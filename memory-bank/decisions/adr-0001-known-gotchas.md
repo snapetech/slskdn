@@ -565,7 +565,7 @@ finally
 
 ### 0x9. Refactors Must Carry Supporting Renames, Namespaces, And Exact Nullability
 
-**The Bug**: API code was updated to use `JsonDocument`, named tuple return signatures, and renamed bridge-result helpers, but the supporting `using System.Text.Json;`, matching nullable tuple generics, and helper call sites were not updated. The result was a hard compile break in otherwise unrelated validation runs.
+**The Bug**: API code was updated to use `JsonDocument`, named tuple return signatures, renamed bridge-result helpers, or newer synchronization types, but the supporting `using System.Text.Json;`, matching nullable tuple generics, helper call sites, and target framework/runtime surface were not updated. The result was a hard compile break in otherwise unrelated validation runs.
 
 **Files Affected**:
 - `src/slskd/SocialFederation/API/ActivityPubController.cs`
@@ -574,6 +574,7 @@ finally
 - `tests/slskd.Tests.Unit/SocialFederation/FederationServiceTests.cs`
 - `tests/slskd.Tests.Unit/Mesh/Realm/Bridge/ActivityPubBridgeTests.cs`
 - `src/slskd/SocialFederation/FederationService.cs`
+- `src/slskd/Users/BrowseTracker.cs`
 
 **Wrong**:
 ```csharp
@@ -589,7 +590,7 @@ return Task.FromResult<(bool Processed, string? Error)>((false, "Missing activit
 return BridgeOperationResult.Failed("Failed to follow remote actor.");
 ```
 
-**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, nullability contracts, configuration assumptions, and fixture prerequisites at the same time, but the import list, helper invocations, generic return expressions, config parsing, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit and make sure success-path tests still provide the real prerequisites those code paths now require.
+**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, nullability contracts, configuration assumptions, fixture prerequisites, or synchronization primitives at the same time, but the import list, helper invocations, generic return expressions, config parsing, target-framework compatibility, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, synchronization types, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit and make sure the chosen APIs actually exist on the project’s current target.
 
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
