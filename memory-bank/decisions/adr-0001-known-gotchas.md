@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xB1. Detached Startup Work Must Not Keep The `StartAsync` Token As Its Real Lifetime
+
+**The Bug**: several hosted services and startup tasks returned from `StartAsync`, but the detached work they queued still ran on the startup coordination token. Once host startup completed or shutdown raced in, accepted initialization and detector loops could be cancelled before they ever really became service-owned background work.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
+- `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
+
+**Wrong**:
+```csharp
+_initializationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+_initializationTask = Task.Run(() => InitializeAsync(_initializationCts.Token), CancellationToken.None);
+
+_ = ObserveBackgroundTaskAsync(
+    Task.Run(() => InitializeApplicationAsync(cancellationToken), CancellationToken.None),
+    "Failed to initialize application in background task");
+```
+
+**Correct**:
+```csharp
+_initializationCts = new CancellationTokenSource();
+_initializationTask = Task.Run(() => InitializeAsync(_initializationCts.Token), CancellationToken.None);
+
+_startupInitializationCts = new CancellationTokenSource();
+_startupInitializationTask = Task.Run(
+    () => InitializeApplicationAsync(_startupInitializationCts.Token),
+    CancellationToken.None);
+```
+
+**Why This Keeps Happening**: it is easy to think of the `StartAsync` token as “the service startup token,” but for detached work it is only the host coordination token for getting through startup. Once work is intentionally handed off to run beyond `StartAsync`, it needs its own CTS owned by the service and canceled explicitly during `StopAsync`.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
