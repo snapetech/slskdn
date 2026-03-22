@@ -213,6 +213,38 @@ Domain = request.Domain,
 
 **Why This Keeps Happening**: API shells often get built before option gating is wired, especially when the underlying services exist in DI. That makes disabled features appear live. Separately, manual/test plan endpoints often omit metadata that the queue path already carries, which means they default to whatever enum zero happens to be. Keep controller contracts aligned with the documented runtime gate, and require the same planner-critical fields on manual plan creation that the real intent path carries.
 
+### 0x9E. VirtualSoulfind v2 Candidate Scores And Backend Ordering Must Use The Same Normalized Model
+
+**The Bug**: `LocalLibraryBackend` emitted `ExpectedQuality = 100` even though `SourceCandidate.ExpectedQuality` is documented as `0.0..1.0`. At the same time, `MultiSourcePlanner`'s backend ordering table omitted newly wired backends like `NativeMesh`, `WebDav`, and `S3`, so they fell through to the default lowest-priority bucket regardless of actual planner intent.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Backends/LocalLibraryBackend.cs`
+- `src/slskd/VirtualSoulfind/v2/Planning/MultiSourcePlanner.cs`
+
+**Wrong**:
+```csharp
+ExpectedQuality = 100,
+...
+var backendPriority = new Dictionary<ContentBackendType, int>
+{
+    { ContentBackendType.LocalLibrary, 1 },
+    { ContentBackendType.MeshDht, 2 },
+    { ContentBackendType.Http, 3 },
+    ...
+};
+```
+
+**Correct**:
+```csharp
+ExpectedQuality = 1.0f,
+...
+{ ContentBackendType.NativeMesh, 2 },
+{ ContentBackendType.WebDav, 3 },
+{ ContentBackendType.S3, 3 },
+```
+
+**Why This Keeps Happening**: Candidate and planner code often evolve separately. One side adds new backends or score semantics, while the other side still assumes the old set. The result is not a crash; it is silent mis-ordering that makes the planner behave irrationally. Keep `SourceCandidate` scores normalized consistently and update the planner’s explicit backend order whenever a new backend becomes real.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
@@ -7611,6 +7643,53 @@ var backend = new SoulseekBackend(client, limiter, catalogueStore, options, logg
 ```
 
 **Why This Keeps Happening**: Constructor changes often land in production code first, and tests keep compiling in warm workspaces or are skipped behind narrower validation commands. When a service gains a required dependency, grep the test tree for all constructor call sites in the same edit or the next full unit-project build will break far away from the original change.
+
+### 0k31. Observability Services Must Depend On The Concrete Metrics Source, Not A Wrapper That Hides It
+
+**The Bug**: `MeshHealthService` took `IMeshDhtClient` and then tried to cast it to `InMemoryDhtClient` to read in-memory health metrics. Under the normal DI registration, `IMeshDhtClient` is a `MeshDhtClient` wrapper, so the cast always failed and mesh health snapshots silently reported zero DHT metrics.
+
+**Files Affected**:
+- `src/slskd/Mesh/Health/MeshHealthService.cs`
+
+**Wrong**:
+```csharp
+public MeshHealthService(ILogger<MeshHealthService> logger, IMeshDhtClient dht)
+{
+    memDht = dht as InMemoryDhtClient;
+}
+```
+
+**Correct**:
+```csharp
+public MeshHealthService(ILogger<MeshHealthService> logger, IDhtClient dht)
+{
+    memDht = dht as InMemoryDhtClient;
+}
+```
+
+**Why This Keeps Happening**: Wrapper abstractions are convenient for feature code, but diagnostics often need implementation-specific counters that wrappers intentionally hide. If a health/metrics service requires concrete runtime state, inject the concrete-facing dependency path that DI actually registers for that state or the observability code will quietly degrade to zeros.
+
+### 0k32. Hashed Storage Layers Cannot Recover Logical Key Prefixes Later
+
+**The Bug**: `InMemoryDhtClient.GetStoreStats()` tried to count content-peer-hint entries by checking whether stored keys started with `"mesh:content-peers:"`. The store only keeps hashed key bytes rendered as hex, so that plaintext prefix check could never match and the content-hint metric stayed wrong even when hints were present.
+
+**Files Affected**:
+- `src/slskd/Mesh/Dht/InMemoryDhtClient.cs`
+
+**Wrong**:
+```csharp
+var content = keys.Count(k => k.StartsWith("mesh:content-peers:", StringComparison.Ordinal));
+```
+
+**Correct**:
+```csharp
+if (ContainsContentPeerHints(list))
+{
+    content++;
+}
+```
+
+**Why This Keeps Happening**: Once a logical key is hashed, prefix semantics are gone unless you carry classification metadata forward separately. Any later stats or filtering logic must inspect stored payload type/metadata, or record the classification at write time, instead of pretending the original string key can still be recovered from the hash.
 
 ---
 
