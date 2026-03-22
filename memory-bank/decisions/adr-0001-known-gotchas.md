@@ -201,6 +201,25 @@ return new DescriptorPublishResult(
 
 **Why This Keeps Happening**: Placeholder data is tempting when wiring dashboards and public APIs because it keeps the feature surface looking alive. In publishing and discovery code that is actively harmful: fake search results waste operator time, fake signatures destroy trust boundaries, and fake stats hide missing instrumentation. If the backing system is not implemented, return empty/failed results and log the gap explicitly.
 
+### 0x6. Capability Advertisements Must Publish The Real Mesh Sequence, Not A Hardcoded Zero
+
+**The Bug**: The generated capability file always exported `mesh_seq_id = 0` even when the local HashDb had a newer sequence. That made healthy peers look permanently stale to other nodes.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityService.cs`
+
+**Wrong**:
+```csharp
+mesh_seq_id = 0L
+```
+
+**Correct**:
+```csharp
+mesh_seq_id = hashDb?.CurrentSeqId ?? 0L
+```
+
+**Why This Keeps Happening**: Static placeholder values are easy to leave behind in capability payloads because they don’t crash anything locally. But capability ads are protocol state, not UI sugar. If the app already has the authoritative local value, publish it from the real source instead of freezing the field at a bootstrap default.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
