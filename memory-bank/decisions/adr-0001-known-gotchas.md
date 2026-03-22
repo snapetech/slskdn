@@ -591,6 +591,29 @@ foreach (var candidate in new[]
 ```
 
 **Why This Keeps Happening**: Tool discovery often assumes either a dev checkout or an executable on `PATH`. Java jars and helper scripts are frequently packaged into shared data directories instead. Search explicit environment variables first, then standard packaged install paths, and only then fall back to looser heuristics.
+
+### 0x14. Recognizer Parsers Must Tolerate The Output Shapes Real Tools Emit, Not Just One Captured Sample
+
+**The Bug**: SongID recognizer parsers only handled one narrow JSON/text shape for SongRec and Audfprint. Valid results using top-level track fields, `matches[]` wrappers, `artists[]`, or path-bearing match lines were discarded or reduced to low-quality titles.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+if (!root.TryGetProperty("track", out var track))
+{
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+var track = GetSongRecTrack(root);
+var artist = TryGetSongRecArtist(track.Value);
+```
+
+**Why This Keeps Happening**: Tool integrations usually start from one example output captured during development. Recognition tools then evolve or emit multiple shapes depending on CLI mode and version. Parse the stable semantic fields conservatively across the known variants instead of binding the whole feature to a single sample payload.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
