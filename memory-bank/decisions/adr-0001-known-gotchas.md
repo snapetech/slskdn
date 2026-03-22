@@ -630,6 +630,7 @@ public async Task<PodRefreshResult> RefreshAsync(...)
 - `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
 - `src/slskd/LibraryHealth/LibraryHealthService.cs`
 - `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+- `src/slskd/PodCore/PodServices.cs`
 
 **Wrong**:
 ```csharp
@@ -642,6 +643,8 @@ _ = Task.Run(() => PerformBackgroundWorkAsync(id, ct), CancellationToken.None);
 ```
 
 **Why This Keeps Happening**: The second parameter to `Task.Run` controls whether the task is queued at all, not just what token the delegate receives. It is easy to assume passing the caller token there is harmless, but for background work it couples scheduling to the request/startup lifetime. Use the real lifetime token inside the delegate, and only use the `Task.Run` token when the task itself should be suppressed if scheduling has not yet happened.
+
+In pod-management code this is especially sneaky because the foreground create/update call can still succeed locally while the background DHT publish never starts, leaving local state and discoverability out of sync.
 
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
