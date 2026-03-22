@@ -83,6 +83,45 @@ public class ContentDescriptorPublisherControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task PublishDescriptor_WhenPublisherReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var publisher = new Mock<IContentDescriptorPublisher>();
+        publisher
+            .Setup(service => service.PublishAsync(It.IsAny<ContentDescriptor>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DescriptorPublishResult(false, "content:a", "v1", DateTimeOffset.UtcNow, TimeSpan.FromHours(1), "sensitive detail"));
+
+        var controller = CreateController(publisher);
+
+        var result = await controller.PublishDescriptor(
+            new PublishDescriptorRequest(new ContentDescriptor { ContentId = "content:a" }),
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", badRequest.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to publish descriptor", badRequest.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task UpdateDescriptor_WhenPublisherReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var publisher = new Mock<IContentDescriptorPublisher>();
+        publisher
+            .Setup(service => service.UpdateAsync(It.IsAny<string>(), It.IsAny<DescriptorUpdates>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DescriptorUpdateResult(false, "content:a", "v2", "v1", Array.Empty<string>(), "sensitive detail"));
+
+        var controller = CreateController(publisher);
+
+        var result = await controller.UpdateDescriptor(
+            "content:a",
+            new UpdateDescriptorRequest(new DescriptorUpdates(NewCodec: "opus")),
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", badRequest.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to update descriptor", badRequest.Value?.ToString() ?? string.Empty);
+    }
+
     private static ContentDescriptorPublisherController CreateController(Mock<IContentDescriptorPublisher>? publisher = null)
     {
         return new ContentDescriptorPublisherController(

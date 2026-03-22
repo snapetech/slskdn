@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 
 using System.IO;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -84,6 +85,64 @@ public class MeshGatewayControllerTests
         Assert.IsType<OkObjectResult>(result);
         directory.Verify(service => service.FindByNameAsync("pods", It.IsAny<CancellationToken>()), Times.Once);
         client.Verify(service => service.CallServiceAsync("pods", "list", It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CallService_WhenServiceReplyFails_DoesNotLeakErrorMessage()
+    {
+        var directory = new Mock<IMeshServiceDirectory>();
+        directory
+            .Setup(service => service.FindByNameAsync("pods", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new MeshServiceDescriptor
+                {
+                    ServiceId = "svc-1",
+                    ServiceName = "pods",
+                    OwnerPeerId = "peer-1",
+                    Endpoint = new MeshServiceEndpoint
+                    {
+                        Protocol = "quic",
+                        Host = "127.0.0.1",
+                        Port = 1
+                    },
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5),
+                    Metadata = new Dictionary<string, string>()
+                }
+            });
+
+        var client = new Mock<IMeshServiceClient>();
+        client
+            .Setup(service => service.CallServiceAsync("pods", "list", It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ServiceReply
+            {
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "sensitive detail",
+                Payload = Encoding.UTF8.GetBytes("bad")
+            });
+
+        var controller = CreateController(
+            new MeshGatewayOptions
+            {
+                Enabled = true,
+                AllowedServices = new() { "pods" }
+            },
+            directory,
+            client);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        controller.HttpContext.Request.Body = new MemoryStream();
+
+        var result = await controller.CallService("pods", "list", CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(400, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Service returned an error", error.Value?.ToString() ?? string.Empty);
     }
 
     private static MeshGatewayController CreateController(
