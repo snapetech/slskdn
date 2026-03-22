@@ -48,6 +48,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `MeshHealthCheck` no longer embeds raw exception text in degraded health descriptions
     - `MeshCircuitBuilder` no longer stores raw exception text in hop status records
   - Documented the recurring pattern in `adr-0001-known-gotchas.md`
+  - Fixed another helper/batch result cluster:
+    - `RegressionHarness` no longer copies raw exception text into scenario/test/benchmark results
+    - `AutoReplaceService` no longer puts raw exception text into per-download batch details
+    - `Dumper` no longer returns raw dump-creation exception text in its result tuple
+  - Added focused harness coverage and documented the recurring pattern in `adr-0001-known-gotchas.md`
   - Fixed a DHT/mesh security-helper result cluster:
     - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
     - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results

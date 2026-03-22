@@ -293,7 +293,7 @@ namespace slskd.Common.CodeQuality
                 result.Success = false;
                 result.EndTime = DateTimeOffset.UtcNow;
                 result.Duration = result.EndTime - result.StartTime;
-                result.ErrorMessage = ex.Message;
+                result.ErrorMessage = "Scenario execution failed";
 
                 logger?.LogError(ex, "[RegressionHarness] Scenario {Scenario} failed with exception", scenario.Name);
             }
@@ -342,7 +342,7 @@ namespace slskd.Common.CodeQuality
             catch (Exception ex)
             {
                 result.Success = false;
-                result.ErrorMessage = ex.Message;
+                result.ErrorMessage = "Test execution failed";
                 logger?.LogError(ex, "[RegressionHarness] Test {TestName} failed", testMethodName);
             }
 
@@ -394,7 +394,7 @@ namespace slskd.Common.CodeQuality
             catch (Exception ex)
             {
                 result.Success = false;
-                result.ErrorMessage = ex.Message;
+                result.ErrorMessage = "Benchmark execution failed";
                 result.EndTime = DateTimeOffset.UtcNow;
                 logger?.LogError(ex, "[PerformanceBenchmarks] Benchmark {Benchmark} failed", benchmark.Name);
             }

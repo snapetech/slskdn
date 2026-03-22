@@ -54,6 +54,24 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
             };
         }
 
+        private static MultiRealmConfig ConfigWithActivityPubReadWriteAndMetadataAllowed()
+        {
+            return new MultiRealmConfig
+            {
+                Realms = new[]
+                {
+                    new RealmConfig { Id = "realm-a", GovernanceRoots = new[] { "root-a" }, Policies = new RealmPolicies() },
+                    new RealmConfig { Id = "realm-b", GovernanceRoots = new[] { "root-b" }, Policies = new RealmPolicies() }
+                },
+                Bridge = new BridgeConfig
+                {
+                    Enabled = true,
+                    AllowedFlows = new[] { "activitypub:read", "activitypub:write", "metadata:read" },
+                    DisallowedFlows = Array.Empty<string>()
+                }
+            };
+        }
+
         private static MultiRealmService CreateMultiRealmService(MultiRealmConfig config)
         {
             return new MultiRealmService(
@@ -218,7 +236,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         [Fact]
         public async Task PerformActivityPubWriteAsync_WhenOperationThrows_ReturnsSanitizedError()
         {
-            var enforcer = CreateEnforcer();
+            var enforcer = CreateEnforcer(CreateMultiRealmService(ConfigWithActivityPubReadWriteAndMetadataAllowed()));
 
             var result = await enforcer.PerformActivityPubWriteAsync(
                 "realm-a",
@@ -306,4 +324,3 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
     }
 }
-

@@ -55,7 +55,7 @@ namespace slskd
             }
             catch (Exception ex)
             {
-                return (false, ex.Message, null);
+                return (false, "Failed to create dump", null);
             }
         }
 

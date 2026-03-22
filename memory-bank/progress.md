@@ -67,6 +67,21 @@
 ### Remaining
 - Continue the bughunt through the next protocol/runtime cluster where background services still surface more detail than they should.
 
+## 2026-03-22 17:02 - Helper and harness result sanitization batch
+
+### Completed
+- Documented a new gotcha for utility/helper result objects that were still echoing raw `ex.Message` text into observable runtime contracts.
+- `RegressionHarness` now returns stable sanitized scenario/test/benchmark failure messages instead of raw exception text.
+- `AutoReplaceService` now records a stable per-item batch failure message instead of the thrown exception text.
+- `Dumper` now returns a stable `Failed to create dump` error instead of the raw diagnostics client exception text.
+- Added focused regression coverage in `RegressionHarnessTests` using the public benchmark API.
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue into the next helper/runtime cluster where transport status, moderation clients, or evidence fields still surface raw exception text.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

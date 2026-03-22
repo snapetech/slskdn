@@ -584,7 +584,7 @@ namespace slskd.Transfers.AutoReplace
                 }
                 catch (Exception ex)
                 {
-                    detail.Error = ex.Message;
+                    detail.Error = "Auto-replace processing failed";
                     result.Failed++;
                     Log.Error(ex, "Error processing: {Filename}", CleanTrackTitle(download.Filename));
                 }
