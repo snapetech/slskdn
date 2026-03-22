@@ -324,7 +324,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
         {
             logger.LogError(ex, "[SwarmOrchestrator] Job {JobId}: Failed with exception", job.JobId);
             status.State = SwarmJobState.Failed;
-            status.Error = ex.Message;
+            status.Error = "Swarm download failed";
         }
         finally
         {
@@ -500,7 +500,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
             {
                 ChunkIndex = chunk.Index,
                 Success = false,
-                Error = ex.Message,
+                Error = "Chunk download failed",
             };
         }
     }

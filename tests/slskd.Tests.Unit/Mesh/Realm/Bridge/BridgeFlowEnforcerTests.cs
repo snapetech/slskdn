@@ -201,6 +201,51 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
 
         [Fact]
+        public async Task PerformActivityPubReadAsync_WhenOperationThrows_ReturnsSanitizedError()
+        {
+            var enforcer = CreateEnforcer();
+
+            var result = await enforcer.PerformActivityPubReadAsync(
+                "realm-a",
+                "realm-b",
+                () => throw new InvalidOperationException("sensitive detail"));
+
+            Assert.False(result.Success);
+            Assert.Equal("ActivityPub read failed", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task PerformActivityPubWriteAsync_WhenOperationThrows_ReturnsSanitizedError()
+        {
+            var enforcer = CreateEnforcer();
+
+            var result = await enforcer.PerformActivityPubWriteAsync(
+                "realm-a",
+                "realm-b",
+                () => throw new InvalidOperationException("sensitive detail"));
+
+            Assert.False(result.Success);
+            Assert.Equal("ActivityPub write failed", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task PerformMetadataReadAsync_WhenOperationThrows_ReturnsSanitizedError()
+        {
+            var enforcer = CreateEnforcer();
+
+            var result = await enforcer.PerformMetadataReadAsync(
+                "realm-a",
+                "realm-b",
+                () => throw new InvalidOperationException("sensitive detail"));
+
+            Assert.False(result.Success);
+            Assert.Equal("Metadata read failed", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        }
+
+        [Fact]
         public void ValidateCrossRealmOperation_WithSameRealm_ReturnsTrue()
         {
             // Arrange
@@ -261,5 +306,4 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
     }
 }
-
 

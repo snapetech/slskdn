@@ -212,6 +212,20 @@ namespace slskd.Tests.Unit.Mesh
             Assert.True(meshSyncService.Stats.SignatureVerificationFailures > 0);
         }
 
+        [Fact]
+        public async Task TrySyncWithPeerAsync_WhenCapabilitiesLookupThrows_ReturnsSanitizedError()
+        {
+            mockCapabilities
+                .Setup(c => c.GetPeerCapabilities("throwing-peer"))
+                .Throws(new InvalidOperationException("sensitive sync detail"));
+
+            var result = await meshSyncService.TrySyncWithPeerAsync("throwing-peer", CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Equal("Mesh sync failed", result.Error);
+            Assert.DoesNotContain("sensitive", result.Error, StringComparison.OrdinalIgnoreCase);
+        }
+
         #endregion
 
         #region Reputation Checks Tests (T-1431)

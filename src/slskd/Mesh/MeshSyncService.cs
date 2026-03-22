@@ -409,7 +409,7 @@ namespace slskd.Mesh
             }
             catch (Exception ex)
             {
-                result.Error = ex.Message;
+                result.Error = "Mesh sync failed";
                 stats.FailedSyncs++;
                 log.Warning(ex, "[MESH] Sync with {Peer} failed", username);
             }

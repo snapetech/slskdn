@@ -38,6 +38,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `ContentVerificationService` no longer returns raw verification exception text in failed-source results
   - Added focused regression coverage for those sanitized scan/verification failure contracts
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Fixed another mesh/runtime status sanitization cluster:
+    - `MeshContentFetcher` no longer returns raw mesh client exception text in fetch results
+    - `MeshSyncService` no longer copies raw sync exceptions into `MeshSyncResult.Error`
+    - `SwarmDownloadOrchestrator` no longer copies raw exception text into job/chunk status errors
+  - Added focused regression coverage for the mesh fetch/sync failure contracts and documented the recurring pattern in `adr-0001-known-gotchas.md`
   - Fixed a DHT/mesh security-helper result cluster:
     - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
     - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results

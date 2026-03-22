@@ -36,6 +36,23 @@
 ### Remaining
 - Continue through the next helper/runtime result cluster where long-lived state records or service DTOs still surface internal exception text.
 
+## 2026-03-22 16:39 - Mesh fetch/sync/swarm status sanitization batch
+
+### Completed
+- Documented a new gotcha for mesh/swarm status DTOs that were still storing raw `ex.Message` strings in observable runtime state.
+- `MeshContentFetcher` now returns a stable `Mesh content fetch failed` error instead of raw mesh client exception text.
+- `MeshSyncService` now returns a stable `Mesh sync failed` error when sync setup throws.
+- `SwarmDownloadOrchestrator` now uses stable `Swarm download failed` / `Chunk download failed` status text instead of raw exception messages.
+- Added focused regressions in:
+  - `MeshContentFetcherTests`
+  - `MeshSyncSecurityTests`
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue through the next runtime/status cluster where background services or orchestration layers still surface raw exception text.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed
