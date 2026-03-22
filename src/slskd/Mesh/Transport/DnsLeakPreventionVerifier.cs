@@ -102,9 +102,9 @@ public class DnsLeakPreventionVerifier
             await stream.WriteAsync(greeting, 0, greeting.Length, cts.Token);
 
             var response = new byte[2];
-            var read = await stream.ReadAsync(response, 0, 2, cts.Token);
+            await ReadExactlyAsync(stream, response, 0, 2, cts.Token);
 
-            if (read != 2 || response[0] != 0x05 || response[1] != 0x00)
+            if (response[0] != 0x05 || response[1] != 0x00)
             {
                 return SocksConnectionResult.Failure("SOCKS5 handshake failed");
             }
@@ -114,6 +114,26 @@ public class DnsLeakPreventionVerifier
         catch (Exception ex)
         {
             return SocksConnectionResult.Failure($"Connection test failed: {ex.Message}");
+        }
+    }
+
+    private static async Task ReadExactlyAsync(
+        Stream stream,
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        var remaining = count;
+        while (remaining > 0)
+        {
+            var read = await stream.ReadAsync(buffer.AsMemory(offset + (count - remaining), remaining), cancellationToken);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("Unexpected end of stream while reading SOCKS5 response");
+            }
+
+            remaining -= read;
         }
     }
 

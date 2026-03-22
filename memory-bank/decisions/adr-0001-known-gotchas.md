@@ -4201,6 +4201,54 @@ return Ok(message);
 
 **Why This Keeps Happening**: Nullable-signature cleanup often turns synchronous-looking lookups into `Task<T?>`, but controller code can still visually resemble the old synchronous pattern. In async controller actions, always await the lookup before testing for `null` / `default` or returning the payload.
 
+### 3g. Network Protocol Reads Must Tolerate Fragmented Stream Reads
+
+**The Bug**: Multiple transport/parsing paths treated a short `ReadAsync` return as protocol failure. On sockets this is normal when frames arrive in fragments, so valid SOCKS handshakes and protocol messages could be rejected or dropped.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/Protocol/SoulseekProtocolParser.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Mesh/Transport/DnsLeakPreventionVerifier.cs`
+- `tests/slskd.Tests.Integration/Security/TorIntegrationTests.cs`
+- `tests/slskd.Tests.Integration/VirtualSoulfind/Bridge/BridgeProtocolValidationTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/Transport/DnsLeakPreventionVerifierTests.cs`
+
+**Wrong**:
+```csharp
+var bytesRead = await stream.ReadAsync(lengthBuffer, 0, 4, ct);
+if (bytesRead != 4)
+{
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+private static async Task<bool> ReadExactlyAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken ct)
+{
+    var totalRead = 0;
+    while (totalRead < count)
+    {
+        var bytesRead = await stream.ReadAsync(
+            buffer,
+            offset + totalRead,
+            count - totalRead,
+            ct);
+
+        if (bytesRead == 0)
+        {
+            return false;
+        }
+
+        totalRead += bytesRead;
+    }
+
+    return true;
+}
+```
+
+**Why This Keeps Happening**: Network framing logic often assumes one `ReadAsync` call yields all requested bytes. On real transports, this assumption is wrong; parsers must accumulate until the header/payload is fully read or the stream closes.
+
 ---
 
-*Last updated: 2026-03-21*
+*Last updated: 2026-03-22*

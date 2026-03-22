@@ -57,6 +57,28 @@ public class TorIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task TorTransport_Socks5Handshake_SucceedsWithFragmentedResponse()
+    {
+        // Arrange
+        using var mockServer = new MockSocksServer { FragmentHandshakeResponse = true };
+        await mockServer.StartAsync();
+
+        var torOptions = new TorOptions
+        {
+            SocksAddress = $"127.0.0.1:{mockServer.Port}",
+            IsolateStreams = false
+        };
+
+        using var transport = new TorSocksTransport(torOptions, _logger);
+
+        // Act
+        var isAvailable = await transport.IsAvailableAsync();
+
+        // Assert
+        Assert.True(isAvailable, "Tor transport should ignore read fragmentation and still detect valid SOCKS5 responses");
+    }
+
+    [Fact]
     public async Task TorTransport_Socks5Handshake_FailsWithWrongVersion()
     {
         // Arrange - Mock server that returns wrong SOCKS version
@@ -176,6 +198,28 @@ public class TorIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task TorTransport_ConnectAsync_HandlesFragmentedConnectResponse()
+    {
+        // Arrange
+        using var mockServer = new MockSocksServer { FragmentConnectResponse = true };
+        await mockServer.StartAsync();
+
+        var torOptions = new TorOptions
+        {
+            SocksAddress = $"127.0.0.1:{mockServer.Port}",
+            IsolateStreams = false
+        };
+
+        using var transport = new TorSocksTransport(torOptions, _logger);
+
+        // Act - connect should succeed even if SOCKS connect response arrives in multiple chunks
+        using var stream = await transport.ConnectAsync("example.com", 80);
+
+        // Assert
+        Assert.NotNull(stream);
+    }
+
+    [Fact]
     public async Task TorTransport_AuthenticationFailure_HandledGracefully()
     {
         // Arrange - Mock server that rejects authentication
@@ -275,6 +319,8 @@ public class TorIntegrationTests : IDisposable
         public byte ResponseVersion { get; set; } = 0x05; // SOCKS5
         public bool RequireAuth { get; set; }
         public bool AuthSuccess { get; set; } = true;
+        public bool FragmentHandshakeResponse { get; set; }
+        public bool FragmentConnectResponse { get; set; }
 
         public async Task StartAsync()
         {
@@ -339,7 +385,7 @@ public class TorIntegrationTests : IDisposable
                     {
                         // Respond to handshake
                         var handshakeResponse = new byte[] { ResponseVersion, 0x00 }; // Version, no auth
-                        await stream.WriteAsync(handshakeResponse, 0, 2, ct);
+                        await WriteFragmentedAsync(stream, handshakeResponse, FragmentHandshakeResponse, ct);
                     }
 
                     // Read connect request (simplified - just consume the data)
@@ -348,7 +394,7 @@ public class TorIntegrationTests : IDisposable
 
                     // Send success response
                     var connectResponse = new byte[] { 0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-                    await stream.WriteAsync(connectResponse, 0, 10, ct);
+                    await WriteFragmentedAsync(stream, connectResponse, FragmentConnectResponse, ct);
                 }
             }
             catch (Exception ex)
@@ -356,6 +402,20 @@ public class TorIntegrationTests : IDisposable
                 // Connection handling error - expected in some test cases
                 Console.WriteLine($"Mock server error: {ex.Message}");
             }
+        }
+
+        private static async Task WriteFragmentedAsync(Stream stream, byte[] payload, bool fragment, CancellationToken ct)
+        {
+            if (!fragment || payload.Length <= 1)
+            {
+                await stream.WriteAsync(payload, 0, payload.Length, ct);
+                return;
+            }
+
+            var firstChunk = Math.Min(payload.Length - 1, Math.Max(1, payload.Length / 2));
+            await stream.WriteAsync(payload, 0, firstChunk, ct);
+            await Task.Delay(5, ct);
+            await stream.WriteAsync(payload, firstChunk, payload.Length - firstChunk, ct);
         }
 
         public void Dispose()
@@ -464,4 +524,3 @@ public class TorIntegrationTests : IDisposable
         }
     }
 }
-

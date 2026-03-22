@@ -2,6 +2,8 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -38,6 +40,23 @@ public class DnsLeakPreventionVerifierTests
         // Note: This test may fail if Tor is not running, but we're testing the validation logic
         // The important part is that it doesn't fail due to hostname validation
         Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task VerifySocksConfiguration_HandlesFragmentedHandshakeResponse()
+    {
+        // Arrange
+        using var mockServer = new FragmentedSocksServer
+        {
+            FragmentHandshakeResponse = true
+        };
+        await mockServer.StartAsync();
+
+        // expectedLeakPrevention=false avoids a second SOCKS validation pass.
+        var result = await _verifier.VerifySocksConfigurationAsync("127.0.0.1", mockServer.Port, "abcdefghijklmnop.onion", false);
+
+        // Assert
+        Assert.True(result.Success);
     }
 
     [Fact]
@@ -153,6 +172,92 @@ public class DnsLeakPreventionVerifierTests
         Assert.NotNull(result);
         Assert.True(result.IsValid);
     }
+
+    private sealed class FragmentedSocksServer : IDisposable
+    {
+        private readonly CancellationTokenSource _cts = new();
+        private Task? _serverTask;
+        private TcpListener? _listener;
+
+        public int Port { get; private set; }
+        public bool FragmentHandshakeResponse { get; set; }
+
+        public async Task StartAsync()
+        {
+            _listener = new TcpListener(IPAddress.Loopback, 0);
+            _listener.Start();
+            Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+            _serverTask = Task.Run(async () =>
+            {
+                while (!_cts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var client = await _listener.AcceptTcpClientAsync(_cts.Token);
+                        _ = HandleClientAsync(client, _cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                }
+            });
+        }
+
+        private async Task HandleClientAsync(TcpClient client, CancellationToken ct)
+        {
+            using var c = client;
+            try
+            {
+                var stream = c.GetStream();
+
+                // Read the SOCKS5 handshake from the client.
+                var handshake = new byte[3];
+                await stream.ReadAsync(handshake, 0, handshake.Length, ct);
+
+                var response = new byte[] { 0x05, 0x00 };
+                await WriteFragmentedAsync(stream, response, FragmentHandshakeResponse, ct);
+            }
+            catch
+            {
+                // Ignore mock transport errors in test environment.
+            }
+        }
+
+        private static async Task WriteFragmentedAsync(Stream stream, byte[] payload, bool fragment, CancellationToken ct)
+        {
+            if (!fragment || payload.Length <= 1)
+            {
+                await stream.WriteAsync(payload, 0, payload.Length, ct);
+                return;
+            }
+
+            await stream.WriteAsync(payload, 0, 1, ct);
+            await Task.Delay(5, ct);
+            await stream.WriteAsync(payload, 1, payload.Length - 1, ct);
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _listener?.Stop();
+
+            try
+            {
+                _serverTask?.GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                _cts.Dispose();
+            }
+        }
+    }
 }
-
-

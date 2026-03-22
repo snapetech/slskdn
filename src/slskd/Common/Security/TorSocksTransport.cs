@@ -68,9 +68,9 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await stream.WriteAsync(handshake, 0, handshake.Length, linkedCts.Token);
 
                 var response = new byte[2];
-                var bytesRead = await stream.ReadAsync(response, 0, 2, linkedCts.Token);
+                await ReadExactlyAsync(stream, response, 0, 2, linkedCts.Token);
 
-                if (bytesRead == 2 && response[0] == 0x05 && response[1] == 0x00)
+                if (response[0] == 0x05 && response[1] == 0x00)
                 {
                     // SOCKS5 handshake successful
                     lock (_statusLock)
@@ -170,7 +170,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await stream.WriteAsync(handshake, 0, handshake.Length, effectiveToken);
 
                 var handshakeResponse = new byte[2];
-                await stream.ReadAsync(handshakeResponse, 0, 2, effectiveToken);
+                await ReadExactlyAsync(stream, handshakeResponse, 0, 2, effectiveToken);
 
                 if (handshakeResponse[0] != 0x05 || handshakeResponse[1] != 0x02)
                 {
@@ -181,7 +181,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await SendSocks5AuthAsync(stream, leasedCircuit.Username, leasedCircuit.Password, effectiveToken);
 
                 var authResponse = new byte[2];
-                await stream.ReadAsync(authResponse, 0, 2, effectiveToken);
+                await ReadExactlyAsync(stream, authResponse, 0, 2, effectiveToken);
 
                 if (authResponse[0] != 0x01 || authResponse[1] != 0x00)
                 {
@@ -195,7 +195,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await stream.WriteAsync(handshake, 0, handshake.Length, effectiveToken);
 
                 var handshakeResponse = new byte[2];
-                await stream.ReadAsync(handshakeResponse, 0, 2, effectiveToken);
+                await ReadExactlyAsync(stream, handshakeResponse, 0, 2, effectiveToken);
 
                 if (handshakeResponse[0] != 0x05 || handshakeResponse[1] != 0x00)
                 {
@@ -208,9 +208,9 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             await stream.WriteAsync(connectRequest, 0, connectRequest.Length, effectiveToken);
 
             var connectResponse = new byte[10]; // Minimum response size
-            var responseLength = await stream.ReadAsync(connectResponse, 0, connectResponse.Length, effectiveToken);
+            await ReadExactlyAsync(stream, connectResponse, 0, 10, effectiveToken);
 
-            if (responseLength < 10 || connectResponse[0] != 0x05 || connectResponse[1] != 0x00)
+            if (connectResponse[0] != 0x05 || connectResponse[1] != 0x00)
             {
                 throw new Exception($"SOCKS5 connect failed with response code {connectResponse[1]:X2}");
             }
@@ -381,6 +381,26 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
         var keyBytes = System.Text.Encoding.UTF8.GetBytes(isolationKey + "-password");
         var hash = sha256.ComputeHash(keyBytes);
         return BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 16).ToLower();
+    }
+
+    private static async Task ReadExactlyAsync(
+        Stream stream,
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        var remaining = count;
+        while (remaining > 0)
+        {
+            var read = await stream.ReadAsync(buffer.AsMemory(offset + (count - remaining), remaining), cancellationToken);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("Unexpected end of stream while reading SOCKS5 response");
+            }
+
+            remaining -= read;
+        }
     }
 
     /// <summary>
