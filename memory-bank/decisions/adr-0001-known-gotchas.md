@@ -147,6 +147,32 @@ return Task.FromResult<IActionResult>(
 
 **Why This Keeps Happening**: Placeholder HTTP handlers often start by returning syntactically valid responses so clients stop erroring during development. For federated protocols that is the wrong tradeoff. A fake success causes other servers to trust delivery and state transitions that never happened. If persistence or processing does not exist yet, return an explicit non-success status.
 
+### 0x4. Unsupported Mesh Streaming Paths Must Close Gracefully, Not Throw
+
+**The Bug**: Several mesh services advertised the `HandleStreamAsync` entry point and then threw `NotSupportedException` when called. That turns an unsupported optional feature into an avoidable protocol-level crash path.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PodsMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshIntrospectionService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/HolePunchMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshContentMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/VirtualSoulfindMeshService.cs`
+
+**Wrong**:
+```csharp
+throw new NotSupportedException("Streaming not implemented for DHT service");
+```
+
+**Correct**:
+```csharp
+_logger.LogWarning("...");
+return stream.CloseAsync(cancellationToken);
+```
+
+**Why This Keeps Happening**: Interface comments that say “throw if unsupported” are easy to follow literally, but once the service is reachable over a network protocol, throws become remote crash surfaces. For unsupported protocol features, log once, close cleanly, and let the caller observe a normal unsupported-path failure instead of an exception.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
