@@ -452,6 +452,29 @@ SET Processed = 1,
 
 **Why This Keeps Happening**: Scaffolding code often defaults to “available”, “best-effort peer string”, or “leave it pending so we can retry later.” Those defaults are dangerous when there is no real backend behind them. If a domain has no provider, do not expose the actor. If a hint is not a routable identity, do not promote it into one. If a failed row should be retained for inspection, mark it processed-with-error instead of keeping it in the live retry queue forever.
 
+### 0x20. Mesh Search Must Use Real Peer IDs For Peer Queries, And Search Results Must Not Leak Opaque IDs As Filenames
+
+**The Bug**: `MeshSearchService` queried peer content using `peer.Username` in one path and then reported `peer.Username` back in the `PeerId` field. That mixed human-facing labels with routable mesh identities and could break any downstream code that expected a real peer ID. The same code also surfaced `"unknown"` or raw `content:*` IDs as filenames even when a stable display name could be derived from the parsed content ID plus codec.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshSearchService.cs`
+
+**Wrong**:
+```csharp
+var peerContent = await meshDirectory.FindContentByPeerAsync(peer.Username, ct);
+PeerId = peerResult.Peer.Username,
+Filename = content.ContentId ?? "unknown",
+```
+
+**Correct**:
+```csharp
+var peerContent = await meshDirectory.FindContentByPeerAsync(peer.PeerId, ct);
+PeerId = peerResult.Peer.PeerId,
+Filename = GetDisplayFilename(content.ContentId, content.Codec),
+```
+
+**Why This Keeps Happening**: Search/result code often treats “display identity” and “transport identity” as interchangeable because both are strings. They are not. Once a result object exposes a field called `PeerId`, it must contain the actual routable identity used by the transport/query layer. Likewise, filenames shown to clients should use the best stable human-readable name already derivable from metadata, not raw opaque IDs or `"unknown"` placeholders.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
