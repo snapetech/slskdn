@@ -67,7 +67,7 @@ public class LibraryHealthControllerTests
             .Setup(service => service.GetIssuesAsync(
                 It.Is<LibraryHealthIssueFilter>(filter => filter.LibraryPath == string.Empty && filter.Limit == 5),
                 default))
-            .ReturnsAsync(new List<LibraryHealthIssue>());
+            .ReturnsAsync(new List<LibraryIssue>());
 
         var ok = await controller.GetHealth("   ", 5, default);
 

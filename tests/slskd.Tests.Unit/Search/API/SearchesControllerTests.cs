@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Search.API;
 
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -52,8 +53,7 @@ public class SearchesControllerTests
                 It.Is<SearchQuery>(query => query.Terms.SequenceEqual(new[] { "hello", "world" })),
                 It.IsAny<SearchScope>(),
                 It.IsAny<SearchOptions>(),
-                It.Is<List<string>>(providers => providers.SequenceEqual(new[] { "pod", "scene" })),
-                It.IsAny<CancellationToken>()),
+                It.Is<List<string>>(providers => providers.SequenceEqual(new[] { "pod", "scene" }))),
             Times.Once);
     }
 

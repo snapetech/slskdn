@@ -8,6 +8,7 @@ using slskd.Core.Security;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -54,6 +55,7 @@ public class PodContentController : ControllerBase
         [FromBody] string contentId,
         CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("Content ID is required");
@@ -61,7 +63,7 @@ public class PodContentController : ControllerBase
 
         try
         {
-            var result = await _contentLinkService.ValidateContentIdAsync(contentId.Trim(), cancellationToken);
+            var result = await _contentLinkService.ValidateContentIdAsync(contentId, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
@@ -88,6 +90,7 @@ public class PodContentController : ControllerBase
         [FromQuery] string contentId,
         CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("Content ID is required");
@@ -95,7 +98,7 @@ public class PodContentController : ControllerBase
 
         try
         {
-            var metadata = await _contentLinkService.GetContentMetadataAsync(contentId.Trim(), cancellationToken);
+            var metadata = await _contentLinkService.GetContentMetadataAsync(contentId, cancellationToken);
             if (metadata == null)
             {
                 return NotFound("Content not found");
@@ -131,6 +134,8 @@ public class PodContentController : ControllerBase
         [FromQuery] int limit = 20,
         CancellationToken cancellationToken = default)
     {
+        query = query?.Trim() ?? string.Empty;
+        domain = string.IsNullOrWhiteSpace(domain) ? null : domain.Trim();
         if (string.IsNullOrWhiteSpace(query))
         {
             return BadRequest("Search query is required");
@@ -141,7 +146,7 @@ public class PodContentController : ControllerBase
 
         try
         {
-            var results = await _contentLinkService.SearchContentAsync(query.Trim(), domain, limit, cancellationToken);
+            var results = await _contentLinkService.SearchContentAsync(query, domain, limit, cancellationToken);
             return Ok(results);
         }
         catch (Exception ex)
@@ -173,21 +178,31 @@ public class PodContentController : ControllerBase
             return BadRequest("Pod creation request is required");
         }
 
-        if (string.IsNullOrWhiteSpace(request.ContentId))
+        var contentId = request.ContentId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("Content ID is required for content-linked pods");
         }
+
+        var podId = request.PodId?.Trim() ?? string.Empty;
+        var name = request.Name?.Trim() ?? string.Empty;
+        var tags = request.Tags?
+            .Select(tag => tag?.Trim() ?? string.Empty)
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Distinct(StringComparer.Ordinal)
+            .ToList()
+            ?? new List<string>();
 
         try
         {
             // Create the pod object
             var pod = new Pod
             {
-                PodId = request.PodId,
-                Name = request.Name,
+                PodId = podId,
+                Name = name,
                 Visibility = request.Visibility,
-                FocusContentId = request.ContentId,
-                Tags = request.Tags ?? new List<string>(),
+                FocusContentId = contentId,
+                Tags = tags,
                 Channels = request.Channels ?? new List<PodChannel>(),
                 ExternalBindings = request.ExternalBindings ?? new List<ExternalBinding>(),
             };

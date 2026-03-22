@@ -37,6 +37,12 @@ public class ShadowIndexController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetShadowIndex(string mbid, CancellationToken ct)
     {
+        mbid = mbid?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(mbid))
+        {
+            return BadRequest(new { error = "MBID is required" });
+        }
+
         logger.LogDebug("Shadow index requested for MBID: {Mbid}", mbid);
 
         try

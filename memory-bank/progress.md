@@ -5514,3 +5514,15 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `742821c7`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:05:21Z
+
+- Continued the broad read-side/controller-boundary bughunt into remaining VirtualSoulfind and MediaCore query/publish endpoints:
+  - fixed `CanonicalController` and `ShadowIndexController` so blank MBIDs return `400` and padded MBIDs are normalized before shadow-index lookup
+  - fixed `FuzzyMatcherController` so content/text inputs are trimmed consistently, threshold/confidence and max-candidate/result ranges are validated, and candidate ordering is deterministic instead of randomizing with `Guid.NewGuid()`
+  - fixed `ContentDescriptorPublisherController` so descriptor/publish/update/unpublish/republish content IDs are trimmed at the boundary, blank descriptor IDs are rejected, and republish content-id lists are trimmed/deduplicated before dispatch
+  - normalized adjacent dirty Pod content inputs so validation/metadata endpoints trim content IDs before lookup/logging and folded in the dirty Pod opinion/content test coverage already present in the tree
+  - added focused regressions for canonical/shadow/fuzzy/publisher controller boundaries and deterministic query behavior
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `b26f3a73`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

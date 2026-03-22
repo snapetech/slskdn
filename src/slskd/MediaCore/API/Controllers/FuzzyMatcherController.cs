@@ -46,28 +46,37 @@ public class FuzzyMatcherController : ControllerBase
     [HttpPost("perceptual")]
     public async Task<IActionResult> ComputePerceptualSimilarity([FromBody] PerceptualSimilarityRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request?.ContentIdA) || string.IsNullOrWhiteSpace(request?.ContentIdB))
+        var contentIdA = request?.ContentIdA?.Trim() ?? string.Empty;
+        var contentIdB = request?.ContentIdB?.Trim() ?? string.Empty;
+        var threshold = request?.Threshold ?? 0.7;
+
+        if (string.IsNullOrWhiteSpace(contentIdA) || string.IsNullOrWhiteSpace(contentIdB))
         {
             return BadRequest("Both ContentID A and B are required");
         }
 
+        if (threshold < 0 || threshold > 1)
+        {
+            return BadRequest("Threshold must be between 0 and 1");
+        }
+
         try
         {
-            var similarity = await _fuzzyMatcher.ScorePerceptualAsync(request.ContentIdA, request.ContentIdB, _registry, cancellationToken);
+            var similarity = await _fuzzyMatcher.ScorePerceptualAsync(contentIdA, contentIdB, _registry, cancellationToken);
 
             return Ok(new
             {
-                contentIdA = request.ContentIdA,
-                contentIdB = request.ContentIdB,
+                contentIdA,
+                contentIdB,
                 similarity,
-                isSimilar = similarity >= (request.Threshold ?? 0.7),
-                threshold = request.Threshold ?? 0.7
+                isSimilar = similarity >= threshold,
+                threshold
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[FuzzyMatcher] Failed to compute perceptual similarity between {ContentIdA} and {ContentIdB}",
-                           request.ContentIdA, request.ContentIdB);
+                           contentIdA, contentIdB);
             return StatusCode(500, new { error = "Failed to compute perceptual similarity" });
         }
     }
@@ -82,33 +91,48 @@ public class FuzzyMatcherController : ControllerBase
     [HttpPost("find/{*contentId}")]
     public async Task<IActionResult> FindSimilarContent(string contentId, [FromBody] FindSimilarRequest? request = null, CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("ContentID is required");
         }
 
+        var minConfidence = request?.MinConfidence ?? 0.7;
+        var maxCandidates = request?.MaxCandidates ?? 50;
+        var maxResults = request?.MaxResults ?? 10;
+
+        if (minConfidence < 0 || minConfidence > 1)
+        {
+            return BadRequest("MinConfidence must be between 0 and 1");
+        }
+
+        if (maxCandidates <= 0 || maxResults <= 0)
+        {
+            return BadRequest("MaxCandidates and MaxResults must be greater than 0");
+        }
+
         try
         {
             // Get candidate ContentIDs (in a real implementation, this would be more sophisticated)
-            var candidates = await GetCandidateContentIdsAsync(contentId, request?.MaxCandidates ?? 50, cancellationToken);
+            var candidates = await GetCandidateContentIdsAsync(contentId, maxCandidates, cancellationToken);
 
             var matches = await _fuzzyMatcher.FindSimilarContentAsync(
                 contentId,
                 candidates,
                 _registry,
-                request?.MinConfidence ?? 0.7,
+                minConfidence,
                 cancellationToken);
 
             return Ok(new
             {
                 targetContentId = contentId,
                 totalCandidates = candidates.Count(),
-                matches = matches.Take(request?.MaxResults ?? 10),
+                matches = matches.Take(maxResults),
                 searchParameters = new
                 {
-                    minConfidence = request?.MinConfidence ?? 0.7,
-                    maxCandidates = request?.MaxCandidates ?? 50,
-                    maxResults = request?.MaxResults ?? 10
+                    minConfidence,
+                    maxCandidates,
+                    maxResults
                 }
             });
         }
@@ -127,23 +151,26 @@ public class FuzzyMatcherController : ControllerBase
     [HttpPost("text")]
     public IActionResult ComputeTextSimilarity([FromBody] TextSimilarityRequest request)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.TextA) || string.IsNullOrWhiteSpace(request.TextB))
+        var textA = request?.TextA?.Trim() ?? string.Empty;
+        var textB = request?.TextB?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(textA) || string.IsNullOrWhiteSpace(textB))
         {
             return BadRequest("Both text strings are required");
         }
 
         try
         {
-            var levenshteinScore = _fuzzyMatcher.ScoreLevenshtein(request.TextA, request.TextB);
-            var phoneticScore = _fuzzyMatcher.ScorePhonetic(request.TextA, request.TextB);
+            var levenshteinScore = _fuzzyMatcher.ScoreLevenshtein(textA, textB);
+            var phoneticScore = _fuzzyMatcher.ScorePhonetic(textA, textB);
 
             // Combined text similarity
             var combinedScore = (levenshteinScore * 0.7) + (phoneticScore * 0.3);
 
             return Ok(new
             {
-                textA = request.TextA,
-                textB = request.TextB,
+                textA,
+                textB,
                 levenshteinSimilarity = levenshteinScore,
                 phoneticSimilarity = phoneticScore,
                 combinedSimilarity = combinedScore
@@ -170,11 +197,13 @@ public class FuzzyMatcherController : ControllerBase
             ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type),
             cancellationToken);
 
-        // Limit and randomize for performance (in a real implementation, this would be more sophisticated)
+        // Keep ordering deterministic so repeated identical requests return stable candidate sets.
         return candidates
-            .Where(c => c != targetContentId) // Exclude self
+            .Where(c => !string.Equals(c, targetContentId, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.Ordinal)
             .Take(maxCandidates)
-            .OrderBy(c => Guid.NewGuid()); // Randomize order
+            .ToList();
     }
 }
 

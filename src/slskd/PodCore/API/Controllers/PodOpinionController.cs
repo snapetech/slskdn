@@ -58,6 +58,7 @@ public class PodOpinionController : ControllerBase
         [FromBody] PodVariantOpinion opinion,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -66,6 +67,17 @@ public class PodOpinionController : ControllerBase
         if (opinion == null)
         {
             return BadRequest("Opinion data is required");
+        }
+
+        opinion.ContentId = opinion.ContentId?.Trim() ?? string.Empty;
+        opinion.VariantHash = opinion.VariantHash?.Trim() ?? string.Empty;
+        opinion.Note = opinion.Note?.Trim() ?? string.Empty;
+        opinion.SenderPeerId = opinion.SenderPeerId?.Trim() ?? string.Empty;
+        opinion.Signature = opinion.Signature?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(opinion.ContentId) || string.IsNullOrWhiteSpace(opinion.VariantHash))
+        {
+            return BadRequest("Content ID and variant hash are required");
         }
 
         try
@@ -104,6 +116,8 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string contentId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -147,6 +161,9 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string variantHash,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
+        variantHash = variantHash?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -194,6 +211,8 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string contentId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -233,6 +252,7 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string podId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -269,6 +289,8 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string contentId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -308,6 +330,7 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string podId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -344,6 +367,8 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string contentId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -383,6 +408,7 @@ public class PodOpinionController : ControllerBase
         [FromRoute] string podId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");

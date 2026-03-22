@@ -774,3 +774,6 @@
 - [x] Normalize search and stats controller boundaries
   - Status: done
   - Notes: Added null-body, trim, dedupe, and pagination validation to search/list-health endpoints, stopped mesh stats from leaking raw exception messages, reduced noisy MediaCore dashboard logging, and folded in adjacent dirty Pod discovery/verification coverage from the working tree.
+- [x] Normalize VirtualSoulfind and MediaCore query/publish controller boundaries
+  - Status: done
+  - Notes: Added MBID/content-id trim validation to canonical/shadow/publisher endpoints, removed nondeterministic fuzzy candidate ordering, tightened fuzzy range validation, normalized republish content-id lists, and folded in adjacent dirty Pod content/opinion coverage.

@@ -89,6 +89,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 4. Specifically re-scan remaining native/compatibility/mesh/share controllers for post-trim duplicate collisions, route-scope mismatches, and list payloads that still pass repeated values straight through to services.
 5. Continue outward into remaining stats/status/search controllers and any lingering PodCore/Sharing APIs that still accept raw IDs, null bodies, or repeated list values without normalization.
 6. Keep widening into the remaining VirtualSoulfind, Search, and PodCore read-side/status surfaces for raw query drift, inconsistent pagination/filter contracts, or false-success status responses.
+7. Continue into the remaining API/controller surfaces and any nearby runtime helpers where repeated values, nondeterministic ordering, or raw route/query strings can still leak through to the service layer.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
