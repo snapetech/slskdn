@@ -756,3 +756,6 @@
 - [x] Normalize adjacent MediaCore controller request boundaries
   - Status: done
   - Notes: Trimmed ContentIdController route/body inputs before forwarding/logging, aligned domain/type controller normalization with service semantics, rejected blank-only metadata export payloads in MetadataPortabilityController, and added focused controller regressions for those boundaries.
+- [x] Normalize remaining mesh/native request boundaries
+  - Status: done
+  - Notes: Normalized localhost-origin host checks in MeshGatewayAuthMiddleware, trimmed LibraryItemsController search/item inputs before filtering or lookup, and added focused regressions for IPv6 loopback origins plus padded/blank native library requests.

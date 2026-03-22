@@ -171,6 +171,44 @@ public class MeshGatewayAuthMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_LocalIpv6OriginWithoutAllowList_PassesThrough()
+    {
+        var options = new MeshGatewayOptions
+        {
+            Enabled = true,
+            AllowedServices = new() { "pods" }
+        };
+
+        var (middleware, context) = CreateMiddleware(options);
+        context.Request.Path = "/mesh/http/pods";
+        context.Connection.RemoteIpAddress = IPAddress.IPv6Loopback;
+        context.Request.Headers["Origin"] = "https://[::1]:3000";
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LocalIpv6OriginWithUppercaseHost_StillPassesThrough()
+    {
+        var options = new MeshGatewayOptions
+        {
+            Enabled = true,
+            AllowedServices = new() { "pods" }
+        };
+
+        var (middleware, context) = CreateMiddleware(options);
+        context.Request.Path = "/mesh/http/pods";
+        context.Connection.RemoteIpAddress = IPAddress.IPv6Loopback;
+        context.Request.Headers["Origin"] = "https://[::1]:3000".Replace("::1", "::1".ToUpperInvariant());
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Fact]
     public void MeshGatewayConfigValidator_GenerateSecureToken_ReturnsNonEmptyString()
     {
         // Act
@@ -261,4 +299,3 @@ public class MeshGatewayAuthMiddlewareTests
         return (middleware, context);
     }
 }
-

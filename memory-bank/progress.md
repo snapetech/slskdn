@@ -5444,3 +5444,13 @@ Code quality improvements were completed as part of Option A:
 - Documented the new bug pattern immediately in ADR-0001 and committed it as `40a07bbd`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 17:20:00Z
+
+- Continued the broad boundary-normalization bughunt into the remaining dirty mesh/native controller pair:
+  - fixed `MeshGatewayAuthMiddleware` so localhost origin checks handle bracketed IPv6 loopback hosts case-insensitively instead of relying on raw host text shape
+  - fixed `LibraryItemsController` so `query`, `kinds`, and `contentId` are normalized at the API boundary before filtering, searching, or logging
+  - added focused regressions for uppercase/bracketed IPv6 localhost origins, whitespace-padded library search queries, and blank library item IDs
+- Documented the new bug pattern immediately in ADR-0001 and committed it as `cae5b599`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

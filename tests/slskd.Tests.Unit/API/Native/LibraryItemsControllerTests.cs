@@ -145,6 +145,36 @@ public class LibraryItemsControllerTests
     }
 
     [Fact]
+    public async Task SearchItems_WithWhitespacePaddedQuery_FiltersByTrimmedFilename()
+    {
+        var directories = new List<Soulseek.Directory>
+        {
+            new Soulseek.Directory("Music", new List<Soulseek.File>
+            {
+                new Soulseek.File(1, "Music/sintel.mp3", 1024, ".mp3"),
+                new Soulseek.File(2, "Music/other.mp3", 2048, ".mp3")
+            })
+        };
+
+        shareServiceMock
+            .Setup(x => x.BrowseAsync(It.IsAny<slskd.Shares.Share>()))
+            .ReturnsAsync(directories);
+
+        shareServiceMock
+            .Setup(x => x.ResolveFileAsync(It.IsAny<string>()))
+            .ReturnsAsync((string filename) => ("local", filename, 1024L));
+
+        var result = await controller.SearchItems(query: "  sintel  ", kinds: null, limit: 100, CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var responseType = okResult.Value!.GetType();
+        var itemsProp = responseType.GetProperty("items");
+        var items = (itemsProp!.GetValue(okResult.Value) as System.Collections.IEnumerable)?.Cast<object>().ToList();
+        Assert.NotNull(items);
+        Assert.Single(items);
+    }
+
+    [Fact]
     public async Task SearchItems_WithKinds_FiltersByMediaKind()
     {
         // Arrange
@@ -181,6 +211,15 @@ public class LibraryItemsControllerTests
         var mediaKindProp = itemType.GetProperty("MediaKind");
         var mediaKind = mediaKindProp?.GetValue(items[0]) as string;
         Assert.Equal("Audio", mediaKind);
+    }
+
+    [Fact]
+    public async Task GetItem_WithWhitespaceContentId_ReturnsBadRequest()
+    {
+        var result = await controller.GetItem("   ", CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.NotNull(badRequest.Value);
     }
 
     [Fact]
