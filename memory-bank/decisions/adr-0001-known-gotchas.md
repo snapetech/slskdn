@@ -270,6 +270,29 @@ public bool IsAudio => ContentIdParser.NormalizeDomain(Domain, Type)
 
 **Why This Keeps Happening**: It is easy to treat the textual content ID format and the semantic media domain as the same thing. They are not. `content:mb:recording:*` is still audio content even though the raw domain token is `mb`. When the codebase mixes canonical media domains with source-specific ID schemes, normalize before filtering or classification.
 
+### 0x13. Transfer Progress Proxies Must Never Return Blank Filenames To Legacy Clients
+
+**The Bug**: The bridge transfer-progress proxy cached `Path.GetFileName(meshStatus.TargetPath)` directly. If the target path was empty or not yet a usable filename, legacy clients got a blank filename field.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/TransferProgressProxy.cs`
+
+**Wrong**:
+```csharp
+Filename = session.CachedFilename ??= Path.GetFileName(meshStatus.TargetPath),
+```
+
+**Correct**:
+```csharp
+filename = Path.GetFileName(meshStatus.TargetPath);
+if (string.IsNullOrWhiteSpace(filename))
+{
+    filename = session.MeshTransferId;
+}
+```
+
+**Why This Keeps Happening**: Readback/proxy layers often assume execution state always has a stable final path. In practice, proxies can observe transfers before that path is useful. Legacy compatibility responses need a guaranteed non-empty presentation value even if it is only a stable transfer identifier fallback.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
