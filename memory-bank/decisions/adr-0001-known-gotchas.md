@@ -10232,3 +10232,67 @@ channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : ch
 ```
 
 **Why This Keeps Happening**: pod/channel APIs look simple enough that it is easy to assume route keys arrive in canonical form. They do not. If a controller does existence checks, storage queries, or updates keyed by `podId` / `channelId`, trim those strings first or storage behavior depends on transport formatting rather than the real logical identifier.
+
+### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
+
+**The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
+
+**Files Affected**:
+- `src/slskd/API/Native/SignalSystemController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageStorageController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageSigningController.cs`
+- `src/slskd/PodCore/API/Controllers/PodDhtController.cs`
+
+**Wrong**:
+```csharp
+active_channels = signalBus != null ? new[] { "mesh", "bt_extension" } : Array.Empty<string>(),
+```
+
+```csharp
+var results = await messageStorage.SearchMessagesAsync(podId, query, channelId, limit, cancellationToken);
+```
+
+```csharp
+if (request?.Pod == null)
+{
+    return BadRequest(...);
+}
+
+return await _podPublisher.PublishAsync(request.Pod, cancellationToken);
+```
+
+**Correct**:
+```csharp
+var activeChannels = options.Enabled && signalBus != null
+    ? new[]
+    {
+        options.MeshChannel.Enabled ? "mesh" : null,
+        options.BtExtensionChannel.Enabled ? "bt_extension" : null,
+    }.Where(channel => channel != null).ToArray()
+    : Array.Empty<string>();
+```
+
+```csharp
+if (limit <= 0 || limit > 500)
+{
+    return BadRequest("limit must be between 1 and 500");
+}
+```
+
+```csharp
+request = request with
+{
+    PrivateKey = request.PrivateKey.Trim(),
+    Message = NormalizeMessage(request.Message),
+};
+```
+
+```csharp
+request = request with { Pod = NormalizePod(request.Pod) };
+if (string.IsNullOrWhiteSpace(request.Pod.PodId))
+{
+    return BadRequest(...);
+}
+```
+
+**Why This Keeps Happening**: these endpoints feel like thin wrappers around internal services, so it is easy to skip the same boundary work enforced elsewhere. That is exactly how config drift, padded IDs, and misleading status output get back into the public API. Treat helper/status controllers the same as any other external boundary: normalize request objects, enforce documented ranges, and derive status from actual enabled config instead of DI presence alone.
