@@ -11220,3 +11220,53 @@ return Ok(new
 ```
 
 **Why This Keeps Happening**: once a response is already wrapped in a public envelope, it is easy to assume any embedded `error` member is safe too. It is not. Treat every nested `Detail` or `error` field as a separate API boundary and translate backend strings there as well.
+
+### 0k70. Parser And Helper Error Strings Must Not Escape Through Administrative Controllers
+
+**The Bug**: administrative endpoints often work with local helpers instead of service DTOs, so they slip past leak checks. YAML validation helpers, federation publish helpers, and dump-capture helpers were still returning raw parser or runtime strings directly to clients even after the broader exception sanitization passes.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/OptionsController.cs`
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/Core/API/Controllers/ApplicationController.cs`
+
+**Wrong**:
+```csharp
+return BadRequest(error);
+```
+
+```csharp
+return Ok(error);
+```
+
+```csharp
+return BadRequest(error ?? "Unable to publish activity");
+```
+
+```csharp
+return StatusCode(507, error);
+```
+
+**Correct**:
+```csharp
+Log.Error("Failed to validate YAML configuration: {Error}", error);
+return BadRequest("Invalid YAML configuration");
+```
+
+```csharp
+return Ok("Invalid YAML configuration");
+```
+
+```csharp
+_logger.LogWarning("[ActivityPub] Failed to publish outbox activity for {Actor}: {Error}",
+    actorName,
+    error ?? "Unknown error");
+return BadRequest("Unable to publish activity");
+```
+
+```csharp
+Log.Warning("Dump failed due to insufficient space or resources: {Error}", error);
+return StatusCode(507, "Insufficient space to create memory dump.");
+```
+
+**Why This Keeps Happening**: these controllers do not look like classic service-boundary code, so raw helper strings feel harmless. They are still internal diagnostics. Treat every helper-produced string as untrusted for HTTP responses unless it is an intentionally stable public message.
