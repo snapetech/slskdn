@@ -113,7 +113,7 @@ public class MetricsOptionsValidationTests
     [Fact]
     public void ApiKeyOptions_InvalidCidr_DoesNotLeakParserDetails()
     {
-        var options = new Options.AuthenticationOptions.ApiKeysOptions.ApiKeyOptions
+        var options = new Options.WebOptions.WebAuthenticationOptions.ApiKeyOptions
         {
             Key = "0123456789abcdef",
             Cidr = "not-a-cidr",

@@ -359,7 +359,7 @@ Respond with JSON as described above.",
                     Categories = LlmModeration.ContentCategory.None,
                     Confidence = 0.0,
                     Reasoning = "Failed to parse LLM response",
-                    Details = new Dictionary<string, string> { ["parse_error"] = ex.Message }
+                    Details = new Dictionary<string, string> { ["parse_error"] = "LLM response parsing failed" }
                 };
             }
         }
