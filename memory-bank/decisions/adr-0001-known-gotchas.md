@@ -7717,6 +7717,25 @@ if (ContainsContentPeerHints(list))
 
 **Why This Keeps Happening**: Once a logical key is hashed, prefix semantics are gone unless you carry classification metadata forward separately. Any later stats or filtering logic must inspect stored payload type/metadata, or record the classification at write time, instead of pretending the original string key can still be recovered from the hash.
 
+### 0k33. Diagnostic Calls Must Respect Identifier Size Contracts Too
+
+**The Bug**: `MeshHealthService` tried to count routing nodes by calling `FindClosest(Array.Empty<byte>(), 1000)`. The routing table expects 160-bit node IDs, so the diagnostic path started throwing `ArgumentException` as soon as any real node existed.
+
+**Files Affected**:
+- `src/slskd/Mesh/Health/MeshHealthService.cs`
+
+**Wrong**:
+```csharp
+var routingCount = memDht.FindClosest(Array.Empty<byte>(), 1000).Count;
+```
+
+**Correct**:
+```csharp
+var routingCount = memDht.GetNodeCount();
+```
+
+**Why This Keeps Happening**: Diagnostics often feel “out of band,” so it is tempting to call lower-level APIs with placeholder values. Those APIs still enforce their data-shape contracts. For health/stat paths, prefer dedicated count/stat accessors over fabricating sentinel IDs or requests that were never valid for the underlying protocol.
+
 ---
 
 *Last updated: 2026-03-22*
