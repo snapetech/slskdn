@@ -12421,3 +12421,33 @@ Error = "Mesh content fetch failed",
 ```
 
 **Why This Keeps Happening**: once one layer receives a “safe enough” error string from another component, it feels natural to pass it through. But protocol error text is still externally influenced data. Consumer-facing result objects need their own stable failure strings instead of relaying upstream messages.
+
+### 0k81. Transport Status And Connectivity Results Are Public Surfaces Too
+
+**The Bug**: transport health/status objects and NAT coordination results were still storing `ex.Message` or downstream peer error text directly in fields like `LastError` and `ErrorMessage`. Those values are observable through diagnostics and caller-facing flows, so low-level socket, DNS, and proxy details leaked out.
+
+**Files Affected**:
+- `src/slskd/Mesh/Nat/HolePunchCoordinator.cs`
+- `src/slskd/Common/Security/WebSocketTransport.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Common/Security/HttpTunnelTransport.cs`
+- `src/slskd/Common/Security/MeekTransport.cs`
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `src/slskd/Common/Security/RelayOnlyTransport.cs`
+- `src/slskd/Common/Security/Obfs4Transport.cs`
+- `src/slskd/Mesh/Transport/TorSocksDialer.cs`
+- `src/slskd/Mesh/Transport/I2pSocksDialer.cs`
+
+**Wrong**:
+```csharp
+_status.LastError = ex.Message;
+return new HolePunchResult(false, null, null, reply.ErrorMessage ?? "Unknown error");
+```
+
+**Correct**:
+```csharp
+_status.LastError = "Tor SOCKS proxy unavailable";
+return new HolePunchResult(false, null, null, "Hole punch request failed");
+```
+
+**Why This Keeps Happening**: status and connectivity models look like internal diagnostics, so it is easy to forget that they are still part of the observable contract. Treat `LastError`, `ErrorMessage`, and similar result fields as public API unless proven otherwise.
