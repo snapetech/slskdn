@@ -10565,3 +10565,59 @@ username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
 ```
 
 **Why This Keeps Happening**: utility endpoints often look read-only and harmless, so their boundary rules get relaxed. That is where subtle interoperability bugs and information leaks creep in. Treat report/status surfaces like any other public API: normalize query text, parse typed headers instead of comparing raw strings, and log exceptions privately while returning stable error contracts.
+
+### 0k65. Thin Utility Controllers Still Need Identifier And Payload Normalization
+
+**The Bug**: controllers like `NowPlayingController`, `UsersController`, `DhtRendezvousController`, and relay utility endpoints looked simple enough that they were forwarding raw route/query/body strings directly into services. That leaves whitespace-padded usernames, agent names, content IDs, or webhook track fields to drift through the API boundary and behave differently from the normalized values used everywhere else.
+
+**Files Affected**:
+- `src/slskd/NowPlaying/API/NowPlayingController.cs`
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+- `src/slskd/Relay/API/Controllers/RelayController.cs`
+
+**Wrong**:
+```csharp
+NowPlaying.SetTrack(request.Artist, request.Title, request.Album);
+```
+
+```csharp
+var endpoint = await Users.GetIPEndPointAsync(username);
+```
+
+```csharp
+_blocklist.BlockUsername(request.Username, request.Reason ?? "Manual block", duration, request.Permanent);
+```
+
+```csharp
+if (string.IsNullOrEmpty(agentName))
+{
+    return BadRequest(...);
+}
+```
+
+**Correct**:
+```csharp
+var artist = request.Artist?.Trim() ?? string.Empty;
+var title = request.Title?.Trim() ?? string.Empty;
+var album = string.IsNullOrWhiteSpace(request.Album) ? null : request.Album.Trim();
+```
+
+```csharp
+username = username?.Trim() ?? string.Empty;
+```
+
+```csharp
+request = request with
+{
+    Username = request.Username?.Trim() ?? string.Empty,
+    Reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
+};
+```
+
+```csharp
+agentName = string.IsNullOrWhiteSpace(agentName) ? null : agentName.Trim();
+contentId = contentId?.Trim() ?? string.Empty;
+```
+
+**Why This Keeps Happening**: the thinner an endpoint looks, the easier it is to assume the service layer will “just handle it.” That is exactly how raw identifiers and padded payload fields keep re-entering the system after bigger boundary cleanups. Even when an action is just a pass-through, normalize route/query/body strings before the service call or the API contract depends on transport formatting instead of logical identity.
