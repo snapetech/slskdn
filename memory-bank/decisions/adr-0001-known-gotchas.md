@@ -9017,6 +9017,34 @@ if (int.TryParse(parts[0], out responseIndex) &&
 
 **Why This Keeps Happening**: Parsers for compact route tokens often validate syntax but not intent. A negative number is still a valid integer, so it slips through unless the parser also enforces the semantic range expected by downstream indexing logic. Any route or API helper that feeds list indexing should reject negative indices at parse time rather than relying on later fallback behavior.
 
+### 0k48. Service Contracts Must Model “Not Found” As Nullable Results Instead Of Returning `null!` From Non-Nullable Tasks
+
+**The Bug**: Several services advertised non-nullable return types even though their “not found” path returned `null!` anyway. `HashDbService.GetPeerMetricsAsync(...)` returned `null!` when no row existed, `CanonicalStatsService.AggregateStatsAsync(...)` returned `null!` when a profile had no variants, and `LibraryHealthService.GetScanStatusAsync(...)` returned `null!` when a scan ID was missing. That hides real absence behind compiler suppression and makes callers rely on impossible contracts.
+
+**Files Affected**:
+- `src/slskd/HashDb/IHashDbService.cs`
+- `src/slskd/HashDb/HashDbService.cs`
+- `src/slskd/Audio/ICanonicalStatsService.cs`
+- `src/slskd/Audio/CanonicalStatsService.cs`
+- `src/slskd/LibraryHealth/ILibraryHealthService.cs`
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+
+**Wrong**:
+```csharp
+Task<PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default);
+...
+return Task.FromResult<PeerPerformanceMetrics>(null!);
+```
+
+**Correct**:
+```csharp
+Task<PeerPerformanceMetrics?> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default);
+...
+return Task.FromResult<PeerPerformanceMetrics?>(null);
+```
+
+**Why This Keeps Happening**: It is easy to preserve pre-nullability method signatures and then “cheat” with `null!` once a missing-row case appears. That silences the compiler but creates a worse bug: downstream code now has an impossible contract and has to guess whether absence can really happen. If a service has a legitimate “not found” outcome, make that nullable in the interface and let callers handle it intentionally.
+
 ---
 
 *Last updated: 2026-03-22*
