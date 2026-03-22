@@ -7889,6 +7889,32 @@ return isValidSignature
 
 **Why This Keeps Happening**: It is tempting to “turn on” signature requirements before the payload format is nailed down, especially when a signing primitive already exists elsewhere in the codebase. That creates a feature that looks security-conscious but cannot ever succeed. Any signed model needs a versioned canonical payload format first; only then should validation reject unsigned or unverifiable data.
 
+### 0k37. Shared Discovery Indexes Must Remove One ID From The Typed List, Not Blank The Whole Key
+
+**The Bug**: `PodDiscoveryService.UnregisterPodAsync(...)` removed a pod from discovery by writing `string.Empty` to every discovery key. Those keys are read back as `List<string>`, so unregistering one pod could either make the key unreadable or wipe unrelated pods that shared the same `all`, `tag`, `name`, or `content` index.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodDiscoveryService.cs`
+
+**Wrong**:
+```csharp
+var removalTasks = registration.DiscoveryKeys.Select(key =>
+    _dhtClient.PutAsync(key, string.Empty, ttlSeconds: 300, cancellationToken));
+```
+
+**Correct**:
+```csharp
+var podIds = await DiscoverPodIdsFromKeyAsync(discoveryKey, cancellationToken);
+var updatedPodIds = podIds
+    .Where(existingPodId => !string.Equals(existingPodId, podId, StringComparison.Ordinal))
+    .Distinct(StringComparer.Ordinal)
+    .ToList();
+
+await _dhtClient.PutAsync(discoveryKey, updatedPodIds, ttlSeconds: 300, cancellationToken);
+```
+
+**Why This Keeps Happening**: Shared secondary indexes feel like “soft cache” data, so it is easy to treat unregister as “clear the key” instead of “remove one membership entry.” That breaks as soon as multiple objects share the same index key. Any typed shared index must be updated with the same shape used for reads, and unregister/update paths must remove only the target member while preserving the rest of the index.
+
 ---
 
 *Last updated: 2026-03-22*
