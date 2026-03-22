@@ -10391,6 +10391,36 @@ if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || star
 
 **Why This Keeps Happening**: these look like “small helper” endpoints, so it is easy to hand-wave the exact boundary semantics. But helpers still define API contracts. If a range is documented as inclusive, allow a single-point range. If identifiers come from external ecosystems like MusicBrainz, dedupe with the comparison semantics clients actually expect.
 
+### 0k67. Compatibility Controllers Must Not Echo Raw Exception Details Back To Clients
+
+**The Bug**: compatibility endpoints were returning raw exception messages in `500` payloads. `SearchCompatibilityController` included `message = ex.Message`, and `UsersCompatibilityController` returned `details = ex.Message`. That leaks internal state and downstream-library messages through the public compat surface even though the server already logs the exception.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/SearchCompatibilityController.cs`
+- `src/slskd/API/Compatibility/UsersCompatibilityController.cs`
+- `tests/slskd.Tests.Unit/API/Compatibility/SearchCompatibilityControllerTests.cs`
+- `tests/slskd.Tests.Unit/API/Compatibility/UsersCompatibilityControllerTests.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Search failed: {Message}", ex.Message);
+    return StatusCode(500, new { error = "Search failed", message = ex.Message });
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Search failed");
+    return StatusCode(500, new { error = "Search failed" });
+}
+```
+
+**Why This Keeps Happening**: compatibility controllers often start as thin adapters over other services, and it is tempting to surface the caught exception to help legacy clients debug. That turns internal library/service failures into API data leaks. Log the exception server-side, but keep the compatibility response generic unless the message is explicitly part of the public contract.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
