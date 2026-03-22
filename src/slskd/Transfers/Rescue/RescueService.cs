@@ -205,7 +205,7 @@ namespace slskd.Transfers.Rescue
                     _ = ObserveBackgroundTaskAsync(
                         Task.Run(async () =>
                         {
-                            var result = await multiSource.DownloadAsync(multiSourceRequest, ct).ConfigureAwait(false);
+                            var result = await multiSource.DownloadAsync(multiSourceRequest, CancellationToken.None).ConfigureAwait(false);
                             if (result.Success)
                             {
                                 log.Information("[RESCUE] Multi-source download completed successfully: {File}, {Bytes} bytes in {TimeMs}ms",

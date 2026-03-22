@@ -689,6 +689,14 @@ internal class TestSoulfindBridgeService : ISoulfindBridgeService
             ActiveConnections = 0,
             StartedAt = _startedAt ?? DateTimeOffset.MinValue
         });
+
+    public void RecordClientConnection(string clientId)
+    {
+    }
+
+    public void RecordClientDisconnection(string clientId)
+    {
+    }
 }
 
 internal class NullProxy<T> : DispatchProxy where T : class

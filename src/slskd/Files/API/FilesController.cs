@@ -291,6 +291,11 @@ namespace slskd.Files.API
                 Log.Warning("File deletion of '{File}' forbidden", requestedFilename);
                 return Forbid();
             }
+            catch (UnauthorizedException)
+            {
+                Log.Warning("File deletion of '{File}' forbidden", requestedFilename);
+                return Forbid();
+            }
             catch (NotFoundException)
             {
                 Log.Information("File '{File}' not found", requestedFilename);

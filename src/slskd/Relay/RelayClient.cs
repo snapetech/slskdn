@@ -119,7 +119,7 @@ namespace slskd.Relay
                 }
 
                 StartCancellationTokenSource?.Dispose();
-                StartCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                StartCancellationTokenSource = new CancellationTokenSource();
                 StartRequested = true;
 
                 // retry indefinitely

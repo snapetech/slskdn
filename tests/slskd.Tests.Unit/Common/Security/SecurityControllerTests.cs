@@ -19,7 +19,7 @@ public class SecurityControllerTests
     {
         var circuitBuilder = new Mock<slskd.Mesh.IMeshCircuitBuilder>();
         circuitBuilder
-            .Setup(x => x.BuildCircuitAsync("peer-1", It.IsAny<int?>()))
+            .Setup(x => x.BuildCircuitAsync("peer-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("secret failure"));
 
         var controller = CreateController(circuitBuilder: circuitBuilder.Object);

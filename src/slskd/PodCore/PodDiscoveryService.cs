@@ -116,7 +116,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 DiscoveryKeys: discoveryKeys,
                 RegisteredAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to register pod for discovery");
         }
     }
 
@@ -175,7 +175,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 Success: false,
                 PodId: podId,
                 RemovedKeys: Array.Empty<string>(),
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to unregister pod from discovery");
         }
     }
 
@@ -218,7 +218,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 SearchTerm: nameSlug,
                 TotalFound: 0,
                 SearchedAt: DateTimeOffset.UtcNow,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to discover pods by name");
         }
     }
 
@@ -253,7 +253,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 SearchTerm: tag,
                 TotalFound: 0,
                 SearchedAt: DateTimeOffset.UtcNow,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to discover pods by tag");
         }
     }
 
@@ -303,7 +303,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 SearchTerm: string.Join(",", tagList),
                 TotalFound: 0,
                 SearchedAt: DateTimeOffset.UtcNow,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to discover pods by tags");
         }
     }
 
@@ -339,7 +339,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 SearchTerm: limit.ToString(),
                 TotalFound: 0,
                 SearchedAt: DateTimeOffset.UtcNow,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to discover pods");
         }
     }
 
@@ -374,7 +374,7 @@ public class PodDiscoveryService : IPodDiscoveryService
                 SearchTerm: contentId,
                 TotalFound: 0,
                 SearchedAt: DateTimeOffset.UtcNow,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to discover pods by content");
         }
     }
 

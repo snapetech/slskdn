@@ -20,6 +20,7 @@ namespace slskd.Transfers.MultiSource.API
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
@@ -88,6 +89,8 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Search text is required");
             }
 
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+
             Log.Information("[MultiSource] Searching for users: {SearchText}", searchText);
 
             var searchResults = new List<SearchResponse>();
@@ -105,7 +108,8 @@ namespace slskd.Transfers.MultiSource.API
                 await Client.SearchAsync(
                     SearchQuery.FromText(searchText),
                     responseHandler: (response) => searchResults.Add(response),
-                    options: searchOptions);
+                    options: searchOptions,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
@@ -235,6 +239,8 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Filename is required");
             }
 
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+
             var searchTerm = IOPath.GetFileNameWithoutExtension(request.Filename);
             Log.Information("[MultiSource] Searching for file sources: {Filename} ({Size} bytes)", request.Filename, request.Size);
 
@@ -253,7 +259,8 @@ namespace slskd.Transfers.MultiSource.API
                 await Client.SearchAsync(
                     SearchQuery.FromText(searchTerm),
                     responseHandler: (response) => searchResults.Add(response),
-                    options: searchOptions);
+                    options: searchOptions,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
@@ -340,6 +347,8 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Filename and size are required");
             }
 
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+
             // First find sources with wide search
             var searchTerm = IOPath.GetFileNameWithoutExtension(request.Filename);
             var searchResults = new List<SearchResponse>();
@@ -354,7 +363,8 @@ namespace slskd.Transfers.MultiSource.API
                         responseLimit: 1000,
                         fileLimit: 100000,
                         filterResponses: true,
-                        minimumResponseFileCount: 1));
+                        minimumResponseFileCount: 1),
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
@@ -389,9 +399,9 @@ namespace slskd.Transfers.MultiSource.API
             var verificationResult = await MultiSource.FindVerifiedSourcesAsync(
                 sources.First().FullPath,
                 request.Size,
-                cancellationToken: HttpContext.RequestAborted);
+                cancellationToken: cancellationToken);
 
-            var chosenSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
+            var chosenSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, cancellationToken);
             var targetFingerprint = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
             var targetSemanticKey = verificationResult.BestSemanticKey;
 
@@ -415,7 +425,7 @@ namespace slskd.Transfers.MultiSource.API
                     TargetFingerprint = targetFingerprint,
                     TargetSemanticKey = targetSemanticKey,
                 },
-                HttpContext.RequestAborted);
+                cancellationToken);
 
             return Ok(downloadResult);
         }
@@ -434,6 +444,8 @@ namespace slskd.Transfers.MultiSource.API
             {
                 return BadRequest("Size is required (exact file size in bytes).");
             }
+
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
 
             Log.Information("[SWARM] Starting swarm download: {Filename} ({Size} bytes, useDb={UseDb})", request.Filename, request.Size, request.UseDiscoveryDb);
 
@@ -473,7 +485,8 @@ namespace slskd.Transfers.MultiSource.API
                             responseLimit: 2000,
                             fileLimit: 100000,
                             filterResponses: true,
-                            minimumResponseFileCount: 1));
+                            minimumResponseFileCount: 1),
+                        cancellationToken: cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -540,7 +553,7 @@ namespace slskd.Transfers.MultiSource.API
                         CandidateSources = allSources.ToDictionary(s => s.Username, s => s.FullPath),
                         TimeoutMs = 30000,
                     },
-                    HttpContext.RequestAborted);
+                    cancellationToken);
 
                 if (verificationResult.BestSources.Count < 2)
                 {
@@ -552,7 +565,7 @@ namespace slskd.Transfers.MultiSource.API
                     });
                 }
 
-                verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
+                verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, cancellationToken);
                 expectedHash = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
 
                 Log.Information("[SWARM] Verified {Count} sources with matching hash {Hash}",
@@ -578,7 +591,7 @@ namespace slskd.Transfers.MultiSource.API
                     TargetFingerprint = verificationResult?.BestSemanticFingerprint ?? expectedHash,
                     TargetSemanticKey = verificationResult?.BestSemanticKey,
                 },
-                HttpContext.RequestAborted);
+                cancellationToken);
 
             if (!downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.Error))
             {

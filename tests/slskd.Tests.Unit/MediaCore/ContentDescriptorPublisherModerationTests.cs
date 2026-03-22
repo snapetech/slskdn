@@ -41,7 +41,8 @@ namespace slskd.Tests.Unit.MediaCore
             {
                 ContentId = "test-content-id",
                 IsAdvertisable = true,
-                SizeBytes = 1024
+                SizeBytes = 1024,
+                Signature = new DescriptorSignature("pk", "ABCD", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             };
 
             _basePublisherMock
@@ -88,7 +89,8 @@ namespace slskd.Tests.Unit.MediaCore
             {
                 ContentId = "test-content-id",
                 IsAdvertisable = true,
-                SizeBytes = 1024
+                SizeBytes = 1024,
+                Signature = new DescriptorSignature("pk", "ABCD", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             };
 
             _basePublisherMock
@@ -111,7 +113,8 @@ namespace slskd.Tests.Unit.MediaCore
             {
                 ContentId = "test-content-id",
                 IsAdvertisable = true,
-                SizeBytes = 1024
+                SizeBytes = 1024,
+                Signature = new DescriptorSignature("pk", "ABCD", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             };
 
             _basePublisherMock
@@ -124,6 +127,29 @@ namespace slskd.Tests.Unit.MediaCore
             // Assert
             Assert.False(result.Success);
             Assert.Equal("test-content-id", result.ContentId);
+        }
+
+        [Fact]
+        public async Task PublishAsync_WhenBasePublisherThrows_ReturnsSanitizedErrorMessage()
+        {
+            var publisher = CreatePublisher();
+            var descriptor = new ContentDescriptor
+            {
+                ContentId = "test-content-id",
+                IsAdvertisable = true,
+                SizeBytes = 1024,
+                Signature = new DescriptorSignature("pk", "ABCD", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            };
+
+            _basePublisherMock
+                .Setup(x => x.PublishAsync(It.IsAny<ContentDescriptor>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("sensitive publish detail"));
+
+            var result = await publisher.PublishAsync(descriptor);
+
+            Assert.False(result.Success);
+            Assert.Equal("Failed to publish descriptor", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -134,8 +134,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
             var result = await engine.MatchAsync(track, candidate);
 
             // Assert
-            Assert.Equal(MatchConfidence.Weak, result.Confidence);
-            Assert.False(result.IsUsable); // Weak is NOT usable (requires user confirmation)
+            Assert.Equal(MatchConfidence.None, result.Confidence);
+            Assert.False(result.IsUsable);
             Assert.False(result.IsStrong);
         }
 

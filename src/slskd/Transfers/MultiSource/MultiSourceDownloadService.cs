@@ -776,7 +776,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             activity?.SetTag("swarm.download.error", ex.Message);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             _logger.LogError(ex, "SWARM DOWNLOAD FAILED: {Message}", ex.Message);
-            result.Error = ex.Message;
+            result.Error = "Multi-source download failed";
             result.Success = false;
             status.State = MultiSourceDownloadState.Failed;
             return result;
@@ -1359,7 +1359,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         {
             stopwatch.Stop();
             result.TimeMs = stopwatch.ElapsedMilliseconds;
-            result.Error = ex.Message;
+            result.Error = "Chunk download failed";
             result.Success = false;
 
             _logger.LogWarning(ex, "Chunk download failed from {Username}: {Message}", username, ex.Message);

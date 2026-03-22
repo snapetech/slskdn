@@ -42,7 +42,7 @@ public class SessionControllerTests
         });
 
         Assert.IsType<OkObjectResult>(result);
-        security.Verify(service => service.GenerateJwt("admin", Role.Administrator, It.IsAny<int?>()), Times.Once);
+        security.Verify(service => service.GenerateJwt("admin", Role.Administrator, null), Times.Once);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class SessionControllerTests
         });
 
         Assert.IsType<OkObjectResult>(result);
-        security.Verify(service => service.GenerateJwt("admin", Role.Administrator, It.IsAny<int?>()), Times.Once);
+        security.Verify(service => service.GenerateJwt("admin", Role.Administrator, null), Times.Once);
     }
 
     private static SessionController CreateController(

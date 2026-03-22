@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.API.Compatibility;
 
 using System.Linq;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -103,9 +104,13 @@ public class DownloadsCompatibilityControllerTests
             CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var text = ok.Value?.ToString() ?? string.Empty;
-        Assert.DoesNotContain("sensitive detail", text);
-        Assert.Contains("Failed to enqueue download", text);
+        var errors = Assert.IsAssignableFrom<IEnumerable<string>>(ok.Value!
+            .GetType()
+            .GetProperty("Errors", BindingFlags.Instance | BindingFlags.Public)!
+            .GetValue(ok.Value)!);
+        var error = Assert.Single(errors);
+        Assert.DoesNotContain("sensitive detail", error);
+        Assert.Contains("Failed to enqueue download", error);
     }
 
     private static DownloadsCompatibilityController CreateController(Mock<IDownloadService> downloadService)

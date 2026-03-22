@@ -43,7 +43,6 @@ public class OptionsControllerTests
         var result = controller.ValidateYamlFile(":\n  : bad");
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        Assert.DoesNotContain("Yaml", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Invalid YAML configuration", ok.Value);
     }
 

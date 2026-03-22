@@ -61,6 +61,42 @@ public class DescriptorRetrieverTests
         dht.Verify(client => client.GetAsync<ContentDescriptor>("mesh:content:content:mb:recording:2", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task RetrieveAsync_WhenDhtLookupThrows_ReturnsSanitizedErrorMessage()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(client => client.GetAsync<ContentDescriptor>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive DHT detail"));
+
+        var retriever = CreateRetriever(dht.Object);
+
+        var result = await retriever.RetrieveAsync("content:mb:recording:3");
+
+        Assert.False(result.Found);
+        Assert.Equal("Failed to retrieve descriptor from DHT", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_WhenValidatorThrows_ReturnsSanitizedValidationError()
+    {
+        var validator = new Mock<IDescriptorValidator>();
+        validator.Setup(v => v.Validate(It.IsAny<ContentDescriptor>(), out It.Ref<string?>.IsAny!))
+            .Throws(new InvalidOperationException("sensitive validation detail"));
+
+        var retriever = new DescriptorRetriever(
+            NullLogger<DescriptorRetriever>.Instance,
+            Mock.Of<IMeshDhtClient>(),
+            validator.Object,
+            Options.Create(new MediaCoreOptions()));
+
+        var result = await retriever.VerifyAsync(new ContentDescriptor { ContentId = "content:a" }, DateTimeOffset.UtcNow);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("Descriptor verification failed", result.ValidationError);
+        Assert.DoesNotContain("sensitive", result.ValidationError, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static DescriptorRetriever CreateRetriever(IMeshDhtClient? dht = null)
     {
         return new DescriptorRetriever(

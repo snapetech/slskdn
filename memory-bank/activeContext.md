@@ -23,52 +23,21 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt across `src/slskd`, focused on controller-boundary normalization, truthful status/config reporting, and keeping adjacent dirty files/tests committed in coherent batches
+- **Current Task**: Validation drift cleanup after the broad runtime/read-side bughunt, focused on getting build/test/lint green without regressing the controller-boundary hardening work
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the controller/runtime bughunt into downstream helper error passthrough:
-    - `ApplicationController`, `OptionsController`, `SearchActionsController`, `ActivityPubController`, and `MultiSourceController` now log detailed downstream/tool/service failures privately and return stable client-safe contracts instead of echoing raw error strings
-    - `SessionController` now trims configured credentials before constant-time comparison so padded config values do not break otherwise-valid login requests
-    - `DiscoveryController` now uses a normalized local search-term value instead of mutating the request object before dispatch
-    - added/folded focused regressions in `OptionsControllerTests`, `SessionControllerTests`, `SearchActionsControllerTests`, and `MultiSourceControllerTests`
-  - Ran the user-requested validation pass:
-    - `dotnet test` still fails in the standing hardening/auth cluster (`HardeningValidatorTests`, `DumpTests`, `MeshGatewayControllerTests`) and also stops on older compile drift in integration/unit test projects
-    - `dotnet build` still fails on the same standing test-project compile drift (`SlskdnTestClient`/`StubWebApplicationFactory` bridge interface changes, older `EventsControllerTests`, `SecurityControllerTests`, `RoomsControllerTests`, PodCore test constructor/signature drift)
-    - `./bin/lint` is not executable directly on this machine; `bash ./bin/lint` runs and currently fails on pre-existing formatting debt in `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, `SocialFederation/FederationService.cs`, and `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`
-  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers, identity/search, Solid, Users, PodCore, and final port-forward/options/share spillover into the same working sweep.
-  - Normalized additional controller behavior:
-    - `FilesController` now validates encoded route segments before Base64 decode/path resolution and returns explicit `400`s for invalid file/directory paths
-    - `RoomsController` and `ConversationsController` now trim room/user/message inputs and reject blank or invalid identifiers before tracker/service dispatch
-    - `SecurityController` now exposes the missing `GET /security/adversarial` route, validates count/limit inputs, trims security admin identifiers, and sanitizes remaining transport/config/circuit failure contracts
-    - adjacent relay upload/download helper spillover was folded in so token/header inputs are trimmed, invalid Base64 relay filenames return `400`, and share-validation failures no longer leak raw exception text
-    - maintenance/debug helpers in native library lookup, port forwarding, HashDb optimization, mesh NAT detection, transfer queue operations, and multi-source search/download now return sanitized `500` contracts instead of raw exception text
-    - `ContactsController` and `SearchesController` now return stable sanitized invite/search failure contracts instead of exposing decode/start exceptions
-    - `SolidController`, `UsersController`, `PodContentController`, `PodChannelController`, and native `PodsController` now stop surfacing raw policy/offline/service-validation exception text
-    - `PortForwardingController`, `OptionsController`, and `SharesController` now return stable duplicate-forward/YAML-validation/download-enqueue error contracts instead of surfacing underlying exception text
-  - Continued with another pass focused on unstable controller-level catch/rethrow and spillover error contracts:
-    - `EventsController` now returns stable `500` contracts for list/raise failures instead of logging and rethrowing, and trims raised-event route/body input before parsing
-    - `ProfileController` now rejects null bodies for profile update/invite creation, trims `peerId` lookups, and no longer leaks thrown exception text from invite generation
-    - `DiscoveryController` now trims `SearchTerm` and rejects non-positive `size`, `limit`, and `minSources` queries before dispatch
-    - folded adjacent dirty spillover into the same batch so `DownloadsCompatibilityController`, `SearchActionsController`, and `SharesController` no longer surface raw exception messages in client-facing error lists/details
-  - Continued into PodCore/native service-result contracts:
-    - `PodMembershipController` now returns a fixed not-found contract instead of surfacing membership service `ErrorMessage` text
-    - `PodDhtController` now returns a fixed pod-not-found contract instead of surfacing publisher `ErrorMessage` text
-    - `PodOpinionController` now returns a fixed publish-failure contract instead of surfacing opinion service `ErrorMessage` text
-    - added focused regressions for those sanitized result-message paths
-  - Folded the next dirty result-contract spillover into the same sweep:
-    - `PodDiscoveryController`, `PodJoinLeaveController`, and `PodMessageRoutingController` now return stable public failure contracts instead of forwarding service `ErrorMessage` values
-    - `MeshGatewayController` now returns a stable service-error message instead of forwarding mesh reply text
-    - `ContentDescriptorPublisherController` now returns stable bad-request contracts for failed publish/update paths instead of raw publisher result objects
-    - `DescriptorRetrieverController` now returns a stable `Descriptor not found` contract instead of surfacing retriever result text
-    - added/folded focused regressions for the remaining PodCore/Mesh/MediaCore failure paths, including a new `DescriptorRetrieverControllerTests` file
-  - Folded the next dirty validation/not-found batch into the same sweep:
-    - `OptionsController`, `HashDbController`, and `MeshController` no longer surface raw validation or sync-result detail
-    - `CapabilitiesController`, `ContentIdController`, and `PodsController` no longer echo raw usernames, external IDs, or pod IDs in public not-found responses
-    - added/folded focused regressions for those sanitized validation/not-found contracts, including a new `CapabilitiesControllerTests` file
-  - Validation has still not been run in this pass.
-  - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, the maintenance/status leak cleanup across native/hashdb/mesh/transfers, the identity/search helper cleanup, the Solid/users/PodCore error-contract fixes, and the final port-forward/options/share spillover.
-  - Validation has still not been run in this pass.
+  - Repaired the remaining validation drift from the broad bughunt:
+    - `PeerReputationStore` now persists explicit JSON DTOs for cold-load safety instead of deserializing runtime `PeerReputationEvent` objects directly
+    - lightweight dump/mesh gateway test hosts now default to loopback remote addresses so the tightened remote-auth rules are exercised predictably in tests
+    - `WarmCacheHintsRequest` now binds snake_case MBID fields explicitly
+    - `LocalPortForwarder` no longer reports pre-cancelled stream mappings as active
+    - `BridgePerformanceTests` now assert on forced-GC retention tolerance instead of noisy heap-delta release math
+  - Added new gotchas for runtime-type JSON persistence drift and GC retention test drift
+  - Validation is green:
+    - `dotnet build --no-restore` passed
+    - `dotnet test --no-build` passed
+    - `bash ./bin/lint` passed
 
 ---
 
@@ -112,14 +81,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Repair the standing validation drift in test projects first:
-   - bridge/dashboard integration stubs missing new interface members
-   - hardening/auth expectation drift in `HardeningValidatorTests`, `DumpTests`, and `MeshGatewayControllerTests`
-   - older unit-test constructor/signature mismatches in `EventsControllerTests`, `SecurityControllerTests`, `RoomsControllerTests`, and several PodCore tests
-2. Clear the existing formatting debt reported by `bash ./bin/lint`, starting with `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, `SocialFederation/FederationService.cs`, and `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`.
-3. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
-4. Prioritize remaining controller actions that still treat service result objects, validation helper output, or caller-supplied identifiers as client-safe response bodies.
-5. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, encoded payloads that still bypass boundary validation, or sanitized-error gaps on maintenance endpoints.
+1. Resume the broad runtime/read-side bughunt from clean green validation.
+2. Prioritize remaining places where public APIs may still report success while backing work is impossible, silently filtered, or split across normalized-vs-raw boundary assumptions.
+3. Continue reducing public error-contract leakage and post-trim duplicate collisions across any remaining native/compatibility/mesh/share/file-messaging helpers.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

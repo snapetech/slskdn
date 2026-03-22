@@ -151,7 +151,7 @@ namespace slskd.Core.API
             var normalizedPassword = login.Password;
             var configuredUsername = OptionsSnapshot.Value.Web.Authentication.Username?.Trim() ?? string.Empty;
             var configuredPassword = OptionsSnapshot.Value.Web.Authentication.Password?.Trim() ?? string.Empty;
-            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var remoteIp = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
 
             // Check for active lockout
             if (_loginAttempts.TryGetValue(remoteIp, out var existing) && existing.LockoutUntil.HasValue && existing.LockoutUntil.Value > DateTimeOffset.UtcNow)

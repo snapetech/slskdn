@@ -19,7 +19,7 @@ public class EventsControllerTests
         var eventService = new Mock<EventService>(Mock.Of<IDbContextFactory<EventsDbContext>>());
         eventService.Setup(x => x.Get(It.IsAny<int>(), It.IsAny<int>())).Throws(new InvalidOperationException("sensitive detail"));
 
-        var controller = new EventsController(eventService.Object, new EventBus());
+        var controller = new EventsController(eventService.Object, new EventBus(eventService.Object));
 
         var result = controller.GetEvents();
 
@@ -33,7 +33,7 @@ public class EventsControllerTests
     public void RaiseEvent_TrimsTypeBeforeParsing()
     {
         var eventService = new Mock<EventService>(Mock.Of<IDbContextFactory<EventsDbContext>>());
-        var controller = new EventsController(eventService.Object, new EventBus());
+        var controller = new EventsController(eventService.Object, new EventBus(eventService.Object));
 
         var result = controller.RaiseEvent(" Noop ", " x ");
 

@@ -91,6 +91,7 @@ public class MeshGatewayTestHostFactory : WebApplicationFactory<ProgramStub>
                                 o.Username = "mesh-gateway-test";
                                 o.Role = Role.Administrator;
                                 o.AllowRemoteNoAuth = true;
+                                o.AllowedCidrs = "127.0.0.1/32,::1/128";
                             });
                     services.AddAuthorization();
 
@@ -110,6 +111,11 @@ public class MeshGatewayTestHostFactory : WebApplicationFactory<ProgramStub>
                 });
                 web.Configure(app =>
                 {
+                    app.Use(async (context, next) =>
+                    {
+                        context.Connection.RemoteIpAddress = System.Net.IPAddress.Loopback;
+                        await next();
+                    });
                     app.UseMiddleware<MeshGatewayAuthMiddleware>();
                     app.UseRouting();
                     app.UseAuthentication();

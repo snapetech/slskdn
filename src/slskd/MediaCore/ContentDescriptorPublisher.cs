@@ -146,7 +146,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 Version: version,
                 PublishedAt: startTime,
                 Ttl: ttl,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to publish descriptor");
         }
     }
 

@@ -153,7 +153,7 @@ public class ContentIdRegistry : IContentIdRegistry
 
         var results = new List<string>();
         var normalizedDomain = ContentIdParser.NormalizeDomain(domain.Trim(), type.Trim());
-        var normalizedType = ContentIdParser.NormalizeType(normalizedDomain, type.Trim());
+        var normalizedType = ContentIdParser.NormalizeType(domain.Trim(), type.Trim());
 
         foreach (var contentId in _externalToContent.Values)
         {

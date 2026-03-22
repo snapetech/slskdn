@@ -15,11 +15,13 @@ namespace slskd.Mesh.Realm
     /// <remarks>
     ///     T-REALM-01: Ensures realm service is initialized during application startup.
     /// </remarks>
-    public sealed class RealmHostedService : IHostedService
+    public sealed class RealmHostedService : IHostedService, IDisposable
     {
         private readonly RealmService _realmService;
         private readonly Microsoft.Extensions.Options.IOptionsMonitor<MultiRealmConfig> _multiRealmConfig;
         private readonly Microsoft.Extensions.Logging.ILogger<RealmHostedService> _logger;
+        private CancellationTokenSource? _initializationCts;
+        private Task? _initializationTask;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="RealmHostedService"/> class.
@@ -49,15 +51,17 @@ namespace slskd.Mesh.Realm
             }
 
             // Initialize in background to avoid blocking other hosted services
-            _ = Task.Run(async () =>
+            _initializationCts?.Dispose();
+            _initializationCts = new CancellationTokenSource();
+            _initializationTask = Task.Run(async () =>
             {
                 try
                 {
                     _logger.LogInformation("[RealmHostedService] Starting realm initialization...");
-                    await _realmService.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    await _realmService.InitializeAsync(_initializationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[RealmHostedService] Realm initialization complete.");
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (_initializationCts.IsCancellationRequested)
                 {
                     _logger.LogInformation("[RealmHostedService] Realm initialization cancelled");
                 }
@@ -71,10 +75,32 @@ namespace slskd.Mesh.Realm
         }
 
         /// <inheritdoc/>
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            // Nothing to stop
-            return Task.CompletedTask;
+            _initializationCts?.Cancel();
+
+            if (_initializationTask != null)
+            {
+                try
+                {
+                    await _initializationTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown.
+                }
+            }
+
+            _initializationTask = null;
+            _initializationCts?.Dispose();
+            _initializationCts = null;
+        }
+
+        public void Dispose()
+        {
+            _initializationCts?.Dispose();
+            _initializationCts = null;
+            GC.SuppressFinalize(this);
         }
     }
 }

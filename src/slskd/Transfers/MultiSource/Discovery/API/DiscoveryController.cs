@@ -17,6 +17,7 @@
 
 namespace slskd.Transfers.MultiSource.Discovery.API
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
@@ -96,10 +97,12 @@ namespace slskd.Transfers.MultiSource.Discovery.API
 
             Log.Information("[Discovery API] Starting discovery for: {SearchTerm}", normalizedSearchTerm);
 
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+
             await Discovery.StartDiscoveryAsync(
                 normalizedSearchTerm,
                 request.EnableHashVerification ?? true, // Default ON for FLAC testing
-                HttpContext.RequestAborted);
+                cancellationToken);
 
             return Ok(new
             {

@@ -592,73 +592,73 @@ namespace slskd.SocialFederation.API
             switch (activity.Type)
             {
                 case "Follow":
-                {
-                    var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(remoteActorId))
                     {
-                        return (false, "Follow activity missing actor");
-                    }
+                        var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(remoteActorId))
+                        {
+                            return (false, "Follow activity missing actor");
+                        }
 
-                    await _relationshipStore.UpsertFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
-                    _logger.LogInformation("[ActivityPub] Recorded follower {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
-                    return (true, null);
-                }
+                        await _relationshipStore.UpsertFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                        _logger.LogInformation("[ActivityPub] Recorded follower {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
+                        return (true, null);
+                    }
 
                 case "Undo":
-                {
-                    if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
                     {
+                        if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return (true, null);
+                        }
+
+                        var remoteActorId = TryGetObjectActor(activity.Object) ?? activity.Actor?.ToString() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(remoteActorId))
+                        {
+                            return (false, "Undo follow missing actor");
+                        }
+
+                        await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                        _logger.LogInformation("[ActivityPub] Removed follower {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
                         return (true, null);
                     }
-
-                    var remoteActorId = TryGetObjectActor(activity.Object) ?? activity.Actor?.ToString() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(remoteActorId))
-                    {
-                        return (false, "Undo follow missing actor");
-                    }
-
-                    await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
-                    _logger.LogInformation("[ActivityPub] Removed follower {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
-                    return (true, null);
-                }
 
                 case "Accept":
-                {
-                    if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
-                            activity.Type, actorName, activity.Actor);
+                        if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                                activity.Type, actorName, activity.Actor);
+                            return (true, null);
+                        }
+
+                        var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(remoteActorId))
+                        {
+                            await _relationshipStore.UpsertFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        _logger.LogInformation("[ActivityPub] Accepted follow relationship with {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
                         return (true, null);
                     }
-
-                    var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(remoteActorId))
-                    {
-                        await _relationshipStore.UpsertFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    _logger.LogInformation("[ActivityPub] Accepted follow relationship with {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
-                    return (true, null);
-                }
 
                 case "Reject":
-                {
-                    if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
-                            activity.Type, actorName, activity.Actor);
+                        if (!string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                                activity.Type, actorName, activity.Actor);
+                            return (true, null);
+                        }
+
+                        var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(remoteActorId))
+                        {
+                            await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        _logger.LogInformation("[ActivityPub] Rejected follow relationship with {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
                         return (true, null);
                     }
-
-                    var remoteActorId = activity.Actor?.ToString() ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(remoteActorId))
-                    {
-                        await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    _logger.LogInformation("[ActivityPub] Rejected follow relationship with {RemoteActor} for actor {ActorName}", remoteActorId, actorName);
-                    return (true, null);
-                }
 
                 case "Create":
                 case "Update":
@@ -671,21 +671,21 @@ namespace slskd.SocialFederation.API
                     return (true, null);
 
                 case "Remove":
-                {
-                    if (string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
                     {
-                        var remoteActorId = TryGetObjectActor(activity.Object) ?? activity.Actor?.ToString() ?? string.Empty;
-                        if (!string.IsNullOrWhiteSpace(remoteActorId))
+                        if (string.Equals(TryGetObjectType(activity.Object), "Follow", StringComparison.OrdinalIgnoreCase))
                         {
-                            await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
-                            await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                            var remoteActorId = TryGetObjectActor(activity.Object) ?? activity.Actor?.ToString() ?? string.Empty;
+                            if (!string.IsNullOrWhiteSpace(remoteActorId))
+                            {
+                                await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                                await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                            }
                         }
-                    }
 
-                    _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
-                        activity.Type, actorName, activity.Actor);
-                    return (true, null);
-                }
+                        _logger.LogInformation("[ActivityPub] Stored inbound activity {Type} for actor {ActorName} from {Actor}",
+                            activity.Type, actorName, activity.Actor);
+                        return (true, null);
+                    }
 
                 default:
                     _logger.LogWarning("[ActivityPub] Stored unsupported activity type {Type} for actor {ActorName}", activity.Type, actorName);

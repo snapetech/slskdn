@@ -45,7 +45,7 @@ public class TransportAddressParsingTests
             "ParseEndpointAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
-        var parseTask = (Task<IPEndPoint?>)parseMethod!.Invoke(null, new object[] { "relay://[::1]:4040", "relay://", CancellationToken.None })!;
+        var parseTask = (Task<IPEndPoint?>)parseMethod!.Invoke(null, new object[] { "[::1]:4040", CancellationToken.None })!;
         var endpoint = await parseTask;
 
         Assert.NotNull(endpoint);

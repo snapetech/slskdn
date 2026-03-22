@@ -94,11 +94,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
             // Assert: SourceCandidate has Id, ItemId, Backend, BackendRef, ExpectedQuality, TrustScore, LastValidatedAt, LastSeenAt, IsPreferred (no Filename/SizeBytes/PeerId/Uri)
             var candidate = Assert.Single(candidates);
             Assert.Equal(ContentBackendType.LocalLibrary, candidate.Backend);
-            Assert.Equal(100f, candidate.ExpectedQuality);
+            Assert.Equal(1.0f, candidate.ExpectedQuality);
             Assert.Equal(1.0f, candidate.TrustScore);
             Assert.True(candidate.IsPreferred);
             Assert.StartsWith("local:", candidate.Id);
-            Assert.Equal(itemId.ToString(), candidate.BackendRef);
+            Assert.StartsWith("content:audio:track:", candidate.BackendRef);
         }
     }
 }

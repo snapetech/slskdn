@@ -31,7 +31,7 @@ namespace slskd.Transfers.MultiSource.Discovery
     /// <summary>
     ///     Service for continuous background discovery of file sources.
     /// </summary>
-    public class SourceDiscoveryService : IHostedService, ISourceDiscoveryService
+    public sealed class SourceDiscoveryService : IHostedService, ISourceDiscoveryService, IDisposable
     {
         /// <summary>
         ///     Search window duration in milliseconds (4 minutes 30 seconds).
@@ -116,7 +116,7 @@ namespace slskd.Transfers.MultiSource.Discovery
             lastCycleNewFiles = 0;
 
             cts?.Dispose();
-            cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts = new CancellationTokenSource();
 
             log.Information("[Discovery] Starting continuous discovery for: {SearchTerm} (hash verification: {HashEnabled})",
                 searchTerm, enableHashVerification);
@@ -153,6 +153,14 @@ namespace slskd.Transfers.MultiSource.Discovery
             cts?.Dispose();
             cts = null;
             log.Information("[Discovery] Stopped. Total cycles: {Cycles}", searchCycles);
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            cts?.Cancel();
+            cts?.Dispose();
+            cts = null;
         }
 
         /// <inheritdoc/>

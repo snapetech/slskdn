@@ -39,7 +39,7 @@ public class IpldControllerTests
 
         var result = await controller.AddLinks(
             "content:audio:track:1",
-            new AddLinksRequest(new[] { new IpldLinkRequest(" album ", " content:audio:album:1 ", " main " ) }),
+            new AddLinksRequest(new[] { new IpldLinkRequest(" album ", " content:audio:album:1 ", " main ") }),
             CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);

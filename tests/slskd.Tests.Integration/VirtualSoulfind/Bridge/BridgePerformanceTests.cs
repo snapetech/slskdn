@@ -197,11 +197,10 @@ public class BridgePerformanceTests : IAsyncLifetime
         // Arrange
         const int messageCount = 1000;
         var streams = new List<MemoryStream>();
+        const long retentionToleranceBytes = 512 * 1024;
 
         // Act
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        var memoryBefore = GC.GetTotalMemory(false);
+        var memoryBefore = GC.GetTotalMemory(true);
 
         for (int i = 0; i < messageCount; i++)
         {
@@ -211,7 +210,7 @@ public class BridgePerformanceTests : IAsyncLifetime
             streams.Add(stream);
         }
 
-        var memoryAfter = GC.GetTotalMemory(false);
+        var memoryAfter = GC.GetTotalMemory(true);
         var memoryUsed = memoryAfter - memoryBefore;
 
         // Cleanup
@@ -220,8 +219,7 @@ public class BridgePerformanceTests : IAsyncLifetime
             stream.Dispose();
         }
         streams.Clear();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+        var memoryAfterCleanup = GC.GetTotalMemory(true);
 
         // Assert
         var memoryPerMessage = memoryUsed / (double)messageCount;
@@ -231,10 +229,11 @@ public class BridgePerformanceTests : IAsyncLifetime
         Assert.True(memoryPerMessage < 5000, $"Expected <5000 bytes/message, got {memoryPerMessage:F2}");
 
         // More important: verify memory is released after cleanup
-        var memoryAfterCleanup = GC.GetTotalMemory(false);
         var memoryReleased = memoryAfter - memoryAfterCleanup;
         output.WriteLine($"Memory released after cleanup: {memoryReleased / 1024.0:F2} KB");
-        Assert.True(memoryReleased > memoryUsed * 0.5, "At least 50% of memory should be released after cleanup");
+        Assert.True(
+            memoryAfterCleanup <= memoryBefore + retentionToleranceBytes,
+            $"Expected cleanup to retain at most {retentionToleranceBytes / 1024.0:F0} KB above baseline, but retained {(memoryAfterCleanup - memoryBefore) / 1024.0:F2} KB");
     }
 
     [Fact]

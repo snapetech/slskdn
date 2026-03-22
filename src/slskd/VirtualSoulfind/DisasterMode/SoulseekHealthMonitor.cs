@@ -57,7 +57,7 @@ public interface ISoulseekHealthMonitor
 /// Monitors Soulseek server health and can trigger the opt-in legacy fallback when unavailable.
 /// Phase 6D: T-821 - Real implementation.
 /// </summary>
-public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
+public sealed class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService, IDisposable
 {
     private readonly ILogger<SoulseekHealthMonitor> logger;
     private readonly Soulseek.ISoulseekClient soulseekClient;
@@ -111,7 +111,7 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
         }
 
         monitoringCts?.Dispose();
-        monitoringCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        monitoringCts = new CancellationTokenSource();
         monitoringTask = Task.Run(() => MonitorLoopAsync(monitoringCts.Token), CancellationToken.None);
 
         logger.LogInformation("[VSF-HEALTH] Health monitoring started");
@@ -140,6 +140,13 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
         }
 
         monitoringTask = null;
+        monitoringCts?.Dispose();
+        monitoringCts = null;
+    }
+
+    public void Dispose()
+    {
+        monitoringCts?.Cancel();
         monitoringCts?.Dispose();
         monitoringCts = null;
     }

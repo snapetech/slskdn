@@ -31,7 +31,7 @@ public class RoomsControllerTests
         var result = await controller.SendMessage(" room-1 ", " hello ");
 
         Assert.IsType<StatusCodeResult>(result);
-        client.Verify(x => x.SendRoomMessageAsync("room-1", "hello"), Times.Once);
+        client.Verify(x => x.SendRoomMessageAsync("room-1", "hello", null), Times.Once);
     }
 
     [Fact]

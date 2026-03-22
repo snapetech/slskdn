@@ -49,6 +49,8 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private long _totalPeersDiscovered;
     private long _totalConnectionsAttempted;
     private long _totalConnectionsSucceeded;
+    private CancellationTokenSource? _backgroundInitializationCts;
+    private Task? _backgroundInitializationTask;
 
     // Rendezvous infohashes (SHA1 of key strings)
     private static readonly InfoHash MainInfohash = InfoHash.FromMemory(SHA1.HashData(Encoding.UTF8.GetBytes("slskdn-mesh-v1")));
@@ -86,7 +88,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         _logger.LogInformation("Starting DHT rendezvous service with MonoTorrent DHT");
 
         // Start the background service immediately to avoid blocking other hosted services
-        _ = StartBackgroundInitializationAsync(cancellationToken);
+        _backgroundInitializationCts?.Dispose();
+        _backgroundInitializationCts = new CancellationTokenSource();
+        _backgroundInitializationTask = StartBackgroundInitializationAsync(_backgroundInitializationCts.Token);
 
         return Task.CompletedTask;
     }
@@ -95,7 +99,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     {
         try
         {
-            await base.StartAsync(cancellationToken).ConfigureAwait(false);
+            await base.StartAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -144,6 +148,24 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
     public override async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        _backgroundInitializationCts?.Cancel();
+
+        if (_backgroundInitializationTask != null)
+        {
+            try
+            {
+                await _backgroundInitializationTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+        }
+
+        _backgroundInitializationTask = null;
+        _backgroundInitializationCts?.Dispose();
+        _backgroundInitializationCts = null;
+
         _logger.LogInformation("Stopping DHT rendezvous service");
 
         try

@@ -32,7 +32,7 @@ namespace slskd.Transfers.Rescue
     ///     Hosted service that periodically checks active downloads for underperformance
     ///     (queued too long, throughput too low, stalled) and triggers rescue mode.
     /// </summary>
-    public class UnderperformanceDetectorHostedService : IHostedService
+    public sealed class UnderperformanceDetectorHostedService : IHostedService, IDisposable
     {
         private readonly IDownloadService downloadService;
         private readonly IRescueService rescueService;
@@ -59,7 +59,7 @@ namespace slskd.Transfers.Rescue
         {
             log.Information("[RESCUE] Underperformance detector started");
             loopCts?.Dispose();
-            loopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            loopCts = new CancellationTokenSource();
             loopTask = Task.Run(() => RunLoopAsync(loopCts.Token), CancellationToken.None);
             await Task.CompletedTask;
         }
@@ -82,6 +82,14 @@ namespace slskd.Transfers.Rescue
             }
 
             loopTask = null;
+            loopCts?.Dispose();
+            loopCts = null;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            loopCts?.Cancel();
             loopCts?.Dispose();
             loopCts = null;
         }

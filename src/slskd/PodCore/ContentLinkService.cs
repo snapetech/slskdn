@@ -57,7 +57,7 @@ public class ContentLinkService : IContentLinkService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error validating content ID {ContentId}", contentId);
-            return new ContentValidationResult(false, contentId, $"Validation error: {ex.Message}");
+            return new ContentValidationResult(false, contentId, "Validation failed");
         }
     }
 

@@ -15,7 +15,7 @@ namespace slskd.Mesh.Realm
     /// <remarks>
     ///     T-REALM-02: Ensures multi-realm service is initialized during application startup.
     /// </remarks>
-    public sealed class MultiRealmHostedService : IHostedService
+    public sealed class MultiRealmHostedService : IHostedService, IDisposable
     {
         private readonly MultiRealmService _multiRealmService;
         private readonly Microsoft.Extensions.Options.IOptionsMonitor<MultiRealmConfig> _config;
@@ -52,7 +52,7 @@ namespace slskd.Mesh.Realm
 
             // Initialize in background to avoid blocking other hosted services
             _initializationCts?.Dispose();
-            _initializationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _initializationCts = new CancellationTokenSource();
             _initializationTask = Task.Run(async () =>
             {
                 try
@@ -61,7 +61,7 @@ namespace slskd.Mesh.Realm
                     await _multiRealmService.InitializeAsync(_initializationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization complete.");
                 }
-                catch (OperationCanceledException) when (_initializationCts.IsCancellationRequested)
+                catch (OperationCanceledException) when (_initializationCts?.IsCancellationRequested == true)
                 {
                     _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization cancelled");
                 }
@@ -92,6 +92,14 @@ namespace slskd.Mesh.Realm
             }
 
             _initializationTask = null;
+            _initializationCts?.Dispose();
+            _initializationCts = null;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _initializationCts?.Cancel();
             _initializationCts?.Dispose();
             _initializationCts = null;
         }

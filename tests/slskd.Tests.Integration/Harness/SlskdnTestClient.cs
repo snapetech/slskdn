@@ -611,6 +611,14 @@ internal class StubSoulfindBridgeServiceForTests : global::slskd.VirtualSoulfind
             ActiveConnections = 0,
             StartedAt = _isRunning ? DateTimeOffset.UtcNow : DateTimeOffset.MinValue
         });
+
+    public void RecordClientConnection(string clientId)
+    {
+    }
+
+    public void RecordClientDisconnection(string clientId)
+    {
+    }
 }
 
 internal class StubBridgeDashboardForTests : global::slskd.VirtualSoulfind.Bridge.IBridgeDashboard
@@ -637,6 +645,12 @@ internal class StubBridgeDashboardForTests : global::slskd.VirtualSoulfind.Bridg
         Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeStatistics());
 
     public void RecordRequest(string clientId, string requestType) { }
+
+    public void RecordConnection(string clientId, string ipAddress) { }
+
+    public void RecordAuthentication(string clientId, string username) { }
+
+    public void RecordDisconnection(string clientId) { }
 
     public void RecordMeshBenefit(long bytesViaMesh) { }
 }

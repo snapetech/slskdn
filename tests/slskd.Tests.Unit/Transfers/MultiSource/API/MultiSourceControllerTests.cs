@@ -24,7 +24,7 @@ public class MultiSourceControllerTests
                 It.IsAny<SearchQuery>(),
                 It.IsAny<Action<SearchResponse>>(),
                 It.IsAny<SearchScope>(),
-                It.IsAny<int>(),
+                It.IsAny<int?>(),
                 It.IsAny<SearchOptions>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive detail"));
@@ -53,7 +53,7 @@ public class MultiSourceControllerTests
                 It.IsAny<SearchQuery>(),
                 It.IsAny<Action<SearchResponse>>(),
                 It.IsAny<SearchScope>(),
-                It.IsAny<int>(),
+                It.IsAny<int?>(),
                 It.IsAny<SearchOptions>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive detail"));

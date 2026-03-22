@@ -109,7 +109,7 @@ public class PodMembershipControllerTests
         var membershipService = new Mock<IPodMembershipService>();
         membershipService
             .Setup(service => service.PublishMembershipAsync(It.IsAny<string>(), It.IsAny<PodMember>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MembershipPublishResult(false, "pod-1", "peer-1", null, null, null, "sensitive detail"));
+            .ReturnsAsync(new MembershipPublishResult(false, "pod-1", "peer-1", string.Empty, DateTimeOffset.MinValue, DateTimeOffset.MinValue, "sensitive detail"));
 
         var controller = new PodMembershipController(
             NullLogger<PodMembershipController>.Instance,
@@ -132,7 +132,7 @@ public class PodMembershipControllerTests
         var membershipService = new Mock<IPodMembershipService>();
         membershipService
             .Setup(service => service.GetMembershipAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MembershipRetrieveResult(false, "pod-1", "peer-1", null, "sensitive detail"));
+            .ReturnsAsync(new MembershipRetrievalResult(false, "pod-1", "peer-1", null, DateTimeOffset.MinValue, DateTimeOffset.MinValue, false, "sensitive detail"));
 
         var controller = new PodMembershipController(
             NullLogger<PodMembershipController>.Instance,

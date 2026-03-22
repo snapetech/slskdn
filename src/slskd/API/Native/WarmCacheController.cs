@@ -9,6 +9,7 @@ using slskd.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Text.Json.Serialization;
 using slskd;
 using slskd.Transfers.MultiSource.Caching;
 using OptionsModel = slskd.Options;
@@ -118,6 +119,6 @@ public class WarmCacheController : ControllerBase
 }
 
 public record WarmCacheHintsRequest(
-    List<string>? MbReleaseIds = null,
-    List<string>? MbArtistIds = null,
-    List<string>? MbLabelIds = null);
+    [property: JsonPropertyName("mb_release_ids")] List<string>? MbReleaseIds = null,
+    [property: JsonPropertyName("mb_artist_ids")] List<string>? MbArtistIds = null,
+    [property: JsonPropertyName("mb_label_ids")] List<string>? MbLabelIds = null);

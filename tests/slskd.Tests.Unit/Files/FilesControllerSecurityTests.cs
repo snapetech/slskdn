@@ -33,6 +33,7 @@ namespace slskd.Tests.Unit.Files
 
             var options = new slskd.Options
             {
+                RemoteFileManagement = true,
                 Directories = new slskd.Options.DirectoriesOptions
                 {
                     Downloads = "/test/downloads",

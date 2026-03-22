@@ -110,7 +110,7 @@ public class DescriptorRetriever : IDescriptorRetriever
             }
             catch (Exception ex)
             {
-                errorMessage = ex.Message;
+                errorMessage = "Failed to retrieve descriptor from DHT";
                 _logger.LogWarning(ex, "[DescriptorRetriever] Failed to retrieve {ContentId} from DHT", contentId);
             }
 
@@ -146,7 +146,7 @@ public class DescriptorRetriever : IDescriptorRetriever
                 RetrievalDuration: DateTimeOffset.UtcNow - startTime,
                 FromCache: false,
                 Verification: null,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to retrieve descriptor");
         }
     }
 
@@ -346,7 +346,7 @@ public class DescriptorRetriever : IDescriptorRetriever
                 SignatureValid: false,
                 FreshnessValid: false,
                 Age: age,
-                ValidationError: ex.Message);
+                ValidationError: "Descriptor verification failed");
         }
     }
 

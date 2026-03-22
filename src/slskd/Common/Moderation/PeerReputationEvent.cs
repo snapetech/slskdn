@@ -5,6 +5,7 @@
 namespace slskd.Common.Moderation
 {
     using System;
+    using System.Text.Json.Serialization;
 
     /// <summary>
     ///     Represents a reputation event for a peer.
@@ -23,6 +24,7 @@ namespace slskd.Common.Moderation
         /// <param name="contentId">Optional content ID associated with the event.</param>
         /// <param name="timestamp">The timestamp of the event.</param>
         /// <param name="metadata">Optional metadata about the event.</param>
+        [JsonConstructor]
         public PeerReputationEvent(
             string peerId,
             PeerReputationEventType eventType,
@@ -40,26 +42,26 @@ namespace slskd.Common.Moderation
         /// <summary>
         ///     Gets the peer identifier.
         /// </summary>
-        public string PeerId { get; }
+        public string PeerId { get; init; }
 
         /// <summary>
         ///     Gets the type of reputation event.
         /// </summary>
-        public PeerReputationEventType EventType { get; }
+        public PeerReputationEventType EventType { get; init; }
 
         /// <summary>
         ///     Gets the optional content ID associated with the event.
         /// </summary>
-        public string? ContentId { get; }
+        public string? ContentId { get; init; }
 
         /// <summary>
         ///     Gets the timestamp of the event.
         /// </summary>
-        public DateTimeOffset Timestamp { get; }
+        public DateTimeOffset Timestamp { get; init; }
 
         /// <summary>
         ///     Gets optional metadata about the event (e.g., reason details).
         /// </summary>
-        public string? Metadata { get; }
+        public string? Metadata { get; init; }
     }
 }

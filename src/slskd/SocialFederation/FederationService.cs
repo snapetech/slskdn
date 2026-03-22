@@ -121,47 +121,47 @@ namespace slskd.SocialFederation
             switch (normalized.Type)
             {
                 case "Follow":
-                {
-                    var remoteActorId = ExtractObjectActorId(normalized.Object);
-                    if (string.IsNullOrWhiteSpace(remoteActorId))
                     {
-                        return (null, "Follow activity requires a remote actor ID object");
-                    }
+                        var remoteActorId = ExtractObjectActorId(normalized.Object);
+                        if (string.IsNullOrWhiteSpace(remoteActorId))
+                        {
+                            return (null, "Follow activity requires a remote actor ID object");
+                        }
 
-                    var inboxUrl = await ResolveActorToInboxAsync(remoteActorId, cancellationToken).ConfigureAwait(false);
-                    if (string.IsNullOrWhiteSpace(inboxUrl))
-                    {
-                        return (null, $"Unable to resolve inbox for '{remoteActorId}'");
-                    }
+                        var inboxUrl = await ResolveActorToInboxAsync(remoteActorId, cancellationToken).ConfigureAwait(false);
+                        if (string.IsNullOrWhiteSpace(inboxUrl))
+                        {
+                            return (null, $"Unable to resolve inbox for '{remoteActorId}'");
+                        }
 
-                    normalized.Object = remoteActorId;
-                    normalized.To = new[] { remoteActorId };
-                    await _deliveryService.DeliverActivityAsync(normalized, new[] { inboxUrl }, cancellationToken).ConfigureAwait(false);
-                    await _relationshipStore.UpsertFollowingAsync(localActorName, remoteActorId, cancellationToken).ConfigureAwait(false);
-                    return (normalized, null);
-                }
+                        normalized.Object = remoteActorId;
+                        normalized.To = new[] { remoteActorId };
+                        await _deliveryService.DeliverActivityAsync(normalized, new[] { inboxUrl }, cancellationToken).ConfigureAwait(false);
+                        await _relationshipStore.UpsertFollowingAsync(localActorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                        return (normalized, null);
+                    }
 
                 case "Undo":
                 case "Remove":
-                {
-                    var recipients = ExtractRecipients(normalized.To);
-                    var inboxUrls = await ResolveInboxUrlsAsync(localActorName, normalized, recipients, cancellationToken).ConfigureAwait(false);
-                    if (inboxUrls.Count > 0)
                     {
-                        await _deliveryService.DeliverActivityAsync(normalized, inboxUrls, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    if (string.Equals(ExtractObjectType(normalized.Object), "Follow", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var remoteActorId = ExtractObjectActorId(normalized.Object);
-                        if (!string.IsNullOrWhiteSpace(remoteActorId))
+                        var recipients = ExtractRecipients(normalized.To);
+                        var inboxUrls = await ResolveInboxUrlsAsync(localActorName, normalized, recipients, cancellationToken).ConfigureAwait(false);
+                        if (inboxUrls.Count > 0)
                         {
-                            await _relationshipStore.RemoveFollowingAsync(localActorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                            await _deliveryService.DeliverActivityAsync(normalized, inboxUrls, cancellationToken).ConfigureAwait(false);
                         }
-                    }
 
-                    return (normalized, null);
-                }
+                        if (string.Equals(ExtractObjectType(normalized.Object), "Follow", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var remoteActorId = ExtractObjectActorId(normalized.Object);
+                            if (!string.IsNullOrWhiteSpace(remoteActorId))
+                            {
+                                await _relationshipStore.RemoveFollowingAsync(localActorName, remoteActorId, cancellationToken).ConfigureAwait(false);
+                            }
+                        }
+
+                        return (normalized, null);
+                    }
 
                 case "Create":
                 case "Update":
@@ -169,21 +169,21 @@ namespace slskd.SocialFederation
                 case "Announce":
                 case "Like":
                 case "Add":
-                {
-                    var recipients = ExtractRecipients(normalized.To);
-                    if (recipients.Count == 0)
                     {
-                        return (null, "Activity must include at least one recipient");
-                    }
+                        var recipients = ExtractRecipients(normalized.To);
+                        if (recipients.Count == 0)
+                        {
+                            return (null, "Activity must include at least one recipient");
+                        }
 
-                    var inboxUrls = await ResolveInboxUrlsAsync(localActorName, normalized, recipients, cancellationToken).ConfigureAwait(false);
-                    if (inboxUrls.Count > 0)
-                    {
-                        await _deliveryService.DeliverActivityAsync(normalized, inboxUrls, cancellationToken).ConfigureAwait(false);
-                    }
+                        var inboxUrls = await ResolveInboxUrlsAsync(localActorName, normalized, recipients, cancellationToken).ConfigureAwait(false);
+                        if (inboxUrls.Count > 0)
+                        {
+                            await _deliveryService.DeliverActivityAsync(normalized, inboxUrls, cancellationToken).ConfigureAwait(false);
+                        }
 
-                    return (normalized, null);
-                }
+                        return (normalized, null);
+                    }
 
                 default:
                     return (null, $"Unsupported outbox activity type '{normalized.Type}'");

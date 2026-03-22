@@ -455,7 +455,7 @@ namespace slskd.Transfers.Downloads
                         var enqueuedTcs = new TaskCompletionSource<Transfer>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                         // satisfies condition #3; CancellationTokenSource set cancelled by the user (via API call)
-                        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        var cts = new CancellationTokenSource();
                         CancellationTokens.TryAdd(transfer.Id, cts);
                         cts.Token.Register(() => enqueuedTcs.TrySetCanceled());
 

@@ -313,7 +313,7 @@ namespace slskd.Backfill
                 {
                     // If we didn't get enough bytes, fail
                     result.Success = false;
-                    result.Error = ex.Message;
+                    result.Error = "Failed to read FLAC header";
                     throw; // Re-throw to catch block below
                 }
 
@@ -347,7 +347,9 @@ namespace slskd.Backfill
             }
             catch (Exception ex)
             {
-                result.Error = ex.Message;
+                result.Error = string.IsNullOrWhiteSpace(result.Error)
+                    ? "Backfill probe failed"
+                    : result.Error;
                 await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
                 logger.LogDebug("[BACKFILL] ✗ Failed {Peer}/{Path}: {Error}", peerId, System.IO.Path.GetFileName(path), ex.Message);
             }

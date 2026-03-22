@@ -5732,3 +5732,19 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test` still fails in the existing hardening/auth cluster (`HardeningValidatorTests`, `DumpTests`, `MeshGatewayControllerTests`) and in older test-project compile drift under `tests/slskd.Tests.Integration` / `tests/slskd.Tests.Unit`
   - `dotnet build` still fails on the same standing test-project compile drift, including missing bridge/dashboard interface method implementations in integration stubs and older unit-test constructor/signature mismatches
   - `./bin/lint` was not executable as a direct file on this machine (`Permission denied`); `bash ./bin/lint` ran and failed on existing formatting debt in `PodCore/SqlitePodService.cs`, `SocialFederation/API/ActivityPubController.cs`, `SocialFederation/FederationService.cs`, and `tests/slskd.Tests.Unit/MediaCore/IpldControllerTests.cs`
+
+## 2026-03-22 17:38 - Validation drift repaired and green
+
+- Repaired the remaining validation blockers from the previous broad hardening pass:
+  - fixed `PeerReputationStore` cold-load persistence by mapping explicit persisted JSON DTOs back into runtime `PeerReputationEvent` objects instead of deserializing directly into runtime types
+  - aligned hardening/dump/mesh gateway test-host behavior with the tightened remote-auth expectations by forcing loopback defaults in the lightweight hosts and updating the affected tests
+  - restored `WarmCacheHintsRequest` snake_case binding with explicit `JsonPropertyName` attributes
+  - fixed pre-cancelled stream mapping in `LocalPortForwarder` so aborted mappings do not transition into a fake active state
+  - stabilized `BridgePerformanceTests` memory validation to assert on forced-GC retention tolerance instead of noisy heap deltas
+- Added immediate gotchas for:
+  - runtime-type JSON persistence drift
+  - GC retention test drift
+- Validation:
+  - `dotnet build --no-restore` passed
+  - `dotnet test --no-build` passed
+  - `bash ./bin/lint` passed

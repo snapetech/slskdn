@@ -74,7 +74,7 @@ public class PodMembershipVerifier : IPodMembershipVerifier
                 IsValidMember: false,
                 IsBanned: false,
                 Role: null,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Membership verification failed");
         }
     }
 
@@ -147,7 +147,7 @@ public class PodMembershipVerifier : IPodMembershipVerifier
                 IsFromValidMember: false,
                 HasValidSignature: false,
                 IsNotBanned: false,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Message verification failed");
         }
     }
 

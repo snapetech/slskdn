@@ -11,7 +11,7 @@ using slskd.Authentication;
 using Xunit;
 
 /// <summary>
-/// PR-06: Dump endpoint. AllowMemoryDump=false → 404; non-admin → 403; remote when AllowRemoteDump=false → 403.
+/// PR-06: Dump endpoint. AllowMemoryDump=false → 404; non-admin → 403; remote no-auth requests now fail at auth as 401 before endpoint policy evaluation.
 /// </summary>
 public class DumpTests
 {
@@ -38,7 +38,7 @@ public class DumpTests
     }
 
     [Fact]
-    public async Task AllowMemoryDump_true_AllowRemoteDump_false_remote_ip_returns_403()
+    public async Task AllowMemoryDump_true_AllowRemoteDump_false_remote_ip_returns_401()
     {
         using var factory = new DumpTestHostFactory(allowMemoryDump: true, allowRemoteDump: false, role: Role.Administrator);
         using var client = factory.CreateClient();
@@ -47,7 +47,7 @@ public class DumpTests
 
         using var response = await client.SendAsync(req);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

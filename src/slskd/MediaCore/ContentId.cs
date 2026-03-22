@@ -143,11 +143,13 @@ public static class ContentIdParser
     {
         if (domain.Equals("mb", StringComparison.OrdinalIgnoreCase))
         {
-            return type.ToLowerInvariant() switch
-            {
-                "recording" or "release" or "artist" => ContentDomains.Audio,
-                _ => domain.ToLowerInvariant(),
-            };
+            return string.IsNullOrWhiteSpace(type)
+                ? ContentDomains.Audio
+                : type.ToLowerInvariant() switch
+                {
+                    "recording" or "release" or "artist" => ContentDomains.Audio,
+                    _ => domain.ToLowerInvariant(),
+                };
         }
 
         return domain.ToLowerInvariant();

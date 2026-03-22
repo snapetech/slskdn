@@ -104,7 +104,7 @@ namespace slskd.PodCore
                     {
                         try
                         {
-                            await podPublisher.PublishPodAsync(pod, ct);
+                            await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                         }
                         catch (Exception ex)
                         {
@@ -516,13 +516,13 @@ namespace slskd.PodCore
                 {
                     try
                     {
-                        await podPublisher.PublishPodAsync(pod, ct);
+                        await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                    }, CancellationToken.None);
+                }, CancellationToken.None);
             }
 
             logger.LogInformation("Created channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
@@ -573,13 +573,13 @@ namespace slskd.PodCore
                 {
                     try
                     {
-                        await podPublisher.PublishPodAsync(pod, ct);
+                        await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                    }, CancellationToken.None);
+                }, CancellationToken.None);
             }
 
             logger.LogInformation("Deleted channel {ChannelId} from pod {PodId}", channelId, podId);
@@ -650,13 +650,13 @@ namespace slskd.PodCore
                 {
                     try
                     {
-                        await podPublisher.PublishPodAsync(pod, ct);
+                        await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                    }, CancellationToken.None);
+                }, CancellationToken.None);
             }
 
             logger.LogInformation("Updated channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);

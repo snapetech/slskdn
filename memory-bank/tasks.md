@@ -810,3 +810,6 @@
 - [x] Normalize VirtualSoulfind and MediaCore query/publish controller boundaries
   - Status: done
   - Notes: Added MBID/content-id trim validation to canonical/shadow/publisher endpoints, removed nondeterministic fuzzy candidate ordering, tightened fuzzy range validation, normalized republish content-id lists, and folded in adjacent dirty Pod content/opinion coverage.
+- [x] Repair validation drift in test hosts, persistence, and bridge performance checks
+  - Status: done
+  - Notes: Fixed cold-load peer reputation persistence with explicit JSON DTO mapping, aligned hardening/dump/mesh gateway test hosts and expectations with the tightened remote-auth rules, stabilized bridge memory validation against forced-GC retention instead of incidental heap movement, restored snake_case warm-cache request binding, and verified `dotnet build`, `dotnet test`, and `bash ./bin/lint` all pass on 2026-03-22.

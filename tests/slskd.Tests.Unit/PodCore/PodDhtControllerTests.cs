@@ -120,7 +120,7 @@ public class PodDhtControllerTests
         var publisher = new Mock<IPodDhtPublisher>();
         publisher
             .Setup(service => service.PublishAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PodPublishResult(false, "pod-1", null, null, null, "sensitive detail"));
+            .ReturnsAsync(new PodPublishResult(false, "pod-1", string.Empty, DateTimeOffset.MinValue, DateTimeOffset.MinValue, "sensitive detail"));
 
         var controller = new PodDhtController(
             NullLogger<PodDhtController>.Instance,
@@ -142,7 +142,7 @@ public class PodDhtControllerTests
         var publisher = new Mock<IPodDhtPublisher>();
         publisher
             .Setup(service => service.GetPublishedMetadataAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PodMetadataResult(false, "pod-1", null, "sensitive detail"));
+            .ReturnsAsync(new PodMetadataResult(false, "pod-1", null, DateTimeOffset.MinValue, DateTimeOffset.MinValue, false, "sensitive detail"));
 
         var controller = new PodDhtController(
             NullLogger<PodDhtController>.Instance,

@@ -164,7 +164,7 @@ public class PodMessageBackfill : IPodMessageBackfill
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during backfill sync for pod {PodId}", podId);
-            return new PodBackfillResult(false, podId, channelsRequested, totalMessagesReceived, stopwatch.Elapsed, ex.Message);
+            return new PodBackfillResult(false, podId, channelsRequested, totalMessagesReceived, stopwatch.Elapsed, "Backfill sync failed");
         }
     }
 
@@ -342,7 +342,7 @@ public class PodMessageBackfill : IPodMessageBackfill
             _logger.LogError(ex, "Error processing backfill response from peer {PeerId} for pod {PodId}",
                 respondingPeerId, podId);
             return new PodBackfillProcessingResult(
-                false, podId, respondingPeerId, messagesProcessed, messagesStored, duplicatesSkipped, stopwatch.Elapsed, ex.Message);
+                false, podId, respondingPeerId, messagesProcessed, messagesStored, duplicatesSkipped, stopwatch.Elapsed, "Backfill response processing failed");
         }
     }
 
@@ -445,7 +445,7 @@ public class PodMessageBackfill : IPodMessageBackfill
         {
             _logger.LogError(ex, "Error requesting backfill from peer {PeerId} for pod {PodId}", peerId, podId);
             return new PodBackfillProcessingResult(
-                false, podId, peerId, 0, 0, 0, TimeSpan.Zero, ex.Message);
+                false, podId, peerId, 0, 0, 0, TimeSpan.Zero, "Backfill request failed");
         }
     }
 

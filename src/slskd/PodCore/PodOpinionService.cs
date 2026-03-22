@@ -271,7 +271,7 @@ public class PodOpinionService : IPodOpinionService
         {
             _logger.LogError(ex, "Error refreshing opinions for pod {PodId}", podId);
             return new OpinionRefreshResult(
-                false, podId, refreshedCount, newOpinionsCount, stopwatch.Elapsed, ex.Message);
+                false, podId, refreshedCount, newOpinionsCount, stopwatch.Elapsed, "Failed to refresh opinions");
         }
     }
 

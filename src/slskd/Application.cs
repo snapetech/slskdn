@@ -65,9 +65,11 @@ namespace slskd
         public void CollectGarbage();
     }
 
-    public sealed class Application : IApplication
+    public sealed class Application : IApplication, IDisposable
     {
         private readonly List<PosixSignalRegistration> _posixSignalRegistrations = new();
+        private CancellationTokenSource? _startupInitializationCts;
+        private Task? _startupInitializationTask;
 
         /// <summary>
         ///     The name of the default user group.
@@ -375,8 +377,11 @@ namespace slskd
             Log.Information("Application started");
 
             // Start the actual initialization in the background to avoid blocking other hosted services
+            _startupInitializationCts?.Dispose();
+            _startupInitializationCts = new CancellationTokenSource();
+            _startupInitializationTask = Task.Run(() => InitializeApplicationAsync(_startupInitializationCts.Token), CancellationToken.None);
             _ = ObserveBackgroundTaskAsync(
-                Task.Run(() => InitializeApplicationAsync(cancellationToken), CancellationToken.None),
+                _startupInitializationTask,
                 "Failed to initialize application in background task");
 
             return Task.CompletedTask;
@@ -652,10 +657,28 @@ namespace slskd
             }
         }
 
-        Task IHostedService.StopAsync(CancellationToken cancellationToken)
+        async Task IHostedService.StopAsync(CancellationToken cancellationToken)
         {
             ShuttingDown = true;
             Log.Warning("Application is shutting down");
+
+            _startupInitializationCts?.Cancel();
+
+            if (_startupInitializationTask != null)
+            {
+                try
+                {
+                    await _startupInitializationTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown.
+                }
+            }
+
+            _startupInitializationTask = null;
+            _startupInitializationCts?.Dispose();
+            _startupInitializationCts = null;
 
             Clock.Stop();
 
@@ -667,7 +690,6 @@ namespace slskd
             }
 
             Log.Information("Client stopped");
-            return Task.CompletedTask;
         }
 
         private void ConfigureSocketKeepaliveOptions(Socket socket, Options.SoulseekOptions.ConnectionOptions options)
@@ -2314,6 +2336,13 @@ namespace slskd
             {
                 Log.Error(ex, messageTemplate, propertyValues);
             }
+        }
+
+        public void Dispose()
+        {
+            _startupInitializationCts?.Cancel();
+            _startupInitializationCts?.Dispose();
+            _startupInitializationCts = null;
         }
     }
 }

@@ -65,6 +65,14 @@ public class MetadataPortabilityTests
         // Arrange
         var contentIds = new[] { "content:audio:track:mb-12345" };
         var mockLinks = new[] { new IpldLink("album", "content:audio:album:mb-67890") };
+        _descriptorRetrieverMock.Setup(r => r.RetrieveAsync(It.IsAny<string>(), false, default))
+            .ReturnsAsync(new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor { ContentId = "content:audio:track:mb-12345" },
+                RetrievedAt: DateTimeOffset.UtcNow,
+                RetrievalDuration: TimeSpan.Zero,
+                FromCache: false,
+                Verification: null));
 
         _ipldMapperMock.Setup(m => m.GetGraphAsync(It.IsAny<string>(), It.IsAny<int>(), default))
             .ReturnsAsync(new ContentGraph("content:audio:track:mb-12345",

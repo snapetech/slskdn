@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 /// <summary>
 ///     Hosted service that runs HashDb optimization tasks on startup and periodically.
 /// </summary>
-public class HashDbOptimizationHostedService : IHostedService
+public sealed class HashDbOptimizationHostedService : IHostedService, IDisposable
 {
     private readonly IHashDbOptimizationService _optimizationService;
     private readonly ILogger<HashDbOptimizationHostedService> _logger;
@@ -48,7 +48,7 @@ public class HashDbOptimizationHostedService : IHostedService
         {
             _logger.LogInformation("[HashDbOptimization] Running automatic index optimization on startup");
             _startupOptimizationCts?.Dispose();
-            _startupOptimizationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _startupOptimizationCts = new CancellationTokenSource();
 
             // Run index optimization (non-blocking, fire-and-forget)
             _startupOptimizationTask = Task.Run(async () =>
@@ -96,6 +96,13 @@ public class HashDbOptimizationHostedService : IHostedService
         _startupOptimizationTask = null;
         _startupOptimizationCts?.Dispose();
         _startupOptimizationCts = null;
+    }
+
+    public void Dispose()
+    {
+        _startupOptimizationCts?.Dispose();
+        _startupOptimizationCts = null;
+        GC.SuppressFinalize(this);
     }
 }
 

@@ -70,7 +70,7 @@ public class PodDiscoveryControllerTests
         var discovery = new Mock<IPodDiscoveryService>();
         discovery
             .Setup(service => service.RegisterPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PodRegistrationResult(false, "pod-1", Array.Empty<string>(), null, null, "sensitive detail"));
+            .ReturnsAsync(new PodRegistrationResult(false, "pod-1", Array.Empty<string>(), DateTimeOffset.MinValue, DateTimeOffset.MinValue, "sensitive detail"));
 
         var controller = new PodDiscoveryController(
             NullLogger<PodDiscoveryController>.Instance,

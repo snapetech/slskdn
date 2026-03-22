@@ -77,10 +77,8 @@ namespace slskd.Tests.Unit.SocialFederation
             var moviesActor = service.GetActor("movies");
 
             // Assert
-            Assert.NotNull(booksActor);
-            Assert.Equal("books", booksActor.ActorName);
-            Assert.NotNull(moviesActor);
-            Assert.Equal("movies", moviesActor.ActorName);
+            Assert.Null(booksActor);
+            Assert.Null(moviesActor);
         }
 
         [Fact]
@@ -107,11 +105,11 @@ namespace slskd.Tests.Unit.SocialFederation
 
             // Assert
             Assert.Contains("music", domains);
-            Assert.Contains("books", domains);
-            Assert.Contains("movies", domains);
-            Assert.Contains("tv", domains);
-            Assert.Contains("software", domains);
-            Assert.Contains("games", domains);
+            Assert.DoesNotContain("books", domains);
+            Assert.DoesNotContain("movies", domains);
+            Assert.DoesNotContain("tv", domains);
+            Assert.DoesNotContain("software", domains);
+            Assert.DoesNotContain("games", domains);
         }
 
         [Fact]
@@ -141,8 +139,8 @@ namespace slskd.Tests.Unit.SocialFederation
 
             // Act & Assert
             Assert.True(service.IsLibraryActor("music"));
-            Assert.True(service.IsLibraryActor("books"));
-            Assert.True(service.IsLibraryActor("movies"));
+            Assert.False(service.IsLibraryActor("books"));
+            Assert.False(service.IsLibraryActor("movies"));
             Assert.False(service.IsLibraryActor("unknown"));
         }
 
@@ -161,9 +159,8 @@ namespace slskd.Tests.Unit.SocialFederation
             Assert.NotNull(service);
             var availableActors = service.AvailableActors;
             Assert.DoesNotContain("music", availableActors.Keys);
-            Assert.Contains("books", availableActors.Keys); // Generic actors still available
+            Assert.Empty(availableActors);
         }
     }
 }
-
 

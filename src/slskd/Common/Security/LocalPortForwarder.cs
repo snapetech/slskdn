@@ -643,9 +643,17 @@ internal class ForwarderConnection : IDisposable
                 throw new InvalidOperationException("Connection is already mapped to a stream");
             }
 
+            _streamMappingCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _isStreamMapped = false;
+                _streamMappingCompletion.TrySetResult();
+                return;
+            }
+
             _isStreamMapped = true;
             _streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _streamMappingCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // Start background stream mapping tasks
             _ = Task.Run(() => MapStreamsAsync(localStream, _streamMappingCts.Token), CancellationToken.None);
