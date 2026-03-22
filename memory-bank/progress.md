@@ -5687,3 +5687,14 @@ Code quality improvements were completed as part of Option A:
   - added focused regressions for those duplicate-forward, YAML-validate, and share-backfill failure paths
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 16:12 - Result-contract spillover cleanup
+
+- Folded the next dirty result-contract batch into the same bughunt:
+  - `PodDiscoveryController`, `PodJoinLeaveController`, and `PodMessageRoutingController` no longer return raw service `ErrorMessage` text on expected failure paths
+  - `MeshGatewayController` now returns a stable `Service returned an error` message instead of forwarding mesh reply text
+  - `ContentDescriptorPublisherController` bad-request paths no longer return raw publisher result objects for failed publish/update operations
+  - `DescriptorRetrieverController` now returns a fixed `Descriptor not found` contract instead of echoing retriever result text
+  - added/folded focused regressions for those PodCore/Mesh/MediaCore failure contracts, including a new `DescriptorRetrieverControllerTests` file
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

@@ -47,6 +47,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `PodDhtController` now returns a fixed pod-not-found contract instead of surfacing publisher `ErrorMessage` text
     - `PodOpinionController` now returns a fixed publish-failure contract instead of surfacing opinion service `ErrorMessage` text
     - added focused regressions for those sanitized result-message paths
+  - Folded the next dirty result-contract spillover into the same sweep:
+    - `PodDiscoveryController`, `PodJoinLeaveController`, and `PodMessageRoutingController` now return stable public failure contracts instead of forwarding service `ErrorMessage` values
+    - `MeshGatewayController` now returns a stable service-error message instead of forwarding mesh reply text
+    - `ContentDescriptorPublisherController` now returns stable bad-request contracts for failed publish/update paths instead of raw publisher result objects
+    - `DescriptorRetrieverController` now returns a stable `Descriptor not found` contract instead of surfacing retriever result text
+    - added/folded focused regressions for the remaining PodCore/Mesh/MediaCore failure paths, including a new `DescriptorRetrieverControllerTests` file
   - Validation has still not been run in this pass.
   - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, the maintenance/status leak cleanup across native/hashdb/mesh/transfers, the identity/search helper cleanup, the Solid/users/PodCore error-contract fixes, and the final port-forward/options/share spillover.
   - Validation has still not been run in this pass.
@@ -95,7 +101,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 ### Next Steps
 1. If requested, run `dotnet test` and `./bin/lint` to validate the committed runtime/read-side cleanup.
 2. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
-3. Prioritize remaining PodCore/native controller actions that still pass service-result `.ErrorMessage` values directly back to clients instead of stable public contracts, especially join/leave and any mutation paths returning service validation text.
+3. Prioritize remaining controller actions that still treat service result objects or `.ErrorMessage` fields as client-safe response bodies, especially native/PodCore/MediaCore mutation paths.
 4. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, encoded payloads that still bypass boundary validation, or sanitized-error gaps on maintenance endpoints.
 5. Continue outward into remaining stats/status/search controllers and any lingering PodCore/Sharing APIs that still accept raw IDs, null bodies, repeated list values, or raw service result text without normalization.
 

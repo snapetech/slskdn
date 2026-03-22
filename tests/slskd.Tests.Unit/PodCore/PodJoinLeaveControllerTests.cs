@@ -63,4 +63,25 @@ public class PodJoinLeaveControllerTests
             service => service.CancelJoinRequestAsync("pod-1", "peer-1", It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task RequestJoin_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.RequestJoinAsync(It.IsAny<PodJoinRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodJoinResult(false, "pod-1", "peer-1", "sensitive detail"));
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.RequestJoin(
+            new PodJoinRequest("pod-1", "peer-1", "member", "pub", 1, "sig", "hi", "nonce"),
+            CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Join request could not be processed", error.Value?.ToString() ?? string.Empty);
+    }
 }

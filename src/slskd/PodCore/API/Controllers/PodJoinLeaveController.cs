@@ -74,7 +74,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Join request failed for {PeerId} to {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Join request could not be processed" });
             }
         }
         catch (Exception ex)
@@ -126,7 +126,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Join acceptance failed for {PeerId} in {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Join acceptance could not be processed" });
             }
         }
         catch (Exception ex)
@@ -176,7 +176,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Leave request failed for {PeerId} from {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Leave request could not be processed" });
             }
         }
         catch (Exception ex)
@@ -227,7 +227,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Leave acceptance failed for {PeerId} from {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Leave acceptance could not be processed" });
             }
         }
         catch (Exception ex)

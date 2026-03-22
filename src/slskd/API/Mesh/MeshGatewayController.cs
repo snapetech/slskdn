@@ -235,7 +235,7 @@ public class MeshGatewayController : ControllerBase
                 {
                     error = "service_error",
                     statusCode = reply.StatusCode,
-                    message = reply.ErrorMessage ?? "Service returned error"
+                    message = "Service returned an error"
                 });
             }
         }

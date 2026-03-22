@@ -72,7 +72,7 @@ public class PodMessageRoutingController : ControllerBase
                 _logger.LogWarning(
                     "[PodMessageRouting] Failed to route message {MessageId}: {Error}",
                     result.MessageId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to route message" });
             }
         }
         catch (Exception ex)

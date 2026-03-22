@@ -70,7 +70,7 @@ public class PodDiscoveryController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDiscovery] Failed to register pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to register pod" });
             }
         }
         catch (Exception ex)
@@ -107,7 +107,7 @@ public class PodDiscoveryController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDiscovery] Failed to unregister pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to unregister pod" });
             }
         }
         catch (Exception ex)
@@ -155,7 +155,7 @@ public class PodDiscoveryController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDiscovery] Failed to update pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to update pod discovery" });
             }
         }
         catch (Exception ex)

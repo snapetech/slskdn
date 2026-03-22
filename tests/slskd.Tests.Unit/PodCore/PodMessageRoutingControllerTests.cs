@@ -120,4 +120,26 @@ public class PodMessageRoutingControllerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task RouteMessage_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.RouteMessageAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodMessageRoutingResult(false, "msg-1", "pod-1", 0, 0, 0, TimeSpan.Zero, "sensitive detail"));
+
+        var controller = new PodMessageRoutingController(
+            NullLogger<PodMessageRoutingController>.Instance,
+            router.Object);
+
+        var result = await controller.RouteMessage(
+            new PodMessage { MessageId = "msg-1", ChannelId = "channel-1", PodId = "pod-1" },
+            CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to route message", error.Value?.ToString() ?? string.Empty);
+    }
 }

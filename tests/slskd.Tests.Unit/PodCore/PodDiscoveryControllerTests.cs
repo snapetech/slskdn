@@ -63,4 +63,24 @@ public class PodDiscoveryControllerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task RegisterPod_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var discovery = new Mock<IPodDiscoveryService>();
+        discovery
+            .Setup(service => service.RegisterPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodRegistrationResult(false, "pod-1", Array.Empty<string>(), null, null, "sensitive detail"));
+
+        var controller = new PodDiscoveryController(
+            NullLogger<PodDiscoveryController>.Instance,
+            discovery.Object);
+
+        var result = await controller.RegisterPod(new Pod { PodId = "pod-1" }, CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to register pod", error.Value?.ToString() ?? string.Empty);
+    }
 }

@@ -62,7 +62,7 @@ public class DescriptorRetrieverController : ControllerBase
                 {
                     contentId,
                     found = false,
-                    error = result.ErrorMessage ?? "Descriptor not found"
+                    error = "Descriptor not found"
                 });
             }
 

@@ -71,7 +71,7 @@ public class ContentDescriptorPublisherController : ControllerBase
                 _logger.LogWarning(
                     "[ContentDescriptorPublisher] Failed to publish {ContentId}: {Error}",
                     result.ContentId, result.ErrorMessage);
-                return BadRequest(result);
+                return BadRequest(new { error = "Failed to publish descriptor" });
             }
         }
         catch (Exception ex)
@@ -164,7 +164,7 @@ public class ContentDescriptorPublisherController : ControllerBase
                 _logger.LogWarning(
                     "[ContentDescriptorPublisher] Failed to update {ContentId}: {Error}",
                     contentId, result.ErrorMessage);
-                return BadRequest(result);
+                return BadRequest(new { error = "Failed to update descriptor" });
             }
         }
         catch (Exception ex)
