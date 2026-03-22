@@ -121,15 +121,26 @@ public class EnforceInvalidConfigIntegrationTests
         }
 
         var tempDir = Path.Combine(Path.GetTempPath(), "slskd-enforce-test-" + Guid.NewGuid().ToString("N")[..8]);
+        string? contentDir = null;
         try
         {
             Directory.CreateDirectory(tempDir);
-            Directory.CreateDirectory(Path.Combine(tempDir, "wwwroot"));
+            // Use dotnet slskd.dll to avoid dotnet run's host loading the app (which can hold the single-instance mutex).
+            var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
+            if (!File.Exists(slskdDll))
+            {
+                return; // slskd not built in Release; build slskd first or run without --no-build.
+            }
+
+            var contentPath = "test-wwwroot-" + Guid.NewGuid().ToString("N")[..8];
+            contentDir = Path.Combine(Path.GetDirectoryName(slskdDll)!, contentPath);
+            Directory.CreateDirectory(contentDir);
+
             var yml = Path.Combine(tempDir, "slskd.yml");
             // YamlConfigurationProvider prefixes with Namespace "slskd"; use web/diagnostics at root (not slskd:)
-            await File.WriteAllTextAsync(yml, """
+            await File.WriteAllTextAsync(yml, $"""
                 web:
-                  contentPath: wwwroot
+                  contentPath: {contentPath}
                   enforceSecurity: true
                   allowRemoteNoAuth: false
                   authentication:
@@ -138,13 +149,6 @@ public class EnforceInvalidConfigIntegrationTests
                 diagnostics:
                   allowMemoryDump: false
                 """);
-
-            // Use dotnet slskd.dll to avoid dotnet run's host loading the app (which can hold the single-instance mutex).
-            var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
-            if (!File.Exists(slskdDll))
-            {
-                return; // slskd not built in Release; build slskd first or run without --no-build.
-            }
 
             var configArg = $"--config \"{yml}\"";
             using var proc = new Process
@@ -196,6 +200,7 @@ public class EnforceInvalidConfigIntegrationTests
         }
         finally
         {
+            try { if (contentDir is not null && Directory.Exists(contentDir)) Directory.Delete(contentDir, recursive: true); } catch { /* ignore */ }
             try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true); } catch { /* ignore */ }
         }
     }

@@ -193,36 +193,30 @@ Assert.Equal(ServiceStatusCodes.ServiceUnavailable, lastReply.StatusCode);
 
 **Why This Keeps Happening**: The breaker state update is observable through asynchronous request flow, not as a hard guarantee tied to a specific numbered call. If the behavior being tested is "the breaker opens after sustained failures," the assertion should allow a bounded convergence window.
 
-### 0j. Subprocess Config Tests Must Align Relative Path Resolution With The Temp App Dir
+### 0j. Subprocess Config Tests Must Create Relative Content Directories Under `AppContext.BaseDirectory`
 
-**The Bug**: `EnforceInvalidConfigIntegrationTests` created a temp `wwwroot` but launched the subprocess with `WorkingDirectory` set to the built app directory, so `contentPath: wwwroot` resolved under `bin/Release/...` and failed base config validation before the hardening rule.
+**The Bug**: `EnforceInvalidConfigIntegrationTests` created a temp `wwwroot` and changed the subprocess working directory, but `contentPath` validation and runtime static-file setup both resolve relative paths under `AppContext.BaseDirectory`, so CI still failed base config validation before the hardening rule.
 
 **Files Affected**:
 - `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
 
 **Wrong**:
 ```csharp
-var proc = new Process
-{
-    StartInfo = new ProcessStartInfo
-    {
-        WorkingDirectory = Path.GetDirectoryName(slskdDll)!,
-    }
-};
+Directory.CreateDirectory(Path.Combine(tempDir, "wwwroot"));
+await File.WriteAllTextAsync(yml, """
+    web:
+      contentPath: wwwroot
+""");
 ```
 
 **Correct**:
 ```csharp
-var proc = new Process
-{
-    StartInfo = new ProcessStartInfo
-    {
-        WorkingDirectory = tempDir,
-    }
-};
+var contentPath = "test-wwwroot-" + Guid.NewGuid().ToString("N")[..8];
+var contentDir = Path.Combine(Path.GetDirectoryName(slskdDll)!, contentPath);
+Directory.CreateDirectory(contentDir);
 ```
 
-**Why This Keeps Happening**: `SLSKD_APP_DIR` controls app data paths, but relative config paths still resolve from the process working directory. If a test depends on repo-style relative config values like `wwwroot`, launch the subprocess from the temporary root that contains those directories.
+**Why This Keeps Happening**: `SLSKD_APP_DIR` and `WorkingDirectory` do not control this option. The validator and `Program` both explicitly combine `OptionsAtStartup.Web.ContentPath` with `AppContext.BaseDirectory`, so tests must place any temporary relative content directory under the built app output directory.
 
 ### 0k. Timeout-Based Circuit Tests Must Distinguish "Breaker Opened" From "Open-State Reply Observed"
 
