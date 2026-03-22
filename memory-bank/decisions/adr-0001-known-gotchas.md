@@ -9431,6 +9431,38 @@ var rawValue = rawPath
 
 **Why This Keeps Happening**: It is tempting to treat the raw target as a full URI and let the framework separate path from query for you, but `RawTarget` is intentionally unprocessed client input. Re-parsing it introduces a second, stricter validation step that can fail for reasons unrelated to the route segment you actually need. If the binder only needs the path portion, split the raw target directly instead of round-tripping through `Uri`.
 
+### 0k56. List-Valued API Validation Must Reject Whitespace-Only Entries Before Delegating Work
+
+**The Bug**: `LibraryHealthController.CreateRemediationJob(...)` only checked that `issue_ids.Count > 0`. A payload like `["", "   "]` therefore passed controller validation and only failed later inside remediation as “No fixable issues provided,” even though the API boundary could have rejected it immediately.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryHealthController.cs`
+
+**Wrong**:
+```csharp
+if (request?.IssueIds == null || request.IssueIds.Count == 0)
+{
+    return BadRequest(new { error = "issue_ids is required" });
+}
+
+var jobId = await healthService.CreateRemediationJobAsync(request.IssueIds, cancellationToken);
+```
+
+**Correct**:
+```csharp
+var issueIds = request?.IssueIds?
+    .Where(issueId => !string.IsNullOrWhiteSpace(issueId))
+    .Select(issueId => issueId.Trim())
+    .ToList();
+
+if (issueIds == null || issueIds.Count == 0)
+{
+    return BadRequest(new { error = "issue_ids is required" });
+}
+```
+
+**Why This Keeps Happening**: API validation often treats “non-empty list” as sufficient and assumes downstream services will handle per-item cleanup. That leaves the boundary accepting syntactically non-empty but semantically empty payloads, which produces confusing service-layer failures. For list-valued request fields, trim and filter elements at the controller boundary before deciding whether the request is valid.
+
 ---
 
 *Last updated: 2026-03-22*
