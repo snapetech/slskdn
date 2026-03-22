@@ -104,27 +104,30 @@ _ = ObserveBackgroundTaskAsync(
 
 **Why This Keeps Happening**: fire-and-forget is convenient in controllers and timer callbacks because it keeps the main path responsive, but it also severs exception propagation. If the detached work matters enough to launch, it matters enough to wrap in a single observer that catches and logs failures explicitly.
 
-### 0x9. Refactors To System.Text.Json Types Must Carry The Namespace And Exact Tuple Nullability
+### 0x9. Refactors Must Carry Supporting Renames, Namespaces, And Exact Nullability
 
-**The Bug**: API code was updated to use `JsonDocument` and named tuple return signatures, but the supporting `using System.Text.Json;` and matching nullable tuple generics were not updated. The result was a hard compile break in otherwise unrelated validation runs.
+**The Bug**: API code was updated to use `JsonDocument`, named tuple return signatures, and renamed bridge-result helpers, but the supporting `using System.Text.Json;`, matching nullable tuple generics, and helper call sites were not updated. The result was a hard compile break in otherwise unrelated validation runs.
 
 **Files Affected**:
 - `src/slskd/SocialFederation/API/ActivityPubController.cs`
 - `src/slskd/SongID/SongIdService.cs`
+- `src/slskd/Mesh/Realm/Bridge/ActivityPubBridge.cs`
 
 **Wrong**:
 ```csharp
 using System.Text;
 return Task.FromResult((false, "Missing activity type"));
+return BridgeOperationResult.CreateFailure("Failed to follow remote actor.");
 ```
 
 **Correct**:
 ```csharp
 using System.Text.Json;
 return Task.FromResult<(bool Processed, string? Error)>((false, "Missing activity type"));
+return BridgeOperationResult.Failed("Failed to follow remote actor.");
 ```
 
-**Why This Keeps Happening**: small API refactors often change type names and nullability contracts at the same time, but the import list and helper return expressions are easy to leave behind. When switching to `System.Text.Json` objects or named nullable tuples, update both the namespace imports and the exact generic return type in the same edit.
+**Why This Keeps Happening**: small refactors often change type names, helper factories, and nullability contracts at the same time, but the import list, helper invocations, and generic return expressions are easy to leave behind. When changing shared result helpers or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit instead of assuming local compile coverage will catch every stale call.
 
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
