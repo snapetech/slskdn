@@ -156,6 +156,28 @@ else
 
 **Why This Keeps Happening**: Value-object update helpers are easy to treat like "copy most fields" code, but queue state types often carry planner-critical metadata such as domain or mode. Separately, staged resolver work often starts by handling only fetch-capable backends, and it is tempting to mark the rest as "good enough" success to keep the flow moving. That creates silent false positives. Preserve all immutable intent fields on update, and fail explicitly for any backend whose fetch path is still missing.
 
+### 0x9C. VirtualSoulfind v2 Local-Library Lookups Must Resolve A Real MediaCore Content ID Before Querying Shares
+
+**The Bug**: `LocalLibraryBackend` queried `IShareRepository` with `ContentItemId.ToString()`, which is just the v2 track GUID. The share repository indexes MediaCore `contentId` strings, so local-library discovery looked implemented but would miss valid local content unless the GUID happened to equal a content ID.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Backends/LocalLibraryBackend.cs`
+
+**Wrong**:
+```csharp
+var contentIdStr = itemId.ToString();
+var contentItem = _shareRepository.FindContentItem(contentIdStr);
+```
+
+**Correct**:
+```csharp
+var externalId = "mb:recording:" + itemId.Value;
+var resolved = await _contentIdRegistry.ResolveAsync(externalId, cancellationToken);
+var contentItem = _shareRepository.FindContentItem(contentIdStr);
+```
+
+**Why This Keeps Happening**: VirtualSoulfind v2 track IDs and MediaCore content IDs are related, but they are not interchangeable. Backends that cross from catalogue/planning into the shared content layer must do the ID translation explicitly. If they do not, the backend will quietly return empty candidate lists while looking perfectly reasonable in code review.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
