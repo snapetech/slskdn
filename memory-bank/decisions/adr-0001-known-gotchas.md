@@ -392,6 +392,33 @@ return new AffinityUpdateResult(
 
 **Why This Keeps Happening**: refresh/update endpoints often look operational rather than user-facing, so their result DTOs get treated like logs. But if the controller returns the record directly, it is still public API. Operational status DTOs need the same stable public error strings as publish, discovery, and verification DTOs.
 
+### 0xB5E. MediaCore Update/Unpublish Result Records Must Not Leak Backend Exceptions Either
+
+**The Bug**: sanitizing `PublishAsync(...)` was not enough. `ContentDescriptorPublisher.UpdateAsync(...)` and `UnpublishAsync(...)` still returned raw `ex.Message` in `DescriptorUpdateResult` and `UnpublishResult`. The controller returns the unpublish result directly and logs the update result, so the leak pattern remained half-fixed.
+
+**Files Affected**:
+- `src/slskd/MediaCore/ContentDescriptorPublisher.cs`
+
+**Wrong**:
+```csharp
+return Task.FromResult(new UnpublishResult(
+    Success: false,
+    ContentId: contentId,
+    WasPublished: false,
+    ErrorMessage: ex.Message));
+```
+
+**Correct**:
+```csharp
+return Task.FromResult(new UnpublishResult(
+    Success: false,
+    ContentId: contentId,
+    WasPublished: false,
+    ErrorMessage: "Failed to unpublish descriptor"));
+```
+
+**Why This Keeps Happening**: once one method in a result-producing service is sanitized, nearby methods look “covered” in review. They are not. In MediaCore, publish, update, and unpublish all produce API-facing result records and each path must be translated independently.
+
 ### 0xB6. Local JSON Persistence Must Use Explicit DTOs Instead Of Depending On Runtime Constructor Binding
 
 **The Bug**: the peer reputation store wrote runtime `PeerReputationEvent` objects straight to disk and tried to read them back into the same type. Cold-load reads silently came back empty because the persisted JSON contract drifted into a shape that `System.Text.Json` constructor binding did not reliably rehydrate for that runtime type.
