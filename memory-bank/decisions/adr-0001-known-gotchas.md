@@ -10299,6 +10299,35 @@ var effectiveLimit = limit > 0 ? Math.Min(limit.Value, 100) : 100;
 
 **Why This Keeps Happening**: controller comments and DTO cleanup often drift separately from runtime enforcement. If an endpoint advertises a hard cap or treats an optional string as “absent”, enforce that at the boundary instead of relying on service-layer callers to rediscover the intended contract.
 
+### 0k64. Pod DHT Normalization Must Cover Nested Metadata, Not Just Top-Level Pod Fields
+
+**The Bug**: `PodDhtController.NormalizePod(...)` normalized the top-level pod object, tags, and channels, but left nested members, external bindings, and private-service policy strings untouched. That meant published DHT metadata could still contain padded peer IDs, roles, keys, service names, hosts, protocols, and binding identifiers even though the outer pod looked canonical.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodDhtController.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodDhtControllerTests.cs`
+
+**Wrong**:
+```csharp
+Members = pod.Members,
+ExternalBindings = pod.ExternalBindings,
+PrivateServicePolicy = pod.PrivateServicePolicy,
+```
+
+**Correct**:
+```csharp
+Members = pod.Members?
+    .Select(member => new PodMember
+    {
+        PeerId = member.PeerId?.Trim() ?? string.Empty,
+        Role = member.Role?.Trim() ?? string.Empty,
+        PublicKey = string.IsNullOrWhiteSpace(member.PublicKey) ? null : member.PublicKey.Trim(),
+    })
+    .ToList(),
+```
+
+**Why This Keeps Happening**: once a controller has a `NormalizePod(...)` helper, it is easy to assume the whole object graph is canonicalized. It is not unless every nested string-bearing subtype is rebuilt too. For DHT-published documents, partial normalization is still a correctness bug because peers consume the nested metadata exactly as published.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
