@@ -51,7 +51,7 @@ public sealed class SolidWebIdResolver : ISolidWebIdResolver
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, opts.TimeoutSeconds)));
 
-        var client = _http.CreateClient();
+        using var client = _http.CreateClient();
         using var req = new HttpRequestMessage(HttpMethod.Get, webId);
         req.Headers.Accept.ParseAdd("text/turtle, application/ld+json;q=0.9, application/rdf+xml;q=0.8");
 
@@ -63,10 +63,10 @@ public sealed class SolidWebIdResolver : ISolidWebIdResolver
         await CopyWithLimitAsync(s, limited, opts.MaxFetchBytes, cts.Token).ConfigureAwait(false);
         limited.Position = 0;
 
-        var g = new Graph();
+        using var g = new Graph();
 
         // dotNetRDF: use RdfReader for auto-detection, or parse based on content-type
-        var ctType = resp.Content.Headers.ContentType?.MediaType ?? "";
+        var ctType = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
         using var reader = new StreamReader(limited);
 
         if (ctType.Contains("turtle", StringComparison.OrdinalIgnoreCase) || ctType.Contains("text/turtle", StringComparison.OrdinalIgnoreCase))
@@ -80,7 +80,7 @@ public sealed class SolidWebIdResolver : ISolidWebIdResolver
             limited.Position = 0;
             reader.DiscardBufferedData();
             var content = await reader.ReadToEndAsync(cts.Token).ConfigureAwait(false);
-            var store = new TripleStore();
+            using var store = new TripleStore();
             var jsonParser = new JsonLdParser();
             jsonParser.Load(store, content);
 

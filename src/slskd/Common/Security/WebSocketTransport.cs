@@ -57,7 +57,7 @@ public class WebSocketTransport : IAnonymityTransport
         try
         {
             using var client = new ClientWebSocket();
-            client.Options.AddSubProtocol(_options.SubProtocol);
+            AddSubProtocolIfConfigured(client);
 
             if (_options.UseWss)
             {
@@ -142,12 +142,12 @@ public class WebSocketTransport : IAnonymityTransport
             if (pooledConnection != null && pooledConnection.IsUsable())
             {
                 _logger.LogDebug("Reusing pooled WebSocket connection for {Host}:{Port}", host, port);
-                return new WebSocketStream(pooledConnection.WebSocket, pooledConnection, () => ReturnToPool(connectionKey, pooledConnection));
+                return new WebSocketStream(pooledConnection.WebSocket, pooledConnection, () => _ = ReturnToPool(connectionKey, pooledConnection));
             }
 
             // Create new WebSocket connection
             var client = new ClientWebSocket();
-            client.Options.AddSubProtocol(_options.SubProtocol);
+            AddSubProtocolIfConfigured(client);
 
             // Add custom headers to appear as normal web traffic
             if (_options.CustomHeaders != null)
@@ -215,7 +215,7 @@ public class WebSocketTransport : IAnonymityTransport
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
 
-                ReturnToPool(connectionKey, connection);
+                _ = ReturnToPool(connectionKey, connection);
             });
         }
         catch (Exception ex)
@@ -275,6 +275,14 @@ public class WebSocketTransport : IAnonymityTransport
         finally
         {
             _connectionPoolLock.Release();
+        }
+    }
+
+    private void AddSubProtocolIfConfigured(ClientWebSocket client)
+    {
+        if (!string.IsNullOrWhiteSpace(_options.SubProtocol))
+        {
+            client.Options.AddSubProtocol(_options.SubProtocol);
         }
     }
 

@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
+
+### Completed
+- Continued the warning-reduction work with another broad batch across `Program`, `Common/Security/*`, mesh overlay/service-fabric helpers, SOLID resolution, streaming, and multi-source swarm code instead of isolated one-off edits.
+- Tightened disposable ownership and lifecycle handling in `HttpTunnelTransport`, `MeekTransport`, `LocalPortForwarder`, `Obfs4Transport`, `TimedBatcher`, `StreamsController`, and related helpers.
+- Reduced token-propagation and nullability/analyzer noise in `WebSocketTransport`, `I2PTransport`, `ITunnelConnectivity`, `MeshServiceClient`, `UdpOverlayClient`, `MediaCoreSwarmService`, `MediaCoreSwarmIntelligence`, and `MediaCoreChunkScheduler`.
+- Cleaned several deterministic style/nullability issues in `Program`, `ServicePayloadParser`, `SolidWebIdResolver`, and the multisource swarm paths while preserving the current behavior.
+
+### Verification
+- `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0 -t:Rebuild` passed repeatedly during the pass.
+- Current app-project warning floor is `1687` warnings, down from the previous stable floor of `1729`.
+
+### Remaining
+- The largest remaining clusters are now mesh transport/overlay analyzers (`DirectQuicDialer`, `PrivateGatewayMeshService`, `I2pSocksDialer`), style debt across controller/API files, and ownership warnings in media/songid/search paths.
+- `Program` still has the `PhysicalFileProvider` ownership warning and multisource still has a stubborn chunk-timeout CTS ownership warning despite the helper extraction.
+
 ## 2026-03-21 11:35 - Security alert cleanup and PR triage
 
 ### Completed

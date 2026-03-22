@@ -12,6 +12,7 @@ using System.Net.Quic;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,9 @@ using slskd.Mesh.Transport;
 /// <summary>
 /// QUIC overlay server for control-plane messages (ControlEnvelope).
 /// </summary>
+[SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
+[SupportedOSPlatform("windows")]
 public class QuicOverlayServer : BackgroundService
 {
     private readonly ILogger<QuicOverlayServer> logger;
@@ -53,6 +57,9 @@ public class QuicOverlayServer : BackgroundService
     /// </summary>
     public int GetActiveConnectionCount() => activeConnections.Count;
 
+    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform("windows")]
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
@@ -75,7 +82,7 @@ public class QuicOverlayServer : BackgroundService
         try
         {
             // Generate self-signed certificate for QUIC/TLS
-            var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic");
+            using var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic");
 
             var listenerOptions = new QuicListenerOptions
             {
@@ -83,18 +90,19 @@ public class QuicOverlayServer : BackgroundService
                 ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
                 ConnectionOptionsCallback = (connection, hello, token) =>
                 {
-                    return new ValueTask<QuicServerConnectionOptions>(new QuicServerConnectionOptions
-                    {
-                        DefaultStreamErrorCode = 0x01,
-                        DefaultCloseErrorCode = 0x01,
-                        ServerAuthenticationOptions = new SslServerAuthenticationOptions
+                    return new ValueTask<QuicServerConnectionOptions>(
+                        new QuicServerConnectionOptions
                         {
-                            ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
-                            ServerCertificate = certificate,
-                            ClientCertificateRequired = false,
-                            RemoteCertificateValidationCallback = (sender, cert, chain, errors) => true // Accept self-signed certs
-                        }
-                    });
+                            DefaultStreamErrorCode = 0x01,
+                            DefaultCloseErrorCode = 0x01,
+                            ServerAuthenticationOptions = new SslServerAuthenticationOptions
+                            {
+                                ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
+                                ServerCertificate = certificate,
+                                ClientCertificateRequired = false,
+                                RemoteCertificateValidationCallback = (_, _, _, _) => true // Accept self-signed certs
+                            }
+                        });
                 }
             };
 
@@ -130,7 +138,7 @@ public class QuicOverlayServer : BackgroundService
             }
 
             await using (listener)
-
+            {
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     try
@@ -139,7 +147,15 @@ public class QuicOverlayServer : BackgroundService
                         var ep = connection.RemoteEndPoint as IPEndPoint;
                         if (ep != null && !connectionThrottler.ShouldAllowConnection(ep.ToString(), TransportType.DirectQuic))
                         {
-                            try { await connection.CloseAsync(0); } catch { /* ignore */ }
+                            try
+                            {
+                                await connection.CloseAsync(0, stoppingToken);
+                            }
+                            catch
+                            {
+                                // Ignore shutdown/close failures for rejected peers.
+                            }
+
                             await connection.DisposeAsync();
                             continue;
                         }
@@ -155,6 +171,7 @@ public class QuicOverlayServer : BackgroundService
                         logger.LogError(ex, "[Overlay-QUIC] Error accepting connection");
                     }
                 }
+            }
         }
         catch (Exception ex)
         {
@@ -162,6 +179,9 @@ public class QuicOverlayServer : BackgroundService
         }
     }
 
+    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform("windows")]
     private async Task HandleConnectionAsync(QuicConnection connection, CancellationToken ct)
     {
         var remoteEndPoint = connection.RemoteEndPoint as IPEndPoint;
@@ -216,6 +236,9 @@ public class QuicOverlayServer : BackgroundService
         }
     }
 
+    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform("windows")]
     private async Task HandleStreamAsync(QuicStream stream, IPEndPoint? remoteEndPoint, CancellationToken ct)
     {
         try

@@ -7,7 +7,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Timed message batcher that holds messages for a configurable window and sends them as batches.
 /// </summary>
-public class TimedBatcher : IMessageBatcher
+public class TimedBatcher : IMessageBatcher, IDisposable
 {
     private readonly MessageBatchingOptions _options;
     private readonly List<BatchedMessage> _currentBatch = new();
@@ -85,7 +85,7 @@ public class TimedBatcher : IMessageBatcher
         }
 
         // Extract the current batch
-        await _batchLock.WaitAsync();
+        await _batchLock.WaitAsync(cancellationToken);
         try
         {
             var batch = _currentBatch.ToList();
@@ -132,6 +132,7 @@ public class TimedBatcher : IMessageBatcher
     private void StartBatchTimer()
     {
         _currentBatchTimer?.Cancel();
+        _currentBatchTimer?.Dispose();
         _currentBatchTimer = new CancellationTokenSource();
 
         Task.Delay(_options.BatchWindowMs, _currentBatchTimer.Token)
@@ -171,5 +172,23 @@ public class TimedBatcher : IMessageBatcher
             // Wait a bit before checking again
             await Task.Delay(50, cancellationToken);
         }
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
+        _currentBatchTimer?.Cancel();
+        _currentBatchTimer?.Dispose();
+        _batchLock.Dispose();
     }
 }

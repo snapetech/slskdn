@@ -109,7 +109,7 @@ public class MeshServiceClient : IMeshServiceClient
         try
         {
             // Serialize the call
-            var callBytes = MessagePackSerializer.Serialize(call);
+            var callBytes = MessagePackSerializer.Serialize(call, cancellationToken: CancellationToken.None);
 
             // Create control envelope
             var envelope = new ControlEnvelope

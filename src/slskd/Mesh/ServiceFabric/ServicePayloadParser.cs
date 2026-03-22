@@ -17,7 +17,7 @@ public static class ServicePayloadParser
     /// Uses <see cref="SecurityUtils.MaxRemotePayloadSize"/> when no explicit max is provided.
     /// </summary>
     /// <returns>(value, null) on success; (default, ServiceReply) on failure.</returns>
-    public static (T? value, ServiceReply? error) TryParseJson<T>(ServiceCall call)
+    public static (T? Value, ServiceReply? Error) TryParseJson<T>(ServiceCall call)
         where T : class
         => TryParseJson<T>(call, SecurityUtils.MaxRemotePayloadSize);
 
@@ -27,7 +27,7 @@ public static class ServicePayloadParser
     /// <param name="call">The service call.</param>
     /// <param name="maxPayloadSize">Maximum payload size in bytes (from <see cref="Mesh.MeshSecurityOptions"/>).</param>
     /// <returns>(value, null) on success; (default, ServiceReply) on failure.</returns>
-    public static (T? value, ServiceReply? error) TryParseJson<T>(ServiceCall call, int maxPayloadSize)
+    public static (T? Value, ServiceReply? Error) TryParseJson<T>(ServiceCall call, int maxPayloadSize)
         where T : class
     {
         if (call.Payload == null || call.Payload.Length == 0)

@@ -329,7 +329,8 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         {
             // Find content variants this peer might have
             var variants = await _contentRegistry.FindByDomainAsync(
-                ContentIdParser.GetDomain(contentAnalysis.ContentId));
+                ContentIdParser.GetDomain(contentAnalysis.ContentId),
+                ct);
 
             if (!variants.Any())
                 return 0.5;

@@ -41,11 +41,23 @@ public sealed class DefaultTunnelConnectivity : ITunnelConnectivity
         IReadOnlyList<string> resolvedIPs,
         CancellationToken cancellationToken)
     {
-        var tcpClient = new TcpClient();
-        await tcpClient.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
-        var stream = tcpClient.GetStream();
-        var remote = tcpClient.Client.RemoteEndPoint as System.Net.IPEndPoint;
-        var connectedIP = remote?.Address.ToString();
-        return (stream, connectedIP);
+        TcpClient? tcpClient = null;
+
+        try
+        {
+            tcpClient = new TcpClient();
+            await tcpClient.ConnectAsync(host, port, cancellationToken).ConfigureAwait(false);
+            var stream = tcpClient.GetStream();
+            var remote = tcpClient.Client.RemoteEndPoint as System.Net.IPEndPoint;
+            var connectedIP = remote?.Address.ToString();
+
+            // NetworkStream owns the socket when it is disposed by the caller.
+            tcpClient = null;
+            return (stream, connectedIP);
+        }
+        finally
+        {
+            tcpClient?.Dispose();
+        }
     }
 }

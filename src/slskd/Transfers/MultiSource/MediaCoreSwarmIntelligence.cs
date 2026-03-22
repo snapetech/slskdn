@@ -545,7 +545,7 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
             if (domain == null)
                 return new[] { contentId };
 
-            var relatedContent = await _contentRegistry.FindByDomainAsync(domain);
+            var relatedContent = await _contentRegistry.FindByDomainAsync(domain, cancellationToken);
             return relatedContent.Take(5).ToList(); // Limit to prevent overwhelming
         }
         catch

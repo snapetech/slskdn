@@ -2815,6 +2815,7 @@ namespace slskd
             // prepend the url base.
             app.UsePathBase(urlBase);
             app.UseHTMLRewrite("((\\.)?\\/static)", $"{(urlBase == "/" ? string.Empty : urlBase)}/static");
+
             // The main fix is making HTTP_ADDRESS configurable for proper binding
             app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={OptionsAtStartup.Web.Port}</script>", excludedRoutes: new[] { "/api", "/swagger" });
             Log.Information("Using base url {UrlBase}", urlBase);
@@ -3315,6 +3316,12 @@ namespace slskd
                 .Where(v => v != "\u0000")
                 .ToArray();
 
+            var configurationDirectory = Path.GetDirectoryName(configurationFile);
+            if (string.IsNullOrWhiteSpace(configurationDirectory))
+            {
+                throw new InvalidOperationException($"Configuration file path '{configurationFile}' does not have a directory component.");
+            }
+
             var result = builder
                 .AddDefaultValues(
                     targetType: typeof(Options))
@@ -3326,7 +3333,7 @@ namespace slskd
                     targetType: typeof(Options),
                     optional: true,
                     reloadOnChange: reloadOnChange,
-                    provider: new PhysicalFileProvider(Path.GetDirectoryName(configurationFile), ExclusionFilters.None)) // required for locations outside of the app directory
+                    provider: new PhysicalFileProvider(configurationDirectory, ExclusionFilters.None)) // required for locations outside of the app directory
                 .AddCommandLine(
                     targetType: typeof(Options),
                     multiValuedArguments,
@@ -3430,7 +3437,7 @@ namespace slskd
         {
             filename = Path.Combine(AppContext.BaseDirectory, filename);
 
-            var cert = X509.Generate(subject: AppName, password, X509KeyStorageFlags.Exportable);
+            using var cert = X509.Generate(subject: AppName, password, X509KeyStorageFlags.Exportable);
             IOFile.WriteAllBytes(filename, cert.Export(X509ContentType.Pkcs12, password));
 
             return (filename, password);

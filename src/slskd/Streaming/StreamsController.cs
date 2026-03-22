@@ -112,18 +112,22 @@ public class StreamsController : ControllerBase
         if (!_limiter.TryAcquire(limiterKey, maxConcurrent))
             return StatusCode(429, "Too many concurrent streams.");
 
-        Stream stream;
+        Stream? stream = null;
         try
         {
             stream = new FileStream(resolved.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var wrapped = new ReleaseOnDisposeStream(stream, () => _limiter.Release(limiterKey));
+            stream = null;
+            return File(wrapped, resolved.ContentType, enableRangeProcessing: true);
         }
         catch (IOException)
         {
             _limiter.Release(limiterKey);
             return NotFound();
         }
-
-        var wrapped = new ReleaseOnDisposeStream(stream, () => _limiter.Release(limiterKey));
-        return File(wrapped, resolved.ContentType, enableRangeProcessing: true);
+        finally
+        {
+            stream?.Dispose();
+        }
     }
 }

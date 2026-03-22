@@ -31,6 +31,7 @@ public class LocalPortForwarder : IDisposable
 
     // Forwarder instances track individual tunnel connections
     private readonly ConcurrentDictionary<string, ForwarderConnection> _activeConnections = new();
+    private bool _disposed;
 
     public LocalPortForwarder(
         ILogger<LocalPortForwarder> logger,
@@ -61,7 +62,11 @@ public class LocalPortForwarder : IDisposable
             throw new InvalidOperationException($"Port {localPort} is already being forwarded");
         }
 
-        var forwarder = new ForwarderInstance(
+        ForwarderInstance? forwarder = null;
+
+        try
+        {
+            forwarder = new ForwarderInstance(
             localPort,
             podId,
             destinationHost,
@@ -70,11 +75,10 @@ public class LocalPortForwarder : IDisposable
             this,
             _logger);
 
-        _activeForwarders[localPort] = forwarder;
+            _activeForwarders[localPort] = forwarder;
 
-        try
-        {
             await forwarder.StartAsync();
+            forwarder = null;
             _logger.LogInformation(
                 "[PortForward] Started forwarding local port {LocalPort} to {Host}:{Port} via pod {PodId}",
                 localPort, destinationHost, destinationPort, podId);
@@ -82,6 +86,7 @@ public class LocalPortForwarder : IDisposable
         catch (Exception ex)
         {
             _activeForwarders.TryRemove(localPort, out _);
+            forwarder?.Dispose();
             _logger.LogError(ex,
                 "[PortForward] Failed to start forwarding on port {LocalPort}", localPort);
             throw;
@@ -307,6 +312,23 @@ public class LocalPortForwarder : IDisposable
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (!disposing)
+        {
+            _disposed = true;
+            return;
+        }
+
         foreach (var forwarder in _activeForwarders.Values)
         {
             forwarder.Dispose();
@@ -320,6 +342,8 @@ public class LocalPortForwarder : IDisposable
         }
 
         _activeConnections.Clear();
+
+        _disposed = true;
     }
 }
 

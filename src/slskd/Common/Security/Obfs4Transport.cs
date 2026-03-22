@@ -52,6 +52,8 @@ public class Obfs4Transport : IAnonymityTransport
     /// <returns>True if obfs4 is available, false otherwise.</returns>
     public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
     {
+        TcpClient? client = null;
+
         try
         {
             // Check if obfs4proxy binary exists
@@ -117,6 +119,8 @@ public class Obfs4Transport : IAnonymityTransport
     /// <returns>A stream for the obfuscated connection.</returns>
     public async Task<Stream> ConnectAsync(string host, int port, string? isolationKey, CancellationToken cancellationToken = default)
     {
+        TcpClient? client = null;
+
         lock (_statusLock)
         {
             _status.TotalConnectionsAttempted++;
@@ -135,7 +139,7 @@ public class Obfs4Transport : IAnonymityTransport
             var process = await StartObfs4ProxyAsync(bridge, isolationKey, cancellationToken);
 
             // Connect to the local obfs4proxy endpoint
-            var client = new TcpClient();
+            client = new TcpClient();
             await client.ConnectAsync("127.0.0.1", process.LocalPort, cancellationToken);
 
             lock (_statusLock)
@@ -146,7 +150,9 @@ public class Obfs4Transport : IAnonymityTransport
             }
 
             _logger.LogDebug("Established obfs4 connection to {Host}:{Port} via bridge {Bridge}", host, port, bridge.Address);
-            return new Obfs4Stream(client.GetStream(), process, () =>
+            var stream = client.GetStream();
+            client = null;
+            return new Obfs4Stream(stream, process, () =>
             {
                 lock (_statusLock)
                 {
@@ -161,6 +167,7 @@ public class Obfs4Transport : IAnonymityTransport
                 _status.LastError = ex.Message;
             }
 
+            client?.Dispose();
             _logger.LogError(ex, "Failed to establish obfs4 connection to {Host}:{Port}", host, port);
             throw;
         }
@@ -237,7 +244,7 @@ public class Obfs4Transport : IAnonymityTransport
     private async Task<Obfs4Process> StartObfs4ProxyAsync(Obfs4Bridge bridge, string? isolationKey, CancellationToken cancellationToken)
     {
         // Find an available local port
-        var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
+        using var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
         listener.Start();
         var localPort = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
@@ -287,7 +294,7 @@ public class Obfs4Transport : IAnonymityTransport
     private async Task<bool> WaitForObfs4ProxyReadyAsync(Process process, CancellationToken cancellationToken)
     {
         // obfs4proxy signals readiness by writing "VERSION 1" to stdout
-        var outputTask = process.StandardOutput.ReadLineAsync();
+        var outputTask = process.StandardOutput.ReadLineAsync(cancellationToken).AsTask();
         var timeoutTask = Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
 
         var completedTask = await Task.WhenAny(outputTask, timeoutTask);

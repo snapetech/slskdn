@@ -20,7 +20,7 @@ namespace slskd.Common.Security;
 /// Meek transport for domain fronting.
 /// Uses domain fronting through CDNs to bypass censorship.
 /// </summary>
-public class MeekTransport : IAnonymityTransport
+public class MeekTransport : IAnonymityTransport, IDisposable
 {
     private readonly MeekOptions _options;
     private readonly ILogger<MeekTransport> _logger;
@@ -28,6 +28,7 @@ public class MeekTransport : IAnonymityTransport
 
     private readonly AnonymityTransportStatus _status = new();
     private readonly object _statusLock = new();
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MeekTransport"/> class.
@@ -64,7 +65,7 @@ public class MeekTransport : IAnonymityTransport
         try
         {
             // Test domain fronting capability
-            var request = new HttpRequestMessage(HttpMethod.Get, _options.BridgeUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Get, _options.BridgeUrl);
 
             // Add domain fronting headers
             request.Headers.Host = _options.FrontDomain;
@@ -148,10 +149,10 @@ public class MeekTransport : IAnonymityTransport
             };
 
             var requestJson = System.Text.Json.JsonSerializer.Serialize(tunnelRequest);
-            var encryptedPayload = await EncryptPayloadAsync(requestJson);
+            var encryptedPayload = EncryptPayload(requestJson);
 
             // Send initial connection request
-            var request = new HttpRequestMessage(HttpMethod.Post, _options.BridgeUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, _options.BridgeUrl)
             {
                 Content = new StringContent(encryptedPayload, Encoding.UTF8, "application/octet-stream")
             };
@@ -223,7 +224,28 @@ public class MeekTransport : IAnonymityTransport
         }
     }
 
-    private async Task<string> EncryptPayloadAsync(string payload)
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            _httpClient.Dispose();
+        }
+
+        _disposed = true;
+    }
+
+    private static string EncryptPayload(string payload)
     {
         // In a real implementation, this would encrypt the payload
         // For now, we'll just base64 encode it
@@ -231,7 +253,7 @@ public class MeekTransport : IAnonymityTransport
         return Convert.ToBase64String(bytes);
     }
 
-    private async Task<string> DecryptPayloadAsync(string encryptedPayload)
+    private static string DecryptPayload(string encryptedPayload)
     {
         // In a real implementation, this would decrypt the payload
         // For now, we'll just base64 decode it
@@ -294,7 +316,7 @@ public class MeekTransport : IAnonymityTransport
             // Send data through additional HTTP requests
             var encryptedData = Convert.ToBase64String(buffer.AsSpan(offset, count).ToArray());
 
-            var request = new HttpRequestMessage(HttpMethod.Post, _options.BridgeUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, _options.BridgeUrl)
             {
                 Content = new StringContent(encryptedData, Encoding.UTF8, "application/octet-stream")
             };

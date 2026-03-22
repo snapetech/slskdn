@@ -144,14 +144,15 @@ public class I2PTransport : IAnonymityTransport
             if (string.IsNullOrWhiteSpace(host))
                 throw new ArgumentException("I2P destination (host) must be a base64 or .b32.i2p address.", nameof(host));
 
-            client = new TcpClient();
+            var tcpClient = new TcpClient();
+            client = tcpClient;
 
             var parts = _options.SamAddress.Split(':');
             var samHost = parts[0];
             var samPort = int.Parse(parts[1]);
 
-            await client.ConnectAsync(samHost, samPort, cancellationToken);
-            var stream = client.GetStream();
+            await tcpClient.ConnectAsync(samHost, samPort, cancellationToken);
+            var stream = tcpClient.GetStream();
             using var writer = new StreamWriter(stream, leaveOpen: true);
             using var reader = new StreamReader(stream, leaveOpen: true);
 
@@ -187,7 +188,7 @@ public class I2PTransport : IAnonymityTransport
                 _status.LastSuccessfulConnection = DateTimeOffset.UtcNow;
             }
 
-            var c = client;
+            var c = tcpClient;
             client = null;
             return new TrackedStream(stream, () =>
             {

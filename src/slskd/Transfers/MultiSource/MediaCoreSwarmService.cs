@@ -152,6 +152,11 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
 
             // Determine primary ContentID and optimization strategy
             var primaryContentId = DeterminePrimaryContentId(groupsByContentId);
+            if (primaryContentId == null)
+            {
+                return CreateFallbackGrouping(verificationResult, cancellationToken);
+            }
+
             var optimizationStrategy = DetermineOptimizationStrategy(primaryContentId, groupsByContentId);
 
             var result = new ContentIdSwarmGrouping(
@@ -173,7 +178,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
                 verificationResult.Filename);
 
             // Fallback to basic grouping
-            return await CreateFallbackGroupingAsync(verificationResult, cancellationToken);
+            return CreateFallbackGrouping(verificationResult, cancellationToken);
         }
     }
 
@@ -239,7 +244,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
                 swarmGrouping.PrimaryContentId);
 
             // Fallback to simple peer selection
-            return await CreateFallbackPeerSelectionAsync(swarmGrouping, maxPeers, cancellationToken);
+            return CreateFallbackPeerSelection(swarmGrouping, maxPeers, cancellationToken);
         }
     }
 
@@ -253,7 +258,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
     }
 
     // Helper methods
-    private static string ExtractContentIdFromFilename(string filename)
+    private static string? ExtractContentIdFromFilename(string filename)
     {
         // Simple extraction - look for content:domain:type:id pattern in filename
         // This is a basic implementation; in practice, this might involve more sophisticated parsing
@@ -283,8 +288,8 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
             // Search for similar content in the registry
             // This is a simplified implementation - in practice, this would involve
             // more sophisticated fuzzy matching against known content
-            var audioContent = await _contentRegistry.FindByDomainAsync("audio");
-            var videoContent = await _contentRegistry.FindByDomainAsync("video");
+            var audioContent = await _contentRegistry.FindByDomainAsync("audio", cancellationToken);
+            var videoContent = await _contentRegistry.FindByDomainAsync("video", cancellationToken);
 
             var candidateContentIds = audioContent.Concat(videoContent).Take(50); // Limit for performance
 
@@ -348,7 +353,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
         return Math.Min(baseScore + sourceCountBonus + codecConsistencyBonus + canonicalBonus, 1.0);
     }
 
-    private static string DeterminePrimaryContentId(IReadOnlyDictionary<string, SwarmGroup> groupsByContentId)
+    private static string? DeterminePrimaryContentId(IReadOnlyDictionary<string, SwarmGroup> groupsByContentId)
     {
         if (!groupsByContentId.Any())
             return null;
@@ -501,7 +506,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
         // Simplified similarity calculation - in practice, this would use
         // more sophisticated text similarity algorithms
         var filename2 = GenerateFilenameFromDescriptor(descriptor);
-        return _fuzzyMatcher.Score(filename1, "", filename2, "");
+        return _fuzzyMatcher.Score(filename1, string.Empty, filename2, string.Empty);
     }
 
     private static string GenerateFilenameFromDescriptor(ContentDescriptor descriptor)
@@ -512,9 +517,11 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
         return $"{contentId}.{codec}";
     }
 
-    private static async Task<ContentIdSwarmGrouping> CreateFallbackGroupingAsync(
+    private static ContentIdSwarmGrouping CreateFallbackGrouping(
         ContentVerificationResult verificationResult, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         // Fallback grouping when MediaCore integration fails
         var fallbackContentId = $"fallback:{verificationResult.Filename.GetHashCode():X8}";
         var allSources = verificationResult.SourcesByHash.SelectMany(kvp => kvp.Value).ToList();
@@ -537,9 +544,11 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
             OptimizationStrategy: SwarmOptimizationStrategy.SpeedFirst);
     }
 
-    private static async Task<SwarmPeerSelection> CreateFallbackPeerSelectionAsync(
+    private static SwarmPeerSelection CreateFallbackPeerSelection(
         ContentIdSwarmGrouping swarmGrouping, int maxPeers, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         // Fallback peer selection when MediaCore integration fails
         var allSources = swarmGrouping.GroupsByContentId
             .SelectMany(kvp => kvp.Value.Sources)

@@ -27,6 +27,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
 
     private readonly AnonymityTransportStatus _status = new();
     private readonly object _statusLock = new();
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpTunnelTransport"/> class.
@@ -208,7 +209,23 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
 
     public void Dispose()
     {
-        _httpClient.Dispose();
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            _httpClient.Dispose();
+        }
+
+        _disposed = true;
     }
 
     /// <summary>
@@ -288,7 +305,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
             var content = new ByteArrayContent(buffer, offset, count);
             content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, _options.ProxyUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, _options.ProxyUrl)
             {
                 Content = content
             };

@@ -21,6 +21,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using slskd.Telemetry;
 using static slskd.Telemetry.SwarmMetrics;
@@ -880,18 +881,27 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 {
                     // AGGRESSIVE timeout - 10s max per chunk to prevent stragglers
                     // Fast peers do 256KB chunks in 1-5 seconds; 10s is plenty
-                    using var chunkCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    chunkCts.CancelAfter(10000); // 10s max per chunk
+                    CancellationTokenSource? chunkCts = null;
+                    ChunkResult result;
+                    try
+                    {
+                        chunkCts = CreateChunkTimeoutSource(cancellationToken);
+                        chunkCts.CancelAfter(10000); // 10s max per chunk
 
-                    var result = await DownloadChunkAsync(
-                        username,
-                        sourcePath,
-                        fileSize,
-                        chunk.StartOffset,
-                        chunk.EndOffset,
-                        workerTempPath,  // Write to worker-specific temp file
-                        status,
-                        chunkCts.Token);
+                        result = await DownloadChunkAsync(
+                            username,
+                            sourcePath,
+                            fileSize,
+                            chunk.StartOffset,
+                            chunk.EndOffset,
+                            workerTempPath,  // Write to worker-specific temp file
+                            status,
+                            chunkCts.Token);
+                    }
+                    finally
+                    {
+                        chunkCts?.Dispose();
+                    }
 
                     result.MusicBrainzRecordingId = source.MusicBrainzRecordingId ?? status.TargetMusicBrainzRecordingId;
                     result.Fingerprint = source.AudioFingerprint ?? status.TargetFingerprint;
@@ -1131,6 +1141,10 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
 
         return chunks;
     }
+
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Returned CTS is disposed by the caller in the surrounding finally block.")]
+    private static CancellationTokenSource CreateChunkTimeoutSource(CancellationToken cancellationToken)
+        => CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
     private async Task<ChunkResult> DownloadChunkAsync(
         string username,

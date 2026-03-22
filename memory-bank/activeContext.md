@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Warning cleanup still in progress; warning floor pushed down through repeated broad passes and the remaining backlog is now mostly analyzers/disposables plus a smaller `Common/*` nullability seam
+- **Current Task**: Warning cleanup still in progress; current stable app-project warning floor is `1687` after another broad analyzer/disposal pass across `Program`, `Common/Security`, mesh overlay/service-fabric, SOLID/streaming, and multisource code
 - **Branch**: `e2e-fixture-fix2`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -59,7 +59,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Investigated the `.76` release hang, confirmed the only stuck job was `Publish to Snap Store (stable)`, and updated both Snap Store upload steps to use per-attempt `timeout --signal=TERM 10m` bounds plus explicit retry/failure logging so future releases do not hang indefinitely inside `snapcraft upload`
   - Rebased the live security-fix work onto the actual GitHub `master` tip (`047a6da3`), excluded `cs/log-forging` from CodeQL, constrained destination/library-health/mesh-transfer paths to configured roots, switched bridge default downloads back to the configured downloads directory, and required auth on `PodMembershipController`
   - Completed the final true-positive CodeQL pass locally: removed cleartext-style secret logging from `Program` and `AsymmetricDisclosure`, hardened relay token validation to trust server-side agent identity instead of request headers, rebuilt `SqliteShareRepository` connection strings from validated data sources, and constrained HashDb profiling to admin-only single-statement read-only SQL with focused unit coverage
-  - Manually dismissed the first false-positive batch (CSRF cookie, SOCKS negotiation, login null-guard), then found GitHub’s fresh analysis still flagging relay agent identifiers as cleartext. Followed up by caching trusted relay connection ids instead of raw agent names and anonymizing relay completion logs/temp filenames with hashed agent ids
+ - Manually dismissed the first false-positive batch (CSRF cookie, SOCKS negotiation, login null-guard), then found GitHub’s fresh analysis still flagging relay agent identifiers as cleartext. Followed up by caching trusted relay connection ids instead of raw agent names and anonymizing relay completion logs/temp filenames with hashed agent ids
+  - Continued the warning-reduction effort with another broad cleanup batch touching `HttpTunnelTransport`, `I2PTransport`, `WebSocketTransport`, `MeekTransport`, `LocalPortForwarder`, `Obfs4Transport`, `TimedBatcher`, `QuicOverlayServer`, `MeshServiceClient`, `ServicePayloadParser`, `SolidWebIdResolver`, `StreamsController`, and the `MediaCore*` / `MultiSourceDownloadService` seams
+  - Rebuilt the app project repeatedly during that pass and pushed the stable warning floor from `1729` to `1687` without breaking the build; the remaining hotspots are now concentrated in mesh transport/overlay analyzers, controller/style debt, and a few stubborn ownership warnings (`PhysicalFileProvider`, chunk CTS, selected transport dialers)
 
 ---
 
@@ -104,7 +106,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. Continue the large warning-reduction pass from the current seam instead of doing isolated one-offs:
-   the heaviest remaining buckets are now `Program`, `MultiSource*`, and `Common/Security/*` disposal/token analyzers plus the smaller remaining `Common/*` helper nullability seam.
+   the heaviest remaining buckets are now mesh transport/overlay analyzers (`DirectQuicDialer`, `PrivateGatewayMeshService`, `I2pSocksDialer`), controller/style debt (`SA1137`/`SA1108` clusters), and the remaining ownership cases in `Program`, `MultiSource*`, media/songid/search paths.
 2. Re-run the slow full-instance `DisasterModeTests` class separately if that harness is needed for CI confidence; the lighter `DisasterModeIntegrationTests` and `LoadTests` are green after the stub-host DI repair.
 3. If release workflows start warning on other third-party actions, repeat the same direct-release audit used here with `gh api repos/<owner>/<repo>/releases/latest`.
 
