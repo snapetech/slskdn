@@ -337,6 +337,33 @@ private async Task CleanupExpiredTunnelsAsync()
 
 **Why This Keeps Happening**: Cleanup work often feels “daemon-like,” so it gets launched as fire-and-forget during construction. But singleton services are still owned objects, and DI can only shut them down cleanly if they expose a disposal lifecycle that cancels and joins their background work.
 
+### 0y. Once A Refresh Method Starts Awaiting I/O, Its Signature Must Be Fully Converted To `async Task<T>`
+
+**The Bug**: `PodDhtPublisher.RefreshAsync` had been partially refactored from synchronous fast-paths to awaited I/O, but the method signature still returned `Task<PodRefreshResult>` without `async`. That produced a compile break and mixed `Task.FromResult(...)` returns with raw `PodRefreshResult` values.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodDhtPublisher.cs`
+
+**Wrong**:
+```csharp
+public Task<PodRefreshResult> RefreshAsync(...)
+{
+    var pod = await _podService.GetPodAsync(...);
+    return new PodRefreshResult(...);
+}
+```
+
+**Correct**:
+```csharp
+public async Task<PodRefreshResult> RefreshAsync(...)
+{
+    var pod = await _podService.GetPodAsync(...);
+    return new PodRefreshResult(...);
+}
+```
+
+**Why This Keeps Happening**: It is common to start with a synchronous `Task.FromResult(...)` method and later add awaited work in the middle. If that happens, update the full signature and normalize the returns immediately; otherwise you get a half-converted method that neither compiles nor communicates its real async behavior.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
