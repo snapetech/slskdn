@@ -135,6 +135,30 @@ _ = Task.Run(async () => await Task.Delay(TimeSpan.FromSeconds(10), _announceCts
 
 **Why This Keeps Happening**: `using var` around a CTS looks tidy, but it is only correct when all work using that token completes before the scope exits. If a background worker outlives the method, the CTS must be owned and disposed by the component lifecycle, not by a local scope.
 
+### 0n. Simulated Background Transfers Still Need To Materialize Output Before Verification
+
+**The Bug**: `MeshTransferService` simulated chunk progress and then immediately ran file integrity checks without ever creating the target file. Every no-hash transfer therefore failed with `FileNotFoundException`, and explicit cancellation could surface as `Failed` instead of `Cancelled`.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshTransferService.cs`
+
+**Wrong**:
+```csharp
+await Task.Delay(200, ct);
+await VerifyFileIntegrityAsync(status, ct);
+```
+
+**Correct**:
+```csharp
+await Task.Delay(200, ct);
+await using var output = new FileStream(status.TargetPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+output.SetLength(status.FileSize);
+await output.FlushAsync(ct);
+await VerifyFileIntegrityAsync(status, ct);
+```
+
+**Why This Keeps Happening**: It is easy to treat a staged or simulated transfer service as "good enough" once progress reporting exists, but any later verification step assumes a real file exists. If the service publishes `Completed` or runs integrity checks, it must materialize the output artifact or explicitly stub verification out.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
@@ -517,6 +541,75 @@ Assert.True(stored.TotalKeys >= 1);
 ```
 
 **Why This Keeps Happening**: Tuple element names are part of the compile-time API surface even though they look lightweight. When cleanup work renames tuple elements for consistency, stale tests won’t fail until the affected project is rebuilt, so always grep the test tree for the old element name after changing a returned tuple signature.
+
+### 0k14. UDP Port Prediction Must Reject Out-of-Range Endpoints Before `IPEndPoint` Construction
+
+**The Bug**: NAT hole punching code predicted adjacent remote ports by adding a small offset directly to `remoteEp.Port` and passed the raw result to `IPEndPoint`, which can throw for edge values (`0` or `65536+`).
+
+**Files Affected**:
+- `src/slskd/Mesh/Nat/UdpHolePuncher.cs`
+
+**Wrong**:
+```csharp
+var predictedEp = new IPEndPoint(remoteEp.Address, remoteEp.Port + offset);
+```
+
+**Correct**:
+```csharp
+var predictedPort = remoteEp.Port + offset;
+if (predictedPort is <= 0 or > ushort.MaxValue)
+{
+    continue;
+}
+
+var predictedEp = new IPEndPoint(remoteEp.Address, predictedPort);
+```
+
+**Why This Keeps Happening**: Small signed math on port numbers can silently exceed protocol limits around `0` and `65535`; this should be guarded before endpoint creation because constructors validate and throw synchronously. Clamp/skip invalid ports before creating predicted probe targets.
+
+### 0k15. UDP Endpoint Parsers Must Reject Invalid Port Ranges Before `IPEndPoint` Construction
+
+**The Bug**: NAT traversal endpoint parsers accepted `udp://` and `relay://` strings with port integers that are out of protocol bounds, then passed them directly to `IPEndPoint`.
+
+**Files Affected**:
+- `src/slskd/Mesh/Nat/NatTraversalService.cs`
+- `src/slskd/Mesh/Nat/StunNatDetector.cs`
+- `src/slskd/Mesh/Dht/PeerDescriptorPublisher.cs`
+- `src/slskd/Mesh/Transport/TransportSelector.cs`
+- `src/slskd/Mesh/Overlay/QuicDataServer.cs`
+
+**Wrong**:
+```csharp
+if (!int.TryParse(parts[1], out var port)) return false;
+ep = new IPEndPoint(ip, port);
+```
+
+**Correct**:
+```csharp
+if (!int.TryParse(parts[1], out var port) || port is <= 0 or > ushort.MaxValue)
+{
+    return false;
+}
+
+ep = new IPEndPoint(ip, port);
+```
+
+```csharp
+if (parts.Length == 2 && int.TryParse(parts[1], out var port) && port is > 0 and <= ushort.MaxValue)
+{
+    return new TransportEndpoint
+    {
+        TransportType = TransportType.DirectQuic,
+        Host = parts[0],
+        Port = port,
+        Scope = TransportScope.ControlAndData,
+        Preference = 0,
+        Cost = 0
+    };
+}
+```
+
+**Why This Keeps Happening**: `IPEndPoint` validates ports at construction time; endpoint parsers should filter malformed or out-of-range values first to avoid throwing and to keep traversal parsing behavior deterministic.
 
 ### 0j9. Optional Lazy Service Resolvers Must Not Throw Before Stats Objects Return Their Local Counters
 
