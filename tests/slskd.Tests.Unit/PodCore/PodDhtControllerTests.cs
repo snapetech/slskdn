@@ -113,4 +113,45 @@ public class PodDhtControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
         publisher.Verify(service => service.RefreshAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task PublishPod_WhenPublisherReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var publisher = new Mock<IPodDhtPublisher>();
+        publisher
+            .Setup(service => service.PublishAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodPublishResult(false, "pod-1", null, null, null, "sensitive detail"));
+
+        var controller = new PodDhtController(
+            NullLogger<PodDhtController>.Instance,
+            publisher.Object);
+
+        var result = await controller.PublishPod(
+            new PublishPodRequest(new Pod { PodId = "pod-1" }),
+            CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to publish pod", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetPodMetadata_WhenPublisherReturnsNotFound_DoesNotLeakErrorMessage()
+    {
+        var publisher = new Mock<IPodDhtPublisher>();
+        publisher
+            .Setup(service => service.GetPublishedMetadataAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodMetadataResult(false, "pod-1", null, "sensitive detail"));
+
+        var controller = new PodDhtController(
+            NullLogger<PodDhtController>.Instance,
+            publisher.Object);
+
+        var result = await controller.GetPodMetadata("pod-1", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", notFound.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Pod not found", notFound.Value?.ToString() ?? string.Empty);
+    }
 }

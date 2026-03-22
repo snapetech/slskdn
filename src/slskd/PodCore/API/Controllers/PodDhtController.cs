@@ -67,7 +67,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to publish pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to publish pod" });
             }
         }
         catch (Exception ex)
@@ -109,7 +109,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to update pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to update pod" });
             }
         }
         catch (Exception ex)
@@ -146,7 +146,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to unpublish pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to unpublish pod" });
             }
         }
         catch (Exception ex)
@@ -182,7 +182,7 @@ public class PodDhtController : ControllerBase
             }
             else
             {
-                return NotFound(new { podId, found = false, error = result.ErrorMessage ?? "Pod not found" });
+                return NotFound(new { podId, found = false, error = "Pod not found" });
             }
         }
         catch (Exception ex)
@@ -219,7 +219,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to refresh pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to refresh pod" });
             }
         }
         catch (Exception ex)

@@ -102,4 +102,46 @@ public class PodMembershipControllerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task PublishMembership_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var membershipService = new Mock<IPodMembershipService>();
+        membershipService
+            .Setup(service => service.PublishMembershipAsync(It.IsAny<string>(), It.IsAny<PodMember>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MembershipPublishResult(false, "pod-1", "peer-1", null, null, null, "sensitive detail"));
+
+        var controller = new PodMembershipController(
+            NullLogger<PodMembershipController>.Instance,
+            membershipService.Object);
+
+        var result = await controller.PublishMembership(
+            "pod-1",
+            new PodMember { PeerId = "peer-1", Role = "member" },
+            CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to publish membership", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetMembership_WhenServiceReturnsNotFound_DoesNotLeakErrorMessage()
+    {
+        var membershipService = new Mock<IPodMembershipService>();
+        membershipService
+            .Setup(service => service.GetMembershipAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MembershipRetrieveResult(false, "pod-1", "peer-1", null, "sensitive detail"));
+
+        var controller = new PodMembershipController(
+            NullLogger<PodMembershipController>.Instance,
+            membershipService.Object);
+
+        var result = await controller.GetMembership("pod-1", "peer-1", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", notFound.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Membership not found", notFound.Value?.ToString() ?? string.Empty);
+    }
 }

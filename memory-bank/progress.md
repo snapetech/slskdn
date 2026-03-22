@@ -173,6 +173,24 @@
 ### Remaining
 - Continue the broad controller/runtime sweep from the remaining identifier-boundary and result-error-message clusters, especially service-result `.ErrorMessage` passthrough in PodCore/native APIs.
 
+## 2026-03-22 16:00 - PodCore service-result error-contract cleanup
+
+### Completed
+- Documented the PodCore/native gotcha where controller actions treat service-layer `ErrorMessage` values as stable public API text.
+- `PodMembershipController` no longer echoes service `ErrorMessage` text in membership-not-found responses; the API now returns a fixed `Membership not found` contract.
+- `PodDhtController` no longer echoes service `ErrorMessage` text in pod-metadata-not-found responses; the API now returns a fixed `Pod not found` contract.
+- `PodOpinionController` no longer surfaces raw opinion-service failure text on failed publish attempts; the API now returns a fixed `Opinion could not be published` contract.
+- Added focused regressions in:
+  - `PodMembershipControllerTests`
+  - `PodDhtControllerTests`
+  - `PodOpinionControllerTests`
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue through the remaining PodCore/native result-message passthrough surfaces, especially join/leave, membership mutation, and any other controller actions still treating internal service diagnostics as public error strings.
+
 ## 2026-03-16 01:52 - Discovery Graph atlas mode + broader search summon points
 
 ### Completed

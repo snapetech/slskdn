@@ -85,7 +85,7 @@ public class PodOpinionController : ControllerBase
             var result = await _opinionService.PublishOpinionAsync(podId, opinion, cancellationToken);
             if (!result.Success)
             {
-                return BadRequest(result.ErrorMessage);
+                return BadRequest("Opinion could not be published");
             }
 
             return Ok(result);

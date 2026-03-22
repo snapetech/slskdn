@@ -67,7 +67,7 @@ public class PodMembershipController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodMembership] Failed to publish membership for {PeerId} in {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to publish membership" });
             }
         }
         catch (Exception ex)
@@ -113,7 +113,7 @@ public class PodMembershipController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodMembership] Failed to update membership for {PeerId} in {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to update membership" });
             }
         }
         catch (Exception ex)
@@ -153,7 +153,7 @@ public class PodMembershipController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodMembership] Failed to remove membership for {PeerId} from {PodId}: {Error}", peerId, podId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to remove membership" });
             }
         }
         catch (Exception ex)
@@ -191,7 +191,7 @@ public class PodMembershipController : ControllerBase
             }
             else
             {
-                return NotFound(new { podId, peerId, found = false, error = result.ErrorMessage ?? "Membership not found" });
+                return NotFound(new { podId, peerId, found = false, error = "Membership not found" });
             }
         }
         catch (Exception ex)
@@ -263,7 +263,7 @@ public class PodMembershipController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodMembership] Failed to ban member {PeerId} from {PodId}: {Error}", peerId, podId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to ban member" });
             }
         }
         catch (Exception ex)
@@ -303,7 +303,7 @@ public class PodMembershipController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodMembership] Failed to unban member {PeerId} from {PodId}: {Error}", peerId, podId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to unban member" });
             }
         }
         catch (Exception ex)
@@ -345,7 +345,7 @@ public class PodMembershipController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodMembership] Failed to change role for {PeerId} in {PodId}: {Error}", peerId, podId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to change role" });
             }
         }
         catch (Exception ex)
