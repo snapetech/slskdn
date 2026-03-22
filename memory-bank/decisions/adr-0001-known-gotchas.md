@@ -159,6 +159,44 @@ using var response = await client.SendAsync(request);
 
 **Why This Keeps Happening**: `using var response = ...` looks complete because the visible disposable is handled, but any factory method invoked inline may also have returned a disposable owner. When the client is created ad hoc instead of coming from DI or a shared field, bind it to a local variable and dispose it explicitly.
 
+### 0t. Stop/Start Components Must Not Cancel Their Permanent Lifetime Token On Ordinary Stop
+
+**The Bug**: `CoverTrafficGenerator.StopAsync` cancelled a long-lived `_cts` that `StartAsync` also linked into every future generation task. After one stop, every later start inherited an already-cancelled token and the generator could never restart.
+
+**Files Affected**:
+- `src/slskd/Common/Security/CoverTrafficGenerator.cs`
+
+**Wrong**:
+```csharp
+private readonly CancellationTokenSource _cts = new();
+
+public async Task StopAsync()
+{
+    _cts.Cancel();
+    _generationCts?.Cancel();
+}
+
+public Task StartAsync(CancellationToken cancellationToken = default)
+{
+    _generationCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+public async Task StopAsync()
+{
+    _generationCts?.Cancel();
+}
+
+public Task StartAsync(CancellationToken cancellationToken = default)
+{
+    _generationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+}
+```
+
+**Why This Keeps Happening**: It is tempting to add a permanent CTS to make shutdown wiring easy, but that token becomes part of restart semantics too. If a component supports repeated start/stop cycles, only disposal should permanently end its lifetime; ordinary stop should cancel the current run, not poison every future run.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
@@ -5276,6 +5314,52 @@ await _registry.RegisterAsync(request.ExternalId, request.ContentId, cancellatio
 ```
 
 **Why This Keeps Happening**: API endpoints often validate for null/empty only, assuming downstream services will reject bad formats. Without parser-level validation at ingress, malformed identifiers get persisted and only fail later when strict code paths attempt to parse them.
+
+### 0k18. Mesh Message Type Should Be Guarded Before Cast to `MeshMessageType`
+
+**The Bug**: `MeshController.HandleMessage` cast payload `type` directly from JSON into `MeshMessageType`, so malformed or undefined values could throw a 500 error instead of returning controlled `BadRequest`.
+
+**Files Affected**:
+- `src/slskd/Mesh/API/MeshController.cs`
+
+**Wrong**:
+```csharp
+var messageType = (MeshMessageType)typeElement.GetInt32();
+```
+
+**Correct**:
+```csharp
+if (!typeElement.TryGetInt32(out var messageTypeInt) || !Enum.IsDefined(typeof(MeshMessageType), messageTypeInt))
+{
+    return BadRequest(new { error = "Unknown or invalid message type" });
+}
+
+var messageType = (MeshMessageType)messageTypeInt;
+```
+
+**Why This Keeps Happening**: API inputs are often treated as trusted when they reach switch-based dispatch code. Untrusted payloads can reach this path from clients or tests, so enum conversion should be defensive and never throw at the edge before validation.
+
+### 0k19. JSON Document Lifetimes Must Not Leak Into API Response Payloads
+
+**The Bug**: Mesh gateway JSON passthrough returned `parsed.RootElement` directly, and `NowPlayingController` held a non-disposed `JsonDocument`, both of which risked invalid response behavior when parsing state was disposed.
+
+**Files Affected**:
+- `src/slskd/API/Mesh/MeshGatewayController.cs`
+- `src/slskd/NowPlaying/API/NowPlayingController.cs`
+
+**Wrong**:
+```csharp
+var parsed = JsonDocument.Parse(json);
+return Ok(parsed.RootElement);
+```
+
+**Correct**:
+```csharp
+using var parsed = JsonDocument.Parse(json);
+return Ok(parsed.RootElement.Clone());
+```
+
+**Why This Keeps Happening**: It is easy to treat `JsonElement` as standalone and forget it is a view over its owning `JsonDocument`. When the document is disposed while an endpoint still references it, response serialization can fail. Clone the element or return an owned structure.
 
 ---
 
