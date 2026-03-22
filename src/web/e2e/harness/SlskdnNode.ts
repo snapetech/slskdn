@@ -3,6 +3,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as net from 'node:net';
 import * as path from 'node:path';
+import { ensureFixtures } from '../fixtures/ensure-fixtures';
 
 export type NodeConfig = {
   apiPort?: number;
@@ -266,60 +267,8 @@ export class SlskdnNode {
       }
     }
 
-    // Fail fast if manifest doesn't exist
-    const manifestPath = fixturesRoot
-      ? path.join(fixturesRoot, 'meta', 'manifest.json')
-      : null;
-    let manifest: {
-      files: Array<{ bytes: number; path: string; sha256: string }>;
-      version: number;
-    } | null = null;
-    if (manifestPath) {
-      try {
-        const manifestContent = await fs.readFile(manifestPath);
-        manifest = JSON.parse(manifestContent);
-      } catch {
-        throw new Error(
-          `E2E fixtures manifest not found or invalid: ${manifestPath}\n` +
-            'Run: cd test-data/slskdn-test-fixtures/meta && node generate-manifest.js',
-        );
-      }
-    }
-
-    // Validate required files exist and checksums match
-    const validationErrors: string[] = [];
-    if (fixturesRoot && manifest) {
-      for (const fileEntry of manifest.files) {
-        const filePath = path.join(fixturesRoot, fileEntry.path);
-        try {
-          await fs.access(filePath);
-          // Optionally validate checksum (can be slow for large files, so make it optional via env var)
-          if (process.env.SLSKDN_VALIDATE_FIXTURE_CHECKSUMS === '1') {
-            const fileContent = await fs.readFile(filePath);
-            const hash = crypto
-              .createHash('sha256')
-              .update(fileContent)
-              .digest('hex');
-            if (hash !== fileEntry.sha256) {
-              validationErrors.push(
-                `Checksum mismatch for ${fileEntry.path}: expected ${fileEntry.sha256}, got ${hash}`,
-              );
-            }
-          }
-        } catch {
-          validationErrors.push(
-            `Required fixture file missing: ${fileEntry.path}`,
-          );
-        }
-      }
-    }
-
-    if (validationErrors.length > 0) {
-      throw new Error(
-        `E2E fixture validation failed:\n${validationErrors.join('\n')}\n` +
-          'Run: ./scripts/fetch-test-fixtures.sh\n' +
-          'Or: cd test-data/slskdn-test-fixtures/meta && node generate-manifest.js',
-      );
+    if (fixturesRoot) {
+      await ensureFixtures(fixturesRoot);
     }
 
     // Allocate ephemeral port if not provided

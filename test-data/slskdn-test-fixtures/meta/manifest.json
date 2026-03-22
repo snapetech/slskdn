@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_utc": "2026-01-27T21:35:59.716Z",
+  "generated_utc": "2026-03-22T00:38:25.294Z",
   "purpose": "E2E test fixtures manifest with checksums for offline validation",
   "files": [
     {
@@ -9,29 +9,34 @@
       "bytes": 399906
     },
     {
-      "path": "movie/sintel_512kb_stereo.mp4",
-      "sha256": "93df4e31869e879354a5055a8549fb9335df0f5f73f4963c9bf0db2c888bb704",
-      "bytes": 77410288
+      "path": "movie/sintel_poster.jpg",
+      "sha256": "7bfeaaa9e69df11188d5520b002196ea127275c482880b84c5b875d5addcb67b",
+      "bytes": 457811
     },
     {
-      "path": "music/open_goldberg/01_aria.ogg",
-      "sha256": "76e02575a0cb999d1938c2d4052a7f1cf4d6809778f326ef9f09d25e4152acd8",
-      "bytes": 3568881
+      "path": "music/open_goldberg/cover.jpg",
+      "sha256": "f3934fbc5ce7d2a35e5d52185f1d0095b5c1e0dfce36e8490b05a9edfaf78dd4",
+      "bytes": 287069
     },
     {
-      "path": "music/open_goldberg/02_variatio_1.ogg",
-      "sha256": "27901978812880ae5ce674089dd60aa3f6a0f33d1abd9b8186af0eac55b04fd1",
-      "bytes": 1368979
+      "path": "tv/ClearBits.txt",
+      "sha256": "05f46e157ef40f02e239bf526a514c21f625db964267e89fb80396dd7111a99c",
+      "bytes": 376
     },
     {
-      "path": "music/open_goldberg/03_variatio_2.ogg",
-      "sha256": "722c431d8d9d2db5972e918a1a019ad2dc35b30b8c439cc7df7a835418928633",
-      "bytes": 1454982
+      "path": "tv/Description.txt",
+      "sha256": "35dc73b3090b03fd3dea4fcdc1c3203294c4d213e7f97fb3f07910bf558e1cfb",
+      "bytes": 225
     },
     {
-      "path": "tv/pioneer_one_s01e01_sample.mp4",
-      "sha256": "b72039744bed2bd5e4bd3bf5325af88b49ace689063c28c8b3a9b1cd08ea3de1",
-      "bytes": 5537655
+      "path": "tv/license.txt",
+      "sha256": "f7df9061d06b3485741f65cdd81fce3fa534032d228a4d3ff2712eed4c9a180b",
+      "bytes": 67
+    },
+    {
+      "path": "tv/pioneer_one_thumb.jpg",
+      "sha256": "e7cc958fd9feb2320ff1976fe317db519cd941ae489f3fd2df5931c25e87ca5d",
+      "bytes": 5620
     }
   ]
 }

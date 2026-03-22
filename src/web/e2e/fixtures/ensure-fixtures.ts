@@ -1,9 +1,40 @@
 import { exec } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
+const OPTIONAL_MEDIA_FILES = [
+  'music/open_goldberg/01_aria.ogg',
+  'movie/sintel_512kb_stereo.mp4',
+  'tv/pioneer_one_s01e01_sample.mp4',
+];
+
+function getRepoRootFromCwd(cwd: string = process.cwd()): string {
+  return path.join(cwd, '..', '..', '..');
+}
+
+function getFullFixturesPath(
+  fixturesDir: string,
+  cwd: string = process.cwd(),
+): string {
+  const repoRoot = getRepoRootFromCwd(cwd);
+  return path.isAbsolute(fixturesDir)
+    ? fixturesDir
+    : path.join(repoRoot, fixturesDir);
+}
+
+export function hasDownloadedMediaFixtures(
+  fixturesDir: string = 'test-data/slskdn-test-fixtures',
+  cwd: string = process.cwd(),
+): boolean {
+  const fullFixturesPath = getFullFixturesPath(fixturesDir, cwd);
+
+  return OPTIONAL_MEDIA_FILES.every((mediaFile) =>
+    existsSync(path.join(fullFixturesPath, mediaFile)),
+  );
+}
 
 /**
  * Ensure test fixtures are available.
@@ -17,10 +48,8 @@ export async function ensureFixtures(
   fixturesDir: string = 'test-data/slskdn-test-fixtures',
   fetchIfMissing: boolean = false,
 ): Promise<void> {
-  const repoRoot = path.join(process.cwd(), '..', '..', '..');
-  const fullFixturesPath = path.isAbsolute(fixturesDir)
-    ? fixturesDir
-    : path.join(repoRoot, fixturesDir);
+  const repoRoot = getRepoRootFromCwd();
+  const fullFixturesPath = getFullFixturesPath(fixturesDir);
 
   // Check if fixtures directory exists
   try {
@@ -50,14 +79,8 @@ export async function ensureFixtures(
 
   // Optionally check for downloaded media files
   // These are optional - tests can work with static files only
-  const mediaFiles = [
-    'music/open_goldberg/01_aria.ogg',
-    'movie/sintel_512kb_stereo.mp4',
-    'tv/pioneer_one_s01e01_sample.mp4',
-  ];
-
   const missingMedia: string[] = [];
-  for (const mediaFile of mediaFiles) {
+  for (const mediaFile of OPTIONAL_MEDIA_FILES) {
     const filePath = path.join(fullFixturesPath, mediaFile);
     try {
       const stat = await fs.stat(filePath);

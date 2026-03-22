@@ -1,4 +1,5 @@
 import { NODES, shouldLaunchNodes } from './env';
+import { hasDownloadedMediaFixtures } from './fixtures/ensure-fixtures';
 import { MultiPeerHarness } from './harness/MultiPeerHarness';
 import {
   announceShareGrant,
@@ -14,8 +15,14 @@ import { T } from './selectors';
 import { expect, test } from '@playwright/test';
 
 test.describe.configure({ mode: 'serial' });
+const hasDownloadedMedia = hasDownloadedMediaFixtures();
 
 test.describe('multi-peer sharing', () => {
+  test.skip(
+    !hasDownloadedMedia,
+    'Multi-peer sharing E2E requires downloaded media fixtures',
+  );
+
   let harness: MultiPeerHarness | null = null;
   const groupName = 'E2E Crew';
   const collectionTitle = 'E2E Playlist';

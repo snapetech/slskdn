@@ -256,6 +256,53 @@ Assert.Equal(ServiceStatusCodes.ServiceUnavailable, blockedReply.StatusCode);
 
 **Why This Keeps Happening**: The timeout response reports the result of the current request, while the breaker state change affects the next request. For timeout-driven breaker tests, inspect router state or issue a separate probe after failures instead of expecting the opening transition and blocked reply to collapse onto the same call.
 
+### 0l. E2E Harnesses Must Not Treat Gitignored Downloaded Media As Baseline CI Fixtures
+
+**The Bug**: Scheduled `E2E Tests` allowed `fetch-test-fixtures.sh` to fail, but `SlskdnNode` still hard-failed on every file listed in the committed fixture manifest. Because the manifest included gitignored downloaded media, one transient fetch failure prevented every harness-backed spec from starting.
+
+**Files Affected**:
+- `src/web/e2e/harness/SlskdnNode.ts`
+- `src/web/e2e/fixtures/ensure-fixtures.ts`
+- `src/web/e2e/streaming.spec.ts`
+- `src/web/e2e/multippeer-sharing.spec.ts`
+- `test-data/slskdn-test-fixtures/meta/generate-manifest.js`
+
+**Wrong**:
+```ts
+for (const fileEntry of manifest.files) {
+  await fs.access(path.join(fixturesRoot, fileEntry.path));
+}
+```
+
+```js
+const REQUIRED_FILES = [
+  'movie/sintel_512kb_stereo.mp4',
+  'music/open_goldberg/01_aria.ogg',
+];
+```
+
+**Correct**:
+```ts
+await ensureFixtures(fixturesRoot);
+```
+
+```ts
+test.skip(
+  !hasDownloadedMediaFixtures(),
+  'Streaming E2E requires downloaded media fixtures',
+);
+```
+
+```js
+const REQUIRED_FILES = [
+  'book/treasure_island_pg120.txt',
+  'movie/sintel_poster.jpg',
+  'music/open_goldberg/cover.jpg',
+];
+```
+
+**Why This Keeps Happening**: The repo has two fixture tiers: tracked baseline assets and gitignored downloaded media. If the workflow says media download is optional, the harness and committed manifest must only require the tracked baseline set, and media-dependent specs need explicit skip gates.
+
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 
 **The Bug**: `SongIdService` treated `TrackTarget` like `AlbumTarget` and tried to read `MusicBrainzArtistId` from it, which broke the build because `TrackTarget` does not expose that property.

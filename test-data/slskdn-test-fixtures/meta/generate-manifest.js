@@ -12,15 +12,16 @@ const FIXTURES_ROOT = path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(FIXTURES_ROOT, 'meta', 'manifest.json');
 const CHECKSUMS_PATH = path.join(FIXTURES_ROOT, 'meta', 'checksums.sha256');
 
-// Files that should be included in the manifest (relative to fixtures root)
-// These are the actual media files used in E2E tests (not metadata like posters, licenses)
+// Files that are always tracked in git and available offline.
+// Downloaded media is intentionally excluded because CI may run without it.
 const REQUIRED_FILES = [
   'book/treasure_island_pg120.txt',
-  'movie/sintel_512kb_stereo.mp4',
-  'music/open_goldberg/01_aria.ogg',
-  'music/open_goldberg/02_variatio_1.ogg',
-  'music/open_goldberg/03_variatio_2.ogg',
-  'tv/pioneer_one_s01e01_sample.mp4',
+  'movie/sintel_poster.jpg',
+  'music/open_goldberg/cover.jpg',
+  'tv/ClearBits.txt',
+  'tv/Description.txt',
+  'tv/license.txt',
+  'tv/pioneer_one_thumb.jpg',
 ];
 
 function sha256File(filePath) {
