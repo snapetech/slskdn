@@ -11270,3 +11270,41 @@ return StatusCode(507, "Insufficient space to create memory dump.");
 ```
 
 **Why This Keeps Happening**: these controllers do not look like classic service-boundary code, so raw helper strings feel harmless. They are still internal diagnostics. Treat every helper-produced string as untrusted for HTTP responses unless it is an intentionally stable public message.
+
+### 0k71. Authenticate And Dispatch With Normalized Input, Not The Pre-Normalization Request Object
+
+**The Bug**: it is easy to trim request fields for validation and comparison but then keep using the original request object later in the method. That caused `SessionController` to authenticate using normalized credentials while still passing the unnormalized username to JWT generation, and it left the discovery start path mutating a nullable request property instead of dispatching with a stable local value.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/SessionController.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/API/DiscoveryController.cs`
+
+**Wrong**:
+```csharp
+login.Username = login.Username?.Trim() ?? string.Empty;
+login.Password = login.Password?.Trim() ?? string.Empty;
+...
+return Ok(new TokenResponse(Security.GenerateJwt(login.Username, Role.Administrator)));
+```
+
+```csharp
+request.SearchTerm = request.SearchTerm?.Trim();
+await Discovery.StartDiscoveryAsync(request.SearchTerm, ...);
+```
+
+**Correct**:
+```csharp
+var normalizedUsername = login.Username;
+var normalizedPassword = login.Password;
+var configuredUsername = OptionsSnapshot.Value.Web.Authentication.Username?.Trim() ?? string.Empty;
+var configuredPassword = OptionsSnapshot.Value.Web.Authentication.Password?.Trim() ?? string.Empty;
+...
+return Ok(new TokenResponse(Security.GenerateJwt(normalizedUsername, Role.Administrator)));
+```
+
+```csharp
+var normalizedSearchTerm = request.SearchTerm?.Trim();
+await Discovery.StartDiscoveryAsync(normalizedSearchTerm, ...);
+```
+
+**Why This Keeps Happening**: once normalization is added, later lines still read cleanly if they keep using `login.Username` or `request.SearchTerm`, so the bug is easy to miss in review. Promote normalized values to explicit locals and use those for every downstream comparison, dispatch, and token-generation step.
