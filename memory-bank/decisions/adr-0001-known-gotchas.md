@@ -139,6 +139,26 @@ public async Task StopAsync(CancellationToken cancellationToken = default)
 
 **Why This Keeps Happening**: Connection state and retry state are often tracked separately. It is easy to stop the current socket or hub and forget that a supervising retry loop is still waiting on its own token. Any service with reconnect logic needs shutdown to cancel both the active connection and the outer retry coordinator.
 
+### 0s. Do Not Inline-Create `HttpClient` Into `SendAsync` When The Client Must Be Disposed
+
+**The Bug**: `RelayClient` created a disposable `HttpClient` with `CreateHttpClient()` directly inside `SendAsync(...)`. The response was disposed, but the client itself was never captured in a `using`, so every file-upload request leaked a client instance.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+
+**Wrong**:
+```csharp
+using var response = await CreateHttpClient().SendAsync(request);
+```
+
+**Correct**:
+```csharp
+using var client = CreateHttpClient();
+using var response = await client.SendAsync(request);
+```
+
+**Why This Keeps Happening**: `using var response = ...` looks complete because the visible disposable is handled, but any factory method invoked inline may also have returned a disposable owner. When the client is created ad hoc instead of coming from DI or a shared field, bind it to a local variable and dispose it explicitly.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
@@ -5175,6 +5195,87 @@ if (!double.TryParse(..., NumberStyles.Float, CultureInfo.InvariantCulture, out 
 ```
 
 **Why This Keeps Happening**: Regex and scraped-output parsers are fragile by nature: slight config drift or endpoint string churn can introduce values outside expected ranges or malformed syntax. Range checks plus `TryParse` keep parsing decisions deterministic and prevent one bad input line from crashing runtime features.
+
+### 0k16. Metadata Import Must Distinguish Invalid IDs From Real Imports
+
+**The Bug**: `MetadataPortability.ImportAsync` logged and counted new entries as imported before validating registry mutation succeeded, while invalid ContentIDs could still be counted as imported because `ImportNewEntryAsync` only logged without a clear success signal.
+
+**Files Affected**:
+- `src/slskd/MediaCore/MetadataPortability.cs`
+
+**Wrong**:
+```csharp
+await ImportNewEntryAsync(entry, cancellationToken);
+entriesImported++;
+
+private async Task ImportNewEntryAsync(MetadataEntry entry, CancellationToken cancellationToken)
+{
+    var parsed = ContentIdParser.Parse(entry.ContentId);
+    if (parsed != null)
+    {
+        await _registry.RegisterAsync(...);
+    }
+
+    _logger.LogInformation("[MetadataPortability] Imported new entry for {ContentId}", entry.ContentId);
+}
+```
+
+**Correct**:
+```csharp
+if (!ContentIdParser.IsValid(entry.ContentId))
+{
+    entriesSkipped++;
+    continue;
+}
+
+var imported = await ImportNewEntryAsync(entry, cancellationToken);
+if (imported) entriesImported++;
+else entriesSkipped++;
+
+private async Task<bool> ImportNewEntryAsync(...)
+{
+    var parsed = ContentIdParser.Parse(entry.ContentId);
+    if (parsed == null) return false;
+    await _registry.RegisterAsync(...);
+    return true;
+}
+```
+
+**Why This Keeps Happening**: Import counters were tied to path entry rather than successful writes. Any validation/registration workflow that mutates state should only increment success counters after the mutation is confirmed, while invalid input should be explicitly skipped and observable.
+
+### 0k17. ContentID Registration Should Validate Incoming ContentID Format
+
+**The Bug**: `ContentIdController.Register` accepted any non-empty `ContentId` string and passed it directly to the registry, allowing malformed values to be stored and creating later registry lookup failures.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/ContentIdController.cs`
+
+**Wrong**:
+```csharp
+if (request == null || string.IsNullOrWhiteSpace(request.ExternalId) || string.IsNullOrWhiteSpace(request.ContentId))
+{
+    return BadRequest("ExternalId and ContentId are required");
+}
+
+await _registry.RegisterAsync(request.ExternalId, request.ContentId, cancellationToken);
+```
+
+**Correct**:
+```csharp
+if (request == null || string.IsNullOrWhiteSpace(request.ExternalId) || string.IsNullOrWhiteSpace(request.ContentId))
+{
+    return BadRequest("ExternalId and ContentId are required");
+}
+
+if (ContentIdParser.Parse(request.ContentId) == null)
+{
+    return BadRequest("Invalid ContentID format. Expected: content:<domain>:<type>:<id>");
+}
+
+await _registry.RegisterAsync(request.ExternalId, request.ContentId, cancellationToken);
+```
+
+**Why This Keeps Happening**: API endpoints often validate for null/empty only, assuming downstream services will reject bad formats. Without parser-level validation at ingress, malformed identifiers get persisted and only fail later when strict code paths attempt to parse them.
 
 ---
 
