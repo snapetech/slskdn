@@ -9191,6 +9191,33 @@ type = trimmedType == null ? null : ContentIdParser.NormalizeType(domain, trimme
 
 **Why This Keeps Happening**: Normalization helpers often start life assuming both domain and type are present, then later get reused from query APIs where one parameter is optional. If the code normalizes the optional parameter too late, the helper sees a null it was never designed to accept. Normalize optional inputs into explicit empty-or-null states before passing them to stricter domain/type helpers.
 
+### 0k51. Refactors That Add `InvariantCulture` Parsing Must Also Add `System.Globalization`
+
+**The Bug**: `HashDbService` added a fallback `DateTimeOffset.TryParse(..., CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, ...)` path for backfill progress reads, but the file never imported `System.Globalization`. The runtime project then stopped compiling with missing-name errors the next time that file was rebuilt.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+using System.Diagnostics;
+using System.IO;
+...
+if (DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
+{
+    return parsed;
+}
+```
+
+**Correct**:
+```csharp
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+```
+
+**Why This Keeps Happening**: C# refactors that change parsing APIs often compile in the editor only if another file already had the right imports in view or the changed method wasn’t rebuilt immediately. When adding culture-aware parsing, always add the namespace in the same patch and rebuild the owning project before moving on.
+
 ---
 
 *Last updated: 2026-03-22*
