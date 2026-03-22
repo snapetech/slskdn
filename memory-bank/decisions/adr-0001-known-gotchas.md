@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
+
+**The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+- `src/slskd/HashDb/Optimization/HashDbOptimizationHostedService.cs`
+- `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(() => _routingTable.TouchAsync(requesterId, peerId), cancellationToken);
+```
+
+**Correct**:
+```csharp
+_ = ObserveBackgroundTaskAsync(
+    Task.Run(() => _routingTable.TouchAsync(requesterId, peerId), CancellationToken.None),
+    "...");
+```
+
+**Why This Keeps Happening**: `Task.Run` has two cancellation sites: the inner async operation and the scheduler itself. For detached follow-up work, passing a short-lived token to the scheduler is usually wrong because it can prevent the task from ever starting, while the outer code still returns success. Queue detached work with `CancellationToken.None`, pass the real token inside the delegate if the work itself should respect cancellation, and keep/observe the background task when shutdown needs to wait for it.
+
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
 **The Bug**: Several Pod and mesh workflows returned placeholder success values, synthetic IDs, fake local peer IDs, or hardcoded stats even though the underlying transport or lookup path was not implemented. This made broken features look healthy and pushed failures downstream into harder-to-debug places.
@@ -317,6 +341,28 @@ return Task.FromResult(_libraryActorService.IsLibraryActor(username));
 ```
 
 **Why This Keeps Happening**: Federation code often grows from separate endpoint and publishing tasks, and each side invents its own actor naming shortcuts. That drift breaks discovery in subtle ways. All actor validation, attribution, and activity authorship should derive from the same `LibraryActorService` inventory and configured base URL.
+
+### 0xB. Provider Methods That Advertise Catalog Lookups Must Reuse Existing HashDb Data Before Falling Back To `null`
+
+**The Bug**: The music content provider exposed recent-item and local-metadata lookup methods, but returned empty results or `null` even though HashDb already held enough album and track data to satisfy conservative exact matches.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Core/Music/MusicContentDomainProvider.cs`
+
+**Wrong**:
+```csharp
+_logger.LogDebug("Fuzzy matching not yet implemented...");
+return null;
+```
+
+**Correct**:
+```csharp
+var albums = await _hashDb.GetAlbumTargetsAsync(cancellationToken);
+var tracks = await _hashDb.GetAlbumTracksAsync(album.ReleaseId, cancellationToken);
+var track = tracks.FirstOrDefault(candidate => ...exact normalized match...);
+```
+
+**Why This Keeps Happening**: Provider interfaces often get designed ahead of the “ideal” fuzzy matching algorithm, and it is tempting to leave them returning `null` until the full scorer exists. That throws away usable catalog data and makes higher-level features look empty. If the repo already has authoritative exact-match data, implement the conservative path first and reserve fuzzy matching for later.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
