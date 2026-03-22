@@ -118,6 +118,34 @@ public sealed class MultiRealmHostedService : IHostedService, IDisposable
 
 **Why This Keeps Happening**: fixing token lifetime often introduces a new owned disposable field. It is easy to stop at `StopAsync`, but analyzers are right here: once the service owns the CTS, it also owns disposal on non-ideal or partial-host-lifecycle paths.
 
+### 0xB3. Accepted Background Loops Must Not Stay Bound To The Caller Token
+
+**The Bug**: some services were not hosted-service startup paths, but they still accepted long-lived work and immediately detached it onto background tasks while keeping the initiating request/start token as the loop lifetime. That meant discovery and cover-traffic jobs could report as started and then stop as soon as the caller returned or the startup token was cancelled.
+
+**Files Affected**:
+- `src/slskd/Common/Security/CoverTrafficGenerator.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
+
+**Wrong**:
+```csharp
+_generationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+_generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token), CancellationToken.None);
+
+cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), CancellationToken.None);
+```
+
+**Correct**:
+```csharp
+_generationCts = new CancellationTokenSource();
+_generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token), CancellationToken.None);
+
+cts = new CancellationTokenSource();
+discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), CancellationToken.None);
+```
+
+**Why This Keeps Happening**: detached work is easy to reason about only in hosted services, but the same rule applies to user-triggered or helper-managed background loops. If the operation should continue after the initiating call returns, it needs a service-owned CTS and an explicit stop path, not a linked copy of the caller token.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
