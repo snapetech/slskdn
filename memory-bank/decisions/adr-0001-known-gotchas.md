@@ -185,6 +185,8 @@ await _soulseekClient.DownloadAsync(...);
 - `src/slskd/Search/SearchService.cs`
 - `src/slskd/LibraryHealth/LibraryHealthService.cs`
 - `src/slskd/PodCore/SqlitePodService.cs`
+- `src/slskd/Transfers/Rescue/RescueService.cs`
+- `src/slskd/LibraryHealth/Remediation/LibraryHealthRemediationService.cs`
 
 **Wrong**:
 ```csharp
@@ -211,6 +213,8 @@ _ = ObserveBackgroundTaskAsync(
 - `src/slskd/Users/UserService.cs`
 - `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
 - `src/slskd/Messaging/ConversationService.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+- `src/slskd/Sharing/ShareGrantAnnouncementService.cs`
 
 **Wrong**:
 ```csharp
