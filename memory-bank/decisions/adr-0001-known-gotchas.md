@@ -363,6 +363,35 @@ return new MembershipRetrievalResult(
 
 **Why This Keeps Happening**: PodCore already had controller-side sanitization and some service-side sanitization, so adjacent result types look “close enough” during review. They are not. Any service result that a controller returns directly is public API. Membership and DHT services must use the same stable public error strings as discovery, verification, and backfill services.
 
+### 0xB5D. Pod Affinity Refresh Results Are Public API Too
+
+**The Bug**: `PodOpinionAggregator.UpdateMemberAffinitiesAsync(...)` still returned `ex.Message` inside `AffinityUpdateResult`. The controller answers with `Ok(result)`, so affinity refresh exposed internal storage/cache failures through a nominally successful `200` response.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodOpinionAggregator.cs`
+
+**Wrong**:
+```csharp
+return new AffinityUpdateResult(
+    Success: false,
+    PodId: podId,
+    MembersUpdated: 0,
+    Duration: stopwatch.Elapsed,
+    ErrorMessage: ex.Message);
+```
+
+**Correct**:
+```csharp
+return new AffinityUpdateResult(
+    Success: false,
+    PodId: podId,
+    MembersUpdated: 0,
+    Duration: stopwatch.Elapsed,
+    ErrorMessage: "Failed to update member affinities");
+```
+
+**Why This Keeps Happening**: refresh/update endpoints often look operational rather than user-facing, so their result DTOs get treated like logs. But if the controller returns the record directly, it is still public API. Operational status DTOs need the same stable public error strings as publish, discovery, and verification DTOs.
+
 ### 0xB6. Local JSON Persistence Must Use Explicit DTOs Instead Of Depending On Runtime Constructor Binding
 
 **The Bug**: the peer reputation store wrote runtime `PeerReputationEvent` objects straight to disk and tried to read them back into the same type. Cold-load reads silently came back empty because the persisted JSON contract drifted into a shape that `System.Text.Json` constructor binding did not reliably rehydrate for that runtime type.
