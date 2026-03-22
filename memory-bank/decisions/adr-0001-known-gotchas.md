@@ -258,6 +258,33 @@ Filename = string.IsNullOrWhiteSpace(filenameFromStatus)
 - `src/slskd/MediaCore/ContentId.cs`
 - `src/slskd/MediaCore/ContentIdRegistry.cs`
 
+### 0x13. Bridge Admin And Status Surfaces Must Share Live Proxy State, And Progress Readback Must Reuse Cached File Metadata
+
+**The Bug**: The bridge proxy accepted real client sessions, but the dashboard only tracked its own local counters, so admin/status APIs could still report zero active connections. In the same area, transfer progress readback fell back to `meshStatus.FileSize`, which can be `0`, even when the bridge had already cached a real file size at download start.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/BridgeDashboard.cs`
+- `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
+- `src/slskd/API/VirtualSoulfind/BridgeController.cs`
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+
+**Wrong**:
+```csharp
+ActiveConnections = 0;
+FileSize = status.FileSize;
+PercentComplete = (int)Math.Clamp(status.ProgressPercent, 0, 100);
+```
+
+**Correct**:
+```csharp
+bridgeDashboard.RecordConnection(clientId, ipAddress);
+bridgeDashboard.RecordRequest(session.ClientId, "download");
+health.ActiveConnections = stats.CurrentConnections;
+var fileSize = status.FileSize > 0 ? status.FileSize : metadata?.SizeBytes ?? 0;
+```
+
+**Why This Keeps Happening**: Bridge code has multiple readback surfaces: the proxy owns live sessions, the dashboard owns admin-facing stats, and the transfer layer owns execution status. If each surface reports only its own partial state, the UI regresses into obvious fiction like zero connections or zero-byte files. When a bridge workflow already captured live/session metadata earlier, status and admin endpoints need to reuse that same state instead of reconstructing weaker answers later.
+
 **Wrong**:
 ```csharp
 public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
