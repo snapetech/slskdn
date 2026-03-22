@@ -76,6 +76,28 @@ _ = ObserveBackgroundTaskAsync(
 
 **Why This Keeps Happening**: `Task.Run` has two cancellation sites: the inner async operation and the scheduler itself. For detached follow-up work, passing a short-lived token to the scheduler is usually wrong because it can prevent the task from ever starting, while the outer code still returns success. Queue detached work with `CancellationToken.None`, pass the real token inside the delegate if the work itself should respect cancellation, and keep/observe the background task when shutdown needs to wait for it.
 
+### 0x8. Detached Controller And Timer Work Must Have A Top-Level Observer
+
+**The Bug**: Several API and timer paths kicked off background work with `_ = Task.Run(...)` and no top-level observer. When the detached work threw, the user-facing action still returned success and the failure became a silent no-op until an eventual unobserved task exception or missing side effect exposed it later.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(async () => await _processor.ProcessIntentAsync(intentId, CancellationToken.None));
+```
+
+**Correct**:
+```csharp
+_ = ObserveBackgroundTaskAsync(
+    Task.Run(() => _processor.ProcessIntentAsync(intentId, CancellationToken.None), CancellationToken.None),
+    intentId);
+```
+
+**Why This Keeps Happening**: fire-and-forget is convenient in controllers and timer callbacks because it keeps the main path responsive, but it also severs exception propagation. If the detached work matters enough to launch, it matters enough to wrap in a single observer that catches and logs failures explicitly.
+
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
 **The Bug**: Several Pod and mesh workflows returned placeholder success values, synthetic IDs, fake local peer IDs, or hardcoded stats even though the underlying transport or lookup path was not implemented. This made broken features look healthy and pushed failures downstream into harder-to-debug places.
