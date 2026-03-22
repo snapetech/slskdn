@@ -12473,3 +12473,25 @@ return new HolePunchResult(false, null, null, "Hole punch request failed");
 ```
 
 **Why This Keeps Happening**: status and connectivity models look like internal diagnostics, so it is easy to forget that they are still part of the observable contract. Treat `LastError`, `ErrorMessage`, and similar result fields as public API unless proven otherwise.
+
+### 0k82. Validation Reports Must Not Echo Backend Exception Details
+
+**The Bug**: validation helpers for share databases and mesh service descriptors were catching internal exceptions and appending `ex.Message` into returned problem lists or validation reasons. Those results are consumed by diagnostics and higher-level flows, so storage and serialization internals leaked into public output.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServiceDescriptorValidator.cs`
+
+**Wrong**:
+```csharp
+list.Add($"Failed to validate database: {ex.Message}");
+return (false, $"Failed to serialize descriptor: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+list.Add("Failed to validate database");
+return (false, "Failed to serialize descriptor");
+```
+
+**Why This Keeps Happening**: validation/report code often feels “safe” because it is already building human-readable failure messages. But those strings are still part of the external contract. For catch-all validation failures, log the exception and return a stable public message instead.
