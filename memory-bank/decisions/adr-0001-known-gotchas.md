@@ -5934,6 +5934,28 @@ private async Task ObserveBackgroundTaskAsync(Task backgroundTask)
 
 **Why This Keeps Happening**: `ContinueWith(OnlyOn...)` feels like a cheap observer, but it creates a second task with its own state machine. When the observed condition is not met, that wrapper task is canceled by design, which makes fire-and-forget orchestration noisy and misleading. If the intent is “run this in the background and log failures,” use a dedicated async helper that awaits the real task and catches inside it.
 
+### 0k22. Fire-And-Forget Tasks From Event Or Timer Paths Still Need An Explicit Observer
+
+**The Bug**: Application startup, timer callbacks, and inbound message handlers launched background work with `_ = Task.Run(...)` or `_ = SomeAsyncCall()` and assumed the callee would always self-handle faults. When one of those tasks throws before its own internal catch or from a later refactor, the exception becomes detached from the triggering event and can surface as unobserved task noise or silently drop maintenance work.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(() => MaybeRescanShares());
+_ = Task.Run(() => HandlePodMessageAsync(username, message));
+```
+
+**Correct**:
+```csharp
+_ = ObserveBackgroundTaskAsync(
+    Task.Run(() => MaybeRescanShares(), CancellationToken.None),
+    "Failed to evaluate scheduled share rescan");
+```
+
+**Why This Keeps Happening**: Fire-and-forget code often starts small and “obviously safe,” so it is easy to skip an observer because the current implementation catches internally. Later edits add awaits, new call sites, or early throws and the task becomes faultable from outside that assumed safe window. If the caller intentionally detaches from the task, it still owns failure observation and should route faults through one consistent helper.
+
 ---
 
 *Last updated: 2026-03-22*
