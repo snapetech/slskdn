@@ -10198,3 +10198,37 @@ var pod = new Pod
 ```
 
 **Why This Keeps Happening**: route and JSON binding only get strings into the controller; they do not produce stable service-layer identifiers. Anything that becomes a DHT key, pod ID, content ID, variant hash, or tag list must be normalized at the controller boundary first, or the same logical object will be addressed under multiple string forms.
+
+### 0k61. Pod Channel And Message-Storage Controllers Must Canonicalize Pod And Channel Keys Before Hitting Storage
+
+**The Bug**: `PodChannelController` and `PodMessageStorageController` were still forwarding raw route and query strings into pod/message storage. That means `" pod-1 "` and `"pod-1"` could address different lookups, existence checks, or channel mutations even though they represent the same logical key. Channel payload fields also kept padded `ChannelId`, `Name`, `BindingInfo`, and `Description` unless a downstream service happened to normalize them later.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodChannelController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageStorageController.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodChannelControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodMessageStorageControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(channelId))
+{
+    return BadRequest("Channel ID is required");
+}
+
+var channel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
+```
+
+```csharp
+var results = await messageStorage.SearchMessagesAsync(podId, query, channelId, limit, cancellationToken);
+```
+
+**Correct**:
+```csharp
+podId = podId?.Trim() ?? string.Empty;
+channelId = channelId?.Trim() ?? string.Empty;
+query = query?.Trim() ?? string.Empty;
+channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim();
+```
+
+**Why This Keeps Happening**: pod/channel APIs look simple enough that it is easy to assume route keys arrive in canonical form. They do not. If a controller does existence checks, storage queries, or updates keyed by `podId` / `channelId`, trim those strings first or storage behavior depends on transport formatting rather than the real logical identifier.
