@@ -23,8 +23,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Replay the stable release from the verified post-`.83` timing-fix commit and monitor CI through completion
-- **Branch**: `security-fixes-master`
+- **Current Task**: Scheduled E2E workflow failures repaired and rerun green on `master`
+- **Branch**: `e2e-fixture-fix2`
 - **Environment**: Local dev
 - **Last Activity**:
   - Disabled GitHub default CodeQL setup via the API, verified recent `master` CodeQL runs are green, manually updated `Formula/slskdn.rb` to release `0.24.5-slskdn.57`, and patched `build-on-tag.yml` so the Homebrew, Nix, and Winget main-repo write-back steps rebase/retry before push.
@@ -103,10 +103,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the `.83` cover-traffic test stabilization to `origin/master`.
-2. Replay the failed stable build with a fresh tag from the verified post-`.83` fix commit.
-3. Watch the replayed stable build through publish/release completion and hand the tester the exact green package for `/slskd` verification.
-4. Re-run GitHub code scanning after the replayed build lands and confirm no auth-boundary findings reopen.
+1. If the nightly E2E workflow flakes again, inspect the uploaded Playwright report first before assuming the tagged release path regressed.
+2. Triage or suppress the longstanding XML-doc warnings that still appear during `dotnet build` in CI so they stop obscuring real failures.
+3. Update GitHub Actions dependencies off the Node 20-based action versions before the June 2, 2026 forced runner switch.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
