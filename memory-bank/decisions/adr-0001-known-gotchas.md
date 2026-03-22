@@ -9463,6 +9463,47 @@ if (issueIds == null || issueIds.Count == 0)
 
 **Why This Keeps Happening**: API validation often treats “non-empty list” as sufficient and assumes downstream services will handle per-item cleanup. That leaves the boundary accepting syntactically non-empty but semantically empty payloads, which produces confusing service-layer failures. For list-valued request fields, trim and filter elements at the controller boundary before deciding whether the request is valid.
 
+
+### 0k56. Controller Validation Must Match Service-Level Normalization Instead Of Accepting Blank-Only Payloads
+
+**The Bug**: MediaCore controllers were still validating only the raw request container shape while the underlying services had moved to trimmed, filtered semantics. `MetadataPortabilityController.Export(...)` accepted `ContentIds` collections containing only blank strings because `Any()` was true, and `ContentIdController` forwarded padded IDs and raw domain/type strings directly into downstream services even though the rest of MediaCore now treats trimmed/normalized values as canonical.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/ContentIdController.cs`
+- `src/slskd/MediaCore/API/Controllers/MetadataPortabilityController.cs`
+- `tests/slskd.Tests.Unit/MediaCore/ContentIdControllerTests.cs`
+- `tests/slskd.Tests.Unit/MediaCore/MetadataPortabilityControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (request?.ContentIds == null || !request.ContentIds.Any())
+{
+    return BadRequest("At least one ContentID is required for export");
+}
+
+await _registry.RegisterAsync(request.ExternalId, request.ContentId, cancellationToken);
+var normalizedType = ContentIdParser.NormalizeType(domain, type);
+```
+
+**Correct**:
+```csharp
+if (request?.ContentIds == null || !request.ContentIds.Any(contentId => !string.IsNullOrWhiteSpace(contentId)))
+{
+    return BadRequest("At least one ContentID is required for export");
+}
+
+var externalId = request.ExternalId.Trim();
+var contentId = request.ContentId.Trim();
+await _registry.RegisterAsync(externalId, contentId, cancellationToken);
+
+domain = domain.Trim();
+type = type.Trim();
+var normalizedDomain = ContentIdParser.NormalizeDomain(domain, type);
+var normalizedType = ContentIdParser.NormalizeType(normalizedDomain, type);
+```
+
+**Why This Keeps Happening**: once service methods become robust to trimming and filtering, controllers can look “good enough” while quietly accepting malformed-but-repairable input. That creates an API contract mismatch: the endpoint claims the raw payload is valid even though the real behavior only works because lower layers silently normalize it. Validate the effective input shape at the controller boundary so controller behavior, service behavior, and tests all agree.
+
 ---
 
 *Last updated: 2026-03-22*
