@@ -100,6 +100,29 @@ return opts.ApprovedPeers.Contains(keyUri.Host, StringComparer.OrdinalIgnoreCase
 
 **Why This Keeps Happening**: In inbound federation code it is easy to grab the most convenient host string and forget whether it identifies the caller or the local service. Friends-only checks must key off verified remote identity material such as the HTTP signature `keyId` host or an explicitly supplied remote origin, and helper methods must refuse to fabricate remote inbox URLs from arbitrary strings.
 
+### 0x2. Security Policies Must Not Pretend To Enforce Checks While Returning Unconditional Allow
+
+**The Bug**: Security policy classes were registered as protection layers but some paths just logged TODOs and returned `Allowed = true` for every request. That creates a false sense of protection and guarantees the engine will never stop abusive traffic.
+
+**Files Affected**:
+- `src/slskd/Security/Policies.cs`
+
+**Wrong**:
+```csharp
+logger.LogDebug("[NatAbuse] NAT abuse detection not fully implemented, allowing peer {PeerId}", context.PeerId);
+return Task.FromResult(new SecurityDecision(true, "nat abuse detection not fully implemented"));
+```
+
+**Correct**:
+```csharp
+if (context.Operation.Contains("consensus", StringComparison.OrdinalIgnoreCase))
+{
+    return Task.FromResult(new SecurityDecision(false, "consensus verification unavailable"));
+}
+```
+
+**Why This Keeps Happening**: It is tempting to wire a policy into DI early and fill it in later, but once the policy is part of a composite engine the placeholder result becomes production behavior. If a policy cannot fully evaluate, it must either enforce the narrow checks it actually can support or fail closed for operations that explicitly depend on that protection.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
