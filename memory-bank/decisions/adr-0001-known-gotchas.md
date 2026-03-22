@@ -3078,6 +3078,31 @@ sed -i "s/^_commit=.*/_commit=${COMMIT}/" PKGBUILD
 
 **Related**: See gotcha #13 "SKIP vs Actual Hash in AUR" for more context on why this pattern exists.
 
+### 25. Mark Optional SongID ML/Audio Dependencies as `optdepends`
+
+**The Bug**: Optional SongID/audio tooling was treated as required by package metadata, which blocked installs on systems without those optional Python/audio packages available.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/PKGBUILD-dev`
+
+**Wrong**:
+```bash
+depends=(
+    python-torchaudio
+)
+```
+
+**Correct**:
+```bash
+optdepends=(
+    'python-torchaudio: optional enhancement for advanced SongID workflows'
+)
+```
+
+**Why This Happens**: SongID feature paths call optional external engines only when present, so hard package requirements in PKGBUILD block users who do not need those features and can prevent installs when package availability is limited.
+
 ---
 
 ## Package Manager Version Constraints
@@ -4272,6 +4297,52 @@ private static async Task<bool> ReadExactlyAsync(Stream stream, byte[] buffer, i
 ```
 
 **Why This Keeps Happening**: Network framing logic often assumes one `ReadAsync` call yields all requested bytes. On real transports, this assumption is wrong; parsers must accumulate until the header/payload is fully read or the stream closes.
+
+### 3h. Stream Wrappers Must Not Block on Async Disposal in `Dispose`
+
+**The Bug**: `QuicStreamWrapper.Dispose()` called `_connection.DisposeAsync().AsTask().GetAwaiter().GetResult()` from a synchronous dispose path, which can block thread-pool shutdown paths and convert asynchronous cancellation into synchronous deadlocks under adverse timing.
+
+**Files Affected**:
+- `src/slskd/Mesh/Transport/DirectQuicDialer.cs`
+
+**Wrong**:
+```csharp
+_connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+```
+
+**Correct**:
+```csharp
+_connection.Dispose();
+```
+
+**Why This Keeps Happening**: When wrapping async resources in synchronous `Stream.Dispose`, it is tempting to wait on async teardown. In QUIC and socket-heavy code paths, this can delay shutdown or deadlock if the async dispose needs the same synchronization context.
+
+### 3i. Cleanup Paths Should Log and Contain Resource-Teardown Failures, Not Swallow Them
+
+**The Bug**: Multiple cleanup/deletion paths swallowed exceptions with empty catches, which hid why forwarder stop/deletion, mDNS/disposer, or relay response cleanups failed and made failures hard to diagnose in production.
+
+**Files Affected**:
+- `src/slskd/Common/Security/LocalPortForwarder.cs`
+- `src/slskd/Swarm/SwarmDownloadOrchestrator.cs`
+- `src/slskd/Identity/MdnsAdvertiser.cs`
+- `src/slskd/Mesh/Overlay/QuicDataServer.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnection.cs`
+- `src/slskd/API/Compatibility/RoomsCompatibilityController.cs`
+
+**Wrong**:
+```csharp
+catch { }
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    _logger.LogDebug(ex, "Failed to cleanup resource");
+}
+```
+
+**Why This Keeps Happening**: Cleanup code often runs during stop/error windows where engineers are reluctant to add logging. Without explicit tracing, transient OS/socket errors and partial-cleanup failures vanish, making subsequent lifecycle issues look nondeterministic.
 
 ---
 
