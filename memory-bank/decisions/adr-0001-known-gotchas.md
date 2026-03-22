@@ -11129,6 +11129,43 @@ return BadRequest(new { error = "Failed to sync with peer" });
 
 **Why This Keeps Happening**: helper methods and result DTOs feel “more official” than exception text, so they slip past leak reviews. They are still internal diagnostics. If the string comes from validation infrastructure or a service result object, log it and translate it before returning from the controller.
 
+### 0k69. Stable 404s Should Not Echo Raw Route Or Query Identifiers
+
+**The Bug**: even after sanitizing exceptions and result DTOs, some controllers were still building `404` messages by interpolating raw route/query identifiers like pod IDs, usernames, or external IDs into the public response body.
+
+**Files Affected**:
+- `src/slskd/API/Native/PodsController.cs`
+- `src/slskd/Capabilities/API/CapabilitiesController.cs`
+- `src/slskd/MediaCore/API/Controllers/ContentIdController.cs`
+
+**Wrong**:
+```csharp
+return NotFound(new { error = $"Pod {podId} not found" });
+```
+
+```csharp
+return NotFound(new { error = $"No capabilities known for {username}" });
+```
+
+```csharp
+return NotFound(new { error = $"External ID '{externalId}' not found" });
+```
+
+**Correct**:
+```csharp
+return NotFound(new { error = "Pod not found" });
+```
+
+```csharp
+return NotFound(new { error = "No capabilities known for peer" });
+```
+
+```csharp
+return NotFound(new { error = "External ID not found" });
+```
+
+**Why This Keeps Happening**: `404` responses look harmless, so it is easy to include the offending identifier for convenience. That still couples the public contract to raw caller input and leaks more request detail than necessary. Keep the identifier in logs; keep the response stable.
+
 ### 0k69. Search And Download Response Envelopes Must Not Carry Backend Error Fields Through To Clients
 
 **The Bug**: some controller paths sanitize thrown exceptions but still leak backend failure details by copying service error fields into `ProblemDetails.Detail` or JSON `error` members on otherwise structured responses. That still exposes mesh fetch errors and multi-source download internals to callers.
