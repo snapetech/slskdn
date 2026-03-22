@@ -360,6 +360,51 @@ return $"{RedactHostname(host)}:{port}";
 
 **Why This Keeps Happening**: utility layers are tempting places to be permissive because they look “non-critical,” but they sit exactly on the boundaries where real-world endpoint formats, protocol variants, and cleanup lifetimes show up. If those helpers only handle the happy-path shape, higher layers quietly lose hostnames, duplicate DHT state, classic STUN servers, or accurate connection counters. Treat parse/accounting helpers as protocol code, not convenience code.
 
+### 0xAB. Protocol Helpers Must Enforce Wire Limits And Address Families Explicitly
+
+**The Bug**: several transport/NAT helpers still assumed IPv4-only happy paths and unbounded field sizes. `TorSocksTransport` would silently truncate SOCKS5 host/auth field lengths past 255 bytes by casting to `byte`, `NatDetectionService` used `new Random()` for STUN transaction IDs, parsed STUN attributes with an off-by-one boundary check, assumed IPv4 sockets for direct-bind detection, and treated IPv6 private/local addresses as public.
+
+**Files Affected**:
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/DhtRendezvous/NatDetectionService.cs`
+
+**Wrong**:
+```csharp
+addressBytes[0] = (byte)hostBytes.Length;
+...
+new Random().NextBytes(request.AsSpan(8, 12));
+...
+while (offset + 4 < response.Length)
+...
+using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+...
+if (bytes.Length != 4)
+{
+    return false; // IPv6 - assume not private for simplicity
+}
+```
+
+**Correct**:
+```csharp
+if (hostBytes.Length is 0 or > 255)
+{
+    throw new ArgumentException(...);
+}
+...
+RandomNumberGenerator.Fill(request.AsSpan(8, 12));
+...
+while (offset + 4 <= response.Length)
+...
+using var socket = new Socket(_publicIp.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+...
+if (ip.AddressFamily == AddressFamily.InterNetworkV6)
+{
+    return ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || isUniqueLocal;
+}
+```
+
+**Why This Keeps Happening**: low-level protocol helpers often start as “minimal implementations,” and then the optimistic assumptions harden into production behavior. Wire-format code must validate field sizes before narrowing casts, exact packet loops need `<=` boundary logic, and NAT/public-address helpers must be explicit about IPv6 rather than treating it as “not handled.” Otherwise the failures only appear in real networks, where they are expensive to diagnose.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
