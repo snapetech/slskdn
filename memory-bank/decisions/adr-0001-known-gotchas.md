@@ -678,6 +678,54 @@ cmd.Parameters.AddWithValue("@release_id", releaseId);
 
 **Why This Keeps Happening**: once read paths are fixed, the app appears healthier, but the underlying store can still accumulate inconsistent keys unless writes are normalized too. That creates a slow-motion regression where new bad rows keep being added and future readers need more and more cleanup logic. Normalize the key at both ends: before querying and before persisting.
 
+### 0xB2. Cache And Popularity Tables Must Normalize Keys Before Counting Or Reporting Them
+
+**The Bug**: both `DescriptorRetriever` and HashDb popularity/state helpers were still letting whitespace and duplicate key shapes skew behavior. `DescriptorRetriever` accepted padded `contentId` values into retrieval and batch paths, counted expired entries in cache-size stats, and recorded retrieval stats under raw domains instead of normalized ones. HashDb FLAC/warm-cache popularity paths still accepted padded keys and could report duplicate `content_id` rows as separate “top popular” entries.
+
+**Files Affected**:
+- `src/slskd/MediaCore/DescriptorRetriever.cs`
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+var contentIdList = contentIds.Distinct().ToList();
+...
+var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+...
+var cacheSizeBytes = _cache.Values.Sum(c => EstimateDescriptorSize(c.Descriptor));
+...
+cmd.Parameters.AddWithValue("@cid", contentId);
+...
+results.Add((cid, hits));
+```
+
+**Correct**:
+```csharp
+contentId = contentId.Trim();
+...
+var contentIdList = contentIds
+    .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+    .Select(contentId => contentId.Trim())
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToList();
+...
+var parsed = ContentIdParser.Parse(contentId);
+var domain = parsed == null ? "unknown" : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
+...
+var cacheSizeBytes = _cache.Values
+    .Where(cached => !IsExpired(cached))
+    .Sum(cached => EstimateDescriptorSize(cached.Descriptor));
+...
+contentId = contentId?.Trim() ?? string.Empty;
+...
+if (!string.IsNullOrWhiteSpace(cid) && seen.Add(cid))
+{
+    results.Add((cid, hits));
+}
+```
+
+**Why This Keeps Happening**: stats, caches, and popularity tables look observational, so they often get less normalization discipline than “real” business data. But once those paths count whitespace variants, expired cache entries, or duplicate rows as distinct facts, dashboards and downstream heuristics start drifting away from reality. Treat reporting keys with the same normalization rules as primary identifiers.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
