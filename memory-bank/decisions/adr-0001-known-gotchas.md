@@ -9531,3 +9531,41 @@ return host == "localhost" ||
 ---
 
 *Last updated: 2026-03-22*
+
+### 0k57. Localhost-Origin And Native Search Boundaries Must Normalize User Input Before Security Or Search Matching
+
+**The Bug**: adjacent request-boundary code was still treating raw user input as canonical. `MeshGatewayAuthMiddleware` compared the parsed origin host with case-sensitive string checks, so bracketed IPv6 localhost origins with uppercase host text could be rejected even though they were still loopback. `LibraryItemsController` also searched with raw `query`/`kinds` values and accepted blank `contentId` route values, so padded search input or blank item lookups could produce misleading misses instead of boundary normalization.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshGatewayAuthMiddleware.cs`
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `tests/slskd.Tests.Unit/Mesh/ServiceFabric/MeshGatewayAuthMiddlewareTests.cs`
+- `tests/slskd.Tests.Unit/API/Native/LibraryItemsControllerTests.cs`
+
+**Wrong**:
+```csharp
+return host == "localhost" ||
+       host == "127.0.0.1" ||
+       host == "::1";
+
+var queryLower = query.ToLowerInvariant();
+...
+logger?.LogInformation("Get library item: contentId={ContentId}", contentId);
+```
+
+**Correct**:
+```csharp
+return host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+       host.Equals("127.0.0.1", StringComparison.Ordinal) ||
+       host.Equals("::1", StringComparison.OrdinalIgnoreCase);
+
+query = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
+kinds = string.IsNullOrWhiteSpace(kinds) ? null : kinds.Trim();
+contentId = contentId?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(contentId))
+{
+    return BadRequest(new { error = "ContentId is required" });
+}
+```
+
+**Why This Keeps Happening**: once request handling looks simple, it is easy to assume framework parsing has already normalized everything important. It has not. Security checks and search filters still need to define their own canonical input shape. If a boundary depends on hostnames, loopback names, query text, or route IDs, trim and normalize those values before comparing, filtering, or logging them.
