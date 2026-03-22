@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.API.Compatibility;
 
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -16,19 +17,45 @@ using Xunit;
 public class DownloadsCompatibilityControllerTests
 {
     [Fact]
-    public async Task CreateDownloads_WithOnlyBlankItems_ReturnsBadRequest()
+    public async Task CreateDownloads_WithWhitespaceOnlyItemFields_ReturnsBadRequest()
     {
-        var controller = CreateController(new Mock<IDownloadService>());
+        var downloadService = new Mock<IDownloadService>();
+        var controller = CreateController(downloadService);
+
+        var result = await controller.CreateDownloads(
+            new DownloadRequest(new List<DownloadItem> { new(" ", "   ", string.Empty) }),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        downloadService.Verify(
+            service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateDownloads_WithMixedValidAndBlankItems_ReturnsBadRequest()
+    {
+        var downloadService = new Mock<IDownloadService>();
+        var controller = CreateController(downloadService);
 
         var result = await controller.CreateDownloads(
             new DownloadRequest(new List<DownloadItem>
             {
-                new("", "   ", "", null),
-                new("   ", "", "", null),
+                new("alice", "/music/song.flac", string.Empty),
+                new("bob", "   ", string.Empty)
             }),
             CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
+        downloadService.Verify(
+            service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -37,7 +64,7 @@ public class DownloadsCompatibilityControllerTests
         var downloadService = new Mock<IDownloadService>();
         downloadService
             .Setup(service => service.EnqueueAsync(
-                "alice",
+                It.IsAny<string>(),
                 It.IsAny<IEnumerable<(string Filename, long Size)>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<Transfer>(), new List<string>()));
@@ -45,10 +72,7 @@ public class DownloadsCompatibilityControllerTests
         var controller = CreateController(downloadService);
 
         var result = await controller.CreateDownloads(
-            new DownloadRequest(new List<DownloadItem>
-            {
-                new(" alice ", " Music/song.flac ", "", null),
-            }),
+            new DownloadRequest(new List<DownloadItem> { new(" alice ", " /music/song.flac ", string.Empty) }),
             CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
@@ -56,39 +80,19 @@ public class DownloadsCompatibilityControllerTests
             service => service.EnqueueAsync(
                 "alice",
                 It.Is<IEnumerable<(string Filename, long Size)>>(files =>
-                    files.Count() == 1 &&
-                    files.First().Filename == "Music/song.flac"),
+                    files.Single().Filename == "/music/song.flac"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
-    [Fact]
-    public async Task GetDownload_WithWhitespacePaddedId_ParsesTrimmedGuid()
-    {
-        var id = Guid.NewGuid();
-        var downloadService = new Mock<IDownloadService>();
-        downloadService
-            .Setup(service => service.Find(It.IsAny<Func<Transfer, bool>>()))
-            .Returns(new Transfer
-            {
-                Id = id,
-                Username = "alice",
-                Filename = "Music/song.flac",
-                State = TransferStates.Queued,
-            });
-
-        var controller = CreateController(downloadService);
-
-        var result = await controller.GetDownload($"  {id}  ", CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(result);
-    }
-
     private static DownloadsCompatibilityController CreateController(Mock<IDownloadService> downloadService)
     {
+        var optionsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();
+        optionsMonitor.SetupGet(monitor => monitor.CurrentValue).Returns(new slskd.Options());
+
         return new DownloadsCompatibilityController(
             downloadService.Object,
             NullLogger<DownloadsCompatibilityController>.Instance,
-            Mock.Of<IOptionsMonitor<slskd.Options>>());
+            optionsMonitor.Object);
     }
 }

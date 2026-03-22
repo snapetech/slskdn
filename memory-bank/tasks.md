@@ -762,3 +762,6 @@
 - [x] Normalize gateway and compatibility controller request inputs
   - Status: done
   - Notes: Trimmed MeshGatewayController service/method route values before allowlist/dispatch, normalized DownloadsCompatibilityController item/status/id inputs before enqueue or lookup, and added focused controller regressions for those request boundaries.
+- [x] Normalize null and whitespace controller body boundaries
+  - Status: done
+  - Notes: Added explicit null/trim handling to SearchCompatibilityController and PortForwardingController, replaced placeholder port-forwarding tests with real controller regressions, and folded in adjacent dirty controller test updates from the working tree.

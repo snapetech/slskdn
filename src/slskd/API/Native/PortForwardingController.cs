@@ -40,19 +40,38 @@ public class PortForwardingController : ControllerBase
     [HttpPost("start")]
     public async Task<IActionResult> StartForwarding([FromBody] StartPortForwardingRequest request)
     {
+        if (request == null)
+        {
+            return BadRequest(new { Error = "Request is required" });
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        var podId = request.PodId?.Trim() ?? string.Empty;
+        var destinationHost = request.DestinationHost?.Trim() ?? string.Empty;
+        var serviceName = string.IsNullOrWhiteSpace(request.ServiceName) ? null : request.ServiceName.Trim();
+
+        if (string.IsNullOrWhiteSpace(podId))
+        {
+            return BadRequest(new { Error = "PodId is required" });
+        }
+
+        if (string.IsNullOrWhiteSpace(destinationHost))
+        {
+            return BadRequest(new { Error = "DestinationHost is required" });
         }
 
         try
         {
             await _portForwarder.StartForwardingAsync(
                 request.LocalPort,
-                request.PodId,
-                request.DestinationHost,
+                podId,
+                destinationHost,
                 request.DestinationPort,
-                request.ServiceName);
+                serviceName);
 
             return Ok(new { Message = $"Port forwarding started on local port {request.LocalPort}" });
         }

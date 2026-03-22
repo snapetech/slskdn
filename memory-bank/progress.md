@@ -5464,3 +5464,14 @@ Code quality improvements were completed as part of Option A:
 - Documented the new bug pattern immediately in ADR-0001 and committed it as `606b6a86`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 18:00:00Z
+
+- Continued the same controller-boundary bughunt into compatibility search and native port forwarding:
+  - fixed `SearchCompatibilityController` so null request bodies return `400` instead of dereferencing `request.Query`, and trimmed search text is now used consistently for dispatch/logging/response
+  - fixed `PortForwardingController` so null requests and whitespace-only `PodId` / `DestinationHost` are rejected explicitly before forwarding starts
+  - replaced the old placeholder-only port-forwarding test file with focused controller regressions against the real native controller boundary
+  - folded in the remaining dirty controller test updates already in the tree while keeping the pass scoped to request-boundary normalization
+- Documented the new bug pattern immediately in ADR-0001 and committed it as `1c76a2ea`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

@@ -38,13 +38,31 @@ public class MeshGatewayControllerTests
             .Setup(service => service.FindByNameAsync("pods", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[]
             {
-                new MeshServiceDescriptor("svc-1", "pods", "peer-1", 1, DateTimeOffset.UtcNow, new Dictionary<string, string>())
+                new MeshServiceDescriptor
+                {
+                    ServiceId = "svc-1",
+                    ServiceName = "pods",
+                    OwnerPeerId = "peer-1",
+                    Endpoint = new MeshServiceEndpoint
+                    {
+                        Protocol = "quic",
+                        Host = "127.0.0.1",
+                        Port = 1
+                    },
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5),
+                    Metadata = new Dictionary<string, string>()
+                }
             });
 
         var client = new Mock<IMeshServiceClient>();
         client
             .Setup(service => service.CallServiceAsync("pods", "list", It.IsAny<ReadOnlyMemory<byte>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ServiceReply(ServiceStatusCodes.OK, Array.Empty<byte>(), null));
+            .ReturnsAsync(new ServiceReply
+            {
+                StatusCode = ServiceStatusCodes.OK,
+                Payload = Array.Empty<byte>()
+            });
 
         var controller = CreateController(
             new MeshGatewayOptions
