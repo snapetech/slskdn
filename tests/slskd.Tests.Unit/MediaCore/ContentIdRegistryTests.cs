@@ -39,6 +39,19 @@ public class ContentIdRegistryTests
     }
 
     [Fact]
+    public async Task RegisterAsync_TrimsKeysBeforeStoring()
+    {
+        await _registry.RegisterAsync("  mb:recording:12345  ", "  content:mb:recording:12345  ");
+
+        var resolved = await _registry.ResolveAsync("mb:recording:12345");
+        var externalIds = await _registry.GetExternalIdsAsync("content:mb:recording:12345");
+
+        Assert.Equal("content:mb:recording:12345", resolved);
+        Assert.Single(externalIds);
+        Assert.Contains("mb:recording:12345", externalIds);
+    }
+
+    [Fact]
     public async Task RegisterAsync_EmptyExternalId_ThrowsArgumentException()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -148,6 +161,19 @@ public class ContentIdRegistryTests
     }
 
     [Fact]
+    public async Task FindByDomainAsync_WithMbDomain_UsesNormalizedDomain()
+    {
+        await _registry.RegisterAsync("mb:recording:12345", "content:mb:recording:12345");
+        await _registry.RegisterAsync("mb:release:67890", "content:mb:release:67890");
+
+        var results = await _registry.FindByDomainAsync("mb");
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains("content:mb:recording:12345", results);
+        Assert.Contains("content:mb:release:67890", results);
+    }
+
+    [Fact]
     public async Task FindByDomainAndTypeAsync_ValidDomainAndType_ReturnsMatchingContentIds()
     {
         // Arrange
@@ -171,6 +197,18 @@ public class ContentIdRegistryTests
 
         result = await _registry.FindByDomainAndTypeAsync("audio", "unknown");
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task FindByDomainAndTypeAsync_WithMbDomainAndRecordingType_UsesNormalizedSemantics()
+    {
+        await _registry.RegisterAsync("mb:recording:12345", "content:mb:recording:12345");
+        await _registry.RegisterAsync("mb:release:67890", "content:mb:release:67890");
+
+        var results = await _registry.FindByDomainAndTypeAsync("mb", "recording");
+
+        Assert.Single(results);
+        Assert.Contains("content:mb:recording:12345", results);
     }
 
     [Fact]

@@ -31,6 +31,9 @@ public class ContentIdRegistry : IContentIdRegistry
         if (string.IsNullOrWhiteSpace(contentId))
             throw new ArgumentException("Content ID cannot be empty", nameof(contentId));
 
+        externalId = externalId.Trim();
+        contentId = contentId.Trim();
+
         // If overwriting a mapping to a different contentId, remove externalId from the old contentId's set
         if (_externalToContent.TryGetValue(externalId, out var oldContentId) && oldContentId != contentId &&
             _contentToExternal.TryGetValue(oldContentId, out var oldSet))
@@ -54,6 +57,7 @@ public class ContentIdRegistry : IContentIdRegistry
         if (string.IsNullOrWhiteSpace(externalId))
             return null;
 
+        externalId = externalId.Trim();
         _externalToContent.TryGetValue(externalId, out var contentId);
         return await Task.FromResult(contentId);
     }
@@ -64,6 +68,7 @@ public class ContentIdRegistry : IContentIdRegistry
         if (string.IsNullOrWhiteSpace(contentId))
             return Array.Empty<string>();
 
+        contentId = contentId.Trim();
         if (_contentToExternal.TryGetValue(contentId, out var externalIds))
         {
             return await Task.FromResult(externalIds.Keys.ToArray());
@@ -78,6 +83,7 @@ public class ContentIdRegistry : IContentIdRegistry
         if (string.IsNullOrWhiteSpace(externalId))
             return await Task.FromResult(false);
 
+        externalId = externalId.Trim();
         return await Task.FromResult(_externalToContent.ContainsKey(externalId));
     }
 
@@ -87,6 +93,7 @@ public class ContentIdRegistry : IContentIdRegistry
         if (string.IsNullOrWhiteSpace(contentId))
             return await Task.FromResult(false);
 
+        contentId = contentId.Trim();
         return await Task.FromResult(_contentToExternal.ContainsKey(contentId));
     }
 
@@ -122,9 +129,9 @@ public class ContentIdRegistry : IContentIdRegistry
             return Array.Empty<string>();
 
         var results = new List<string>();
-        var normalizedDomain = domain.ToLowerInvariant();
+        var normalizedDomain = ContentIdParser.NormalizeDomain(domain.Trim(), string.Empty);
 
-        foreach (var (externalId, contentId) in _externalToContent)
+        foreach (var contentId in _externalToContent.Values)
         {
             var parsedContentId = ContentIdParser.Parse(contentId);
             if (parsedContentId != null &&
@@ -135,7 +142,7 @@ public class ContentIdRegistry : IContentIdRegistry
             }
         }
 
-        return await Task.FromResult(results.Distinct().ToArray());
+        return await Task.FromResult(results.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
     /// <inheritdoc/>
@@ -145,10 +152,10 @@ public class ContentIdRegistry : IContentIdRegistry
             return Array.Empty<string>();
 
         var results = new List<string>();
-        var normalizedDomain = domain.ToLowerInvariant();
-        var normalizedType = type.ToLowerInvariant();
+        var normalizedDomain = ContentIdParser.NormalizeDomain(domain.Trim(), type.Trim());
+        var normalizedType = ContentIdParser.NormalizeType(normalizedDomain, type.Trim());
 
-        foreach (var (externalId, contentId) in _externalToContent)
+        foreach (var contentId in _externalToContent.Values)
         {
             var parsedContentId = ContentIdParser.Parse(contentId);
             if (parsedContentId != null &&
@@ -161,7 +168,7 @@ public class ContentIdRegistry : IContentIdRegistry
             }
         }
 
-        return await Task.FromResult(results.Distinct().ToArray());
+        return await Task.FromResult(results.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
     /// <summary>

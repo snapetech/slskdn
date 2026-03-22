@@ -5419,3 +5419,16 @@ Code quality improvements were completed as part of Option A:
   - refreshed focused tests in unit/integration projects so current runtime expectations match the normalized key/domain behavior
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 16:45:00Z
+
+- Continued the broad MediaCore/runtime bughunt from clean HEAD:
+  - normalized `ContentIdRegistry` registrations and lookups so external/content IDs are trimmed before storing, resolving, or reverse-querying
+  - fixed `FindByDomainAsync(...)` and `FindByDomainAndTypeAsync(...)` to use the same normalized MediaCore semantics as the rest of the stack, so `mb`/`recording` queries align with `audio` results instead of raw lowercase string matching
+  - fixed `MetadataPortability.ExportAsync(...)` to trim and case-insensitively deduplicate content IDs before descriptor retrieval and to track exported domains using normalized MediaCore semantics rather than raw parsed domains
+  - tightened `DescriptorRetrieverController` validation so whitespace-only batch IDs are rejected and `maxResults` matches the retriever’s real `1..500` contract
+  - folded in the dirty `UrlEncodingModelBinder` fix and its new unit coverage so malformed query strings in `RawTarget` no longer force an unnecessary `Uri` parse during route segment recovery
+  - added focused regressions for normalized registry lookups, metadata export deduplication/domain tracking, and model-binder raw-target parsing
+- Documented the new bug pattern immediately in ADR-0001 and committed it as `e4be9372`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

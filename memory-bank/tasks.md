@@ -750,3 +750,6 @@
 - [x] Tighten runtime compatibility regression coverage
   - Status: done
   - Notes: Added/updated focused unit and integration regressions for Search item parsing, SongID tool parsing and path traversal, LoggingSanitizer IPv6 URL handling, WebSocket transport URL validation, blacklist/logging helper behavior, and descriptor retrieval normalization.
+- [x] Normalize MediaCore registry/export/controller boundaries
+  - Status: done
+  - Notes: Trimmed ContentIdRegistry keys before storage/lookup, aligned domain/type queries with normalized MediaCore semantics, normalized MetadataPortability export dedupe/domain tracking, tightened DescriptorRetriever controller request validation, and added focused coverage for those read-side boundaries plus UrlEncodingModelBinder raw-target parsing.

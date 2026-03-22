@@ -45,7 +45,10 @@ public class MetadataPortability : IMetadataPortability
         var allLinks = new List<IpldLink>();
         var entriesByDomain = new Dictionary<string, int>();
 
-        foreach (var contentId in contentIds.Distinct())
+        foreach (var contentId in contentIds
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Select(contentId => contentId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
@@ -75,7 +78,10 @@ public class MetadataPortability : IMetadataPortability
                 entries.Add(new MetadataEntry(contentId, descriptor, sourceInfo));
 
                 // Track domain statistics
-                var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+                var parsed = ContentIdParser.Parse(contentId);
+                var domain = parsed == null
+                    ? "unknown"
+                    : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
                 entriesByDomain.TryGetValue(domain, out var count);
                 entriesByDomain[domain] = count + 1;
 
@@ -105,7 +111,10 @@ public class MetadataPortability : IMetadataPortability
             ExportedAt: DateTimeOffset.UtcNow,
             Source: "slskdN",
             Entries: entries,
-            Links: allLinks.Distinct().ToArray(),
+            Links: allLinks
+                .Where(link => !string.IsNullOrWhiteSpace(link.Target))
+                .Distinct()
+                .ToArray(),
             Metadata: packageMetadata);
 
         _logger.LogInformation(

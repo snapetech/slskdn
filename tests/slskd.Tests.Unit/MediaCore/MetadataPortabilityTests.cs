@@ -80,6 +80,50 @@ public class MetadataPortabilityTests
     }
 
     [Fact]
+    public async Task ExportAsync_TrimsAndDeduplicatesContentIdsCaseInsensitively()
+    {
+        _descriptorRetrieverMock.Setup(r => r.RetrieveAsync(It.IsAny<string>(), false, default))
+            .ReturnsAsync((string contentId, bool _, CancellationToken _) => new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor { ContentId = contentId },
+                RetrievedAt: DateTimeOffset.UtcNow,
+                RetrievalDuration: TimeSpan.Zero,
+                FromCache: false,
+                Verification: null));
+
+        var package = await _portability.ExportAsync(new[]
+        {
+            " content:mb:recording:12345 ",
+            "content:mb:recording:12345",
+            "CONTENT:MB:RECORDING:12345",
+            "",
+            "   ",
+        }, includeLinks: false);
+
+        Assert.Single(package.Entries);
+        _descriptorRetrieverMock.Verify(
+            r => r.RetrieveAsync("content:mb:recording:12345", false, default),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportAsync_TracksNormalizedDomains()
+    {
+        _descriptorRetrieverMock.Setup(r => r.RetrieveAsync("content:mb:recording:12345", false, default))
+            .ReturnsAsync(new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor { ContentId = "content:mb:recording:12345" },
+                RetrievedAt: DateTimeOffset.UtcNow,
+                RetrievalDuration: TimeSpan.Zero,
+                FromCache: false,
+                Verification: null));
+
+        var package = await _portability.ExportAsync(new[] { "content:mb:recording:12345" }, includeLinks: false);
+
+        Assert.Equal(1, package.Metadata.EntriesByDomain["audio"]);
+    }
+
+    [Fact]
     public async Task ImportAsync_ValidPackage_Succeeds()
     {
         // Arrange

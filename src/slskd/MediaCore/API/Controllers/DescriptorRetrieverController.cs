@@ -84,7 +84,7 @@ public class DescriptorRetrieverController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> RetrieveBatch([FromBody] BatchRetrievalRequest request, CancellationToken cancellationToken = default)
     {
-        if (request?.ContentIds == null || !request.ContentIds.Any())
+        if (request?.ContentIds == null || !request.ContentIds.Any(contentId => !string.IsNullOrWhiteSpace(contentId)))
         {
             return BadRequest("At least one ContentID is required");
         }
@@ -127,9 +127,9 @@ public class DescriptorRetrieverController : ControllerBase
             return BadRequest("Domain is required");
         }
 
-        if (maxResults < 1 || maxResults > 1000)
+        if (maxResults < 1 || maxResults > 500)
         {
-            return BadRequest("Max results must be between 1 and 1000");
+            return BadRequest("Max results must be between 1 and 500");
         }
 
         try
