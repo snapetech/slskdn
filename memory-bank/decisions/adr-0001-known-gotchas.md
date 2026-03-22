@@ -9300,6 +9300,29 @@ using System.IO;
 
 **Why This Keeps Happening**: C# refactors that change parsing APIs often compile in the editor only if another file already had the right imports in view or the changed method wasn’t rebuilt immediately. When adding culture-aware parsing, always add the namespace in the same patch and rebuild the owning project before moving on.
 
+### 0k52. Transport Config Validation Must Happen Before Hot-Path `new Uri(...)` Calls
+
+**The Bug**: `WebSocketTransport` accepted any `ServerUrl` at construction time and only parsed it later with `new Uri(_options.ServerUrl)` inside `IsAvailableAsync(...)` and `ConnectAsync(...)`. A bad or non-WebSocket URL then surfaced as a runtime `UriFormatException` or generic connect failure instead of a clear config error, even though no network work had started.
+
+**Files Affected**:
+- `src/slskd/Common/Security/WebSocketTransport.cs`
+
+**Wrong**:
+```csharp
+var uri = new Uri(_options.ServerUrl);
+await client.ConnectAsync(uri, cancellationToken);
+```
+
+**Correct**:
+```csharp
+if (!TryGetServerUri(out var uri, out var validationError))
+{
+    throw new InvalidOperationException(validationError);
+}
+```
+
+**Why This Keeps Happening**: Transport implementations often treat endpoint strings as “just another connection failure” and defer validation until the first actual dial. That blurs the line between configuration bugs and network bugs, which makes status reporting and tests noisy. Validate configured URIs before attempting transport work, and require the expected scheme (`ws`/`wss` here) explicitly.
+
 ---
 
 *Last updated: 2026-03-22*
