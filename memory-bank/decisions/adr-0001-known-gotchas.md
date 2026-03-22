@@ -9962,6 +9962,51 @@ request.LibraryPath = request.LibraryPath?.Trim() ?? string.Empty;
 
 **Why This Keeps Happening**: compatibility wrappers often sit outside the main feature area, so they are easy to miss during DTO refactors. If a compatibility endpoint forwards a shared request model, re-check the current shape of that model instead of assuming legacy property names still exist.
 
+### 0k64. PodCore Controllers Must Normalize Route IDs And Signed Request Fields Before Service Calls
+
+**The Bug**: PodCore membership and join/leave controllers were still treating route values and signed request fields as canonical. That let padded `podId`, `peerId`, and role values reach service calls unchanged, and `ChangeRole(...)` could log and dispatch a role with leading/trailing whitespace. The same family of bug existed in join/leave requests and acceptances, where signed request DTOs were forwarded with raw `PodId`, `PeerId`, `RequestedRole`, `AcceptedRole`, key material, and optional messages/nonces.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodMembershipController.cs`
+- `src/slskd/PodCore/API/Controllers/PodJoinLeaveController.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodMembershipControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodJoinLeaveControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || string.IsNullOrWhiteSpace(request?.NewRole))
+{
+    return BadRequest(...);
+}
+
+var result = await _membershipService.ChangeRoleAsync(podId, peerId, request.NewRole, cancellationToken);
+var result = await _joinLeaveService.RequestJoinAsync(joinRequest, cancellationToken);
+```
+
+**Correct**:
+```csharp
+podId = podId?.Trim() ?? string.Empty;
+peerId = peerId?.Trim() ?? string.Empty;
+var newRole = request?.NewRole?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId) || string.IsNullOrWhiteSpace(newRole))
+{
+    return BadRequest(...);
+}
+
+joinRequest = joinRequest with
+{
+    PodId = joinRequest.PodId?.Trim() ?? string.Empty,
+    PeerId = joinRequest.PeerId?.Trim() ?? string.Empty,
+    RequestedRole = joinRequest.RequestedRole?.Trim() ?? string.Empty,
+    PublicKey = joinRequest.PublicKey?.Trim() ?? string.Empty,
+    Signature = joinRequest.Signature?.Trim() ?? string.Empty,
+    Message = string.IsNullOrWhiteSpace(joinRequest.Message) ? null : joinRequest.Message.Trim(),
+    Nonce = string.IsNullOrWhiteSpace(joinRequest.Nonce) ? null : joinRequest.Nonce.Trim()
+};
+```
+
+**Why This Keeps Happening**: once a request is represented by a DTO or route parameters, it is easy to assume the framework has already produced canonical strings. It has not. If a controller forwards IDs, roles, keys, or signatures into membership/join logic, trim them first so service behavior and signature validation operate on a stable input shape.
+
 ### 0k59. Controllers Must Validate Null Bodies Before Logging Or Relying On Attribute Validation, And Must Trim Required String Fields Explicitly
 
 **The Bug**: two controller boundaries still assumed framework/model validation had already normalized the request. `SearchCompatibilityController` logged `request.Query` before checking whether `request` was null, so a null JSON body could throw before returning a proper `400`. `PortForwardingController` relied on `[Required]`/`[StringLength]` for `PodId` and `DestinationHost`, but whitespace-only strings still made it through to forwarding logic because attribute validation does not automatically trim them into the effective required shape.
