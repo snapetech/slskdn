@@ -5,6 +5,7 @@
 namespace slskd.API.Native;
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -324,16 +325,16 @@ public class JobsController : ControllerBase
 }
 
 public record MbReleaseJobRequest(
-    string MbReleaseId,
-    string TargetDir,
-    string Tracks = "all",
-    JobConstraints? Constraints = null);
+    [property: JsonPropertyName("mb_release_id")] string MbReleaseId,
+    [property: JsonPropertyName("target_dir")] string TargetDir,
+    [property: JsonPropertyName("tracks")] string Tracks = "all",
+    [property: JsonPropertyName("constraints")] JobConstraints? Constraints = null);
 
 public record JobConstraints(
-    string[]? PreferredCodecs = null,
-    bool AllowLossy = false,
-    bool PreferCanonical = true,
-    bool UseOverlay = true);
+    [property: JsonPropertyName("preferred_codecs")] string[]? PreferredCodecs = null,
+    [property: JsonPropertyName("allow_lossy")] bool AllowLossy = false,
+    [property: JsonPropertyName("prefer_canonical")] bool PreferCanonical = true,
+    [property: JsonPropertyName("use_overlay")] bool UseOverlay = true);
 
 /// <summary>
 /// Helper interface for test host to access all jobs.

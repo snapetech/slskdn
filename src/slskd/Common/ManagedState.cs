@@ -103,7 +103,7 @@ namespace slskd
         /// <param name="services">The IServiceCollection to which the managed state is to be added.</param>
         /// <param name="setter">An optional anonymous function used to apply an initial state mutation.</param>
         /// <returns>The IServiceCollection with managed state added.</returns>
-        public static IServiceCollection AddManagedState<T>(this IServiceCollection services, Func<T, T> setter = null)
+        public static IServiceCollection AddManagedState<T>(this IServiceCollection services, Func<T, T>? setter = null)
             where T : class
         {
             services.AddSingleton<IManagedState<T>, ManagedState<T>>();
@@ -157,7 +157,7 @@ namespace slskd
         /// <summary>
         ///     Gets the current application state.
         /// </summary>
-        public T CurrentValue { get; private set; } = (T)Activator.CreateInstance(typeof(T));
+        public T CurrentValue { get; private set; } = (T)Activator.CreateInstance(typeof(T))!;
 
         /// <summary>
         ///     Gets a point-in-time snapshot of the current state.

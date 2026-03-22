@@ -52,7 +52,7 @@ public interface IDhtRendezvousService
     /// <summary>
     /// Stop the DHT node and close all connections.
     /// </summary>
-    new Task StopAsync(CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Force a peer discovery cycle.

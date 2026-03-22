@@ -40,12 +40,12 @@ namespace slskd
         /// <param name="maxDelayInMilliseconds">The maximum delay in milliseconds.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>The execution context.</returns>
-        public static async Task Do(Func<Task> task, Func<int, Exception, bool> isRetryable = null, Action<int, Exception> onFailure = null, int maxAttempts = 3, int maxDelayInMilliseconds = int.MaxValue, CancellationToken cancellationToken = default)
+        public static async Task Do(Func<Task> task, Func<int, Exception, bool>? isRetryable = null, Action<int, Exception>? onFailure = null, int maxAttempts = 3, int maxDelayInMilliseconds = int.MaxValue, CancellationToken cancellationToken = default)
         {
             await Do<object>(async () =>
             {
                 await task();
-                return Task.FromResult<object>(null);
+                return Task.FromResult<object?>(null);
             }, isRetryable, onFailure, maxAttempts, maxDelayInMilliseconds, cancellationToken);
         }
 
@@ -60,7 +60,7 @@ namespace slskd
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <typeparam name="T">The Type of the logic return value.</typeparam>
         /// <returns>The execution context.</returns>
-        public static async Task<T> Do<T>(Func<Task<T>> task, Func<int, Exception, bool> isRetryable = null, Action<int, Exception> onFailure = null, int maxAttempts = 3, int maxDelayInMilliseconds = int.MaxValue, CancellationToken cancellationToken = default)
+        public static async Task<T> Do<T>(Func<Task<T>> task, Func<int, Exception, bool>? isRetryable = null, Action<int, Exception>? onFailure = null, int maxAttempts = 3, int maxDelayInMilliseconds = int.MaxValue, CancellationToken cancellationToken = default)
         {
             isRetryable ??= (_, _) => true;
             onFailure ??= (_, _) => { };

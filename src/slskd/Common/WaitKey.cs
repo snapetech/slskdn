@@ -47,13 +47,23 @@ namespace slskd
         /// </summary>
         public object[] TokenParts { get; }
 
-        public static bool operator !=(WaitKey lhs, WaitKey rhs)
+        public static bool operator !=(WaitKey? lhs, WaitKey? rhs)
         {
-            return !lhs.Equals(rhs);
+            return !(lhs == rhs);
         }
 
-        public static bool operator ==(WaitKey lhs, WaitKey rhs)
+        public static bool operator ==(WaitKey? lhs, WaitKey? rhs)
         {
+            if (ReferenceEquals(lhs, rhs))
+            {
+                return true;
+            }
+
+            if (lhs is null || rhs is null)
+            {
+                return false;
+            }
+
             return lhs.Equals(rhs);
         }
 
@@ -62,16 +72,9 @@ namespace slskd
         /// </summary>
         /// <param name="obj">The object to which to compare.</param>
         /// <returns>A value indicating whether the specified object is equal to this instance.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            try
-            {
-                return Equals((WaitKey)obj);
-            }
-            catch (InvalidCastException)
-            {
-                return false;
-            }
+            return Equals(obj as WaitKey);
         }
 
         /// <summary>
@@ -79,9 +82,9 @@ namespace slskd
         /// </summary>
         /// <param name="other">The WaitKey to which to compare.</param>
         /// <returns>A value indicating whether the specified WaitKey is equal to this instance.</returns>
-        public bool Equals(WaitKey other)
+        public bool Equals(WaitKey? other)
         {
-            return Token == other.Token;
+            return other is not null && Token == other.Token;
         }
 
         /// <summary>

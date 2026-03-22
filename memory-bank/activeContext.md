@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: E2E workflow repaired, action runtime versions updated, and malformed XML doc warnings removed
+- **Current Task**: Warning cleanup still in progress; lightweight integration hosts and Soulbeet native jobs compatibility repaired
 - **Branch**: `e2e-fixture-fix2`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -103,8 +103,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. If the nightly E2E workflow flakes again, inspect the uploaded Playwright report first before assuming the tagged release path regressed.
-2. Triage the remaining compiler/nullability warnings still surfaced in CI (`Common/Retry`, `ManagedState`, `WaitKey`, `Checkpointer`, duplicate using in `Program.cs`) so they stop masking real failures.
+1. Continue the large warning-reduction pass from the current seam instead of doing isolated one-offs:
+   `ShareService` / `SqliteShareRepository` nullability mismatches, then the broader nullable/default-parameter clusters that still dominate `dotnet build`.
+2. Re-run the slow full-instance `DisasterModeTests` class separately if that harness is needed for CI confidence; the lighter `DisasterModeIntegrationTests` and `LoadTests` are green after the stub-host DI repair.
 3. If release workflows start warning on other third-party actions, repeat the same direct-release audit used here with `gh api repos/<owner>/<repo>/releases/latest`.
 
 4. **Recent completions** (2026-01-27):

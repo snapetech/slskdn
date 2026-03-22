@@ -41,7 +41,7 @@ namespace slskd
         /// </summary>
         /// <param name="smoothingFactor"></param>
         /// <param name="onUpdate"></param>
-        public ExponentialMovingAverage(double smoothingFactor, Action<double> onUpdate = null)
+        public ExponentialMovingAverage(double smoothingFactor, Action<double>? onUpdate = null)
             : this(smoothingFactor)
         {
             OnUpdate = onUpdate;
@@ -58,7 +58,7 @@ namespace slskd
         public bool Initialized { get; private set; } = false;
 
         private double SmoothingFactor { get; }
-        private Action<double> OnUpdate { get; }
+        private Action<double>? OnUpdate { get; }
 
         /// <summary>
         ///     Updates the average with a new value.

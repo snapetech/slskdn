@@ -25,7 +25,7 @@ using Serilog;
 
 public static class CheckpointerExtensions
 {
-    public static Checkpointer Checkpointer(this ILogger logger, string context = null, [CallerMemberName] string memberName = "")
+    public static Checkpointer Checkpointer(this ILogger logger, string? context = null, [CallerMemberName] string memberName = "")
     {
         return new Checkpointer(context, memberName, logger);
     }
@@ -34,9 +34,9 @@ public static class CheckpointerExtensions
 public sealed class Checkpointer : IDisposable
 {
     public Checkpointer(
-        string context = null,
-[CallerMemberName] string memberName = "",
-        ILogger logger = null)
+        string? context = null,
+        [CallerMemberName] string memberName = "",
+        ILogger? logger = null)
     {
         Stopwatch = Stopwatch.StartNew();
         Context = $"{context ?? memberName}";

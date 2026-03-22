@@ -42,14 +42,14 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="parentDirectory">The optional directory prefix used for counting subdirectories.</param>
         /// <returns>The number of directories.</returns>
-        int CountDirectories(string parentDirectory = null);
+        int CountDirectories(string? parentDirectory = null);
 
         /// <summary>
         ///     Counts the number of files in the database.
         /// </summary>
         /// <param name="parentDirectory">The optional directory prefix used for counting files in a subdirectory.</param>
         /// <returns>The number of files.</returns>
-        int CountFiles(string parentDirectory = null);
+        int CountFiles(string? parentDirectory = null);
 
         /// <summary>
         ///     Creates a new database.
@@ -117,7 +117,7 @@ namespace slskd.Shares
             long timestamp,
             bool isBlocked = false,
             bool isQuarantined = false,
-            string moderationReason = null);
+            string? moderationReason = null);
 
         /// <summary>
         ///     Inserts a scan record at the specified <paramref name="timestamp"/>.
@@ -131,7 +131,7 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="parentDirectory">The optional directory prefix used for listing subdirectories.</param>
         /// <returns>The list of directories.</returns>
-        IEnumerable<string> ListDirectories(string parentDirectory = null);
+        IEnumerable<string> ListDirectories(string? parentDirectory = null);
 
         /// <summary>
         ///     Lists all files.
@@ -139,7 +139,7 @@ namespace slskd.Shares
         /// <param name="parentDirectory">The optional parent directory.</param>
         /// <param name="includeFullPath">A value indicating whether the fully qualified path should be returned.</param>
         /// <returns>The list of files.</returns>
-        IEnumerable<File> ListFiles(string parentDirectory = null, bool includeFullPath = false);
+        IEnumerable<File> ListFiles(string? parentDirectory = null, bool includeFullPath = false);
 
         /// <summary>
         ///     Lists local (original) file paths and sizes for all shared files.
@@ -147,7 +147,7 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="parentDirectory">Optional. When set, filters by maskedFilename LIKE parentDirectory || '%'.</param>
         /// <returns>Sequence of (LocalPath, Size).</returns>
-        IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string parentDirectory = null);
+        IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string? parentDirectory = null);
 
         /// <summary>
         ///     Returns the list of all <see cref="Scan"/> started at or after the specified <paramref name="startedAtOrAfter"/>

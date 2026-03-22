@@ -210,6 +210,8 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddSingleton<ISearchService, StubSearchService>()
                         .AddSingleton<IWarmCachePopularityService>(_ => NullProxy<IWarmCachePopularityService>.Create())
                         .AddSingleton<slskd.Transfers.MultiSource.Analytics.ISwarmAnalyticsService, StubSwarmAnalyticsService>()
+                        .AddSingleton<global::slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator, StubDisasterModeCoordinator>()
+                        .AddSingleton<global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery, StubShadowIndexQueryForFactory>()
                         // ISoulseekClient for CompatibilityController (GET /api/info) — Soulbeet
                         .AddSingleton<ISoulseekClient>(_ => Mock.Of<ISoulseekClient>(x =>
                             x.State == SoulseekClientStates.LoggedIn && x.Username == "test-user"));
@@ -324,6 +326,79 @@ internal class StubSwarmAnalyticsService : slskd.Transfers.MultiSource.Analytics
         CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new List<slskd.Transfers.MultiSource.Analytics.SwarmRecommendation>());
+    }
+}
+
+internal sealed class StubDisasterModeCoordinator : global::slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator
+{
+    public global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevel CurrentLevel { get; private set; }
+
+    public event EventHandler<global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevelChangedEventArgs>? DisasterModeLevelChanged;
+
+    public Task DeactivateDisasterModeAsync(CancellationToken ct = default)
+    {
+        return SetDisasterModeLevelAsync(
+            global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevel.Normal,
+            "Test deactivation",
+            ct);
+    }
+
+    public Task SetDisasterModeLevelAsync(
+        global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevel level,
+        string reason,
+        CancellationToken ct = default)
+    {
+        var previousLevel = CurrentLevel;
+        CurrentLevel = level;
+        DisasterModeLevelChanged?.Invoke(this, new global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevelChangedEventArgs
+        {
+            Level = level,
+            PreviousLevel = previousLevel,
+            Timestamp = DateTimeOffset.UtcNow,
+            Reason = reason,
+        });
+
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class StubShadowIndexQueryForFactory : global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery
+{
+    public Task<global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult?> QueryAsync(string mbid, CancellationToken ct = default)
+    {
+        return Task.FromResult<global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult?>(new global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult
+        {
+            MBID = mbid,
+            TotalPeerCount = 2,
+            CanonicalVariants = new List<global::slskd.VirtualSoulfind.ShadowIndex.VariantHint>
+            {
+                new()
+                {
+                    Codec = "FLAC",
+                    BitrateKbps = 1000,
+                    SizeBytes = 25_000_000,
+                    QualityScore = 100,
+                },
+            },
+        });
+    }
+
+    public async Task<Dictionary<string, global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult>> QueryBatchAsync(
+        List<string> mbids,
+        CancellationToken ct = default)
+    {
+        var results = new Dictionary<string, global::slskd.VirtualSoulfind.ShadowIndex.ShadowIndexQueryResult>();
+
+        foreach (var mbid in mbids)
+        {
+            var result = await QueryAsync(mbid, ct);
+            if (result != null)
+            {
+                results[mbid] = result;
+            }
+        }
+
+        return results;
     }
 }
 

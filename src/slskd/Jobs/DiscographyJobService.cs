@@ -6,6 +6,7 @@ namespace slskd.Jobs
 {
     using System;
     using System.Collections.Generic;
+    using System.Text.Json.Serialization;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -132,12 +133,16 @@ namespace slskd.Jobs
 
     public class DiscographyJobRequest
     {
+        [JsonPropertyName("artist_id")]
         public string ArtistId { get; set; }
 
+        [JsonPropertyName("profile")]
         public DiscographyProfile Profile { get; set; } = DiscographyProfile.CoreDiscography;
 
+        [JsonPropertyName("target_dir")]
         public string TargetDirectory { get; set; }
 
+        [JsonPropertyName("release_ids")]
         public List<string>? ReleaseIds { get; set; }
     }
 }

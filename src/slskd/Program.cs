@@ -79,7 +79,6 @@ namespace slskd
     using slskd.Audio;
     using slskd.Authentication;
     using slskd.Common.Security;
-    using slskd.Common.Security;
     using slskd.Configuration;
     using slskd.Core.API;
     using slskd.Cryptography;

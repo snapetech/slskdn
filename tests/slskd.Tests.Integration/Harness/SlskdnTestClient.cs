@@ -153,6 +153,8 @@ public class SlskdnTestClient : IAsyncDisposable
             new StubBridgeDashboardForTests());
         builder.Services.AddSingleton<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>(_ =>
             CreateNullProxy<global::slskd.VirtualSoulfind.Bridge.ITransferProgressProxy>());
+        builder.Services.AddSingleton<global::slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator>(_ =>
+            new StubDisasterModeCoordinatorForTests());
         builder.Services.AddSingleton<global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery>(_ =>
             new StubShadowIndexQueryForTests());
         builder.Services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<slskd.Options>>(_ =>
@@ -512,6 +514,39 @@ internal sealed class StubShadowIndexQueryForTests : global::slskd.VirtualSoulfi
         }
 
         return results;
+    }
+}
+
+internal sealed class StubDisasterModeCoordinatorForTests : global::slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator
+{
+    public global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevel CurrentLevel { get; private set; }
+
+    public event EventHandler<global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevelChangedEventArgs>? DisasterModeLevelChanged;
+
+    public Task DeactivateDisasterModeAsync(CancellationToken ct = default)
+    {
+        return SetDisasterModeLevelAsync(
+            global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevel.Normal,
+            "Test deactivation",
+            ct);
+    }
+
+    public Task SetDisasterModeLevelAsync(
+        global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevel level,
+        string reason,
+        CancellationToken ct = default)
+    {
+        var previousLevel = CurrentLevel;
+        CurrentLevel = level;
+        DisasterModeLevelChanged?.Invoke(this, new global::slskd.VirtualSoulfind.DisasterMode.DisasterModeLevelChangedEventArgs
+        {
+            Level = level,
+            PreviousLevel = previousLevel,
+            Timestamp = DateTimeOffset.UtcNow,
+            Reason = reason,
+        });
+
+        return Task.CompletedTask;
     }
 }
 

@@ -5230,3 +5230,13 @@ Code quality improvements were completed as part of Option A:
 - Fixed the repeated `CS1570` malformed XML documentation warnings by escaping raw ampersands in XML doc comments across the moderation, code-quality, realm, sharing, and VirtualSoulfind files.
 - Documented the XML-doc pitfall in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) so future comment edits do not reintroduce invalid XML.
 - Validation: local `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0` no longer emitted `CS1570`; workflow grep confirmed no remaining `checkout/setup-dotnet/setup-node/upload-artifact/download-artifact@v4` pins; remote GitHub Actions run `23392771736` (`E2E Tests`, `workflow_dispatch`, `master`) completed successfully on the updated action stack without the previous Node 20 deprecation annotation.
+## 2026-03-22 01:25:20Z
+
+- Fixed two recurring integration-host regressions in one pass:
+  - restored VirtualSoulfind controller dependencies in the lightweight test hosts by registering stub `IDisasterModeCoordinator` and `IShadowIndexQuery`
+  - restored snake_case binding for native jobs endpoints used by Soulbeet compatibility tests (`mb_release_id`, `target_dir`, `artist_id`, `label_name`, etc.)
+- Verified `SoulbeetAdvancedModeTests` passes again and the previously failing `VirtualSoulfind` smoke classes (`DisasterModeIntegrationTests`, `LoadTests`) now pass.
+- Re-ran validation:
+  - `bash ./bin/lint` passes
+  - `dotnet test` core suites pass (`slskd.Tests`, `slskd.Tests.Unit`)
+  - `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0` still succeeds but the repo still has a large broader warning backlog (~2200 warnings), so the warning-reduction work is not complete yet.

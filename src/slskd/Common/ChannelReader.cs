@@ -63,7 +63,7 @@ namespace slskd.Shares
         public ChannelReader(
             Channel<T> channel,
             Action<T> handler,
-            Action<Exception> exceptionHandler = null,
+            Action<Exception>? exceptionHandler = null,
             bool automaticallyStart = true,
             CancellationToken cancellationToken = default)
         {
@@ -91,7 +91,7 @@ namespace slskd.Shares
 
         private Channel<T> Channel { get; }
         private Action<T> Handler { get; }
-        private Action<Exception> ExceptionHandler { get; }
+        private Action<Exception>? ExceptionHandler { get; }
         private TaskCompletionSource TaskCompletionSource { get; } = new TaskCompletionSource();
         private CancellationToken CancellationToken { get; }
         private object SyncRoot { get; } = new object();

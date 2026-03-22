@@ -6,6 +6,7 @@ namespace slskd.Jobs
 {
     using System;
     using System.Collections.Generic;
+    using System.Text.Json.Serialization;
 
     public class LabelCrateJob
     {
@@ -32,10 +33,13 @@ namespace slskd.Jobs
 
     public class LabelCrateJobRequest
     {
-        public string LabelId { get; set; }
+        [JsonPropertyName("label_id")]
+        public string? LabelId { get; set; }
 
-        public string LabelName { get; set; }
+        [JsonPropertyName("label_name")]
+        public string? LabelName { get; set; }
 
+        [JsonPropertyName("limit")]
         public int Limit { get; set; } = 10;
     }
 }

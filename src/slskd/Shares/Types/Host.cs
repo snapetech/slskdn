@@ -33,7 +33,7 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="name">The name of the host.</param>
         /// <param name="shares">The collection of hosted shares.</param>
-        public Host(string name, IEnumerable<Share> shares = null)
+        public Host(string name, IEnumerable<Share>? shares = null)
         {
             Name = name;
             Shares = shares ?? Enumerable.Empty<Share>();

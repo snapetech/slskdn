@@ -60,7 +60,7 @@ namespace slskd.Shares
         ///     Returns the entire contents of the share.
         /// </summary>
         /// <returns>The entire contents of the share.</returns>
-        Task<IEnumerable<Directory>> BrowseAsync(Share share = null);
+        Task<IEnumerable<Directory>> BrowseAsync(Share? share = null);
 
         /// <summary>
         ///     Dumps the local share cache to a file.
