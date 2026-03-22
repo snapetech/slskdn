@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xB6. Read-Side Helpers Must Not Fabricate State, And Opinion Publishes Must Upsert Instead Of Appending Forever
+
+**The Bug**: several PodCore helpers looked read-only but still mutated runtime state by calling `GetOrAdd(...)` on reads/cancels, which fabricated empty pending-request buckets for pods that had never seen join/leave traffic. At the same time, opinion publishing and caching appended every re-publish from the same sender/variant forever, so refresh counts drifted upward and the same pod member could appear to “vote” multiple times for the same variant.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodJoinLeaveService.cs`
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+var pendingRequests = _pendingJoinRequests.GetOrAdd(podId, _ => new ConcurrentBag<PodJoinRequest>());
+return Task.FromResult<IReadOnlyList<PodJoinRequest>>(pendingRequests.ToList());
+
+existingOpinions.Add(opinion);
+contentOpinions.Add(opinion);
+```
+
+**Correct**:
+```csharp
+if (_pendingJoinRequests.TryGetValue(podId, out var pendingRequests))
+{
+    return Task.FromResult<IReadOnlyList<PodJoinRequest>>(pendingRequests.ToList());
+}
+
+existingOpinions.RemoveAll(existing =>
+    string.Equals(existing.SenderPeerId, opinion.SenderPeerId, StringComparison.OrdinalIgnoreCase) &&
+    string.Equals(existing.VariantHash, opinion.VariantHash, StringComparison.OrdinalIgnoreCase));
+existingOpinions.Add(opinion);
+```
+
+**Why This Keeps Happening**: `ConcurrentDictionary.GetOrAdd(...)` is convenient enough that it gets used even in read paths, but it is still a write. Likewise, append-only caches feel safe for “history,” but pod opinions are current member state, not an event log. Read helpers should use `TryGetValue(...)` when “missing” is a valid state, and opinion upserts should key on sender + variant instead of appending duplicates.
+
 ### 0xB1. Detached Startup Work Must Not Keep The `StartAsync` Token As Its Real Lifetime
 
 **The Bug**: several hosted services and startup tasks returned from `StartAsync`, but the detached work they queued still ran on the startup coordination token. Once host startup completed or shutdown raced in, accepted initialization and detector loops could be cancelled before they ever really became service-owned background work.
