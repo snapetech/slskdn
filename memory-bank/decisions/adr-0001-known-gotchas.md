@@ -125,7 +125,10 @@ public sealed class MultiRealmHostedService : IHostedService, IDisposable
 
 **Files Affected**:
 - `src/slskd/Common/Security/CoverTrafficGenerator.cs`
+- `src/slskd/Relay/RelayClient.cs`
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
 - `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
 
 **Wrong**:
 ```csharp
@@ -143,6 +146,12 @@ _generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token)
 
 cts = new CancellationTokenSource();
 discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), CancellationToken.None);
+
+StartCancellationTokenSource = new CancellationTokenSource();
+await Retry.Do(..., StartCancellationTokenSource.Token);
+
+var cts = new CancellationTokenSource();
+CancellationTokens.TryAdd(transfer.Id, cts);
 ```
 
 **Why This Keeps Happening**: detached work is easy to reason about only in hosted services, but the same rule applies to user-triggered or helper-managed background loops. If the operation should continue after the initiating call returns, it needs a service-owned CTS and an explicit stop path, not a linked copy of the caller token.
