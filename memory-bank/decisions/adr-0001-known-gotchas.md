@@ -8848,6 +8848,33 @@ if (clipLength <= 0 || step <= 0)
 
 **Why This Keeps Happening**: Config parsers often stop at “is it an integer?” and leave semantic validation to downstream code. That works until the downstream path tries to schedule, bound, or execute work using values that are syntactically valid but physically meaningless. Any parser for durations, lengths, or step sizes needs explicit positivity checks at the parse boundary, not just defensive math later.
 
+### 0k47. Route Item-ID Parsers Must Reject Explicit Negative Indices Instead Of Quietly Falling Back
+
+**The Bug**: `SearchActionsController.TryParseItemId(...)` accepted `responseIndex:fileIndex` strings even when `fileIndex` was negative. The download path then treated `/items/0:-1/download` as “use the first file” instead of rejecting the malformed item ID, which means an explicitly invalid request could target the wrong file.
+
+**Files Affected**:
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+
+**Wrong**:
+```csharp
+if (int.TryParse(parts[0], out responseIndex) && int.TryParse(parts[1], out fileIndex))
+{
+    return true;
+}
+```
+
+**Correct**:
+```csharp
+if (int.TryParse(parts[0], out responseIndex) &&
+    int.TryParse(parts[1], out fileIndex) &&
+    fileIndex >= 0)
+{
+    return true;
+}
+```
+
+**Why This Keeps Happening**: Parsers for compact route tokens often validate syntax but not intent. A negative number is still a valid integer, so it slips through unless the parser also enforces the semantic range expected by downstream indexing logic. Any route or API helper that feeds list indexing should reject negative indices at parse time rather than relying on later fallback behavior.
+
 ---
 
 *Last updated: 2026-03-22*
