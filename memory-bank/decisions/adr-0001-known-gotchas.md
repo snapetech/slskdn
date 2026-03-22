@@ -12585,3 +12585,22 @@ return new ValidationResult("The Directory field specifies a non-relative direct
 ```
 
 **Why This Keeps Happening**: validation attributes feel generic and harmless, so they often preserve “helpful” path details. But these attributes sit on public request/config boundaries. Treat their error text as externally visible and never include absolute paths or raw filesystem input.
+
+### 0k86. Diagnostic Detail Maps Are Public Contracts Too
+
+**The Bug**: the moderation provider had already sanitized verdict, reasoning, and health fields, but still preserved raw parser details in `Details["parse_error"]`. Structured diagnostic maps are still observable output and must follow the same sanitization rules as top-level error fields.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/HttpLlmModerationProvider.cs`
+
+**Wrong**:
+```csharp
+Details = new Dictionary<string, string> { ["parse_error"] = ex.Message }
+```
+
+**Correct**:
+```csharp
+Details = new Dictionary<string, string> { ["parse_error"] = "LLM response parsing failed" }
+```
+
+**Why This Keeps Happening**: once the top-level error fields are sanitized, it is easy to forget about nested detail bags. Treat diagnostic dictionaries and metadata maps as public response surface, not as an internal dump bucket.

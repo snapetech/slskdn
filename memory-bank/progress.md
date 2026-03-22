@@ -5950,3 +5950,9 @@ Code quality improvements were completed as part of Option A:
 - Fixed `FileExistsAttribute`, `FileDoesNotExistAttribute`, and `DirectoryExistsAttribute` so validation failures no longer echo absolute filesystem paths or raw input paths in public `ValidationResult` messages.
 - Added focused unit coverage for missing-file, existing-file, missing-directory, and non-relative-directory validation failures to assert the sanitized contracts.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for shared validation attribute path leakage.
+
+## 2026-03-22 17:49 - Moderation detail-map sanitization spillover
+
+- Folded in dirty moderation spillover so `HttpLlmModerationProvider` no longer exposes parser internals through `Details["parse_error"]`.
+- Folded in the matching unit regression and the nested API-key options test-path correction that was left dirty in the tree.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for diagnostic detail-map leakage.

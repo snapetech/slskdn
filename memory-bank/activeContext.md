@@ -212,3 +212,7 @@ dotnet test
 ## 2026-03-22 17:46
 - Sanitized shared file/directory validation attributes so they no longer expose absolute paths through validation failures.
 - Next: continue through remaining shared validation and result-builder surfaces that may still leak input details.
+
+## 2026-03-22 17:49
+- Folded in dirty moderation/detail-map spillover and restored the metrics validation test path drift.
+- Next: continue bughunt from the next clean head after recommitting the remaining dirty files.
