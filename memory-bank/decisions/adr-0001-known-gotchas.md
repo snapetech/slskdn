@@ -258,6 +258,62 @@ Assert.Equal(ServiceStatusCodes.ServiceUnavailable, blockedReply.StatusCode);
 
 ### 0l. E2E Harnesses Must Not Treat Gitignored Downloaded Media As Baseline CI Fixtures
 
+### 0m. Lightweight Integration Hosts Must Stub Every Controller Dependency They Expose
+
+**The Bug**: Integration test hosts included the VirtualSoulfind controllers in their application parts, but did not register `IDisasterModeCoordinator` and `IShadowIndexQuery` consistently, so tests failed at request time with controller activation errors instead of exercising the endpoint contracts.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs`
+- `tests/slskd.Tests.Integration/Harness/SlskdnTestClient.cs`
+
+**Wrong**:
+```csharp
+services.AddControllers()
+    .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.DisasterModeController).Assembly);
+```
+
+```csharp
+builder.Services.AddSingleton<global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery>(_ =>
+    new StubShadowIndexQueryForTests());
+```
+
+**Correct**:
+```csharp
+services.AddSingleton<global::slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator>(_ =>
+    new StubDisasterModeCoordinatorForTests());
+services.AddSingleton<global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery>(_ =>
+    new StubShadowIndexQueryForTests());
+```
+
+**Why This Keeps Happening**: The lightweight test hosts deliberately avoid the full production DI graph, so every added controller creates a manual dependency obligation. If you expose a controller assembly in a stub host, audit its constructor dependencies immediately or the tests will fail with activation errors that look like app regressions.
+
+### 0n. Native API DTOs Need Explicit Snake_Case Binding When Compatibility Clients Post Snake_Case JSON
+
+**The Bug**: The native jobs endpoints accepted positional record DTOs with PascalCase property names, but the Soulbeet compatibility tests posted `snake_case` JSON like `mb_release_id` and `target_dir`, causing model binding to fail with `400` ProblemDetails payloads.
+
+**Files Affected**:
+- `src/slskd/API/Native/JobsController.cs`
+
+**Wrong**:
+```csharp
+public record MbReleaseJobRequest(
+    string MbReleaseId,
+    string TargetDir,
+    string Tracks = "all",
+    JobConstraints? Constraints = null);
+```
+
+**Correct**:
+```csharp
+public record MbReleaseJobRequest(
+    [property: JsonPropertyName("mb_release_id")] string MbReleaseId,
+    [property: JsonPropertyName("target_dir")] string TargetDir,
+    [property: JsonPropertyName("tracks")] string Tracks = "all",
+    [property: JsonPropertyName("constraints")] JobConstraints? Constraints = null);
+```
+
+**Why This Keeps Happening**: ASP.NET Core JSON binding is case-insensitive, but it does not translate underscore-delimited names into PascalCase automatically. Compatibility-facing DTOs need explicit `JsonPropertyName` attributes anywhere the request contract is `snake_case`.
+
 **The Bug**: The scheduled `E2E Tests` workflow treated downloaded media as mandatory baseline fixtures, so a transient fetch failure aborted the whole suite before any real UI coverage ran.
 
 **Files Affected**:
