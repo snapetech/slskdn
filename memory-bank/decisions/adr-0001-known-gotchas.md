@@ -84,6 +84,40 @@ _startupInitializationTask = Task.Run(
 
 **Why This Keeps Happening**: it is easy to think of the `StartAsync` token as “the service startup token,” but for detached work it is only the host coordination token for getting through startup. Once work is intentionally handed off to run beyond `StartAsync`, it needs its own CTS owned by the service and canceled explicitly during `StopAsync`.
 
+### 0xB2. Service-Owned Cancellation Sources Need Real Disposal Ownership Too
+
+**The Bug**: once background services were fixed to stop using the host startup token, they began owning their own `CancellationTokenSource` fields. Without `IDisposable` on the service itself, cleanup only happened on the happy `StopAsync` path and the code immediately started tripping `CA1001`.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
+- `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
+
+**Wrong**:
+```csharp
+public sealed class MultiRealmHostedService : IHostedService
+{
+    private CancellationTokenSource? _initializationCts;
+}
+```
+
+**Correct**:
+```csharp
+public sealed class MultiRealmHostedService : IHostedService, IDisposable
+{
+    private CancellationTokenSource? _initializationCts;
+
+    public void Dispose()
+    {
+        _initializationCts?.Cancel();
+        _initializationCts?.Dispose();
+        _initializationCts = null;
+    }
+}
+```
+
+**Why This Keeps Happening**: fixing token lifetime often introduces a new owned disposable field. It is easy to stop at `StopAsync`, but analyzers are right here: once the service owns the CTS, it also owns disposal on non-ideal or partial-host-lifecycle paths.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
