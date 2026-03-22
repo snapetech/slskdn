@@ -8116,6 +8116,64 @@ var memberships = _activeMemberships.Values
 
 **Why This Keeps Happening**: A service often starts with a cache for metrics or write-side bookkeeping, and the read-side list API gets left as a placeholder because a global index is “not designed yet.” Once the service already owns authoritative live state for active entries, returning an empty placeholder is a correctness bug, not an implementation detail. Prefer exposing the owned state immediately and only replace it later if a stronger cross-process index is added.
 
+### 0k3A. Membership Update Paths Must Reconcile Existing Counters Instead Of Treating Every Rewrite As A New Member
+
+**The Bug**: `PodMembershipService.PublishMembershipAsync(...)` always incremented active, per-role, per-pod, and banned counters even when it was overwriting the same member. `ChangeRoleAsync(...)` also pre-adjusted the old/new role counts before calling `UpdateMembershipAsync(...)`, so a single role change could leave both stale old-role entries and double-counted new-role entries.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodMembershipService.cs`
+
+**Wrong**:
+```csharp
+_activeMemberships[membershipKey] = membershipInfo;
+Interlocked.Increment(ref _totalMemberships);
+Interlocked.Increment(ref _activeMembershipsCount);
+_membershipsByRole.AddOrUpdate(member.Role, 1, (_, count) => count + 1);
+_membershipsByPod.AddOrUpdate(podId, 1, (_, count) => count + 1);
+
+var oldRole = currentResult.SignedRecord.Role;
+_membershipsByRole.AddOrUpdate(oldRole, 0, (_, count) => Math.Max(0, count - 1));
+_membershipsByRole.AddOrUpdate(newRole, 1, (_, count) => count + 1);
+```
+
+**Correct**:
+```csharp
+var previousMembership = _activeMemberships.TryGetValue(membershipKey, out var existingMembership)
+    ? existingMembership
+    : null;
+
+_activeMemberships[membershipKey] = membershipInfo;
+UpdateTrackedMembershipCounts(previousMembership, membershipInfo);
+```
+
+**Why This Keeps Happening**: Write-side caches often begin as “just metrics,” so update paths get copied from create paths and nobody revisits the counter semantics once overwrite operations are added. The moment a service can republish, ban, unban, or change roles for the same key, counter updates must reconcile the previous record and the new record in one place. Never pre-adjust derived counters in a higher-level helper and then call the generic publish path again.
+
+### 0k3B. Dispose Every Owned Semaphore In Lazy-Load Stores, Not Just The Hot-Path Lock
+
+**The Bug**: `PeerReputationStore` owned both `_fileLock` and `_loadLock`, but `Dispose()` only released `_fileLock`. The lazy-load gate stayed undisposed for the lifetime of each store instance, leaking synchronization resources in repeated test or service construction cycles.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/PeerReputationStore.cs`
+
+**Wrong**:
+```csharp
+public void Dispose()
+{
+    _fileLock.Dispose();
+}
+```
+
+**Correct**:
+```csharp
+public void Dispose()
+{
+    _fileLock.Dispose();
+    _loadLock.Dispose();
+}
+```
+
+**Why This Keeps Happening**: It is easy to dispose the obvious “main” lock and forget auxiliary gates added later for lazy initialization or background coordination. Any class that owns multiple `SemaphoreSlim` or CTS instances needs dispose coverage to be audited as a set, not one field at a time.
+
 ---
 
 *Last updated: 2026-03-22*
