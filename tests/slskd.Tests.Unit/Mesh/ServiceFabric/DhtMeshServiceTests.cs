@@ -62,6 +62,83 @@ public class DhtMeshServiceTests
         Assert.Equal("peer-1", routingTable.GetAllNodes()[0].Address);
     }
 
+    [Fact]
+    public async Task HandleCallAsync_FindValue_WhenDependencyThrows_ReturnsSanitizedError()
+    {
+        var dhtClient = new Mock<IDhtClient>();
+        dhtClient
+            .Setup(client => client.GetAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var service = new DhtMeshService(
+            Mock.Of<ILogger<DhtMeshService>>(),
+            new KademliaRoutingTable(CreateNodeId(0x01)),
+            dhtClient.Object,
+            Mock.Of<IMeshMessageSigner>());
+
+        var call = new ServiceCall
+        {
+            ServiceName = "dht",
+            Method = "FindValue",
+            CorrelationId = Guid.NewGuid().ToString(),
+            Payload = JsonSerializer.SerializeToUtf8Bytes(new FindValueRequest
+            {
+                Key = CreateNodeId(0x03),
+                RequesterId = CreateNodeId(0x02)
+            }),
+        };
+
+        var reply = await service.HandleCallAsync(
+            call,
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.UnknownError, reply.StatusCode);
+        Assert.Equal("FindValue failed", reply.ErrorMessage);
+        Assert.DoesNotContain("sensitive detail", reply.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task HandleCallAsync_Store_WhenDependencyThrows_ReturnsSanitizedError()
+    {
+        var dhtClient = new Mock<IDhtClient>();
+        dhtClient
+            .Setup(client => client.PutAsync(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var service = new DhtMeshService(
+            Mock.Of<ILogger<DhtMeshService>>(),
+            new KademliaRoutingTable(CreateNodeId(0x01)),
+            dhtClient.Object,
+            Mock.Of<IMeshMessageSigner>());
+
+        var call = new ServiceCall
+        {
+            ServiceName = "dht",
+            Method = "Store",
+            CorrelationId = Guid.NewGuid().ToString(),
+            Payload = JsonSerializer.SerializeToUtf8Bytes(new StoreRequest
+            {
+                Key = CreateNodeId(0x03),
+                Value = new byte[] { 0x01 },
+                RequesterId = CreateNodeId(0x02),
+                TtlSeconds = 300,
+                PublicKeyBase64 = Convert.ToBase64String(new byte[] { 0x01 }),
+                SignatureBase64 = Convert.ToBase64String(new byte[] { 0x02 }),
+                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            }),
+        };
+
+        var reply = await service.HandleCallAsync(
+            call,
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.UnknownError, reply.StatusCode);
+        Assert.Equal("Store failed", reply.ErrorMessage);
+        Assert.DoesNotContain("sensitive detail", reply.ErrorMessage);
+    }
+
     private static byte[] CreateNodeId(byte value)
     {
         var nodeId = new byte[20];

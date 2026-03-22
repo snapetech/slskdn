@@ -172,6 +172,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine(ex);
                 state = UpdateState(new PlanExecutionState
                 {
                     ExecutionId = state.ExecutionId,
@@ -181,7 +182,7 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                     TotalSteps = state.TotalSteps,
                     StartedAt = state.StartedAt,
                     CompletedAt = DateTimeOffset.UtcNow,
-                    ErrorMessage = $"Unexpected error: {ex.Message}",
+                    ErrorMessage = "Unexpected resolver failure",
                 });
                 return state;
             }
@@ -315,7 +316,8 @@ namespace slskd.VirtualSoulfind.v2.Resolution
             }
             catch (Exception ex)
             {
-                return StepResult.Failure(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex);
+                return StepResult.Failure("NativeMesh fetch failed");
             }
         }
 
@@ -362,7 +364,8 @@ namespace slskd.VirtualSoulfind.v2.Resolution
             }
             catch (Exception ex)
             {
-                return StepResult.Failure(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex);
+                return StepResult.Failure($"{backendType} fetch failed");
             }
         }
 

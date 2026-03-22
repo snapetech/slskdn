@@ -84,7 +84,7 @@ public sealed class MeshContentMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = ex.Message,
+                ErrorMessage = "Mesh content service error",
                 Payload = Array.Empty<byte>(),
             };
         }

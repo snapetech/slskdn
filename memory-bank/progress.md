@@ -5797,3 +5797,13 @@ Code quality improvements were completed as part of Option A:
 - Fixed `PodOpinionService` so publishing/updating an opinion replaces the prior sender+variant record instead of appending duplicates forever, and so refresh statistics report real new-opinion deltas instead of staying stuck at zero.
 - Fixed `PodJoinLeaveService` so read/cancel helpers use `TryGetValue(...)` instead of `GetOrAdd(...)` and stop fabricating empty pending-request buckets, while peer-ID matching now stays case-consistent across join/leave flows.
 - Added and immediately committed the new gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for read-side cache mutation and append-only opinion drift.
+
+## 2026-03-22 17:18 - VSF v2 result-contract sanitization pass
+
+- Fixed `SimpleResolver` so unexpected backend failures no longer become raw `ex.Message` strings in `PlanExecutionState` or `StepResult`. Resolver failures now return stable sanitized messages instead of transport-specific details.
+- Fixed `HttpBackend` and `WebDavBackend` validation so `HttpRequestException` text is not reflected back through candidate validation results.
+- Added focused unit coverage for:
+  - sanitized resolver execution failures
+  - sanitized HTTP backend validation failures
+  - sanitized WebDAV backend validation failures
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for VSF v2 result error passthrough.

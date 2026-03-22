@@ -165,7 +165,8 @@ namespace slskd.VirtualSoulfind.v2.Backends
             }
             catch (HttpRequestException ex)
             {
-                return SourceCandidateValidationResult.Invalid($"HTTP error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine(ex);
+                return SourceCandidateValidationResult.Invalid("WebDAV validation failed");
             }
         }
 

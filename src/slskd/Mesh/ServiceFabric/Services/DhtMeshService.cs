@@ -88,7 +88,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"Internal error: {ex.Message}",
+                ErrorMessage = "Internal DHT service error",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -154,7 +154,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"FindNode error: {ex.Message}",
+                ErrorMessage = "FindNode failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -247,7 +247,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"FindValue error: {ex.Message}",
+                ErrorMessage = "FindValue failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -334,7 +334,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"Store error: {ex.Message}",
+                ErrorMessage = "Store failed",
                 Payload = Array.Empty<byte>()
             };
         }

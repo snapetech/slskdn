@@ -23,10 +23,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on PodCore and MediaCore paths that still over-report success or drift on normalized state
+- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on service/result contracts that still leak internal error text or drift away from normalized public behavior
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed a VirtualSoulfind v2 result-contract cluster:
+    - `SimpleResolver` no longer copies raw exception text into `PlanExecutionState` or `StepResult`
+    - `HttpBackend` and `WebDavBackend` no longer echo raw `HttpRequestException` messages in validation results
+  - Added focused unit coverage for those sanitized VSF v2 failure contracts and folded in adjacent dirty mesh service test/code changes already in the tree
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Fixed another PodCore/MediaCore runtime cluster:
     - `MetadataPortability` now registers imported entries with normalized external IDs instead of raw domain values
     - `PodMessageRouter` now deduplicates/normalizes target peer IDs and no longer counts privacy-batched payloads as already routed
@@ -97,8 +102,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. Continue the broad runtime/read-side bughunt from the stronger green release gate and packaging-smoke baseline.
-2. Prioritize remaining places where public APIs may still report success while backing work is impossible, silently filtered, or split across normalized-vs-raw boundary assumptions.
-3. Sweep the remaining dirty PodCore/MediaCore test files that appeared alongside this runtime cluster.
+2. Prioritize remaining places where result DTOs, background-state records, or lightweight service helpers still expose raw internal error text.
+3. Keep folding in adjacent dirty files so the repo stays committed and clean between passes.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

@@ -3,6 +3,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {
     using System;
     using System.Collections.Generic;
+    using System.Net;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
@@ -99,7 +100,29 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             Assert.Contains("not in allowlist", result.InvalidityReason);
         }
 
-        private HttpBackend CreateBackend(HttpBackendOptions options = null)
+        [Fact]
+        public async Task ValidateCandidate_WhenHttpClientThrows_ReturnsSanitizedError()
+        {
+            var handler = new ThrowingHttpMessageHandler(new HttpRequestException("sensitive detail"));
+            var backend = CreateBackend(handler: handler);
+            var candidate = new SourceCandidate
+            {
+                Id = Guid.NewGuid().ToString(),
+                ItemId = ContentItemId.NewId(),
+                Backend = ContentBackendType.Http,
+                BackendRef = "https://allowed.com/file.flac",
+                TrustScore = 0.7f,
+                ExpectedQuality = 0.8f,
+            };
+
+            var result = await backend.ValidateCandidateAsync(candidate, CancellationToken.None);
+
+            Assert.False(result.IsValid);
+            Assert.Equal("HTTP validation failed", result.InvalidityReason);
+            Assert.DoesNotContain("sensitive detail", result.InvalidityReason);
+        }
+
+        private HttpBackend CreateBackend(HttpBackendOptions options = null, HttpMessageHandler handler = null)
         {
             options ??= new HttpBackendOptions
             {
@@ -108,7 +131,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 
             // IHttpClientFactory.CreateClient (and its parameterless extension) must return an HttpClient.
             // Use a test double because Moq cannot setup extension methods.
-            var httpClient = new HttpClient();
+            var httpClient = handler == null
+                ? new HttpClient(new StubHttpMessageHandler())
+                : new HttpClient(handler);
             var httpFactory = new TestHttpClientFactory(httpClient);
 
             var optionsMonitor = new Mock<IOptionsMonitor<HttpBackendOptions>>();
@@ -125,5 +150,31 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         private readonly HttpClient _client;
         public TestHttpClientFactory(HttpClient client) => _client = client;
         public HttpClient CreateClient(string name) => _client;
+    }
+
+    internal sealed class StubHttpMessageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(new byte[1024]),
+            });
+        }
+    }
+
+    internal sealed class ThrowingHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Exception _exception;
+
+        public ThrowingHttpMessageHandler(Exception exception)
+        {
+            _exception = exception;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromException<HttpResponseMessage>(_exception);
+        }
     }
 }
