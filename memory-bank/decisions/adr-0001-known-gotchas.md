@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xBA. Background Scan And Verification Result Records Must Not Persist Raw Exception Text
+
+**The Bug**: long-running scan/verification helpers already converted failures into status records or result DTOs, but some of them still copied `ex.Message` straight into persisted scan state, issue reasons, or failed-source responses. That leaked filesystem and transfer internals through otherwise stable runtime/status contracts.
+
+**Files Affected**:
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+- `src/slskd/Transfers/MultiSource/ContentVerificationService.cs`
+
+**Wrong**:
+```csharp
+scan.ErrorMessage = ex.Message;
+Reason = $"File cannot be read: {ex.Message}",
+return (username, null, default, stopwatch.ElapsedMilliseconds, ex.Message);
+```
+
+**Correct**:
+```csharp
+scan.ErrorMessage = "Library health scan failed";
+Reason = "File cannot be read",
+return (username, null, default, stopwatch.ElapsedMilliseconds, "Verification failed");
+```
+
+**Why This Keeps Happening**: once an exception is being “handled” by converting it into a stored status record or failure DTO, it is easy to treat that surface like a private log sink. It is not. Persisted scan state, issue records, and verification results are observable contracts and need the same sanitized-message discipline as controllers. Log the exception privately and keep the status/result text stable.
+
 ### 0xB6. Read-Side Helpers Must Not Fabricate State, And Opinion Publishes Must Upsert Instead Of Appending Forever
 
 **The Bug**: several PodCore helpers looked read-only but still mutated runtime state by calling `GetOrAdd(...)` on reads/cancels, which fabricated empty pending-request buckets for pods that had never seen join/leave traffic. At the same time, opinion publishing and caching appended every re-publish from the same sender/variant forever, so refresh counts drifted upward and the same pod member could appear to “vote” multiple times for the same variant.
