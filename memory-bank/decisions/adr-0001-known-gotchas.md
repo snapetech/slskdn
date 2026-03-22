@@ -211,6 +211,52 @@ return new PodBackfillResult(false, podId, channelsRequested, totalMessagesRecei
 
 **Why This Keeps Happening**: once code moves from exceptions to result records, it feels “safe” to preserve the detailed error string inside the DTO. But if that DTO is part of a controller response contract, it is just another public API body. Log the detailed exception privately and keep the result payload stable.
 
+### 0xB5. Service-Level Helper DTOs Need The Same Sanitization As Controller DTOs
+
+**The Bug**: even after controller error responses were sanitized, several PodCore services still returned typed helper results with `ex.Message` inside them. Those records were then returned directly from `200 OK` controller paths such as verification, discovery, refresh, and backfill APIs, leaking internal details without ever throwing at the controller boundary.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodDiscoveryService.cs`
+- `src/slskd/PodCore/PodMembershipVerifier.cs`
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+return new MembershipVerificationResult(
+    IsValidMember: false,
+    IsBanned: false,
+    Role: null,
+    ErrorMessage: ex.Message);
+
+return new PodDiscoveryResult(
+    Pods: Array.Empty<PodMetadata>(),
+    SearchType: "name",
+    SearchTerm: nameSlug,
+    TotalFound: 0,
+    SearchedAt: DateTimeOffset.UtcNow,
+    ErrorMessage: ex.Message);
+```
+
+**Correct**:
+```csharp
+return new MembershipVerificationResult(
+    IsValidMember: false,
+    IsBanned: false,
+    Role: null,
+    ErrorMessage: "Membership verification failed");
+
+return new PodDiscoveryResult(
+    Pods: Array.Empty<PodMetadata>(),
+    SearchType: "name",
+    SearchTerm: nameSlug,
+    TotalFound: 0,
+    SearchedAt: DateTimeOffset.UtcNow,
+    ErrorMessage: "Failed to discover pods by name");
+```
+
+**Why This Keeps Happening**: once a service uses typed result records instead of throwing, it is easy to stop thinking about API exposure at the service layer. But when controllers return those results directly, the service record is the API contract. Treat service-level `ErrorMessage` fields exactly like controller payloads: stable public text only, detailed exception text only in logs.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
