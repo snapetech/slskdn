@@ -197,6 +197,27 @@ public Task StartAsync(CancellationToken cancellationToken = default)
 
 **Why This Keeps Happening**: It is tempting to add a permanent CTS to make shutdown wiring easy, but that token becomes part of restart semantics too. If a component supports repeated start/stop cycles, only disposal should permanently end its lifetime; ordinary stop should cancel the current run, not poison every future run.
 
+### 0u. Queue Release `TaskCompletionSource`s Must Use `RunContinuationsAsynchronously`
+
+**The Bug**: `UploadQueue` released an upload by calling `SetResult()` on a default `TaskCompletionSource` while still inside queue scheduling logic. Continuations could run inline and re-enter queue methods like `Complete(...)`, risking deadlock against the queue semaphore.
+
+**Files Affected**:
+- `src/slskd/Transfers/Types/Upload.cs`
+- `src/slskd/Transfers/Uploads/UploadQueue.cs`
+
+**Wrong**:
+```csharp
+public TaskCompletionSource TaskCompletionSource { get; set; } = new TaskCompletionSource();
+```
+
+**Correct**:
+```csharp
+public TaskCompletionSource TaskCompletionSource { get; set; } =
+    new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+```
+
+**Why This Keeps Happening**: `TaskCompletionSource` looks like a passive signal, but by default it can execute awaiter continuations synchronously on the thread calling `SetResult`. In queue, lock, and semaphore-protected schedulers, that means arbitrary caller code can run before internal state is fully released. Use `RunContinuationsAsynchronously` for handoff signals that may be completed under coordination primitives.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
