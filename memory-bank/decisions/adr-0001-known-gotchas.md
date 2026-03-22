@@ -52,6 +52,39 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
+
+**The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/ApplicationController.cs`
+- `src/slskd/Core/API/Controllers/OptionsController.cs`
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+
+**Wrong**:
+```csharp
+return StatusCode(507, error);
+return BadRequest(error ?? "Unable to publish activity");
+Detail = fetchResult.Error ?? "Failed to fetch content from pod peer";
+error = downloadResult.Error;
+```
+
+**Correct**:
+```csharp
+Log.Warning("Dump failed due to insufficient space or resources: {Error}", error);
+return StatusCode(507, "Insufficient space to create memory dump.");
+
+_logger.LogWarning("[ActivityPub] Failed to publish outbox activity for {Actor}: {Error}", actorName, error ?? "Unknown error");
+return BadRequest("Unable to publish activity");
+
+Detail = "Failed to fetch content from pod peer";
+error = downloadResult.Success ? null : "Swarm download failed";
+```
+
+**Why This Keeps Happening**: helper/diagnostic endpoints often sit close to the subsystem that failed, so it feels natural to “just return the error.” But those strings come from validators, remote peers, dump tools, or internal orchestration layers and are not stable public API contracts. The right pattern is always: log detailed downstream failures privately, then return a fixed client-safe message.
+
 ### 0xAC. Utility Controllers Drift Too: Encoded Route Segments, Chat Room Names, And Security Admin Inputs Need The Same Normalization And Sanitized Error Contracts
 
 **The Bug**: several “small” utility controllers were left outside the broad boundary-hardening passes. That let invalid Base64 file route segments throw during decode, whitespace-padded room/user identifiers miss tracked state, blank chat payloads reach Soulseek service calls, and security admin/test endpoints leak raw exception text from config persistence or transport probes.
