@@ -107,6 +107,7 @@ _ = ObserveBackgroundTaskAsync(
 
 **Files Affected**:
 - `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SongID/SongIdService.cs`
 
 **Wrong**:
 ```csharp
