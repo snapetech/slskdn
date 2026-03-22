@@ -132,7 +132,8 @@ public static class ContentSafety
         }
         catch (Exception ex)
         {
-            return ContentVerificationResult.Fail($"Could not read file: {ex.Message}", ContentThreatLevel.Unknown);
+            System.Diagnostics.Debug.WriteLine(ex);
+            return ContentVerificationResult.Fail("Could not read file", ContentThreatLevel.Unknown);
         }
 
         // Check for dangerous content first

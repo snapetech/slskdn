@@ -83,6 +83,28 @@ public class MeshTransferServiceTests : IDisposable
         Assert.Equal(MeshTransferState.Cancelled, status!.State);
     }
 
+    [Fact]
+    public async Task StartTransferAsync_WhenPeerDiscoveryFails_ReturnsSanitizedFailure()
+    {
+        _scenePeerDiscovery
+            .Setup(d => d.DiscoverPeersAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var transferId = await _service.StartTransferAsync(
+            peerId: "peer-a",
+            fileHash: string.Empty,
+            fileSize: 1024,
+            targetPath: Path.Combine(_tempRoot, "failure.bin"),
+            ct: CancellationToken.None);
+
+        var status = await WaitForTerminalStatusAsync(transferId);
+
+        Assert.NotNull(status);
+        Assert.Equal(MeshTransferState.Failed, status!.State);
+        Assert.Equal("Mesh transfer failed", status.ErrorMessage);
+        Assert.DoesNotContain("sensitive detail", status.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))

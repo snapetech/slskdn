@@ -23,10 +23,16 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on service/result contracts that still leak internal error text across runtime helper surfaces
+- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on helper/result contracts that still leak internal error text across runtime subsystems
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed a file-safety / transfer-status result cluster:
+    - `PathGuard` no longer echoes raw path exceptions in validation results
+    - both `ContentSafety` implementations no longer echo raw file-read exceptions
+    - `MeshTransferService` no longer copies raw exception text into transfer status
+  - Added focused regression coverage for those sanitized helper/result contracts
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Fixed a DHT/mesh security-helper result cluster:
     - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
     - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results

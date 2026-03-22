@@ -5816,3 +5816,14 @@ Code quality improvements were completed as part of Option A:
   - sanitized peer verification failures
   - sanitized DNS leak verification failures
 - Added and immediately committed the corresponding gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for security-helper result error passthrough.
+
+## 2026-03-22 17:22 - File safety and transfer-status sanitization pass
+
+- Fixed `PathGuard` so invalid path normalization no longer returns raw exception text in `PathValidationResult`.
+- Fixed both `ContentSafety` implementations so file-read failures now return a stable `Could not read file` message instead of filesystem exception details.
+- Fixed `MeshTransferService` so failed transfers now expose a stable `Mesh transfer failed` status message instead of the raw exception string.
+- Added focused unit coverage for:
+  - sanitized path validation failures
+  - sanitized content safety file-read failures
+  - sanitized mesh transfer failure status
+- Added and immediately committed the corresponding gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for file-safety and transfer-status result passthrough.

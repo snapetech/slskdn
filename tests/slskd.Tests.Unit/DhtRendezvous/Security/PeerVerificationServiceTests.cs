@@ -28,7 +28,7 @@ public class PeerVerificationServiceTests
 
         Assert.False(result.IsVerified);
         Assert.False(result.IsPartial);
-        Assert.Equal("Verification failed", result.ErrorMessage);
-        Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        Assert.Equal("Verification failed", result.FailureReason);
+        Assert.DoesNotContain("sensitive detail", result.FailureReason);
     }
 }

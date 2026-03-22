@@ -6,7 +6,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Resolution;
 
 using Microsoft.Extensions.Options;
 using Moq;
+using slskd.VirtualSoulfind.Core;
 using slskd.VirtualSoulfind.v2.Backends;
+using slskd.VirtualSoulfind.v2.Execution;
 using slskd.VirtualSoulfind.v2.Planning;
 using slskd.VirtualSoulfind.v2.Resolution;
 using slskd.VirtualSoulfind.v2.Sources;
@@ -29,13 +31,13 @@ public class SimpleResolverTests
 
         var plan = new TrackAcquisitionPlan
         {
-            TrackId = Guid.NewGuid(),
-            Steps =
+            TrackId = Guid.NewGuid().ToString(),
+            Steps = new[]
             {
                 new PlanStep
                 {
                     Backend = ContentBackendType.Http,
-                    Candidates =
+                    Candidates = new[]
                     {
                         new SourceCandidate
                         {

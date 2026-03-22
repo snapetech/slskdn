@@ -280,7 +280,7 @@ public class MeshTransferService : IMeshTransferService
                 transferId, ex.Message);
 
             status.State = MeshTransferState.Failed;
-            status.ErrorMessage = ex.Message;
+            status.ErrorMessage = "Mesh transfer failed";
             PublishProgress(transferId, status);
         }
         finally

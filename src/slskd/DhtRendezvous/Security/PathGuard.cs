@@ -334,7 +334,8 @@ public static partial class PathGuard
         }
         catch (Exception ex)
         {
-            return PathValidationResult.Fail($"Invalid path: {ex.Message}", PathViolationType.InvalidComponent);
+            System.Diagnostics.Debug.WriteLine(ex);
+            return PathValidationResult.Fail("Invalid path", PathViolationType.InvalidComponent);
         }
     }
 }

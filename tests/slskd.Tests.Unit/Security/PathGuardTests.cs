@@ -172,6 +172,17 @@ public class PathGuardTests
     }
 
     [Fact]
+    public void Validate_WhenPathNormalizationThrows_ReturnsSanitizedError()
+    {
+        var result = PathGuard.Validate("bad\0path", TestRoot);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(PathViolationType.InvalidComponent, result.ViolationType);
+        Assert.Equal("Invalid path", result.Error);
+        Assert.DoesNotContain("null", result.Error ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void NormalizeAbsolutePathWithinRoots_AllowsPathWithinConfiguredRoot()
     {
         var target = Path.Combine(TestRoot, "album", "track.flac");
@@ -201,4 +212,3 @@ public class PathGuardTests
         Assert.Null(result);
     }
 }
-

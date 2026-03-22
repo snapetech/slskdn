@@ -53,8 +53,9 @@ public class WebDavBackendTests
             : new HttpClient(handler);
         var httpFactory = new slskd.Tests.Unit.VirtualSoulfind.v2.Backends.TestHttpClientFactory(httpClient);
         var optionsMonitor = new Mock<IOptionsMonitor<WebDavBackendOptions>>();
+        var sourceRegistry = new Mock<ISourceRegistry>();
         optionsMonitor.Setup(o => o.CurrentValue).Returns(options);
 
-        return new WebDavBackend(httpFactory, optionsMonitor.Object);
+        return new WebDavBackend(httpFactory, optionsMonitor.Object, sourceRegistry.Object);
     }
 }

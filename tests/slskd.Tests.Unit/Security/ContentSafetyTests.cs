@@ -6,6 +6,7 @@
 namespace slskd.Tests.Unit.Security;
 
 using System;
+using System.IO;
 using slskd.Common.Security;
 using Xunit;
 
@@ -212,6 +213,28 @@ public class ContentSafetyTests
         Assert.Equal(ContentThreatLevel.Unknown, result.ThreatLevel);
     }
 
+    [Fact]
+    public async Task VerifyFileAsync_WhenFileReadThrows_ReturnsSanitizedError()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"slskdn-content-safety-{Guid.NewGuid():N}.flac");
+        await File.WriteAllBytesAsync(tempPath, FlacMagic);
+
+        try
+        {
+            using var lockStream = new FileStream(tempPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+            var result = await ContentSafety.VerifyFileAsync(tempPath, CancellationToken.None);
+
+            Assert.False(result.IsValid);
+            Assert.Equal("Could not read file", result.Message);
+            Assert.DoesNotContain(tempPath, result.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
     private static byte[] CreateHeader(byte[] magic)
     {
         // Create a 16-byte header with magic bytes at the beginning
@@ -220,4 +243,3 @@ public class ContentSafetyTests
         return header;
     }
 }
-
