@@ -239,6 +239,46 @@ cmd.CommandText = @"
 
 **Why This Keeps Happening**: storage tables often keep historical or overlapping rows, but service-layer APIs are usually consumed as if they expose a canonical view. If an API says “get variant by id” or “get recording ids with variants,” it should normalize duplicates, prefer the freshest/best row, and filter empty identifiers. Otherwise higher layers inherit storage noise and quietly degrade into duplicate results, stale ordering, and missed lookups.
 
+### 0xA6. Music Identity Must Fall Back From Release Tables To Recording-Level HashDb Data
+
+**The Bug**: `MusicContentDomainProvider` treated album-target tables as the only authoritative source for `MusicItem` construction. If release/track rows were missing but HashDb already had valid recording-level variants for the MBID, the provider still returned `null` and made the item disappear from higher-level flows.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Core/Music/MusicContentDomainProvider.cs`
+- `src/slskd/VirtualSoulfind/Core/Music/MusicItem.cs`
+
+**Wrong**:
+```csharp
+var track = tracks.FirstOrDefault(candidate =>
+    string.Equals(candidate.RecordingId, recordingId, StringComparison.OrdinalIgnoreCase));
+
+if (track != null)
+{
+    return MusicItem.FromTrackEntry(track, isAdvertisable);
+}
+
+return null;
+```
+
+**Correct**:
+```csharp
+var bestVariant = variants
+    .OrderByDescending(variant => variant.QualityScore)
+    .ThenByDescending(variant => variant.SeenCount)
+    .FirstOrDefault();
+if (bestVariant != null)
+{
+    return MusicItem.FromRecordingFallback(
+        recordingId,
+        DeriveFallbackTitle(bestVariant),
+        null,
+        bestVariant.DurationMs > 0 ? bestVariant.DurationMs : null,
+        isAdvertisable);
+}
+```
+
+**Why This Keeps Happening**: release-level catalogue data and recording-level variant data arrive on different timelines. It is easy to accidentally code the richer album model as mandatory even though the system already has enough recording-level truth to surface a conservative item. When those layers diverge, prefer a degraded-but-real recording item over `null`.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
