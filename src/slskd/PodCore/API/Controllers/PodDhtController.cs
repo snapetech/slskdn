@@ -5,6 +5,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,9 +49,15 @@ public class PodDhtController : ControllerBase
             return BadRequest(new { error = "Pod data is required" });
         }
 
+        var normalizedRequest = request with { Pod = NormalizePod(request.Pod) };
+        if (string.IsNullOrWhiteSpace(normalizedRequest.Pod.PodId))
+        {
+            return BadRequest(new { error = "Pod ID is required" });
+        }
+
         try
         {
-            var result = await _podPublisher.PublishAsync(request.Pod, cancellationToken);
+            var result = await _podPublisher.PublishAsync(normalizedRequest.Pod, cancellationToken);
 
             if (result.Success)
             {
@@ -82,9 +91,15 @@ public class PodDhtController : ControllerBase
             return BadRequest(new { error = "Pod data is required" });
         }
 
+        var normalizedRequest = request with { Pod = NormalizePod(request.Pod) };
+        if (string.IsNullOrWhiteSpace(normalizedRequest.Pod.PodId))
+        {
+            return BadRequest(new { error = "Pod ID is required" });
+        }
+
         try
         {
-            var result = await _podPublisher.UpdateAsync(request.Pod, cancellationToken);
+            var result = await _podPublisher.UpdateAsync(normalizedRequest.Pod, cancellationToken);
 
             if (result.Success)
             {
@@ -113,6 +128,7 @@ public class PodDhtController : ControllerBase
     [HttpDelete("unpublish/{*podId}")]
     public async Task<IActionResult> UnpublishPod(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "Pod ID is required" });
@@ -150,6 +166,7 @@ public class PodDhtController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetPodMetadata(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "Pod ID is required" });
@@ -184,6 +201,7 @@ public class PodDhtController : ControllerBase
     [HttpPost("refresh/{*podId}")]
     public async Task<IActionResult> RefreshPod(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "Pod ID is required" });
@@ -229,6 +247,46 @@ public class PodDhtController : ControllerBase
             _logger.LogError(ex, "[PodDht] Error getting publishing stats");
             return StatusCode(500, new { error = "Failed to get publishing statistics" });
         }
+    }
+
+    private static Pod NormalizePod(Pod pod)
+    {
+        ArgumentNullException.ThrowIfNull(pod);
+
+        return new Pod
+        {
+            PodId = pod.PodId?.Trim() ?? string.Empty,
+            Name = pod.Name?.Trim() ?? string.Empty,
+            Description = string.IsNullOrWhiteSpace(pod.Description) ? null : pod.Description.Trim(),
+            Visibility = pod.Visibility,
+            IsPublic = pod.IsPublic,
+            MaxMembers = pod.MaxMembers,
+            AllowGuests = pod.AllowGuests,
+            RequireApproval = pod.RequireApproval,
+            UpdatedAt = pod.UpdatedAt,
+            FocusContentId = string.IsNullOrWhiteSpace(pod.FocusContentId) ? null : pod.FocusContentId.Trim(),
+            Tags = pod.Tags?
+                .Select(tag => tag?.Trim() ?? string.Empty)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.Ordinal)
+                .ToList()
+                ?? new List<string>(),
+            Channels = pod.Channels?
+                .Select(channel => new PodChannel
+                {
+                    ChannelId = channel.ChannelId?.Trim() ?? string.Empty,
+                    Kind = channel.Kind,
+                    Name = channel.Name?.Trim() ?? string.Empty,
+                    BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim(),
+                    Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim(),
+                })
+                .ToList()
+                ?? new List<PodChannel>(),
+            Members = pod.Members,
+            ExternalBindings = pod.ExternalBindings,
+            Capabilities = pod.Capabilities,
+            PrivateServicePolicy = pod.PrivateServicePolicy,
+        };
     }
 }
 

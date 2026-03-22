@@ -5,6 +5,7 @@
 namespace slskd.API.Native;
 
 using slskd.Core.Security;
+using System.Linq;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,15 +22,14 @@ using slskd.Signals;
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class SignalSystemController : ControllerBase
 {
-    private readonly IOptionsMonitor<SignalSystemOptions> optionsMonitor;
-    private readonly ILogger<SignalSystemController> logger;
+    private readonly IOptionsMonitor<SignalSystemOptions> _optionsMonitor;
 
     public SignalSystemController(
         IOptionsMonitor<SignalSystemOptions> optionsMonitor,
         ILogger<SignalSystemController> logger)
     {
-        this.optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
-        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _optionsMonitor = optionsMonitor ?? throw new ArgumentNullException(nameof(optionsMonitor));
+        _ = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ public class SignalSystemController : ControllerBase
     [Authorize]
     public IActionResult GetConfiguration()
     {
-        var options = optionsMonitor.CurrentValue;
+        var options = _optionsMonitor.CurrentValue;
 
         return Ok(new
         {
@@ -68,15 +68,22 @@ public class SignalSystemController : ControllerBase
     [Authorize]
     public IActionResult GetStatus()
     {
-        var options = optionsMonitor.CurrentValue;
+        var options = _optionsMonitor.CurrentValue;
         var signalBus = HttpContext.RequestServices.GetService<ISignalBus>();
+        var activeChannels = options.Enabled && signalBus != null
+            ? new[]
+            {
+                options.MeshChannel.Enabled ? "mesh" : null,
+                options.BtExtensionChannel.Enabled ? "bt_extension" : null,
+            }.Where(channel => channel != null).Cast<string>().ToArray()
+            : Array.Empty<string>();
 
         var statistics = signalBus != null ? signalBus.GetStatistics() : null;
 
         return Ok(new
         {
             enabled = options.Enabled,
-            active_channels = signalBus != null ? new[] { "mesh", "bt_extension" } : Array.Empty<string>(),
+            active_channels = activeChannels,
             statistics = statistics != null ? new
             {
                 signals_sent = statistics.SignalsSent,

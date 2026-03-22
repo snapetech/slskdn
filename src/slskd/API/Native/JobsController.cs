@@ -144,8 +144,8 @@ public class JobsController : ControllerBase
             return BadRequest("Request is required");
         }
 
-        request.LabelId = request.LabelId?.Trim();
-        request.LabelName = request.LabelName?.Trim();
+        request.LabelId = string.IsNullOrWhiteSpace(request.LabelId) ? null : request.LabelId.Trim();
+        request.LabelName = string.IsNullOrWhiteSpace(request.LabelName) ? null : request.LabelName.Trim();
 
         if (string.IsNullOrWhiteSpace(request.LabelId) && string.IsNullOrWhiteSpace(request.LabelName))
         {
@@ -279,7 +279,7 @@ public class JobsController : ControllerBase
         // T-1410: Apply pagination
         var totalCount = allJobs.Count;
         var effectiveOffset = Math.Max(0, offset ?? 0);
-        var effectiveLimit = limit > 0 ? limit.Value : 100; // Default limit 100, max reasonable
+        var effectiveLimit = limit > 0 ? Math.Min(limit.Value, 100) : 100; // Default limit 100, max reasonable
 
         var paginatedJobs = allJobs
             .Skip(effectiveOffset)

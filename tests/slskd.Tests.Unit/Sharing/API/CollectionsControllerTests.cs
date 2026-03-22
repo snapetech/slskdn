@@ -137,6 +137,21 @@ public class CollectionsControllerTests
     }
 
     [Fact]
+    public async Task Create_WithWhitespaceOnlyDescription_NormalizesToNull()
+    {
+        var c = CreateController();
+        _sharingMock.Setup(x => x.CreateCollectionAsync(It.IsAny<Collection>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = Guid.NewGuid(), Title = "Test", OwnerUserId = "alice" });
+
+        var r = await c.Create(new CreateCollectionRequest { Title = "Test", Description = "   " }, CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(r);
+        _sharingMock.Verify(x => x.CreateCollectionAsync(
+            It.Is<Collection>(collection => collection.Description == null),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task Update_NotFound_ReturnsNotFound()
     {
         var c = CreateController();
@@ -234,5 +249,34 @@ public class CollectionsControllerTests
         Assert.Equal("content:mb:recording:1", updated.ContentId);
         Assert.Equal("audio", updated.MediaKind);
         Assert.Equal("hash-2", updated.ContentHash);
+    }
+
+    [Fact]
+    public async Task AddItem_WithWhitespaceOnlyOptionalFields_NormalizesToNull()
+    {
+        var c = CreateController();
+        var collectionId = Guid.NewGuid();
+        _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
+        _sharingMock.Setup(x => x.AddCollectionItemAsync(It.IsAny<CollectionItem>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CollectionItem { Id = Guid.NewGuid(), CollectionId = collectionId, ContentId = "content:1" });
+
+        var r = await c.AddItem(
+            collectionId,
+            new AddCollectionItemRequest
+            {
+                ContentId = " content:1 ",
+                MediaKind = "   ",
+                ContentHash = "\t"
+            },
+            CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(r);
+        _sharingMock.Verify(x => x.AddCollectionItemAsync(
+            It.Is<CollectionItem>(item =>
+                item.ContentId == "content:1" &&
+                item.MediaKind == null &&
+                item.ContentHash == null),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 }

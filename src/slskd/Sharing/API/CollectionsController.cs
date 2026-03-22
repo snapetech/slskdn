@@ -122,7 +122,13 @@ public class CollectionsController : ControllerBase
         if (string.IsNullOrWhiteSpace(currentUserId))
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot create collection: user identity not available. Please configure Soulseek username or enable Identity & Friends." });
         var t = req.Type?.Trim() == CollectionType.Playlist ? CollectionType.Playlist : CollectionType.ShareList;
-        var c = new Collection { Title = req.Title.Trim(), Description = req.Description?.Trim(), Type = t, OwnerUserId = currentUserId };
+        var c = new Collection
+        {
+            Title = req.Title.Trim(),
+            Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim(),
+            Type = t,
+            OwnerUserId = currentUserId
+        };
         var created = await _sharing.CreateCollectionAsync(c, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
@@ -187,7 +193,13 @@ public class CollectionsController : ControllerBase
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();
-        var item = new CollectionItem { CollectionId = id, ContentId = req.ContentId.Trim(), MediaKind = req.MediaKind?.Trim(), ContentHash = req.ContentHash?.Trim() };
+        var item = new CollectionItem
+        {
+            CollectionId = id,
+            ContentId = req.ContentId.Trim(),
+            MediaKind = string.IsNullOrWhiteSpace(req.MediaKind) ? null : req.MediaKind.Trim(),
+            ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHash.Trim()
+        };
         var created = await _sharing.AddCollectionItemAsync(item, ct);
         return CreatedAtAction(nameof(GetItems), new { id }, created);
     }

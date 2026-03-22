@@ -23,23 +23,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt across `src/slskd` dirty files, focused on key normalization, cache/query consistency, transport helper validation, and stale regression alignment
+- **Current Task**: Broad runtime/read-side bughunt across `src/slskd`, focused on controller-boundary normalization, truthful status/read-side reporting, and keeping adjacent dirty files/tests committed in coherent batches
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad bughunt through the remaining dirty runtime/test files instead of leaving a partial working tree behind.
-  - Normalized additional `HashDbService` read/write behavior:
-    - trims lookup and persistence keys before querying or writing
-    - uses case-insensitive JSON deserialization for persisted jobs/graphs
-    - preserves row-based fallback reconstruction when persisted JSON deserializes to `null`
-    - deduplicates warm-cache and popularity result sets
-    - accepts ISO-style persisted backfill timestamps
-  - Normalized `DescriptorRetriever` behavior:
-    - trims and deduplicates batch content IDs
-    - records normalized domains in retrieval stats
-    - excludes expired cache entries from reported cache size/count
-  - Kept the dirty test cluster aligned with the normalized runtime behavior, including descriptor retrieval normalization, SongID parsing/path handling, LoggingSanitizer IPv6 URL handling, and WebSocket transport URL validation.
-  - Current working tree is ready for a full commit; validation has not been run in this pass.
+  - Continued the broad controller-boundary bughunt into auxiliary status and PodCore helper endpoints instead of only the main controllers.
+  - Normalized additional controller behavior:
+    - `SignalSystemController` now reports active channels from actual enabled config instead of DI presence
+    - `PodMessageStorageController` now enforces the documented `1..500` search limit
+    - `PodChannelController` now rejects blank channel IDs/names after trimming
+    - `PodMessageSigningController` and `PodDhtController` now normalize nested request objects before they become service-layer keys
+  - Folded in adjacent dirty request-boundary fixes already present in the tree for `JobsController`, `CollectionsController`, and `SharesController`, plus aligned the new unit regressions for signal and PodCore controller boundaries.
+  - Validation has still not been run in this pass.
 
 ---
 

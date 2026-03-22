@@ -57,6 +57,7 @@ public class PodChannelController : ControllerBase
         [FromBody] PodChannel channel,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -65,6 +66,20 @@ public class PodChannelController : ControllerBase
         if (channel == null)
         {
             return BadRequest("Channel data is required");
+        }
+
+        channel.ChannelId = channel.ChannelId?.Trim() ?? string.Empty;
+        channel.Name = channel.Name?.Trim() ?? string.Empty;
+        channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim();
+        channel.Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim();
+        if (string.IsNullOrWhiteSpace(channel.ChannelId))
+        {
+            return BadRequest("Channel ID is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            return BadRequest("Channel name is required");
         }
 
         try
@@ -111,6 +126,7 @@ public class PodChannelController : ControllerBase
         [FromRoute] string podId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -154,6 +170,8 @@ public class PodChannelController : ControllerBase
         [FromRoute] string channelId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -211,6 +229,8 @@ public class PodChannelController : ControllerBase
         [FromBody] PodChannel channel,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -224,6 +244,15 @@ public class PodChannelController : ControllerBase
         if (channel == null)
         {
             return BadRequest("Channel data is required");
+        }
+
+        channel.ChannelId = channel.ChannelId?.Trim() ?? string.Empty;
+        channel.Name = channel.Name?.Trim() ?? string.Empty;
+        channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim();
+        channel.Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim();
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            return BadRequest("Channel name is required");
         }
 
         // Ensure channel ID matches route parameter
@@ -292,6 +321,8 @@ public class PodChannelController : ControllerBase
         [FromRoute] string channelId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");

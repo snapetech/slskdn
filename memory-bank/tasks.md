@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Normalize auxiliary signal and PodCore controller boundaries
+  - Status: done
+  - Notes: Fixed SignalSystem status reporting so active channels reflect enabled config instead of DI presence, enforced documented search-limit bounds in Pod message storage, normalized pod/message payload objects before signing and DHT publication, tightened Pod channel create/update validation, and folded in adjacent dirty job/sharing boundary fixes plus focused regressions.
 - [x] Normalize HashDb and MediaCore read-side key handling
   - Status: done
   - Notes: Trimmed and validated HashDb lookup/write keys, made JSON deserialization case-insensitive with row-based fallback preservation, deduplicated warm-cache/popularity/query results, and normalized MediaCore descriptor retrieval/query inputs and reporting.

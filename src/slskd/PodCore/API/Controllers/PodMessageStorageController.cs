@@ -59,6 +59,9 @@ public class PodMessageStorageController : ControllerBase
         [FromQuery] int limit = 50,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        query = query?.Trim() ?? string.Empty;
+        channelId = string.IsNullOrWhiteSpace(channelId) ? null : channelId.Trim();
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -67,6 +70,11 @@ public class PodMessageStorageController : ControllerBase
         if (string.IsNullOrWhiteSpace(query))
         {
             return BadRequest("Search query is required");
+        }
+
+        if (limit <= 0 || limit > 500)
+        {
+            return BadRequest("limit must be between 1 and 500");
         }
 
         try
@@ -160,6 +168,8 @@ public class PodMessageStorageController : ControllerBase
         [FromQuery] long olderThan,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -207,6 +217,8 @@ public class PodMessageStorageController : ControllerBase
         [FromRoute] string channelId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");

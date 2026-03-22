@@ -72,6 +72,30 @@ public class JobsControllerBoundaryTests
     }
 
     [Fact]
+    public async Task CreateLabelCrateJob_NormalizesBlankLabelIdToNullBeforeDispatch()
+    {
+        var labelCrateService = new Mock<ILabelCrateJobService>();
+        labelCrateService
+            .Setup(service => service.CreateJobAsync(It.IsAny<LabelCrateJobRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("job-123");
+
+        var controller = CreateController(labelCrateService: labelCrateService);
+
+        var result = await controller.CreateLabelCrateJob(
+            new LabelCrateJobRequest { LabelId = "   ", LabelName = " Warp " },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        labelCrateService.Verify(
+            service => service.CreateJobAsync(
+                It.Is<LabelCrateJobRequest>(request =>
+                    request.LabelId == null &&
+                    request.LabelName == "Warp"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetJob_WithBlankId_ReturnsBadRequest()
     {
         var controller = CreateController();

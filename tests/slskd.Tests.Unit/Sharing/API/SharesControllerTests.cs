@@ -264,4 +264,26 @@ public class SharesControllerTests
                 g.AudiencePeerId == "peer123"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Update_WithNonPositiveMaxConcurrentStreams_ClampsToOne()
+    {
+        var c = CreateController();
+        var shareId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        var grant = new ShareGrant { Id = shareId, CollectionId = collectionId, MaxConcurrentStreams = 4 };
+
+        _sharingMock.Setup(x => x.GetShareGrantAsync(shareId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(grant);
+        _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
+        _sharingMock.Setup(x => x.UpdateShareGrantAsync(It.IsAny<ShareGrant>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await c.Update(shareId, new UpdateShareGrantRequest { MaxConcurrentStreams = 0 }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var updated = Assert.IsType<ShareGrant>(ok.Value);
+        Assert.Equal(1, updated.MaxConcurrentStreams);
+    }
 }

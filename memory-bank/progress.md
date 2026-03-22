@@ -5526,3 +5526,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `b26f3a73`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:17:30Z
+
+- Continued the broad controller-boundary bughunt into auxiliary signal and PodCore helper endpoints:
+  - fixed `SignalSystemController` so `active_channels` now reflects actual enabled config instead of assuming both channels are active whenever `ISignalBus` is registered
+  - fixed `PodMessageStorageController` so message search enforces the documented `1..500` limit contract instead of forwarding invalid bounds to storage
+  - fixed `PodChannelController` so create/update requests reject blank channel IDs/names after trimming instead of relying on downstream services to catch malformed channel payloads
+  - fixed `PodMessageSigningController` so signing and verification trim nested message/private-key fields before dispatch and removed noisy success-path logging
+  - fixed `PodDhtController` so publish/update/unpublish/refresh normalize pod IDs and trim key pod metadata fields before DHT publication or lookup
+  - folded in adjacent dirty request-boundary fixes already in the tree for `JobsController`, `CollectionsController`, and `SharesController`, plus aligned controller regressions for sharing and the new signal/PodCore endpoints
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `b4504895`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

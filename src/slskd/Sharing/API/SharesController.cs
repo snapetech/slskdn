@@ -295,7 +295,7 @@ public class SharesController : ControllerBase
         if (req.AllowDownload != null) g.AllowDownload = req.AllowDownload.Value;
         if (req.AllowReshare != null) g.AllowReshare = req.AllowReshare.Value;
         if (req.ExpiryUtc != null) g.ExpiryUtc = req.ExpiryUtc;
-        if (req.MaxConcurrentStreams != null) g.MaxConcurrentStreams = req.MaxConcurrentStreams.Value;
+        if (req.MaxConcurrentStreams != null) g.MaxConcurrentStreams = req.MaxConcurrentStreams.Value <= 0 ? 1 : req.MaxConcurrentStreams.Value;
         if (req.MaxBitrateKbps != null) g.MaxBitrateKbps = req.MaxBitrateKbps;
         await _sharing.UpdateShareGrantAsync(g, ct);
         return Ok(g);
