@@ -293,6 +293,7 @@ _ = ObserveBackgroundTaskAsync(
 - `src/slskd/Mesh/Realm/Bridge/ActivityPubBridge.cs`
 - `tests/slskd.Tests.Unit/SocialFederation/FederationServiceTests.cs`
 - `tests/slskd.Tests.Unit/Mesh/Realm/Bridge/ActivityPubBridgeTests.cs`
+- `src/slskd/SocialFederation/FederationService.cs`
 
 **Wrong**:
 ```csharp
@@ -308,7 +309,7 @@ return Task.FromResult<(bool Processed, string? Error)>((false, "Missing activit
 return BridgeOperationResult.Failed("Failed to follow remote actor.");
 ```
 
-**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, nullability contracts, and fixture prerequisites at the same time, but the import list, helper invocations, generic return expressions, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit and make sure success-path tests still provide the real prerequisites those code paths now require.
+**Why This Keeps Happening**: small refactors often change type names, constructor signatures, helper factories, nullability contracts, configuration assumptions, and fixture prerequisites at the same time, but the import list, helper invocations, generic return expressions, config parsing, and test constructors are easy to leave behind. When changing shared result helpers, DI signatures, or moving to `System.Text.Json` objects and named nullable tuples, do a repo-wide usage pass in the same edit and make sure success-path tests still provide the real prerequisites those code paths now require.
 
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
