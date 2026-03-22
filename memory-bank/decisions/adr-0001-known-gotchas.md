@@ -279,6 +279,48 @@ if (bestVariant != null)
 
 **Why This Keeps Happening**: release-level catalogue data and recording-level variant data arrive on different timelines. It is easy to accidentally code the richer album model as mandatory even though the system already has enough recording-level truth to surface a conservative item. When those layers diverge, prefer a degraded-but-real recording item over `null`.
 
+### 0xA7. Query/Telemetry/Chat Surfaces Must Normalize And Deduplicate Existing State Before Reporting It
+
+**The Bug**: several read-side paths returned less useful data than the app already had. Scene search returned duplicate results for the same scene ID, scene chat accepted duplicate messages and odd limits, telemetry left scene stats empty even though joined-scene state was available, descriptor domain queries trusted raw caller casing/duplicates, and music fingerprint matching still returned `null` despite stored fingerprint rows existing in HashDb.
+
+**Files Affected**:
+- `src/slskd/HashDb/IHashDbService.cs`
+- `src/slskd/HashDb/HashDbService.cs`
+- `src/slskd/VirtualSoulfind/Core/Music/MusicContentDomainProvider.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneChatService.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneService.cs`
+- `src/slskd/VirtualSoulfind/Integration/TelemetryDashboard.cs`
+- `src/slskd/MediaCore/DescriptorRetriever.cs`
+
+**Wrong**:
+```csharp
+return Task.FromResult(new List<SceneChatMessage>());
+...
+results.Add(metadata);
+...
+return Task.FromResult(new DescriptorQueryResult(... Descriptors: results, ...));
+```
+
+**Correct**:
+```csharp
+if (limit <= 0)
+{
+    return Task.FromResult(new List<SceneChatMessage>());
+}
+...
+var deduped = results
+    .GroupBy(metadata => metadata.SceneId, StringComparer.OrdinalIgnoreCase)
+    .Select(group => group.First())
+    .ToList();
+...
+results = results
+    .GroupBy(descriptor => descriptor.ContentId, StringComparer.OrdinalIgnoreCase)
+    .Select(group => group.First())
+    .ToList();
+```
+
+**Why This Keeps Happening**: read paths often start life as “best effort” plumbing and then become user-facing without getting a second pass. Once a surface is used for UI, planning, or compatibility APIs, it must normalize inputs, deduplicate existing state, and summarize what the system already knows rather than exposing raw cache/storage noise or empty placeholders.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
