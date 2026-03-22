@@ -253,6 +253,33 @@ var file = Path.GetFullPath(rawPath);
 
 **Why This Keeps Happening**: Many optional path settings in `Options` intentionally default to `string.Empty`. Validation attributes must distinguish "unset optional value" from "configured path" before normalizing or resolving the path, or they will fail startup for the wrong reason and mask the real validation behavior being tested.
 
+### 0j3. Subprocess Startup Tests Must Launch The Freshly Built App Binary, Not A Hard-Coded `Release` Output
+
+**The Bug**: `EnforceInvalidConfigIntegrationTests` always launched `src/slskd/bin/Release/net8.0/slskd.dll`, so `dotnet test` could rebuild the project in `Debug` while the test still executed a stale old `Release` binary and reported a failure that had already been fixed in source.
+
+**Files Affected**:
+- `tests/slskd.Tests/EnforceInvalidConfigIntegrationTests.cs`
+
+**Wrong**:
+```csharp
+var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
+if (!File.Exists(slskdDll))
+{
+    return;
+}
+```
+
+**Correct**:
+```csharp
+var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd.dll");
+if (!File.Exists(slskdDll))
+{
+    slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
+}
+```
+
+**Why This Keeps Happening**: Integration tests that spawn the app as a subprocess are not automatically tied to the current test build configuration. If they hard-code one output folder, they can silently run stale binaries and invalidate the test result. Always resolve the current build output first, then fall back only if necessary.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
