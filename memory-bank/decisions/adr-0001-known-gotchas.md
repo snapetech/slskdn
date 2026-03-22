@@ -10456,3 +10456,49 @@ return Ok(Program.LogBuffer.ToArray());
 ```
 
 **Why This Keeps Happening**: controllers that mostly expose application state or configuration feel less risky than write-heavy feature endpoints, so it is easy to leave them on older conventions. That is exactly where null-body crashes, ambiguous no-op responses, and mutable live-state leaks survive. Treat status/config surfaces as external API boundaries too: validate bodies before logging, make missing request payloads explicit `400`s, and return snapshots instead of live collections.
+
+### 0k64. Telemetry And Status Controllers Must Not Depend On Exact Header Strings Or Leak Raw Exceptions
+
+**The Bug**: telemetry/report endpoints kept doing two fragile things: checking `Accept` headers with exact string equality, and returning `ex.Message` directly on failures. Exact equality breaks on common values like `application/json; charset=utf-8` or multi-value Accept headers. Raw exception messages leak implementation details from metrics/report providers straight back to clients.
+
+**Files Affected**:
+- `src/slskd/Telemetry/API/TelemetryController.cs`
+- `src/slskd/Telemetry/API/MetricsController.cs`
+- `src/slskd/Telemetry/API/ReportsController.cs`
+- `src/slskd/Core/API/Controllers/ApplicationController.cs`
+
+**Wrong**:
+```csharp
+if (Request.Headers.Accept.ToString().Equals("application/json", StringComparison.OrdinalIgnoreCase))
+{
+    ...
+}
+```
+
+```csharp
+catch (Exception ex)
+{
+    return StatusCode(500, ex.Message);
+}
+```
+
+**Correct**:
+```csharp
+var acceptsJson = Request.GetTypedHeaders().Accept?.Any(header =>
+    string.Equals(header.MediaType.Value, "application/json", StringComparison.OrdinalIgnoreCase)) == true;
+```
+
+```csharp
+catch (Exception ex)
+{
+    Log.Error(ex, "Error fetching metrics");
+    return StatusCode(500, "Failed to fetch metrics");
+}
+```
+
+```csharp
+direction = string.IsNullOrWhiteSpace(direction) ? null : direction.Trim();
+username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
+```
+
+**Why This Keeps Happening**: utility endpoints often look read-only and harmless, so their boundary rules get relaxed. That is where subtle interoperability bugs and information leaks creep in. Treat report/status surfaces like any other public API: normalize query text, parse typed headers instead of comparing raw strings, and log exceptions privately while returning stable error contracts.
