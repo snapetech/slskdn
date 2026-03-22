@@ -689,6 +689,55 @@ var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
 
 **Why This Keeps Happening**: Ranking pipelines often assume canonical IDs exist by the time candidates are formed. Real metadata providers do not guarantee that. If a hit has strong human-meaningful identity data, keep it in the candidate set with a stable synthetic ID so downstream ranking can still compare and present it.
 
+### 0x18. HashDb Job Lookups Must Fall Back To Row Columns When Stored JSON Becomes Incompatible
+
+**The Bug**: Discography and label-crate job tables already stored their important fields in dedicated columns, but `Get*JobAsync()` still returned `null` whenever the serialized `json_data` blob could not be deserialized. That made otherwise recoverable jobs disappear.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    log.Warning(ex, "... failed to deserialize ...");
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+return new Jobs.DiscographyJob
+{
+    JobId = reader.GetString(0),
+    ArtistName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+    ...
+};
+```
+
+**Why This Keeps Happening**: JSON snapshots are convenient for rich state, but schema drift eventually breaks deserialization. If the table also stores the canonical summary columns, use them to reconstruct a conservative job object instead of treating the whole record as gone.
+
+### 0x19. Relationship Cleanup Activities Must Remove Both Inbound And Outbound Follow State When They Reference Follows
+
+**The Bug**: Follow-specific `Undo`, `Reject`, and `Remove` flows were being implemented incrementally. Without explicit cleanup, some follow-removal activities could leave stale follower/following rows behind depending on which side initiated the relationship.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+
+**Wrong**:
+```csharp
+case "Remove":
+    return (true, null);
+```
+
+**Correct**:
+```csharp
+await _relationshipStore.RemoveFollowerAsync(actorName, remoteActorId, cancellationToken);
+await _relationshipStore.RemoveFollowingAsync(actorName, remoteActorId, cancellationToken);
+```
+
+**Why This Keeps Happening**: Relationship protocols produce several different “remove” style activities, and it is easy to wire only the first one you encountered. Once both follower and following state exist locally, any follow-removal activity should reconcile both sides conservatively unless the protocol context proves otherwise.
+
 ### 0x18. Inbound `Accept`/`Reject` For Follow Activities Must Reconcile Local `following` State
 
 **The Bug**: After outbound follow state was added, inbound `Accept` and `Reject` responses for follow activities still behaved like generic stored activities. That left local `following` state optimistic and stale when a remote actor rejected a follow.
