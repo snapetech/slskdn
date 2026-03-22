@@ -5758,6 +5758,43 @@ private async Task RunProviderSearchAsync(...)
 
 **Why This Keeps Happening**: `ContinueWith` looks like a compact way to “handle errors later,” but its cancellation token controls the continuation task, not the antecedent. That means the wrapper can silently change success/failure/cancellation semantics and make higher-level coordination do the wrong thing. In modern async code, prefer `await` with explicit `try`/`catch`; for fire-and-forget startup work, catch inside the background task instead of relying on a continuation to observe faults.
 
+### 0k21. Do Not Use `ContinueWith(OnlyOn...)` As A Fire-And-Forget Success/Fault Observer
+
+**The Bug**: Several background observers used `ContinueWith(..., OnlyOnFaulted)` or `OnlyOnRanToCompletion` just to log success/failure after a fire-and-forget task. On the common path, the continuation task itself became canceled, so code like `Task.WhenAll(...)` or status logging was tracking a synthetic wrapper task instead of the real operation.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `src/slskd/Events/EventBus.cs`
+- `src/slskd/Common/Security/TimedBatcher.cs`
+- `src/slskd/Transfers/Uploads/UploadService.cs`
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+_ = backgroundTask.ContinueWith(
+    task => Log.Error(task.Exception, "Background work failed"),
+    TaskContinuationOptions.OnlyOnFaulted);
+```
+
+**Correct**:
+```csharp
+_ = ObserveBackgroundTaskAsync(backgroundTask);
+
+private async Task ObserveBackgroundTaskAsync(Task backgroundTask)
+{
+    try
+    {
+        await backgroundTask;
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Background work failed");
+    }
+}
+```
+
+**Why This Keeps Happening**: `ContinueWith(OnlyOn...)` feels like a cheap observer, but it creates a second task with its own state machine. When the observed condition is not met, that wrapper task is canceled by design, which makes fire-and-forget orchestration noisy and misleading. If the intent is “run this in the background and log failures,” use a dedicated async helper that awaits the real task and catches inside it.
+
 ---
 
 *Last updated: 2026-03-22*
