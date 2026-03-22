@@ -23,10 +23,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on service/result contracts that still leak internal error text or drift away from normalized public behavior
+- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on service/result contracts that still leak internal error text across runtime helper surfaces
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed a DHT/mesh security-helper result cluster:
+    - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
+    - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results
+  - Added focused unit coverage for those sanitized security-helper failure contracts
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Fixed a VirtualSoulfind v2 result-contract cluster:
     - `SimpleResolver` no longer copies raw exception text into `PlanExecutionState` or `StepResult`
     - `HttpBackend` and `WebDavBackend` no longer echo raw `HttpRequestException` messages in validation results

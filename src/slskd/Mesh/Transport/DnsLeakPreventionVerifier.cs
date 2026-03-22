@@ -69,7 +69,7 @@ public class DnsLeakPreventionVerifier
         catch (Exception ex)
         {
             _logger.LogError(ex, "DNS leak prevention verification failed with exception");
-            return DnsLeakVerificationResult.Failure($"Verification exception: {ex.Message}");
+            return DnsLeakVerificationResult.Failure("DNS leak verification failed");
         }
     }
 
@@ -113,7 +113,8 @@ public class DnsLeakPreventionVerifier
         }
         catch (Exception ex)
         {
-            return SocksConnectionResult.Failure($"Connection test failed: {ex.Message}");
+            _logger.LogDebug(ex, "SOCKS connection test failed");
+            return SocksConnectionResult.Failure("Connection test failed");
         }
     }
 
@@ -164,7 +165,8 @@ public class DnsLeakPreventionVerifier
         }
         catch (Exception ex)
         {
-            return DnsLeakTestResult.LeakDetected($"DNS leak test failed: {ex.Message}");
+            _logger.LogDebug(ex, "DNS leak prevention test failed");
+            return DnsLeakTestResult.LeakDetected("DNS leak test failed");
         }
     }
 

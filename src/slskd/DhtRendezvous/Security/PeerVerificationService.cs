@@ -142,7 +142,7 @@ public sealed class PeerVerificationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying username {Username}", claimedUsername);
-            return VerificationResult.Failed($"Error: {ex.Message}");
+            return VerificationResult.Failed("Verification failed");
         }
     }
 

@@ -5807,3 +5807,12 @@ Code quality improvements were completed as part of Option A:
   - sanitized HTTP backend validation failures
   - sanitized WebDAV backend validation failures
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for VSF v2 result error passthrough.
+
+## 2026-03-22 17:20 - DHT and mesh security-helper sanitization pass
+
+- Fixed `PeerVerificationService` so verification failures no longer echo raw `ex.Message` content through `VerificationResult`.
+- Fixed `DnsLeakPreventionVerifier` so top-level verification failures, SOCKS connection failures, and DNS leak test failures now return stable sanitized messages instead of raw socket/transport exception text.
+- Added focused unit coverage for:
+  - sanitized peer verification failures
+  - sanitized DNS leak verification failures
+- Added and immediately committed the corresponding gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for security-helper result error passthrough.

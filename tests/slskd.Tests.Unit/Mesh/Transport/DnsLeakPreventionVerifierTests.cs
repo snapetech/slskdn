@@ -77,6 +77,20 @@ public class DnsLeakPreventionVerifierTests
     }
 
     [Fact]
+    public async Task VerifySocksConfiguration_WhenVerificationThrows_ReturnsSanitizedFailure()
+    {
+        var result = await _verifier.VerifySocksConfigurationAsync(
+            "127.0.0.1",
+            -1,
+            "abcdefghijklmnop.onion",
+            false);
+
+        Assert.False(result.Success);
+        Assert.Equal("DNS leak verification failed", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive", result.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task PerformDnsLeakAudit_NoConfigurations_ReturnsSuccess()
     {
         // Arrange

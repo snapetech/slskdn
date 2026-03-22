@@ -12153,3 +12153,47 @@ result.Errors.Add("Import failed");
 ```
 
 **Why This Keeps Happening**: migration and admin-tool code sits outside the main request pipeline, so it gets mentally categorized as “not API code.” But if the return type is a structured result object consumed by humans or other layers, its error fields are still part of the public contract and must be sanitized.
+
+### 0k77. Mesh ServiceReply Error Fields Are Public Contract, Not Internal Diagnostics
+
+**The Bug**: mesh services can feel “internal” because they are not MVC controllers, but `ServiceReply.ErrorMessage` is still a network-visible protocol field. Returning `ex.Message` from `HandleCallAsync(...)` or per-method catch blocks leaks backend details to remote peers and into higher-level gateway responses.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshContentMeshService.cs`
+
+**Wrong**:
+```csharp
+return new ServiceReply
+{
+    StatusCode = ServiceStatusCodes.UnknownError,
+    ErrorMessage = $"FindValue error: {ex.Message}",
+};
+```
+
+```csharp
+return new ServiceReply
+{
+    StatusCode = ServiceStatusCodes.UnknownError,
+    ErrorMessage = ex.Message,
+};
+```
+
+**Correct**:
+```csharp
+return new ServiceReply
+{
+    StatusCode = ServiceStatusCodes.UnknownError,
+    ErrorMessage = "FindValue failed",
+};
+```
+
+```csharp
+return new ServiceReply
+{
+    StatusCode = ServiceStatusCodes.UnknownError,
+    ErrorMessage = "Mesh content service error",
+};
+```
+
+**Why This Keeps Happening**: once code moves below the HTTP layer, it stops looking like “response construction” even though the service reply is still serialized across trust boundaries. Treat `ServiceReply.ErrorMessage` exactly like an API error payload: log the exception detail locally, return a stable public string remotely.
