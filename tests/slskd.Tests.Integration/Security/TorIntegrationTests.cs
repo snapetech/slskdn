@@ -6,7 +6,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Moq;
 using slskd.Common.Security;
+using slskd.Mesh;
+using slskd.Mesh.Transport;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -220,6 +223,146 @@ public class TorIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task TorTransport_ConnectAsync_ConsumesVariableLengthConnectResponse()
+    {
+        // Arrange
+        var bindAddress = Encoding.ASCII.GetBytes(new string((char)'t', 22));
+        var connectResponse = new byte[4 + 1 + bindAddress.Length + 2];
+        connectResponse[0] = 0x05; // VER
+        connectResponse[1] = 0x00; // SUCCEEDED
+        connectResponse[2] = 0x00; // RSV
+        connectResponse[3] = 0x03; // Domain
+        connectResponse[4] = (byte)bindAddress.Length;
+        Array.Copy(bindAddress, 0, connectResponse, 5, bindAddress.Length);
+        connectResponse[^2] = 0x01;
+        connectResponse[^1] = 0xBB;
+
+        using var mockServer = new MockSocksServer
+        {
+            ConnectResponse = connectResponse,
+            PostConnectPayload = "TorTransportPayload"
+        };
+        await mockServer.StartAsync();
+
+        var torOptions = new TorOptions
+        {
+            SocksAddress = $"127.0.0.1:{mockServer.Port}",
+            IsolateStreams = false
+        };
+
+        using var transport = new TorSocksTransport(torOptions, _logger);
+
+        // Act
+        using var stream = await transport.ConnectAsync("example.com", 80);
+
+        var readBuffer = new byte[32];
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var bytesRead = await stream.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
+
+        // Assert - returned stream should start with payload, not leftover connect response bytes.
+        var payload = Encoding.UTF8.GetString(readBuffer, 0, bytesRead);
+        Assert.Equal("TorTransportPayload", payload);
+    }
+
+    [Fact]
+    public async Task TorSocksDialer_DialAsync_ConsumesVariableLengthConnectResponse()
+    {
+        // Arrange
+        var bindAddress = Encoding.ASCII.GetBytes(new string((char)'x', 24));
+        var connectResponse = new byte[4 + 1 + bindAddress.Length + 2];
+        connectResponse[0] = 0x05; // VER
+        connectResponse[1] = 0x00; // SUCCEEDED
+        connectResponse[2] = 0x00; // RSV
+        connectResponse[3] = 0x03; // Domain
+        connectResponse[4] = (byte)bindAddress.Length;
+        Array.Copy(bindAddress, 0, connectResponse, 5, bindAddress.Length);
+        connectResponse[^2] = 0x01;
+        connectResponse[^1] = 0xBB;
+
+        using var mockServer = new MockSocksServer
+        {
+            ConnectResponse = connectResponse,
+            PostConnectPayload = "TorDialerPayload",
+        };
+        await mockServer.StartAsync();
+
+        var options = new TorTransportOptions
+        {
+            Enabled = true,
+            SocksHost = "127.0.0.1",
+            SocksPort = mockServer.Port,
+        };
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
+
+        var endpoint = new TransportEndpoint
+        {
+            TransportType = TransportType.TorOnionQuic,
+            Host = "abcdefghijklmnop.onion",
+            Port = 443
+        };
+
+        // Act
+        using var stream = await dialer.DialAsync(endpoint);
+
+        var readBuffer = new byte[32];
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var bytesRead = await stream.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
+
+        // Assert - returned stream should start with payload, not leftover connect response bytes.
+        var payload = Encoding.UTF8.GetString(readBuffer, 0, bytesRead);
+        Assert.Equal("TorDialerPayload", payload);
+    }
+
+    [Fact]
+    public async Task I2pSocksDialer_DialAsync_ConsumesVariableLengthConnectResponse()
+    {
+        // Arrange
+        var bindAddress = Encoding.ASCII.GetBytes(new string((char)'y', 18));
+        var connectResponse = new byte[4 + 1 + bindAddress.Length + 2];
+        connectResponse[0] = 0x05; // VER
+        connectResponse[1] = 0x00; // SUCCEEDED
+        connectResponse[2] = 0x00; // RSV
+        connectResponse[3] = 0x03; // Domain
+        connectResponse[4] = (byte)bindAddress.Length;
+        Array.Copy(bindAddress, 0, connectResponse, 5, bindAddress.Length);
+        connectResponse[^2] = 0x01;
+        connectResponse[^1] = 0xBB;
+
+        using var mockServer = new MockSocksServer
+        {
+            ConnectResponse = connectResponse,
+            PostConnectPayload = "I2pDialerPayload",
+        };
+        await mockServer.StartAsync();
+
+        var options = new I2PTransportOptions
+        {
+            Enabled = true,
+            SocksHost = "127.0.0.1",
+            SocksPort = mockServer.Port,
+        };
+        var dialer = new I2pSocksDialer(options, Mock.Of<ILogger<I2pSocksDialer>>());
+
+        var endpoint = new TransportEndpoint
+        {
+            TransportType = TransportType.I2PQuic,
+            Host = "abcdef.i2p",
+            Port = 443
+        };
+
+        // Act
+        using var stream = await dialer.DialAsync(endpoint);
+
+        var readBuffer = new byte[32];
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var bytesRead = await stream.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
+
+        // Assert - returned stream should start with payload, not leftover connect response bytes.
+        var payload = Encoding.UTF8.GetString(readBuffer, 0, bytesRead);
+        Assert.Equal("I2pDialerPayload", payload);
+    }
+
+    [Fact]
     public async Task TorTransport_AuthenticationFailure_HandledGracefully()
     {
         // Arrange - Mock server that rejects authentication
@@ -321,6 +464,8 @@ public class TorIntegrationTests : IDisposable
         public bool AuthSuccess { get; set; } = true;
         public bool FragmentHandshakeResponse { get; set; }
         public bool FragmentConnectResponse { get; set; }
+        public byte[]? ConnectResponse { get; set; }
+        public string PostConnectPayload { get; set; } = string.Empty;
 
         public async Task StartAsync()
         {
@@ -393,8 +538,15 @@ public class TorIntegrationTests : IDisposable
                     await stream.ReadAsync(connectRequest, 0, 10, ct);
 
                     // Send success response
-                    var connectResponse = new byte[] { 0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+                    var connectResponse = ConnectResponse ??
+                        new byte[] { 0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
                     await WriteFragmentedAsync(stream, connectResponse, FragmentConnectResponse, ct);
+
+                    if (!string.IsNullOrEmpty(PostConnectPayload))
+                    {
+                        var payload = Encoding.UTF8.GetBytes(PostConnectPayload);
+                        await WriteFragmentedAsync(stream, payload, false, ct);
+                    }
                 }
             }
             catch (Exception ex)

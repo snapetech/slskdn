@@ -269,16 +269,47 @@ public class TorSocksDialer : ITransportDialer
         await stream.WriteAsync(request, 0, request.Length, cancellationToken);
 
         // Read connect response
-        var connectResponse = new byte[10];
-        await ReadExactlyAsync(stream, connectResponse, 0, 10, cancellationToken);
-
-        if (connectResponse[0] != 0x05 || connectResponse[1] != 0x00)
-        {
-            throw new Exception($"SOCKS5 connect failed with error code {connectResponse[1]}");
-        }
+        await ReadSocks5ConnectResponseAsync(stream, cancellationToken);
 
         _logger.LogDebug("SOCKS5 handshake completed for {Host}:{Port}{Isolation}", host, port,
             string.IsNullOrEmpty(isolationKey) ? string.Empty : $" (isolated: {isolationKey})");
+    }
+
+    private async Task ReadSocks5ConnectResponseAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var header = new byte[4];
+        await ReadExactlyAsync(stream, header, 0, 4, cancellationToken);
+
+        if (header[0] != 0x05)
+        {
+            throw new Exception($"Invalid SOCKS5 response version: {header[0]:X2}");
+        }
+
+        if (header[1] != 0x00)
+        {
+            throw new Exception($"SOCKS5 connect failed with response code {header[1]:X2}");
+        }
+
+        int bytesToRead;
+        switch (header[3])
+        {
+            case 0x01:
+                bytesToRead = 4 + 2;
+                break;
+            case 0x03:
+                var length = new byte[1];
+                await ReadExactlyAsync(stream, length, 0, 1, cancellationToken);
+                bytesToRead = length[0] + 2;
+                break;
+            case 0x04:
+                bytesToRead = 16 + 2;
+                break;
+            default:
+                throw new Exception($"Unsupported SOCKS5 address type: {header[3]:X2}");
+        }
+
+        var tail = new byte[bytesToRead];
+        await ReadExactlyAsync(stream, tail, 0, tail.Length, cancellationToken);
     }
 
     private static bool IsValidOnionHostname(string hostname)

@@ -519,6 +519,30 @@ var streamHash = v.Codec switch
 
 **Why This Keeps Happening**: Nullability cleanup often replaces nullable strings with `string.Empty`, but any fallback logic that relied on `??` now changes behavior silently. When a value is semantically "missing", use `string.IsNullOrWhiteSpace`-aware fallback helpers instead of null-coalescing chains.
 
+### 0k1. SOCKS5 CONNECT Parsing Must Consume ATYP-Dependent Binds Before Returning Connected Stream
+
+**The Bug**: Several SOCKS5 dialers read a fixed 10-byte CONNECT response regardless of `ATYP`, so variable-length domain-name responses left trailing bytes (address bytes plus port) in the TCP stream and leaked into application reads as garbled preamble bytes.
+
+**Files Affected**:
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Mesh/Transport/TorSocksDialer.cs`
+- `src/slskd/Mesh/Transport/I2pSocksDialer.cs`
+
+**Wrong**:
+```csharp
+var connectResponse = new byte[10];
+await ReadExactlyAsync(stream, connectResponse, 0, 10, token);
+```
+
+**Correct**:
+```csharp
+var header = new byte[4];
+await ReadExactlyAsync(stream, header, 0, header.Length, token);
+// read address tail length based on ATYP (IPv4 4 bytes, domain 1+length, IPv6 16 bytes) then read 2-byte port
+```
+
+**Why This Keeps Happening**: SOCKS5 CONNECT replies are variable length by design (`ATYP` controls how much payload follows the first 4 bytes). Any consumer that hardcodes `10` bytes silently assumes IPv4 and causes protocol desynchronization whenever a domain response is returned by the proxy.
+
 ### 0k. Timeout-Based Circuit Tests Must Distinguish "Breaker Opened" From "Open-State Reply Observed"
 
 **The Bug**: `ServiceTimeout_TriggersCircuitBreaker` still flaked after widening the retry window because the last timeout call could be the one that opens the breaker, which means the first `ServiceUnavailable` reply only appears on the next probe request.

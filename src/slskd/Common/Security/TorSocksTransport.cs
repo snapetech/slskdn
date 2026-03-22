@@ -207,13 +207,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             var connectRequest = CreateSocks5ConnectRequest(host, port);
             await stream.WriteAsync(connectRequest, 0, connectRequest.Length, effectiveToken);
 
-            var connectResponse = new byte[10]; // Minimum response size
-            await ReadExactlyAsync(stream, connectResponse, 0, 10, effectiveToken);
-
-            if (connectResponse[0] != 0x05 || connectResponse[1] != 0x00)
-            {
-                throw new Exception($"SOCKS5 connect failed with response code {connectResponse[1]:X2}");
-            }
+            await ReadSocks5ConnectResponseAsync(stream, effectiveToken);
 
             lock (_statusLock)
             {
@@ -265,6 +259,44 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             _logger.LogError(ex, "Failed to establish Tor connection to {Host}:{Port} via circuit {CircuitKey}", host, port, circuitKey);
             throw;
         }
+    }
+
+    private static async Task ReadSocks5ConnectResponseAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var header = new byte[4];
+        await ReadExactlyAsync(stream, header, 0, header.Length, cancellationToken);
+
+        if (header[0] != 0x05)
+        {
+            throw new Exception($"Invalid SOCKS5 response version: {header[0]:X2}");
+        }
+
+        if (header[1] != 0x00)
+        {
+            throw new Exception($"SOCKS5 connect failed with response code {header[1]:X2}");
+        }
+
+        int bytesToRead;
+        var addressType = header[3];
+        switch (addressType)
+        {
+            case 0x01:
+                bytesToRead = 4 + 2;
+                break;
+            case 0x03:
+                var length = new byte[1];
+                await ReadExactlyAsync(stream, length, 0, 1, cancellationToken);
+                bytesToRead = length[0] + 2;
+                break;
+            case 0x04:
+                bytesToRead = 16 + 2;
+                break;
+            default:
+                throw new Exception($"Unsupported SOCKS5 address type: {addressType:X2}");
+        }
+
+        var tail = new byte[bytesToRead];
+        await ReadExactlyAsync(stream, tail, 0, tail.Length, cancellationToken);
     }
 
     /// <summary>
