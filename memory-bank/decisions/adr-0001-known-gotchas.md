@@ -52,6 +52,51 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xA6. Controller Boundaries Must Normalize Route Keys Before Looking Up Or Mutating Existing State
+
+**The Bug**: Multiple controllers trimmed request bodies but still trusted raw route IDs or ignored them entirely after parsing object IDs. That let whitespace-padded pod/channel/user names fall through to downstream services, and transfer endpoints could mutate or return a transfer by GUID even when the route username did not match the actual transfer owner.
+
+**Files Affected**:
+- `src/slskd/Transfers/API/Controllers/TransfersController.cs`
+- `src/slskd/API/Native/PodsController.cs`
+- `src/slskd/API/VirtualSoulfind/BridgeController.cs`
+- `src/slskd/API/Native/WarmCacheController.cs`
+- `src/slskd/API/Compatibility/UsersCompatibilityController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageRoutingController.cs`
+- `src/slskd/Transfers/Ranking/API/RankingController.cs`
+
+**Wrong**:
+```csharp
+if (!Guid.TryParse(id, out var guid))
+{
+    return BadRequest();
+}
+
+var download = Transfers.Downloads.Find(t => t.Id == guid);
+return Ok(download);
+```
+
+**Correct**:
+```csharp
+username = username?.Trim() ?? string.Empty;
+id = id?.Trim() ?? string.Empty;
+
+if (string.IsNullOrWhiteSpace(username) || !Guid.TryParse(id, out var guid))
+{
+    return BadRequest();
+}
+
+var download = Transfers.Downloads.Find(t => t.Id == guid);
+if (download == default || !string.Equals(download.Username, username, StringComparison.Ordinal))
+{
+    return NotFound();
+}
+
+return Ok(download);
+```
+
+**Why This Keeps Happening**: boundary normalization work often starts with the request body because it is obvious, but route/query keys are just as authoritative and can drift independently. Once a controller uses a route key to scope an object lookup, the normalized route value must be validated and enforced all the way through the lookup or mutation. Otherwise the API contract says “this resource belongs to X” while the implementation really means “any resource with this GUID.”
+
 ### 0xA0. Legacy Fallback Auto-Activation Must Be Explicitly Opt-In, Even When `VirtualSoulfind.DisasterMode` Exists
 
 **The Bug**: The code already failed closed when the entire `VirtualSoulfind.DisasterMode` section was absent, but `DisasterModeOptions.Auto` still defaulted to `true`. That meant a partial config block like `virtualSoulfind.disasterMode: {}` silently turned on legacy auto-fallback and could flip search/runtime behavior away from the default Soulseek+mesh path.
