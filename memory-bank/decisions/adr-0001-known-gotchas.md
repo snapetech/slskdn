@@ -123,6 +123,30 @@ if (context.Operation.Contains("consensus", StringComparison.OrdinalIgnoreCase))
 
 **Why This Keeps Happening**: It is tempting to wire a policy into DI early and fill it in later, but once the policy is part of a composite engine the placeholder result becomes production behavior. If a policy cannot fully evaluate, it must either enforce the narrow checks it actually can support or fail closed for operations that explicitly depend on that protection.
 
+### 0x3. Federation Endpoints Must Not Return Success For Inbox Features Without Storage Or Processors
+
+**The Bug**: The ActivityPub inbox endpoints returned an empty collection for reads and `202 Accepted` for posts even though there was no inbox persistence and no activity processor behind them. Remote peers got a success signal for work the server immediately discarded.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+
+**Wrong**:
+```csharp
+return Task.FromResult<IActionResult>(Ok(new ActivityPubOrderedCollection
+{
+    TotalItems = 0,
+    OrderedItems = Array.Empty<object>()
+}));
+```
+
+**Correct**:
+```csharp
+return Task.FromResult<IActionResult>(
+    StatusCode(StatusCodes.Status501NotImplemented, "Inbox retrieval is not implemented"));
+```
+
+**Why This Keeps Happening**: Placeholder HTTP handlers often start by returning syntactically valid responses so clients stop erroring during development. For federated protocols that is the wrong tradeoff. A fake success causes other servers to trust delivery and state transitions that never happened. If persistence or processing does not exist yet, return an explicit non-success status.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
