@@ -759,3 +759,6 @@
 - [x] Normalize remaining mesh/native request boundaries
   - Status: done
   - Notes: Normalized localhost-origin host checks in MeshGatewayAuthMiddleware, trimmed LibraryItemsController search/item inputs before filtering or lookup, and added focused regressions for IPv6 loopback origins plus padded/blank native library requests.
+- [x] Normalize gateway and compatibility controller request inputs
+  - Status: done
+  - Notes: Trimmed MeshGatewayController service/method route values before allowlist/dispatch, normalized DownloadsCompatibilityController item/status/id inputs before enqueue or lookup, and added focused controller regressions for those request boundaries.

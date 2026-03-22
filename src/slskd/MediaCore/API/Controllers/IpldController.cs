@@ -183,9 +183,20 @@ public class IpldController : ControllerBase
             return BadRequest("At least one link is required");
         }
 
+        var links = request.Links
+            .Select(link => new IpldLink(
+                link.Name?.Trim() ?? string.Empty,
+                link.Target?.Trim() ?? string.Empty,
+                string.IsNullOrWhiteSpace(link.LinkName) ? null : link.LinkName.Trim()))
+            .ToList();
+
+        if (links.Any(link => string.IsNullOrWhiteSpace(link.Name) || string.IsNullOrWhiteSpace(link.Target)))
+        {
+            return BadRequest("Each link requires a non-empty name and target");
+        }
+
         try
         {
-            var links = request.Links.Select(l => new IpldLink(l.Name, l.Target, l.LinkName)).ToList();
             await _ipldMapper.AddLinksAsync(contentId, links, cancellationToken);
 
             _logger.LogInformation(

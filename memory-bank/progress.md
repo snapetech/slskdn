@@ -5454,3 +5454,13 @@ Code quality improvements were completed as part of Option A:
 - Documented the new bug pattern immediately in ADR-0001 and committed it as `cae5b599`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 17:40:00Z
+
+- Continued the same broad boundary-normalization pass into mesh gateway and slskd-compat download controllers:
+  - fixed `MeshGatewayController.CallService(...)` so padded route values are trimmed before request validation, allowlist checks, service discovery, and client dispatch
+  - fixed `DownloadsCompatibilityController` so blank-only download items are rejected, user/path fields are trimmed before enqueue, and padded download IDs/status filters are normalized before lookup/filtering
+  - added focused controller regressions for blank gateway route values, trimmed gateway service dispatch, blank compatibility download items, trimmed enqueue paths, and padded download IDs
+- Documented the new bug pattern immediately in ADR-0001 and committed it as `606b6a86`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

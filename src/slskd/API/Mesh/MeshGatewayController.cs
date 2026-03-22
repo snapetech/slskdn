@@ -75,11 +75,23 @@ public class MeshGatewayController : ControllerBase
             string method,
             CancellationToken cancellationToken)
     {
+        serviceName = serviceName?.Trim() ?? string.Empty;
+        method = method?.Trim() ?? string.Empty;
+
         // Check if gateway is enabled (should be enforced by middleware, but double-check)
         if (!_options.Enabled)
         {
             _logger.LogWarning("[GatewayController] Gateway is disabled");
             return NotFound(new { error = "gateway_disabled" });
+        }
+
+        if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(method))
+        {
+            return BadRequest(new
+            {
+                error = "invalid_request",
+                message = "Service name and method are required"
+            });
         }
 
         // Check service allowlist

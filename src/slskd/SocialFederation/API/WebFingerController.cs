@@ -65,6 +65,9 @@ namespace slskd.SocialFederation.API
             [FromQuery] string? rel = null,
             CancellationToken cancellationToken = default)
         {
+            resource = resource?.Trim() ?? string.Empty;
+            rel = string.IsNullOrWhiteSpace(rel) ? null : rel.Trim();
+
             var opts = _federationOptions.CurrentValue;
 
             // Check if federation is enabled and not in hermit mode
@@ -136,6 +139,7 @@ namespace slskd.SocialFederation.API
         {
             username = string.Empty;
             domain = string.Empty;
+            resource = resource.Trim();
 
             // Handle acct: URIs (acct:username@domain)
             if (resource.StartsWith("acct:", StringComparison.OrdinalIgnoreCase))
@@ -147,42 +151,39 @@ namespace slskd.SocialFederation.API
                     return false;
                 }
 
-                username = acctPart.Substring(0, atIndex);
-                domain = acctPart.Substring(atIndex + 1);
-                return true;
+                username = acctPart.Substring(0, atIndex).Trim();
+                domain = acctPart.Substring(atIndex + 1).Trim();
+                return !string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(domain);
             }
 
             // Handle https: URIs (https://domain/@username or https://domain/actors/username)
             if (resource.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    var uri = new Uri(resource);
-
-                    // Extract domain
-                    domain = uri.Host;
-
-                    // Extract username from path
-                    var path = uri.AbsolutePath.Trim('/');
-                    if (path.StartsWith("@"))
-                    {
-                        username = path.Substring(1);
-                    }
-                    else if (path.StartsWith("actors/"))
-                    {
-                        username = path.Substring(7); // Remove "actors/"
-                    }
-                    else
-                    {
-                        return false;
-                    }
-
-                    return true;
-                }
-                catch
+                if (!Uri.TryCreate(resource, UriKind.Absolute, out var uri) ||
+                    !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }
+
+                domain = uri.Host;
+
+                var pathSegments = uri.AbsolutePath
+                    .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                if (pathSegments.Length == 1 && pathSegments[0].StartsWith("@", StringComparison.Ordinal))
+                {
+                    username = pathSegments[0][1..].Trim();
+                    return !string.IsNullOrWhiteSpace(username);
+                }
+
+                if (pathSegments.Length == 2 &&
+                    string.Equals(pathSegments[0], "actors", StringComparison.OrdinalIgnoreCase))
+                {
+                    username = pathSegments[1].Trim();
+                    return !string.IsNullOrWhiteSpace(username);
+                }
+
+                return false;
             }
 
             return false;
