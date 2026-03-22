@@ -112,6 +112,50 @@ if (backend.SupportedDomain.HasValue && backend.SupportedDomain != domain)
 
 **Why This Keeps Happening**: Nullable enum capability flags are easy to misread during planner work. In this codebase, `null` is not "unknown" or "unsupported"; it is the wildcard case. Any backend-selection filter has to preserve that semantic or the system looks wired while most of the backends are effectively dead.
 
+### 0x9B. VirtualSoulfind v2 Must Not Lose Track Domain Or Report Acquisition Success For Backends That Cannot Fetch
+
+**The Bug**: The in-memory intent queue rebuilt `DesiredTrack` without copying `Domain`, so any status transition silently erased the domain needed by later planning and API reads. At the same time, the simple resolver treated `Soulseek`, `MeshDht`, and `Lan` steps as success even though those backends still had no fetch implementation, causing intents to complete without acquiring anything.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Intents/InMemoryIntentQueue.cs`
+- `src/slskd/VirtualSoulfind/v2/Resolution/SimpleResolver.cs`
+
+**Wrong**:
+```csharp
+var updated = new DesiredTrack
+{
+    DesiredTrackId = track.DesiredTrackId,
+    TrackId = track.TrackId,
+    ...
+};
+...
+else
+{
+    return StepResult.Success(null);
+}
+```
+
+**Correct**:
+```csharp
+var updated = new DesiredTrack
+{
+    Domain = track.Domain,
+    DesiredTrackId = track.DesiredTrackId,
+    ...
+};
+...
+else if (step.Backend == ContentBackendType.LocalLibrary)
+{
+    return StepResult.Success(candidate.BackendRef);
+}
+else
+{
+    return StepResult.Failure($"Backend {step.Backend} has no fetch implementation");
+}
+```
+
+**Why This Keeps Happening**: Value-object update helpers are easy to treat like "copy most fields" code, but queue state types often carry planner-critical metadata such as domain or mode. Separately, staged resolver work often starts by handling only fetch-capable backends, and it is tempting to mark the rest as "good enough" success to keep the flow moving. That creates silent false positives. Preserve all immutable intent fields on update, and fail explicitly for any backend whose fetch path is still missing.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
