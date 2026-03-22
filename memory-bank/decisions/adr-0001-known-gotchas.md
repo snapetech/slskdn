@@ -204,6 +204,25 @@ return new ContentDescriptor
 
 **Why This Keeps Happening**: “Best-effort” sources often get wired as minimal stubs first, and once they return a non-null descriptor, it is easy to miss that they are still throwing away most of their evidence. If a lookup already resolved structured hints, the descriptor builder should carry that evidence forward instead of collapsing it into an almost-empty shell.
 
+### 0x10. Capability Version Parsers Must Accept Real Dev And Prerelease slskdn Version Strings
+
+**The Bug**: Capability discovery parsed version strings with a strict `x.y.z` regex, so dev or prerelease client versions like `slskdn/0.24.1-dev+dht+mesh` were rejected before any capability tokens were read.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityService.cs`
+
+**Wrong**:
+```csharp
+new Regex(@"slskdn/(\\d+\\.\\d+\\.\\d+)(\\+.*)?", ...)
+```
+
+**Correct**:
+```csharp
+new Regex(@"slskdn/([^+\\s]+)(\\+.*)?", ...)
+```
+
+**Why This Keeps Happening**: Parsers often start from a stable release example and quietly hard-code that shape. Capability/version strings are compatibility inputs, so they need to accept the real version forms the project emits in dev and prerelease builds instead of only idealized semver triples.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
