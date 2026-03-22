@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
+
+**The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Backends/SoulseekBackend.cs`
+- `src/slskd/VirtualSoulfind/v2/Matching/SimpleMatchEngine.cs`
+
+**Wrong**:
+```csharp
+var searchQuery = BuildSearchQuery(itemId); // returns raw GUID text
+...
+if (titleMatch && durationMatch)
+{
+    return Task.FromResult(new MatchResult
+    {
+        Confidence = MatchConfidence.Medium,
+        Score = 0.75,
+        Reason = "Title + duration match",
+    });
+}
+```
+
+**Correct**:
+```csharp
+var track = await _catalogueStore.FindTrackByIdAsync(itemId.ToString(), cancellationToken);
+AddSearchTerm(terms, artist?.Name);
+AddSearchTerm(terms, track.Title);
+...
+var artistMatch = IsTextMatch(context.ArtistName, candidate.Embedded.Artist);
+var albumMatch = IsTextMatch(context.ReleaseTitle, candidate.Embedded.Album);
+```
+
+**Why This Keeps Happening**: v2 content IDs are internal correlation keys, not user-facing discovery terms. When a backend already has a catalogue layer, search should be built from canonical metadata and matching should use the same context. Falling back to opaque IDs or title-only matching makes the feature look implemented while quietly discarding the only evidence that could make it work conservatively and correctly.
+
 ### 0xA. ActivityPub Outboxes Must Not Be Advertised Without A Real Post Path And Follower Fan-Out
 
 **The Bug**: The server advertised actor outbox URLs, but `POST /actors/{actor}/outbox` returned `501` and public activities had no follower fan-out path. That meant local actors could claim an ActivityPub outbox existed while there was no durable local post path and no real delivery to followers.
