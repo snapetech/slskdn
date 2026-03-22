@@ -12562,3 +12562,26 @@ ErrorMessage = "Unknown method";
 ```
 
 **Why This Keeps Happening**: protocol and RPC layers often feel “machine-to-machine,” so it is easy to assume detailed reply text is harmless. It is not. Validator output and reflected method names are still part of the externally visible contract and should be normalized to stable messages.
+
+### 0k85. Shared Validation Attributes Must Not Echo Absolute Paths
+
+**The Bug**: common file and directory validation attributes were returning full filesystem paths and raw input paths inside `ValidationResult.ErrorMessage`. Those attributes are reused across config and API-bound validation, so absolute local paths leaked through ordinary validation failures.
+
+**Files Affected**:
+- `src/slskd/Common/Validation/FileExistsAttribute.cs`
+- `src/slskd/Common/Validation/FileDoesNotExistAttribute.cs`
+- `src/slskd/Common/Validation/DirectoryExistsAttributes.cs`
+
+**Wrong**:
+```csharp
+return new ValidationResult($"The File field specifies a non-existent file '{file}'.");
+return new ValidationResult($"The Directory field specifies a non-relative directory path: '{value}'.");
+```
+
+**Correct**:
+```csharp
+return new ValidationResult("The File field specifies a non-existent file.");
+return new ValidationResult("The Directory field specifies a non-relative directory path.");
+```
+
+**Why This Keeps Happening**: validation attributes feel generic and harmless, so they often preserve “helpful” path details. But these attributes sit on public request/config boundaries. Treat their error text as externally visible and never include absolute paths or raw filesystem input.

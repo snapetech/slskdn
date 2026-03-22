@@ -5944,3 +5944,9 @@ Code quality improvements were completed as part of Option A:
 - Fixed `MeshServiceClient`, `HolePunchMeshService`, and `VirtualSoulfindMeshService` so observable mesh replies no longer reflect requested service names or caller-supplied method names in `ErrorMessage`.
 - Added focused unit coverage for sanitized mesh-service client not-found replies and sanitized unknown-method replies in the hole-punch and VirtualSoulfind mesh services.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for mesh protocol and service reply leakage.
+
+## 2026-03-22 17:46 - Shared validation attribute path sanitization pass
+
+- Fixed `FileExistsAttribute`, `FileDoesNotExistAttribute`, and `DirectoryExistsAttribute` so validation failures no longer echo absolute filesystem paths or raw input paths in public `ValidationResult` messages.
+- Added focused unit coverage for missing-file, existing-file, missing-directory, and non-relative-directory validation failures to assert the sanitized contracts.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for shared validation attribute path leakage.

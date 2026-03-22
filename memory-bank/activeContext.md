@@ -208,3 +208,7 @@ dotnet test
 ## 2026-03-22 17:40
 - Sanitized mesh protocol and service-fabric reply contracts that were still reflecting validator details and method/service names.
 - Next: continue bughunt through remaining observable validation/result objects, especially shared validation attributes and service reply builders.
+
+## 2026-03-22 17:46
+- Sanitized shared file/directory validation attributes so they no longer expose absolute paths through validation failures.
+- Next: continue through remaining shared validation and result-builder surfaces that may still leak input details.
