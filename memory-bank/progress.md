@@ -5575,3 +5575,18 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `7e275e8f`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:56:20Z
+
+- Continued the broad utility/native boundary bughunt into now-playing, users, relay, and DHT helper endpoints:
+  - fixed `NowPlayingController` so generic now-playing updates reject null/blank artist/title and trim track fields before state changes; webhook parsing now trims extracted artist/title/album fields before applying updates
+  - fixed `UsersController` so username-scoped endpoints trim route usernames and reject blank values consistently before browse/info/status/group/directory dispatch
+  - fixed `DhtRendezvousController` so blocklist IP/username requests and unblock route targets are trimmed before validation or mutation
+  - fixed `RelayController.StreamContent(...)` so content IDs and agent names are normalized before relay lookup and blank content IDs are rejected explicitly
+  - folded in adjacent dirty compatibility/bridge spillover already in the tree:
+    - sanitized `500` responses in search/users compatibility and bridge admin/bridge API controllers so exception messages stop leaking
+    - aligned the port-forwarding single-port regression and added focused bridge/users compatibility tests already present in the working tree
+  - added focused unit regressions for now-playing, DHT rendezvous, and user-group boundary handling
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `87d1b7c2`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

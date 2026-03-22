@@ -54,8 +54,9 @@ public class PortForwardingControllerTests
         var result = controller.GetAvailablePorts(12345, 12345);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var ports = ok.Value?.ToString() ?? string.Empty;
-        Assert.Contains("12345", ports);
+        var availablePortsProperty = ok.Value?.GetType().GetProperty("AvailablePorts");
+        var availablePorts = Assert.IsAssignableFrom<IEnumerable<int>>(availablePortsProperty?.GetValue(ok.Value));
+        Assert.Contains(12345, availablePorts);
     }
 
     private static PortForwardingController CreateController()

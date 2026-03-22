@@ -97,8 +97,8 @@ public class SearchCompatibilityController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Search failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = "Search failed", message = ex.Message });
+            logger.LogError(ex, "Search failed");
+            return StatusCode(500, new { error = "Search failed" });
         }
     }
 }

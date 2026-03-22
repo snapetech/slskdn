@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Normalize utility/native identifier boundaries and adjacent compatibility spillover
+  - Status: done
+  - Notes: Trimmed and validated now-playing track fields, user-route identifiers, DHT blocklist request targets, and relay streaming identifiers before dispatch; folded in adjacent compatibility/bridge sanitized-error changes already in the tree plus focused regressions for utility and compatibility surfaces.
 - [x] Normalize telemetry/report controller boundaries and adjacent native spillover
   - Status: done
   - Notes: Fixed typed Accept-header parsing for telemetry JSON responses, sanitized report/metrics `500` contracts, trimmed report query inputs before validation, rejected null loopback bodies in `ApplicationController`, and folded in adjacent native warm-cache/port-forward/native-pod boundary cleanups plus focused tests.

@@ -88,6 +88,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             try
             {
                 var endpoint = await Users.GetIPEndPointAsync(username);
@@ -113,6 +119,12 @@ namespace slskd.Users.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
             }
 
             // H-08: Check Soulseek safety caps before initiating browse
@@ -151,6 +163,12 @@ namespace slskd.Users.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
             }
 
             if (BrowseTracker.TryGet(username, out var progress))
@@ -198,7 +216,19 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
-            if (request == null || string.IsNullOrEmpty(request.Directory))
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
+            if (request == null)
+            {
+                return BadRequest();
+            }
+
+            request.Directory = request.Directory?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(request.Directory))
             {
                 return BadRequest();
             }
@@ -233,6 +263,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             try
             {
                 var response = await Users.GetInfoAsync(username);
@@ -260,6 +296,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             try
             {
                 var response = await Users.GetStatusAsync(username);
@@ -284,6 +326,12 @@ namespace slskd.Users.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
             }
 
             var group = Users.GetGroup(username);

@@ -447,6 +447,15 @@ namespace slskd.Relay
                 return StatusCode(503, "Content locator not available");
             }
 
+            contentId = contentId?.Trim() ?? string.Empty;
+            agentName = string.IsNullOrWhiteSpace(agentName) ? null : agentName.Trim();
+            token = string.IsNullOrWhiteSpace(token) ? null : token.Trim();
+
+            if (string.IsNullOrWhiteSpace(contentId))
+            {
+                return BadRequest("contentId is required");
+            }
+
             // Resolve ContentId to filename
             var resolved = ContentLocator.Resolve(contentId, HttpContext.RequestAborted);
             if (resolved == null)

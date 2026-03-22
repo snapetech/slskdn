@@ -27,14 +27,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into telemetry/report/application utility endpoints and folded the adjacent native spillover back into the same batch.
+  - Continued the broad controller-boundary bughunt into utility/native endpoints and folded the adjacent compatibility/bridge spillover into the same batch.
   - Normalized additional controller behavior:
-    - `TelemetryController` and `MetricsController` now parse `Accept` headers correctly for JSON negotiation
-    - `MetricsController` and `ReportsController` now return sanitized `500` responses instead of raw exception messages
-    - `ReportsController` trims direction/username/sort inputs before validation
-    - `ApplicationController` now rejects null loopback bodies explicitly
-    - adjacent `WarmCacheController`, `PortForwardingController`, and native `PodsController` spillover was folded into the same boundary-cleanup batch
-  - Added focused unit regressions for telemetry/application boundaries and the native spillover cases.
+    - `NowPlayingController` now trims/rejects invalid track payloads before updating state
+    - `UsersController` now trims username route values and rejects blank usernames consistently
+    - `DhtRendezvousController` now normalizes blocklist request fields and unblock targets
+    - `RelayController.StreamContent(...)` now normalizes content IDs/agent names before relay lookup
+    - adjacent compatibility and bridge spillover was folded in to sanitize `500` error contracts
+  - Added focused unit regressions for now-playing, DHT rendezvous, user-group boundaries, and the folded compatibility/bridge spillover.
   - Validation has still not been run in this pass.
 
 ---

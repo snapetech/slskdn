@@ -47,7 +47,21 @@ public class NowPlayingController : ControllerBase
     [Authorize(Policy = AuthPolicy.Any)]
     public IActionResult Put([FromBody] NowPlayingRequest request)
     {
-        NowPlaying.SetTrack(request.Artist, request.Title, request.Album);
+        if (request == null)
+        {
+            return BadRequest("Track data is required");
+        }
+
+        var artist = request.Artist?.Trim() ?? string.Empty;
+        var title = request.Title?.Trim() ?? string.Empty;
+        var album = string.IsNullOrWhiteSpace(request.Album) ? null : request.Album.Trim();
+
+        if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(title))
+        {
+            return BadRequest("Artist and title are required");
+        }
+
+        NowPlaying.SetTrack(artist, title, album);
         return NoContent();
     }
 
@@ -103,11 +117,11 @@ public class NowPlayingController : ControllerBase
                 // Only handle play/resume events; clear on stop/pause
                 if (ev is "media.play" or "media.resume" or "media.scrobble")
                 {
-                    var title = meta.TryGetProperty("title", out var t) ? t.GetString() : null;
-                    var artist = meta.TryGetProperty("grandparentTitle", out var gp) ? gp.GetString()
-                               : meta.TryGetProperty("originalTitle", out var ot) ? ot.GetString()
+                    var title = meta.TryGetProperty("title", out var t) ? t.GetString()?.Trim() : null;
+                    var artist = meta.TryGetProperty("grandparentTitle", out var gp) ? gp.GetString()?.Trim()
+                               : meta.TryGetProperty("originalTitle", out var ot) ? ot.GetString()?.Trim()
                                : null;
-                    var album = meta.TryGetProperty("parentTitle", out var pt) ? pt.GetString() : null;
+                    var album = meta.TryGetProperty("parentTitle", out var pt) ? pt.GetString()?.Trim() : null;
 
                     if (!string.IsNullOrEmpty(artist) && !string.IsNullOrEmpty(title))
                         NowPlaying.SetTrack(artist, title, album);
@@ -126,9 +140,9 @@ public class NowPlayingController : ControllerBase
                 var type = jellyType.GetString();
                 if (type is "PlaybackStart" or "PlaybackProgress")
                 {
-                    var title = root.TryGetProperty("Name", out var n) ? n.GetString() : null;
-                    var artist = root.TryGetProperty("Artist", out var a) ? a.GetString() : null;
-                    var album = root.TryGetProperty("Album", out var alb) ? alb.GetString() : null;
+                    var title = root.TryGetProperty("Name", out var n) ? n.GetString()?.Trim() : null;
+                    var artist = root.TryGetProperty("Artist", out var a) ? a.GetString()?.Trim() : null;
+                    var album = root.TryGetProperty("Album", out var alb) ? alb.GetString()?.Trim() : null;
 
                     if (!string.IsNullOrEmpty(artist) && !string.IsNullOrEmpty(title))
                         NowPlaying.SetTrack(artist, title, album);
@@ -144,9 +158,9 @@ public class NowPlayingController : ControllerBase
             // Generic fallback: { "artist": "...", "title": "...", "album": "...", "event": "play|stop" }
             {
                 var evt = root.TryGetProperty("event", out var e) ? e.GetString() : "play";
-                var title = root.TryGetProperty("title", out var t) ? t.GetString() : null;
-                var artist = root.TryGetProperty("artist", out var a) ? a.GetString() : null;
-                var album = root.TryGetProperty("album", out var alb) ? alb.GetString() : null;
+                var title = root.TryGetProperty("title", out var t) ? t.GetString()?.Trim() : null;
+                var artist = root.TryGetProperty("artist", out var a) ? a.GetString()?.Trim() : null;
+                var album = root.TryGetProperty("album", out var alb) ? alb.GetString()?.Trim() : null;
 
                 if (evt is "stop" or "pause")
                 {

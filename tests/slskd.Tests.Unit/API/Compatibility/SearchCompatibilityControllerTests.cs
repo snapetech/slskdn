@@ -83,4 +83,28 @@ public class SearchCompatibilityControllerTests
                 It.IsAny<List<string>>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task Search_WhenSearchServiceThrows_DoesNotLeakExceptionMessage()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = new SearchCompatibilityController(
+            searchService.Object,
+            NullLogger<SearchCompatibilityController>.Instance);
+
+        var result = await controller.Search(new SearchRequest("hello", null, 5), CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+    }
 }

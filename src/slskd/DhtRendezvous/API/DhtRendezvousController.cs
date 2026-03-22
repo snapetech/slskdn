@@ -243,7 +243,10 @@ public class DhtRendezvousController : ControllerBase
     [HttpPost("overlay/blocklist/ip")]
     public ActionResult BlockIp([FromBody] BlockIpRequest request)
     {
-        if (!System.Net.IPAddress.TryParse(request.Ip, out var ip))
+        var ipText = request.Ip?.Trim() ?? string.Empty;
+        var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+
+        if (!System.Net.IPAddress.TryParse(ipText, out var ip))
         {
             return BadRequest(new { error = "Invalid IP address" });
         }
@@ -252,9 +255,9 @@ public class DhtRendezvousController : ControllerBase
             ? TimeSpan.FromMinutes(request.DurationMinutes.Value)
             : (TimeSpan?)null;
 
-        _blocklist.BlockIp(ip, request.Reason ?? "Manual block", duration, request.Permanent);
+        _blocklist.BlockIp(ip, reason ?? "Manual block", duration, request.Permanent);
 
-        return Ok(new { message = $"Blocked IP {request.Ip}" });
+        return Ok(new { message = $"Blocked IP {ipText}" });
     }
 
     /// <summary>
@@ -263,7 +266,10 @@ public class DhtRendezvousController : ControllerBase
     [HttpPost("overlay/blocklist/username")]
     public ActionResult BlockUsername([FromBody] BlockUsernameRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username))
+        var username = request.Username?.Trim() ?? string.Empty;
+        var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+
+        if (string.IsNullOrWhiteSpace(username))
         {
             return BadRequest(new { error = "Username required" });
         }
@@ -272,9 +278,9 @@ public class DhtRendezvousController : ControllerBase
             ? TimeSpan.FromMinutes(request.DurationMinutes.Value)
             : (TimeSpan?)null;
 
-        _blocklist.BlockUsername(request.Username, request.Reason ?? "Manual block", duration, request.Permanent);
+        _blocklist.BlockUsername(username, reason ?? "Manual block", duration, request.Permanent);
 
-        return Ok(new { message = $"Blocked username {request.Username}" });
+        return Ok(new { message = $"Blocked username {username}" });
     }
 
     /// <summary>
@@ -283,6 +289,13 @@ public class DhtRendezvousController : ControllerBase
     [HttpDelete("overlay/blocklist/{type}/{target}")]
     public ActionResult Unblock(string type, string target)
     {
+        type = type?.Trim() ?? string.Empty;
+        target = target?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(target))
+        {
+            return BadRequest(new { error = "Type and target are required" });
+        }
+
         bool removed;
 
         if (type.Equals("ip", StringComparison.OrdinalIgnoreCase))

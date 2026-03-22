@@ -89,8 +89,8 @@ public class BridgeAdminController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get bridge dashboard: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Failed to get bridge dashboard");
+            return StatusCode(500, new { error = "Failed to get bridge dashboard" });
         }
     }
 
@@ -110,8 +110,8 @@ public class BridgeAdminController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get bridge clients: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Failed to get bridge clients");
+            return StatusCode(500, new { error = "Failed to get bridge clients" });
         }
     }
 
@@ -131,8 +131,8 @@ public class BridgeAdminController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get bridge stats: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Failed to get bridge stats");
+            return StatusCode(500, new { error = "Failed to get bridge stats" });
         }
     }
 }

@@ -72,7 +72,7 @@ public class UsersCompatibilityController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to browse user {Username}", username);
-            return StatusCode(500, new { error = "Failed to browse user", username, details = ex.Message });
+            return StatusCode(500, new { error = "Failed to browse user", username });
         }
     }
 }

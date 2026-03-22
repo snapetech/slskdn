@@ -57,8 +57,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge search failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge search failed");
+            return StatusCode(500, new { error = "Bridge search failed" });
         }
     }
 
@@ -97,8 +97,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge download failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge download failed");
+            return StatusCode(500, new { error = "Bridge download failed" });
         }
     }
 
@@ -118,8 +118,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge get rooms failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge get rooms failed");
+            return StatusCode(500, new { error = "Bridge get rooms failed" });
         }
     }
 
@@ -141,8 +141,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge get status failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge get status failed");
+            return StatusCode(500, new { error = "Bridge get status failed" });
         }
     }
 
@@ -162,8 +162,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge start failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge start failed");
+            return StatusCode(500, new { error = "Bridge start failed" });
         }
     }
 
@@ -183,8 +183,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge stop failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge stop failed");
+            return StatusCode(500, new { error = "Bridge stop failed" });
         }
     }
 
@@ -216,8 +216,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge transfer progress failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge transfer progress failed");
+            return StatusCode(500, new { error = "Bridge transfer progress failed" });
         }
     }
 }
