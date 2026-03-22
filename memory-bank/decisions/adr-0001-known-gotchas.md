@@ -189,6 +189,28 @@ await podPublisher.PublishPodAsync(pod, CancellationToken.None);
 
 **Why This Keeps Happening**: detached work is easy to reason about only in hosted services, but the same rule applies to user-triggered or helper-managed background loops. If the operation should continue after the initiating call returns, it needs a service-owned CTS and an explicit stop path, not a linked copy of the caller token.
 
+### 0xB4. Result DTOs Returned Directly By Controllers Must Not Carry Raw Exception Text
+
+**The Bug**: some PodCore services already returned typed result DTOs instead of throwing, but they still stuffed `ex.Message` into those DTOs. Because the controllers return those results directly, internal exception text leaked straight into otherwise “successful” `200` responses.
+
+**Files Affected**:
+- `src/slskd/PodCore/ContentLinkService.cs`
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+
+**Wrong**:
+```csharp
+return new ContentValidationResult(false, contentId, $"Validation error: {ex.Message}");
+return new PodBackfillResult(false, podId, channelsRequested, totalMessagesReceived, stopwatch.Elapsed, ex.Message);
+```
+
+**Correct**:
+```csharp
+return new ContentValidationResult(false, contentId, "Validation failed");
+return new PodBackfillResult(false, podId, channelsRequested, totalMessagesReceived, stopwatch.Elapsed, "Backfill sync failed");
+```
+
+**Why This Keeps Happening**: once code moves from exceptions to result records, it feels “safe” to preserve the detailed error string inside the DTO. But if that DTO is part of a controller response contract, it is just another public API body. Log the detailed exception privately and keep the result payload stable.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
