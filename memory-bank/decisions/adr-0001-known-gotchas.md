@@ -11128,3 +11128,58 @@ return BadRequest(new { error = "Failed to sync with peer" });
 ```
 
 **Why This Keeps Happening**: helper methods and result DTOs feel “more official” than exception text, so they slip past leak reviews. They are still internal diagnostics. If the string comes from validation infrastructure or a service result object, log it and translate it before returning from the controller.
+
+### 0k69. Search And Download Response Envelopes Must Not Carry Backend Error Fields Through To Clients
+
+**The Bug**: some controller paths sanitize thrown exceptions but still leak backend failure details by copying service error fields into `ProblemDetails.Detail` or JSON `error` members on otherwise structured responses. That still exposes mesh fetch errors and multi-source download internals to callers.
+
+**Files Affected**:
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+
+**Wrong**:
+```csharp
+return StatusCode(502, new ProblemDetails
+{
+    Type = "pod_fetch_failed",
+    Title = "Pod content fetch failed",
+    Detail = fetchResult.Error ?? "Failed to fetch content from pod peer"
+});
+```
+
+```csharp
+return Ok(new
+{
+    success = downloadResult.Success,
+    error = downloadResult.Error,
+});
+```
+
+**Correct**:
+```csharp
+_logger.LogWarning("[SearchActions] Failed to fetch pod content {ContentId} from peer {PeerId}: {Error}",
+    contentId,
+    targetPeerId,
+    fetchResult.Error ?? "Unknown error");
+return StatusCode(502, new ProblemDetails
+{
+    Type = "pod_fetch_failed",
+    Title = "Pod content fetch failed",
+    Detail = "Failed to fetch content from pod peer"
+});
+```
+
+```csharp
+if (!downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.Error))
+{
+    Log.Warning("Swarm download failed for {Filename}: {Error}", request.Filename, downloadResult.Error);
+}
+
+return Ok(new
+{
+    success = downloadResult.Success,
+    error = downloadResult.Success ? null : "Swarm download failed",
+});
+```
+
+**Why This Keeps Happening**: once a response is already wrapped in a public envelope, it is easy to assume any embedded `error` member is safe too. It is not. Treat every nested `Detail` or `error` field as a separate API boundary and translate backend strings there as well.
