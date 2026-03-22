@@ -170,6 +170,40 @@ await _soulseekClient.DownloadAsync(...);
 
 **Why This Keeps Happening**: Helper methods around transfer flows are easy to stub during initial feature wiring because there is already a weaker fallback path. That fallback then hides the fact that the primary mechanism never worked. If the repo already has browse/download primitives for the same client, wire them before accepting a fallback-only implementation.
 
+### 0xF. Shadow-Index Descriptor Sources Must Materialize Variant Hints, Not Just Echo The Content ID
+
+**The Bug**: The shadow-index descriptor source successfully queried canonical variant hints, then built a descriptor with an empty hash list and almost no other information. That made the descriptor look present while discarding the actual codec, size, and hash-prefix evidence already returned by the shadow index.
+
+**Files Affected**:
+- `src/slskd/MediaCore/ShadowIndexDescriptorSource.cs`
+
+**Wrong**:
+```csharp
+return new ContentDescriptor
+{
+    ContentId = contentId,
+    Hashes = new List<ContentHash>(),
+    Confidence = 0.8
+};
+```
+
+**Correct**:
+```csharp
+var hashes = variants
+    .Select(variant => new ContentHash("sha256-prefix16", ...))
+    .ToList();
+return new ContentDescriptor
+{
+    ContentId = contentId,
+    Hashes = hashes,
+    SizeBytes = bestVariant.SizeBytes,
+    Codec = bestVariant.Codec,
+    Confidence = confidence,
+};
+```
+
+**Why This Keeps Happening**: “Best-effort” sources often get wired as minimal stubs first, and once they return a non-null descriptor, it is easy to miss that they are still throwing away most of their evidence. If a lookup already resolved structured hints, the descriptor builder should carry that evidence forward instead of collapsing it into an almost-empty shell.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
