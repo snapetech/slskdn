@@ -20,6 +20,22 @@
 ### Remaining
 - Continue the broader bughunt around detached background work and request/event paths that still lack explicit observers or clean shutdown semantics.
 
+## 2026-03-22 16:26 - LibraryHealth and content-verification failure-contract cleanup
+
+### Completed
+- Documented a new gotcha for persisted/background scan status records and verification DTOs that copied raw `ex.Message` text into observable runtime state.
+- `LibraryHealthService` now returns stable sanitized scan failure text (`Library health scan failed`) and no longer stores raw file-read/file-scan exception text in emitted `CorruptedFile` issue reasons.
+- `ContentVerificationService` no longer returns raw transfer exception text as failed-source reasons; verification failures now use a stable `Verification failed` contract.
+- Added focused regressions in:
+  - `LibraryHealthServiceTests`
+  - `ContentVerificationServiceTests`
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue through the next helper/runtime result cluster where long-lived state records or service DTOs still surface internal exception text.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

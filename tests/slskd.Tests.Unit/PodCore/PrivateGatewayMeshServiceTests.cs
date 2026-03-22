@@ -9,6 +9,7 @@ using slskd.Mesh.ServiceFabric;
 using slskd.Mesh.ServiceFabric.Services;
 using slskd.PodCore;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -18,6 +19,14 @@ namespace slskd.Tests.Unit.PodCore;
 
 public class PrivateGatewayMeshServiceTests
 {
+    private sealed class ThrowingTunnelConnectivity : ITunnelConnectivity
+    {
+        public Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("sensitive detail");
+        }
+    }
+
     private readonly Mock<ILogger<PrivateGatewayMeshService>> _loggerMock;
     private readonly Mock<IPodService> _podServiceMock;
     private readonly PrivateGatewayMeshService _service;
@@ -207,6 +216,59 @@ public class PrivateGatewayMeshServiceTests
 
         Assert.Equal(ServiceStatusCodes.Forbidden, result.StatusCode);
         Assert.Contains("Destination not allowed", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task HandleCallAsync_OpenTunnel_WhenConnectivityThrows_ReturnsSanitizedError()
+    {
+        var podId = "pod:00000000000000000000000000000040";
+        var pod = new Pod
+        {
+            PodId = podId,
+            Name = "VPN Pod",
+            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
+            PrivateServicePolicy = new PodPrivateServicePolicy
+            {
+                Enabled = true,
+                GatewayPeerId = "peer:mesh:self",
+                AllowPrivateRanges = true,
+                AllowedDestinations = new List<AllowedDestination>
+                {
+                    new AllowedDestination { HostPattern = "192.168.1.100", Port = 80, Protocol = "tcp" }
+                }
+            }
+        };
+
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        var dnsSecurity = new DnsSecurityService(Mock.Of<ILogger<DnsSecurityService>>());
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(IPodService))).Returns(_podServiceMock.Object);
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(DnsSecurityService))).Returns(dnsSecurity);
+
+        var service = new PrivateGatewayMeshService(
+            _loggerMock.Object,
+            _podServiceMock.Object,
+            serviceProviderMock.Object,
+            tunnelConnectivity: new ThrowingTunnelConnectivity(),
+            dnsSecurity: dnsSecurity);
+
+        var request = Req(podId, "192.168.1.100", 80);
+        var call = new ServiceCall
+        {
+            CorrelationId = "test-connect-throw",
+            Method = "OpenTunnel",
+            Payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))
+        };
+        var context = new MeshServiceContext { RemotePeerId = "peer-member" };
+
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock.Setup(x => x.GetMembersAsync(podId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember> { new PodMember { PeerId = "peer-member", Role = "member" } });
+
+        var result = await service.HandleCallAsync(call, context);
+
+        Assert.Equal(ServiceStatusCodes.ServiceUnavailable, result.StatusCode);
+        Assert.Equal("Failed to connect to destination", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
     }
 
     [Fact]

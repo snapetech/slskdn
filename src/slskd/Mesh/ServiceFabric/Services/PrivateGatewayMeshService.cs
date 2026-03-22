@@ -485,7 +485,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Failed to connect to destination: {ex.Message}"
+                ErrorMessage = "Failed to connect to destination"
             };
         }
     }
@@ -569,7 +569,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Tunnel error: {ex.Message}"
+                ErrorMessage = "Tunnel error"
             };
         }
     }
@@ -675,7 +675,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Tunnel error: {ex.Message}"
+                ErrorMessage = "Tunnel error"
             };
         }
     }

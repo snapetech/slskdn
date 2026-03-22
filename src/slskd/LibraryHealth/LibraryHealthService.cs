@@ -216,7 +216,7 @@ namespace slskd.LibraryHealth
             catch (Exception ex)
             {
                 scan.Status = ScanStatus.Failed;
-                scan.ErrorMessage = ex.Message;
+                scan.ErrorMessage = "Library health scan failed";
                 scan.CompletedAt = DateTimeOffset.UtcNow;
                 await hashDb.UpsertLibraryHealthScanAsync(scan, ct).ConfigureAwait(false);
                 activeScans.TryRemove(scanId, out _);
@@ -291,7 +291,7 @@ namespace slskd.LibraryHealth
                         Severity = LibraryIssueSeverity.Critical,
                         FilePath = filePath,
                         MusicBrainzRecordingId = recordingId,
-                        Reason = $"File cannot be read: {ex.Message}",
+                        Reason = "File cannot be read",
                         CanAutoFix = true,
                         SuggestedAction = "Re-download from Soulseek or mesh overlay",
                         Status = LibraryIssueStatus.Detected,
@@ -381,7 +381,7 @@ namespace slskd.LibraryHealth
                     Type = LibraryIssueType.CorruptedFile,
                     Severity = LibraryIssueSeverity.Critical,
                     FilePath = filePath,
-                    Reason = $"File scan failed: {ex.Message}",
+                    Reason = "File scan failed",
                     CanAutoFix = true,
                     SuggestedAction = "Re-download from Soulseek or mesh overlay",
                     Status = LibraryIssueStatus.Detected,

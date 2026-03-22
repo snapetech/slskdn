@@ -33,6 +33,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `MeshTransferService` no longer copies raw exception text into transfer status
   - Added focused regression coverage for those sanitized helper/result contracts
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Fixed another runtime/status sanitization cluster:
+    - `LibraryHealthService` no longer persists raw exception text into scan state or emitted corrupted-file issue reasons
+    - `ContentVerificationService` no longer returns raw verification exception text in failed-source results
+  - Added focused regression coverage for those sanitized scan/verification failure contracts
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Fixed a DHT/mesh security-helper result cluster:
     - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
     - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results
