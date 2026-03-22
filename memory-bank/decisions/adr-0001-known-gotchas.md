@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xBC. Background Protocol And Health Surfaces Need Sanitized Runtime Text Too
+
+**The Bug**: long-lived protocol and health helpers such as bridge proxy sessions, mesh health checks, and circuit-hop status were still embedding raw exception text into protocol error payloads or status fields. That leaked runtime/transport detail through background protocol surfaces even though higher-level APIs had already been sanitized.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
+- `src/slskd/Mesh/MeshHealthCheck.cs`
+- `src/slskd/Mesh/MeshCircuitBuilder.cs`
+
+**Wrong**:
+```csharp
+await SendErrorResponseAsync(stream, $"Internal error: {ex.Message}", ct);
+var errorMsg = Encoding.UTF8.GetBytes(ex.Message);
+hop.ErrorMessage = ex.Message;
+```
+
+**Correct**:
+```csharp
+await SendErrorResponseAsync(stream, "Internal error", ct);
+var errorMsg = Encoding.UTF8.GetBytes("Download request failed");
+hop.ErrorMessage = "Hop establishment failed";
+```
+
+**Why This Keeps Happening**: protocol/background code often bypasses controller-style helpers, so it is easy to treat wire payloads and health/status fields like debug output. They are still observable contracts. If a background/protocol path catches and converts an exception into a status or response, return stable sanitized text and keep the real exception only in logs.
+
 ### 0xBB. Mesh And Swarm Status DTOs Must Not Copy Raw Exception Text Into Runtime Error Fields
 
 **The Bug**: mesh-fetch, mesh-sync, and swarm orchestration code already converted exceptions into status/result objects, but some of those runtime DTOs still stored `ex.Message` directly. That leaked transport and filesystem details through streaming, mesh, and swarm status surfaces even after controller hardening.
