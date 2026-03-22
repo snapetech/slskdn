@@ -8520,6 +8520,45 @@ results = filtered
 
 **Why This Keeps Happening**: Shared DHT indexes are eventually consistent and can accumulate duplicates during concurrent refreshes or imperfect unregister paths. Read-side discovery code should assume index membership is noisy and normalize it before producing user-facing lists.
 
+### 0k42. Legacy Transport Endpoint Parsers Must Handle Bracketed IPv6, Not Just `scheme://host:port`
+
+**The Bug**: `TransportSelector.ParseLegacyEndpoint(...)` parsed legacy `descriptor.Endpoints` values by stripping `quic://` and splitting on `:`. Bracketed IPv6 advertisements like `quic://[2001:db8::42]:443` therefore never became usable `TransportEndpoint` entries, even though the peer descriptor was otherwise valid.
+
+**Files Affected**:
+- `src/slskd/Mesh/Transport/TransportSelector.cs`
+
+**Wrong**:
+```csharp
+var parts = endpointStr.Replace("quic://", string.Empty).Split(':');
+if (parts.Length == 2 && int.TryParse(parts[1], out var port))
+{
+    return new TransportEndpoint
+    {
+        TransportType = TransportType.DirectQuic,
+        Host = parts[0],
+        Port = port,
+    };
+}
+```
+
+**Correct**:
+```csharp
+var normalized = endpointStr.Replace("quic://", string.Empty, StringComparison.OrdinalIgnoreCase);
+if (!TryParseLegacyHostAndPort(normalized, out var host, out var port))
+{
+    return null;
+}
+
+return new TransportEndpoint
+{
+    TransportType = TransportType.DirectQuic,
+    Host = host,
+    Port = port,
+};
+```
+
+**Why This Keeps Happening**: The codebase has more than one transport-metadata ingestion path: publisher-side formatting, peer-resolution parsing, and legacy descriptor fallback parsing. IPv6 support often gets fixed in one path while another copy still assumes `Split(':')` is safe. Any endpoint parser that accepts URI-like metadata needs explicit bracketed IPv6 handling and should be reviewed alongside the other parser copies.
+
 ---
 
 *Last updated: 2026-03-22*
