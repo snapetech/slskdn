@@ -53,7 +53,7 @@ namespace slskd
                 await client.WriteDumpAsync(DumpType.Full, path, logDumpGeneration: false, cancellationToken).ConfigureAwait(false);
                 return (true, null, path);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (false, "Failed to create dump", null);
             }

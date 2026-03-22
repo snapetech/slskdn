@@ -119,7 +119,8 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
         }
         catch (Exception ex)
         {
-            return (false, $"Failed to serialize descriptor: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to serialize descriptor {ServiceId}", descriptor.ServiceId);
+            return (false, "Failed to serialize descriptor");
         }
 
         // 6. Validate signature (if present) - CRITICAL SECURITY REQUIREMENT

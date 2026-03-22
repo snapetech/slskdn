@@ -58,6 +58,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `HttpLlmModerationProvider` no longer exposes raw HTTP exception text in moderation responses or provider health
     - `SongIdService` no longer stores raw exception text in run summaries/evidence for analysis and auxiliary pipeline skips
   - Added focused coverage in transport tests, moderation tests, and `SongIdServiceTests`, and documented the recurring pattern in `adr-0001-known-gotchas.md`
+  - Fixed another infrastructure boundary cluster:
+    - `ValidateCsrfForCookiesOnlyAttribute` no longer copies raw exception text into `ProblemDetails.Detail`
+    - `MeshServiceDescriptorValidator` no longer returns raw serializer exception text in its validation tuple
+  - Folded in the adjacent dirty cleanup already in the tree for `Dumper`, `LibraryHealthService`, and `SongIdService`
+  - Documented the recurring pattern in `adr-0001-known-gotchas.md`
   - Fixed a DHT/mesh security-helper result cluster:
     - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
     - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results

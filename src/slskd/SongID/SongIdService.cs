@@ -425,7 +425,7 @@ public sealed class SongIdService : ISongIdService
                 analysis.Evidence.Add($"Chromaprint extracted for local file ({fingerprint.Length} chars).");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             analysis.Evidence.Add("Chromaprint extraction failed for local file.");
         }
@@ -511,7 +511,7 @@ public sealed class SongIdService : ISongIdService
 
             return analysis;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             analysis.Query = source;
             analysis.Evidence.Add("yt-dlp unavailable or failed; falling back to raw URL query.");
@@ -581,7 +581,7 @@ public sealed class SongIdService : ISongIdService
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     analysis.Evidence.Add("Spotify YouTube candidate search skipped.");
                 }
@@ -589,7 +589,7 @@ public sealed class SongIdService : ISongIdService
 
             return analysis;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             analysis.Query = source;
             analysis.Evidence.Add("Spotify metadata fetch failed; falling back to raw source query.");
@@ -1746,7 +1746,7 @@ public sealed class SongIdService : ISongIdService
                 cancellationToken).ConfigureAwait(false);
             videoPath = ResolveDownloadedFile(videoDir, "source-video");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             run.Evidence.Add("Video capture skipped for OCR.");
         }
@@ -1773,7 +1773,7 @@ public sealed class SongIdService : ISongIdService
                 cancellationToken).ConfigureAwait(false);
             commentsPath = Directory.EnumerateFiles(commentsDir, "*.info.json").FirstOrDefault();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             run.Evidence.Add("Comment harvesting skipped.");
         }
@@ -1883,7 +1883,7 @@ public sealed class SongIdService : ISongIdService
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     run.Evidence.Add($"Clip fingerprint lookup failed for {finding.ClipId}.");
                 }
@@ -1896,7 +1896,7 @@ public sealed class SongIdService : ISongIdService
                         finding.SongRec = ParseSongRecFinding(songrec.StandardOutput);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     run.Evidence.Add($"SongRec lookup failed for {finding.ClipId}.");
                 }
@@ -1905,7 +1905,7 @@ public sealed class SongIdService : ISongIdService
                 {
                     finding.AiHeuristics = await ScoreAiAudioArtifactsAsync(clipPath, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     run.Evidence.Add($"AI artifact heuristic skipped for {finding.ClipId}.");
                 }
@@ -1917,7 +1917,7 @@ public sealed class SongIdService : ISongIdService
                         finding.Panako = await QueryPanakoClipAsync(run, panakoJarPath, clipPath, cancellationToken).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     run.Evidence.Add($"Panako lookup failed for {finding.ClipId}.");
                 }
@@ -1929,7 +1929,7 @@ public sealed class SongIdService : ISongIdService
                         finding.Audfprint = await QueryAudfprintAsync(audfprintScriptPath, audfprintDatabasePath, clipPath, cancellationToken).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     run.Evidence.Add($"Audfprint lookup failed for {finding.ClipId}.");
                 }
@@ -1997,7 +1997,7 @@ public sealed class SongIdService : ISongIdService
                 await AddSearchCandidatesAsync(run, phrase, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             run.Evidence.Add("Transcript extraction skipped.");
         }
@@ -2041,7 +2041,7 @@ public sealed class SongIdService : ISongIdService
                     });
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 run.Evidence.Add($"OCR skipped at {timestamp}s.");
             }
@@ -3184,7 +3184,7 @@ public sealed class SongIdService : ISongIdService
                     Heuristics = heuristics,
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 run.Evidence.Add($"Perturbation probe {probe.Id} skipped.");
             }

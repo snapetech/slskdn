@@ -154,7 +154,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
                 {
                     Status = 400,
                     Title = "CSRF validation error",
-                    Detail = ex.Message
+                    Detail = "CSRF validation could not be completed. If you're using the web UI, refresh the page. If you're using the API, use JWT or API key authentication instead of cookies."
                 };
                 var result = new BadRequestObjectResult(problem);
                 result.ContentTypes.Clear();

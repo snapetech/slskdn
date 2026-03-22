@@ -102,6 +102,23 @@
 ### Remaining
 - Continue into the next runtime cluster where internal exception text may still leak through transport statistics, moderation clients, or other evidence/status records.
 
+## 2026-03-22 17:31 - Filter and validator response-contract sanitization batch
+
+### Completed
+- Documented a new gotcha for infrastructure helpers that still populate API-visible error text.
+- `ValidateCsrfForCookiesOnlyAttribute` now returns a stable CSRF validation detail instead of copying raw exception text into `ProblemDetails`.
+- `MeshServiceDescriptorValidator` now logs serialization failures privately and returns a stable `Failed to serialize descriptor` validation result.
+- Folded in the adjacent dirty cleanup already in the tree for:
+  - `Dumper`
+  - `LibraryHealthService`
+  - `SongIdService`
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue through any remaining middleware/filter/helper surfaces that still expose raw exception text through observable response or validation fields.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

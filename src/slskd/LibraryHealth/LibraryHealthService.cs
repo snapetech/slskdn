@@ -281,7 +281,7 @@ namespace slskd.LibraryHealth
                     variant.TranscodeSuspect = isSuspect;
                     variant.TranscodeReason = reason;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Issue: Corrupted file
                     await EmitIssueAsync(new LibraryIssue
