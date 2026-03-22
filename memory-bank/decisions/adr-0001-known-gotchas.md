@@ -293,6 +293,46 @@ if (string.IsNullOrWhiteSpace(filename))
 
 **Why This Keeps Happening**: Readback/proxy layers often assume execution state always has a stable final path. In practice, proxies can observe transfers before that path is useful. Legacy compatibility responses need a guaranteed non-empty presentation value even if it is only a stable transfer identifier fallback.
 
+### 0x14. Bridge Downloads Must Reuse File Metadata Learned During Search Instead Of Falling Back To Zero-Size Transfers
+
+**The Bug**: Bridge search already synthesized `BridgeFile` entries with filename and size, but `DownloadAsync(...)` threw that away and fell back to `ExtractSizeFromFilename(...)`, which returned `null`. That degraded mesh transfer startup into zero-size downloads even when the size had just been discovered.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+
+**Wrong**:
+```csharp
+var fileSize = ExtractSizeFromFilename(filename) ?? 0;
+```
+
+**Correct**:
+```csharp
+var cachedFile = GetCachedBridgeFileMetadata(username, filename);
+var fileSize = cachedFile?.SizeBytes ?? ExtractSizeFromFilename(filename) ?? 0;
+```
+
+**Why This Keeps Happening**: Search and download flows often get implemented separately, and the download path is forced to reconstruct metadata it already had moments earlier. If the bridge search step already resolved filename/size/canonical hints, cache and reuse them for the follow-up download request instead of re-deriving from lossy heuristics.
+
+### 0x15. Descriptor Query Filters Must Use The Same Content-ID Normalization Rules As The Registry
+
+**The Bug**: `DescriptorRetriever.QueryByDomainAsync(...)` filtered cached descriptors using raw `parsed.Domain` and `parsed.Type`, while the registry and other MediaCore paths needed normalized semantics such as treating `content:mb:recording:*` as audio tracks. Query results therefore disagreed with registry lookups.
+
+**Files Affected**:
+- `src/slskd/MediaCore/DescriptorRetriever.cs`
+
+**Wrong**:
+```csharp
+parsed.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase)
+```
+
+**Correct**:
+```csharp
+ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type)
+    .Equals(domain, StringComparison.OrdinalIgnoreCase)
+```
+
+**Why This Keeps Happening**: Once one subsystem adds normalization for mixed ID schemes, every other filter path has to use the same rule set. Query helpers are especially easy to miss because they often start as “cache-only demos” and later become real API behavior.
+
 ### 0x7. Detached Background Work Must Not Use Short-Lived Request Or Startup Tokens As Task.Run Scheduler Tokens
 
 **The Bug**: Several request handlers and hosted services intentionally kicked work off in the background, but still passed the request/startup cancellation token as the `Task.Run(..., token)` scheduler token. If that token was already canceled, the work never queued at all even though the outer path still reported success or startup completion.
