@@ -96,7 +96,7 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "WebSocket transport unavailable";
             }
 
             _logger.LogWarning(ex, "WebSocket transport not available at {Url}", _options.ServerUrl);
@@ -242,7 +242,7 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "WebSocket tunnel connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish WebSocket tunnel to {Host}:{Port}", host, port);

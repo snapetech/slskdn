@@ -100,7 +100,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "Tor SOCKS proxy unavailable";
             }
 
             _logger.LogWarning(ex, "Tor SOCKS proxy not available at {Address}", _options.SocksAddress);
@@ -254,7 +254,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
 
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "Tor connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish Tor connection to {Host}:{Port} via circuit {CircuitKey}", host, port, circuitKey);

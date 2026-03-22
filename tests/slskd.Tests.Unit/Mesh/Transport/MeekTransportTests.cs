@@ -243,5 +243,16 @@ public class MeekTransportTests : IDisposable
         Assert.NotNull(decrypted);
         Assert.Equal(originalPayload, decrypted); // Should round-trip correctly
     }
-}
 
+    [Fact]
+    public async Task ConnectAsync_WhenConnectionFails_StoresSanitizedStatusError()
+    {
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+
+        var status = transport.GetStatus();
+        Assert.Equal("Meek connection failed", status.LastError);
+        Assert.DoesNotContain("Name or service", status.LastError ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+}

@@ -263,10 +263,10 @@ public sealed class SongIdService : ISongIdService
             _logger.LogWarning(ex, "SongID analysis failed for source {Source}", run.Source);
             run.Status = "failed";
             run.CompletedAt = DateTimeOffset.UtcNow;
-            run.Summary = ex.Message;
+            run.Summary = "SongID analysis failed.";
             run.CurrentStage = "failed";
             run.QueuePosition = null;
-            run.Evidence.Add($"Analysis failed: {ex.Message}");
+            run.Evidence.Add("Analysis failed.");
             await PublishRunAsync(run).ConfigureAwait(false);
         }
     }
@@ -427,7 +427,7 @@ public sealed class SongIdService : ISongIdService
         }
         catch (Exception ex)
         {
-            analysis.Evidence.Add($"Chromaprint extraction failed for local file: {ex.Message}");
+            analysis.Evidence.Add("Chromaprint extraction failed for local file.");
         }
 
         var metadata = await _metadataFacade.GetByFileAsync(source, cancellationToken).ConfigureAwait(false);
@@ -514,7 +514,7 @@ public sealed class SongIdService : ISongIdService
         catch (Exception ex)
         {
             analysis.Query = source;
-            analysis.Evidence.Add($"yt-dlp unavailable or failed; falling back to raw URL query. {ex.Message}");
+            analysis.Evidence.Add("yt-dlp unavailable or failed; falling back to raw URL query.");
             return analysis;
         }
     }
@@ -583,7 +583,7 @@ public sealed class SongIdService : ISongIdService
                 }
                 catch (Exception ex)
                 {
-                    analysis.Evidence.Add($"Spotify YouTube candidate search skipped: {ex.Message}");
+                    analysis.Evidence.Add("Spotify YouTube candidate search skipped.");
                 }
             }
 
@@ -592,7 +592,7 @@ public sealed class SongIdService : ISongIdService
         catch (Exception ex)
         {
             analysis.Query = source;
-            analysis.Evidence.Add($"Spotify metadata fetch failed; falling back to raw source query. {ex.Message}");
+            analysis.Evidence.Add("Spotify metadata fetch failed; falling back to raw source query.");
             return analysis;
         }
     }
@@ -1748,7 +1748,7 @@ public sealed class SongIdService : ISongIdService
         }
         catch (Exception ex)
         {
-            run.Evidence.Add($"Video capture skipped for OCR: {ex.Message}");
+            run.Evidence.Add("Video capture skipped for OCR.");
         }
 
         string? commentsPath = null;
@@ -1775,7 +1775,7 @@ public sealed class SongIdService : ISongIdService
         }
         catch (Exception ex)
         {
-            run.Evidence.Add($"Comment harvesting skipped: {ex.Message}");
+            run.Evidence.Add("Comment harvesting skipped.");
         }
 
         return new PreparedAnalysisAssets
@@ -1885,7 +1885,7 @@ public sealed class SongIdService : ISongIdService
                 }
                 catch (Exception ex)
                 {
-                    run.Evidence.Add($"Clip fingerprint lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"Clip fingerprint lookup failed for {finding.ClipId}.");
                 }
 
                 try
@@ -1898,7 +1898,7 @@ public sealed class SongIdService : ISongIdService
                 }
                 catch (Exception ex)
                 {
-                    run.Evidence.Add($"SongRec lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"SongRec lookup failed for {finding.ClipId}.");
                 }
 
                 try
@@ -1907,7 +1907,7 @@ public sealed class SongIdService : ISongIdService
                 }
                 catch (Exception ex)
                 {
-                    run.Evidence.Add($"AI artifact heuristic skipped for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"AI artifact heuristic skipped for {finding.ClipId}.");
                 }
 
                 try
@@ -1919,7 +1919,7 @@ public sealed class SongIdService : ISongIdService
                 }
                 catch (Exception ex)
                 {
-                    run.Evidence.Add($"Panako lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"Panako lookup failed for {finding.ClipId}.");
                 }
 
                 try
@@ -1931,7 +1931,7 @@ public sealed class SongIdService : ISongIdService
                 }
                 catch (Exception ex)
                 {
-                    run.Evidence.Add($"Audfprint lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"Audfprint lookup failed for {finding.ClipId}.");
                 }
 
                 run.Clips.Add(finding);
@@ -1999,7 +1999,7 @@ public sealed class SongIdService : ISongIdService
         }
         catch (Exception ex)
         {
-            run.Evidence.Add($"Transcript extraction skipped: {ex.Message}");
+            run.Evidence.Add("Transcript extraction skipped.");
         }
     }
 
@@ -2043,7 +2043,7 @@ public sealed class SongIdService : ISongIdService
             }
             catch (Exception ex)
             {
-                run.Evidence.Add($"OCR skipped at {timestamp}s: {ex.Message}");
+                run.Evidence.Add($"OCR skipped at {timestamp}s.");
             }
         }
     }
@@ -3186,7 +3186,7 @@ public sealed class SongIdService : ISongIdService
             }
             catch (Exception ex)
             {
-                run.Evidence.Add($"Perturbation probe {probe.Id} skipped: {ex.Message}");
+                run.Evidence.Add($"Perturbation probe {probe.Id} skipped.");
             }
         }
 

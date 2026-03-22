@@ -333,6 +333,35 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Equal(1, finding.MatchCount);
     }
 
+    [Fact]
+    public async Task AnalyzeLocalFileAsync_WhenFingerprintExtractionThrows_SanitizesEvidence()
+    {
+        var store = new SongIdRunStore();
+        var fingerprintService = new Mock<IFingerprintExtractionService>();
+        fingerprintService
+            .Setup(service => service.ExtractFingerprintAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive local fingerprint detail"));
+
+        var metadataFacade = new Mock<IMetadataFacade>();
+        metadataFacade
+            .Setup(service => service.GetByFileAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MetadataFacadeResult?)null);
+
+        var service = CreateService(store, metadataFacade.Object, fingerprintService.Object);
+        var method = typeof(SongIdService).GetMethod("AnalyzeLocalFileAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        var audioPath = Path.Combine(_tempDir, "sample.flac");
+        await File.WriteAllBytesAsync(audioPath, new byte[] { 0, 1, 2, 3 });
+
+        var task = (Task<SongIdAnalysis>)method!.Invoke(service, new object[] { audioPath, CancellationToken.None })!;
+        var analysis = await task;
+
+        var evidence = Assert.Single(analysis.Evidence.Where(item => item.Contains("Chromaprint extraction failed for local file", StringComparison.Ordinal)));
+        Assert.DoesNotContain("sensitive", evidence, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetFileNameWithoutExtension(audioPath), analysis.Query);
+    }
+
     public void Dispose()
     {
         var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
@@ -344,7 +373,10 @@ public sealed class SongIdServiceTests : IDisposable
         }
     }
 
-    private static SongIdService CreateService(ISongIdRunStore store)
+    private static SongIdService CreateService(
+        ISongIdRunStore store,
+        IMetadataFacade? metadataFacade = null,
+        IFingerprintExtractionService? fingerprintExtractionService = null)
     {
         var hubContext = CreateHubContext();
         var options = new slskd.Options
@@ -357,12 +389,12 @@ public sealed class SongIdServiceTests : IDisposable
 
         return new SongIdService(
             store,
-            Mock.Of<IMetadataFacade>(),
+            metadataFacade ?? Mock.Of<IMetadataFacade>(),
             Mock.Of<IMusicBrainzClient>(),
             Mock.Of<IAcoustIdClient>(),
             Mock.Of<ICanonicalStatsService>(),
             Mock.Of<IArtistReleaseGraphService>(),
-            Mock.Of<IFingerprintExtractionService>(),
+            fingerprintExtractionService ?? Mock.Of<IFingerprintExtractionService>(),
             Mock.Of<IHttpClientFactory>(),
             new TestOptionsMonitor<slskd.Options>(options),
             hubContext,

@@ -82,6 +82,26 @@
 ### Remaining
 - Continue into the next helper/runtime cluster where transport status, moderation clients, or evidence fields still surface raw exception text.
 
+## 2026-03-22 17:16 - Transport, moderation, and SongID diagnostics sanitization batch
+
+### Completed
+- Documented a new gotcha for status/evidence fields that look diagnostic but are still observable runtime contracts.
+- `WebSocketTransport`, `TorSocksTransport`, `I2PTransport`, `MeekTransport`, and `HttpTunnelTransport` now store stable sanitized `LastError` text instead of raw exception messages.
+- `HttpLlmModerationProvider` now returns stable sanitized moderation/health errors instead of echoing HTTP exception text.
+- `SongIdService` now uses stable summary/evidence text when analysis steps or auxiliary probes fail instead of appending raw exception messages.
+- Added focused regressions in:
+  - `WebSocketTransportTests`
+  - `MeekTransportTests`
+  - `HttpTunnelTransportTests`
+  - `LlmModerationTests`
+  - `SongIdServiceTests`
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue into the next runtime cluster where internal exception text may still leak through transport statistics, moderation clients, or other evidence/status records.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

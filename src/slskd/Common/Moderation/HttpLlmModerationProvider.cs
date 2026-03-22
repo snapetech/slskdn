@@ -131,7 +131,7 @@ namespace slskd.Common.Moderation
             {
                 var processingTime = _requestTimer.Elapsed;
                 _lastError = DateTimeOffset.UtcNow;
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "LLM moderation request failed";
 
                 _logger.LogError(ex,
                     "[HttpLlm] Moderation failed | RequestId={RequestId} | Time={TimeMs}ms | Error={Message}",
@@ -146,8 +146,8 @@ namespace slskd.Common.Moderation
                     Severity = LlmModeration.SeverityLevel.Safe,
                     Categories = LlmModeration.ContentCategory.None,
                     Confidence = 0.0,
-                    Reasoning = $"LLM service error: {ex.Message}",
-                    Error = ex.Message,
+                    Reasoning = "LLM service error",
+                    Error = "LLM moderation request failed",
                     ProcessingTime = processingTime,
                     Timestamp = DateTimeOffset.UtcNow
                 };

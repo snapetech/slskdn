@@ -97,7 +97,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "HTTP tunnel transport unavailable";
             }
 
             _logger.LogWarning(ex, "HTTP tunnel transport not available at {Url}", _options.ProxyUrl);
@@ -200,7 +200,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "HTTP tunnel connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish HTTP tunnel to {Host}:{Port}", host, port);

@@ -194,4 +194,16 @@ public class WebSocketTransportTests : IDisposable
         var transport = new WebSocketTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
     }
+
+    [Fact]
+    public async Task ConnectAsync_WhenConnectionFails_StoresSanitizedStatusError()
+    {
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+
+        var status = transport.GetStatus();
+        Assert.Equal("WebSocket tunnel connection failed", status.LastError);
+        Assert.DoesNotContain("Name or service", status.LastError ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

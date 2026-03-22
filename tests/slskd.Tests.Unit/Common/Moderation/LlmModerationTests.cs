@@ -232,7 +232,11 @@ namespace slskd.Tests.Unit.Common.Moderation
             Assert.Equal(LlmModeration.SeverityLevel.Safe, response.Severity);
             Assert.Equal(0.0, response.Confidence);
             Assert.NotNull(response.Error);
-            Assert.Contains("Internal Server Error", response.Error);
+            Assert.Equal("LLM moderation request failed", response.Error);
+            Assert.Equal("LLM service error", response.Reasoning);
+            Assert.DoesNotContain("Internal Server Error", response.Error);
+            var health = await provider.GetHealthStatusAsync();
+            Assert.Equal("LLM moderation request failed", health.LastErrorMessage);
         }
 
         [Fact]
@@ -362,5 +366,4 @@ namespace slskd.Tests.Unit.Common.Moderation
         }
     }
 }
-
 

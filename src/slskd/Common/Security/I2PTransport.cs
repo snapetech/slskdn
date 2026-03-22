@@ -101,7 +101,7 @@ public class I2PTransport : IAnonymityTransport
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "I2P SAM bridge unavailable";
             }
 
             _logger.LogWarning(ex, "I2P SAM bridge not available at {Address}", _options.SamAddress);
@@ -202,7 +202,7 @@ public class I2PTransport : IAnonymityTransport
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "I2P connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish I2P connection to destination {Host}", host);
