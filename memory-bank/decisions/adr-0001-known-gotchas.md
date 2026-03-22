@@ -380,6 +380,40 @@ startInfo.Environment["APP_DIR"] = appDir;
 
 **Why This Keeps Happening**: Several startup path fields are modeled as empty strings, not nulls. `??=` only fixes null, so blank values can leak into filesystem setup and explode before logging/config are fully online. Test harnesses that expect isolated app state must also pass `APP_DIR` explicitly instead of assuming `WorkingDirectory` or the config file location will set it indirectly.
 
+### 0j7. SOCKS/Tunnel Tests Must Use Bounded Timeouts And Deterministic Silent Endpoints, Not "Probably Unused" Ports
+
+**The Bug**: `TorTransport_ConnectionTimeout_HandledGracefully` hung for minutes because it assumed `127.0.0.1:12345` was unused. If something listens on that port but never speaks SOCKS, `TorSocksTransport` had no internal handshake timeout and would wait forever on `ReadAsync`.
+
+**Files Affected**:
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `tests/slskd.Tests.Integration/Security/TorIntegrationTests.cs`
+
+**Wrong**:
+```csharp
+var torOptions = new TorOptions
+{
+    SocksAddress = "127.0.0.1:12345",
+};
+
+await transport.ConnectAsync("example.com", 80);
+```
+
+**Correct**:
+```csharp
+using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+var effectiveToken = linkedCts.Token;
+```
+
+```csharp
+using var silentServer = new SilentTcpServer();
+await silentServer.StartAsync();
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, cts.Token));
+```
+
+**Why This Keeps Happening**: Connection-refused tests are only deterministic if the endpoint state is deterministic. A "random closed port" can become an open but silent endpoint on another machine or CI worker, and transports without a bounded connect/handshake timeout will then hang forever in network reads.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
