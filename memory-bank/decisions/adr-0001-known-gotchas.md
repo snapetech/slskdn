@@ -435,6 +435,60 @@ Assert.True(stored.TotalKeys >= 1);
 
 **Why This Keeps Happening**: Tuple element names are part of the compile-time API surface even though they look lightweight. When cleanup work renames tuple elements for consistency, stale tests won’t fail until the affected project is rebuilt, so always grep the test tree for the old element name after changing a returned tuple signature.
 
+### 0j9. Optional Lazy Service Resolvers Must Not Throw Before Stats Objects Return Their Local Counters
+
+**The Bug**: `MeshStatsCollector.GetStatsAsync()` returned all-zero stats in unit tests even after `RecordMessageSent()` and `RecordMessageReceived()` because optional lazy resolvers for DHT and overlay services threw before the method reached the return statement, and the outer catch replaced the partially collected counters with a default zeroed stats object.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshStatsCollector.cs`
+
+**Wrong**:
+```csharp
+this.dhtClient = new Lazy<Dht.InMemoryDhtClient>(() =>
+    serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as Dht.InMemoryDhtClient
+        ?? throw new InvalidOperationException(...));
+```
+
+**Correct**:
+```csharp
+this.dhtClient = new Lazy<Dht.InMemoryDhtClient?>(() =>
+    serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as Dht.InMemoryDhtClient);
+```
+
+**Why This Keeps Happening**: Diagnostics collectors often depend on optional subsystems. If a lazy resolver throws for an absent optional service, the whole stats call can fall into a broad catch and wipe out independent counters that were already valid. Optional service lookups should return `null` and let the collector degrade gracefully.
+
+### 0j10. Re-entrant Stop/Dispose Paths Must Null Out `CancellationTokenSource` Before Canceling
+
+**The Bug**: `LocalPortForwarder.StopForwardingAsync()` could throw `ObjectDisposedException` because `ForwarderInstance.StopAsync()` called `_cts?.Cancel()` even when a previous stop/dispose path had already disposed that same `CancellationTokenSource`.
+
+**Files Affected**:
+- `src/slskd/Common/Security/LocalPortForwarder.cs`
+
+**Wrong**:
+```csharp
+_cts?.Cancel();
+...
+_cts?.Dispose();
+```
+
+**Correct**:
+```csharp
+var cts = _cts;
+_cts = null;
+
+try
+{
+    cts?.Cancel();
+}
+catch (ObjectDisposedException)
+{
+}
+
+cts?.Dispose();
+```
+
+**Why This Keeps Happening**: Stop and dispose paths often converge on the same field. If the field remains published while cleanup is in progress, later callers can observe a disposed token source and try to cancel it again. Copy the reference locally, clear the field first, and then clean it up once.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
