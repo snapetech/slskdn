@@ -327,6 +327,42 @@ result.Error = string.IsNullOrWhiteSpace(result.Error)
 
 **Why This Keeps Happening**: transfer-style services often treat their result DTOs as operator diagnostics, not public API contracts. But once a controller responds with `Ok(result)`, those `Error` strings are client-visible. Preserve specific stable public states like `Failed to parse FLAC header` when they are intentional, but never copy raw exception text from transfer, filesystem, or probe failures into the DTO.
 
+### 0xB5C. Pod Membership And DHT Result Records Need The Same Sanitization As Pod Verification/Discovery Results
+
+**The Bug**: PodCore still had raw `ex.Message` leaks in membership and DHT publishing services. Their controllers return `MembershipPublishResult`, `MembershipRetrievalResult`, `PodPublishResult`, `PodUnpublishResult`, `PodMetadataResult`, and `PodRefreshResult` directly from `Ok(result)` paths, so DHT/backend exception text escaped through normal PodCore control-plane APIs.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodMembershipService.cs`
+- `src/slskd/PodCore/PodDhtPublisher.cs`
+
+**Wrong**:
+```csharp
+return new MembershipRetrievalResult(
+    Found: false,
+    PodId: podId,
+    PeerId: peerId,
+    SignedRecord: null,
+    RetrievedAt: DateTimeOffset.UtcNow,
+    ExpiresAt: DateTimeOffset.MinValue,
+    IsValidSignature: false,
+    ErrorMessage: ex.Message);
+```
+
+**Correct**:
+```csharp
+return new MembershipRetrievalResult(
+    Found: false,
+    PodId: podId,
+    PeerId: peerId,
+    SignedRecord: null,
+    RetrievedAt: DateTimeOffset.UtcNow,
+    ExpiresAt: DateTimeOffset.MinValue,
+    IsValidSignature: false,
+    ErrorMessage: "Failed to retrieve membership");
+```
+
+**Why This Keeps Happening**: PodCore already had controller-side sanitization and some service-side sanitization, so adjacent result types look “close enough” during review. They are not. Any service result that a controller returns directly is public API. Membership and DHT services must use the same stable public error strings as discovery, verification, and backfill services.
+
 ### 0xB6. Local JSON Persistence Must Use Explicit DTOs Instead Of Depending On Runtime Constructor Binding
 
 **The Bug**: the peer reputation store wrote runtime `PeerReputationEvent` objects straight to disk and tried to read them back into the same type. Cold-load reads silently came back empty because the persisted JSON contract drifted into a shape that `System.Text.Json` constructor binding did not reliably rehydrate for that runtime type.
