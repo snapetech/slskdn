@@ -98,7 +98,9 @@ return StatusCode(500, new { error = "Tor connectivity test failed" });
 - `src/slskd/API/Native/LibraryItemsController.cs`
 - `src/slskd/API/Native/PortForwardingController.cs`
 - `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/Identity/API/ContactsController.cs`
 - `src/slskd/Mesh/API/MeshController.cs`
+- `src/slskd/Search/API/Controllers/SearchesController.cs`
 - `src/slskd/Transfers/API/Controllers/TransfersController.cs`
 - `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
 
