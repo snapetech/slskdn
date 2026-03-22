@@ -3873,6 +3873,31 @@ run: |
 
 **Why This Keeps Happening**: GitHub Actions first parses YAML, then hands the deindented block to bash. The workflow file must satisfy both layers at once: keep the heredoc lines indented enough for YAML block-scalar syntax, but consistently indented so the runner deindents them back to column 1 for bash.
 
+### 3e. Non-Nullable Tuple Return Sites Must Use `default`, Not `null!`
+
+**The Bug**: Warning cleanup changed `SqliteShareRepository.FindFileInfo()` to return `null!` on the not-found path, but the method returns a non-nullable value tuple. That compiles for reference types, not tuples, so the next rebuild failed with `CS0037`.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs`
+
+**Wrong**:
+```csharp
+if (!reader.Read())
+{
+    return null!;
+}
+```
+
+**Correct**:
+```csharp
+if (!reader.Read())
+{
+    return default;
+}
+```
+
+**Why This Keeps Happening**: During nullable cleanup, it is easy to mechanically replace "missing value" returns with `null!`. That only works for reference-type return paths. For tuples and other value types, keep the existing sentinel form such as `default` or change the signature explicitly.
+
 ---
 
 *Last updated: 2026-01-27*

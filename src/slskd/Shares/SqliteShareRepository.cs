@@ -92,7 +92,7 @@ namespace slskd.Shares
         {
             using var conn = GetConnection();
 
-            SqliteCommand cmd = default;
+            SqliteCommand? cmd = null;
 
             try
             {
@@ -125,7 +125,7 @@ namespace slskd.Shares
         {
             using var conn = GetConnection();
 
-            SqliteCommand cmd = default;
+            SqliteCommand? cmd = null;
 
             try
             {
@@ -376,7 +376,7 @@ namespace slskd.Shares
 
             using var conn = GetConnection();
 
-            SqliteCommand cmd = default;
+            SqliteCommand? cmd = null;
 
             try
             {
@@ -415,7 +415,7 @@ namespace slskd.Shares
         {
             var results = new List<Soulseek.File>();
 
-            SqliteCommand cmd = default;
+            SqliteCommand? cmd = null;
             using var conn = GetConnection();
 
             try
@@ -818,10 +818,10 @@ namespace slskd.Shares
             {
                 return (
                     Domain: reader.GetString(0),
-                    WorkId: reader.IsDBNull(1) ? null : reader.GetString(1),
+                    WorkId: reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
                     MaskedFilename: reader.GetString(2),
                     IsAdvertisable: reader.GetInt32(3) != 0,
-                    ModerationReason: reader.IsDBNull(4) ? null : reader.GetString(4),
+                    ModerationReason: reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
                     CheckedAt: reader.GetInt64(5)
                 );
             }
@@ -849,9 +849,9 @@ namespace slskd.Shares
                 yield return (
                     ContentId: reader.GetString(0),
                     Domain: reader.GetString(1),
-                    WorkId: reader.IsDBNull(2) ? null : reader.GetString(2),
+                    WorkId: reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
                     IsAdvertisable: reader.GetInt32(3) != 0,
-                    ModerationReason: reader.IsDBNull(4) ? null : reader.GetString(4)
+                    ModerationReason: reader.IsDBNull(4) ? string.Empty : reader.GetString(4)
                 );
             }
         }
