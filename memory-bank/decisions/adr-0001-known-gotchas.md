@@ -164,6 +164,46 @@ if (string.IsNullOrWhiteSpace(request.ArtistId))
 
 **Why This Keeps Happening**: once most controller surfaces have been normalized, the remaining “simple” endpoints look harmless and get skipped. Those are exactly the places where raw DTOs and route/query strings keep leaking into service calls. Sharing and job APIs are still boundary code; they need the same null-body, trim, dedupe, and blank-value rules as the rest of the control plane.
 
+### 0xA9. Stats And Search Endpoints Need The Same Boundary Validation As Mutation Endpoints
+
+**The Bug**: read-only endpoints were still treated as “safe” and skipped during boundary cleanup. That left null search bodies, whitespace-padded search text/providers, negative pagination values, blank library-health paths, and exception-message leakage on stats endpoints even after the rest of the API had been normalized.
+
+**Files Affected**:
+- `src/slskd/Search/API/Controllers/SearchesController.cs`
+- `src/slskd/API/Native/LibraryHealthController.cs`
+- `src/slskd/API/Native/MeshStatsController.cs`
+
+**Wrong**:
+```csharp
+search = await Searches.StartAsync(
+    id,
+    SearchQuery.FromText(request.SearchText),
+    SearchScope.Network,
+    request.ToSearchOptions(),
+    request.Providers);
+...
+return StatusCode(500, new { error = "Failed to retrieve mesh stats", message = ex.Message });
+```
+
+**Correct**:
+```csharp
+if (request == null)
+{
+    return BadRequest("Request is required");
+}
+
+request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+request.Providers = request.Providers?
+    .Select(provider => provider?.Trim() ?? string.Empty)
+    .Where(provider => !string.IsNullOrWhiteSpace(provider))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToList();
+...
+return StatusCode(500, new { error = "Failed to retrieve mesh stats" });
+```
+
+**Why This Keeps Happening**: teams often harden POST/PUT/DELETE paths first and leave read-only or “status” endpoints for later, but those routes still sit on the public control plane. They can leak internals, accept invalid pagination/filter values, or silently normalize user intent differently from the rest of the API unless they get the same boundary pass.
+
 ### 0xA0. Legacy Fallback Auto-Activation Must Be Explicitly Opt-In, Even When `VirtualSoulfind.DisasterMode` Exists
 
 **The Bug**: The code already failed closed when the entire `VirtualSoulfind.DisasterMode` section was absent, but `DisasterModeOptions.Auto` still defaulted to `true`. That meant a partial config block like `virtualSoulfind.disasterMode: {}` silently turned on legacy auto-fallback and could flip search/runtime behavior away from the default Soulseek+mesh path.
