@@ -517,6 +517,36 @@ Assert.Equal("file_not_found", problemDetails.Type);
 
 **Why This Keeps Happening**: once one transport wrapper or one controller path gets corrected, sibling implementations and higher-level tests often stay on the old contract. That creates false confidence: unit-level behavior says one thing while integration coverage and sibling wrappers still encode the old assumptions. When you tighten a runtime contract, update the sibling wrappers and the end-to-end tests in the same pass.
 
+### 0xAE. Private Helper Signature Changes Must Be Paired With Test Updates And Edge-Case Assertions
+
+**The Bug**: several low-level test files were lagging behind already-changed helper semantics. `TransportAddressParsingTests` still reflected the old `RelayOnlyTransport.ParseEndpointAsync(...)` signature after the runtime gained an explicit scheme-prefix parameter, and there was no direct coverage for two newly tightened safety behaviors: `Blacklist.Contains(...)` failing closed on IPv6, and `LoggingUtils.SafeEndpoint(...)` preserving ports while redacting hostnames without misclassifying hostnames like `172.example.com` as private.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Mesh/Transport/TransportAddressParsingTests.cs`
+- `tests/slskd.Tests.Unit/Common/BlacklistTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/Transport/LoggingUtilsTests.cs`
+
+**Wrong**:
+```csharp
+var parseTask = (Task<IPEndPoint>)parseMethod!.Invoke(null, new object[] { "[::1]:4040", CancellationToken.None })!;
+...
+// no assertion for IPv6 blacklist lookup
+...
+// no assertion for hostname+port redaction or 172.example.com handling
+```
+
+**Correct**:
+```csharp
+var parseTask = (Task<IPEndPoint?>)parseMethod!.Invoke(null, new object[] { "relay://[::1]:4040", "relay://", CancellationToken.None })!;
+...
+Assert.False(bl.Contains(IPAddress.IPv6Loopback));
+...
+Assert.Equal("rem...host:4040", result);
+Assert.Equal("exa...com:8080", result);
+```
+
+**Why This Keeps Happening**: reflection-based tests and helper-utility tests are especially prone to drift because they are “just tests,” so they often get updated later or not at all. But these are exactly the places where signature changes and subtle redaction/parsing semantics need to be locked down. If you touch a private helper contract or a privacy helper, update the tests in the same pass and add an assertion for the edge case that motivated the change.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
