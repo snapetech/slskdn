@@ -7820,6 +7820,34 @@ lock (opinions)
 
 **Why This Keeps Happening**: Generic storage wrappers make it easy to forget which layer owns serialization. If the wrapper already serializes typed values, pre-serializing to a string creates a format mismatch that compiles cleanly and only fails at runtime. Separately, `AsReadOnly()` only wraps a list; it does not freeze it. Any shared mutable cache list needs either immutable storage or a locked snapshot on every public read.
 
+### 0k36. Signature-Gated Payloads Must Define A Canonical Verification Format Before Enforcing Signatures
+
+**The Bug**: `PodOpinionService` required every opinion to have a signature, but `ValidateOpinionAsync(...)` always returned invalid because the service had no stable payload definition to verify. That made opinion publishing and DHT retrieval impossible by construction even when callers supplied real Ed25519 signatures.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(opinion.Signature))
+{
+    return new OpinionValidationResult(false, "Opinion signatures are required.");
+}
+
+return new OpinionValidationResult(false, "Opinion signature verification is not implemented...");
+```
+
+**Correct**:
+```csharp
+var payload = CreateCanonicalOpinionPayload(podId, opinion);
+var isValidSignature = _ed25519.Verify(Encoding.UTF8.GetBytes(payload), signatureBytes, publicKeyBytes);
+return isValidSignature
+    ? new OpinionValidationResult(true, ValidatedOpinion: opinion)
+    : new OpinionValidationResult(false, "Opinion signature is invalid.");
+```
+
+**Why This Keeps Happening**: It is tempting to “turn on” signature requirements before the payload format is nailed down, especially when a signing primitive already exists elsewhere in the codebase. That creates a feature that looks security-conscious but cannot ever succeed. Any signed model needs a versioned canonical payload format first; only then should validation reject unsigned or unverifiable data.
+
 ---
 
 *Last updated: 2026-03-22*
