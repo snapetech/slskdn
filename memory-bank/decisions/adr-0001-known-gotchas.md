@@ -180,6 +180,33 @@ if (status == null)
 
 **Why This Keeps Happening**: readback paths often assume the live backend is authoritative at every poll, but transfer/status systems are inherently lossy at the edges. When the app already has a last known good snapshot, that snapshot is more truthful than a sudden null. The same principle applies to retrieval flows: “not found” is a first-class state and should not be handled indirectly through exception churn.
 
+### 0xA4. Capability Parsers Must Preserve slskdN Identity Even When No Feature Flags Are Present
+
+**The Bug**: capability parsing treated `Flags == None` as “not an slskdN client” and returned `null` from both tag/version parsers. That caused peers with valid `slskdn/...` version strings or capability tags but zero advertised feature flags to disappear from capability-aware flows entirely, even though protocol/client identity had already been established.
+
+**Files Affected**:
+- `src/slskd/Capabilities/ICapabilityService.cs`
+- `src/slskd/Capabilities/CapabilityService.cs`
+
+**Wrong**:
+```csharp
+return caps.Flags != PeerCapabilityFlags.None ? caps : null;
+...
+public bool IsSlskdnClient => Flags != PeerCapabilityFlags.None;
+```
+
+**Correct**:
+```csharp
+return caps;
+...
+public bool IsSlskdnClient =>
+    Flags != PeerCapabilityFlags.None ||
+    ProtocolVersion > 0 ||
+    !string.IsNullOrWhiteSpace(ClientVersion);
+```
+
+**Why This Keeps Happening**: capability flags and client identity are related, but they are not the same thing. A parser that successfully matches a slskdN capability envelope or version string has already learned something useful even if the feature bitmap is empty or incomplete. Treat identity and advertised features as separate dimensions, otherwise conservative peers get misclassified as nonexistent.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
