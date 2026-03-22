@@ -427,8 +427,10 @@ await progressProxy.StopProxyAsync(session.ActiveProxyId, CancellationToken.None
 - `src/slskd/Search/SearchService.cs`
 - `src/slskd/LibraryHealth/LibraryHealthService.cs`
 - `src/slskd/PodCore/SqlitePodService.cs`
+- `src/slskd/PodCore/PodMessageBackfill.cs`
 - `src/slskd/Transfers/Rescue/RescueService.cs`
 - `src/slskd/LibraryHealth/Remediation/LibraryHealthRemediationService.cs`
+- `src/slskd/Identity/MdnsAdvertiser.cs`
 
 **Wrong**:
 ```csharp
@@ -442,7 +444,7 @@ _ = ObserveBackgroundTaskAsync(
     "...");
 ```
 
-**Why This Keeps Happening**: `Task.Run` has two cancellation sites: the inner async operation and the scheduler itself. For detached follow-up work, passing a short-lived token to the scheduler is usually wrong because it can prevent the task from ever starting, while the outer code still returns success. Queue detached work with `CancellationToken.None`, pass the real token inside the delegate if the work itself should respect cancellation, and keep/observe the background task when shutdown needs to wait for it.
+**Why This Keeps Happening**: `Task.Run` has two cancellation sites: the inner async operation and the scheduler itself. For detached follow-up work, passing a short-lived token to the scheduler is usually wrong because it can prevent the task from ever starting, while the outer code still returns success. It is especially dangerous when the code already acquired a semaphore slot, opened resources, or completed setup that the delegate was supposed to release or continue. Queue detached work with `CancellationToken.None`, pass the real token inside the delegate if the work itself should respect cancellation, and keep/observe the background task when shutdown needs to wait for it. If the work is already asynchronous I/O, prefer calling the async helper directly instead of wrapping it in `Task.Run` at all.
 
 ### 0x8. Detached Controller And Timer Work Must Have A Top-Level Observer
 
