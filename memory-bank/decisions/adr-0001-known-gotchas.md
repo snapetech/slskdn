@@ -547,6 +547,62 @@ Assert.Equal("exa...com:8080", result);
 
 **Why This Keeps Happening**: reflection-based tests and helper-utility tests are especially prone to drift because they are “just tests,” so they often get updated later or not at all. But these are exactly the places where signature changes and subtle redaction/parsing semantics need to be locked down. If you touch a private helper contract or a privacy helper, update the tests in the same pass and add an assertion for the edge case that motivated the change.
 
+### 0xAF. HashDb Read Paths Must Tolerate Stored JSON And Key Drift Without Dropping Valid Local State
+
+**The Bug**: several HashDb reads still assumed perfectly stable stored values. `GetDiscographyJobAsync(...)` and `GetLabelCrateJobAsync(...)` deserialized persisted JSON without case-insensitive options and treated a `null` deserialize result as authoritative. Warm-cache reads accepted untrimmed content IDs and listed duplicate rows. `GetCodecProfilesForRecordingAsync(...)` deduplicated profiles with a linear case-sensitive list check. `GetBackfillProgressAsync(...)` only accepted raw Unix-second strings even though persisted state may drift to trimmed/ISO timestamps.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+return JsonSerializer.Deserialize<Jobs.DiscographyJob>(json);
+...
+if (string.IsNullOrWhiteSpace(contentId))
+{
+    return null;
+}
+...
+if (!list.Contains(profile))
+{
+    list.Add(profile);
+}
+...
+if (long.TryParse(result.ToString(), out var timestamp))
+{
+    return DateTimeOffset.FromUnixTimeSeconds(timestamp);
+}
+```
+
+**Correct**:
+```csharp
+var deserialized = JsonSerializer.Deserialize<Jobs.DiscographyJob>(json, CaseInsensitiveJson);
+if (deserialized != null)
+{
+    return deserialized;
+}
+...
+contentId = contentId?.Trim() ?? string.Empty;
+...
+if (!string.IsNullOrWhiteSpace(entry.ContentId) && seen.Add(entry.ContentId))
+{
+    list.Add(entry);
+}
+...
+if (seen.Add(profile))
+{
+    list.Add(profile);
+}
+...
+var text = result.ToString()?.Trim();
+if (DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
+{
+    return parsed;
+}
+```
+
+**Why This Keeps Happening**: HashDb is a long-lived local store, so read paths inevitably outlive the exact write format that created the data. If read code assumes one casing, one timestamp format, or one perfectly clean key shape, valid local state disappears after minor migrations or manual repair. Read paths should normalize keys, dedupe duplicate rows, and deserialize with compatibility options before concluding the state is absent.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
