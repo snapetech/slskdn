@@ -155,6 +155,7 @@ await _federationService.PublishOutboxActivityAsync(actor.ActorName, deleteActiv
 
 **Files Affected**:
 - `src/slskd/Capabilities/CapabilityFileService.cs`
+- `src/slskd/Capabilities/CapabilityFileService.cs`
 
 **Wrong**:
 ```csharp
@@ -419,7 +420,7 @@ finally
 }
 ```
 
-**Why This Keeps Happening**: linked CTS instances are tiny but high-churn, and async control flow makes ownership less obvious than it looks. When a method creates a linked token per iteration or per request, make the dispose boundary explicit with `try/finally` so later edits and analyzers agree on the lifetime.
+**Why This Keeps Happening**: linked CTS instances are tiny but high-churn, and async control flow makes ownership less obvious than it looks. When a method creates a linked token per iteration or per request, isolate that lifetime in a tiny helper or make the dispose boundary explicit with `try/finally` so later edits and analyzers agree on the lifetime.
 
 ### 0x9. Refactors Must Carry Supporting Renames, Namespaces, And Exact Nullability
 
