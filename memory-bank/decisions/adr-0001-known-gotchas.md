@@ -98,6 +98,27 @@ _ = ObserveBackgroundTaskAsync(
 
 **Why This Keeps Happening**: fire-and-forget is convenient in controllers and timer callbacks because it keeps the main path responsive, but it also severs exception propagation. If the detached work matters enough to launch, it matters enough to wrap in a single observer that catches and logs failures explicitly.
 
+### 0x9. Refactors To System.Text.Json Types Must Carry The Namespace And Exact Tuple Nullability
+
+**The Bug**: API code was updated to use `JsonDocument` and named tuple return signatures, but the supporting `using System.Text.Json;` and matching nullable tuple generics were not updated. The result was a hard compile break in otherwise unrelated validation runs.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+
+**Wrong**:
+```csharp
+using System.Text;
+return Task.FromResult((false, "Missing activity type"));
+```
+
+**Correct**:
+```csharp
+using System.Text.Json;
+return Task.FromResult<(bool Processed, string? Error)>((false, "Missing activity type"));
+```
+
+**Why This Keeps Happening**: small API refactors often change type names and nullability contracts at the same time, but the import list and helper return expressions are easy to leave behind. When switching to `System.Text.Json` objects or named nullable tuples, update both the namespace imports and the exact generic return type in the same edit.
+
 ### 0x. Do Not Return Fake Success For Unimplemented Distributed Features
 
 **The Bug**: Several Pod and mesh workflows returned placeholder success values, synthetic IDs, fake local peer IDs, or hardcoded stats even though the underlying transport or lookup path was not implemented. This made broken features look healthy and pushed failures downstream into harder-to-debug places.
