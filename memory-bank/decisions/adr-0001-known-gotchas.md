@@ -299,6 +299,34 @@ return new DescriptorPublishResult(
 
 **Why This Keeps Happening**: typed result records feel more formal than raw exceptions, so they slip past leak reviews. But if a controller returns the record directly, every embedded error string is public API surface. In MediaCore especially, batch and verification endpoints often reply with `Ok(result)` even on per-item failures, so sanitization has to happen inside the result-producing service, not only at the controller boundary.
 
+### 0xB5B. Long-Running Transfer And Backfill Result DTOs Must Not Echo Raw Runtime Failures
+
+**The Bug**: multi-source download and backfill services were still placing `ex.Message` into their result DTOs. Their controllers return those DTOs directly from `200 OK` endpoints, so filesystem, transfer, and probe internals leaked to clients even though the controller itself never threw.
+
+**Files Affected**:
+- `src/slskd/Transfers/MultiSource/MultiSourceDownloadService.cs`
+- `src/slskd/Backfill/BackfillSchedulerService.cs`
+
+**Wrong**:
+```csharp
+result.Error = ex.Message;
+return result;
+```
+
+**Correct**:
+```csharp
+result.Error = "Multi-source download failed";
+return result;
+```
+
+```csharp
+result.Error = string.IsNullOrWhiteSpace(result.Error)
+    ? "Backfill probe failed"
+    : result.Error;
+```
+
+**Why This Keeps Happening**: transfer-style services often treat their result DTOs as operator diagnostics, not public API contracts. But once a controller responds with `Ok(result)`, those `Error` strings are client-visible. Preserve specific stable public states like `Failed to parse FLAC header` when they are intentional, but never copy raw exception text from transfer, filesystem, or probe failures into the DTO.
+
 ### 0xB6. Local JSON Persistence Must Use Explicit DTOs Instead Of Depending On Runtime Constructor Binding
 
 **The Bug**: the peer reputation store wrote runtime `PeerReputationEvent` objects straight to disk and tried to read them back into the same type. Cold-load reads silently came back empty because the persisted JSON contract drifted into a shape that `System.Text.Json` constructor binding did not reliably rehydrate for that runtime type.
