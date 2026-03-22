@@ -8206,6 +8206,78 @@ public void Dispose()
 
 **Why This Keeps Happening**: It is easy to dispose the obvious “main” lock and forget auxiliary gates added later for lazy initialization or background coordination. Any class that owns multiple `SemaphoreSlim` or CTS instances needs dispose coverage to be audited as a set, not one field at a time.
 
+### 0k3C. Release Wrappers Must Override `DisposeAsync()` Or Async Response Paths Leak Permits
+
+**The Bug**: `ReleaseOnDisposeStream` invoked its release callback only from synchronous `Dispose(bool)`. When ASP.NET or another caller disposed the stream asynchronously, the wrapper skipped `_onDispose()` and leaked the stream-session permit even though the underlying stream was closed.
+
+**Files Affected**:
+- `src/slskd/Streaming/ReleaseOnDisposeStream.cs`
+
+**Wrong**:
+```csharp
+protected override void Dispose(bool disposing)
+{
+    if (_disposed) return;
+    _disposed = true;
+    try { _onDispose(); } catch { }
+    _inner.Dispose();
+    base.Dispose(disposing);
+}
+```
+
+**Correct**:
+```csharp
+public override async ValueTask DisposeAsync()
+{
+    if (_disposed)
+    {
+        await base.DisposeAsync().ConfigureAwait(false);
+        return;
+    }
+
+    _disposed = true;
+    try { _onDispose(); } catch { }
+    await _inner.DisposeAsync().ConfigureAwait(false);
+    await base.DisposeAsync().ConfigureAwait(false);
+}
+```
+
+**Why This Keeps Happening**: Small wrapper streams are usually written against the classic `Dispose(bool)` path and then reused under ASP.NET, gRPC, or modern async I/O stacks that favor `DisposeAsync()`. If the wrapper owns cleanup side effects beyond closing the inner stream, it must implement both disposal paths and keep them idempotent.
+
+### 0k3D. Mesh Endpoint Parsers Must Handle Bracketed IPv6 Advertisements, Not Just `host:port`
+
+**The Bug**: `PeerDescriptorPublisher.BuildTransportEndpoints()` parsed advertised endpoints with `Split(':')`, so bracketed IPv6 entries like `[2001:db8::42]:2235` never produced a direct QUIC transport endpoint. Dual-stack nodes could therefore advertise legacy endpoints but silently drop their direct transport advertisement.
+
+**Files Affected**:
+- `src/slskd/Mesh/Dht/PeerDescriptorPublisher.cs`
+
+**Wrong**:
+```csharp
+var parts = endpointStr.Split(':');
+if (parts.Length == 2 && int.TryParse(parts[1], out var port))
+{
+    endpoints.Add(new TransportEndpoint
+    {
+        Host = parts[0],
+        Port = port,
+    });
+}
+```
+
+**Correct**:
+```csharp
+if (TryParseAdvertisedEndpoint(endpointStr, out var host, out var port))
+{
+    endpoints.Add(new TransportEndpoint
+    {
+        Host = host,
+        Port = port,
+    });
+}
+```
+
+**Why This Keeps Happening**: Endpoint parsing often starts with IPv4 and hostname assumptions, then IPv6 support gets bolted on later by adding bracketed strings in one layer without updating the consumer. Any transport-advertisement parser needs explicit IPv6 handling rather than generic `Split(':')` logic.
+
 ---
 
 *Last updated: 2026-03-22*
