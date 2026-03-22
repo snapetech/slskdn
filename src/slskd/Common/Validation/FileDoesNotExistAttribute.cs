@@ -28,11 +28,11 @@ namespace slskd.Validation
     /// </summary>
     public class FileDoesNotExistAttribute : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value != null)
             {
-                var file = Path.GetFullPath(value?.ToString());
+                var file = Path.GetFullPath(value.ToString()!);
 
                 if (!string.IsNullOrEmpty(file))
                 {

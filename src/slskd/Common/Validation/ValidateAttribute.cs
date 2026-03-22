@@ -31,7 +31,7 @@ namespace slskd.Validation
     /// </summary>
     public class ValidateAttribute : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value == null)
             {
@@ -56,7 +56,7 @@ namespace slskd.Validation
                     foreach (string key in ((IDictionary)value).Keys)
                     {
                         var val = ((IDictionary)value)[key];
-                        var result = IsValid(val, new ValidationContext(val, null, null));
+                        var result = val == null ? ValidationResult.Success : IsValid(val, new ValidationContext(val, null, null));
 
                         if (result != ValidationResult.Success)
                         {
@@ -69,7 +69,7 @@ namespace slskd.Validation
                     for (int i = 0; i < array.Length; i++)
                     {
                         var val = array.GetValue(i);
-                        var result = IsValid(val, new ValidationContext(val, null, null));
+                        var result = val == null ? ValidationResult.Success : IsValid(val, new ValidationContext(val, null, null));
 
                         if (result != ValidationResult.Success)
                         {

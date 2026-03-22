@@ -38,7 +38,7 @@ namespace slskd.Configuration
         /// <param name="targetType">The type from which to map properties.</param>
         /// <param name="prefix">A prefix to prepend to all variable names.</param>
         /// <returns>The updated <see cref="IConfigurationBuilder"/>.</returns>
-        public static IConfigurationBuilder AddEnvironmentVariables(this IConfigurationBuilder builder, Type targetType, string prefix = null)
+        public static IConfigurationBuilder AddEnvironmentVariables(this IConfigurationBuilder builder, Type targetType, string? prefix = null)
         {
             if (builder == null)
             {
@@ -104,7 +104,7 @@ namespace slskd.Configuration
                     if (attribute != default)
                     {
                         // retrieve the envar name from the attribute
-                        var name = (string)attribute.ConstructorArguments[0].Value;
+                        var name = (string?)attribute.ConstructorArguments[0].Value;
 
                         if (!string.IsNullOrEmpty(name))
                         {
@@ -151,12 +151,12 @@ namespace slskd.Configuration
         /// <summary>
         ///     Gets or sets the type from which to map properties.
         /// </summary>
-        public Type TargetType { get; set; }
+        public Type TargetType { get; set; } = typeof(object);
 
         /// <summary>
         ///     Gets or sets a prefix to prepend to all variable names.
         /// </summary>
-        public string Prefix { get; set; }
+        public string Prefix { get; set; } = string.Empty;
 
         /// <summary>
         ///     Builds the <see cref="EnvironmentVariableConfigurationProvider"/> for this source.

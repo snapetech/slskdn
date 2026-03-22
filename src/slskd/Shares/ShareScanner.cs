@@ -73,7 +73,7 @@ namespace slskd.Shares
             int workerCount,
             FileService fileService,
             Common.Moderation.IModerationProvider moderationProvider,
-            ISoulseekFileFactory soulseekFileFactory = null)
+            ISoulseekFileFactory? soulseekFileFactory = null)
         {
             WorkerCount = workerCount;
             Files = fileService;

@@ -39,7 +39,7 @@ namespace slskd.Validation
         private Type TargetType { get; set; }
         private bool IgnoreCase { get; set; }
 
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value is IList<string> array)
             {

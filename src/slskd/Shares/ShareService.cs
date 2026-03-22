@@ -50,8 +50,8 @@ namespace slskd.Shares
             IShareRepositoryFactory shareRepositoryFactory,
             IOptionsMonitor<Options> optionsMonitor,
             Common.Moderation.IModerationProvider moderationProvider,
-            IShareScanner scanner = null,
-            IContentPeerHintService contentPeerHintService = null)
+            IShareScanner? scanner = null,
+            IContentPeerHintService? contentPeerHintService = null)
         {
             var options = optionsMonitor.CurrentValue;
 
@@ -161,11 +161,11 @@ namespace slskd.Shares
         ///     Returns the entire contents of the share.
         /// </summary>
         /// <returns>The entire contents of the share.</returns>
-        public Task<IEnumerable<Directory>> BrowseAsync(Share share = null)
+        public Task<IEnumerable<Directory>> BrowseAsync(Share? share = null)
         {
             var directories = new ConcurrentDictionary<string, Directory>();
 
-            string prefix = null;
+            string? prefix = null;
 
             if (share != null)
             {
@@ -236,7 +236,7 @@ namespace slskd.Shares
                 return true;
             }
 
-            host = null;
+            host = null!;
             return false;
         }
 

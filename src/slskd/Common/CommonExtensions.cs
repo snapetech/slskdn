@@ -97,14 +97,14 @@ namespace slskd
         /// <param name="right">The right side of the comparison.</param>
         /// <param name="parentFqn">The root path for recursive calls.</param>
         /// <returns>A list of differences between the two objects.</returns>
-        public static IEnumerable<(PropertyInfo Property, string FQN, object Left, object Right)> DiffWith(this object left, object right, string parentFqn = null)
+        public static IEnumerable<(PropertyInfo Property, string FQN, object? Left, object? Right)> DiffWith(this object left, object right, string? parentFqn = null)
         {
             if (left?.GetType() != right?.GetType())
             {
                 throw new InvalidCastException($"Unable to diff types {left?.GetType()} and {right?.GetType()}");
             }
 
-            var differences = new List<(PropertyInfo Property, string FQN, object Left, object Right)>();
+            var differences = new List<(PropertyInfo Property, string FQN, object? Left, object? Right)>();
 
             foreach (var prop in left?.GetType().GetProperties())
             {

@@ -50,7 +50,7 @@ namespace slskd.Configuration
         /// </param>
         /// <param name="provider">The updated <see cref="IFileProvider"/> to use to access the file.</param>
         /// <returns>The <see cref="IConfigurationBuilder"/>.</returns>
-        public static IConfigurationBuilder AddYamlFile(this IConfigurationBuilder builder, string path, Type targetType, bool optional = true, bool reloadOnChange = false, bool normalizeKeys = true, IFileProvider provider = null)
+        public static IConfigurationBuilder AddYamlFile(this IConfigurationBuilder builder, string path, Type targetType, bool optional = true, bool reloadOnChange = false, bool normalizeKeys = true, IFileProvider? provider = null)
         {
             if (builder == null)
             {
@@ -188,9 +188,9 @@ namespace slskd.Configuration
             }
         }
 
-        private void Traverse(YamlNode root, string path = null)
+        private void Traverse(YamlNode root, string? path = null)
         {
-            string Normalize(string str) => NormalizeKeys ? str?.Replace("_", string.Empty).Replace("-", string.Empty).ToLowerInvariant() : str;
+            string? Normalize(string? str) => NormalizeKeys ? str?.Replace("_", string.Empty).Replace("-", string.Empty).ToLowerInvariant() : str;
 
             if (root is YamlScalarNode scalar)
             {
@@ -200,7 +200,10 @@ namespace slskd.Configuration
                 {
                     var normalizedPath = Normalize(path);
                     var storedValue = scalar.Value == null || NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
-                    Data[normalizedPath] = storedValue;
+                    if (normalizedPath != null)
+                    {
+                        Data[normalizedPath] = storedValue;
+                    }
                 }
             }
             else if (root is YamlMappingNode map)
@@ -231,7 +234,7 @@ namespace slskd.Configuration
         /// <summary>
         ///     Gets or sets the type from which to map properties.
         /// </summary>
-        public Type TargetType { get; set; }
+        public Type TargetType { get; set; } = typeof(object);
 
         /// <summary>
         ///     Gets or sets a value indicating whether configuration keys should be normalized (_, - removed, changed to lowercase).

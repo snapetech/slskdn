@@ -81,7 +81,7 @@ namespace slskd.HashDb
         /// <summary>
         ///     Updates peer capabilities.
         /// </summary>
-        Task UpdatePeerCapabilitiesAsync(string username, PeerCapabilityFlags caps, string clientVersion = null, CancellationToken cancellationToken = default);
+        Task UpdatePeerCapabilitiesAsync(string username, PeerCapabilityFlags caps, string? clientVersion = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Gets all slskdn-capable peers.

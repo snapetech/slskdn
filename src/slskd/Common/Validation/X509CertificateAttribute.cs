@@ -29,7 +29,7 @@ namespace slskd.Validation
     /// </summary>
     public class X509CertificateAttribute : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value != null)
             {

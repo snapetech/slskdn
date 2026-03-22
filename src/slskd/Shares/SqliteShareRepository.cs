@@ -88,7 +88,7 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="parentDirectory">The optional directory prefix used for counting subdirectories.</param>
         /// <returns>The number of directories.</returns>
-        public int CountDirectories(string parentDirectory = null)
+        public int CountDirectories(string? parentDirectory = null)
         {
             using var conn = GetConnection();
 
@@ -121,7 +121,7 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="parentDirectory">The optional directory prefix used for counting files in a subdirectory.</param>
         /// <returns>The number of files.</returns>
-        public int CountFiles(string parentDirectory = null)
+        public int CountFiles(string? parentDirectory = null)
         {
             using var conn = GetConnection();
 
@@ -325,7 +325,7 @@ namespace slskd.Shares
             long timestamp,
             bool isBlocked = false,
             bool isQuarantined = false,
-            string moderationReason = null)
+            string? moderationReason = null)
         {
             using var conn = GetConnection();
 
@@ -370,7 +370,7 @@ namespace slskd.Shares
         /// </summary>
         /// <param name="parentDirectory">The optional directory prefix used for listing subdirectories.</param>
         /// <returns>The list of directories.</returns>
-        public IEnumerable<string> ListDirectories(string parentDirectory = null)
+        public IEnumerable<string> ListDirectories(string? parentDirectory = null)
         {
             var results = new List<string>();
 
@@ -411,7 +411,7 @@ namespace slskd.Shares
         /// <param name="parentDirectory">The optional parent directory.</param>
         /// <param name="includeFullPath">A value indicating whether the fully qualified path should be returned.</param>
         /// <returns>The list of files.</returns>
-        public IEnumerable<Soulseek.File> ListFiles(string parentDirectory = null, bool includeFullPath = false)
+        public IEnumerable<Soulseek.File> ListFiles(string? parentDirectory = null, bool includeFullPath = false)
         {
             var results = new List<Soulseek.File>();
 
@@ -463,7 +463,7 @@ namespace slskd.Shares
         }
 
         /// <inheritdoc/>
-        public IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string parentDirectory = null)
+        public IEnumerable<(string LocalPath, long Size)> ListLocalPathsAndSizes(string? parentDirectory = null)
         {
             var results = new List<(string, long)>();
             using var conn = GetConnection();

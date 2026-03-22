@@ -9,7 +9,6 @@ namespace slskd.Common.Moderation
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
-    using System.Text.Json;
     using System.Linq;
     using System.Security.Cryptography;
     using System.Text.Json;

@@ -28,7 +28,7 @@ namespace slskd.Validation
     /// </summary>
     public class AbsoluteFilePathAttribute : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value != null)
             {

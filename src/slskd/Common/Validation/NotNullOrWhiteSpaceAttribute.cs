@@ -27,13 +27,13 @@ namespace slskd.Validation
     /// </summary>
     public class NotNullOrWhiteSpaceAttribute : ValidationAttribute
     {
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
-            if (string.IsNullOrEmpty((string)value))
+            if (value is not string stringValue || string.IsNullOrEmpty(stringValue))
             {
                 return new ValidationResult($"The {validationContext.DisplayName} field must contain a value");
             }
-            else if (string.IsNullOrWhiteSpace((string)value))
+            else if (string.IsNullOrWhiteSpace(stringValue))
             {
                 return new ValidationResult($"The {validationContext.DisplayName} field must not contain a value consisting only of whitespace");
             }

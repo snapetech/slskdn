@@ -84,7 +84,7 @@ namespace slskd.Transfers.Downloads
         /// <param name="expression">An optional expression used to match downloads.</param>
         /// <param name="includeRemoved">Optionally include downloads that have been removed previously.</param>
         /// <returns>The list of downloads matching the specified expression, or all downloads if no expression is specified.</returns>
-        List<Transfer> List(Expression<Func<Transfer, bool>> expression = null, bool includeRemoved = false);
+        List<Transfer> List(Expression<Func<Transfer, bool>>? expression = null, bool includeRemoved = false);
 
         /// <summary>
         ///     Removes <see cref="TransferStates.Completed"/> downloads older than the specified <paramref name="age"/>.
@@ -143,7 +143,7 @@ namespace slskd.Transfers.Downloads
             IRelayService relayService,
             IFTPService ftpClient,
             EventBus eventBus,
-            IPeerMetricsService peerMetricsService = null)
+            IPeerMetricsService? peerMetricsService = null)
         {
             Client = soulseekClient;
             OptionsMonitor = optionsMonitor;

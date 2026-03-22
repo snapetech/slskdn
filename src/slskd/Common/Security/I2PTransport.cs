@@ -56,14 +56,14 @@ public class I2PTransport : IAnonymityTransport
             if (client.Connected)
             {
                 var stream = client.GetStream();
-                var writer = new StreamWriter(stream);
-                var reader = new StreamReader(stream);
+                using var writer = new StreamWriter(stream, leaveOpen: true);
+                using var reader = new StreamReader(stream, leaveOpen: true);
 
                 // Send HELLO command to test SAM bridge
                 await writer.WriteLineAsync("HELLO VERSION MIN=3.1 MAX=3.1");
-                await writer.FlushAsync();
+                await writer.FlushAsync(cancellationToken);
 
-                var response = await reader.ReadLineAsync();
+                var response = await reader.ReadLineAsync(cancellationToken);
                 if (response != null && response.Contains("RESULT=OK"))
                 {
                     lock (_statusLock)
@@ -152,13 +152,13 @@ public class I2PTransport : IAnonymityTransport
 
             await client.ConnectAsync(samHost, samPort, cancellationToken);
             var stream = client.GetStream();
-            var writer = new StreamWriter(stream);
-            var reader = new StreamReader(stream);
+            using var writer = new StreamWriter(stream, leaveOpen: true);
+            using var reader = new StreamReader(stream, leaveOpen: true);
 
             // SAM v3.1 HELLO (one-shot; no named session)
             await writer.WriteLineAsync("HELLO VERSION MIN=3.1 MAX=3.1");
-            await writer.FlushAsync();
-            var helloResponse = await reader.ReadLineAsync();
+            await writer.FlushAsync(cancellationToken);
+            var helloResponse = await reader.ReadLineAsync(cancellationToken);
             if (helloResponse == null || !helloResponse.Contains("RESULT=OK"))
                 throw new InvalidOperationException($"SAM HELLO failed: {helloResponse}");
 
@@ -166,9 +166,9 @@ public class I2PTransport : IAnonymityTransport
             var sessionId = Guid.NewGuid().ToString("N")[..8];
             var connectCmd = $"STREAM CONNECT ID={sessionId} DESTINATION={host.Trim()} SILENT=false";
             await writer.WriteLineAsync(connectCmd);
-            await writer.FlushAsync();
+            await writer.FlushAsync(cancellationToken);
 
-            var connectResponse = await reader.ReadLineAsync();
+            var connectResponse = await reader.ReadLineAsync(cancellationToken);
             if (connectResponse == null)
                 throw new InvalidOperationException("SAM STREAM CONNECT produced no response.");
 

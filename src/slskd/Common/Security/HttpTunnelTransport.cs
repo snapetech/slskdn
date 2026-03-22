@@ -19,7 +19,7 @@ namespace slskd.Common.Security;
 /// HTTP tunnel transport for DPI circumvention.
 /// Encodes traffic as HTTP requests/responses to appear as normal web traffic.
 /// </summary>
-public class HttpTunnelTransport : IAnonymityTransport
+public class HttpTunnelTransport : IAnonymityTransport, IDisposable
 {
     private readonly HttpTunnelOptions _options;
     private readonly ILogger<HttpTunnelTransport> _logger;
@@ -66,7 +66,7 @@ public class HttpTunnelTransport : IAnonymityTransport
         try
         {
             // Test connectivity with a simple HEAD request
-            var request = new HttpRequestMessage(HttpMethod.Head, _options.ProxyUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Head, _options.ProxyUrl);
 
             if (_options.CustomHeaders != null)
             {
@@ -145,7 +145,7 @@ public class HttpTunnelTransport : IAnonymityTransport
             var requestJson = System.Text.Json.JsonSerializer.Serialize(tunnelRequest);
             var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
-            var request = new HttpRequestMessage(_options.Method switch
+            using var request = new HttpRequestMessage(_options.Method switch
             {
                 "POST" => HttpMethod.Post,
                 "PUT" => HttpMethod.Put,
@@ -204,6 +204,11 @@ public class HttpTunnelTransport : IAnonymityTransport
             _logger.LogError(ex, "Failed to establish HTTP tunnel to {Host}:{Port}", host, port);
             throw;
         }
+    }
+
+    public void Dispose()
+    {
+        _httpClient.Dispose();
     }
 
     /// <summary>

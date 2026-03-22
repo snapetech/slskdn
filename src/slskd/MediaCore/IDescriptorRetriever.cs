@@ -106,7 +106,7 @@ public record DescriptorVerificationResult(
     bool FreshnessValid,
     TimeSpan Age,
     string? ValidationError = null,
-    IReadOnlyList<string> Warnings = null);
+    IReadOnlyList<string>? Warnings = null);
 
 /// <summary>
 /// Retrieval statistics.

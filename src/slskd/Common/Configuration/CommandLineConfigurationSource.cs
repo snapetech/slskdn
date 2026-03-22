@@ -40,7 +40,7 @@ namespace slskd.Configuration
         /// <param name="multiValuedArguments">An array of argument names which can be specified with multiple values.</param>
         /// <param name="commandLine">The command line string from which to parse arguments.</param>
         /// <returns>The updated <see cref="IConfigurationBuilder"/>.</returns>
-        public static IConfigurationBuilder AddCommandLine(this IConfigurationBuilder builder, Type targetType, string[] multiValuedArguments = null, string commandLine = null)
+        public static IConfigurationBuilder AddCommandLine(this IConfigurationBuilder builder, Type targetType, string[]? multiValuedArguments = null, string? commandLine = null)
         {
             if (builder == null)
             {
@@ -111,7 +111,7 @@ namespace slskd.Configuration
                     if (attribute != default)
                     {
                         var shortName = ((char)attribute.ConstructorArguments[0].Value).ToString();
-                        var longName = (string)attribute.ConstructorArguments[1].Value;
+                        var longName = (string?)attribute.ConstructorArguments[1].Value;
                         var arguments = new[] { shortName, longName }.Where(i => !string.IsNullOrEmpty(i));
 
                         foreach (var argument in arguments.Where(argument => dictionary.ContainsKey(argument)))
@@ -172,12 +172,12 @@ namespace slskd.Configuration
         /// <summary>
         ///     Gets or sets the command line string from which to parse arguments.
         /// </summary>
-        public string CommandLine { get; set; }
+        public string CommandLine { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the type from which to map properties.
         /// </summary>
-        public Type TargetType { get; set; }
+        public Type TargetType { get; set; } = typeof(object);
 
         /// <summary>
         ///     Gets or sets an array of argument names which can be specified with multiple values.

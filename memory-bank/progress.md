@@ -5240,3 +5240,16 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint` passes
   - `dotnet test` core suites pass (`slskd.Tests`, `slskd.Tests.Unit`)
   - `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0` still succeeds but the repo still has a large broader warning backlog (~2200 warnings), so the warning-reduction work is not complete yet.
+
+## 2026-03-22 02:02:00Z
+
+- Continued the broad warning-reduction pass across the next four seams:
+  - share/nullability signatures (`ShareService`, `SqliteShareRepository`, `ShareScanner`)
+  - configuration and validation nullability/default-parameter cleanup
+  - duplicate using cleanup in moderation/music files
+  - targeted disposable cleanup in anonymity transports
+- Verified the tree still builds after each batch.
+- Warning count moved down in two steps:
+  - about `2227 -> 2157`
+  - then `2157 -> 2135`
+- The next obvious seam is the remaining nullable-default constructor/interface noise in `HashDb`, `Search`, `Relay`, `Downloads`, `Rescue`, and related service constructors.

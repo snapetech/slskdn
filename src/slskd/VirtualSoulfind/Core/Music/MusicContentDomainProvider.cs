@@ -10,7 +10,6 @@ namespace slskd.VirtualSoulfind.Core.Music
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using slskd.Common.Moderation;
-    using slskd.Common.Moderation;
     using slskd.HashDb;
     using slskd.VirtualSoulfind.Core;
 

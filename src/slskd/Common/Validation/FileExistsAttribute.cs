@@ -39,11 +39,11 @@ namespace slskd.Validation
 
         private FileAccess? FileAccess { get; } = null;
 
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value != null)
             {
-                var file = Path.GetFullPath(value?.ToString());
+                var file = Path.GetFullPath(value.ToString()!);
 
                 if (!string.IsNullOrEmpty(file))
                 {

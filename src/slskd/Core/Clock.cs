@@ -104,7 +104,7 @@ namespace slskd
         }
 
         private static Timer CreateTimer(double interval) => new() { AutoReset = true, Interval = interval, Enabled = false };
-        private static void Fire(EventHandler<ClockEventArgs> e, ClockEventArgs args = null) => e?.Invoke(null, args ?? new ClockEventArgs());
+        private static void Fire(EventHandler<ClockEventArgs>? e, ClockEventArgs? args = null) => e?.Invoke(null, args ?? new ClockEventArgs());
     }
 
     /// <summary>

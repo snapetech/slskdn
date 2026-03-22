@@ -25,7 +25,7 @@ namespace slskd
 
     public static class Sqlite
     {
-        public static int ExecuteNonQuery(this SqliteConnection conn, string query, Action<SqliteCommand> action = null)
+        public static int ExecuteNonQuery(this SqliteConnection conn, string query, Action<SqliteCommand>? action = null)
         {
             using var cmd = new SqliteCommand(query, conn);
             action?.Invoke(cmd);

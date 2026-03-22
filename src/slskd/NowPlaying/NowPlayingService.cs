@@ -17,12 +17,12 @@ public class NowPlayingService
     /// <summary>
     ///     Gets the current track, or null when nothing is playing.
     /// </summary>
-    public NowPlayingTrack CurrentTrack { get; private set; }
+    public NowPlayingTrack? CurrentTrack { get; private set; }
 
     /// <summary>
     ///     Sets the currently playing track.
     /// </summary>
-    public void SetTrack(string artist, string title, string album = null)
+    public void SetTrack(string artist, string title, string? album = null)
     {
         if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(title))
         {
@@ -53,7 +53,7 @@ public class NowPlayingService
     /// <summary>
     ///     Returns the now-playing suffix to append to the user description, or null when nothing is playing.
     /// </summary>
-    public string GetDescriptionSuffix()
+    public string? GetDescriptionSuffix()
     {
         var track = CurrentTrack;
         if (track == null)
@@ -68,8 +68,8 @@ public class NowPlayingService
 /// </summary>
 public record NowPlayingTrack
 {
-    public string Artist { get; init; }
-    public string Title { get; init; }
-    public string Album { get; init; }
+    public string Artist { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string? Album { get; init; }
     public DateTimeOffset StartedAt { get; init; }
 }

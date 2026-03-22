@@ -80,8 +80,8 @@ namespace slskd
             int? writeQueueSize = null,
             int? connectTimeout = null,
             int? inactivityTimeout = null,
-            ProxyOptions proxyOptions = null,
-            Action<Socket> configureSocket = null) => new ConnectionOptions(
+            ProxyOptions? proxyOptions = null,
+            Action<Socket>? configureSocket = null) => new ConnectionOptions(
                 readBufferSize: readBufferSize ?? o.ReadBufferSize,
                 writeBufferSize: writeBufferSize ?? o.WriteBufferSize,
                 writeQueueSize: writeQueueSize ?? o.WriteQueueSize,

@@ -44,7 +44,7 @@ namespace slskd.Validation
         private bool EnsureWriteable { get; set; }
         private bool RelativeToApplicationDirectory { get; set; }
 
-        protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
             if (value is not string || string.IsNullOrEmpty((string)value))
             {
