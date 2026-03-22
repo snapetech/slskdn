@@ -61,6 +61,9 @@ This is not optional. This is the highest priority action after fixing a bug.
 - `src/slskd/HashDb/Optimization/HashDbOptimizationHostedService.cs`
 - `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
 - `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+- `src/slskd/Common/Security/CoverTrafficGenerator.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
+- `src/slskd/VirtualSoulfind/Bridge/Proxy/BridgeProxyServer.cs`
 
 **Wrong**:
 ```csharp
