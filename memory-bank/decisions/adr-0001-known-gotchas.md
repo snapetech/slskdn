@@ -8606,6 +8606,50 @@ return new TransportEndpoint
 
 **Why This Keeps Happening**: The codebase has more than one transport-metadata ingestion path: publisher-side formatting, peer-resolution parsing, and legacy descriptor fallback parsing. IPv6 support often gets fixed in one path while another copy still assumes `Split(':')` is safe. Any endpoint parser that accepts URI-like metadata needs explicit bracketed IPv6 handling and should be reviewed alongside the other parser copies.
 
+### 0k43. Endpoint Readers Must Parse The Actual Metadata Format (`scheme://host:port` And Bracketed IPv6), Not Just Bare IPv4 `host:port`
+
+**The Bug**: `MeshDirectory`, `ContentDirectory`, `TorSocksTransport`, `I2PTransport`, and `RelayOnlyTransport` all had independent `host:port` parsers that assumed a single colon separator. That broke two real production cases: normal mesh metadata such as `udp://1.1.1.1:5000` was returned as an unparsed address with a null port, and bracketed IPv6 endpoints like `quic://[2001:db8::42]:6000` or `[::1]:9050` were rejected outright.
+
+**Files Affected**:
+- `src/slskd/Mesh/Dht/MeshDirectory.cs`
+- `src/slskd/Mesh/Dht/ContentDirectory.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `src/slskd/Common/Security/RelayOnlyTransport.cs`
+
+**Wrong**:
+```csharp
+var parts = endpoint.Split(':');
+if (parts.Length != 2)
+{
+    return (endpoint, null);
+}
+```
+
+**Correct**:
+```csharp
+var schemeSeparatorIndex = normalized.IndexOf("://", StringComparison.Ordinal);
+if (schemeSeparatorIndex >= 0)
+{
+    normalized = normalized[(schemeSeparatorIndex + 3)..];
+}
+
+if (normalized.StartsWith("[", StringComparison.Ordinal))
+{
+    var closingBracketIndex = normalized.IndexOf(']');
+    host = normalized[1..closingBracketIndex];
+    portPart = normalized[(closingBracketIndex + 2)..];
+}
+else
+{
+    var separatorIndex = normalized.LastIndexOf(':');
+    host = normalized[..separatorIndex];
+    portPart = normalized[(separatorIndex + 1)..];
+}
+```
+
+**Why This Keeps Happening**: Networking code often grows in layers. One layer emits URI-like endpoint metadata, another reads it as if it were a raw socket address, and then IPv6 support lands later on only one side. Any place that consumes endpoints needs to be validated against the exact serialized format already used elsewhere in the system, including scheme prefixes and bracketed IPv6 literals.
+
 ---
 
 *Last updated: 2026-03-22*
