@@ -291,6 +291,32 @@ services.AddSingleton<IObservationStore>(sp =>
 ```
 
 **Why This Keeps Happening**: Feature flags are easy to add at the config layer without actually switching the implementation underneath. That is worse than an explicit TODO because operators believe the feature is active. If an option is meant to toggle behavior, wire the implementation choice at registration time or remove the option until the backing implementation exists.
+
+### 0xA. Federation Discovery And Publication Must Use The Same Actor Inventory And Base URL
+
+**The Bug**: WebFinger only recognized a hardcoded `library` actor while outgoing federation code published `WorkRef` and collection activities using hardcoded `/actors/{domain}` paths or `https://localhost:5000`. That produced actor IDs the server did not actually expose.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/WebFingerController.cs`
+- `src/slskd/SocialFederation/FederationService.cs`
+- `src/slskd/SocialFederation/VirtualSoulfindFederationIntegration.cs`
+- `src/slskd/SocialFederation/ServiceCollectionExtensions.cs`
+
+**Wrong**:
+```csharp
+workRef = WorkRef.FromMusicItem(musicItem, "https://localhost:5000");
+workRef.AttributedTo = $"/actors/{contentItem.Domain}";
+return Task.FromResult(string.Equals(username, "library", StringComparison.OrdinalIgnoreCase));
+```
+
+**Correct**:
+```csharp
+workRef = WorkRef.FromMusicItem(musicItem, BaseUrl);
+workRef.AttributedTo = actor?.ActorId ?? $"{BaseUrl}/actors/{contentItem.Domain}";
+return Task.FromResult(_libraryActorService.IsLibraryActor(username));
+```
+
+**Why This Keeps Happening**: Federation code often grows from separate endpoint and publishing tasks, and each side invents its own actor naming shortcuts. That drift breaks discovery in subtle ways. All actor validation, attribution, and activity authorship should derive from the same `LibraryActorService` inventory and configured base URL.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
