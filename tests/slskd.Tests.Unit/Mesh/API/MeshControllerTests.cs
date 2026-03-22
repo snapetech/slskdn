@@ -158,6 +158,26 @@ public class MeshControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task DetectNatType_WhenDetectorThrows_DoesNotLeakExceptionMessage()
+    {
+        var natDetector = new Mock<INatDetector>();
+        natDetector
+            .Setup(detector => detector.DetectAsync())
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = new MeshController(
+            Mock.Of<IMeshSyncService>(),
+            new MeshStatsCollector(NullLogger<MeshStatsCollector>.Instance, Mock.Of<IServiceProvider>()),
+            natDetector.Object);
+
+        var result = await controller.DetectNatType();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", ok.Value?.ToString() ?? string.Empty);
+        Assert.Contains("NAT detection failed", ok.Value?.ToString() ?? string.Empty);
+    }
+
     private static MeshController CreateController(Mock<IMeshSyncService> meshSync)
     {
         meshSync.SetupGet(service => service.Stats).Returns(new MeshSyncStats());

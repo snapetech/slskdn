@@ -105,7 +105,7 @@ namespace slskd.Mesh.API
                 {
                     type = "unknown",
                     detected = false,
-                    error = ex.Message
+                    error = "NAT detection failed"
                 });
             }
         }

@@ -100,6 +100,51 @@ public class TransfersControllerTests
         downloads.Verify(service => service.GetPlaceInQueueAsync(It.IsAny<Guid>()), Times.Never);
     }
 
+    [Fact]
+    public async Task EnqueueAsync_WhenEnqueueThrows_DoesNotLeakExceptionMessage()
+    {
+        var downloads = new Mock<IDownloadService>();
+        downloads
+            .Setup(service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = CreateController(downloads);
+
+        var result = await controller.EnqueueAsync(
+            "alice",
+            new[] { new QueueDownloadRequest { Filename = "Music/song.flac", Size = 10 } });
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Equal("Failed to enqueue downloads", error.Value);
+    }
+
+    [Fact]
+    public async Task GetPlaceInQueueAsync_WhenQueueLookupThrows_DoesNotLeakExceptionMessage()
+    {
+        var downloads = new Mock<IDownloadService>();
+        var transferId = Guid.NewGuid();
+        downloads
+            .Setup(service => service.Find(It.IsAny<Expression<Func<SlskdTransfer, bool>>>()))
+            .Returns(new SlskdTransfer { Id = transferId, Username = "alice" });
+        downloads
+            .Setup(service => service.GetPlaceInQueueAsync(transferId))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = CreateController(downloads);
+
+        var result = await controller.GetPlaceInQueueAsync("alice", transferId.ToString());
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Equal("Failed to get queue position", error.Value);
+    }
+
     private static TransfersController CreateController(Mock<IDownloadService> downloads)
     {
         var transferService = new Mock<ITransferService>();

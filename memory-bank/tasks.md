@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Sanitize maintenance/debug controller error contracts
+  - Status: done
+  - Notes: Removed raw exception-message leakage from native library lookup, port-forwarding, HashDb optimization/status helpers, mesh NAT detection, transfer queue operations, and multi-source search/download helpers; folded in the adjacent dirty regressions for those operational endpoints.
 - [x] Normalize utility file/chat/security controller boundaries
   - Status: done
   - Notes: Hardened `FilesController`, `RoomsController`, `ConversationsController`, and `SecurityController` so encoded route segments, room/user identifiers, chat payloads, and security admin/test inputs are trimmed/validated at the boundary; sanitized remaining raw-exception contracts in security/relay helpers; added focused regressions for the new messaging/security seams.

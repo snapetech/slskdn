@@ -294,8 +294,8 @@ namespace slskd.Transfers.API
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to enqueue {Count} files for {Username}: {Message}", requestList.Count, username, ex.Message);
-                return StatusCode(500, ex.Message);
+                Log.Error(ex, "Failed to enqueue {Count} files for {Username}", requestList.Count, username);
+                return StatusCode(500, "Failed to enqueue downloads");
             }
             finally
             {
@@ -452,7 +452,8 @@ namespace slskd.Transfers.API
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                Log.Error(ex, "Failed to get place in queue for {Username}/{TransferId}", username, guid);
+                return StatusCode(500, "Failed to get queue position");
             }
         }
 

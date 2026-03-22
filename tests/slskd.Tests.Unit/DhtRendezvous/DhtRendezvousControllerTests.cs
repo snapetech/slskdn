@@ -7,6 +7,7 @@ namespace slskd.Tests.Unit.DhtRendezvous;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using slskd.DhtRendezvous;
 using slskd.DhtRendezvous.API;
 using slskd.DhtRendezvous.Security;
 using Xunit;

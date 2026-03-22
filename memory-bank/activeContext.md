@@ -27,13 +27,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces and folded the adjacent relay helper cleanup into the same batch.
+  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers maintenance spillover into the same working sweep.
   - Normalized additional controller behavior:
     - `FilesController` now validates encoded route segments before Base64 decode/path resolution and returns explicit `400`s for invalid file/directory paths
     - `RoomsController` and `ConversationsController` now trim room/user/message inputs and reject blank or invalid identifiers before tracker/service dispatch
     - `SecurityController` now exposes the missing `GET /security/adversarial` route, validates count/limit inputs, trims security admin identifiers, and sanitizes remaining transport/config/circuit failure contracts
     - adjacent relay upload/download helper spillover was folded in so token/header inputs are trimmed, invalid Base64 relay filenames return `400`, and share-validation failures no longer leak raw exception text
-  - Added focused unit regressions for files, rooms, conversations, relay filename decoding, and the new security-controller seams.
+    - maintenance/debug helpers in native library lookup, port forwarding, HashDb optimization, mesh NAT detection, transfer queue operations, and multi-source search/download now return sanitized `500` contracts instead of raw exception text
+  - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, and the maintenance/status leak cleanup across native/hashdb/mesh/transfers.
   - Validation has still not been run in this pass.
 
 ---
@@ -81,7 +82,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 1. If requested, run `dotnet test` and `./bin/lint` to validate the committed runtime/read-side cleanup.
 2. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
 3. Prioritize additional PodCore/VirtualSoulfind/MediaCore services that still expose mutable cached collections, placeholder validation logic, under-reported state, or raw route/query parsing drift.
-4. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, or encoded payloads that still bypass boundary validation.
+4. Re-scan any remaining native/compatibility/mesh/share/file-messaging helpers for post-trim duplicate collisions, route-scope mismatches, encoded payloads that still bypass boundary validation, or sanitized-error gaps on maintenance endpoints.
 5. Continue outward into remaining stats/status/search controllers and any lingering PodCore/Sharing APIs that still accept raw IDs, null bodies, or repeated list values without normalization.
 6. Keep widening into the remaining VirtualSoulfind, Search, and PodCore read-side/status surfaces for raw query drift, inconsistent pagination/filter contracts, or false-success status responses.
 7. Continue into the remaining API/controller surfaces and any nearby runtime helpers where repeated values, nondeterministic ordering, or raw route/query strings can still leak through to the service layer.

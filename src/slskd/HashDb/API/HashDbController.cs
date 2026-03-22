@@ -385,7 +385,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error optimizing indexes");
-                return StatusCode(500, new { error = "Failed to optimize indexes", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to optimize indexes" });
             }
         }
 
@@ -409,7 +409,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error analyzing database");
-                return StatusCode(500, new { error = "Failed to analyze database", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to analyze database" });
             }
         }
 
@@ -433,7 +433,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error running VACUUM/ANALYZE");
-                return StatusCode(500, new { error = "Failed to run VACUUM/ANALYZE", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to run VACUUM/ANALYZE" });
             }
         }
 
@@ -477,7 +477,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error profiling query");
-                return StatusCode(500, new { error = "Failed to profile query", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to profile query" });
             }
         }
 
@@ -501,7 +501,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error getting slow query stats");
-                return StatusCode(500, new { error = "Failed to get slow query stats", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to get slow query stats" });
             }
         }
     }

@@ -79,9 +79,9 @@ public class PortForwardingController : ControllerBase
         {
             return Conflict(new { Error = ex.Message });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to start port forwarding: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to start port forwarding" });
         }
     }
 
@@ -98,9 +98,9 @@ public class PortForwardingController : ControllerBase
             await _portForwarder.StopForwardingAsync(localPort);
             return Ok(new { Message = $"Port forwarding stopped on local port {localPort}" });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to stop port forwarding: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to stop port forwarding" });
         }
     }
 
@@ -116,9 +116,9 @@ public class PortForwardingController : ControllerBase
             var status = _portForwarder.GetForwardingStatus();
             return Ok(status);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get forwarding status: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get forwarding status" });
         }
     }
 
@@ -140,9 +140,9 @@ public class PortForwardingController : ControllerBase
 
             return Ok(status);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get forwarding status: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get forwarding status" });
         }
     }
 
@@ -180,9 +180,9 @@ public class PortForwardingController : ControllerBase
 
             return Ok(new { AvailablePorts = availablePorts });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get available ports: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get available ports" });
         }
     }
 
@@ -230,9 +230,9 @@ public class PortForwardingController : ControllerBase
 
             return Ok(stats);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get stream statistics: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get stream statistics" });
         }
     }
 }

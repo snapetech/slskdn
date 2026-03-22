@@ -4,6 +4,8 @@
 
 namespace slskd.Tests.Unit.API.Native;
 
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -57,6 +59,29 @@ public class PortForwardingControllerTests
         var availablePortsProperty = ok.Value?.GetType().GetProperty("AvailablePorts");
         var availablePorts = Assert.IsAssignableFrom<IEnumerable<int>>(availablePortsProperty?.GetValue(ok.Value));
         Assert.Contains(12345, availablePorts);
+    }
+
+    [Fact]
+    public async Task StartForwarding_WhenForwarderThrows_DoesNotLeakExceptionMessage()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var occupiedPort = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        var controller = CreateController();
+
+        var result = await controller.StartForwarding(new StartPortForwardingRequest
+        {
+            LocalPort = occupiedPort,
+            PodId = "pod-1",
+            DestinationHost = "example.com",
+            DestinationPort = 80
+        });
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("address", error.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Failed to start port forwarding", error.Value?.ToString() ?? string.Empty);
     }
 
     private static PortForwardingController CreateController()

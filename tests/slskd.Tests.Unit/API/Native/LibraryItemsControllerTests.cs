@@ -214,6 +214,20 @@ public class LibraryItemsControllerTests
     }
 
     [Fact]
+    public async Task SearchItems_WhenBrowseThrows_DoesNotLeakExceptionMessage()
+    {
+        shareServiceMock
+            .Setup(x => x.BrowseAsync(It.IsAny<slskd.Shares.Share>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var result = await controller.SearchItems(query: null, kinds: null, limit: 100, CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
     public async Task GetItem_WithWhitespaceContentId_ReturnsBadRequest()
     {
         var result = await controller.GetItem("   ", CancellationToken.None);
@@ -254,6 +268,20 @@ public class LibraryItemsControllerTests
         var items = (itemsProp.GetValue(okResult.Value) as System.Collections.IEnumerable)?.Cast<object>().ToList();
         Assert.NotNull(items);
         Assert.Equal(2, items.Count);
+    }
+
+    [Fact]
+    public async Task GetItem_WhenBrowseThrows_DoesNotLeakExceptionMessage()
+    {
+        shareServiceMock
+            .Setup(x => x.BrowseAsync(It.IsAny<slskd.Shares.Share>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var result = await controller.GetItem("sha256:test", CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
     }
 
     [Fact]

@@ -5603,3 +5603,13 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `50d1f629`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 22:37:10Z
+
+- Folded the remaining dirty maintenance/controller spillover into another broad cleanup batch:
+  - sanitized `500` contracts in `LibraryItemsController`, `PortForwardingController`, `HashDbController`, `MeshController`, `TransfersController`, and `MultiSourceController` so those maintenance/debug/search helpers stop returning raw `ex.Message`
+  - kept the existing normalized route/body work in place and aligned the dirty tests already sitting in the tree for library lookup, port forwarding, mesh NAT detection, transfer queue operations, HashDb optimization, and multi-source search/download error handling
+  - included the adjacent dirty DHT rendezvous test import cleanup so the working tree returned to a single coherent checkpoint
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `50e59120`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

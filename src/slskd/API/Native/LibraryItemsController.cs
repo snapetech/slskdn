@@ -139,7 +139,7 @@ public class LibraryItemsController : ControllerBase
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error searching library items");
-            return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            return StatusCode(500, new { error = "Internal server error" });
         }
     }
 
@@ -356,7 +356,7 @@ public class LibraryItemsController : ControllerBase
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error getting library item");
-            return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            return StatusCode(500, new { error = "Internal server error" });
         }
     }
 

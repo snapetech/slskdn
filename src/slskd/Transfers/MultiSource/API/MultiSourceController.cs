@@ -109,8 +109,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[MultiSource] Search failed: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Store for drill-down
@@ -257,8 +257,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[MultiSource] Search failed: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Find exact matches
@@ -358,7 +358,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Download search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Find exact matches with same size
@@ -476,7 +477,8 @@ namespace slskd.Transfers.MultiSource.API
                 }
                 catch (Exception ex)
                 {
-                    return StatusCode(500, new { error = $"Search failed: {ex.Message}" });
+                    Log.Warning(ex, "[MultiSource] Swarm search failed");
+                    return StatusCode(500, new { error = "Search failed" });
                 }
 
                 Log.Information("[SWARM] Search complete: {Count} responses", searchResults.Count);
@@ -798,8 +800,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[MultiSource] Search failed: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Group files by filename + size (potential multi-source candidates)
@@ -992,7 +994,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                testResult.Error = $"Search failed: {ex.Message}";
+                Log.Warning(ex, "[MultiSource] Search test failed");
+                testResult.Error = "Search failed";
                 return Ok(testResult);
             }
 
