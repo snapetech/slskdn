@@ -545,6 +545,52 @@ Following = $"{ActorId}/following",
 ```
 
 **Why This Keeps Happening**: It is common to build actor documents first and postpone collection endpoints. In federation, advertised URLs are part of the contract. If an actor document exposes a collection URL, the server must return a syntactically valid collection there, even if it is empty for now.
+
+### 0x12. Once Inbound Follow Activities Are Accepted, Follower Collections Must Be Backed By Durable Relationship State
+
+**The Bug**: After inbox acceptance/storage was added, follower collection endpoints still had no relationship state behind them. `Follow` and `Undo` activities were accepted, but `/followers` remained disconnected from any persisted relationships.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/ActivityPubRelationshipStore.cs`
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/SocialFederation/ServiceCollectionExtensions.cs`
+
+**Wrong**:
+```csharp
+case "Follow":
+    return (true, null);
+```
+
+**Correct**:
+```csharp
+await _relationshipStore.UpsertFollowerAsync(actorName, remoteActorId, cancellationToken);
+return (true, null);
+```
+
+**Why This Keeps Happening**: It is easy to think of inbox storage and follower collections as separate milestones, but in ActivityPub they are linked by protocol semantics. If the app accepts `Follow`/`Undo`, it must update durable relationship state so `/followers` reflects what the inbox actually processed.
+
+### 0x13. External Tool Discovery Should Search Standard System Install Paths Before Falling Back To Best-Effort PATH Scans
+
+**The Bug**: Even after adding env-var and `PATH` discovery, SongID helpers like `panako.jar` and `audfprint.py` could still be missed on systems that install them into standard share directories rather than executable directories.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+var pathScript = FindNewestFileOnPath("audfprint.py");
+```
+
+**Correct**:
+```csharp
+foreach (var candidate in new[]
+{
+    "/usr/share/audfprint/audfprint.py",
+    "/usr/local/share/audfprint/audfprint.py",
+})
+```
+
+**Why This Keeps Happening**: Tool discovery often assumes either a dev checkout or an executable on `PATH`. Java jars and helper scripts are frequently packaged into shared data directories instead. Search explicit environment variables first, then standard packaged install paths, and only then fall back to looser heuristics.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
