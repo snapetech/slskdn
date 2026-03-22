@@ -159,6 +159,43 @@ await VerifyFileIntegrityAsync(status, ct);
 
 **Why This Keeps Happening**: It is easy to treat a staged or simulated transfer service as "good enough" once progress reporting exists, but any later verification step assumes a real file exists. If the service publishes `Completed` or runs integrity checks, it must materialize the output artifact or explicitly stub verification out.
 
+### 0o. Validation Added Before Assignment Cannot Reuse The Assigned Variable In `catch`
+
+**The Bug**: `DirectQuicDialer` added port validation before assigning `ipEndpoint`, but the catch block still logged `ipEndpoint.ToString()`. That introduced a compile break and would also have hidden the original validation failure behind secondary logging logic.
+
+**Files Affected**:
+- `src/slskd/Mesh/Transport/DirectQuicDialer.cs`
+
+**Wrong**:
+```csharp
+IPEndPoint ipEndpoint;
+if (endpoint.Port is <= 0 or > ushort.MaxValue)
+{
+    throw new ArgumentOutOfRangeException(nameof(endpoint.Port));
+}
+
+catch (Exception ex)
+{
+    LoggingUtils.LogConnectionFailed(_logger, peerId, ipEndpoint.ToString(), ex.Message);
+}
+```
+
+**Correct**:
+```csharp
+IPEndPoint? ipEndpoint = null;
+
+catch (Exception ex)
+{
+    LoggingUtils.LogConnectionFailed(
+        _logger,
+        peerId,
+        ipEndpoint?.ToString() ?? $"{endpoint.Host}:{endpoint.Port}",
+        ex.Message);
+}
+```
+
+**Why This Keeps Happening**: Validation checks often get inserted above the original assignment line during hardening work. Any later logging or cleanup path that assumes assignment already happened must be updated to tolerate the pre-assignment failure path as well.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
@@ -577,6 +614,7 @@ var predictedEp = new IPEndPoint(remoteEp.Address, predictedPort);
 - `src/slskd/Mesh/Dht/PeerDescriptorPublisher.cs`
 - `src/slskd/Mesh/Transport/TransportSelector.cs`
 - `src/slskd/Mesh/Overlay/QuicDataServer.cs`
+- `src/slskd/Mesh/Transport/DirectQuicDialer.cs`
 
 **Wrong**:
 ```csharp
@@ -607,6 +645,15 @@ if (parts.Length == 2 && int.TryParse(parts[1], out var port) && port is > 0 and
         Cost = 0
     };
 }
+```
+
+```csharp
+if (endpoint.Port is <= 0 or > ushort.MaxValue)
+{
+    throw new ArgumentOutOfRangeException(nameof(endpoint.Port), endpoint.Port, "Port must be between 1 and 65535");
+}
+
+var ipEndpoint = new IPEndPoint(IPAddress.Parse(endpoint.Host), endpoint.Port);
 ```
 
 **Why This Keeps Happening**: `IPEndPoint` validates ports at construction time; endpoint parsers should filter malformed or out-of-range values first to avoid throwing and to keep traversal parsing behavior deterministic.
