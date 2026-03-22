@@ -11089,3 +11089,42 @@ return StatusCode(httpStatus, new
 ```
 
 **Why This Keeps Happening**: once a service layer starts returning typed results instead of exceptions, it is easy to treat the whole DTO as a client-ready response and forward it unchanged. That shortcut is still boundary slop. Log the detailed service text, then translate the HTTP response into a stable public contract.
+
+### 0k68. Validation Helpers And Sync Results Are Not Safe Response Payloads
+
+**The Bug**: controllers can still leak internal rule text even after exception sanitization if they return validation helper output such as `GetResultString()`, SQL normalization errors, or sync-result `Error` fields directly. Those strings expose internal validation rules and backend wording that may change independently of the public API.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/OptionsController.cs`
+- `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/Mesh/API/MeshController.cs`
+
+**Wrong**:
+```csharp
+return BadRequest(result.GetResultString());
+```
+
+```csharp
+return BadRequest(new { error = validationError });
+```
+
+```csharp
+return BadRequest(new { error = result.Error });
+```
+
+**Correct**:
+```csharp
+Log.Warning("Options patch validation failed: {Message}", result.GetResultString());
+return BadRequest("Invalid options overlay");
+```
+
+```csharp
+Log.Warning("[HashDb] Rejected profiling query: {ValidationError}", validationError);
+return BadRequest(new { error = "Query is not allowed for profiling" });
+```
+
+```csharp
+return BadRequest(new { error = "Failed to sync with peer" });
+```
+
+**Why This Keeps Happening**: helper methods and result DTOs feel “more official” than exception text, so they slip past leak reviews. They are still internal diagnostics. If the string comes from validation infrastructure or a service result object, log it and translate it before returning from the controller.
