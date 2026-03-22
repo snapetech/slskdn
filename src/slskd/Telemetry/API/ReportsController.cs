@@ -76,6 +76,8 @@ public class ReportsController : ControllerBase
     [FromQuery] string? direction = null,
     [FromQuery] string? username = null)
     {
+        direction = string.IsNullOrWhiteSpace(direction) ? null : direction.Trim();
+        username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
         var now = DateTime.UtcNow;
 
         start ??= now.AddDays(-7);
@@ -109,7 +111,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching transfer summary over {Start}-{End}: {Message}", start, end, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch transfer summary");
         }
     }
 
@@ -138,6 +140,8 @@ public class ReportsController : ControllerBase
     [FromQuery] string? direction = null,
     [FromQuery] string? username = null)
     {
+        direction = string.IsNullOrWhiteSpace(direction) ? null : direction.Trim();
+        username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
         var now = DateTime.UtcNow;
 
         start ??= now.AddDays(-7);
@@ -187,7 +191,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching transfer histogram over {Start}-{End}/{Interval}: {Message}", start, end, interval, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch transfer histogram");
         }
     }
 
@@ -219,6 +223,10 @@ public class ReportsController : ControllerBase
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
     {
+        direction = direction?.Trim() ?? string.Empty;
+        sortBy = sortBy?.Trim() ?? string.Empty;
+        sortOrder = sortOrder?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(direction))
         {
             return BadRequest("Direction is required");
@@ -271,7 +279,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching transfer leaderboard over {Start}-{End}: {Message}", start, end, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch transfer leaderboard");
         }
     }
 
@@ -295,6 +303,7 @@ public class ReportsController : ControllerBase
     [FromQuery] DateTime? start = null,
     [FromQuery] DateTime? end = null)
     {
+        username = username?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(username))
         {
             return BadRequest("Username is required");
@@ -349,7 +358,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching user details for {Username}: {Message}", username, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch user details");
         }
     }
 
@@ -381,6 +390,10 @@ public class ReportsController : ControllerBase
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
     {
+        direction = direction?.Trim() ?? string.Empty;
+        username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
+        sortOrder = sortOrder?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(direction))
         {
             return BadRequest("Direction is required");
@@ -428,7 +441,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching transfer exceptions over {Start}-{End}: {Message}", start, end, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch transfer exceptions");
         }
     }
 
@@ -458,6 +471,9 @@ public class ReportsController : ControllerBase
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
     {
+        direction = direction?.Trim() ?? string.Empty;
+        username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
+
         if (string.IsNullOrWhiteSpace(direction))
         {
             return BadRequest("Direction is required");
@@ -499,7 +515,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching transfer exceptions over {Start}-{End}: {Message}", start, end, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch transfer exception summary");
         }
     }
 
@@ -527,6 +543,7 @@ public class ReportsController : ControllerBase
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
     {
+        username = string.IsNullOrWhiteSpace(username) ? null : username.Trim();
         start ??= Program.GenesisDateTime;
         end ??= DateTime.MaxValue;
 
@@ -557,7 +574,7 @@ public class ReportsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching transfer directories over {Start}-{End}: {Message}", start, end, ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch transfer directories");
         }
     }
 }

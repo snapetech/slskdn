@@ -21,6 +21,7 @@ using slskd.Core.Security;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Asp.Versioning;
@@ -96,7 +97,10 @@ public class MetricsController : ControllerBase
     {
         try
         {
-            if (Request.Headers.Accept.ToString().Equals("application/json", StringComparison.OrdinalIgnoreCase))
+            var acceptsJson = Request.GetTypedHeaders().Accept?.Any(header =>
+                string.Equals(header.MediaType.Value, "application/json", StringComparison.OrdinalIgnoreCase)) == true;
+
+            if (acceptsJson)
             {
                 Dictionary<string, PrometheusMetric> dict = await Telemetry.Prometheus.GetMetricsAsObject();
                 return Ok(dict);
@@ -108,7 +112,7 @@ public class MetricsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching metrics: {Message}", ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch metrics");
         }
     }
 
@@ -132,7 +136,7 @@ public class MetricsController : ControllerBase
         catch (Exception ex)
         {
             Log.Error(ex, "Error fetching KPIs: {Message}", ex.Message);
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, "Failed to fetch KPIs");
         }
     }
 }

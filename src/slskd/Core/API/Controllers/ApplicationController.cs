@@ -210,6 +210,11 @@ namespace slskd.Core.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult Loopback([FromBody] object body)
         {
+            if (body == null)
+            {
+                return BadRequest("Body is required");
+            }
+
             Log.Information("Loopback POST: {Body}", body);
             return Ok();
         }

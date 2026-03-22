@@ -5560,3 +5560,18 @@ Code quality improvements were completed as part of Option A:
   - added a focused native pod regression proving the fully normalized nested pod shape reaches `IPodService.CreateAsync(...)`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 21:44:40Z
+
+- Continued the broad status/report bughunt into telemetry and application utility endpoints:
+  - fixed `TelemetryController` and `MetricsController` so JSON negotiation uses typed `Accept` parsing instead of exact string equality, and `MetricsController` no longer returns raw exception messages on `500`
+  - fixed `ReportsController` so direction/username/sort inputs are trimmed before validation and all report endpoints return sanitized `500` contracts instead of `ex.Message`
+  - fixed `ApplicationController.Loopback(...)` so null bodies are rejected explicitly instead of being logged as a successful no-op
+  - folded in adjacent dirty native/controller spillover already in the tree:
+    - `WarmCacheController` now deduplicates MBIDs case-insensitively
+    - `PortForwardingController` now accepts single-port ranges
+    - native `PodsController` and its tests were aligned with the nested pod normalization pass
+  - added focused unit regressions for telemetry/application boundary behavior plus the warm-cache and port-forward spillover tests
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `7e275e8f`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

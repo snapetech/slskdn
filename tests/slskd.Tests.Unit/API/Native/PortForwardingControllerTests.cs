@@ -46,6 +46,18 @@ public class PortForwardingControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public void GetAvailablePorts_WithSinglePortRange_ReturnsThatPortWhenUnused()
+    {
+        var controller = CreateController();
+
+        var result = controller.GetAvailablePorts(12345, 12345);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var ports = ok.Value?.ToString() ?? string.Empty;
+        Assert.Contains("12345", ports);
+    }
+
     private static PortForwardingController CreateController()
     {
         var forwarder = new LocalPortForwarder(

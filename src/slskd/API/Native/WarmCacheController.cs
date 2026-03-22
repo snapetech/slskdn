@@ -59,19 +59,19 @@ public class WarmCacheController : ControllerBase
         var releaseIds = (request.MbReleaseIds ?? new List<string>())
             .Select(id => id?.Trim() ?? string.Empty)
             .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var artistIds = (request.MbArtistIds ?? new List<string>())
             .Select(id => id?.Trim() ?? string.Empty)
             .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var labelIds = (request.MbLabelIds ?? new List<string>())
             .Select(id => id?.Trim() ?? string.Empty)
             .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (releaseIds.Count == 0 && artistIds.Count == 0 && labelIds.Count == 0)

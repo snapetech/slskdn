@@ -135,8 +135,11 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "Pod data is required" });
             }
 
-            request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
-            request.Pod = NormalizePod(request.Pod);
+            request = request with
+            {
+                RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty,
+                Pod = NormalizePod(request.Pod)
+            };
 
             if (string.IsNullOrWhiteSpace(request.RequestingPeerId))
             {
@@ -193,8 +196,11 @@ public class PodsController : ControllerBase
             }
 
             podId = podId?.Trim() ?? string.Empty;
-            request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
-            request.Pod = NormalizePod(request.Pod);
+            request = request with
+            {
+                RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty,
+                Pod = NormalizePod(request.Pod)
+            };
 
             if (request.Pod.PodId != podId)
             {

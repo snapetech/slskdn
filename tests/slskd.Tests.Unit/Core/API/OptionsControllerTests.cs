@@ -7,6 +7,7 @@ namespace slskd.Tests.Unit.Core.API;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Moq;
+using slskd;
 using slskd.Core.API;
 using Xunit;
 
@@ -36,12 +37,12 @@ public class OptionsControllerTests
 
     private static OptionsController CreateController(bool remoteConfiguration = true)
     {
-        var options = new Options
+        var options = new slskd.Options
         {
             RemoteConfiguration = remoteConfiguration,
         };
 
-        var optionsSnapshot = new Mock<IOptionsSnapshot<Options>>();
+        var optionsSnapshot = new Mock<IOptionsSnapshot<slskd.Options>>();
         optionsSnapshot.SetupGet(snapshot => snapshot.Value).Returns(options);
 
         var stateMutator = new Mock<IStateMutator<State>>();

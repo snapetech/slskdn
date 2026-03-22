@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Authentication;
 using slskd.Core.API;
+using slskd.Core.Security;
 using Xunit;
 
 public class SessionControllerTests
@@ -29,7 +30,7 @@ public class SessionControllerTests
     {
         var security = new Mock<ISecurityService>();
         security
-            .Setup(service => service.GenerateJwt(It.IsAny<string>(), It.IsAny<Role>()))
+            .Setup(service => service.GenerateJwt(It.IsAny<string>(), It.IsAny<Role>(), It.IsAny<int?>()))
             .Returns(new JwtSecurityToken());
 
         var controller = CreateController(security: security);
@@ -41,18 +42,18 @@ public class SessionControllerTests
         });
 
         Assert.IsType<OkObjectResult>(result);
-        security.Verify(service => service.GenerateJwt("admin", Role.Administrator), Times.Once);
+        security.Verify(service => service.GenerateJwt("admin", Role.Administrator, It.IsAny<int?>()), Times.Once);
     }
 
     private static SessionController CreateController(bool headless = false, Mock<ISecurityService>? security = null)
     {
         security ??= new Mock<ISecurityService>();
 
-        var options = new Options
+        var options = new slskd.Options
         {
-            Web = new WebOptions
+            Web = new slskd.Options.WebOptions
             {
-                Authentication = new WebOptions.WebAuthenticationOptions
+                Authentication = new slskd.Options.WebOptions.WebAuthenticationOptions
                 {
                     Disabled = false,
                     Username = "admin",
@@ -61,7 +62,7 @@ public class SessionControllerTests
             },
         };
 
-        var optionsSnapshot = new Mock<IOptionsSnapshot<Options>>();
+        var optionsSnapshot = new Mock<IOptionsSnapshot<slskd.Options>>();
         optionsSnapshot.SetupGet(snapshot => snapshot.Value).Returns(options);
 
         return new SessionController(

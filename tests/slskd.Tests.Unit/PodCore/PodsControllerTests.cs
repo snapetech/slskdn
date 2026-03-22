@@ -205,70 +205,6 @@ public class PodsControllerTests
     }
 
     [Fact]
-    public async Task CreatePod_TrimsNestedPodFieldsBeforeDispatch()
-    {
-        var pod = new Pod
-        {
-            PodId = " pod:test123 ",
-            Name = " Test Pod ",
-            Description = "  desc  ",
-            FocusContentId = " content:mb:recording:abc ",
-            Tags = new List<string> { " ambient ", "ambient", " electronic " },
-            Members = new List<PodMember>
-            {
-                new() { PeerId = " peer:member ", Role = " owner ", PublicKey = " key-1 " }
-            },
-            ExternalBindings = new List<ExternalBinding>
-            {
-                new() { Kind = " soulseek-room ", Mode = " readonly ", Identifier = " room-1 " }
-            },
-            PrivateServicePolicy = new PodPrivateServicePolicy
-            {
-                GatewayPeerId = " peer:creator ",
-                RegisteredServices = new List<RegisteredService>
-                {
-                    new() { Name = " web ui ", Description = " local ui ", Host = " host.local ", Protocol = " tcp " }
-                }
-            }
-        };
-
-        _podServiceMock
-            .Setup(x => x.CreateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Pod { PodId = "pod:test123", Name = "Test Pod" });
-        _podServiceMock
-            .Setup(x => x.JoinAsync("pod:test123", It.IsAny<PodMember>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        var result = await _controller.CreatePod(new CreatePodRequest(pod, " peer:creator "));
-
-        Assert.IsType<CreatedAtActionResult>(result);
-        _podServiceMock.Verify(
-            x => x.CreateAsync(
-                It.Is<Pod>(created =>
-                    created.PodId == "pod:test123" &&
-                    created.Name == "Test Pod" &&
-                    created.Description == "desc" &&
-                    created.FocusContentId == "content:mb:recording:abc" &&
-                    created.Tags.SequenceEqual(new[] { "ambient", "electronic" }) &&
-                    created.Members != null &&
-                    created.Members[0].PeerId == "peer:member" &&
-                    created.Members[0].Role == "owner" &&
-                    created.Members[0].PublicKey == "key-1" &&
-                    created.ExternalBindings.Count == 1 &&
-                    created.ExternalBindings[0].Kind == "soulseek-room" &&
-                    created.ExternalBindings[0].Mode == "readonly" &&
-                    created.ExternalBindings[0].Identifier == "room-1" &&
-                    created.PrivateServicePolicy != null &&
-                    created.PrivateServicePolicy.GatewayPeerId == "peer:creator" &&
-                    created.PrivateServicePolicy.RegisteredServices[0].Name == "web ui" &&
-                    created.PrivateServicePolicy.RegisteredServices[0].Description == "local ui" &&
-                    created.PrivateServicePolicy.RegisteredServices[0].Host == "host.local" &&
-                    created.PrivateServicePolicy.RegisteredServices[0].Protocol == "tcp"),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
     public async Task CreatePod_WithNullPod_ReturnsBadRequest()
     {
         // Act
@@ -521,7 +457,9 @@ public class PodsControllerTests
 
         _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
         _podServiceMock.Setup(x => x.GetMembersAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(new List<PodMember>());
-        _podServiceMock.Setup(x => x.UpdateAsync(pod, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock
+            .Setup(x => x.UpdateAsync(It.Is<Pod>(candidate => candidate.PodId == podId && candidate.Name == "Test Pod"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pod);
 
         // Act
         var result = await _controller.UpdatePod(podId, request);

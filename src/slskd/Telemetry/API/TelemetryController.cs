@@ -24,10 +24,12 @@ using slskd.Core.Security;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
@@ -85,7 +87,10 @@ public class TelemetryController : ControllerBase
     [Produces("text/plain", "application/json")]
     public async Task<IActionResult> Get()
     {
-        if (Request.Headers.Accept.ToString().Equals("application/json", StringComparison.OrdinalIgnoreCase))
+        var acceptsJson = Request.GetTypedHeaders().Accept?.Any(header =>
+            string.Equals(header.MediaType.Value, "application/json", StringComparison.OrdinalIgnoreCase)) == true;
+
+        if (acceptsJson)
         {
             Dictionary<string, PrometheusMetric> dict = await Telemetry.Prometheus.GetMetricsAsObject();
             return Ok(dict);

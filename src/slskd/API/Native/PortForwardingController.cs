@@ -160,7 +160,7 @@ public class PortForwardingController : ControllerBase
         try
         {
             // Validate port range
-            if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || startPort >= endPort)
+            if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || startPort > endPort)
             {
                 return BadRequest(new { Error = "Invalid port range" });
             }

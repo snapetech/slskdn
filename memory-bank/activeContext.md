@@ -27,14 +27,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into core status/config endpoints, then folded the remaining native Pod spillover back to a clean tree.
+  - Continued the broad controller-boundary bughunt into telemetry/report/application utility endpoints and folded the adjacent native spillover back into the same batch.
   - Normalized additional controller behavior:
-    - `SessionController` now validates and trims login bodies before headless-mode logging or JWT generation
-    - `OptionsController` now treats missing overlay/YAML bodies as explicit request errors and sanitizes YAML write failures
-    - `LogsController` now returns a stable snapshot array instead of the live log queue
-    - `ServerController` now normalizes blank disconnect messages
-    - `PodDhtController` and `PodsController` now trim nested member/external-binding/private-service-policy fields before publication/create-update dispatch
-  - Added focused unit regressions for session/options/logs boundaries and extended Pod DHT/native Pod normalization coverage.
+    - `TelemetryController` and `MetricsController` now parse `Accept` headers correctly for JSON negotiation
+    - `MetricsController` and `ReportsController` now return sanitized `500` responses instead of raw exception messages
+    - `ReportsController` trims direction/username/sort inputs before validation
+    - `ApplicationController` now rejects null loopback bodies explicitly
+    - adjacent `WarmCacheController`, `PortForwardingController`, and native `PodsController` spillover was folded into the same boundary-cleanup batch
+  - Added focused unit regressions for telemetry/application boundaries and the native spillover cases.
   - Validation has still not been run in this pass.
 
 ---

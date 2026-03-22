@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Normalize telemetry/report controller boundaries and adjacent native spillover
+  - Status: done
+  - Notes: Fixed typed Accept-header parsing for telemetry JSON responses, sanitized report/metrics `500` contracts, trimmed report query inputs before validation, rejected null loopback bodies in `ApplicationController`, and folded in adjacent native warm-cache/port-forward/native-pod boundary cleanups plus focused tests.
 - [x] Fold deeper Pod nested normalization into native Pod endpoints
   - Status: done
   - Notes: Extended native `PodsController` payload normalization so nested members, external bindings, and private-service-policy fields are trimmed before create/update dispatch, and added regression coverage proving the normalized pod shape reaches the service layer.
