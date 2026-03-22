@@ -9569,3 +9569,52 @@ if (string.IsNullOrWhiteSpace(contentId))
 ```
 
 **Why This Keeps Happening**: once request handling looks simple, it is easy to assume framework parsing has already normalized everything important. It has not. Security checks and search filters still need to define their own canonical input shape. If a boundary depends on hostnames, loopback names, query text, or route IDs, trim and normalize those values before comparing, filtering, or logging them.
+
+### 0k58. Compatibility And Gateway Controllers Must Trim Route/Body Inputs Before Allowlist Or Enqueue Logic
+
+**The Bug**: controller boundaries still treated raw route and body strings as canonical. `MeshGatewayController.CallService(...)` checked the service allowlist and invoked service discovery with untrimmed `serviceName`/`method` route values, so padded paths could be rejected or misrouted. `DownloadsCompatibilityController` also accepted blank or whitespace-padded download items and passed raw usernames/remote paths into enqueue logic, even though the real effective request shape requires non-blank normalized values.
+
+**Files Affected**:
+- `src/slskd/API/Mesh/MeshGatewayController.cs`
+- `src/slskd/API/Compatibility/DownloadsCompatibilityController.cs`
+- `tests/slskd.Tests.Unit/Mesh/ServiceFabric/MeshGatewayControllerTests.cs`
+- `tests/slskd.Tests.Unit/API/Compatibility/DownloadsCompatibilityControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (!_options.AllowedServices.Contains(serviceName))
+{
+    return StatusCode(403, ...);
+}
+
+foreach (var item in request.Items)
+{
+    var files = new List<(string Filename, long Size)>
+    {
+        (item.RemotePath, 0)
+    };
+
+    await downloadService.EnqueueAsync(item.User, files, cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+serviceName = serviceName?.Trim() ?? string.Empty;
+method = method?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(method))
+{
+    return BadRequest(new { error = "invalid_request" });
+}
+
+var items = request.Items
+    .Select(item => new DownloadItem(
+        item.User?.Trim() ?? string.Empty,
+        item.RemotePath?.Trim() ?? string.Empty,
+        item.TargetDir?.Trim() ?? string.Empty,
+        string.IsNullOrWhiteSpace(item.TargetFilename) ? null : item.TargetFilename.Trim()))
+    .Where(item => !string.IsNullOrWhiteSpace(item.User) && !string.IsNullOrWhiteSpace(item.RemotePath))
+    .ToList();
+```
+
+**Why This Keeps Happening**: route values and JSON strings often look “already parsed,” so it is easy to assume they are ready for authorization, allowlist checks, or enqueue operations. They are not. If controller behavior depends on string identity, trim and validate before comparing or dispatching. Otherwise the API contract depends on invisible downstream normalization and breaks on padded-but-human-plausible input.
