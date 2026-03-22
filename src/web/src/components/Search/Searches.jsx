@@ -1,5 +1,6 @@
 import './Search.css';
 import { createSearchHubConnection } from '../../lib/hubFactory';
+import { getCapabilities } from '../../lib/slskdn';
 import * as library from '../../lib/searches';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
@@ -22,6 +23,7 @@ import { Button, Checkbox, Icon, Input, Segment } from 'semantic-ui-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const Searches = ({ server } = {}) => {
+  const normalizedServer = server ?? { isConnected: false };
   const [connecting, setConnecting] = useState(true);
   const [error, setError] = useState(undefined);
   const [searches, setSearches] = useState({});
@@ -137,13 +139,8 @@ const Searches = ({ server } = {}) => {
         // For now, we'll enable UI by default and check capabilities
         // In a full implementation, we'd check a specific flag from options
         try {
-          const response = await fetch('/api/slskdn/capabilities');
-          if (response.ok) {
-            const data = await response.json();
-            // Feature is enabled by default, but we can check if it's explicitly disabled
-            // For now, assume enabled unless explicitly disabled
-            setScenePodBridgeEnabled(true);
-          }
+          await getCapabilities();
+          setScenePodBridgeEnabled(true);
         } catch (error_) {
           // Feature flag check failed - assume enabled by default
           console.debug(
@@ -281,7 +278,7 @@ const Searches = ({ server } = {}) => {
       return (
         <SearchDetail
           creating={creating}
-          disabled={!server?.isConnected}
+          disabled={!normalizedServer.isConnected}
           onCreate={create}
           onRemove={remove}
           onStop={stop}
@@ -315,25 +312,25 @@ const Searches = ({ server } = {}) => {
           action={
             <>
               <Button
-                disabled={creating || !server.isConnected}
+                disabled={creating || !normalizedServer.isConnected}
                 icon="plus"
                 onClick={create}
               />
               <Button
-                disabled={creating || !server.isConnected}
+                disabled={creating || !normalizedServer.isConnected}
                 icon="search"
                 onClick={() => create({ navigate: true })}
               />
             </>
           }
           className="search-input"
-          disabled={creating || !server.isConnected}
+          disabled={creating || !normalizedServer.isConnected}
           input={
             <input
               data-lpignore="true"
               data-testid="search-input"
               placeholder={
-                server.isConnected
+                normalizedServer.isConnected
                   ? 'Search phrase'
                   : 'Connect to server to perform a search'
               }
@@ -409,10 +406,10 @@ const Searches = ({ server } = {}) => {
           </div>
         )}
       </Segment>
-      <SongIDPanel disabled={!server?.isConnected} />
-      <MusicBrainzLookup disabled={!server?.isConnected} />
-      <DiscoveryGraphAtlasPanel disabled={!server?.isConnected} />
-      <AlbumCompletionPanel disabled={!server?.isConnected} />
+      <SongIDPanel disabled={!normalizedServer.isConnected} />
+      <MusicBrainzLookup disabled={!normalizedServer.isConnected} />
+      <DiscoveryGraphAtlasPanel disabled={!normalizedServer.isConnected} />
+      <AlbumCompletionPanel disabled={!normalizedServer.isConnected} />
       {Object.keys(searches).length === 0 ? (
         <PlaceholderSegment
           caption="No searches to display"

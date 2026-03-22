@@ -258,50 +258,74 @@ Assert.Equal(ServiceStatusCodes.ServiceUnavailable, blockedReply.StatusCode);
 
 ### 0l. E2E Harnesses Must Not Treat Gitignored Downloaded Media As Baseline CI Fixtures
 
-**The Bug**: Scheduled `E2E Tests` allowed `fetch-test-fixtures.sh` to fail, but `SlskdnNode` still hard-failed on every file listed in the committed fixture manifest. Because the manifest included gitignored downloaded media, one transient fetch failure prevented every harness-backed spec from starting.
+**The Bug**: The scheduled `E2E Tests` workflow treated downloaded media as mandatory baseline fixtures, so a transient fetch failure aborted the whole suite before any real UI coverage ran.
 
 **Files Affected**:
 - `src/web/e2e/harness/SlskdnNode.ts`
 - `src/web/e2e/fixtures/ensure-fixtures.ts`
 - `src/web/e2e/streaming.spec.ts`
 - `src/web/e2e/multippeer-sharing.spec.ts`
-- `test-data/slskdn-test-fixtures/meta/generate-manifest.js`
+- `test-data/slskdn-test-fixtures/meta/manifest.json`
 
 **Wrong**:
 ```ts
-for (const fileEntry of manifest.files) {
-  await fs.access(path.join(fixturesRoot, fileEntry.path));
+const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+for (const entry of manifest.files) {
+  await fs.access(path.join(fixturesRoot, entry.path));
 }
-```
-
-```js
-const REQUIRED_FILES = [
-  'movie/sintel_512kb_stereo.mp4',
-  'music/open_goldberg/01_aria.ogg',
-];
 ```
 
 **Correct**:
 ```ts
 await ensureFixtures(fixturesRoot);
-```
-
-```ts
 test.skip(
   !hasDownloadedMediaFixtures(),
   'Streaming E2E requires downloaded media fixtures',
 );
 ```
 
-```js
-const REQUIRED_FILES = [
-  'book/treasure_island_pg120.txt',
-  'movie/sintel_poster.jpg',
-  'music/open_goldberg/cover.jpg',
-];
+**Why This Keeps Happening**: The committed fixture tree contains a small tracked offline baseline plus a larger gitignored media tier fetched on demand. CI can legitimately run without the downloaded tier, so the harness must validate the tracked baseline and let only media-dependent specs skip.
+
+### 0m. E2E Harnesses Should Launch The Prebuilt Release App, And UI Pages Must Tolerate Missing `server` State During Boot
+
+**The Bug**: The E2E harness launched `dotnet run` during test execution even though CI had already built the backend, which made the first node startup exceed the 30-second TCP wait on cold runs. Separately, `Searches.jsx` read `server.isConnected` before `applicationState.server` existed, so a harmless `/capabilities` failure turned into a page-crashing `TypeError`.
+
+**Files Affected**:
+- `src/web/e2e/harness/SlskdnNode.ts`
+- `src/web/src/components/Search/Searches.jsx`
+
+**Wrong**:
+```ts
+const webContentPath = path.relative(expectedAppBaseDir, webBuildPath);
+const args = ['run', '--project', projectPath, '--', '--app-dir', this.appDir];
+await waitForTcpListen('127.0.0.1', this.apiPort, 30_000);
 ```
 
-**Why This Keeps Happening**: The repo has two fixture tiers: tracked baseline assets and gitignored downloaded media. If the workflow says media download is optional, the harness and committed manifest must only require the tracked baseline set, and media-dependent specs need explicit skip gates.
+```jsx
+disabled={creating || !server.isConnected}
+placeholder={server.isConnected ? 'Search phrase' : 'Connect to server'}
+```
+
+**Correct**:
+```ts
+const webContentPath = webBuildPath.replace(/\\/g, '/');
+const args = useBuiltRelease
+  ? [builtDllPath, '--app-dir', this.appDir]
+  : ['run', '--project', projectPath, '-c', 'Release', '--', '--app-dir', this.appDir];
+await waitForTcpListen('127.0.0.1', this.apiPort, 60_000);
+```
+
+```jsx
+const normalizedServer = server ?? { isConnected: false };
+disabled={creating || !normalizedServer.isConnected}
+placeholder={
+  normalizedServer.isConnected
+    ? 'Search phrase'
+    : 'Connect to server to perform a search'
+}
+```
+
+**Why This Keeps Happening**: E2E harness code often grows around local developer assumptions, but CI already provides a built Release app and is much less tolerant of redundant startup work. On the frontend, boot-time state objects can be transiently missing even when the route eventually succeeds, so route components must normalize optional props before reading nested fields.
 
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 

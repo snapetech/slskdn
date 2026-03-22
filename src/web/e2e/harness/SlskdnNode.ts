@@ -188,6 +188,10 @@ export class SlskdnNode {
     }
   }
 
+  private getBuiltAppBaseDir(repoRoot: string): string {
+    return path.join(repoRoot, 'src', 'slskd', 'bin', 'Release', 'net8.0');
+  }
+
   private async syncWebUi(repoRoot: string): Promise<void> {
     const webBuildPath = path.join(repoRoot, 'src', 'web', 'build');
 
@@ -329,17 +333,7 @@ export class SlskdnNode {
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
 
     const webBuildPath = path.join(repoRoot, 'src', 'web', 'build');
-    const expectedAppBaseDir = path.join(
-      repoRoot,
-      'src',
-      'slskd',
-      'bin',
-      'Debug',
-      'net8.0',
-    );
-    const webContentPath = path
-      .relative(expectedAppBaseDir, webBuildPath)
-      .replace(/\\/g, '/');
+    const webContentPath = webBuildPath.replace(/\\/g, '/');
 
     // Note: YAML provider automatically prefixes with "slskd:" namespace, so DON'T wrap under slskd: here
     // If we wrap it, we'd get slskd:slskd:web:port instead of slskd:web:port
@@ -411,6 +405,8 @@ flags:
 
     // Launch slskdn process
     const projectPath = path.join(repoRoot, 'src', 'slskd', 'slskd.csproj');
+    const builtAppBaseDir = this.getBuiltAppBaseDir(repoRoot);
+    const builtDllPath = path.join(builtAppBaseDir, 'slskd.dll');
 
     // Verify project exists
     try {
@@ -419,20 +415,36 @@ flags:
       throw new Error(`Project not found: ${projectPath}`);
     }
 
-    // Add --force-share-scan to avoid ShareInitializationException when cache doesn't exist
-    const skipBuild = process.env.SLSKDN_E2E_NO_BUILD === 'true';
-    const args = [
-      'run',
-      '--project',
-      projectPath,
-      ...(skipBuild ? ['--no-build'] : []),
-      '--',
-      '--app-dir',
-      this.appDir,
-      '--config',
-      configPath,
-      '--force-share-scan',
-    ];
+    let useBuiltRelease = false;
+    try {
+      await fs.access(builtDllPath);
+      useBuiltRelease = true;
+    } catch {
+      useBuiltRelease = false;
+    }
+
+    const args = useBuiltRelease
+      ? [
+          builtDllPath,
+          '--app-dir',
+          this.appDir,
+          '--config',
+          configPath,
+          '--force-share-scan',
+        ]
+      : [
+          'run',
+          '--project',
+          projectPath,
+          '-c',
+          'Release',
+          '--',
+          '--app-dir',
+          this.appDir,
+          '--config',
+          configPath,
+          '--force-share-scan',
+        ];
 
     // Write stdout/stderr to files for debugging
     const artifactsDir = path.join(this.appDir, 'artifacts');
@@ -469,6 +481,10 @@ flags:
         `[${timestamp}] [${this.config.nodeName}] [+${elapsed}ms] ${message}`,
       );
     };
+
+    logWithTimestamp(
+      `[start] Launch mode: ${useBuiltRelease ? `prebuilt ${builtDllPath}` : 'dotnet run -c Release'}`,
+    );
 
     this.process.stdout?.on('data', async (data) => {
       const text = data.toString();
@@ -540,7 +556,7 @@ flags:
     const tcpStartTime = Date.now();
     logWithTimestamp(`[start] Waiting for TCP port ${this.apiPort} to listen`);
     try {
-      await waitForTcpListen('127.0.0.1', this.apiPort, 30_000);
+      await waitForTcpListen('127.0.0.1', this.apiPort, 60_000);
       const tcpElapsed = Date.now() - tcpStartTime;
       logWithTimestamp(
         `[start] TCP port ${this.apiPort} listening after ${tcpElapsed}ms`,
