@@ -280,6 +280,65 @@ if (!File.Exists(slskdDll))
 
 **Why This Keeps Happening**: Integration tests that spawn the app as a subprocess are not automatically tied to the current test build configuration. If they hard-code one output folder, they can silently run stale binaries and invalidate the test result. Always resolve the current build output first, then fall back only if necessary.
 
+### 0j4. Empty-String Unix Socket Defaults Must Be Treated As "Not Configured" Before Kestrel Startup
+
+**The Bug**: Full-instance integration tests timed out for 25 seconds per test because `Program` treated `web.socket` as configured whenever it was non-null. The option defaults to `string.Empty`, so Kestrel received an empty Unix socket path and crashed during `builder.Build()` before the API ever came up.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Core/Options.cs`
+
+**Wrong**:
+```csharp
+if (OptionsAtStartup.Web.Socket != null)
+{
+    options.ListenUnixSocket(OptionsAtStartup.Web.Socket);
+}
+```
+
+**Correct**:
+```csharp
+if (!string.IsNullOrWhiteSpace(OptionsAtStartup.Web.Socket))
+{
+    options.ListenUnixSocket(OptionsAtStartup.Web.Socket);
+}
+```
+
+**Why This Keeps Happening**: This codebase uses `string.Empty` for many optional path-like settings. Startup code must check for a real configured value, not just non-null, or the app can die in a later subsystem with a misleading exception instead of simply leaving the optional feature disabled.
+
+### 0j5. Full-Instance Bridge Tests Must Set The Bridge-Enable Environment Variable, Not Just Bridge Config
+
+**The Bug**: `SlskdnFullInstanceRunner` wrote `virtualSoulfind.bridge.enabled: true` into test config, but `Program` only registers `BridgeProxyServer` when `SLSKDN_ENABLE_BRIDGE_PROXY` is present. The bridge integration tests therefore spent their startup budget booting an app that would never open the expected bridge port.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+var startInfo = new ProcessStartInfo
+{
+    FileName = binaryPath,
+    Arguments = $"--config \"{configPath}\"",
+};
+```
+
+**Correct**:
+```csharp
+var startInfo = new ProcessStartInfo
+{
+    FileName = binaryPath,
+    Arguments = $"--config \"{configPath}\"",
+};
+
+if (enableBridge)
+{
+    startInfo.Environment["SLSKDN_ENABLE_BRIDGE_PROXY"] = "1";
+}
+```
+
+**Why This Keeps Happening**: Some test-only or deadlock-guarded features are gated by environment variables in addition to config. If a harness expects a hosted service to exist, it must mirror the same startup gate the application uses, or tests will silently wait on a port that the process was never allowed to bind.
+
 ### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
 
 **The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
