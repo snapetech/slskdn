@@ -397,6 +397,40 @@ var track = tracks.FirstOrDefault(candidate => candidate.RecordingId == recordin
 
 **Why This Keeps Happening**: Feature code often assumes a dedicated query method is required and gives up when that exact API does not exist. Before returning a permanent `null`, check whether the existing persistence layer already contains the needed data and whether a bounded lookup can assemble the answer from current interfaces.
 
+### 0x15. Transport Client Counters Must Be Released On Early Validation And Cancellation Paths Too
+
+**The Bug**: `MeshServiceClient` incremented its per-peer concurrency counter before duplicate-correlation and pre-cancel checks, then returned/threw without going through the cleanup path. A single bad request could permanently inflate pending-call accounting for that peer.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshServiceClient.cs`
+
+**Wrong**:
+```csharp
+_perPeerCallCounts.AddOrUpdate(targetPeerId, 1, (_, count) => count + 1);
+if (!_pendingCalls.TryAdd(call.CorrelationId, tcs))
+{
+    throw new InvalidOperationException("Duplicate correlation ID");
+}
+```
+
+**Correct**:
+```csharp
+_perPeerCallCounts.AddOrUpdate(targetPeerId, 1, (_, count) => count + 1);
+try
+{
+    if (!_pendingCalls.TryAdd(call.CorrelationId, tcs))
+    {
+        return Task.FromResult(new ServiceReply { ... });
+    }
+}
+finally
+{
+    // shared cleanup runs for every exit path
+}
+```
+
+**Why This Keeps Happening**: It is easy to think of “validation” as happening before the real work starts, but once shared counters or dictionaries are mutated, every return path is stateful. If a method increments concurrency, allocates correlation state, or acquires quotas before all validations finish, the cleanup logic must still wrap those early exits.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
