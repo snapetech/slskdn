@@ -85,6 +85,46 @@ error = downloadResult.Success ? null : "Swarm download failed";
 
 **Why This Keeps Happening**: helper/diagnostic endpoints often sit close to the subsystem that failed, so it feels natural to “just return the error.” But those strings come from validators, remote peers, dump tools, or internal orchestration layers and are not stable public API contracts. The right pattern is always: log detailed downstream failures privately, then return a fixed client-safe message.
 
+### 0xB0. Test Doubles Must Track Interface And Record-Signature Changes Immediately
+
+**The Bug**: integration stubs and controller tests quietly drifted behind production interfaces and result records. Once bridge services gained connection-tracking hooks and PodCore result records added required timestamps/signature fields, test projects stopped compiling even though the app code still built.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnTestClient.cs`
+- `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs`
+- `tests/slskd.Tests.Unit/Events/EventsControllerTests.cs`
+- `tests/slskd.Tests.Unit/Common/Security/SecurityControllerTests.cs`
+- `tests/slskd.Tests.Unit/Messaging/RoomsControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodDiscoveryControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodDhtControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodMembershipControllerTests.cs`
+
+**Wrong**:
+```csharp
+internal class TestSoulfindBridgeService : ISoulfindBridgeService
+{
+    public Task<BridgeHealthStatus> GetHealthAsync(...) => ...;
+}
+
+new PodMetadataResult(false, "pod-1", null, "sensitive detail");
+client.Verify(x => x.SendRoomMessageAsync("room-1", "hello"), Times.Once);
+```
+
+**Correct**:
+```csharp
+internal class TestSoulfindBridgeService : ISoulfindBridgeService
+{
+    public Task<BridgeHealthStatus> GetHealthAsync(...) => ...;
+    public void RecordClientConnection(string clientId) { }
+    public void RecordClientDisconnection(string clientId) { }
+}
+
+new PodMetadataResult(false, "pod-1", null, DateTimeOffset.MinValue, DateTimeOffset.MinValue, false, "sensitive detail");
+client.Verify(x => x.SendRoomMessageAsync("room-1", "hello", It.IsAny<CancellationToken>()), Times.Once);
+```
+
+**Why This Keeps Happening**: broad bughunt passes often touch public interfaces first and only later hit test projects during validation. In this repo, the integration/unit suites are large enough that stale stubs and old record constructors can survive for a while. Any interface or result-shape change needs an immediate companion sweep across test doubles and constructor call sites or validation turns into compile archaeology instead of real regression checking.
+
 ### 0xAC. Utility Controllers Drift Too: Encoded Route Segments, Chat Room Names, And Security Admin Inputs Need The Same Normalization And Sanitized Error Contracts
 
 **The Bug**: several “small” utility controllers were left outside the broad boundary-hardening passes. That let invalid Base64 file route segments throw during decode, whitespace-padded room/user identifiers miss tracked state, blank chat payloads reach Soulseek service calls, and security admin/test endpoints leak raw exception text from config persistence or transport probes.
