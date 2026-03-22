@@ -218,6 +218,36 @@ Directory.CreateDirectory(contentDir);
 
 **Why This Keeps Happening**: `SLSKD_APP_DIR` and `WorkingDirectory` do not control this option. The validator and `Program` both explicitly combine `OptionsAtStartup.Web.ContentPath` with `AppContext.BaseDirectory`, so tests must place any temporary relative content directory under the built app output directory.
 
+### 0k. Empty-String DTO Defaults Break `??`-Based Fallback Chains For Hash Selection
+
+**The Bug**: `AudioVariant` cleanup initialized codec-specific hash properties to `string.Empty`, but `CanonicalStatsService` still used `??` fallback chains when building dedup keys. Empty strings are non-null, so FLAC variants with missing `FlacStreamInfoHash42` stopped falling back to `FlacPcmMd5` and collapsed into the same canonical candidate bucket.
+
+**Files Affected**:
+- `src/slskd/Audio/CanonicalStatsService.cs`
+- `src/slskd/Audio/AudioVariant.cs`
+
+**Wrong**:
+```csharp
+var streamHash = v.Codec switch
+{
+    "FLAC" => v.FlacStreamInfoHash42 ?? v.FlacPcmMd5 ?? v.FileSha256,
+    "MP3" => v.Mp3StreamHash ?? v.FileSha256,
+    _ => v.FileSha256,
+};
+```
+
+**Correct**:
+```csharp
+var streamHash = v.Codec switch
+{
+    "FLAC" => FirstNonEmpty(v.FlacStreamInfoHash42, v.FlacPcmMd5, v.FileSha256),
+    "MP3" => FirstNonEmpty(v.Mp3StreamHash, v.FileSha256),
+    _ => FirstNonEmpty(v.FileSha256),
+};
+```
+
+**Why This Keeps Happening**: Nullability cleanup often replaces nullable strings with `string.Empty`, but any fallback logic that relied on `??` now changes behavior silently. When a value is semantically "missing", use `string.IsNullOrWhiteSpace`-aware fallback helpers instead of null-coalescing chains.
+
 ### 0k. Timeout-Based Circuit Tests Must Distinguish "Breaker Opened" From "Open-State Reply Observed"
 
 **The Bug**: `ServiceTimeout_TriggersCircuitBreaker` still flaked after widening the retry window because the last timeout call could be the one that opens the breaker, which means the first `ServiceUnavailable` reply only appears on the next probe request.

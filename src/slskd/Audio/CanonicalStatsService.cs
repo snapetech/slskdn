@@ -138,17 +138,22 @@ namespace slskd.Audio
         {
             var streamHash = v.Codec switch
             {
-                "FLAC" => v.FlacStreamInfoHash42 ?? v.FlacPcmMd5 ?? v.FileSha256,
-                "MP3" => v.Mp3StreamHash ?? v.FileSha256,
-                "Opus" => v.OpusStreamHash ?? v.FileSha256,
-                "AAC" => v.AacStreamHash ?? v.FileSha256,
-                _ => v.FileSha256,
+                "FLAC" => FirstNonEmpty(v.FlacStreamInfoHash42, v.FlacPcmMd5, v.FileSha256),
+                "MP3" => FirstNonEmpty(v.Mp3StreamHash, v.FileSha256),
+                "Opus" => FirstNonEmpty(v.OpusStreamHash, v.FileSha256),
+                "AAC" => FirstNonEmpty(v.AacStreamHash, v.FileSha256),
+                _ => FirstNonEmpty(v.FileSha256),
             };
 
             var sketch = string.IsNullOrWhiteSpace(v.AudioSketchHash) ? "nosketch" : v.AudioSketchHash;
             var durationBucket = RoundDuration(v.DurationMs);
             var codecPart = crossCodec ? string.Empty : (v.Codec ?? "unknown");
             return $"{codecPart}:{streamHash}:{sketch}:{durationBucket}";
+        }
+
+        private static string FirstNonEmpty(params string[] values)
+        {
+            return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
         }
 
         private static int RoundDuration(int durationMs)
