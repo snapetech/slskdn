@@ -10735,6 +10735,28 @@ return StatusCode(500, new ProblemDetails
 
 **Why This Keeps Happening**: `ProblemDetails` feels like a safe “API-native” error container, so it is easy to forget that `Detail` is still user-facing contract data. Structured error wrappers only help if their human-readable fields are also sanitized.
 
+### 0k75. Aggregated Error Lists Must Not Smuggle Raw Exception Text Back To Clients
+
+**The Bug**: after direct error returns get sanitized, internal exception text often survives inside per-item error collections. `DownloadsCompatibilityController` appended `ex.Message` into its `Errors` list for failed batch items, and `SharesController` included raw exception text in share-backfill `Errors` entries for download and content-resolution failures. Those lists are still response payloads and leak implementation details one item at a time.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/DownloadsCompatibilityController.cs`
+- `src/slskd/Sharing/API/SharesController.cs`
+- `tests/slskd.Tests.Unit/API/Compatibility/DownloadsCompatibilityControllerTests.cs`
+- `tests/slskd.Tests.Unit/Sharing/API/SharesControllerTests.cs`
+
+**Wrong**:
+```csharp
+failed.Add($"{item.User}/{item.RemotePath}: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+failed.Add($"{item.User}/{item.RemotePath}: Failed to enqueue download");
+```
+
+**Why This Keeps Happening**: batch APIs encourage “best effort” reporting, and it feels natural to preserve the exact per-item failure reason. Unless those reasons are part of the public contract, that turns internal exceptions into client-visible data. Keep the item identity, but map the failure reason to a stable public message.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
