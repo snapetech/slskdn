@@ -7253,6 +7253,8 @@ _ = ObserveBackgroundTaskAsync(
 **Files Affected**:
 - `src/slskd/VirtualSoulfind/Core/Music/MusicContentDomainProvider.cs`
 - `src/slskd/HashDb/Models/HashDbEntry.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshSearchService.cs`
+- `src/slskd/DhtRendezvous/IDhtRendezvousService.cs`
 
 **Wrong**:
 ```csharp
@@ -7262,6 +7264,10 @@ var isAdvertisable = hashes.Any(entry => entry.IsAdvertisable);
 **Correct**:
 ```csharp
 var isAdvertisable = hashes.Any();
+```
+
+```csharp
+var peerContent = await meshDirectory.FindContentByPeerAsync(peer.MeshPeerId, ct);
 ```
 
 **Why This Keeps Happening**: Data-model refactors often remove or rename properties in one subsystem while dependent query code keeps compiling in a warm workspace or on partial builds. Any change to DTO/entity shape needs a repo-wide usage pass, especially in provider/query layers that derive booleans from now-removed fields.
