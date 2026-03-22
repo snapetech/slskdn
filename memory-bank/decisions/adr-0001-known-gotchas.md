@@ -7359,6 +7359,74 @@ private async Task RunPollLoopAsync(TimeSpan pollInterval, CancellationToken can
 
 **Why This Keeps Happening**: `System.Threading.Timer` accepts synchronous callbacks, so it is deceptively easy to pass an async lambda and forget that it becomes fire-and-forget on every tick. For async periodic work, own a loop task plus cancellation source so polling cannot overlap silently and shutdown can cancel the exact work it started.
 
+### 0k27. Identity Caches Must Use The Same Comparer As The User-Facing Identity Surface
+
+**The Bug**: Scene moderation stored muted and blocked peer IDs in default case-sensitive `HashSet<string>` instances. If the same peer ID arrived later with different casing, `IsPeerMutedAsync(...)` or `IsPeerBlockedAsync(...)` returned false even though the user had already muted or blocked that peer locally.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/SceneModerationService.cs`
+
+**Wrong**:
+```csharp
+var muted = mutedPeers.GetOrAdd(sceneId, _ => new HashSet<string>());
+```
+
+**Correct**:
+```csharp
+var muted = mutedPeers.GetOrAdd(sceneId, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+```
+
+**Why This Keeps Happening**: Local caches often start with default collection constructors, but user/peer identifiers elsewhere in the codebase are treated case-insensitively. If the identity surface is case-insensitive, every cache and lookup collection that backs it needs the same comparer or the behavior becomes inconsistent and surprising.
+
+### 0k28. Security Pinning State Must Copy Caller-Owned Collections Before Storing Them
+
+**The Bug**: `DnsSecurityService.PinTunnelIPs(...)` stored the caller’s `List<string>` instance directly in tunnel pin state. If the caller later mutated that list, the pinned-IP security decision changed after the fact, which could accidentally authorize addresses that were never validated when the tunnel was created.
+
+**Files Affected**:
+- `src/slskd/Common/Security/DnsSecurityService.cs`
+
+**Wrong**:
+```csharp
+_tunnelIpPins[tunnelId] = (hostname, resolvedIPs, DateTimeOffset.UtcNow.AddHours(24));
+```
+
+**Correct**:
+```csharp
+var pinnedIps = new List<string>(resolvedIPs);
+_tunnelIpPins[tunnelId] = (hostname, pinnedIps, DateTimeOffset.UtcNow.AddHours(24));
+```
+
+**Why This Keeps Happening**: It is easy to treat a method parameter as “already ours” once validation is complete, but mutable collections still belong to the caller unless copied. Security-sensitive caches and pin sets should snapshot validated values on write so later external mutation cannot rewrite policy decisions.
+
+### 0k29. Lazily Loaded Stores Must Trigger Load On Read APIs Too, Not Just Write Paths
+
+**The Bug**: `PeerReputationStore.GetRecentEventsAsync(...)` read directly from `_eventCache` without calling `EnsureDataLoadedAsync(...)`. On a fresh store instance with valid data on disk, the method returned an empty result until some other API triggered the lazy-load path first.
+
+**Files Affected**:
+- `src/slskd/Common/Moderation/PeerReputationStore.cs`
+
+**Wrong**:
+```csharp
+public Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(...)
+{
+    if (!_eventCache.TryGetValue(peerId, out var events))
+    {
+        return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
+    }
+}
+```
+
+**Correct**:
+```csharp
+public async Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(...)
+{
+    await EnsureDataLoadedAsync(cancellationToken);
+    ...
+}
+```
+
+**Why This Keeps Happening**: Lazy-load designs usually get wired into write paths and the most obvious read methods first, then one “simple” read skips the load because it looks like a pure cache access. Any public API that exposes persisted state must either guarantee prior initialization or trigger the same lazy-load guard itself.
+
 ---
 
 *Last updated: 2026-03-22*
