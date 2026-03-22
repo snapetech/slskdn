@@ -151,6 +151,35 @@ var candidate = await ReadCandidateAsync(conn, reader, cancellationToken);
 
 **Why This Keeps Happening**: health/reporting paths often get treated as “just for the dashboard,” so stale placeholders survive even after the runtime has the real events needed to maintain correct state. The same thing happens with persistence reads: skipping malformed rows feels safe, but it leaves permanent garbage that keeps degrading behavior. If a service owns live connection state, keep it current at the source. If a persisted row is unreadable and cannot be repaired, clean it up where it is detected.
 
+### 0xA3. Progress Readback Must Reuse The Last Known Good Snapshot When Live Mesh Status Drops Out
+
+**The Bug**: bridge progress APIs returned `null` as soon as `GetTransferStatusAsync(...)` returned no live status, even when a valid progress snapshot had already been observed. That made in-flight transfers disappear from legacy clients and status polling during transient mesh gaps. Fuzzy matching also relied on descriptor retrieval exceptions instead of explicitly treating `Found == false` as a normal miss.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Bridge/BridgeApi.cs`
+- `src/slskd/VirtualSoulfind/Bridge/TransferProgressProxy.cs`
+- `src/slskd/MediaCore/FuzzyMatcher.cs`
+
+**Wrong**:
+```csharp
+var status = await meshTransfer.GetTransferStatusAsync(transferId, ct);
+if (status == null)
+{
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+var status = await meshTransfer.GetTransferStatusAsync(transferId, ct);
+if (status == null)
+{
+    return metadata?.LastProgress;
+}
+```
+
+**Why This Keeps Happening**: readback paths often assume the live backend is authoritative at every poll, but transfer/status systems are inherently lossy at the edges. When the app already has a last known good snapshot, that snapshot is more truthful than a sudden null. The same principle applies to retrieval flows: “not found” is a first-class state and should not be handled indirectly through exception churn.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
