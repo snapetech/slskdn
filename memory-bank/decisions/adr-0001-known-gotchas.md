@@ -307,6 +307,59 @@ if (IsExpired(kvp.Value))
 
 **Why This Keeps Happening**: compatibility shims and read-side endpoints are easy to treat as “best effort,” so placeholders survive because they look harmless. They are not harmless: silent defaults hide bad client input, overly strict parsing breaks compatible callers, and stale cache scans or `null` heuristics under-report state the system could already derive locally. If the app cannot determine an answer, reject the request or return the strongest real local state it has, but do not fabricate a success path.
 
+### 0xAA. Transport And Directory Helpers Must Preserve Real Endpoint State Instead Of Dropping It At Parse Boundaries
+
+**The Bug**: several low-level helpers were assuming “parse failure” or “close enough” semantics that broke real runtime behavior. `RelayOnlyTransport` incremented `ActiveConnections` without decrementing it on stream close, `NatTraversalService` only accepted literal IP relay/UDP endpoints and skipped hostname-based entries entirely, `ContentDirectory` and `MeshDirectory` trusted null/duplicate peer lists from DHT reads, `StunNatDetector` only accepted `XOR-MAPPED-ADDRESS` and ignored classic `MAPPED-ADDRESS`, `Blacklist.Contains(...)` still tried to project IPv6 addresses into an IPv4 table, and `LoggingUtils.SafeEndpoint(...)` dropped port structure for hostname endpoints.
+
+**Files Affected**:
+- `src/slskd/Common/Security/RelayOnlyTransport.cs`
+- `src/slskd/Mesh/Nat/NatTraversalService.cs`
+- `src/slskd/Mesh/Nat/StunNatDetector.cs`
+- `src/slskd/Mesh/Dht/ContentDirectory.cs`
+- `src/slskd/Mesh/Dht/MeshDirectory.cs`
+- `src/slskd/Core/Blacklist.cs`
+- `src/slskd/Mesh/Transport/LoggingUtils.cs`
+
+**Wrong**:
+```csharp
+_status.ActiveConnections++;
+return stream;
+...
+if (!IPAddress.TryParse(host, out var ip)) return false;
+...
+var endpoint = p.Endpoints.FirstOrDefault();
+...
+if (attrType == 0x0020)
+...
+int first = ip.GetAddressBytes()[0];
+...
+return $"{domain[..Math.Min(3, domain.Length)]}...{tld}";
+```
+
+**Correct**:
+```csharp
+_status.ActiveConnections++;
+return new TrackedStream(stream, () =>
+{
+    _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
+});
+...
+var resolved = await Dns.GetHostAddressesAsync(host, ct);
+...
+var endpoint = p.Endpoints?.FirstOrDefault();
+...
+if (attrType is 0x0020 or 0x0001)
+...
+if (addressBytes.Length != 4)
+{
+    return false;
+}
+...
+return $"{RedactHostname(host)}:{port}";
+```
+
+**Why This Keeps Happening**: utility layers are tempting places to be permissive because they look “non-critical,” but they sit exactly on the boundaries where real-world endpoint formats, protocol variants, and cleanup lifetimes show up. If those helpers only handle the happy-path shape, higher layers quietly lose hostnames, duplicate DHT state, classic STUN servers, or accurate connection counters. Treat parse/accounting helpers as protocol code, not convenience code.
+
 **Correct**:
 ```csharp
 var bestVariant = variants
