@@ -9346,6 +9346,67 @@ return $"{uri.Scheme}://{host}";
 
 **Why This Keeps Happening**: URI APIs split parsing and formatting responsibilities. `Uri.Host` is normalized host data, not a ready-to-emit authority string, so code that reconstructs URLs from it often forgets IPv6 bracket rules. If you rebuild a safe URL from parsed parts, explicitly handle IPv6 formatting instead of assuming the host property is directly printable.
 
+### 0k54. MediaCore Read-Side APIs Must Normalize Keys And Domain Semantics At The Boundary, Not Just In Lower Layers
+
+**The Bug**: MediaCore had already normalized descriptor retrieval and registry semantics internally, but adjacent boundaries still accepted raw, padded, or partially-normalized inputs. `ContentIdRegistry` stored and queried raw external/content IDs, `MetadataPortability.ExportAsync(...)` deduplicated case-sensitively and tracked raw parsed domains, and `DescriptorRetrieverController` still allowed whitespace-only batch payloads while advertising a `maxResults` range wider than the retriever actually honored.
+
+**Files Affected**:
+- `src/slskd/MediaCore/ContentIdRegistry.cs`
+- `src/slskd/MediaCore/MetadataPortability.cs`
+- `src/slskd/MediaCore/API/Controllers/DescriptorRetrieverController.cs`
+- `tests/slskd.Tests.Unit/MediaCore/ContentIdRegistryTests.cs`
+- `tests/slskd.Tests.Unit/MediaCore/MetadataPortabilityTests.cs`
+
+**Wrong**:
+```csharp
+var normalizedDomain = domain.ToLowerInvariant();
+foreach (var contentId in contentIds.Distinct())
+{
+    var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+}
+
+if (request?.ContentIds == null || !request.ContentIds.Any())
+{
+    return BadRequest("At least one ContentID is required");
+}
+
+if (maxResults < 1 || maxResults > 1000)
+{
+    return BadRequest("Max results must be between 1 and 1000");
+}
+```
+
+**Correct**:
+```csharp
+externalId = externalId.Trim();
+contentId = contentId.Trim();
+
+var normalizedDomain = ContentIdParser.NormalizeDomain(domain.Trim(), string.Empty);
+
+foreach (var contentId in contentIds
+    .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+    .Select(contentId => contentId.Trim())
+    .Distinct(StringComparer.OrdinalIgnoreCase))
+{
+    var parsed = ContentIdParser.Parse(contentId);
+    var domain = parsed == null
+        ? "unknown"
+        : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
+}
+
+if (request?.ContentIds == null || !request.ContentIds.Any(contentId => !string.IsNullOrWhiteSpace(contentId)))
+{
+    return BadRequest("At least one ContentID is required");
+}
+
+if (maxResults < 1 || maxResults > 500)
+{
+    return BadRequest("Max results must be between 1 and 500");
+}
+```
+
+**Why This Keeps Happening**: once a lower-level service starts normalizing IDs and domain/type semantics correctly, nearby registries, export paths, and API controllers often keep their older raw-string assumptions. That creates a quiet split-brain: one layer trims, dedupes, and maps `mb` to `audio`, while the next layer still treats whitespace, case variants, and widened ranges as distinct or valid. Fixing only the core service is not enough. When semantics change, update the registry, export/readback layer, controller validation, and tests in the same patch.
+
 ---
 
 *Last updated: 2026-03-22*
