@@ -86,6 +86,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 1. If requested, run `dotnet test` and `./bin/lint` to validate the committed runtime/read-side cleanup.
 2. Resume scanning for broad bug clusters where the public API reports success but the backing work is impossible, mis-serialized, silently filtered out, or split across normalized-vs-raw boundary assumptions.
 3. Prioritize additional PodCore/VirtualSoulfind/MediaCore services that still expose mutable cached collections, placeholder validation logic, under-reported state, or raw route/query parsing drift.
+4. Specifically re-scan remaining native/compatibility/mesh/share controllers for post-trim duplicate collisions, route-scope mismatches, and list payloads that still pass repeated values straight through to services.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

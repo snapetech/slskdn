@@ -42,11 +42,17 @@ public class BridgeController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Search([FromBody] BridgeSearchRequest request, CancellationToken ct)
     {
-        logger.LogDebug("Bridge search: {Query}", request.Query);
+        if (request == null || string.IsNullOrWhiteSpace(request.Query))
+        {
+            return BadRequest(new { error = "Query is required" });
+        }
+
+        var query = request.Query.Trim();
+        logger.LogDebug("Bridge search: {Query}", query);
 
         try
         {
-            var result = await bridgeApi.SearchAsync(request.Query, ct);
+            var result = await bridgeApi.SearchAsync(query, ct);
             return Ok(result);
         }
         catch (Exception ex)
@@ -63,14 +69,28 @@ public class BridgeController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Download([FromBody] BridgeDownloadRequest request, CancellationToken ct)
     {
-        logger.LogDebug("Bridge download: {Username}/{Filename}", request.Username, request.Filename);
+        if (request == null)
+        {
+            return BadRequest(new { error = "Request is required" });
+        }
+
+        var username = request.Username?.Trim() ?? string.Empty;
+        var filename = request.Filename?.Trim() ?? string.Empty;
+        var targetPath = request.TargetPath?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(filename) || string.IsNullOrWhiteSpace(targetPath))
+        {
+            return BadRequest(new { error = "Username, filename, and targetPath are required" });
+        }
+
+        logger.LogDebug("Bridge download: {Username}/{Filename}", username, filename);
 
         try
         {
             var transferId = await bridgeApi.DownloadAsync(
-                request.Username,
-                request.Filename,
-                request.TargetPath,
+                username,
+                filename,
+                targetPath,
                 ct);
 
             return Ok(new { transfer_id = transferId });
@@ -175,6 +195,12 @@ public class BridgeController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetTransferProgress(string transferId, CancellationToken ct)
     {
+        transferId = transferId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(transferId))
+        {
+            return BadRequest(new { error = "TransferId is required" });
+        }
+
         logger.LogDebug("Bridge transfer progress: {TransferId}", transferId);
 
         try

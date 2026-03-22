@@ -41,7 +41,17 @@ public class PodMessageRoutingController : ControllerBase
     [HttpPost("route")]
     public async Task<IActionResult> RouteMessage([FromBody] PodMessage message, CancellationToken cancellationToken = default)
     {
-        if (message == null || string.IsNullOrWhiteSpace(message.MessageId) || string.IsNullOrWhiteSpace(message.ChannelId))
+        if (message == null)
+        {
+            return BadRequest(new { error = "Valid pod message with MessageId and ChannelId is required" });
+        }
+
+        message.MessageId = message.MessageId?.Trim() ?? string.Empty;
+        message.ChannelId = message.ChannelId?.Trim() ?? string.Empty;
+        message.PodId = message.PodId?.Trim() ?? string.Empty;
+        message.SenderPeerId = message.SenderPeerId?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(message.MessageId) || string.IsNullOrWhiteSpace(message.ChannelId))
         {
             return BadRequest(new { error = "Valid pod message with MessageId and ChannelId is required" });
         }
@@ -86,9 +96,27 @@ public class PodMessageRoutingController : ControllerBase
             return BadRequest(new { error = "Valid message and target peer IDs are required" });
         }
 
+        request.Message.MessageId = request.Message.MessageId?.Trim() ?? string.Empty;
+        request.Message.ChannelId = request.Message.ChannelId?.Trim() ?? string.Empty;
+        request.Message.PodId = request.Message.PodId?.Trim() ?? string.Empty;
+        request.Message.SenderPeerId = request.Message.SenderPeerId?.Trim() ?? string.Empty;
+
+        var normalizedTargetPeerIds = request.TargetPeerIds
+            .Select(peerId => peerId?.Trim() ?? string.Empty)
+            .Where(peerId => !string.IsNullOrWhiteSpace(peerId))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (string.IsNullOrWhiteSpace(request.Message.MessageId) ||
+            string.IsNullOrWhiteSpace(request.Message.ChannelId) ||
+            normalizedTargetPeerIds.Count == 0)
+        {
+            return BadRequest(new { error = "Valid message and target peer IDs are required" });
+        }
+
         try
         {
-            var result = await _messageRouter.RouteMessageToPeersAsync(request.Message, request.TargetPeerIds, cancellationToken);
+            var result = await _messageRouter.RouteMessageToPeersAsync(request.Message, normalizedTargetPeerIds, cancellationToken);
 
             if (result.Success)
             {
@@ -141,6 +169,9 @@ public class PodMessageRoutingController : ControllerBase
     [HttpGet("seen/{messageId}/{podId}")]
     public IActionResult IsMessageSeen(string messageId, string podId)
     {
+        messageId = messageId?.Trim() ?? string.Empty;
+        podId = podId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(messageId) || string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "MessageId and PodId are required" });
@@ -167,6 +198,9 @@ public class PodMessageRoutingController : ControllerBase
     [HttpPost("seen/{messageId}/{podId}")]
     public IActionResult RegisterMessageSeen(string messageId, string podId)
     {
+        messageId = messageId?.Trim() ?? string.Empty;
+        podId = podId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(messageId) || string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "MessageId and PodId are required" });

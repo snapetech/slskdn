@@ -72,8 +72,15 @@ public class PodsController : ControllerBase
     [HttpGet("{podId}")]
     public async Task<IActionResult> GetPod(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
             var pod = await podService.GetPodAsync(podId, ct);
             if (pod == null)
             {
@@ -95,6 +102,8 @@ public class PodsController : ControllerBase
     [HttpDelete("{podId}")]
     public async Task<IActionResult> DeletePod(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
             if (string.IsNullOrWhiteSpace(podId))
@@ -125,6 +134,9 @@ public class PodsController : ControllerBase
             {
                 return BadRequest(new { error = "Pod data is required" });
             }
+
+            request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
+            request.Pod.PodId = request.Pod.PodId?.Trim() ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(request.RequestingPeerId))
             {
@@ -179,6 +191,10 @@ public class PodsController : ControllerBase
             {
                 return BadRequest(new { error = "Pod data is required" });
             }
+
+            podId = podId?.Trim() ?? string.Empty;
+            request = request with { RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty };
+            request.Pod.PodId = request.Pod.PodId?.Trim() ?? string.Empty;
 
             if (request.Pod.PodId != podId)
             {
@@ -250,8 +266,15 @@ public class PodsController : ControllerBase
     [HttpGet("{podId}/members")]
     public async Task<IActionResult> GetMembers(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
             var members = await podService.GetMembersAsync(podId, ct);
             return Ok(members);
         }
@@ -271,16 +294,25 @@ public class PodsController : ControllerBase
         [FromBody] JoinPodRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PeerId))
+            var peerId = request?.PeerId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(peerId))
             {
                 return BadRequest(new { error = "PeerId is required" });
             }
 
             var member = new PodMember
             {
-                PeerId = request.PeerId,
+                PeerId = peerId,
                 Role = "member",
                 IsBanned = false,
             };
@@ -291,7 +323,7 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "Failed to join pod (may already be a member)" });
             }
 
-            return Ok(new { podId, peerId = request.PeerId, joined = true });
+            return Ok(new { podId, peerId, joined = true });
         }
         catch (Exception ex)
         {
@@ -309,20 +341,29 @@ public class PodsController : ControllerBase
         [FromBody] LeavePodRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PeerId))
+            var peerId = request?.PeerId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(peerId))
             {
                 return BadRequest(new { error = "PeerId is required" });
             }
 
-            var left = await podService.LeaveAsync(podId, request.PeerId, ct);
+            var left = await podService.LeaveAsync(podId, peerId, ct);
             if (!left)
             {
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            return Ok(new { podId, peerId = request.PeerId, left = true });
+            return Ok(new { podId, peerId, left = true });
         }
         catch (Exception ex)
         {
@@ -340,20 +381,29 @@ public class PodsController : ControllerBase
         [FromBody] BanMemberRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PeerId))
+            var peerId = request?.PeerId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(peerId))
             {
                 return BadRequest(new { error = "PeerId is required" });
             }
 
-            var banned = await podService.BanAsync(podId, request.PeerId, ct);
+            var banned = await podService.BanAsync(podId, peerId, ct);
             if (!banned)
             {
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            return Ok(new { podId, peerId = request.PeerId, banned = true });
+            return Ok(new { podId, peerId, banned = true });
         }
         catch (Exception ex)
         {
@@ -372,8 +422,16 @@ public class PodsController : ControllerBase
         [FromQuery] long? since = null,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
             var soulseekUsername = await TryGetSoulseekDmUsernameAsync(podId, channelId, ct);
             if (soulseekUsername != null && conversationService != null)
             {
@@ -417,14 +475,26 @@ public class PodsController : ControllerBase
         [FromBody] SendMessageRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.Body))
+            var body = request?.Body?.Trim() ?? string.Empty;
+            var senderPeerId = request?.SenderPeerId?.Trim() ?? string.Empty;
+            var signature = request?.Signature?.Trim();
+
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(body))
             {
                 return BadRequest(new { error = "Message body is required" });
             }
 
-            if (string.IsNullOrWhiteSpace(request.SenderPeerId))
+            if (string.IsNullOrWhiteSpace(senderPeerId))
             {
                 return BadRequest(new { error = "SenderPeerId is required" });
             }
@@ -432,7 +502,7 @@ public class PodsController : ControllerBase
             var soulseekUsername = await TryGetSoulseekDmUsernameAsync(podId, channelId, ct);
             if (soulseekUsername != null && conversationService != null)
             {
-                await conversationService.SendMessageAsync(soulseekUsername, request.Body);
+                await conversationService.SendMessageAsync(soulseekUsername, body);
                 return Ok(new { messageId = Guid.NewGuid().ToString("N"), sent = true });
             }
 
@@ -441,10 +511,10 @@ public class PodsController : ControllerBase
                 MessageId = Guid.NewGuid().ToString("N"),
                 PodId = podId,
                 ChannelId = channelId,
-                SenderPeerId = request.SenderPeerId,
-                Body = request.Body,
+                SenderPeerId = senderPeerId,
+                Body = body,
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Signature = request.Signature ?? string.Empty,
+                Signature = signature ?? string.Empty,
             };
 
             var sent = await podMessaging.SendAsync(message, ct);
@@ -482,26 +552,36 @@ public class PodsController : ControllerBase
         [FromBody] BindRoomRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.RoomName))
+            var roomName = request?.RoomName?.Trim() ?? string.Empty;
+            var mode = string.IsNullOrWhiteSpace(request?.Mode) ? "readonly" : request.Mode.Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(roomName))
             {
                 return BadRequest(new { error = "RoomName is required" });
             }
 
-            var mode = request.Mode ?? "readonly";
             if (mode != "readonly" && mode != "mirror")
             {
                 return BadRequest(new { error = "Mode must be 'readonly' or 'mirror'" });
             }
 
-            var bound = await chatBridge.BindRoomAsync(podId, channelId, request.RoomName, mode, ct);
+            var bound = await chatBridge.BindRoomAsync(podId, channelId, roomName, mode, ct);
             if (!bound)
             {
                 return BadRequest(new { error = "Failed to bind channel to room" });
             }
 
-            return Ok(new { podId, channelId, roomName = request.RoomName, mode, bound = true });
+            return Ok(new { podId, channelId, roomName, mode, bound = true });
         }
         catch (Exception ex)
         {
@@ -519,8 +599,16 @@ public class PodsController : ControllerBase
             string channelId,
             CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
             var unbound = await chatBridge.UnbindRoomAsync(podId, channelId, ct);
             if (!unbound)
             {

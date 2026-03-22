@@ -115,6 +115,7 @@ public class CollectionsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCollectionRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Request is required.", Detail = "Request is required." });
         if (string.IsNullOrWhiteSpace(req.Title))
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Title is required.", Detail = "Title is required." });
         var currentUserId = await GetCurrentUserIdAsync(ct);
@@ -132,10 +133,16 @@ public class CollectionsController : ControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateCollectionRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();
-        if (req.Title != null) c.Title = req.Title.Trim();
+        if (req.Title != null)
+        {
+            var title = req.Title.Trim();
+            if (string.IsNullOrWhiteSpace(title)) return BadRequest("Title cannot be blank.");
+            c.Title = title;
+        }
         if (req.Description != null) c.Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
         if (req.Type != null) c.Type = req.Type.Trim() == CollectionType.Playlist ? CollectionType.Playlist : CollectionType.ShareList;
         await _sharing.UpdateCollectionAsync(c, ct);
@@ -175,6 +182,7 @@ public class CollectionsController : ControllerBase
     public async Task<IActionResult> AddItem([FromRoute] Guid id, [FromBody] AddCollectionItemRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("Request is required.");
         if (string.IsNullOrWhiteSpace(req.ContentId)) return BadRequest("ContentId is required.");
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
@@ -190,15 +198,29 @@ public class CollectionsController : ControllerBase
     public async Task<IActionResult> UpdateItem([FromRoute] Guid id, [FromRoute] Guid itemId, [FromBody] UpdateCollectionItemRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();
         var items = await _sharing.GetCollectionItemsAsync(id, ct);
         var it = items.FirstOrDefault(x => x.Id == itemId);
         if (it == null) return NotFound();
-        it.ContentId = req.ContentId ?? it.ContentId;
-        it.MediaKind = req.MediaKind;
-        it.ContentHash = req.ContentHash;
+        if (req.ContentId != null)
+        {
+            var contentId = req.ContentId.Trim();
+            if (string.IsNullOrWhiteSpace(contentId)) return BadRequest("ContentId cannot be blank.");
+            it.ContentId = contentId;
+        }
+
+        if (req.MediaKind != null)
+        {
+            it.MediaKind = string.IsNullOrWhiteSpace(req.MediaKind) ? null : req.MediaKind.Trim();
+        }
+
+        if (req.ContentHash != null)
+        {
+            it.ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHash.Trim();
+        }
         await _sharing.UpdateCollectionItemAsync(it, ct);
         return Ok(it);
     }
@@ -224,7 +246,12 @@ public class CollectionsController : ControllerBase
     public async Task<IActionResult> ReorderItems([FromRoute] Guid id, [FromBody] ReorderRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("ItemIds is required.");
         if (req.ItemIds == null || req.ItemIds.Count == 0) return BadRequest("ItemIds is required.");
+        if (req.ItemIds.Any(itemId => itemId == Guid.Empty) || req.ItemIds.Count != req.ItemIds.Distinct().Count())
+        {
+            return BadRequest("ItemIds must be non-empty and unique.");
+        }
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var c = await _sharing.GetCollectionAsync(id, ct);
         if (c == null || c.OwnerUserId != currentUserId) return NotFound();

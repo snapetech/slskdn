@@ -765,3 +765,6 @@
 - [x] Normalize null and whitespace controller body boundaries
   - Status: done
   - Notes: Added explicit null/trim handling to SearchCompatibilityController and PortForwardingController, replaced placeholder port-forwarding tests with real controller regressions, and folded in adjacent dirty controller test updates from the working tree.
+- [x] Normalize route-scoped controller ownership and duplicate-key boundaries
+  - Status: done
+  - Notes: Tightened transfer/pod/bridge/warm-cache/ranking/controller inputs so trimmed route/body values are enforced before lookup or mutation, rejected duplicate post-trim channel keys in Pod backfill sync, normalized collection item/title updates, and aligned the adjacent mesh/pod/transfer/sharing test coverage with those API boundaries.

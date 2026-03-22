@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.API.Compatibility;
 
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -11,6 +12,7 @@ using slskd.API.Compatibility;
 using slskd.Search;
 using Soulseek;
 using Xunit;
+using SlskdSearch = slskd.Search.Search;
 
 public class SearchCompatibilityControllerTests
 {
@@ -35,12 +37,13 @@ public class SearchCompatibilityControllerTests
                 It.IsAny<Guid>(),
                 It.IsAny<SearchQuery>(),
                 It.IsAny<SearchScope>(),
-                It.IsAny<SearchOptions>()))
-            .ReturnsAsync(new Search
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ReturnsAsync(new SlskdSearch
             {
                 Id = Guid.NewGuid(),
                 SearchText = "hello world",
-                Responses = new List<SearchResponse>()
+                Responses = Array.Empty<slskd.Search.Response>()
             });
 
         var controller = new SearchCompatibilityController(
@@ -53,10 +56,10 @@ public class SearchCompatibilityControllerTests
         searchService.Verify(
             service => service.StartAsync(
                 It.IsAny<Guid>(),
-                It.Is<SearchQuery>(query => query.Terms == "hello world"),
+                It.Is<SearchQuery>(query => query.Terms.SequenceEqual(new[] { "hello", "world" })),
                 It.IsAny<SearchScope>(),
-                It.IsAny<SearchOptions>()),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()),
             Times.Once);
     }
 }
-

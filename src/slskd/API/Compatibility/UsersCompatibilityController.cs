@@ -39,6 +39,12 @@ public class UsersCompatibilityController : ControllerBase
             string username,
             CancellationToken cancellationToken = default)
     {
+        username = username?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest(new { error = "Username is required" });
+        }
+
         logger.LogInformation("Browse user requested: {Username}", username);
 
         try

@@ -132,6 +132,12 @@ namespace slskd.Mesh.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> SyncWithPeer(string username)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest(new { error = "username required" });
+            }
+
             var result = await MeshSync.TrySyncWithPeerAsync(username);
             if (!result.Success)
             {
@@ -170,6 +176,12 @@ namespace slskd.Mesh.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> LookupKey(string flacKey)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return BadRequest(new { error = "flacKey required" });
+            }
+
             var entry = await MeshSync.LookupHashAsync(flacKey);
             if (entry == null)
             {
@@ -186,7 +198,15 @@ namespace slskd.Mesh.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> PublishHash([FromBody] PublishHashRequest request)
         {
-            if (string.IsNullOrEmpty(request?.FlacKey) || string.IsNullOrEmpty(request.ByteHash) || request.Size <= 0)
+            if (request == null)
+            {
+                return BadRequest(new { error = "flacKey, byteHash, and size are required" });
+            }
+
+            request.FlacKey = request.FlacKey?.Trim() ?? string.Empty;
+            request.ByteHash = request.ByteHash?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(request.FlacKey) || string.IsNullOrWhiteSpace(request.ByteHash) || request.Size <= 0)
             {
                 return BadRequest(new { error = "flacKey, byteHash, and size are required" });
             }
@@ -202,7 +222,8 @@ namespace slskd.Mesh.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> HandleMessage([FromQuery] string fromUser, [FromBody] JsonElement messageJson)
         {
-            if (string.IsNullOrEmpty(fromUser))
+            fromUser = fromUser?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(fromUser))
             {
                 return BadRequest(new { error = "fromUser query parameter required" });
             }
@@ -250,7 +271,8 @@ namespace slskd.Mesh.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> MergeEntries([FromQuery] string fromUser, [FromBody] MergeEntriesRequest request)
         {
-            if (string.IsNullOrEmpty(fromUser))
+            fromUser = fromUser?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(fromUser))
             {
                 return BadRequest(new { error = "fromUser query parameter required" });
             }
@@ -260,10 +282,31 @@ namespace slskd.Mesh.API
                 return BadRequest(new { error = "entries required" });
             }
 
-            var merged = await MeshSync.MergeEntriesAsync(fromUser, request.Entries);
+            var normalizedEntries = request.Entries
+                .Select(entry => new MeshHashEntry
+                {
+                    SeqId = entry.SeqId,
+                    FlacKey = entry.FlacKey?.Trim() ?? string.Empty,
+                    ByteHash = entry.ByteHash?.Trim() ?? string.Empty,
+                    Size = entry.Size,
+                    MetaFlags = entry.MetaFlags
+                })
+                .Where(entry =>
+                    !string.IsNullOrWhiteSpace(entry.FlacKey) &&
+                    !string.IsNullOrWhiteSpace(entry.ByteHash) &&
+                    entry.Size > 0)
+                .DistinctBy(entry => (entry.FlacKey, entry.ByteHash, entry.Size, entry.SeqId))
+                .ToArray();
+
+            if (normalizedEntries.Length == 0)
+            {
+                return BadRequest(new { error = "each entry requires flacKey, byteHash, and positive size" });
+            }
+
+            var merged = await MeshSync.MergeEntriesAsync(fromUser, normalizedEntries);
             return Ok(new
             {
-                received = request.Entries.Count(),
+                received = normalizedEntries.Length,
                 merged,
                 stats = MeshSync.Stats,
             });

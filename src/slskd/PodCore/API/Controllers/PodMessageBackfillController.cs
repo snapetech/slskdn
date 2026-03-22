@@ -55,6 +55,8 @@ public class PodMessageBackfillController : ControllerBase
         [FromBody] Dictionary<string, long> lastSeenTimestamps,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -65,9 +67,29 @@ public class PodMessageBackfillController : ControllerBase
             return BadRequest("Last seen timestamps are required");
         }
 
+        var normalizedLastSeenTimestamps = new Dictionary<string, long>(StringComparer.Ordinal);
+        foreach (var pair in lastSeenTimestamps)
+        {
+            var channelId = pair.Key?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(channelId) || pair.Value <= 0)
+            {
+                return BadRequest("Each last seen timestamp requires a non-empty channel ID and positive timestamp");
+            }
+
+            if (!normalizedLastSeenTimestamps.TryAdd(channelId, pair.Value))
+            {
+                return BadRequest("Channel IDs must be unique after trimming");
+            }
+        }
+
+        if (normalizedLastSeenTimestamps.Count == 0)
+        {
+            return BadRequest("Each last seen timestamp requires a non-empty channel ID and positive timestamp");
+        }
+
         try
         {
-            var result = await _backfillService.SyncOnRejoinAsync(podId, lastSeenTimestamps, cancellationToken);
+            var result = await _backfillService.SyncOnRejoinAsync(podId, normalizedLastSeenTimestamps, cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
@@ -91,6 +113,8 @@ public class PodMessageBackfillController : ControllerBase
     [ProducesResponseType(500)]
     public IActionResult GetLastSeenTimestamps([FromRoute] string podId)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -127,6 +151,9 @@ public class PodMessageBackfillController : ControllerBase
     [FromRoute] string channelId,
     [FromBody] long timestamp)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");

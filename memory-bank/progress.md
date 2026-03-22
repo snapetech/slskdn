@@ -5475,3 +5475,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the new bug pattern immediately in ADR-0001 and committed it as `1c76a2ea`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 20:49:25Z
+
+- Continued the broad controller-boundary bughunt into transfer, pod, bridge, mesh, warm-cache, sharing, and compatibility surfaces:
+  - fixed `TransfersController` so username-scoped download/upload routes now trim and enforce the route username before returning, cancelling, or queue-position polling a transfer by GUID, and added null-body handling to the auto-replace endpoints
+  - fixed `PodsController`, `BridgeController`, `UsersCompatibilityController`, `LibraryCompatibilityController`, `WarmCacheController`, `PodMessageRoutingController`, and `RankingController` so route/body values are trimmed before logging or dispatch, blank-only identifiers are rejected consistently, and duplicate peer/user/candidate lists are filtered before service calls
+  - fixed `PodMessageBackfillController` so trimmed channel IDs are validated without `ToDictionary(...)` collisions; duplicate keys after trimming now return a deterministic `400` instead of failing during normalization
+  - fixed `MeshController.MergeEntries(...)` so normalized duplicate entries are collapsed before merge dispatch rather than inflating the received payload with repeated identical entries
+  - fixed `CollectionsController` so null requests and blank title/content updates are rejected explicitly and item updates trim content/media/hash values before persistence
+  - folded in the adjacent dirty/new unit tests already present in the tree and aligned them with the normalized route/body semantics for transfers, ranking, pod routing/backfill, mesh merge, collection updates, and compatibility search
+- Documented the recurring bug patterns immediately in ADR-0001 and committed them as `8fded311` and `3c3e0761`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
