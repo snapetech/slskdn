@@ -23,20 +23,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Validation drift cleanup after the broad runtime/read-side bughunt, focused on getting build/test/lint green without regressing the controller-boundary hardening work
+- **Current Task**: Release-hardening follow-up after the broad runtime/read-side bughunt, focused on making release readiness explicit with a repeatable gate and checklist
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Repaired the remaining validation drift from the broad bughunt:
-    - `PeerReputationStore` now persists explicit JSON DTOs for cold-load safety instead of deserializing runtime `PeerReputationEvent` objects directly
-    - lightweight dump/mesh gateway test hosts now default to loopback remote addresses so the tightened remote-auth rules are exercised predictably in tests
-    - `WarmCacheHintsRequest` now binds snake_case MBID fields explicitly
-    - `LocalPortForwarder` no longer reports pre-cancelled stream mappings as active
-    - `BridgePerformanceTests` now assert on forced-GC retention tolerance instead of noisy heap-delta release math
-  - Added new gotchas for runtime-type JSON persistence drift and GC retention test drift
+  - Added an explicit release-surface integration smoke gate:
+    - new `packaging/scripts/run-release-integration-smoke.sh`
+    - wired into `packaging/scripts/run-release-gate.sh`
+    - covers `LoadTests`, `DisasterModeIntegrationTests`, `SoulbeetAdvancedModeTests`, `CanonicalSelectionTests`, and `LibraryHealthTests`
+  - Added `docs/dev/release-checklist.md` so local release readiness, tag-triggered builds, and remaining limits are documented in one place
+  - Updated `docs/dev/testing-policy.md` so the documented release gate matches the actual release gate
   - Validation is green:
-    - `dotnet build --no-restore` passed
-    - `dotnet test --no-build` passed
+    - `bash packaging/scripts/run-release-gate.sh` passed
     - `bash ./bin/lint` passed
 
 ---
@@ -81,9 +79,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Resume the broad runtime/read-side bughunt from clean green validation.
+1. Resume the broad runtime/read-side bughunt from the new green release gate.
 2. Prioritize remaining places where public APIs may still report success while backing work is impossible, silently filtered, or split across normalized-vs-raw boundary assumptions.
-3. Continue reducing public error-contract leakage and post-trim duplicate collisions across any remaining native/compatibility/mesh/share/file-messaging helpers.
+3. Consider automating the remaining packaging-specific smokes called out in `memory-bank/tasks.md`, especially the NixOS VM smoke test and subpath-hosted web smoke.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

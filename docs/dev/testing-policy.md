@@ -23,6 +23,14 @@ This is the minimum bar for code that is about to ship or gate CI:
 - built-web output verification for subpath-safe relative assets
 - backend unit tests
 - backend smoke/regression tests in `tests/slskd.Tests`
+- targeted backend integration smoke in `tests/slskd.Tests.Integration`:
+  - `LoadTests`
+  - `DisasterModeIntegrationTests`
+  - `SoulbeetAdvancedModeTests`
+  - `CanonicalSelectionTests`
+  - `LibraryHealthTests`
+
+See [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) for the operator-facing release steps and what this gate does or does not prove.
 
 ### 2. Focused Regression Tests
 

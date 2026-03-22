@@ -31,5 +31,8 @@ dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release
 section "Run backend smoke/regression tests"
 dotnet test tests/slskd.Tests/slskd.Tests.csproj -c Release
 
+section "Run backend integration smoke tests"
+bash packaging/scripts/run-release-integration-smoke.sh
+
 echo
 echo "Release gate passed."

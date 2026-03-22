@@ -5748,3 +5748,23 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore` passed
   - `dotnet test --no-build` passed
   - `bash ./bin/lint` passed
+
+## 2026-03-22 17:12 - Release checklist and integration smoke gate
+
+- Extended the existing repo-level release gate instead of creating a second competing pipeline:
+  - added [run-release-integration-smoke.sh](/home/keith/Documents/code/slskdn/packaging/scripts/run-release-integration-smoke.sh)
+  - wired it into [run-release-gate.sh](/home/keith/Documents/code/slskdn/packaging/scripts/run-release-gate.sh)
+- The release gate now includes a small targeted integration slice covering:
+  - `LoadTests`
+  - `DisasterModeIntegrationTests`
+  - `SoulbeetAdvancedModeTests`
+  - `CanonicalSelectionTests`
+  - `LibraryHealthTests`
+- Added an operator-facing release checklist in [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) that explains:
+  - the minimum local release bar
+  - what a green local gate proves
+  - what still requires the tag-triggered build path
+- Updated [testing-policy.md](/home/keith/Documents/code/slskdn/docs/dev/testing-policy.md) so the documented release gate matches the actual one.
+- Validation:
+  - `bash packaging/scripts/run-release-gate.sh` passed
+  - `bash ./bin/lint` passed
