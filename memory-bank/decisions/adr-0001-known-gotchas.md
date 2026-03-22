@@ -99,6 +99,46 @@ _generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token)
 
 **Why This Keeps Happening**: Linked CTS instances look like one-line plumbing, but once their token is handed to a background loop they become part of the component lifecycle. If the service must stop that loop later, it must keep and dispose the linked CTS alongside the task instead of letting a local scope tear it down.
 
+### 0r. Stop Paths Must Cancel Retry Tokens, Not Just Active Connections
+
+**The Bug**: `RelayClient.StopAsync` disconnected the current `HubConnection` but left the retry-loop token alive. A caller could request stop and still get another background reconnect attempt from the existing `Retry.Do(...)` loop.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+
+**Wrong**:
+```csharp
+public async Task StopAsync(CancellationToken cancellationToken = default)
+{
+    StartRequested = false;
+
+    if (HubConnection != null)
+    {
+        await HubConnection.StopAsync(cancellationToken);
+    }
+}
+```
+
+**Correct**:
+```csharp
+public async Task StopAsync(CancellationToken cancellationToken = default)
+{
+    StartRequested = false;
+    var startCancellationTokenSource = StartCancellationTokenSource;
+    StartCancellationTokenSource = null;
+    startCancellationTokenSource?.Cancel();
+
+    if (HubConnection != null)
+    {
+        await HubConnection.StopAsync(cancellationToken);
+    }
+
+    startCancellationTokenSource?.Dispose();
+}
+```
+
+**Why This Keeps Happening**: Connection state and retry state are often tracked separately. It is easy to stop the current socket or hub and forget that a supervising retry loop is still waiting on its own token. Any service with reconnect logic needs shutdown to cancel both the active connection and the outer retry coordinator.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
