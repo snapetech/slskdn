@@ -164,7 +164,7 @@ public class RelayOnlyTransport : IAnonymityTransport
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "Relay connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish relay connection to {Host}:{Port}", host, port);

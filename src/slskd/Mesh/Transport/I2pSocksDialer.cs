@@ -96,7 +96,7 @@ public class I2pSocksDialer : ITransportDialer
         catch (Exception ex)
         {
             _statistics.FailedConnections++;
-            _statistics.LastError = ex.Message;
+            _statistics.LastError = "I2P dialer connection failed";
             _logger.LogWarning(ex, "Failed to establish I2P connection to {Host}:{Port}", endpoint.Host, endpoint.Port);
             throw;
         }
@@ -138,7 +138,7 @@ public class I2pSocksDialer : ITransportDialer
         catch (Exception ex)
         {
             _statistics.IsAvailable = false;
-            _statistics.LastError = ex.Message;
+            _statistics.LastError = "I2P SOCKS dialer unavailable";
             _logger.LogWarning(ex, "I2P SOCKS proxy not available at {Host}:{Port}", _options.SocksHost, _options.SocksPort);
             return false;
         }

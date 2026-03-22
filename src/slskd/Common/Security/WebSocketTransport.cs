@@ -126,6 +126,8 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
     /// <returns>A stream for the tunneled connection.</returns>
     public async Task<Stream> ConnectAsync(string host, int port, string? isolationKey, CancellationToken cancellationToken = default)
     {
+        var validationFailure = false;
+
         lock (_statusLock)
         {
             _status.TotalConnectionsAttempted++;
@@ -140,6 +142,7 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
                     _status.LastError = validationError;
                 }
 
+                validationFailure = true;
                 throw new InvalidOperationException(validationError);
             }
 
@@ -242,7 +245,10 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
         {
             lock (_statusLock)
             {
-                _status.LastError = "WebSocket tunnel connection failed";
+                if (!validationFailure)
+                {
+                    _status.LastError = "WebSocket tunnel connection failed";
+                }
             }
 
             _logger.LogError(ex, "Failed to establish WebSocket tunnel to {Host}:{Port}", host, port);

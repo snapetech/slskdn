@@ -147,7 +147,7 @@ public class TorSocksDialer : ITransportDialer
         catch (Exception ex)
         {
             _statistics.IsAvailable = false;
-            _statistics.LastError = ex.Message;
+            _statistics.LastError = "Tor SOCKS dialer unavailable";
             _logger.LogWarning(ex, "Tor SOCKS proxy not available at {Host}:{Port}", _options.SocksHost, _options.SocksPort);
             return false;
         }

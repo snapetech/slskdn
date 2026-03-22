@@ -345,7 +345,7 @@ public sealed class SongIdServiceTests : IDisposable
         var metadataFacade = new Mock<IMetadataFacade>();
         metadataFacade
             .Setup(service => service.GetByFileAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MetadataFacadeResult?)null);
+            .ReturnsAsync((MetadataResult?)null);
 
         var service = CreateService(store, metadataFacade.Object, fingerprintService.Object);
         var method = typeof(SongIdService).GetMethod("AnalyzeLocalFileAsync", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -354,12 +354,15 @@ public sealed class SongIdServiceTests : IDisposable
         var audioPath = Path.Combine(_tempDir, "sample.flac");
         await File.WriteAllBytesAsync(audioPath, new byte[] { 0, 1, 2, 3 });
 
-        var task = (Task<SongIdAnalysis>)method!.Invoke(service, new object[] { audioPath, CancellationToken.None })!;
-        var analysis = await task;
+        var task = (Task)method!.Invoke(service, new object[] { audioPath, CancellationToken.None })!;
+        await task;
+        var analysis = task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)!.GetValue(task)!;
+        var evidence = (IEnumerable<string>)analysis.GetType().GetProperty("Evidence", BindingFlags.Public | BindingFlags.Instance)!.GetValue(analysis)!;
+        var query = (string)analysis.GetType().GetProperty("Query", BindingFlags.Public | BindingFlags.Instance)!.GetValue(analysis)!;
 
-        var evidence = Assert.Single(analysis.Evidence.Where(item => item.Contains("Chromaprint extraction failed for local file", StringComparison.Ordinal)));
-        Assert.DoesNotContain("sensitive", evidence, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(Path.GetFileNameWithoutExtension(audioPath), analysis.Query);
+        var sanitizedEvidence = Assert.Single(evidence.Where(item => item.Contains("Chromaprint extraction failed for local file", StringComparison.Ordinal)));
+        Assert.DoesNotContain("sensitive", sanitizedEvidence, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetFileNameWithoutExtension(audioPath), query);
     }
 
     public void Dispose()

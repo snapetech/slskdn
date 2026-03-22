@@ -121,6 +121,22 @@ public class WebSocketTransportTests : IDisposable
     }
 
     [Fact]
+    public async Task IsAvailableAsync_WhenConnectionThrows_SetsSanitizedLastError()
+    {
+        var options = new WebSocketTransportOptions
+        {
+            ServerUrl = "wss://127.0.0.1:1/tunnel"
+        };
+
+        var transport = new WebSocketTransport(options, _loggerMock.Object);
+
+        var isAvailable = await transport.IsAvailableAsync();
+
+        Assert.False(isAvailable);
+        Assert.Equal("WebSocket transport unavailable", transport.GetStatus().LastError);
+    }
+
+    [Fact]
     public async Task IsAvailableAsync_WithInvalidServerUrl_ReturnsFalseWithoutThrowing()
     {
         var options = new WebSocketTransportOptions

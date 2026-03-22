@@ -88,7 +88,7 @@ public class Obfs4Transport : IAnonymityTransport
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "Obfs4 transport unavailable";
             }
 
             _logger.LogWarning(ex, "Obfs4 transport not available");
@@ -171,7 +171,7 @@ public class Obfs4Transport : IAnonymityTransport
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "Obfs4 connection failed";
             }
 
             client?.Dispose();
