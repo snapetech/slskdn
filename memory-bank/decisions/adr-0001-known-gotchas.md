@@ -9709,3 +9709,64 @@ if (links.Any(link => string.IsNullOrWhiteSpace(link.Name) || string.IsNullOrWhi
 ```
 
 **Why This Keeps Happening**: once normalization exists, it is tempting to “help” by dropping bad elements and proceeding with the rest. That changes API semantics and hides malformed client input. For batch payloads, normalize first, then reject the whole request if any element is invalid unless the endpoint explicitly documents partial-success behavior.
+
+### 0k59. Controllers Must Validate Null Bodies Before Logging Or Relying On Attribute Validation, And Must Trim Required String Fields Explicitly
+
+**The Bug**: two controller boundaries still assumed framework/model validation had already normalized the request. `SearchCompatibilityController` logged `request.Query` before checking whether `request` was null, so a null JSON body could throw before returning a proper `400`. `PortForwardingController` relied on `[Required]`/`[StringLength]` for `PodId` and `DestinationHost`, but whitespace-only strings still made it through to forwarding logic because attribute validation does not automatically trim them into the effective required shape.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/SearchCompatibilityController.cs`
+- `src/slskd/API/Native/PortForwardingController.cs`
+- `tests/slskd.Tests.Unit/API/Compatibility/SearchCompatibilityControllerTests.cs`
+- `tests/slskd.Tests.Unit/API/Native/PortForwardingControllerTests.cs`
+
+**Wrong**:
+```csharp
+logger.LogInformation("Compatibility search: {Query}", request.Query);
+
+if (string.IsNullOrWhiteSpace(request.Query))
+{
+    return BadRequest(new { error = "Query is required" });
+}
+```
+
+```csharp
+if (!ModelState.IsValid)
+{
+    return BadRequest(ModelState);
+}
+
+await _portForwarder.StartForwardingAsync(
+    request.LocalPort,
+    request.PodId,
+    request.DestinationHost,
+    request.DestinationPort,
+    request.ServiceName);
+```
+
+**Correct**:
+```csharp
+if (request == null || string.IsNullOrWhiteSpace(request.Query))
+{
+    return BadRequest(new { error = "Query is required" });
+}
+
+var query = request.Query.Trim();
+logger.LogInformation("Compatibility search: {Query}", query);
+```
+
+```csharp
+if (request == null)
+{
+    return BadRequest(new { Error = "Request is required" });
+}
+
+var podId = request.PodId?.Trim() ?? string.Empty;
+var destinationHost = request.DestinationHost?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(podId))
+{
+    return BadRequest(new { Error = "PodId is required" });
+}
+```
+
+**Why This Keeps Happening**: framework binding gets you parsed objects, not canonical business input. Null request bodies, whitespace-only strings, and padded required identifiers still need explicit handling at the controller boundary. If the action logs, compares, or dispatches string fields, validate and trim them first instead of assuming model binding or data annotations already did it.
