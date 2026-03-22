@@ -286,6 +286,32 @@ data[kvp.Key] = kvp.Value
 
 **Why This Keeps Happening**: runtime domain types are tempting to reuse for persistence because it looks simpler, but JSON on disk is a compatibility boundary. Constructor changes, init-only properties, attribute drift, and serializer defaults all make that boundary brittle. For long-lived local persistence, use a dedicated persistence DTO with plain settable properties and map explicitly to runtime objects.
 
+### 0xB7. GC-Based Performance Tests Must Assert On Forced-Collection Retention, Not Incidental Heap Movement
+
+**The Bug**: the bridge protocol memory test used `GC.GetTotalMemory(false)` before and after allocating many `MemoryStream` instances and then asserted that at least 50% of the measured allocation disappeared after cleanup. The runtime heap moved independently of the test, so the “released memory” value could even go negative despite correct disposal.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/VirtualSoulfind/Bridge/BridgePerformanceTests.cs`
+
+**Wrong**:
+```csharp
+var memoryBefore = GC.GetTotalMemory(false);
+var memoryAfter = GC.GetTotalMemory(false);
+var memoryAfterCleanup = GC.GetTotalMemory(false);
+Assert.True(memoryReleased > memoryUsed * 0.5);
+```
+
+**Correct**:
+```csharp
+var memoryBefore = GC.GetTotalMemory(true);
+var memoryAfter = GC.GetTotalMemory(true);
+var memoryAfterCleanup = GC.GetTotalMemory(true);
+
+Assert.True(memoryAfterCleanup <= memoryBefore + retentionToleranceBytes);
+```
+
+**Why This Keeps Happening**: throughput tests often drift into heap-behavior tests, but `GetTotalMemory(false)` is only a point-in-time estimate and large-object-heap or background-GC activity makes strict delta assertions noisy. If the goal is “cleanup does not retain excessive memory,” force collection and assert on retained memory relative to a bounded tolerance above baseline.
+
 ### 0xAF. Diagnostic, Federation, And Download Helpers Must Log Detailed Downstream Failures, Not Echo Them
 
 **The Bug**: several helper endpoints still forwarded raw downstream tool/service errors back to clients because they looked “operational” rather than product-facing. That leaked YAML validator output, dumper failure text, mesh fetch errors, federation publish details, and swarm download failure reasons even after the rest of the API had been sanitized.
