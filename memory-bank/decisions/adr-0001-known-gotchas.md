@@ -97,6 +97,36 @@ return Ok(download);
 
 **Why This Keeps Happening**: boundary normalization work often starts with the request body because it is obvious, but route/query keys are just as authoritative and can drift independently. Once a controller uses a route key to scope an object lookup, the normalized route value must be validated and enforced all the way through the lookup or mutation. Otherwise the API contract says “this resource belongs to X” while the implementation really means “any resource with this GUID.”
 
+### 0xA7. Trimming Dictionary Keys After Deserialization Can Create Hidden Duplicate-Key Collisions
+
+**The Bug**: backfill sync accepted a `Dictionary<string, long>` request body, then normalized channel IDs with `ToDictionary(pair => pair.Key.Trim(), ...)`. Inputs like `"general"` and `" general "` were distinct in the JSON payload but collided after trimming, so the controller could throw during normalization before any validation response was returned.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodMessageBackfillController.cs`
+
+**Wrong**:
+```csharp
+var normalizedLastSeenTimestamps = lastSeenTimestamps
+    .ToDictionary(
+        pair => pair.Key?.Trim() ?? string.Empty,
+        pair => pair.Value);
+```
+
+**Correct**:
+```csharp
+var normalizedLastSeenTimestamps = new Dictionary<string, long>(StringComparer.Ordinal);
+foreach (var pair in lastSeenTimestamps)
+{
+    var channelId = pair.Key?.Trim() ?? string.Empty;
+    if (!normalizedLastSeenTimestamps.TryAdd(channelId, pair.Value))
+    {
+        return BadRequest("Channel IDs must be unique after trimming");
+    }
+}
+```
+
+**Why This Keeps Happening**: trimming is often treated as harmless cleanup, but it can change key identity. Any time a request dictionary or set is normalized after model binding, collisions have to be handled explicitly and turned into deterministic `400` responses. Otherwise the API skips validation and fails in the middle of normalization with an implementation-detail exception.
+
 ### 0xA0. Legacy Fallback Auto-Activation Must Be Explicitly Opt-In, Even When `VirtualSoulfind.DisasterMode` Exists
 
 **The Bug**: The code already failed closed when the entire `VirtualSoulfind.DisasterMode` section was absent, but `DisasterModeOptions.Auto` still defaulted to `true`. That meant a partial config block like `virtualSoulfind.disasterMode: {}` silently turned on legacy auto-fallback and could flip search/runtime behavior away from the default Soulseek+mesh path.
