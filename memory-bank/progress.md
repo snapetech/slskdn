@@ -53,6 +53,20 @@
 ### Remaining
 - Continue through the next runtime/status cluster where background services or orchestration layers still surface raw exception text.
 
+## 2026-03-22 16:50 - Bridge protocol and mesh status sanitization batch
+
+### Completed
+- Documented a new gotcha for background protocol and health/status surfaces that were still embedding raw exception text into observable runtime payloads.
+- `BridgeProxyServer` now returns stable `Internal error` / `Download request failed` bridge payloads instead of echoing thrown exception messages.
+- `MeshHealthCheck` now returns a stable degraded description instead of embedding the exception text.
+- `MeshCircuitBuilder` now stores a stable hop failure message instead of the raw exception text.
+
+### Verification
+- Validation has not been run in this pass.
+
+### Remaining
+- Continue the bughunt through the next protocol/runtime cluster where background services still surface more detail than they should.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

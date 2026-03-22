@@ -280,7 +280,7 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
             {
                 _logger.LogWarning(ex, "Failed to establish hop {HopNumber} to peer {PeerId}", hop.HopNumber, hop.PeerId);
                 hop.IsEstablished = false;
-                hop.ErrorMessage = ex.Message;
+                hop.ErrorMessage = "Hop establishment failed";
             }
 
             hops.Add(hop);

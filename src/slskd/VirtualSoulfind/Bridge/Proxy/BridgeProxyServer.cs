@@ -233,7 +233,7 @@ public class BridgeProxyServer : BackgroundService
                     // Try to send error response
                     try
                     {
-                        await SendErrorResponseAsync(stream, $"Internal error: {ex.Message}", ct);
+                        await SendErrorResponseAsync(stream, "Internal error", ct);
                     }
                     catch
                     {
@@ -475,7 +475,7 @@ public class BridgeProxyServer : BackgroundService
                 using var errorStream = new MemoryStream();
                 using var writer = new BinaryWriter(errorStream);
                 writer.Write(false); // Failure
-                var errorMsg = Encoding.UTF8.GetBytes(ex.Message);
+                var errorMsg = Encoding.UTF8.GetBytes("Download request failed");
                 writer.Write(errorMsg.Length);
                 writer.Write(errorMsg);
                 writer.Write(downloadRequest.Token);

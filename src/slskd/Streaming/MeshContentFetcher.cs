@@ -75,7 +75,7 @@ public sealed class MeshContentFetcher : IMeshContentFetcher
             {
                 return new MeshContentFetchResult
                 {
-                    Error = reply.ErrorMessage ?? $"Mesh service returned status {reply.StatusCode}",
+                    Error = "Mesh content fetch failed",
                     SizeValid = false,
                     HashValid = false
                 };

@@ -43,6 +43,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `MeshSyncService` no longer copies raw sync exceptions into `MeshSyncResult.Error`
     - `SwarmDownloadOrchestrator` no longer copies raw exception text into job/chunk status errors
   - Added focused regression coverage for the mesh fetch/sync failure contracts and documented the recurring pattern in `adr-0001-known-gotchas.md`
+  - Fixed another protocol/status sanitization cluster:
+    - `BridgeProxyServer` no longer sends raw exception text back over the bridge protocol for generic internal errors or failed download requests
+    - `MeshHealthCheck` no longer embeds raw exception text in degraded health descriptions
+    - `MeshCircuitBuilder` no longer stores raw exception text in hop status records
+  - Documented the recurring pattern in `adr-0001-known-gotchas.md`
   - Fixed a DHT/mesh security-helper result cluster:
     - `PeerVerificationService` no longer returns raw Soulseek/transport exception text in verification results
     - `DnsLeakPreventionVerifier` no longer returns raw socket/transport exception text in verification or leak-test results
