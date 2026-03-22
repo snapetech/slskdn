@@ -7793,6 +7793,33 @@ dhtOpsTimer.Start();
 
 **Why This Keeps Happening**: Counter plumbing often gets added first, and the timing side of a rate metric is easy to overlook because the code still compiles and returns a value. Any metric derived from elapsed time needs an explicit lifecycle decision for when the clock begins, or the rate silently degenerates to zero.
 
+### 0k35. MessagePack DHT Paths Must Store Typed Payloads, And Mutable Cache Lists Must Be Snapshotted Before Returning
+
+**The Bug**: `PodOpinionService` serialized opinions to a JSON string and passed that string into `IMeshDhtClient.PutAsync(...)`, even though the mesh DHT client already MessagePack-serializes typed objects. Reads later asked for `List<PodVariantOpinion>`, so the opinion path quietly stored one format and requested another. The same service also returned `cachedOpinions.AsReadOnly()` over a mutable `List<PodVariantOpinion>` that later writes kept mutating, so earlier callers could observe unrelated later publishes.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+var jsonData = JsonSerializer.Serialize(existingOpinions);
+await _dhtClient.PutAsync(dhtKey, jsonData, ttlSeconds: 3600, ct);
+...
+return cachedOpinions.AsReadOnly();
+```
+
+**Correct**:
+```csharp
+await _dhtClient.PutAsync(dhtKey, existingOpinions, ttlSeconds: 3600, ct);
+...
+lock (opinions)
+{
+    return opinions.ToList();
+}
+```
+
+**Why This Keeps Happening**: Generic storage wrappers make it easy to forget which layer owns serialization. If the wrapper already serializes typed values, pre-serializing to a string creates a format mismatch that compiles cleanly and only fails at runtime. Separately, `AsReadOnly()` only wraps a list; it does not freeze it. Any shared mutable cache list needs either immutable storage or a locked snapshot on every public read.
+
 ---
 
 *Last updated: 2026-03-22*
