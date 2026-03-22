@@ -353,6 +353,34 @@ _ = ObserveBackgroundTaskAsync(
 
 **Why This Keeps Happening**: fire-and-forget is convenient in controllers and timer callbacks because it keeps the main path responsive, but it also severs exception propagation. If the detached work matters enough to launch, it matters enough to wrap in a single observer that catches and logs failures explicitly.
 
+### 0xA. Per-Request Linked CancellationTokenSource Instances Need Explicit Async-Safe Disposal
+
+**The Bug**: Capability-file fetches created a linked `CancellationTokenSource` inside an async retry loop and relied on implicit disposal structure around awaited work. That left the code easy to regress and kept analyzers flagging the path, which is a good signal that linked CTS ownership is not obvious enough.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+var data = await DownloadSmallFileAsync(username, path, 4096, cts.Token);
+```
+
+**Correct**:
+```csharp
+var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+try
+{
+    var data = await DownloadSmallFileAsync(username, path, 4096, cts.Token);
+}
+finally
+{
+    cts.Dispose();
+}
+```
+
+**Why This Keeps Happening**: linked CTS instances are tiny but high-churn, and async control flow makes ownership less obvious than it looks. When a method creates a linked token per iteration or per request, make the dispose boundary explicit with `try/finally` so later edits and analyzers agree on the lifetime.
+
 ### 0x9. Refactors Must Carry Supporting Renames, Namespaces, And Exact Nullability
 
 **The Bug**: API code was updated to use `JsonDocument`, named tuple return signatures, and renamed bridge-result helpers, but the supporting `using System.Text.Json;`, matching nullable tuple generics, and helper call sites were not updated. The result was a hard compile break in otherwise unrelated validation runs.
