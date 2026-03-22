@@ -207,6 +207,38 @@ public bool IsSlskdnClient =>
 
 **Why This Keeps Happening**: capability flags and client identity are related, but they are not the same thing. A parser that successfully matches a slskdN capability envelope or version string has already learned something useful even if the feature bitmap is empty or incomplete. Treat identity and advertised features as separate dimensions, otherwise conservative peers get misclassified as nonexistent.
 
+### 0xA5. HashDb Variant APIs Must Return Stable Variant Views, Not Raw Duplicate Table Rows
+
+**The Bug**: HashDb variant lookups were still using raw table semantics in several places. `LookupHashAsync(...)` only queried `flac_key` even though callers and docs treated `VariantId` as equivalent. Recording-level variant queries also returned duplicate variants and empty recording IDs straight from the table without stable ordering or filtering.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+cmd.CommandText = "SELECT * FROM HashDb WHERE flac_key = @flac_key";
+...
+cmd.CommandText = "SELECT DISTINCT musicbrainz_id FROM HashDb WHERE musicbrainz_id IS NOT NULL";
+```
+
+**Correct**:
+```csharp
+cmd.CommandText = @"
+    SELECT *
+    FROM HashDb
+    WHERE flac_key = @lookup_key OR variant_id = @lookup_key
+    ORDER BY CASE WHEN flac_key = @lookup_key THEN 0 ELSE 1 END, last_updated_at DESC";
+...
+cmd.CommandText = @"
+    SELECT musicbrainz_id
+    FROM HashDb
+    WHERE musicbrainz_id IS NOT NULL AND TRIM(musicbrainz_id) <> ''
+    GROUP BY musicbrainz_id
+    ORDER BY MAX(last_updated_at) DESC";
+```
+
+**Why This Keeps Happening**: storage tables often keep historical or overlapping rows, but service-layer APIs are usually consumed as if they expose a canonical view. If an API says “get variant by id” or “get recording ids with variants,” it should normalize duplicates, prefer the freshest/best row, and filter empty identifiers. Otherwise higher layers inherit storage noise and quietly degrade into duplicate results, stale ordering, and missed lookups.
+
 ### 0x9. VirtualSoulfind v2 Must Not Search Soulseek With Opaque Item IDs Or Match Tracks Without Catalogue Context
 
 **The Bug**: The v2 Soulseek backend built search text from `ContentItemId.ToString()`, which produced opaque GUID queries that could never return useful network results. At the same time, the v2 match engine ignored artist/release context already present in the catalogue and accepted title-plus-duration matches as if they were the best available rule.
