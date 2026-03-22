@@ -10705,6 +10705,36 @@ catch (InvalidOperationException)
 
 **Why This Keeps Happening**: exception-leak cleanup often focuses on obvious `500` handlers first, while conflict and partial-batch branches get treated as “safe” because the operation already failed in a known way. They still expose runtime wording and backend details unless they return stable public messages just like every other boundary path.
 
+### 0k74. ProblemDetails.Detail Must Not Mirror Raw Exception Text
+
+**The Bug**: once direct string returns are cleaned up, raw exception leaks often survive inside `ProblemDetails.Detail`. `SearchActionsController` still copied backend exception text into pod and scene download failure responses even though the outer payload looked structured and intentional.
+
+**Files Affected**:
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+- `tests/slskd.Tests.Unit/Search/API/SearchActionsControllerTests.cs`
+
+**Wrong**:
+```csharp
+return StatusCode(500, new ProblemDetails
+{
+    Type = "download_exception",
+    Title = "Download exception",
+    Detail = ex.Message
+});
+```
+
+**Correct**:
+```csharp
+return StatusCode(500, new ProblemDetails
+{
+    Type = "download_exception",
+    Title = "Download exception",
+    Detail = "Scene download failed"
+});
+```
+
+**Why This Keeps Happening**: `ProblemDetails` feels like a safe “API-native” error container, so it is easy to forget that `Detail` is still user-facing contract data. Structured error wrappers only help if their human-readable fields are also sanitized.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
