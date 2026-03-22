@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Sanitize helper invite/search exception contracts
+  - Status: done
+  - Notes: Removed raw decode/search exception leakage from identity invite import and search start endpoints; folded in the focused dirty regressions already in the tree for invite decoding and differentiated search failure responses.
 - [x] Sanitize maintenance/debug controller error contracts
   - Status: done
   - Notes: Removed raw exception-message leakage from native library lookup, port-forwarding, HashDb optimization/status helpers, mesh NAT detection, transfer queue operations, and multi-source search/download helpers; folded in the adjacent dirty regressions for those operational endpoints.

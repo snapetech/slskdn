@@ -77,6 +77,18 @@ public class ContactsControllerTests
     }
 
     [Fact]
+    public async Task AddFromInvite_InvalidLink_DoesNotLeakExceptionMessage()
+    {
+        var c = CreateController();
+
+        var r = await c.AddFromInvite(new AddFromInviteRequest { InviteLink = "slskdn://invite/%", Nickname = "Bob" }, CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(r);
+        Assert.DoesNotContain("invalid", bad.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Failed to decode invite.", bad.Value);
+    }
+
+    [Fact]
     public async Task AddFromInvite_ExpiredInvite_ReturnsBadRequest()
     {
         var c = CreateController();

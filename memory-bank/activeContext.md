@@ -27,14 +27,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers maintenance spillover into the same working sweep.
+  - Continued the broad controller-boundary bughunt into file/chat/security helper surfaces, then folded the remaining native/hashdb/mesh/transfers and identity/search maintenance spillover into the same working sweep.
   - Normalized additional controller behavior:
     - `FilesController` now validates encoded route segments before Base64 decode/path resolution and returns explicit `400`s for invalid file/directory paths
     - `RoomsController` and `ConversationsController` now trim room/user/message inputs and reject blank or invalid identifiers before tracker/service dispatch
     - `SecurityController` now exposes the missing `GET /security/adversarial` route, validates count/limit inputs, trims security admin identifiers, and sanitizes remaining transport/config/circuit failure contracts
     - adjacent relay upload/download helper spillover was folded in so token/header inputs are trimmed, invalid Base64 relay filenames return `400`, and share-validation failures no longer leak raw exception text
     - maintenance/debug helpers in native library lookup, port forwarding, HashDb optimization, mesh NAT detection, transfer queue operations, and multi-source search/download now return sanitized `500` contracts instead of raw exception text
-  - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, and the maintenance/status leak cleanup across native/hashdb/mesh/transfers.
+    - `ContactsController` and `SearchesController` now return stable sanitized invite/search failure contracts instead of exposing decode/start exceptions
+  - Added/folded focused unit regressions for files, rooms, conversations, relay filename decoding, security-controller seams, the maintenance/status leak cleanup across native/hashdb/mesh/transfers, and the final identity/search helper cleanup.
   - Validation has still not been run in this pass.
 
 ---

@@ -96,9 +96,9 @@ public class ContactsController : ControllerBase
 
             return CreatedAtAction(nameof(Get), new { id = contact.Id }, contact);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return BadRequest($"Failed to decode invite: {ex.Message}");
+            return BadRequest("Failed to decode invite.");
         }
     }
 

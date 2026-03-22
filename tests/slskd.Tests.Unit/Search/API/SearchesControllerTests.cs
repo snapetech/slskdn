@@ -67,6 +67,72 @@ public class SearchesControllerTests
         Assert.IsType<BadRequestResult>(result);
     }
 
+    [Fact]
+    public async Task Post_WhenSearchServiceThrowsArgumentException_DoesNotLeakExceptionMessage()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ThrowsAsync(new ArgumentException("sensitive detail"));
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest { SearchText = "hello" });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", badRequest.Value?.ToString() ?? string.Empty);
+        Assert.Equal("Invalid search request", badRequest.Value);
+    }
+
+    [Fact]
+    public async Task Post_WhenSearchServiceThrowsDuplicateToken_DoesNotLeakExceptionMessage()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ThrowsAsync(new DuplicateTokenException("sensitive detail"));
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest { SearchText = "hello" });
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", conflict.Value?.ToString() ?? string.Empty);
+        Assert.Equal("A search with this ID is already in progress", conflict.Value);
+    }
+
+    [Fact]
+    public async Task Post_WhenSearchServiceThrowsUnexpectedException_DoesNotLeakExceptionMessage()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest { SearchText = "hello" });
+
+        var error = Assert.IsType<ConflictObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Equal("Search could not be started", error.Value);
+    }
+
     private static SearchesController CreateController(Mock<ISearchService>? searchService = null)
     {
         return new SearchesController(

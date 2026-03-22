@@ -5613,3 +5613,13 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `50e59120`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 22:44:50Z
+
+- Folded the final dirty helper/controller spillover into the same cleanup run:
+  - fixed `ContactsController.AddFromInvite(...)` so malformed invite payloads return the stable decode error instead of echoing decode exceptions
+  - fixed `SearchesController.Post(...)` so argument, duplicate-token, invalid-operation, and unexpected failures return explicit sanitized contracts instead of passing exception text through
+  - aligned the dirty unit regressions already in the tree for invite decode failures and differentiated search failure behavior
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `7fa0f5e1`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
