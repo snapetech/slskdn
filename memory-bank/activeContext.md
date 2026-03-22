@@ -200,3 +200,7 @@ dotnet test
 ## 2026-03-22 17:28
 - Folded in remaining dirty share/validator spillover and restored a clean head.
 - Next: continue broad bughunt from the remaining runtime/read-side clusters.
+
+## 2026-03-22 17:34
+- Sanitized remaining config-validation and secure-framer parser leakage surfaces.
+- Next: continue broad bughunt through remaining externally visible result/validation objects rather than pure logs.

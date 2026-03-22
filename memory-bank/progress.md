@@ -5930,3 +5930,10 @@ Code quality improvements were completed as part of Option A:
 ## 2026-03-22 17:28 - Share validation spillover cleanup
 
 - Folded in the remaining dirty share and validator spillover: `SqliteShareRepository` now returns a stable validation problem string instead of appending backend exception text, and focused tests now assert the sanitized contract for share validation and mesh descriptor serialization failures.
+
+## 2026-03-22 17:34 - Config and protocol parser sanitization pass
+
+- Fixed `Options` CIDR validators so relay-agent, blacklisted-group, and API-key validation now return stable `CIDR ... is invalid` results instead of echoing parser exception text.
+- Fixed `SecureMessageFramer` so malformed JSON now throws a stable `Invalid JSON` protocol violation instead of embedding serializer line/byte diagnostics into the wire error contract.
+- Added focused unit coverage for all three CIDR validator paths and both secure-framer malformed JSON paths.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for config and protocol parser leakage.

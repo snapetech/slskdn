@@ -12495,3 +12495,25 @@ return (false, "Failed to serialize descriptor");
 ```
 
 **Why This Keeps Happening**: validation/report code often feels “safe” because it is already building human-readable failure messages. But those strings are still part of the external contract. For catch-all validation failures, log the exception and return a stable public message instead.
+
+### 0k83. Config Validators And Protocol Framers Must Not Echo Parser Internals
+
+**The Bug**: both configuration validators and wire-protocol framers were still appending raw parser exception text into externally visible validation errors and protocol violations. That leaked implementation details like CIDR parser messages and JSON byte offsets into public contracts.
+
+**Files Affected**:
+- `src/slskd/Core/Options.cs`
+- `src/slskd/DhtRendezvous/Security/SecureMessageFramer.cs`
+
+**Wrong**:
+```csharp
+results.Add(new ValidationResult($"CIDR {cidr} is invalid: {ex.Message}"));
+throw new ProtocolViolationException($"Invalid JSON: {ex.Message}", ex);
+```
+
+**Correct**:
+```csharp
+results.Add(new ValidationResult($"CIDR {cidr} is invalid"));
+throw new ProtocolViolationException("Invalid JSON", ex);
+```
+
+**Why This Keeps Happening**: parsers and validators feel like “input-quality” code, so it seems harmless to expose their exact failure text. But those messages are still observable API surface and can drift with library upgrades. Return stable public wording and keep parser specifics in logs only.
