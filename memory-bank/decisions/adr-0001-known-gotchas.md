@@ -7944,6 +7944,45 @@ await _dhtClient.PutAsync(discoveryKey, updatedPodIds, ttlSeconds: 300, cancella
 
 **Why This Keeps Happening**: Shared secondary indexes feel like “soft cache” data, so it is easy to treat unregister as “clear the key” instead of “remove one membership entry.” That breaks as soon as multiple objects share the same index key. Any typed shared index must be updated with the same shape used for reads, and unregister/update paths must remove only the target member while preserving the rest of the index.
 
+### 0k38. Reverse Index Read-Modify-Write Paths Need Local Serialization Or They Will Drop Concurrent Updates
+
+**The Bug**: `ContentPeerPublisher` updated the reverse `mesh:peer-content:{peerId}` index by reading the current `List<string>`, appending one content ID, and writing the list back. Two concurrent publishes for the same peer could both read the same old list and the later write would overwrite the earlier one, silently dropping one content mapping.
+
+**Files Affected**:
+- `src/slskd/Mesh/Dht/ContentPeerPublisher.cs`
+
+**Wrong**:
+```csharp
+var existing = await dht.GetAsync<List<string>>(peerKey, ct) ?? new List<string>();
+if (!existing.Contains(contentId))
+{
+    existing.Add(contentId);
+}
+
+await dht.PutAsync(peerKey, existing, ttlSeconds: 1800, ct: ct);
+```
+
+**Correct**:
+```csharp
+await peerContentIndexLock.WaitAsync(ct);
+try
+{
+    var existing = await dht.GetAsync<List<string>>(peerKey, ct) ?? new List<string>();
+    if (!existing.Contains(contentId))
+    {
+        existing.Add(contentId);
+    }
+
+    await dht.PutAsync(peerKey, existing, ttlSeconds: 1800, ct: ct);
+}
+finally
+{
+    peerContentIndexLock.Release();
+}
+```
+
+**Why This Keeps Happening**: A single-process service often “looks sequential” in code review, but any async publish path can be entered concurrently. Read-modify-write against a shared typed index is a lost-update bug unless the process serializes those mutations or the storage layer offers a real compare-and-swap primitive.
+
 ---
 
 *Last updated: 2026-03-22*
