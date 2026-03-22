@@ -216,7 +216,8 @@ public class PodContentController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Invalid content-linked pod request");
+            return BadRequest("Invalid content-linked pod request");
         }
         catch (Exception ex)
         {

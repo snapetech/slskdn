@@ -744,6 +744,9 @@
 
 ## 2026-03-22 Completed Follow-up
 
+- [x] Sanitize Solid, user-offline, and PodCore validation error contracts
+  - Status: done
+  - Notes: Removed raw policy/exception detail leakage from Solid WebID resolution, sanitized offline-user `404` responses in `UsersController`, and replaced service-thrown argument/invalid-operation text with stable bad-request contracts in Pod content/channel/native pod create paths; added focused regressions for those error contracts.
 - [x] Sanitize helper invite/search exception contracts
   - Status: done
   - Notes: Removed raw decode/search exception leakage from identity invite import and search start endpoints; folded in the focused dirty regressions already in the tree for invite decoding and differentiated search failure responses.

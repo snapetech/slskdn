@@ -5623,3 +5623,14 @@ Code quality improvements were completed as part of Option A:
 - Documented the recurring bug pattern immediately in ADR-0001 and committed it as `7fa0f5e1`
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 22:58:35Z
+
+- Continued the same controller-contract cleanup into the next raw-exception cluster:
+  - fixed `SolidController` so blocked/failed WebID resolution no longer returns raw fetch-policy or transport exception text in `ProblemDetails`
+  - fixed `UsersController` so offline-user lookups return a stable `User is offline` contract instead of echoing `UserOfflineException` text across endpoint/browse/directory/info/status
+  - fixed `PodContentController`, `PodChannelController`, and native `PodsController` so service-thrown validation/invalid-operation messages no longer pass straight through to callers on create/update flows
+  - added focused regressions for Solid blocked/failure details, sanitized offline-user responses, and the PodCore bad-request contracts
+- Documented the recurring bug pattern immediately in ADR-0001 and committed it as `d85c4684`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

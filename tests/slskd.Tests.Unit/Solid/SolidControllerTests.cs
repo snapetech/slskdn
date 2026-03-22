@@ -111,6 +111,7 @@ public class SolidControllerTests
         Assert.Equal(400, problem.StatusCode);
         var problemDetails = problem.Value as Microsoft.AspNetCore.Mvc.ProblemDetails;
         Assert.Contains("Solid fetch blocked", problemDetails?.Title);
+        Assert.DoesNotContain("example.com", problemDetails?.Detail ?? string.Empty);
     }
 
     [Fact]
@@ -145,5 +146,6 @@ public class SolidControllerTests
         Assert.Equal(500, problem.StatusCode);
         var problemDetails = problem.Value as Microsoft.AspNetCore.Mvc.ProblemDetails;
         Assert.Contains("Failed to resolve WebID", problemDetails?.Title);
+        Assert.DoesNotContain("Network error", problemDetails?.Detail ?? string.Empty);
     }
 }

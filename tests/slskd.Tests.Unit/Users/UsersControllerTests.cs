@@ -71,5 +71,24 @@ namespace slskd.Tests.Unit.Users
 
             Assert.IsType<BadRequestObjectResult>(result);
         }
+
+        [Fact]
+        public async Task Info_WhenUserOffline_DoesNotLeakExceptionMessage()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock.Setup(x => x.GetInfoAsync("testuser")).ThrowsAsync(new UserOfflineException("sensitive detail"));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser");
+
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("User is offline", notFound.Value);
+        }
     }
 }

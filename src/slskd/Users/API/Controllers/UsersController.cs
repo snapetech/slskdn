@@ -101,7 +101,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for endpoint lookup", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -145,7 +146,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for browse", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -243,7 +245,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for directory browse", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -276,7 +279,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for info", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -309,7 +313,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for status", username);
+                return NotFound("User is offline");
             }
         }
 

@@ -94,4 +94,28 @@ public class PodChannelControllerTests
             service => service.CreateChannelAsync(It.IsAny<string>(), It.IsAny<PodChannel>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task CreateChannel_WhenServiceThrowsArgumentException_ReturnsSanitizedBadRequest()
+    {
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.GetPodAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Pod { PodId = "pod-1" });
+        podService
+            .Setup(service => service.CreateChannelAsync(It.IsAny<string>(), It.IsAny<PodChannel>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("sensitive detail"));
+
+        var controller = new PodChannelController(
+            podService.Object,
+            NullLogger<PodChannelController>.Instance);
+
+        var result = await controller.CreateChannel(
+            "pod-1",
+            new PodChannel { ChannelId = "channel-1", Name = "General" },
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Invalid channel request", badRequest.Value);
+    }
 }

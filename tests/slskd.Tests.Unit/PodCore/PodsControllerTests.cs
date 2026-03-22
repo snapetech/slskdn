@@ -215,6 +215,23 @@ public class PodsControllerTests
     }
 
     [Fact]
+    public async Task CreatePod_WhenServiceThrowsArgumentException_ReturnsSanitizedBadRequest()
+    {
+        var request = new CreatePodRequest(
+            new Pod { PodId = "pod:test123", Name = "Test Pod", Visibility = PodVisibility.Private },
+            "peer:creator");
+
+        _podServiceMock
+            .Setup(x => x.CreateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("sensitive detail"));
+
+        var result = await _controller.CreatePod(request);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Invalid pod request", badRequest.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
     public async Task DeletePod_WithValidPodId_ReturnsNoContent()
     {
         var podId = "pod:00000000000000000000000000000001";

@@ -65,6 +65,24 @@ public class PodContentControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task CreateContentLinkedPod_WhenServiceThrowsArgumentException_ReturnsSanitizedBadRequest()
+    {
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.CreateContentLinkedPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("sensitive detail"));
+
+        var controller = CreateController(Mock.Of<IContentLinkService>(), podService.Object);
+
+        var result = await controller.CreateContentLinkedPod(
+            new ContentLinkedPodRequest("pod-1", "Demo", PodVisibility.Listed, "content-1"),
+            CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Invalid content-linked pod request", badRequest.Value);
+    }
+
     private static PodContentController CreateController(IContentLinkService contentLinkService, IPodService? podService = null)
     {
         var services = new ServiceCollection();

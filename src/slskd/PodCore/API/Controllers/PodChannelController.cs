@@ -96,11 +96,13 @@ public class PodChannelController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Invalid create channel request for pod {PodId}", podId);
+            return BadRequest("Invalid channel request");
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Create channel operation rejected for pod {PodId}", podId);
+            return BadRequest("Invalid channel request");
         }
         catch (Exception ex)
         {
@@ -287,11 +289,13 @@ public class PodChannelController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Invalid update channel request for pod {PodId}/{ChannelId}", podId, channelId);
+            return BadRequest("Invalid channel request");
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Update channel operation rejected for pod {PodId}/{ChannelId}", podId, channelId);
+            return BadRequest("Invalid channel request");
         }
         catch (Exception ex)
         {
@@ -359,7 +363,8 @@ public class PodChannelController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Delete channel operation rejected for pod {PodId}/{ChannelId}", podId, channelId);
+            return BadRequest("Invalid channel request");
         }
         catch (Exception ex)
         {

@@ -170,7 +170,8 @@ public class PodsController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            logger.LogWarning(ex, "Invalid pod create request");
+            return BadRequest(new { error = "Invalid pod request" });
         }
         catch (Exception ex)
         {
@@ -257,7 +258,8 @@ public class PodsController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            logger.LogWarning(ex, "Invalid pod update request for {PodId}", podId);
+            return BadRequest(new { error = "Invalid pod request" });
         }
         catch (Exception ex)
         {
