@@ -10137,3 +10137,64 @@ if (string.IsNullOrWhiteSpace(podId))
 ```
 
 **Why This Keeps Happening**: framework binding gets you parsed objects, not canonical business input. Null request bodies, whitespace-only strings, and padded required identifiers still need explicit handling at the controller boundary. If the action logs, compares, or dispatches string fields, validate and trim them first instead of assuming model binding or data annotations already did it.
+
+### 0k60. Pod Opinion And Content-Link Controllers Must Normalize Route And Body Identifiers Before Dispatch
+
+**The Bug**: several PodCore controller paths were still forwarding padded or effectively blank identifiers into downstream services. `PodOpinionController` accepted whitespace-padded `podId`, `contentId`, `variantHash`, and opinion fields, so route checks could pass while DHT-backed opinion lookups/publishes used non-canonical keys. `PodContentController` trimmed search text late, forwarded untrimmed optional domains, and created content-linked pods with padded `PodId`, `Name`, `ContentId`, and duplicate/blank tags. This makes cache keys, DHT keys, and pod metadata depend on transport formatting instead of the real identifier.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodOpinionController.cs`
+- `src/slskd/PodCore/API/Controllers/PodContentController.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodOpinionControllerTests.cs`
+- `tests/slskd.Tests.Unit/PodCore/PodContentControllerTests.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(contentId))
+{
+    return BadRequest("Content ID is required");
+}
+
+var opinions = await _opinionService.GetOpinionsAsync(podId, contentId, cancellationToken);
+```
+
+```csharp
+var pod = new Pod
+{
+    PodId = request.PodId,
+    Name = request.Name,
+    FocusContentId = request.ContentId,
+    Tags = request.Tags ?? new List<string>(),
+};
+```
+
+**Correct**:
+```csharp
+podId = podId?.Trim() ?? string.Empty;
+contentId = contentId?.Trim() ?? string.Empty;
+variantHash = variantHash?.Trim() ?? string.Empty;
+
+if (string.IsNullOrWhiteSpace(contentId) || string.IsNullOrWhiteSpace(variantHash))
+{
+    return BadRequest(...);
+}
+```
+
+```csharp
+var tags = request.Tags?
+    .Select(tag => tag?.Trim() ?? string.Empty)
+    .Where(tag => !string.IsNullOrWhiteSpace(tag))
+    .Distinct(StringComparer.Ordinal)
+    .ToList()
+    ?? new List<string>();
+
+var pod = new Pod
+{
+    PodId = request.PodId?.Trim() ?? string.Empty,
+    Name = request.Name?.Trim() ?? string.Empty,
+    FocusContentId = request.ContentId?.Trim() ?? string.Empty,
+    Tags = tags,
+};
+```
+
+**Why This Keeps Happening**: route and JSON binding only get strings into the controller; they do not produce stable service-layer identifiers. Anything that becomes a DHT key, pod ID, content ID, variant hash, or tag list must be normalized at the controller boundary first, or the same logical object will be addressed under multiple string forms.
