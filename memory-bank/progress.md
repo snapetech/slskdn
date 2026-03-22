@@ -5937,3 +5937,10 @@ Code quality improvements were completed as part of Option A:
 - Fixed `SecureMessageFramer` so malformed JSON now throws a stable `Invalid JSON` protocol violation instead of embedding serializer line/byte diagnostics into the wire error contract.
 - Added focused unit coverage for all three CIDR validator paths and both secure-framer malformed JSON paths.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for config and protocol parser leakage.
+
+## 2026-03-22 17:40 - Mesh protocol and service reply sanitization pass
+
+- Fixed `MeshOverlayConnection` so invalid HELLO / HELLO_ACK failures no longer echo validator detail text through `ProtocolViolationException`.
+- Fixed `MeshServiceClient`, `HolePunchMeshService`, and `VirtualSoulfindMeshService` so observable mesh replies no longer reflect requested service names or caller-supplied method names in `ErrorMessage`.
+- Added focused unit coverage for sanitized mesh-service client not-found replies and sanitized unknown-method replies in the hole-punch and VirtualSoulfind mesh services.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for mesh protocol and service reply leakage.

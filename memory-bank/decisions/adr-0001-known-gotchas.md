@@ -12536,3 +12536,29 @@ throw new ProtocolViolationException("Invalid JSON", ex);
 ```
 
 **Why This Keeps Happening**: parsers and validators feel like “input-quality” code, so it seems harmless to expose their exact failure text. But those messages are still observable API surface and can drift with library upgrades. Return stable public wording and keep parser specifics in logs only.
+
+### 0k84. Mesh Protocol And Service Replies Must Not Echo Validator Text Or Method Names
+
+**The Bug**: mesh handshake failures and service-fabric reply paths were still embedding validator errors and caller-supplied method/service names directly into protocol exceptions and `ServiceReply.ErrorMessage`. That leaked implementation details and reflected untrusted input back into observable contracts.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayConnection.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServiceClient.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/HolePunchMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/VirtualSoulfindMeshService.cs`
+
+**Wrong**:
+```csharp
+throw new ProtocolViolationException($"Invalid HELLO_ACK: {validation.Error}");
+ErrorMessage = $"No providers for '{serviceName}'";
+ErrorMessage = $"Unknown method: {call.Method}";
+```
+
+**Correct**:
+```csharp
+throw new ProtocolViolationException("Invalid HELLO_ACK");
+ErrorMessage = "No providers available for requested service";
+ErrorMessage = "Unknown method";
+```
+
+**Why This Keeps Happening**: protocol and RPC layers often feel “machine-to-machine,” so it is easy to assume detailed reply text is harmless. It is not. Validator output and reflected method names are still part of the externally visible contract and should be normalized to stable messages.
