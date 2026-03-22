@@ -354,6 +354,28 @@ var requestId = $"{username}:{flacKey}";
 
 **Why This Keeps Happening**: It is easy to choose the “business identifier” as the correlation key and forget that the same business item may be requested concurrently from multiple remotes. For any fan-out network query, the correlation key must include enough dimensions to be unique per in-flight request, typically peer plus payload key.
 
+### 0x13. Capability Discovery Helpers Need A Real Metadata Fallback When File Transfer Isn’t Wired
+
+**The Bug**: `CapabilityFileService` attempted only a stubbed file download path and then returned `null`, even though the app already had a real remote capability signal in the peer’s `UserInfo` description tag.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+var data = await DownloadSmallFileAsync(...);
+// ...
+return null;
+```
+
+**Correct**:
+```csharp
+var userInfo = await _soulseekClient.GetUserInfoAsync(username, cts.Token);
+var parsedCaps = _capabilityService.ParseCapabilityTag(userInfo?.Description ?? string.Empty);
+```
+
+**Why This Keeps Happening**: Helper services often get built around the “ideal” transport first and forget the lower-fidelity signal that already exists elsewhere in the app. If the preferred fetch path is not implemented, fall back to another real source of peer capability truth instead of silently turning discovery off.
+
 ### 0p. Timer Expiry Must Not Be Inferred From `CancellationTokenSource.IsCancellationRequested`
 
 **The Bug**: `TimedBatcher` waited for `_currentBatchTimer.IsCancellationRequested` to decide that the batch window had expired. Normal `Task.Delay` completion does not cancel the token, so time-window batching could wait forever unless the batch filled up.
