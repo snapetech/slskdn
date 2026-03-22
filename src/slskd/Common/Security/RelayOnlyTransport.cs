@@ -152,7 +152,13 @@ public class RelayOnlyTransport : IAnonymityTransport
                 _status.LastSuccessfulConnection = DateTimeOffset.UtcNow;
             }
 
-            return stream;
+            return new TrackedStream(stream, () =>
+            {
+                lock (_statusLock)
+                {
+                    _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -168,16 +174,9 @@ public class RelayOnlyTransport : IAnonymityTransport
 
     private static async Task<IPEndPoint> ParseEndpointAsync(string hostPort, CancellationToken ct)
     {
-        var idx = hostPort.LastIndexOf(':');
-        if (idx < 0)
+        if (!TryParseHostAndPort(hostPort, out var host, out var port))
         {
             throw new ArgumentException("Relay endpoint must be host:port: " + hostPort);
-        }
-
-        var host = hostPort[..idx];
-        if (!int.TryParse(hostPort[(idx + 1)..], out var port) || port is <= 0 or > ushort.MaxValue)
-        {
-            throw new ArgumentOutOfRangeException(nameof(hostPort), hostPort, "Relay port must be between 1 and 65535");
         }
 
         IPAddress ip;
@@ -192,6 +191,43 @@ public class RelayOnlyTransport : IAnonymityTransport
         }
 
         return new IPEndPoint(ip, port);
+    }
+
+    private static bool TryParseHostAndPort(string hostPort, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(hostPort))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (hostPort.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = hostPort.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= hostPort.Length - 2 || hostPort[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = hostPort[1..closingBracketIndex];
+            portPart = hostPort[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = hostPort.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == hostPort.Length - 1)
+            {
+                return false;
+            }
+
+            host = hostPort[..separatorIndex];
+            portPart = hostPort[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     /// <summary>
@@ -215,6 +251,83 @@ public class RelayOnlyTransport : IAnonymityTransport
 
     private static string SelectRelayPeer(System.Collections.Generic.List<string> list)
     {
-        return list[new Random().Next(list.Count)];
+        return list[Random.Shared.Next(list.Count)];
+    }
+
+    private sealed class TrackedStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly Action _onDispose;
+        private bool _disposed;
+
+        public TrackedStream(Stream inner, Action onDispose)
+        {
+            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            _onDispose = onDispose ?? throw new ArgumentNullException(nameof(onDispose));
+        }
+
+        public override bool CanRead => _inner.CanRead;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => _inner.CanWrite;
+        public override long Length => _inner.Length;
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
+
+        public override void Flush() => _inner.Flush();
+        public override Task FlushAsync(CancellationToken cancellationToken) => _inner.FlushAsync(cancellationToken);
+        public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+        public override int Read(Span<byte> buffer) => _inner.Read(buffer);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => _inner.ReadAsync(buffer, cancellationToken);
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _inner.ReadAsync(buffer, offset, count, cancellationToken);
+        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+        public override void SetLength(long value) => _inner.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+        public override void Write(ReadOnlySpan<byte> buffer) => _inner.Write(buffer);
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) => _inner.WriteAsync(buffer, cancellationToken);
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => _inner.WriteAsync(buffer, offset, count, cancellationToken);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            try
+            {
+                if (disposing)
+                {
+                    _inner.Dispose();
+                }
+            }
+            finally
+            {
+                _onDispose();
+                base.Dispose(disposing);
+            }
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            try
+            {
+                await _inner.DisposeAsync();
+            }
+            finally
+            {
+                _onDispose();
+                await base.DisposeAsync();
+            }
+        }
     }
 }

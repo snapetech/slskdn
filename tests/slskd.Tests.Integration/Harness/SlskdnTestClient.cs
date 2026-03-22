@@ -438,8 +438,8 @@ internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHe
     public Task<string> StartScanAsync(global::slskd.LibraryHealth.LibraryHealthScanRequest request, CancellationToken ct = default) =>
         Task.FromResult(Guid.NewGuid().ToString("N"));
 
-    public Task<global::slskd.LibraryHealth.LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default) =>
-        Task.FromResult(new global::slskd.LibraryHealth.LibraryHealthScan
+    public Task<global::slskd.LibraryHealth.LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default) =>
+        Task.FromResult<global::slskd.LibraryHealth.LibraryHealthScan?>(new global::slskd.LibraryHealth.LibraryHealthScan
         {
             ScanId = scanId,
             LibraryPath = "(all)",

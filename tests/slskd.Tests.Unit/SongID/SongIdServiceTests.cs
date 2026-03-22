@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -229,6 +230,104 @@ public sealed class SongIdServiceTests : IDisposable
 
         Assert.Contains(run.Plans, plan => plan.Kind == "mix" && plan.Title.StartsWith("Mix cluster"));
         Assert.Contains(run.Evidence, entry => entry.Contains("mix cluster"));
+    }
+
+    [Fact]
+    public void ParseProfiles_IgnoresNonPositiveClipLengthsAndSteps()
+    {
+        var method = typeof(SongIdService).GetMethod("ParseProfiles", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var profiles = Assert.IsType<List<(int ClipLength, int Step)>>(method!.Invoke(null, new object[] { "15:5,0:5,20:0,-10:3,30:10" }));
+
+        Assert.Equal(2, profiles.Count);
+        Assert.Contains((15, 5), profiles);
+        Assert.Contains((30, 10), profiles);
+        Assert.DoesNotContain((0, 5), profiles);
+        Assert.DoesNotContain((20, 0), profiles);
+        Assert.DoesNotContain((-10, 3), profiles);
+    }
+
+    [Fact]
+    public void BuildClipStarts_WithNonPositiveProfileValues_ReturnsEmpty()
+    {
+        var method = typeof(SongIdService).GetMethod("BuildClipStarts", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var zeroClipLength = Assert.IsAssignableFrom<IEnumerable<int>>(method!.Invoke(null, new object[] { 120, 0, 5 })!);
+        var zeroStep = Assert.IsAssignableFrom<IEnumerable<int>>(method.Invoke(null, new object[] { 120, 15, 0 })!);
+        var negativeStep = Assert.IsAssignableFrom<IEnumerable<int>>(method.Invoke(null, new object[] { 120, 15, -2 })!);
+
+        Assert.Empty(zeroClipLength);
+        Assert.Empty(zeroStep);
+        Assert.Empty(negativeStep);
+    }
+
+    [Fact]
+    public void ParseSongRecFinding_InvalidJson_ReturnsNull()
+    {
+        var method = typeof(SongIdService).GetMethod("ParseSongRecFinding", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var result = method!.Invoke(null, new object[] { "not-json" });
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveCorpusFingerprintPath_RejectsPathTraversalOutsideMetadataDirectory()
+    {
+        var metadataDir = Path.Combine(_tempDir, "corpus");
+        Directory.CreateDirectory(metadataDir);
+
+        var metadataPath = Path.Combine(metadataDir, "entry.json");
+        File.WriteAllText(metadataPath, "{}");
+
+        var outsideFingerprint = Path.Combine(_tempDir, "outside.fpcalc");
+        File.WriteAllText(outsideFingerprint, "FINGERPRINT=1,2,3");
+
+        var entry = new SongIdCorpusEntry
+        {
+            FingerprintPath = Path.Combine("..", "outside.fpcalc"),
+        };
+
+        var method = typeof(SongIdService).GetMethod("ResolveCorpusFingerprintPath", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var result = method!.Invoke(null, new object[] { metadataPath, entry });
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ParseSongRecFinding_ParsesMatchesArrayFirstTrack()
+    {
+        var method = typeof(SongIdService).GetMethod("ParseSongRecFinding", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            matches = new object[]
+            {
+                new
+                {
+                    track = new
+                    {
+                        title = "Track Title",
+                        subtitle = "Track Artist",
+                        key = "track-key",
+                    },
+                },
+            },
+        });
+
+        var result = method!.Invoke(null, new object[] { payload });
+
+        var finding = Assert.IsType<SongIdRecognizerFinding>(result);
+        Assert.Equal("Track Title", finding.Title);
+        Assert.Equal("Track Artist", finding.Artist);
+        Assert.Equal("track-key", finding.ExternalId);
+        Assert.Equal(1, finding.MatchCount);
     }
 
     public void Dispose()

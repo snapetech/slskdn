@@ -99,6 +99,59 @@ public class Phase8MeshTests
     }
 
     [Fact]
+    public async Task NatTraversalService_ParsesBracketedIpv6UdpEndpoint()
+    {
+        var hp = new Mock<IUdpHolePuncher>();
+        var relay = new Mock<IRelayClient>();
+        var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<NatTraversalService>>();
+
+        hp.Setup(x => x.TryPunchAsync(
+                It.IsAny<IPEndPoint>(),
+                It.Is<IPEndPoint>(ep => ep.Address.Equals(IPAddress.Parse("2001:db8::10")) && ep.Port == 4100),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UdpHolePunchResult(true, null, TimeSpan.Zero));
+
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshOptions());
+        var svc = new NatTraversalService(logger, hp.Object, relay.Object, options);
+
+        var res = await svc.ConnectAsync("peer-ipv6", new List<string> { "udp://[2001:db8::10]:4100" }, CancellationToken.None);
+
+        Assert.True(res.Success);
+        Assert.False(res.UsedRelay);
+        Assert.Equal("udp://[2001:db8::10]:4100", res.ChosenEndpoint);
+    }
+
+    [Fact]
+    public async Task NatTraversalService_ParsesBracketedIpv6RelayEndpoint()
+    {
+        var hp = new Mock<IUdpHolePuncher>();
+        var relay = new Mock<IRelayClient>();
+        var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<NatTraversalService>>();
+
+        hp.Setup(x => x.TryPunchAsync(It.IsAny<IPEndPoint>(), It.IsAny<IPEndPoint>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UdpHolePunchResult(false, null, TimeSpan.Zero));
+
+        relay.Setup(x => x.RelayAsync(
+                It.IsAny<byte[]>(),
+                It.Is<IPEndPoint>(ep => ep.Address.Equals(IPAddress.Parse("2001:db8::20")) && ep.Port == 5100),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var options = Microsoft.Extensions.Options.Options.Create(new MeshOptions
+        {
+            EnableMirrored = true,
+        });
+
+        var svc = new NatTraversalService(logger, hp.Object, relay.Object, options);
+
+        var res = await svc.ConnectAsync("peer-ipv6", new List<string> { "relay://[2001:db8::20]:5100" }, CancellationToken.None);
+
+        Assert.True(res.Success);
+        Assert.True(res.UsedRelay);
+        Assert.Equal("relay://[2001:db8::20]:5100", res.ChosenEndpoint);
+    }
+
+    [Fact]
     public void KademliaRoutingTable_BucketSplitting()
     {
         var selfId = new byte[20];
@@ -240,6 +293,21 @@ public class Phase8MeshTests
     }
 
     [Fact]
+    public void StunNatDetector_ProbeServerParser_AcceptsBracketedIpv6()
+    {
+        var parseMethod = typeof(StunNatDetector).GetMethod(
+            "TryParseHostAndPort",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        var args = new object[] { "[2001:db8::30]:3478", null!, 0 };
+        var parsed = (bool)parseMethod!.Invoke(null, args)!;
+
+        Assert.True(parsed);
+        Assert.Equal("2001:db8::30", args[1]);
+        Assert.Equal(3478, args[2]);
+    }
+
+    [Fact]
     public async Task UdpHolePuncher_BasicConnectivity()
     {
         var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<UdpHolePuncher>>();
@@ -350,6 +418,68 @@ public class Phase8MeshTests
         Assert.Equal(2, peers.Count);
         Assert.Contains(peers, p => p.PeerId == "peer1");
         Assert.Contains(peers, p => p.PeerId == "peer2");
+    }
+
+    [Fact]
+    public async Task MeshDirectory_FindPeersByContent_ParsesSchemedAndIpv6Endpoints()
+    {
+        var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<MeshDirectory>>();
+        var dhtClient = new Mock<slskd.Mesh.Dht.IMeshDhtClient>();
+        var validator = Mock.Of<slskd.MediaCore.IDescriptorValidator>();
+        var directory = new MeshDirectory(logger, dhtClient.Object, validator);
+
+        var contentId = "content:test:ipv6";
+        var hints = new ContentPeerHints
+        {
+            Peers = new List<ContentPeerHint>
+            {
+                new() { PeerId = "peer1", Endpoints = new List<string> { "udp://1.1.1.1:5000" }, TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+                new() { PeerId = "peer2", Endpoints = new List<string> { "quic://[2001:db8::42]:6000" }, TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() },
+            }
+        };
+
+        dhtClient.Setup(d => d.GetAsync<ContentPeerHints>($"mesh:content-peers:{contentId}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hints);
+
+        var peers = await directory.FindPeersByContentAsync(contentId);
+
+        Assert.Collection(
+            peers.OrderBy(p => p.PeerId),
+            peer =>
+            {
+                Assert.Equal("peer1", peer.PeerId);
+                Assert.Equal("1.1.1.1", peer.Address);
+                Assert.Equal(5000, peer.Port);
+            },
+            peer =>
+            {
+                Assert.Equal("peer2", peer.PeerId);
+                Assert.Equal("2001:db8::42", peer.Address);
+                Assert.Equal(6000, peer.Port);
+            });
+    }
+
+    [Fact]
+    public async Task ContentDirectory_FindPeerById_ParsesSchemedIpv6Endpoint()
+    {
+        var logger = Mock.Of<Microsoft.Extensions.Logging.ILogger<ContentDirectory>>();
+        var dhtClient = new Mock<slskd.Mesh.Dht.IMeshDhtClient>();
+        var validator = Mock.Of<slskd.MediaCore.IDescriptorValidator>();
+        var directory = new ContentDirectory(logger, dhtClient.Object, validator);
+
+        dhtClient.Setup(d => d.GetAsync<slskd.Mesh.Dht.MeshPeerDescriptor>("mesh:peer:peer-ipv6", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new slskd.Mesh.Dht.MeshPeerDescriptor
+            {
+                PeerId = "peer-ipv6",
+                Endpoints = new List<string> { "quic://[2001:db8::99]:7000" },
+            });
+
+        var peer = await directory.FindPeerByIdAsync("peer-ipv6");
+
+        Assert.NotNull(peer);
+        Assert.Equal("peer-ipv6", peer.PeerId);
+        Assert.Equal("2001:db8::99", peer.Address);
+        Assert.Equal(7000, peer.Port);
     }
 
     [Fact]

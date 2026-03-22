@@ -622,7 +622,7 @@ internal class StubLibraryHealthService : ILibraryHealthService
 {
     public Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default) => Task.FromResult(Guid.NewGuid().ToString("N"));
 
-    public Task<LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default) => Task.FromResult(new LibraryHealthScan
+    public Task<LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default) => Task.FromResult<LibraryHealthScan?>(new LibraryHealthScan
     {
         ScanId = scanId,
         LibraryPath = "(all)",

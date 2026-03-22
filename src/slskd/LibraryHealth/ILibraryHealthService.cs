@@ -12,7 +12,7 @@ namespace slskd.LibraryHealth
     {
         Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default);
 
-        Task<LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default);
+        Task<LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default);
 
         Task<List<LibraryIssue>> GetIssuesAsync(LibraryHealthIssueFilter filter, CancellationToken ct = default);
 

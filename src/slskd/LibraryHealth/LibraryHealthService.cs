@@ -112,14 +112,14 @@ namespace slskd.LibraryHealth
             return scanId;
         }
 
-        public async Task<LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default)
+        public async Task<LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default)
         {
             if (activeScans.TryGetValue(scanId, out var active))
             {
                 return active;
             }
 
-            return await hashDb.GetLibraryHealthScanAsync(scanId, ct).ConfigureAwait(false) ?? null!;
+            return await hashDb.GetLibraryHealthScanAsync(scanId, ct).ConfigureAwait(false);
         }
 
         public Task<List<LibraryIssue>> GetIssuesAsync(LibraryHealthIssueFilter filter, CancellationToken ct = default)

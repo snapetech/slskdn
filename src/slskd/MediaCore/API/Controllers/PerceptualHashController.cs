@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -131,10 +132,18 @@ public class PerceptualHashController : ControllerBase
             return BadRequest("Two hash values are required");
         }
 
+        if (request.Threshold is < 0 or > 1)
+        {
+            return BadRequest("Threshold must be between 0 and 1");
+        }
+
         try
         {
-            if (!ulong.TryParse(request.HashA, System.Globalization.NumberStyles.HexNumber, null, out var hashA) ||
-                !ulong.TryParse(request.HashB, System.Globalization.NumberStyles.HexNumber, null, out var hashB))
+            var normalizedHashA = NormalizeHexHash(request.HashA);
+            var normalizedHashB = NormalizeHexHash(request.HashB);
+
+            if (!ulong.TryParse(normalizedHashA, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hashA) ||
+                !ulong.TryParse(normalizedHashB, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hashB))
             {
                 return BadRequest("Hash values must be valid hexadecimal numbers");
             }
@@ -145,8 +154,8 @@ public class PerceptualHashController : ControllerBase
 
             return Ok(new
             {
-                hashA = request.HashA,
-                hashB = request.HashB,
+                hashA = normalizedHashA,
+                hashB = normalizedHashB,
                 hammingDistance = distance,
                 similarity,
                 areSimilar,
@@ -178,6 +187,17 @@ public class PerceptualHashController : ControllerBase
                 ["Spectral"] = "Simple spectral analysis hash (fallback)"
             }
         });
+    }
+
+    private static string NormalizeHexHash(string hash)
+    {
+        var normalized = hash.Trim();
+        if (normalized.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[2..];
+        }
+
+        return normalized;
     }
 }
 

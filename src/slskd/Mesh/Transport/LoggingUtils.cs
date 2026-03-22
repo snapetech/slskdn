@@ -102,37 +102,129 @@ public static class LoggingUtils
             return "[null]";
         }
 
-        // Allow localhost and private IPs in logs (they're not sensitive)
-        if (endpoint.Contains("127.0.0.1") || endpoint.Contains("localhost") ||
-            endpoint.Contains("10.") || endpoint.Contains("192.168.") ||
-            endpoint.Contains("172."))
+        if (TryExtractHostAndPort(endpoint, out var host, out var port))
+        {
+            if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+            {
+                return endpoint;
+            }
+
+            if (System.Net.IPAddress.TryParse(host, out var ipAddress))
+            {
+                if (IsSafeLocalAddress(ipAddress))
+                {
+                    return endpoint;
+                }
+
+                if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    var parts = ipAddress.ToString().Split('.');
+                    return $"xxx.xxx.xxx.{parts[3]}:{port}";
+                }
+
+                var ipv6Segments = ipAddress.ToString().Split(':', StringSplitOptions.RemoveEmptyEntries);
+                var suffix = ipv6Segments.Length > 0 ? ipv6Segments[^1] : ipAddress.ToString();
+                return $"xxxx:xxxx:xxxx:{suffix}:{port}";
+            }
+
+            return $"{RedactHostname(host)}:{port}";
+        }
+
+        if (System.Net.IPAddress.TryParse(endpoint, out var rawIpAddress))
+        {
+            if (IsSafeLocalAddress(rawIpAddress))
+            {
+                return endpoint;
+            }
+
+            if (rawIpAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            {
+                var parts = rawIpAddress.ToString().Split('.');
+                return $"xxx.xxx.xxx.{parts[3]}";
+            }
+
+            var ipv6Segments = rawIpAddress.ToString().Split(':', StringSplitOptions.RemoveEmptyEntries);
+            var suffix = ipv6Segments.Length > 0 ? ipv6Segments[^1] : rawIpAddress.ToString();
+            return $"xxxx:xxxx:xxxx:{suffix}";
+        }
+
+        if (string.Equals(endpoint, "localhost", StringComparison.OrdinalIgnoreCase))
         {
             return endpoint;
         }
 
-        // For public IPs/hostnames, show only the last octet or segment
-        if (System.Net.IPAddress.TryParse(endpoint.Split(':')[0], out _))
-        {
-            var parts = endpoint.Split('.');
-            if (parts.Length == 4)
-            {
-                return $"xxx.xxx.xxx.{parts[3]}"; // Hide first 3 octets of IPv4
-            }
-        }
+        return endpoint.Contains('.') ? RedactHostname(endpoint) : "[redacted]";
+    }
 
-        // For hostnames, show only TLD and basic structure
-        if (endpoint.Contains("."))
+    private static string RedactHostname(string hostname)
+    {
+        var parts = hostname.Split('.');
+        if (parts.Length >= 2)
         {
-            var parts = endpoint.Split('.');
-            if (parts.Length >= 2)
-            {
-                var tld = parts[^1]; // Last part (TLD)
-                var domain = parts.Length >= 3 ? parts[^2] : parts[0];
-                return $"{domain[..Math.Min(3, domain.Length)]}...{tld}";
-            }
+            var tld = parts[^1];
+            var domain = parts.Length >= 3 ? parts[^2] : parts[0];
+            return $"{domain[..Math.Min(3, domain.Length)]}...{tld}";
         }
 
         return "[redacted]";
+    }
+
+    private static bool TryExtractHostAndPort(string endpoint, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (endpoint.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = endpoint.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= endpoint.Length - 2 || endpoint[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = endpoint[1..closingBracketIndex];
+            portPart = endpoint[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = endpoint.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == endpoint.Length - 1)
+            {
+                return false;
+            }
+
+            host = endpoint[..separatorIndex];
+            portPart = endpoint[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
+    }
+
+    private static bool IsSafeLocalAddress(System.Net.IPAddress address)
+    {
+        if (System.Net.IPAddress.IsLoopback(address))
+        {
+            return true;
+        }
+
+        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        {
+            var ipv6Bytes = address.GetAddressBytes();
+            var isUniqueLocal = ipv6Bytes.Length > 0 && (ipv6Bytes[0] & 0xFE) == 0xFC;
+            return address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || isUniqueLocal;
+        }
+
+        var ipv4Bytes = address.GetAddressBytes();
+        return ipv4Bytes.Length == 4 &&
+            (ipv4Bytes[0] == 10 ||
+             (ipv4Bytes[0] == 172 && ipv4Bytes[1] >= 16 && ipv4Bytes[1] <= 31) ||
+             (ipv4Bytes[0] == 192 && ipv4Bytes[1] == 168));
     }
 
     /// <summary>

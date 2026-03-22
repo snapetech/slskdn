@@ -3183,7 +3183,7 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
-        public Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default)
+        public Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
@@ -3196,7 +3196,7 @@ namespace slskd.HashDb
                 return Task.FromResult(ReadPeerMetrics(reader));
             }
 
-            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>(null!);
+            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?>(null);
         }
 
         /// <inheritdoc/>

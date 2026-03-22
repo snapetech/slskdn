@@ -36,7 +36,10 @@ public class ContentDirectory : IMeshDirectory
         // Convert DHT descriptor to interface descriptor
         var endpoint = dhtDescriptor.Endpoints?.FirstOrDefault();
         var (address, port) = ParseEndpoint(endpoint);
-        return new slskd.Mesh.MeshPeerDescriptor(dhtDescriptor.PeerId, address, port);
+        return new slskd.Mesh.MeshPeerDescriptor(
+            string.IsNullOrWhiteSpace(dhtDescriptor.PeerId) ? peerId : dhtDescriptor.PeerId,
+            address,
+            port);
     }
 
     public async Task<IReadOnlyList<slskd.Mesh.MeshPeerDescriptor>> FindPeersByContentAsync(string contentId, CancellationToken ct = default)
@@ -45,10 +48,14 @@ public class ContentDirectory : IMeshDirectory
         var hints = await dht.GetAsync<ContentPeerHints>(key, ct);
         if (hints?.Peers == null || hints.Peers.Count == 0) return Array.Empty<slskd.Mesh.MeshPeerDescriptor>();
 
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         return hints.Peers
+            .Where(p => !string.IsNullOrWhiteSpace(p.PeerId) && (p.TimestampUnixMs <= 0 || now - p.TimestampUnixMs < 3600_000))
+            .GroupBy(p => p.PeerId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(peer => peer.TimestampUnixMs).First())
             .Select(p =>
             {
-                var endpoint = p.Endpoints.FirstOrDefault();
+                var endpoint = p.Endpoints?.FirstOrDefault();
                 var (address, port) = ParseEndpoint(endpoint);
                 return new slskd.Mesh.MeshPeerDescriptor(p.PeerId, address, port);
             })
@@ -62,7 +69,7 @@ public class ContentDirectory : IMeshDirectory
         if (contentList == null || contentList.Count == 0) return Array.Empty<slskd.Mesh.MeshContentDescriptor>();
 
         var results = new List<slskd.Mesh.MeshContentDescriptor>();
-        foreach (var cid in contentList)
+        foreach (var cid in contentList.Where(cid => !string.IsNullOrWhiteSpace(cid)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var descriptor = await GetContentDescriptorAsync(cid, ct);
             if (descriptor != null)
@@ -100,18 +107,60 @@ public class ContentDirectory : IMeshDirectory
     /// </summary>
     private (string? Address, int? Port) ParseEndpoint(string? endpoint)
     {
-        if (string.IsNullOrEmpty(endpoint)) return (null, null);
-
-        var parts = endpoint.Split(':');
-        if (parts.Length != 2) return (endpoint, null);
-
-        var address = parts[0];
-        if (!int.TryParse(parts[1], out var p) || p is <= 0 or > ushort.MaxValue)
+        if (string.IsNullOrEmpty(endpoint))
         {
-            return (address, null);
+            return (null, null);
         }
 
-        var port = p;
+        var normalized = endpoint;
+        var schemeSeparatorIndex = normalized.IndexOf("://", StringComparison.Ordinal);
+        if (schemeSeparatorIndex >= 0)
+        {
+            normalized = normalized[(schemeSeparatorIndex + 3)..];
+        }
+
+        if (!TryParseHostAndPort(normalized, out var address, out var port))
+        {
+            return (normalized, null);
+        }
+
         return (address, port);
+    }
+
+    private static bool TryParseHostAndPort(string endpoint, out string address, out int port)
+    {
+        address = endpoint;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (endpoint.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = endpoint.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= endpoint.Length - 2 || endpoint[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            address = endpoint[1..closingBracketIndex];
+            portPart = endpoint[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = endpoint.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == endpoint.Length - 1)
+            {
+                return false;
+            }
+
+            address = endpoint[..separatorIndex];
+            portPart = endpoint[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 }

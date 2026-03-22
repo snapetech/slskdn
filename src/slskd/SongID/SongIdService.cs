@@ -2109,35 +2109,42 @@ public sealed class SongIdService : ISongIdService
             return null;
         }
 
-        using var doc = JsonDocument.Parse(stdout);
-        var root = doc.RootElement;
-        var track = GetSongRecTrack(root);
-        if (!track.HasValue || track.Value.ValueKind != JsonValueKind.Object)
+        try
+        {
+            using var doc = JsonDocument.Parse(stdout);
+            var root = doc.RootElement;
+            var track = GetSongRecTrack(root);
+            if (!track.HasValue || track.Value.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var title = TryGetString(track.Value, "title") ?? TryGetString(track.Value, "name");
+            var artist = TryGetString(track.Value, "subtitle") ??
+                TryGetString(track.Value, "artist") ??
+                TryGetSongRecArtist(track.Value);
+            if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(artist))
+            {
+                return null;
+            }
+
+            var matchCount = root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array
+                ? matches.GetArrayLength()
+                : 1;
+            return new SongIdRecognizerFinding
+            {
+                Title = title ?? string.Empty,
+                Artist = artist ?? string.Empty,
+                ExternalId = TryGetString(track.Value, "key") ?? TryGetString(track.Value, "id"),
+                MatchCount = matchCount,
+                Score = matchCount > 0 ? Math.Min(0.98, 0.78 + (matchCount * 0.03)) : 0.85,
+                Summary = "SongRec recognition hit",
+            };
+        }
+        catch (JsonException)
         {
             return null;
         }
-
-        var title = TryGetString(track.Value, "title") ?? TryGetString(track.Value, "name");
-        var artist = TryGetString(track.Value, "subtitle") ??
-            TryGetString(track.Value, "artist") ??
-            TryGetSongRecArtist(track.Value);
-        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(artist))
-        {
-            return null;
-        }
-
-        var matchCount = root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array
-            ? matches.GetArrayLength()
-            : 1;
-        return new SongIdRecognizerFinding
-        {
-            Title = title ?? string.Empty,
-            Artist = artist ?? string.Empty,
-            ExternalId = TryGetString(track.Value, "key") ?? TryGetString(track.Value, "id"),
-            MatchCount = matchCount,
-            Score = matchCount > 0 ? Math.Min(0.98, 0.78 + (matchCount * 0.03)) : 0.85,
-            Summary = "SongRec recognition hit",
-        };
     }
 
     private static SongIdRecognizerFinding? ParsePanakoFinding(string stdout)
@@ -2312,6 +2319,11 @@ public sealed class SongIdService : ISongIdService
                 continue;
             }
 
+            if (clipLength <= 0 || step <= 0)
+            {
+                continue;
+            }
+
             profiles.Add((clipLength, step));
         }
 
@@ -2320,7 +2332,7 @@ public sealed class SongIdService : ISongIdService
 
     private static IEnumerable<int> BuildClipStarts(int durationSeconds, int clipLength, int step)
     {
-        if (durationSeconds <= 0)
+        if (durationSeconds <= 0 || clipLength <= 0 || step <= 0)
         {
             yield break;
         }
@@ -2507,7 +2519,15 @@ public sealed class SongIdService : ISongIdService
             return File.Exists(entry.FingerprintPath) ? entry.FingerprintPath : null;
         }
 
-        var relativeToMetadata = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(metadataPath) ?? string.Empty, entry.FingerprintPath));
+        var metadataDirectory = Path.GetDirectoryName(metadataPath) ?? string.Empty;
+        var metadataRoot = Path.GetFullPath(metadataDirectory);
+        var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, entry.FingerprintPath));
+        if (!relativeToMetadata.StartsWith(metadataRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(relativeToMetadata, metadataRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
         return File.Exists(relativeToMetadata) ? relativeToMetadata : null;
     }
 
@@ -2885,19 +2905,28 @@ public sealed class SongIdService : ISongIdService
         DateTime newestWriteTime = DateTime.MinValue;
         foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            if (!Directory.Exists(directory))
+            try
             {
-                continue;
-            }
-
-            foreach (var candidate in Directory.EnumerateFiles(directory, fileName, SearchOption.TopDirectoryOnly))
-            {
-                var writeTime = File.GetLastWriteTimeUtc(candidate);
-                if (newest == null || writeTime > newestWriteTime)
+                if (!Directory.Exists(directory))
                 {
-                    newest = candidate;
-                    newestWriteTime = writeTime;
+                    continue;
                 }
+
+                foreach (var candidate in Directory.EnumerateFiles(directory, fileName, SearchOption.TopDirectoryOnly))
+                {
+                    var writeTime = File.GetLastWriteTimeUtc(candidate);
+                    if (newest == null || writeTime > newestWriteTime)
+                    {
+                        newest = candidate;
+                        newestWriteTime = writeTime;
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (IOException)
+            {
             }
         }
 

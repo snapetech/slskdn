@@ -114,9 +114,11 @@ public class SearchActionsController : ControllerBase
         }
 
         var response = search.Responses.ElementAt(responseIndex);
+        var itemParts = itemId.Split(':', StringSplitOptions.TrimEntries);
+        var explicitFileIndex = itemParts.Length == 2;
         var file = fileIndex >= 0 && fileIndex < response.Files.Count
             ? response.Files.ElementAt(fileIndex)
-            : response.Files.FirstOrDefault();
+            : explicitFileIndex ? null : response.Files.FirstOrDefault();
 
         if (file == null)
         {
@@ -261,7 +263,9 @@ public class SearchActionsController : ControllerBase
             if (string.IsNullOrWhiteSpace(targetPeerId))
             {
                 var peers = await _meshDirectory.FindPeersByContentAsync(contentId, ct);
-                if (peers == null || peers.Count == 0)
+                var fallbackPeer = peers?
+                    .FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate.PeerId));
+                if (fallbackPeer == null)
                 {
                     return NotFound(new ProblemDetails
                     {
@@ -271,7 +275,7 @@ public class SearchActionsController : ControllerBase
                     });
                 }
 
-                targetPeerId = peers[0].PeerId;
+                targetPeerId = fallbackPeer.PeerId;
                 _logger.LogDebug("[SearchActions] Using peer {PeerId} from mesh directory lookup", targetPeerId);
             }
 
@@ -408,11 +412,11 @@ public class SearchActionsController : ControllerBase
             return false;
         }
 
-        var parts = itemId.Split(':');
+        var parts = itemId.Split(':', StringSplitOptions.TrimEntries);
         if (parts.Length == 1)
         {
             // Just response index
-            if (int.TryParse(parts[0], out responseIndex))
+            if (int.TryParse(parts[0], out responseIndex) && responseIndex >= 0)
             {
                 fileIndex = 0; // Default to first file
                 return true;
@@ -420,7 +424,10 @@ public class SearchActionsController : ControllerBase
         }
         else if (parts.Length == 2)
         {
-            if (int.TryParse(parts[0], out responseIndex) && int.TryParse(parts[1], out fileIndex))
+            if (int.TryParse(parts[0], out responseIndex) &&
+                int.TryParse(parts[1], out fileIndex) &&
+                responseIndex >= 0 &&
+                fileIndex >= 0)
             {
                 return true;
             }

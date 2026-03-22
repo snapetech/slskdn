@@ -358,6 +358,11 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
         {
             addressType = 0x03; // Domain name
             var hostBytes = System.Text.Encoding.UTF8.GetBytes(host);
+            if (hostBytes.Length is 0 or > 255)
+            {
+                throw new ArgumentException("SOCKS5 host name must be between 1 and 255 bytes", nameof(host));
+            }
+
             addressBytes = new byte[1 + hostBytes.Length];
             addressBytes[0] = (byte)hostBytes.Length;
             Array.Copy(hostBytes, 0, addressBytes, 1, hostBytes.Length);
@@ -383,6 +388,15 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
     {
         var usernameBytes = System.Text.Encoding.UTF8.GetBytes(username);
         var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
+        if (usernameBytes.Length is 0 or > 255)
+        {
+            throw new ArgumentException("SOCKS5 username must be between 1 and 255 bytes", nameof(username));
+        }
+
+        if (passwordBytes.Length is 0 or > 255)
+        {
+            throw new ArgumentException("SOCKS5 password must be between 1 and 255 bytes", nameof(password));
+        }
 
         var authRequest = new List<byte>
         {
@@ -514,18 +528,49 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             throw new InvalidOperationException("Tor SOCKS address is not configured");
         }
 
-        var parts = socksAddress.Split(':');
-        if (parts.Length != 2)
+        if (!TryParseHostAndPort(socksAddress, out var host, out var socksPort))
         {
             throw new InvalidOperationException($"Invalid Tor SOCKS address format: {socksAddress}");
         }
 
-        if (!int.TryParse(parts[1], out var socksPort) || socksPort is <= 0 or > ushort.MaxValue)
+        return (host, socksPort);
+    }
+
+    private static bool TryParseHostAndPort(string address, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(address))
         {
-            throw new ArgumentOutOfRangeException(nameof(socksAddress), socksAddress, "Tor SOCKS port must be between 1 and 65535");
+            return false;
         }
 
-        return (parts[0], socksPort);
+        string portPart;
+        if (address.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = address.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= address.Length - 2 || address[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = address[1..closingBracketIndex];
+            portPart = address[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = address.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == address.Length - 1)
+            {
+                return false;
+            }
+
+            host = address[..separatorIndex];
+            portPart = address[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     /// <summary>

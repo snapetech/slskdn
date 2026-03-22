@@ -212,9 +212,9 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (string.IsNullOrWhiteSpace(domain))
             throw new ArgumentException("Domain cannot be empty", nameof(domain));
 
-        domain = domain.Trim().ToLowerInvariant();
-        type = string.IsNullOrWhiteSpace(type) ? null : type.Trim().ToLowerInvariant();
-        maxResults = Math.Max(1, maxResults);
+        domain = ContentIdParser.NormalizeDomain(domain.Trim(), type?.Trim());
+        type = string.IsNullOrWhiteSpace(type) ? null : ContentIdParser.NormalizeType(domain, type.Trim());
+        maxResults = Math.Clamp(maxResults, 1, 500);
 
         var startTime = DateTimeOffset.UtcNow;
         var results = new List<ContentDescriptor>();
@@ -222,40 +222,36 @@ public class DescriptorRetriever : IDescriptorRetriever
 
         try
         {
-            // In a real implementation, this would query an index or search the DHT
-            // For now, we'll search through cached entries as a demonstration
-            var matchingContentIds = _cache.Keys
-                .Where(contentId =>
+            var matchingDescriptors = _cache
+                .Where(kvp =>
                 {
-                    var parsed = ContentIdParser.Parse(contentId);
+                    if (IsExpired(kvp.Value))
+                    {
+                        _cache.TryRemove(kvp.Key, out _);
+                        return false;
+                    }
+
+                    var parsed = ContentIdParser.Parse(kvp.Key);
                     return parsed != null &&
                            ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type)
                                .Equals(domain, StringComparison.OrdinalIgnoreCase) &&
                            (type == null || ContentIdParser.NormalizeType(parsed.Domain, parsed.Type)
                                .Equals(type, StringComparison.OrdinalIgnoreCase));
                 })
-                .Take(maxResults + 1) // +1 to check if there are more
-                .ToList();
-
-            if (matchingContentIds.Count > maxResults)
-            {
-                hasMore = true;
-                matchingContentIds = matchingContentIds.Take(maxResults).ToList();
-            }
-
-            // Retrieve the descriptors
-            foreach (var contentId in matchingContentIds)
-            {
-                if (_cache.TryGetValue(contentId, out var cached) && !IsExpired(cached))
-                {
-                    results.Add(cached.Descriptor);
-                }
-            }
-
-            results = results
+                .OrderByDescending(kvp => kvp.Value.RetrievedAt)
+                .Select(kvp => kvp.Value.Descriptor)
                 .GroupBy(descriptor => descriptor.ContentId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First())
+                .Take(maxResults + 1)
                 .ToList();
+
+            if (matchingDescriptors.Count > maxResults)
+            {
+                hasMore = true;
+                matchingDescriptors = matchingDescriptors.Take(maxResults).ToList();
+            }
+
+            results = matchingDescriptors;
         }
         catch (Exception ex)
         {

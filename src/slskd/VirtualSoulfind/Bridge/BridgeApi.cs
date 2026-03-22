@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -61,6 +62,15 @@ public class BridgeFile
 /// </summary>
 public class BridgeApi : IBridgeApi
 {
+    private static readonly Regex FilenameHashRegex = new(
+        @"(?<![0-9a-fA-F])([0-9a-fA-F]{32,128})(?![0-9a-fA-F])",
+        RegexOptions.Compiled);
+    private static readonly Regex FilenameBracketedSizeRegex = new(
+        @"[\[\(](\d{1,3}(?:[,_ ]\d{3})+|\d{6,})[\]\)]",
+        RegexOptions.Compiled);
+    private static readonly Regex FilenameByteSizeRegex = new(
+        @"(?<!\d)(\d{1,3}(?:[,_ ]\d{3})+|\d{6,})\s*(?:bytes?|b)(?![a-z])",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private readonly ConcurrentDictionary<string, BridgeFileMetadata> searchFileMetadata = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, BridgeTransferMetadata> transferMetadata = new();
     private readonly ILogger<BridgeApi> logger;
@@ -388,7 +398,11 @@ public class BridgeApi : IBridgeApi
         try
         {
             var recordings = await musicBrainz.SearchRecordingsAsync(query, limit: 10, ct);
-            return recordings.Select(r => r.RecordingId).ToList();
+            return recordings
+                .Select(r => r.RecordingId)
+                .Where(recordingId => !string.IsNullOrWhiteSpace(recordingId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -399,15 +413,49 @@ public class BridgeApi : IBridgeApi
 
     private string? ExtractHashFromFilename(string filename)
     {
-        // Heuristic: look for hash-like patterns in filename
-        // In practice, this would come from metadata or shadow index lookup
-        return null;
+        var fileNameOnly = Path.GetFileNameWithoutExtension(filename);
+        if (string.IsNullOrWhiteSpace(fileNameOnly))
+        {
+            return null;
+        }
+
+        var match = FilenameHashRegex.Matches(fileNameOnly)
+            .Select(candidate => candidate.Groups[1].Value)
+            .OrderByDescending(candidate => candidate.Length)
+            .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(match) ? null : match;
     }
 
     private long? ExtractSizeFromFilename(string filename)
     {
-        // Heuristic: try to extract size from filename patterns
-        // In practice, this would come from metadata or shadow index lookup
+        var fileNameOnly = Path.GetFileNameWithoutExtension(filename);
+        if (string.IsNullOrWhiteSpace(fileNameOnly))
+        {
+            return null;
+        }
+
+        var candidate = FilenameBracketedSizeRegex.Match(fileNameOnly);
+        if (!candidate.Success)
+        {
+            candidate = FilenameByteSizeRegex.Match(fileNameOnly);
+        }
+
+        if (!candidate.Success)
+        {
+            return null;
+        }
+
+        var normalized = candidate.Groups[1].Value
+            .Replace("_", string.Empty, StringComparison.Ordinal)
+            .Replace(",", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        if (long.TryParse(normalized, out var sizeBytes) && sizeBytes > 0)
+        {
+            return sizeBytes;
+        }
+
         return null;
     }
 

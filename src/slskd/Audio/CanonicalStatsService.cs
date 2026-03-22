@@ -24,12 +24,12 @@ namespace slskd.Audio
             this.log = log;
         }
 
-        public async Task<CanonicalStats> AggregateStatsAsync(string recordingId, string codecProfileKey, CancellationToken ct = default)
+        public async Task<CanonicalStats?> AggregateStatsAsync(string recordingId, string codecProfileKey, CancellationToken ct = default)
         {
             var variants = await hashDb.GetVariantsByRecordingAndProfileAsync(recordingId, codecProfileKey, ct).ConfigureAwait(false);
             if (variants == null || variants.Count == 0)
             {
-                return null!;
+                return null;
             }
 
             // Deduplicate identical streams within the profile using codec-specific hashes
@@ -86,7 +86,11 @@ namespace slskd.Audio
                 if (!statsByProfile.ContainsKey(profileKey))
                 {
                     var existing = await hashDb.GetCanonicalStatsAsync(recordingId, profileKey, ct).ConfigureAwait(false);
-                    statsByProfile[profileKey] = existing ?? await AggregateStatsAsync(recordingId, profileKey, ct).ConfigureAwait(false);
+                    var computed = existing ?? await AggregateStatsAsync(recordingId, profileKey, ct).ConfigureAwait(false);
+                    if (computed != null)
+                    {
+                        statsByProfile[profileKey] = computed;
+                    }
                 }
             }
 
