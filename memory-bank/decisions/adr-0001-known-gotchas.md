@@ -8681,6 +8681,41 @@ if (!IPAddress.TryParse(host, out var ip))
 
 **Why This Keeps Happening**: NAT code often starts from IPv4-only assumptions because early tests use loopback or public IPv4 literals. Once IPv6 support arrives, the failure is easy to miss because the parser doesn’t throw in most paths; it just returns “no endpoint” and the traversal stack falls back or reports failure. Any NAT or STUN endpoint parser needs explicit bracketed IPv6 handling and dedicated tests for both direct and relay-style prefixes.
 
+### 0k45. Labelled Blacklist And Safe-Log Endpoint Parsers Must Not Assume “One Colon Means One Meaning”
+
+**The Bug**: Two unrelated string readers were both using brittle colon assumptions. `Blacklist` treated P2P rows as `label:range` with `Split(':')[1]`, so labels containing additional `:` characters could make format detection or loading fail even though the trailing IP range was valid. `LoggingUtils.SafeEndpoint(...)` also treated endpoint strings as either plain IPv4 `host:port` or hostnames, which broke bracketed IPv6 loopback/private detection and produced inconsistent redaction for IPv6 endpoints.
+
+**Files Affected**:
+- `src/slskd/Core/Blacklist.cs`
+- `src/slskd/Mesh/Transport/LoggingUtils.cs`
+
+**Wrong**:
+```csharp
+if (IPAddressRange.TryParse(line.Split(':')[1], out _))
+{
+    return BlacklistFormat.P2P;
+}
+
+if (System.Net.IPAddress.TryParse(endpoint.Split(':')[0], out _))
+{
+    ...
+}
+```
+
+**Correct**:
+```csharp
+var separatorIndex = line.LastIndexOf(':');
+range = line[(separatorIndex + 1)..].Trim();
+
+if (TryExtractHostAndPort(endpoint, out var host, out var port) &&
+    System.Net.IPAddress.TryParse(host, out var ipAddress))
+{
+    ...
+}
+```
+
+**Why This Keeps Happening**: Colons are overloaded across the codebase: they separate labels from data, delimit ports, and appear inside IPv6 literals. Small helper code often assumes only one of those meanings is present in a given string. Any parser touching endpoint-like or label-plus-payload formats needs to define which colon is structural and parse accordingly instead of using the first split that “works” on IPv4-only samples.
+
 ---
 
 *Last updated: 2026-03-22*
