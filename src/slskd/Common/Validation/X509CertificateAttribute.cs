@@ -37,7 +37,7 @@ namespace slskd.Validation
 
                 if (!string.IsNullOrEmpty(cert.Pfx) && !X509.TryValidate(cert.Pfx, cert.Password, out var certResult))
                 {
-                    return new ValidationResult($"Invalid HTTPs certificate: {certResult}");
+                    return new ValidationResult("Invalid HTTPs certificate");
                 }
             }
 

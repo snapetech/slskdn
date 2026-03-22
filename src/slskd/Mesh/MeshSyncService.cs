@@ -398,8 +398,8 @@ namespace slskd.Mesh
                 await syncLock.WaitAsync(cancellationToken);
                 try
                 {
-                    var hello = GenerateHelloMessage();
-                    result.Error = $"Mesh sync transport is not implemented (local seq={hello.LatestSeqId})";
+                    _ = GenerateHelloMessage();
+                    result.Error = "Mesh sync transport is not implemented";
                     log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is not implemented", username);
                 }
                 finally

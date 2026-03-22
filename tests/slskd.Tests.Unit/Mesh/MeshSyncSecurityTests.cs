@@ -226,6 +226,24 @@ namespace slskd.Tests.Unit.Mesh
             Assert.DoesNotContain("sensitive", result.Error, StringComparison.OrdinalIgnoreCase);
         }
 
+        [Fact]
+        public async Task TrySyncWithPeerAsync_WhenTransportIsNotImplemented_DoesNotLeakLocalSequenceState()
+        {
+            mockCapabilities
+                .Setup(c => c.GetPeerCapabilities("mesh-peer"))
+                .Returns(new PeerCapabilities
+                {
+                    ClientVersion = "1.0.0",
+                    CanMeshSync = true,
+                });
+
+            var result = await meshSyncService.TrySyncWithPeerAsync("mesh-peer", CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Equal("Mesh sync transport is not implemented", result.Error);
+            Assert.DoesNotContain("seq", result.Error, StringComparison.OrdinalIgnoreCase);
+        }
+
         #endregion
 
         #region Reputation Checks Tests (T-1431)
