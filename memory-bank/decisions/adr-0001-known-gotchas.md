@@ -3898,6 +3898,38 @@ if (!reader.Read())
 
 **Why This Keeps Happening**: During nullable cleanup, it is easy to mechanically replace "missing value" returns with `null!`. That only works for reference-type return paths. For tuples and other value types, keep the existing sentinel form such as `default` or change the signature explicitly.
 
+### 3f. Async Controller Lookups Must Await Repository Tasks Before Null / NotFound Checks
+
+**The Bug**: Warning cleanup changed `FindMessageAsync()` to return `Task<PrivateMessage?>`, but the controller kept comparing the un-awaited task result to `default`. That made the not-found branch unreachable and could incorrectly return `200 OK` for missing messages.
+
+**Files Affected**:
+- `src/slskd/Messaging/API/Controllers/ConversationsController.cs`
+- `src/slskd/Messaging/ConversationService.cs`
+
+**Wrong**:
+```csharp
+var message = Messages.Conversations.FindMessageAsync(username, id);
+if (message == default)
+{
+    return NotFound();
+}
+
+return Ok(message);
+```
+
+**Correct**:
+```csharp
+var message = await Messages.Conversations.FindMessageAsync(username, id);
+if (message == default)
+{
+    return NotFound();
+}
+
+return Ok(message);
+```
+
+**Why This Keeps Happening**: Nullable-signature cleanup often turns synchronous-looking lookups into `Task<T?>`, but controller code can still visually resemble the old synchronous pattern. In async controller actions, always await the lookup before testing for `null` / `default` or returning the payload.
+
 ---
 
-*Last updated: 2026-01-27*
+*Last updated: 2026-03-21*
