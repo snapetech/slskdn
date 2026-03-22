@@ -10421,6 +10421,36 @@ catch (Exception ex)
 
 **Why This Keeps Happening**: compatibility controllers often start as thin adapters over other services, and it is tempting to surface the caught exception to help legacy clients debug. That turns internal library/service failures into API data leaks. Log the exception server-side, but keep the compatibility response generic unless the message is explicitly part of the public contract.
 
+### 0k68. Legacy Bridge And Admin APIs Must Not Expose Backend Exception Text
+
+**The Bug**: the legacy bridge-facing APIs had the same leak pattern in multiple endpoints. `BridgeController` returned raw `ex.Message` for search, download, room listing, status, start/stop, and transfer-progress failures. `BridgeAdminController` did the same for dashboard, client-list, and stats failures. That exposes internal bridge/mesh failures and downstream service messages directly to clients.
+
+**Files Affected**:
+- `src/slskd/API/VirtualSoulfind/BridgeController.cs`
+- `src/slskd/API/VirtualSoulfind/BridgeAdminController.cs`
+- `tests/slskd.Tests.Unit/API/VirtualSoulfind/BridgeControllerTests.cs`
+- `tests/slskd.Tests.Unit/API/VirtualSoulfind/BridgeAdminControllerTests.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Bridge search failed: {Message}", ex.Message);
+    return StatusCode(500, new { error = ex.Message });
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Bridge search failed");
+    return StatusCode(500, new { error = "Bridge search failed" });
+}
+```
+
+**Why This Keeps Happening**: adapter/controller layers feel “close to the client,” so it is easy to return the raw exception to preserve context. That is the wrong layer for it. Bridge and admin APIs should log internal exceptions, but only emit stable public error strings that do not reveal backend implementation details.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
