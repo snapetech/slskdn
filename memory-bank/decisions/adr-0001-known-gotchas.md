@@ -364,6 +364,27 @@ public async Task<PodRefreshResult> RefreshAsync(...)
 
 **Why This Keeps Happening**: It is common to start with a synchronous `Task.FromResult(...)` method and later add awaited work in the middle. If that happens, update the full signature and normalize the returns immediately; otherwise you get a half-converted method that neither compiles nor communicates its real async behavior.
 
+### 0z. The `Task.Run` Scheduling Token Must Match The Background Task Lifetime, Not The Caller Lifetime
+
+**The Bug**: Several services launched long-lived background work with `Task.Run(..., cancellationToken)` where `cancellationToken` belonged to the current request or startup call. That token can cancel before the task is even scheduled, silently preventing the background operation from starting at all.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+- `src/slskd/LibraryHealth/LibraryHealthService.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(() => PerformBackgroundWorkAsync(id, ct), ct);
+```
+
+**Correct**:
+```csharp
+_ = Task.Run(() => PerformBackgroundWorkAsync(id, ct), CancellationToken.None);
+```
+
+**Why This Keeps Happening**: The second parameter to `Task.Run` controls whether the task is queued at all, not just what token the delegate receives. It is easy to assume passing the caller token there is harmless, but for background work it couples scheduling to the request/startup lifetime. Use the real lifetime token inside the delegate, and only use the `Task.Run` token when the task itself should be suppressed if scheduling has not yet happened.
+
 ### 0k. `async void` Event Handlers Must Catch At The Top Level Or They Can Crash Background Health Logic
 
 **The Bug**: Disaster-mode health event handlers used `async void` without a top-level exception guard, so any exception from delayed recovery/escalation work could escape the event callback, terminate the process, or silently break recovery flow.
