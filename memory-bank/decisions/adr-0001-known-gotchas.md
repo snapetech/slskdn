@@ -119,6 +119,34 @@ public sealed class MultiRealmHostedService : IHostedService, IDisposable
 
 **Why This Keeps Happening**: fixing token lifetime often introduces a new owned disposable field. It is easy to stop at `StopAsync`, but analyzers are right here: once the service owns the CTS, it also owns disposal on non-ideal or partial-host-lifecycle paths.
 
+### 0xB3. Controller Boundary Hardening Must Stay Null-Safe For Direct Controller Tests And Option-Gated Branches
+
+**The Bug**: controller hardening changes started reading `HttpContext.RequestAborted`, `HttpContext.Connection.RemoteIpAddress`, or feature-gated options directly. That broke unit tests and direct controller usage where no full ASP.NET request context exists, and it also caused endpoint tests to fail in the wrong branch because the required feature flag was never enabled.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/SessionController.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/API/DiscoveryController.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+- `tests/slskd.Tests.Unit/Core/API/SessionControllerTests.cs`
+- `tests/slskd.Tests.Unit/Files/FilesControllerSecurityTests.cs`
+
+**Wrong**:
+```csharp
+var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+await Discovery.StartDiscoveryAsync(term, true, HttpContext.RequestAborted);
+await MultiSource.SelectCanonicalSourcesAsync(result, HttpContext.RequestAborted);
+```
+
+**Correct**:
+```csharp
+var remoteIp = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+await Discovery.StartDiscoveryAsync(term, true, cancellationToken);
+await MultiSource.SelectCanonicalSourcesAsync(result, cancellationToken);
+```
+
+**Why This Keeps Happening**: boundary passes focus on trim/validation/error contracts, but these controllers are still executed directly in unit tests and lightweight harnesses. Any new `HttpContext` dependency must be null-safe, and tests that expect validation on option-gated endpoints must first enable the relevant feature or they will fail for a completely different reason.
+
 ### 0xB3. Accepted Background Loops Must Not Stay Bound To The Caller Token
 
 **The Bug**: some services were not hosted-service startup paths, but they still accepted long-lived work and immediately detached it onto background tasks while keeping the initiating request/start token as the loop lifetime. That meant discovery and cover-traffic jobs could report as started and then stop as soon as the caller returned or the startup token was cancelled.
