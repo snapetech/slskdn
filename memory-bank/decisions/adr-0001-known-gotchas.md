@@ -1639,6 +1639,34 @@ await Retry.Do(task: async () =>
 
 **Why This Keeps Happening**: Retry loops naturally push payload construction outward so the body looks cleaner, but that can accidentally turn per-request disposables into shared mutable state. For retryable HTTP sends, either recreate request content per attempt or isolate it behind an immutable factory so each send owns and disposes its own payload object.
 
+### 0ab. Delayed Cleanup Must Remove The Specific Completed Entry, Not Whatever Shares The Same Key Later
+
+**The Bug**: Browse-status cleanup scheduled `TryRemove(username)` five seconds after a browse completed. If another browse for the same username updated the tracker during that window, the older cleanup task deleted the newer entry and the status endpoint incorrectly dropped to `404`.
+
+**Files Affected**:
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+- `src/slskd/Users/BrowseTracker.cs`
+- `src/slskd/Users/IBrowseTracker.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(async () =>
+{
+    await Task.Delay(5000);
+    BrowseTracker.TryRemove(username);
+});
+```
+
+**Correct**:
+```csharp
+BrowseTracker.TryGet(username, out var completedProgress);
+_ = ObserveBrowseCleanupAsync(username, completedProgress);
+...
+BrowseTracker.TryRemove(username, completedProgress);
+```
+
+**Why This Keeps Happening**: Delayed cleanup often captures only the lookup key and assumes the keyed state is still the same object later. That assumption breaks as soon as the same key can be reused for a newer operation. When cleanup is deferred, capture an operation/version/token or compare the exact tracked instance before removing it.
+
 ### 0x. Singleton Services Must Not Launch Infinite Cleanup Loops Without A Disposal Hook
 
 **The Bug**: `PrivateGatewayMeshService` is registered as a singleton and started an infinite `CleanupExpiredTunnelsAsync` loop with `Task.Run(...)`, `while (true)`, and `Task.Delay(...)` but exposed no `Dispose()` path to cancel it. That leaves a permanent background task with live references to service state until process exit.
