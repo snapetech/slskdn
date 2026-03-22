@@ -10451,6 +10451,39 @@ catch (Exception ex)
 
 **Why This Keeps Happening**: adapter/controller layers feel “close to the client,” so it is easy to return the raw exception to preserve context. That is the wrong layer for it. Bridge and admin APIs should log internal exceptions, but only emit stable public error strings that do not reveal backend implementation details.
 
+### 0k69. Internal Tooling And Status Controllers Must Keep Failure Payloads Stable
+
+**The Bug**: several non-core controllers still leaked backend exception text because they were treated as “internal” tooling surfaces. `LibraryItemsController`, `MultiSourceController`, and `HashDbController` all returned `ex.Message` or a `message` field on `500`s, and `MeshController` surfaced raw NAT detection failures in its fallback payload. Those endpoints still sit behind public HTTP contracts, so exception text becomes API data.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+- `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/Mesh/API/MeshController.cs`
+- `tests/slskd.Tests.Unit/API/Native/LibraryItemsControllerTests.cs`
+- `tests/slskd.Tests.Unit/Transfers/MultiSource/API/MultiSourceControllerTests.cs`
+- `tests/slskd.Tests.Unit/HashDb/API/HashDbControllerTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/API/MeshControllerTests.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Error searching library items");
+    return StatusCode(500, new { error = "Internal server error" });
+}
+```
+
+**Why This Keeps Happening**: once the main compatibility and bridge APIs are cleaned up, “helper” controllers start to look lower-risk and the old debug-friendly pattern sneaks back in. Any controller that returns structured HTTP errors needs the same rule: log the exception server-side, but return only stable public error text or status metadata.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
