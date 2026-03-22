@@ -8318,6 +8318,34 @@ if (TryParseAdvertisedEndpoint(endpointStr, out var host, out var port))
 
 **Why This Keeps Happening**: Endpoint parsing often starts with IPv4 and hostname assumptions, then IPv6 support gets bolted on later by adding bracketed strings in one layer without updating the consumer. Any transport-advertisement parser needs explicit IPv6 handling rather than generic `Split(':')` logic.
 
+### 0k3E. Deterministic Service IDs Need A Published Reverse Index Or `FindByIdAsync()` Is A Permanent False Negative
+
+**The Bug**: `DhtMeshServiceDirectory.FindByIdAsync(...)` was a stub that always returned an empty list even though service IDs are deterministic and surfaced in the API. Published services were discoverable by name but impossible to resolve by ID because `MeshServicePublisher` never wrote a reverse `svcid:{serviceId}` entry.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/DhtMeshServiceDirectory.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServicePublisher.cs`
+
+**Wrong**:
+```csharp
+_logger.LogDebug("[ServiceDirectory] FindById not yet fully implemented: {ServiceId}", serviceId);
+return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+```
+
+**Correct**:
+```csharp
+await _dhtClient.PutAsync(
+    $"svcid:{descriptor.ServiceId}",
+    descriptor,
+    _options.DescriptorTtlSeconds,
+    cancellationToken);
+
+var rawValue = await _dhtClient.GetRawAsync($"svcid:{serviceId}", cancellationToken);
+var descriptor = SecurityUtils.ParseMessagePackSafely<MeshServiceDescriptor>(rawValue, _maxPayload);
+```
+
+**Why This Keeps Happening**: Deterministic IDs can create the illusion that lookup is “already solved” because the ID can be recomputed, but discovery still needs a storage key that can be queried directly. If the public interface exposes ID-based lookup, the publisher and directory must evolve together: write the reverse index when publishing and validate that exact payload on read.
+
 ---
 
 *Last updated: 2026-03-22*
