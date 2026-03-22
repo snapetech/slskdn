@@ -93,7 +93,7 @@ public class ContentIdController : ControllerBase
 
             if (contentId == null)
             {
-                return NotFound(new { error = $"External ID '{externalId}' not found" });
+                return NotFound(new { error = "External ID not found" });
             }
 
             return Ok(new { externalId, contentId });

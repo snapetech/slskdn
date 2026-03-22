@@ -456,7 +456,8 @@ namespace slskd.HashDb.API
 
             if (!Optimization.HashDbOptimizationService.TryNormalizeProfileQuery(request.Query, out var normalizedQuery, out var validationError))
             {
-                return BadRequest(new { error = validationError });
+                Log.Warning("[HashDb] Rejected profiling query: {ValidationError}", validationError);
+                return BadRequest(new { error = "Query is not allowed for profiling" });
             }
 
             try

@@ -46,4 +46,20 @@ public class ContentIdControllerTests
             x => x.FindByDomainAndTypeAsync("audio", "recording", It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task Resolve_WhenExternalIdIsMissing_DoesNotEchoInput()
+    {
+        var registry = new Mock<IContentIdRegistry>();
+        registry.Setup(x => x.ResolveAsync("mb:recording:12345", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var controller = new ContentIdController(NullLogger<ContentIdController>.Instance, registry.Object);
+
+        var result = await controller.Resolve(" mb:recording:12345 ", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.DoesNotContain("12345", notFound.Value?.ToString() ?? string.Empty);
+        Assert.Contains("External ID not found", notFound.Value?.ToString() ?? string.Empty);
+    }
 }

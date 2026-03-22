@@ -141,7 +141,7 @@ namespace slskd.Mesh.API
             var result = await MeshSync.TrySyncWithPeerAsync(username);
             if (!result.Success)
             {
-                return BadRequest(new { error = result.Error });
+                return BadRequest(new { error = "Failed to sync with peer" });
             }
 
             return Ok(result);

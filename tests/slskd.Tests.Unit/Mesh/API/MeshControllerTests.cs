@@ -163,7 +163,7 @@ public class MeshControllerTests
     {
         var natDetector = new Mock<INatDetector>();
         natDetector
-            .Setup(detector => detector.DetectAsync())
+            .Setup(detector => detector.DetectAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive detail"));
 
         var controller = new MeshController(
@@ -176,6 +176,29 @@ public class MeshControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.DoesNotContain("sensitive detail", ok.Value?.ToString() ?? string.Empty);
         Assert.Contains("NAT detection failed", ok.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task SyncWithPeer_WhenSyncFails_DoesNotLeakErrorMessage()
+    {
+        var meshSync = new Mock<IMeshSyncService>();
+        meshSync.SetupGet(service => service.Stats).Returns(new MeshSyncStats());
+        meshSync
+            .Setup(service => service.TrySyncWithPeerAsync("peer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MeshSyncResult
+            {
+                Success = false,
+                PeerUsername = "peer-1",
+                Error = "sensitive detail"
+            });
+
+        var controller = CreateController(meshSync);
+
+        var result = await controller.SyncWithPeer("peer-1");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", badRequest.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Failed to sync with peer", badRequest.Value?.ToString() ?? string.Empty);
     }
 
     private static MeshController CreateController(Mock<IMeshSyncService> meshSync)

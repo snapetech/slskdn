@@ -99,10 +99,16 @@ namespace slskd.Capabilities.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetPeer(string username)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest(new { error = "Username is required" });
+            }
+
             var caps = Capabilities.GetPeerCapabilities(username);
             if (caps == null)
             {
-                return NotFound(new { error = $"No capabilities known for {username}" });
+                return NotFound(new { error = "No capabilities known for peer" });
             }
 
             return Ok(new

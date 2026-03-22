@@ -56,4 +56,22 @@ public class HashDbControllerTests
         Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
         Assert.Contains("Failed to get slow query stats", error.Value?.ToString() ?? string.Empty);
     }
+
+    [Fact]
+    public async Task ProfileQuery_WithDisallowedQuery_DoesNotLeakValidationMessage()
+    {
+        var controller = new HashDbController(
+            Mock.Of<IHashDbService>(),
+            Mock.Of<IDbContextFactory<SearchDbContext>>(),
+            Mock.Of<IHashDbOptimizationService>());
+
+        var result = await controller.ProfileQuery(new ProfileQueryRequest
+        {
+            Query = "DELETE FROM files"
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("DELETE", badRequest.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Query is not allowed for profiling", badRequest.Value?.ToString() ?? string.Empty);
+    }
 }

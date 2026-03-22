@@ -84,7 +84,7 @@ public class PodsController : ControllerBase
             var pod = await podService.GetPodAsync(podId, ct);
             if (pod == null)
             {
-                return NotFound(new { error = $"Pod {podId} not found" });
+                return NotFound(new { error = "Pod not found" });
             }
 
             return Ok(pod);
@@ -111,7 +111,7 @@ public class PodsController : ControllerBase
 
             var deleted = await podService.DeletePodAsync(podId, ct);
             if (!deleted)
-                return NotFound(new { error = $"Pod {podId} not found" });
+                return NotFound(new { error = "Pod not found" });
 
             return NoContent();
         }
@@ -217,7 +217,7 @@ public class PodsController : ControllerBase
             var existingPod = await podService.GetPodAsync(podId, ct);
             if (existingPod == null)
             {
-                return NotFound(new { error = $"Pod {podId} not found" });
+                return NotFound(new { error = "Pod not found" });
             }
 
             // Get current members for authorization check
@@ -254,7 +254,7 @@ public class PodsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = $"Pod {podId} not found" });
+            return NotFound(new { error = "Pod not found" });
         }
         catch (ArgumentException ex)
         {

@@ -47,6 +47,24 @@ public class OptionsControllerTests
         Assert.Equal("Invalid YAML configuration", ok.Value);
     }
 
+    [Fact]
+    public void ApplyOverlay_WithInvalidOverlay_DoesNotLeakValidationMessage()
+    {
+        var controller = CreateController();
+
+        var result = controller.ApplyOverlay(new OptionsOverlay
+        {
+            Soulseek = new OptionsOverlay.SoulseekOptionsPatch
+            {
+                ListenPort = 1
+            }
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("1024", badRequest.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Invalid options overlay", badRequest.Value);
+    }
+
     private static OptionsController CreateController(bool remoteConfiguration = true)
     {
         var options = new slskd.Options

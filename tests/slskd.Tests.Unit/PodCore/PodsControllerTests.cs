@@ -115,6 +115,19 @@ public class PodsControllerTests
     }
 
     [Fact]
+    public async Task GetPod_WithMissingPod_DoesNotEchoPodId()
+    {
+        var podId = "pod:00000000000000000000000000000000";
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync((Pod?)null);
+
+        var result = await _controller.GetPod(podId);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.DoesNotContain(podId, notFound.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Pod not found", notFound.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
     public async Task CreatePod_WithValidPod_ReturnsCreatedResult()
     {
         // Arrange

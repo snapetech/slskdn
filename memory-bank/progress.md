@@ -5698,3 +5698,17 @@ Code quality improvements were completed as part of Option A:
   - added/folded focused regressions for those PodCore/Mesh/MediaCore failure contracts, including a new `DescriptorRetrieverControllerTests` file
 - Validation:
   - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`
+
+## 2026-03-22 16:24 - Validation-detail and echoed-identifier cleanup
+
+- Folded the next dirty boundary batch into the same sweep:
+  - `OptionsController` no longer returns raw overlay validation text from `GetResultString()`
+  - `HashDbController` profiling rejects disallowed SQL with a stable public contract instead of echoing validator output
+  - `MeshController` sync failure no longer returns raw `MeshSyncResult.Error`
+- Extended the same public-contract cleanup to identifier-bearing 404s:
+  - `CapabilitiesController` now trims usernames, rejects blanks, and returns a stable peer-not-found contract
+  - `ContentIdController.Resolve(...)` now returns a stable `External ID not found` contract
+  - `PodsController` no longer echoes raw pod IDs in its pod-not-found responses
+- Added/folded focused regressions for all of the above, including new `CapabilitiesControllerTests`
+- Validation:
+  - Not run in this pass; user did not request `dotnet test`, `dotnet build`, or `./bin/lint`

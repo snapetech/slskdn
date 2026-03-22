@@ -100,7 +100,7 @@ namespace slskd.Core.API
             if (!overlay.TryValidate(out var result))
             {
                 Log.Warning("Options patch validation failed: {Message}", result.GetResultString());
-                return BadRequest(result.GetResultString());
+                return BadRequest("Invalid options overlay");
             }
 
             try
