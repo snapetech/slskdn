@@ -642,6 +642,52 @@ if (libraryActor == null)
 ```
 
 **Why This Keeps Happening**: Federation endpoint work often starts with one actor and then grows into a registry-based model later. It is easy to update discovery and forget admission checks. Any endpoint that operates on actor names must validate against the shared actor registry, not legacy hardcoded names.
+
+### 0x16. Outbound Follow State Must Be Persisted When The App Exposes A `following` Collection
+
+**The Bug**: After follower state was added, the app still exposed `/following` without any durable outbound follow state. Bridge and service-level follow operations could claim success without leaving the server with any local record of the relationship.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/ActivityPubRelationshipStore.cs`
+- `src/slskd/SocialFederation/FederationService.cs`
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/Mesh/Realm/Bridge/ActivityPubBridge.cs`
+
+**Wrong**:
+```csharp
+return BridgeOperationResult.CreateSuccess(new { FollowedActor = actorId });
+```
+
+**Correct**:
+```csharp
+await _relationshipStore.UpsertFollowingAsync(localActorName, remoteActorId, cancellationToken);
+```
+
+**Why This Keeps Happening**: It is natural to think of outbound delivery and local state as separate concerns, but ActivityPub collection endpoints expose local state. If the server can follow remote actors, that operation must update durable `following` state or the endpoint becomes misleading.
+
+### 0x17. Segment Metadata Candidates Should Fall Back To Stable Synthetic IDs Instead Of Being Dropped For Missing MBIDs
+
+**The Bug**: Segment metadata hits with strong title/artist data but no MusicBrainz recording ID were discarded entirely. That made segment identification weaker than necessary for sources whose metadata provider did not resolve MBIDs.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId))
+{
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
+    ? hit.MusicBrainzRecordingId
+    : $"metadata:{NormalizeSegmentQuery(BuildBestQuery(hit.Artist, hit.Title))}";
+```
+
+**Why This Keeps Happening**: Ranking pipelines often assume canonical IDs exist by the time candidates are formed. Real metadata providers do not guarantee that. If a hit has strong human-meaningful identity data, keep it in the candidate set with a stable synthetic ID so downstream ranking can still compare and present it.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
