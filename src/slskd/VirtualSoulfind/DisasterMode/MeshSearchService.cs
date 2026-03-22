@@ -63,13 +63,13 @@ public interface IMeshSearchService
 public class MeshSearchService : IMeshSearchService
 {
     private readonly ILogger<MeshSearchService> logger;
-    private readonly IMeshDirectory meshDirectory;
-    private readonly IMeshSyncService meshSync;
+    private readonly IMeshDirectory? meshDirectory;
+    private readonly IMeshSyncService? meshSync;
 
     public MeshSearchService(
         ILogger<MeshSearchService> logger,
-        IMeshDirectory meshDirectory = null,
-        IMeshSyncService meshSync = null)
+        IMeshDirectory? meshDirectory = null,
+        IMeshSyncService? meshSync = null)
     {
         this.logger = logger;
         this.meshDirectory = meshDirectory;

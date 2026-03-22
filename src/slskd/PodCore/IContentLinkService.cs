@@ -36,7 +36,7 @@ public interface IContentLinkService
     /// <param name="limit">Maximum number of results.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>List of searchable content items.</returns>
-    Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string domain = null, int limit = 20, CancellationToken ct = default);
+    Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -57,7 +57,7 @@ public record ContentMetadata(
     string Artist,
     string Type,
     string Domain,
-    Dictionary<string, string> AdditionalInfo = null);
+    Dictionary<string, string>? AdditionalInfo = null);
 
 /// <summary>
 ///     Result of content search.
@@ -68,4 +68,4 @@ public record ContentSearchResult(
     string Subtitle,
     string Type,
     string Domain,
-    Dictionary<string, string> Metadata = null);
+    Dictionary<string, string>? Metadata = null);

@@ -74,7 +74,7 @@ namespace slskd.Configuration
         public DefaultValueConfigurationProvider(DefaultValueConfigurationSource source)
         {
             TargetType = source.TargetType;
-            Namespace = TargetType.Namespace.Split('.').First();
+            Namespace = (TargetType.Namespace ?? string.Empty).Split('.').First();
         }
 
         private string Namespace { get; set; }

@@ -29,7 +29,7 @@ public partial class SearchService
     /// <summary>
     ///     Starts a bridged search using Scene ↔ Pod Bridging providers.
     /// </summary>
-    private async Task<Search> StartBridgedSearchAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<ISearchProvider> providersToUse = null)
+    private async Task<Search> StartBridgedSearchAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<ISearchProvider>? providersToUse = null)
     {
         var cancellationTokenSource = new CancellationTokenSource();
         CancellationTokens.TryAdd(id, cancellationTokenSource);

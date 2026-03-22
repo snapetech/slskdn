@@ -65,12 +65,14 @@ namespace slskd.Authentication
         {
             var remote = Context.Connection.RemoteIpAddress;
             var isLoopback = remote != null && IPAddress.IsLoopback(remote);
-            if (isLoopback)
-                ; // allow
-            else if (Options.AllowRemoteNoAuth)
-                ; // allow
-            else if (!string.IsNullOrWhiteSpace(Options.AllowedCidrs) && remote != null)
+
+            if (!isLoopback && !Options.AllowRemoteNoAuth)
             {
+                if (string.IsNullOrWhiteSpace(Options.AllowedCidrs) || remote == null)
+                {
+                    return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback"));
+                }
+
                 var allowed = false;
                 foreach (var cidr in Options.AllowedCidrs.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -82,10 +84,10 @@ namespace slskd.Authentication
                 }
 
                 if (!allowed)
+                {
                     return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback, AllowRemoteNoAuth, or AllowedCidrs"));
+                }
             }
-            else
-                return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback"));
 
             if (Options.AllowRemoteNoAuth)
             {

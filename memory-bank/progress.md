@@ -5253,3 +5253,18 @@ Code quality improvements were completed as part of Option A:
   - about `2227 -> 2157`
   - then `2157 -> 2135`
 - The next obvious seam is the remaining nullable-default constructor/interface noise in `HashDb`, `Search`, `Relay`, `Downloads`, `Rescue`, and related service constructors.
+
+## 2026-03-22 03:05:00Z
+
+- Continued the large warning-reduction pass instead of doing isolated one-offs, with another broad nullable/default-value sweep across:
+  - API compatibility and auth handlers (`LibraryCompatibilityController`, `LibraryItemsController`, `CanonicalController`, `ApiKeyAuthentication`, `PassthroughAuthentication`)
+  - audio/library-health helpers (`CanonicalStatsService`, `CodecProfile`, `AudioSketchService`)
+  - wishlist and share models/services (`WishlistItem`, wishlist API request DTOs, `WishlistService`, `ShareService`, `ShareScanner`)
+  - JSON converter nullability (`TypeConverter`, `KnownUnsupportedTypeConverter`)
+- Fixed a cleanup regression in canonical-audio deduplication where empty-string hash defaults broke `??` fallback chains and collapsed distinct FLAC variants into one candidate bucket. Documented the gotcha immediately and committed that fix in `f62e6ce2`.
+- Revalidated the canonical-audio regression directly: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter FullyQualifiedName~CanonicalStatsServiceTests` passes again.
+- Rebuilt the app project with a clean rebuild target after the latest warning pass:
+  - `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0 -t:Rebuild`
+  - warning count moved from `1934 -> 1912 -> 1901`
+- Re-ran `bash ./bin/lint` successfully after the latest edits.
+- The next remaining broad seams are now concentrated in `Common/*` nullability helpers, `Mesh/Overlay/*` platform/disposable analyzers, and the larger analyzer/style buckets (`CA2000`, `CA2016`, `CA1416`, StyleCop) rather than the earlier constructor/default-value noise.

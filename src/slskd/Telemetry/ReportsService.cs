@@ -55,7 +55,7 @@ public class ReportsService
         DateTime? start = null,
         DateTime? end = null,
         TransferDirection? direction = null,
-        string username = null)
+        string? username = null)
     {
         start ??= DateTime.MinValue;
         end ??= DateTime.MaxValue;
@@ -135,7 +135,7 @@ public class ReportsService
         DateTime end,
         TimeSpan interval,
         TransferDirection? direction = null,
-        string username = null)
+        string? username = null)
     {
         if (end <= start)
         {
@@ -318,7 +318,7 @@ public class ReportsService
         TransferDirection direction,
         DateTime? start = null,
         DateTime? end = null,
-        string username = null,
+        string? username = null,
         SortOrder sortOrder = SortOrder.DESC,
         int limit = 25,
         int offset = 0)
@@ -398,7 +398,7 @@ public class ReportsService
         TransferDirection direction,
         DateTime? start = null,
         DateTime? end = null,
-        string username = null,
+        string? username = null,
         int limit = 25,
         int offset = 0)
     {
@@ -471,7 +471,7 @@ public class ReportsService
     public List<TransferDirectorySummary> GetTransferDirectoryFrequency(
         DateTime? start = null,
         DateTime? end = null,
-        string username = null,
+        string? username = null,
         SortOrder sortOrder = SortOrder.DESC,
         int limit = 25,
         int offset = 0)

@@ -88,14 +88,14 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         IContentVerificationService contentVerificationService,
         IHashDbService? hashDb = null,
         IMeshSyncService? meshSync = null,
-        IFingerprintExtractionService fingerprintExtractionService = null,
-        IAcoustIdClient acoustIdClient = null,
-        IAutoTaggingService autoTaggingService = null,
-        IOptionsMonitor<slskdOptions> optionsMonitor = null,
-        ICanonicalStatsService canonicalStatsService = null,
-        IMediaCoreSwarmService mediaCoreSwarmService = null,
-        IPlaybackPriorityService playbackPriorityService = null,
-        Optimization.IChunkSizeOptimizer chunkSizeOptimizer = null)
+        IFingerprintExtractionService? fingerprintExtractionService = null,
+        IAcoustIdClient? acoustIdClient = null,
+        IAutoTaggingService? autoTaggingService = null,
+        IOptionsMonitor<slskdOptions>? optionsMonitor = null,
+        ICanonicalStatsService? canonicalStatsService = null,
+        IMediaCoreSwarmService? mediaCoreSwarmService = null,
+        IPlaybackPriorityService? playbackPriorityService = null,
+        Optimization.IChunkSizeOptimizer? chunkSizeOptimizer = null)
     {
         _logger = logger;
         _client = soulseekClient;
@@ -246,7 +246,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     public async Task<ContentVerificationResult> FindVerifiedSourcesAsync(
         string filename,
         long fileSize,
-        string excludeUsername = null,
+        string? excludeUsername = null,
         CancellationToken cancellationToken = default)
     {
         // Extract just the filename for searching

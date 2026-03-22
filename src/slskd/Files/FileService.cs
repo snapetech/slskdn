@@ -304,7 +304,7 @@ namespace slskd.Files
         /// <exception cref="ArgumentException">Thrown if the specified directory has a relative path.</exception>
         /// <exception cref="NotFoundException">Thrown if the specified directory does not exist.</exception>
         /// <exception cref="UnauthorizedException">Thrown if the specified root directory is restricted.</exception>
-        public virtual async Task<FilesystemDirectory> ListContentsAsync(string directory, EnumerationOptions enumerationOptions = null)
+        public virtual async Task<FilesystemDirectory> ListContentsAsync(string directory, EnumerationOptions? enumerationOptions = null)
         {
             if (Path.GetFullPath(directory) != directory)
             {
@@ -373,7 +373,7 @@ namespace slskd.Files
         /// <returns>A Stream with which the contents of the file can be written.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the specified filename is null or contains only whitespace.</exception>
         /// <exception cref="IOException">Thrown if the underlying file or Stream can't be created for some reason.</exception>
-        public virtual Stream CreateFile(string filename, CreateFileOptions options = null)
+        public virtual Stream CreateFile(string filename, CreateFileOptions? options = null)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filename, nameof(filename));
 

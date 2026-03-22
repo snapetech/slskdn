@@ -42,7 +42,7 @@ public class LibraryCompatibilityController : ControllerBase
         logger.LogInformation("Compatibility library scan requested");
 
         var scanId = await healthService.StartScanAsync(
-            request ?? new LibraryHealthScanRequest { LibraryPath = null },
+            request ?? new LibraryHealthScanRequest(),
             cancellationToken);
 
         return Ok(new { scan_id = scanId });

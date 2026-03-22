@@ -83,14 +83,14 @@ namespace slskd.HashDb
         /// <param name="serviceProvider">Service provider for lazy resolution of mesh sync (optional).</param>
         public HashDbService(
             string appDirectory,
-            EventBus eventBus = null,
-            IServiceProvider serviceProvider = null,
-            IFingerprintExtractionService fingerprintExtractionService = null,
-            IAcoustIdClient acoustIdClient = null,
-            IAutoTaggingService autoTaggingService = null,
-            IMusicBrainzClient musicBrainzClient = null,
-            IOptionsMonitor<slskdOptions> optionsMonitor = null,
-            IMemoryCache hashCache = null)
+            EventBus? eventBus = null,
+            IServiceProvider? serviceProvider = null,
+            IFingerprintExtractionService? fingerprintExtractionService = null,
+            IAcoustIdClient? acoustIdClient = null,
+            IAutoTaggingService? autoTaggingService = null,
+            IMusicBrainzClient? musicBrainzClient = null,
+            IOptionsMonitor<slskdOptions>? optionsMonitor = null,
+            IMemoryCache? hashCache = null)
         {
             this.serviceProvider = serviceProvider;
             this.fingerprintExtractionService = fingerprintExtractionService;
@@ -914,7 +914,7 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
-        public async Task UpdatePeerCapabilitiesAsync(string username, PeerCapabilityFlags caps, string clientVersion = null, CancellationToken cancellationToken = default)
+        public async Task UpdatePeerCapabilitiesAsync(string username, PeerCapabilityFlags caps, string? clientVersion = null, CancellationToken cancellationToken = default)
         {
             await GetOrCreatePeerAsync(username, cancellationToken);
 

@@ -203,12 +203,12 @@ namespace slskd.Wishlist.API
         ///     The search text.
         /// </summary>
         [Required]
-        public string SearchText { get; set; }
+        public string SearchText { get; set; } = string.Empty;
 
         /// <summary>
         ///     Optional filter expression.
         /// </summary>
-        public string Filter { get; set; }
+        public string Filter { get; set; } = string.Empty;
 
         /// <summary>
         ///     Whether the wishlist item is enabled.
@@ -234,12 +234,12 @@ namespace slskd.Wishlist.API
         /// <summary>
         ///     The search text.
         /// </summary>
-        public string SearchText { get; set; }
+        public string SearchText { get; set; } = string.Empty;
 
         /// <summary>
         ///     Optional filter expression.
         /// </summary>
-        public string Filter { get; set; }
+        public string Filter { get; set; } = string.Empty;
 
         /// <summary>
         ///     Whether the wishlist item is enabled.

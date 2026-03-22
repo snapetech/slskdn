@@ -133,7 +133,7 @@ namespace slskd.Users
         /// <param name="username">The username to check.</param>
         /// <param name="ipAddress">The IPAddress to check, if available.</param>
         /// <returns>A value indicating whether the specified user and/or IP are blacklisted.</returns>
-        bool IsBlacklisted(string username, IPAddress ipAddress = null);
+        bool IsBlacklisted(string username, IPAddress? ipAddress = null);
 
         /// <summary>
         ///     Retrieves a value indicating whether the specified peer is privileged.

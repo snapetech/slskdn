@@ -102,7 +102,7 @@ public class ContentLinkService : IContentLinkService
         }
     }
 
-    public async Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string domain = null, int limit = 20, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {

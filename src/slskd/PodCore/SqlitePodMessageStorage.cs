@@ -168,7 +168,7 @@ public class SqlitePodMessageStorage : IPodMessageStorage
         }
     }
 
-    public async Task<IReadOnlyList<PodMessage>> SearchMessagesAsync(string podId, string query, string channelId = null, int limit = DefaultSearchLimit, CancellationToken ct = default)
+    public async Task<IReadOnlyList<PodMessage>> SearchMessagesAsync(string podId, string query, string? channelId = null, int limit = DefaultSearchLimit, CancellationToken ct = default)
     {
         // Validate inputs
         if (!PodValidation.IsValidPodId(podId))

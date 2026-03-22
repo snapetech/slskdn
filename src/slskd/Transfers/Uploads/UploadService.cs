@@ -163,7 +163,7 @@ namespace slskd.Transfers.Uploads
             IRelayService relayService,
             IDbContextFactory<TransfersDbContext> contextFactory,
             EventBus eventBus,
-            IScheduledRateLimitService scheduledRateLimitService = null)
+            IScheduledRateLimitService? scheduledRateLimitService = null)
         {
             var log = Serilog.Log.ForContext<UploadService>();
             log.Information("[UploadService] Constructor called");

@@ -886,7 +886,7 @@ namespace slskd.Shares
             }
         }
 
-        private SqliteConnection GetConnection(string connectionString = null)
+        private SqliteConnection GetConnection(string? connectionString = null)
         {
             connectionString = NormalizeConnectionString(connectionString ?? ConnectionString);
 

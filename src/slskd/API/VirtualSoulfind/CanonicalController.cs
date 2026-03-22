@@ -47,7 +47,7 @@ public class CanonicalController : ControllerBase
                 return Ok(new
                 {
                     mbid = mbid,
-                    canonical_variant = (object)null,
+                    canonical_variant = (object?)null,
                     available_variants = 0,
                     selection_reason = "No variants found in shadow index"
                 });
@@ -59,7 +59,7 @@ public class CanonicalController : ControllerBase
             return Ok(new
             {
                 mbid = mbid,
-                canonical_variant = canonicalVariant == null ? null : new
+                canonical_variant = canonicalVariant is null ? null : new
                 {
                     codec = canonicalVariant.Codec,
                     bitrate = canonicalVariant.BitrateKbps,

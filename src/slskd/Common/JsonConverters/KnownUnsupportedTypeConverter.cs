@@ -41,7 +41,7 @@ public class KnownUnsupportedTypeConverter : JsonConverter<object>
             || typeToConvert == typeof(UIntPtr);
     }
 
-    public override object Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         reader.Skip();
         return default;

@@ -36,8 +36,8 @@ public class LibraryItemsController : ControllerBase
 {
     private readonly IShareService shareService;
     private readonly IHashDbService? hashDbService;
-    private readonly ILogger<LibraryItemsController> logger;
-    private readonly IOptionsSnapshot<slskd.Options> options;
+    private readonly ILogger<LibraryItemsController>? logger;
+    private readonly IOptionsSnapshot<slskd.Options>? options;
 
     public LibraryItemsController(
         IShareService shareService,

@@ -23,7 +23,7 @@ namespace slskd.Shares
     public record Scan
     {
         public long StartedAt { get; init; }
-        public string OptionsJson { get; init; }
+        public string OptionsJson { get; init; } = string.Empty;
         public long? EndedAt { get; init; }
         public bool Suspect { get; init; }
     }

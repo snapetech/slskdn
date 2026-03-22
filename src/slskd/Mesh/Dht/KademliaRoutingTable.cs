@@ -77,7 +77,7 @@ public class KademliaRoutingTable
     /// Add or update a node in the routing table.
     /// Implements the Kademlia bucket splitting and ping-before-evict algorithm.
     /// </summary>
-    public async Task TouchAsync(byte[] nodeId, string address, Func<byte[], Task<bool>> pingFunc = null)
+    public async Task TouchAsync(byte[] nodeId, string address, Func<byte[], Task<bool>>? pingFunc = null)
     {
         if (nodeId.Length != selfId.Length || nodeId.SequenceEqual(selfId))
             return;

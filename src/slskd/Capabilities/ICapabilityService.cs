@@ -56,7 +56,7 @@ namespace slskd.Capabilities
         /// <summary>
         ///     Gets or sets the peer's username.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the capability flags.
@@ -66,7 +66,7 @@ namespace slskd.Capabilities
         /// <summary>
         ///     Gets or sets the client version string.
         /// </summary>
-        public string ClientVersion { get; set; }
+        public string ClientVersion { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the protocol version supported.
@@ -132,21 +132,21 @@ namespace slskd.Capabilities
         /// </summary>
         /// <param name="description">The peer's description string.</param>
         /// <returns>Parsed capabilities, or null if no slskdn tag found.</returns>
-        PeerCapabilities ParseCapabilityTag(string description);
+        PeerCapabilities? ParseCapabilityTag(string description);
 
         /// <summary>
         ///     Parses capability tokens from a client version string.
         /// </summary>
         /// <param name="versionString">The client version string.</param>
         /// <returns>Parsed capabilities, or null if not a slskdn client.</returns>
-        PeerCapabilities ParseVersionString(string versionString);
+        PeerCapabilities? ParseVersionString(string versionString);
 
         /// <summary>
         ///     Gets cached capabilities for a known peer.
         /// </summary>
         /// <param name="username">The peer's username.</param>
         /// <returns>Cached capabilities, or null if unknown.</returns>
-        PeerCapabilities GetPeerCapabilities(string username);
+        PeerCapabilities? GetPeerCapabilities(string username);
 
         /// <summary>
         ///     Records discovered capabilities for a peer.

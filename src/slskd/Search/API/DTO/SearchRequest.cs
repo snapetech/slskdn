@@ -97,10 +97,10 @@ namespace slskd.Search.API
         /// <param name="responseReceived"></param>
         /// <returns></returns>
         public SearchOptions ToSearchOptions(
-            Func<SearchResponse, bool> responseFilter = null,
-            Func<File, bool> fileFilter = null,
-            Action<(SearchStates PreviousState, Search Search)> stateChanged = null,
-            Action<(Search Search, SearchResponse Response)> responseReceived = null)
+            Func<SearchResponse, bool>? responseFilter = null,
+            Func<File, bool>? fileFilter = null,
+            Action<(SearchStates PreviousState, Search Search)>? stateChanged = null,
+            Action<(Search Search, SearchResponse Response)>? responseReceived = null)
         {
             var def = new SearchOptions();
 

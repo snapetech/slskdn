@@ -73,8 +73,8 @@ public class ReportsController : ControllerBase
     public IActionResult GetTransferSummary(
     [FromQuery] DateTime? start = null,
     [FromQuery] DateTime? end = null,
-    [FromQuery] string direction = null,
-    [FromQuery] string username = null)
+    [FromQuery] string? direction = null,
+    [FromQuery] string? username = null)
     {
         var now = DateTime.UtcNow;
 
@@ -135,8 +135,8 @@ public class ReportsController : ControllerBase
     [FromQuery] DateTime? start = null,
     [FromQuery] DateTime? end = null,
     [FromQuery] int interval = 60,
-    [FromQuery] string direction = null,
-    [FromQuery] string username = null)
+    [FromQuery] string? direction = null,
+    [FromQuery] string? username = null)
     {
         var now = DateTime.UtcNow;
 
@@ -373,10 +373,10 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(string), 400)]
     [ProducesResponseType(typeof(string), 500)]
     public IActionResult GetTransferExceptions(
-    [FromQuery] string direction = null,
+    [FromQuery] string? direction = null,
     [FromQuery] DateTime? start = null,
     [FromQuery] DateTime? end = null,
-    [FromQuery] string username = null,
+    [FromQuery] string? username = null,
     [FromQuery] string sortOrder = "DESC",
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
@@ -454,7 +454,7 @@ public class ReportsController : ControllerBase
     [FromQuery] string direction,
     [FromQuery] DateTime? start = null,
     [FromQuery] DateTime? end = null,
-    [FromQuery] string username = null,
+    [FromQuery] string? username = null,
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
     {
@@ -523,7 +523,7 @@ public class ReportsController : ControllerBase
     public IActionResult GetTransferDirectoryFrequency(
     [FromQuery] DateTime? start = null,
     [FromQuery] DateTime? end = null,
-    [FromQuery] string username = null,
+    [FromQuery] string? username = null,
     [FromQuery] int limit = 25,
     [FromQuery] int offset = 0)
     {

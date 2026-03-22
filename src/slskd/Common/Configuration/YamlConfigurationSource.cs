@@ -97,7 +97,7 @@ namespace slskd.Configuration
             : base(source)
         {
             TargetType = source.TargetType;
-            Namespace = TargetType.Namespace.Split('.').First();
+            Namespace = (TargetType.Namespace ?? string.Empty).Split('.').First();
             NormalizeKeys = source.NormalizeKeys;
         }
 

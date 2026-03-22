@@ -133,14 +133,14 @@ namespace slskd.Audio
 
     public class DedupeResult
     {
-        public string RecordingId { get; set; }
+        public string RecordingId { get; set; } = string.Empty;
 
         public List<DedupeGroup> Groups { get; set; } = new();
     }
 
     public class DedupeGroup
     {
-        public string AudioSketchHash { get; set; }
+        public string AudioSketchHash { get; set; } = string.Empty;
 
         public int RepresentativeDurationMs { get; set; }
 
@@ -151,13 +151,13 @@ namespace slskd.Audio
 
     public class DedupeVariant
     {
-        public string VariantId { get; set; }
+        public string VariantId { get; set; } = string.Empty;
 
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
-        public string Codec { get; set; }
+        public string Codec { get; set; } = string.Empty;
 
-        public string Container { get; set; }
+        public string Container { get; set; } = string.Empty;
 
         public int DurationMs { get; set; }
 
@@ -167,15 +167,15 @@ namespace slskd.Audio
 
         public bool TranscodeSuspect { get; set; }
 
-        public string StreamHash { get; set; }
+        public string StreamHash { get; set; } = string.Empty;
 
-        public string AudioSketchHash { get; set; }
+        public string AudioSketchHash { get; set; } = string.Empty;
     }
 
     public class DedupeDuplicateSet
     {
-        public string StreamHash { get; set; }
+        public string StreamHash { get; set; } = string.Empty;
 
-        public List<DedupeVariant> Variants { get; set; }
+        public List<DedupeVariant> Variants { get; set; } = new();
     }
 }

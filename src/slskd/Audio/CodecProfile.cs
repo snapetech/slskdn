@@ -14,7 +14,7 @@ namespace slskd.Audio
     /// </summary>
     public class CodecProfile
     {
-        public string Codec { get; set; }
+        public string Codec { get; set; } = string.Empty;
         public bool IsLossless { get; set; }
         public int SampleRateHz { get; set; }
         public int? BitDepth { get; set; }

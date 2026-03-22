@@ -49,8 +49,8 @@ namespace slskd.Transfers.MultiSource
         /// <param name="meshSync">The mesh sync service (optional).</param>
         public ContentVerificationService(
             ISoulseekClient soulseekClient,
-            IHashDbService hashDb = null,
-            IMeshSyncService meshSync = null)
+            IHashDbService? hashDb = null,
+            IMeshSyncService? meshSync = null)
         {
             Client = soulseekClient;
             HashDb = hashDb;
@@ -58,8 +58,8 @@ namespace slskd.Transfers.MultiSource
         }
 
         private ISoulseekClient Client { get; }
-        private IHashDbService HashDb { get; }
-        private IMeshSyncService MeshSync { get; }
+        private IHashDbService? HashDb { get; }
+        private IMeshSyncService? MeshSync { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<ContentVerificationService>();
 
         /// <summary>

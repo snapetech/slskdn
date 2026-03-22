@@ -38,7 +38,7 @@ namespace slskd.Transfers.MultiSource
         Task<ContentVerificationResult> FindVerifiedSourcesAsync(
             string filename,
             long fileSize,
-            string excludeUsername = null,
+            string? excludeUsername = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>

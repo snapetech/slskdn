@@ -96,7 +96,7 @@ namespace slskd.Capabilities
         }
 
         /// <inheritdoc/>
-        public PeerCapabilities ParseCapabilityTag(string description)
+        public PeerCapabilities? ParseCapabilityTag(string description)
         {
             if (string.IsNullOrWhiteSpace(description))
             {
@@ -143,7 +143,7 @@ namespace slskd.Capabilities
         }
 
         /// <inheritdoc/>
-        public PeerCapabilities ParseVersionString(string versionString)
+        public PeerCapabilities? ParseVersionString(string versionString)
         {
             if (string.IsNullOrWhiteSpace(versionString))
             {
@@ -187,7 +187,7 @@ namespace slskd.Capabilities
         }
 
         /// <inheritdoc/>
-        public PeerCapabilities GetPeerCapabilities(string username)
+        public PeerCapabilities? GetPeerCapabilities(string username)
         {
             return peerCache.TryGetValue(username, out var caps) ? caps : null;
         }

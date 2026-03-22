@@ -96,10 +96,10 @@ namespace slskd.Mesh
             ISoulseekClient soulseekClient,
             IMeshMessageSigner messageSigner,
             Common.Security.PeerReputation? peerReputation = null,
-            IManagedState<State> appState = null,
-            IOptions<MeshSyncSecurityOptions> syncSecurityOptions = null,
-            IFlacKeyToPathResolver pathResolver = null,
-            IProofOfPossessionService proofOfPossession = null)
+            IManagedState<State>? appState = null,
+            IOptions<MeshSyncSecurityOptions>? syncSecurityOptions = null,
+            IFlacKeyToPathResolver? pathResolver = null,
+            IProofOfPossessionService? proofOfPossession = null)
         {
             this.hashDb = hashDb;
             this.capabilities = capabilities;

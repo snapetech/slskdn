@@ -82,7 +82,7 @@ namespace slskd.Configuration
         public CommandLineConfigurationProvider(CommandLineConfigurationSource source)
         {
             TargetType = source.TargetType;
-            Namespace = TargetType.Namespace.Split('.').First();
+            Namespace = (TargetType.Namespace ?? string.Empty).Split('.').First();
             CommandLine = source.CommandLine;
             MultiValuedArguments = source.MultiValuedArguments;
         }
@@ -90,7 +90,7 @@ namespace slskd.Configuration
         private string CommandLine { get; set; }
         private string Namespace { get; set; }
         private Type TargetType { get; set; }
-        private string[] MultiValuedArguments { get; set; }
+        private string[]? MultiValuedArguments { get; set; }
 
         /// <summary>
         ///     Parses command line arguments from the specified string and maps them to the corresponding keys.
@@ -110,7 +110,7 @@ namespace slskd.Configuration
 
                     if (attribute != default)
                     {
-                        var shortName = ((char)attribute.ConstructorArguments[0].Value).ToString();
+                        var shortName = ((char?)attribute.ConstructorArguments[0].Value)?.ToString() ?? string.Empty;
                         var longName = (string?)attribute.ConstructorArguments[1].Value;
                         var arguments = new[] { shortName, longName }.Where(i => !string.IsNullOrEmpty(i));
 

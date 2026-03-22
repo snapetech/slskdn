@@ -35,8 +35,8 @@ namespace slskd.Search
         /// <returns></returns>
         public static SearchOptions WithActions(
             this SearchOptions options,
-            Action<(SearchStates PreviousState, Soulseek.Search Search)> stateChanged = null,
-            Action<(Soulseek.Search Search, SearchResponse Response)> responseReceived = null)
+            Action<(SearchStates PreviousState, Soulseek.Search Search)>? stateChanged = null,
+            Action<(Soulseek.Search Search, SearchResponse Response)>? responseReceived = null)
         {
             stateChanged ??= (args) => { };
             responseReceived ??= (args) => { };
@@ -81,8 +81,8 @@ namespace slskd.Search
         /// <returns></returns>
         public static SearchOptions WithFilters(
             this SearchOptions options,
-            Func<SearchResponse, bool> responseFilter = null,
-            Func<Soulseek.File, bool> fileFilter = null)
+            Func<SearchResponse, bool>? responseFilter = null,
+            Func<Soulseek.File, bool>? fileFilter = null)
         {
             return new SearchOptions(
                 searchTimeout: options.SearchTimeout,

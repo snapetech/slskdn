@@ -177,7 +177,7 @@ namespace slskd.Files.API
         public Task<IActionResult> DeleteIncompleteFileAsync([FromRoute] string base64FileName)
                     => DeleteFileAsync(rootDirectory: OptionsSnapshot.Value.Directories.Incomplete, base64FileName);
 
-        private async Task<IActionResult> ListDirectoryAsync(string rootDirectory, string base64SubdirectoryName = null, bool recursive = false)
+        private async Task<IActionResult> ListDirectoryAsync(string rootDirectory, string? base64SubdirectoryName = null, bool recursive = false)
         {
             var requestedDir = (base64SubdirectoryName ?? string.Empty)
                 .FromBase64()

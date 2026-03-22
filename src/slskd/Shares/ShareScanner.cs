@@ -91,12 +91,12 @@ namespace slskd.Shares
         private FileService Files { get; }
         private int WorkerCount { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<ShareScanner>();
-        private IReadOnlyList<Share> Shares { get; set; }
+        private IReadOnlyList<Share> Shares { get; set; } = Array.Empty<Share>();
         private ISoulseekFileFactory SoulseekFileFactory { get; }
         private Common.Moderation.IModerationProvider ModerationProvider { get; }
         private IManagedState<SharedFileCacheState> State { get; } = new ManagedState<SharedFileCacheState>();
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1);
-        private CancellationTokenSource CancellationTokenSource { get; set; }
+        private CancellationTokenSource? CancellationTokenSource { get; set; }
         private Options.FlagsOptions Flags { get; set; }
 
         /// <summary>

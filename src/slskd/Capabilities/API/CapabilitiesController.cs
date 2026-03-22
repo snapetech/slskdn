@@ -128,7 +128,7 @@ namespace slskd.Capabilities.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult ParseCapabilities([FromBody] ParseRequest request)
         {
-            PeerCapabilities caps = null;
+            PeerCapabilities? caps = null;
 
             if (!string.IsNullOrWhiteSpace(request?.Description))
             {
@@ -189,11 +189,11 @@ namespace slskd.Capabilities.API
         /// <summary>
         ///     Gets or sets the description string to parse.
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the version string to parse.
         /// </summary>
-        public string VersionString { get; set; }
+        public string VersionString { get; set; } = string.Empty;
     }
 }

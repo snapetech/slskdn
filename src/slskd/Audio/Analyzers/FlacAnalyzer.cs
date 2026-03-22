@@ -122,8 +122,8 @@ namespace slskd.Audio.Analyzers
     /// </summary>
     public class FlacAnalysisResult
     {
-        public string FlacStreamInfoHash42 { get; set; }
-        public string FlacPcmMd5 { get; set; }
+        public string FlacStreamInfoHash42 { get; set; } = string.Empty;
+        public string FlacPcmMd5 { get; set; } = string.Empty;
         public int? FlacMinBlockSize { get; set; }
         public int? FlacMaxBlockSize { get; set; }
         public int? FlacMinFrameSize { get; set; }
@@ -134,7 +134,7 @@ namespace slskd.Audio.Analyzers
         public int? Channels { get; set; }
         public double QualityScore { get; set; }
         public bool TranscodeSuspect { get; set; }
-        public string TranscodeReason { get; set; }
-        public string AnalyzerVersion { get; set; }
+        public string TranscodeReason { get; set; } = string.Empty;
+        public string AnalyzerVersion { get; set; } = string.Empty;
     }
 }

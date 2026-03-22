@@ -80,14 +80,14 @@ namespace slskd.Messaging
         /// </summary>
         /// <param name="expression">An optional expression used to locate conversations.</param>
         /// <returns>The operation context, including the list of found conversations.</returns>
-        Task<IEnumerable<Conversation>> ListAsync(Expression<Func<Conversation, bool>> expression = null);
+        Task<IEnumerable<Conversation>> ListAsync(Expression<Func<Conversation, bool>>? expression = null);
 
         /// <summary>
         ///     Returns the list of all <see cref="PrivateMessage"/> records matching the specified <paramref name="expression"/>.
         /// </summary>
         /// <param name="expression">An optional expression used to locate private messages.</param>
         /// <returns>The operation context, including the list of found private messages.</returns>
-        Task<IEnumerable<PrivateMessage>> ListMessagesAsync(Expression<Func<PrivateMessage, bool>> expression = null);
+        Task<IEnumerable<PrivateMessage>> ListMessagesAsync(Expression<Func<PrivateMessage, bool>>? expression = null);
 
         /// <summary>
         ///     Handles the receipt of an inbound <see cref="PrivateMessage"/>.
@@ -415,8 +415,9 @@ namespace slskd.Messaging
         /// </summary>
         /// <param name="expression">An optional expression used to locate conversations.</param>
         /// <returns>The operation context, including the list of found conversations.</returns>
-        public Task<IEnumerable<Conversation>> ListAsync(Expression<Func<Conversation, bool>> expression = null)
+        public Task<IEnumerable<Conversation>> ListAsync(Expression<Func<Conversation, bool>>? expression = null)
         {
+            expression ??= c => true;
             using var context = ContextFactory.CreateDbContext();
 
             // todo: replace this garbage with Dapper and a real SQL query
@@ -446,8 +447,9 @@ namespace slskd.Messaging
         /// </summary>
         /// <param name="expression">An optional expression used to locate private messages.</param>
         /// <returns>The operation context, including the list of found private messages.</returns>
-        public Task<IEnumerable<PrivateMessage>> ListMessagesAsync(Expression<Func<PrivateMessage, bool>> expression = null)
+        public Task<IEnumerable<PrivateMessage>> ListMessagesAsync(Expression<Func<PrivateMessage, bool>>? expression = null)
         {
+            expression ??= m => true;
             using var context = ContextFactory.CreateDbContext();
 
             var response = context.PrivateMessages

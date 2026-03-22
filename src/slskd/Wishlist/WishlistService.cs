@@ -45,7 +45,7 @@ namespace slskd.Wishlist
         /// <summary>
         ///     Gets a wishlist item by ID.
         /// </summary>
-        Task<WishlistItem> GetAsync(Guid id);
+        Task<WishlistItem?> GetAsync(Guid id);
 
         /// <summary>
         ///     Creates a new wishlist item.
@@ -107,7 +107,7 @@ namespace slskd.Wishlist
         }
 
         /// <inheritdoc/>
-        public async Task<WishlistItem> GetAsync(Guid id)
+        public async Task<WishlistItem?> GetAsync(Guid id)
         {
             using var context = ContextFactory.CreateDbContext();
             return await context.WishlistItems.FindAsync(id);
@@ -262,7 +262,7 @@ namespace slskd.Wishlist
             var maxWait = TimeSpan.FromSeconds(20);
             var pollInterval = TimeSpan.FromMilliseconds(500);
             var waited = TimeSpan.Zero;
-            slskd.Search.Search searchWithResponses = null;
+            slskd.Search.Search? searchWithResponses = null;
 
             while (waited < maxWait)
             {

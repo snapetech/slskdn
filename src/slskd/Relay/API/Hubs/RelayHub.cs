@@ -122,7 +122,7 @@ namespace slskd.Relay
         /// </summary>
         /// <param name="exception">The Exception that caused the disconnect.</param>
         /// <returns></returns>
-        public override Task OnDisconnectedAsync(Exception exception)
+        public override Task OnDisconnectedAsync(Exception? exception)
         {
             if (Relay.TryDeregisterAgent(Context.ConnectionId, out var record))
             {

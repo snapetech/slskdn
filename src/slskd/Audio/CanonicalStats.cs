@@ -12,9 +12,9 @@ namespace slskd.Audio
     /// </summary>
     public class CanonicalStats
     {
-        public string Id { get; set; } // recordingId + ':' + codecProfileKey
-        public string MusicBrainzRecordingId { get; set; }
-        public string CodecProfileKey { get; set; }
+        public string Id { get; set; } = string.Empty; // recordingId + ':' + codecProfileKey
+        public string MusicBrainzRecordingId { get; set; } = string.Empty;
+        public string CodecProfileKey { get; set; } = string.Empty;
 
         // Aggregated counts
         public int VariantCount { get; set; }
@@ -31,7 +31,7 @@ namespace slskd.Audio
         public Dictionary<int, int> SampleRateDistribution { get; set; } = new();
 
         // Canonical candidate
-        public string BestVariantId { get; set; }
+        public string BestVariantId { get; set; } = string.Empty;
         public double CanonicalityScore { get; set; }
 
         public DateTimeOffset LastUpdated { get; set; }

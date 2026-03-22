@@ -33,7 +33,7 @@ namespace slskd.Audio
         /// </summary>
         /// <param name="filePath">Audio file path.</param>
         /// <returns>Hex-encoded hash or null on failure.</returns>
-        public string ComputeSketchHash(string filePath)
+        public string? ComputeSketchHash(string filePath)
         {
             var ffmpegPath = optionsMonitor.CurrentValue.Integration.Chromaprint.FfmpegPath;
             if (string.IsNullOrWhiteSpace(ffmpegPath) || !File.Exists(ffmpegPath))

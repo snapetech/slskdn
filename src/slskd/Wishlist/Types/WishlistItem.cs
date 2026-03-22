@@ -35,12 +35,12 @@ namespace slskd.Wishlist
         ///     Gets or sets the search text.
         /// </summary>
         [Required]
-        public string SearchText { get; set; }
+        public string SearchText { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the filter expression (optional).
         /// </summary>
-        public string Filter { get; set; }
+        public string Filter { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets a value indicating whether the wishlist item is enabled.

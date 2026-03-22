@@ -82,14 +82,14 @@ namespace slskd.Transfers.Rescue
         ///     Initializes a new instance of the <see cref="RescueService"/> class.
         /// </summary>
         public RescueService(
-            IHashDbService hashDb = null,
-            IFingerprintExtractionService fingerprinting = null,
-            IAcoustIdClient acoustId = null,
-            IMeshSyncService meshSync = null,
-            IMeshDirectory meshDirectory = null,
-            IMultiSourceDownloadService multiSource = null,
-            IDownloadService downloadService = null,
-            IRescueGuardrailService guardrails = null)
+            IHashDbService? hashDb = null,
+            IFingerprintExtractionService? fingerprinting = null,
+            IAcoustIdClient? acoustId = null,
+            IMeshSyncService? meshSync = null,
+            IMeshDirectory? meshDirectory = null,
+            IMultiSourceDownloadService? multiSource = null,
+            IDownloadService? downloadService = null,
+            IRescueGuardrailService? guardrails = null)
         {
             this.hashDb = hashDb;
             this.fingerprinting = fingerprinting;

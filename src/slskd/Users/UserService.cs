@@ -274,7 +274,7 @@ namespace slskd.Users
         /// <param name="username">The username to check.</param>
         /// <param name="ipAddress">The IPAddress to check, if available.</param>
         /// <returns>A value indicating whether the specified user and/or IP are blacklisted.</returns>
-        public bool IsBlacklisted(string username, IPAddress ipAddress = null)
+        public bool IsBlacklisted(string username, IPAddress? ipAddress = null)
         {
             var blacklist = OptionsMonitor.CurrentValue.Groups.Blacklisted;
 

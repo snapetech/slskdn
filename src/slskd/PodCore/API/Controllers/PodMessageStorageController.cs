@@ -55,7 +55,7 @@ public class PodMessageStorageController : ControllerBase
     public async Task<IActionResult> SearchMessages(
     [FromRoute] string podId,
     [FromQuery] string query,
-    [FromQuery] string channelId = null,
+    [FromQuery] string? channelId = null,
     [FromQuery] int limit = 50,
             CancellationToken cancellationToken = default)
     {

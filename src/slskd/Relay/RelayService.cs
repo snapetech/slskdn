@@ -213,7 +213,7 @@ namespace slskd.Relay
         /// <param name="agentName">The name of the agent.</param>
         /// <param name="id">The unique ID for the stream.</param>
         /// <param name="exception">If the transfer associated with the stream failed, the exception that caused the failure.</param>
-        void TryCloseFileStream(string agentName, Guid id, Exception exception = null);
+        void TryCloseFileStream(string agentName, Guid id, Exception? exception = null);
 
         /// <summary>
         ///     Attempts to remove the registration for the specified <paramref name="connectionId"/>.
@@ -323,7 +323,7 @@ namespace slskd.Relay
             IOptionsMonitor<Options> optionsMonitor,
             IHubContext<RelayHub, IRelayHub> relayHub,
             IHttpClientFactory httpClientFactory,
-            IRelayClient relayClient = null)
+            IRelayClient? relayClient = null)
         {
             Files = fileService;
             Shares = shareService;
@@ -722,7 +722,7 @@ namespace slskd.Relay
         /// <param name="agentName">The name of the agent.</param>
         /// <param name="id">The unique ID for the stream.</param>
         /// <param name="exception">If the transfer associated with the stream failed, the exception that caused the failure.</param>
-        public void TryCloseFileStream(string agentName, Guid id, Exception exception = default)
+        public void TryCloseFileStream(string agentName, Guid id, Exception? exception = default)
         {
             var key = new WaitKey(nameof(HandleFileStreamResponseAsync), agentName, id);
 

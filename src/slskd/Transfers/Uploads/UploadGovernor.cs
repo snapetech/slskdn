@@ -70,7 +70,7 @@ namespace slskd.Transfers
         public UploadGovernor(
             IUserService userService,
             IOptionsMonitor<Options> optionsMonitor,
-            IScheduledRateLimitService scheduledRateLimitService = null)
+            IScheduledRateLimitService? scheduledRateLimitService = null)
         {
             Users = userService;
             ScheduledRateLimitService = scheduledRateLimitService;
@@ -86,7 +86,7 @@ namespace slskd.Transfers
         private int LastGlobalSpeedLimit { get; set; }
         private Dictionary<string, ITokenBucket> TokenBuckets { get; set; } = new Dictionary<string, ITokenBucket>();
         private IUserService Users { get; }
-        private IScheduledRateLimitService ScheduledRateLimitService { get; }
+        private IScheduledRateLimitService? ScheduledRateLimitService { get; }
 
         /// <summary>
         ///     Asynchronously obtains a grant of <paramref name="requestedBytes"/> for the requesting <paramref name="username"/>.

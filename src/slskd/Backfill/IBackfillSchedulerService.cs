@@ -152,13 +152,13 @@ namespace slskd.Backfill
     public class BackfillCandidate
     {
         /// <summary>Gets or sets the file ID.</summary>
-        public string FileId { get; set; }
+        public string FileId { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the peer ID (username).</summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file path.</summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long Size { get; set; }
@@ -185,19 +185,19 @@ namespace slskd.Backfill
         public bool Success { get; set; }
 
         /// <summary>Gets or sets the peer ID.</summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file path.</summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the discovered hash (if successful).</summary>
-        public string Hash { get; set; }
+        public string Hash { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the FLAC key (if successful).</summary>
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the error message (if failed).</summary>
-        public string Error { get; set; }
+        public string Error { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the duration in milliseconds.</summary>
         public long DurationMs { get; set; }

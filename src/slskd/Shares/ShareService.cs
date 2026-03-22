@@ -115,9 +115,9 @@ namespace slskd.Shares
 
         private IShareRepositoryFactory ShareRepositoryFactory { get; }
         private IShareScanner Scanner { get; }
-        private IContentPeerHintService ContentPeerHintService { get; }
+        private IContentPeerHintService? ContentPeerHintService { get; }
         private SemaphoreSlim ScannerSyncRoot { get; } = new SemaphoreSlim(1, 1);
-        private string LastOptionsHash { get; set; }
+        private string LastOptionsHash { get; set; } = string.Empty;
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private ConcurrentDictionary<string, (Host Host, IShareRepository Repository)> HostDictionary { get; set; } = new();
         private IManagedState<ShareState> State { get; } = new ManagedState<ShareState>();

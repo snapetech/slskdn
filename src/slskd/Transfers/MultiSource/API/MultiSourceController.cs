@@ -165,7 +165,7 @@ namespace slskd.Transfers.MultiSource.API
         /// <returns>Files from the user.</returns>
         [HttpGet("users/{username}/files")]
         [Authorize(Policy = AuthPolicy.Any)]
-        public IActionResult GetUserFiles(string username, [FromQuery] string filter = null)
+        public IActionResult GetUserFiles(string username, [FromQuery] string? filter = null)
         {
             if (LastSearchResults == null || LastSearchResults.Count == 0)
             {

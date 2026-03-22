@@ -197,9 +197,9 @@ namespace slskd.Audio.Analyzers
     /// </summary>
     public class Mp3AnalysisResult
     {
-        public string Mp3StreamHash { get; set; }
-        public string Mp3Encoder { get; set; }
-        public string Mp3EncoderPreset { get; set; }
+        public string Mp3StreamHash { get; set; } = string.Empty;
+        public string Mp3Encoder { get; set; } = string.Empty;
+        public string Mp3EncoderPreset { get; set; } = string.Empty;
         public int? Mp3FramesAnalyzed { get; set; }
         public double? EffectiveBandwidthHz { get; set; }
         public double? NominalLowpassHz { get; set; }
@@ -207,7 +207,7 @@ namespace slskd.Audio.Analyzers
         public double? HfEnergyRatio { get; set; }
         public double QualityScore { get; set; }
         public bool TranscodeSuspect { get; set; }
-        public string TranscodeReason { get; set; }
-        public string AnalyzerVersion { get; set; }
+        public string TranscodeReason { get; set; } = string.Empty;
+        public string AnalyzerVersion { get; set; } = string.Empty;
     }
 }

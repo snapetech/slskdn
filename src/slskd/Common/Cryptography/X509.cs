@@ -36,7 +36,7 @@ namespace slskd.Cryptography
         /// <param name="password">The optional password for the certificate.</param>
         /// <param name="x509KeyStorageFlags">The optional key storage flags for the certificate.</param>
         /// <returns>The generated certificate.</returns>
-        public static X509Certificate2 Generate(string subject, string password = null, X509KeyStorageFlags x509KeyStorageFlags = X509KeyStorageFlags.MachineKeySet)
+        public static X509Certificate2 Generate(string subject, string? password = null, X509KeyStorageFlags x509KeyStorageFlags = X509KeyStorageFlags.MachineKeySet)
         {
             password ??= Guid.NewGuid().ToString();
 
@@ -62,7 +62,7 @@ namespace slskd.Cryptography
         /// <param name="password">The optional password for the certificate.</param>
         /// <param name="result">The error message, if the certificate is invalid.</param>
         /// <returns>A value indicating whether the certificate is valid.</returns>
-        public static bool TryValidate(string fileName, string password, out string result)
+        public static bool TryValidate(string fileName, string? password, out string? result)
         {
             result = null;
 

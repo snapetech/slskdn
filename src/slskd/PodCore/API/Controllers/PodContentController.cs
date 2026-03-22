@@ -127,7 +127,7 @@ public class PodContentController : ControllerBase
     [ProducesResponseType(500)]
     public async Task<IActionResult> SearchContent(
     [FromQuery] string query,
-    [FromQuery] string domain = null,
+    [FromQuery] string? domain = null,
     [FromQuery] int limit = 20,
             CancellationToken cancellationToken = default)
     {
@@ -219,6 +219,6 @@ public record ContentLinkedPodRequest(
     string Name,
     PodVisibility Visibility,
     string ContentId,
-    List<string> Tags = null,
-    List<PodChannel> Channels = null,
-    List<ExternalBinding> ExternalBindings = null);
+    List<string>? Tags = null,
+    List<PodChannel>? Channels = null,
+    List<ExternalBinding>? ExternalBindings = null);

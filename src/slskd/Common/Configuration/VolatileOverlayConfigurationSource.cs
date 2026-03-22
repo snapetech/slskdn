@@ -40,13 +40,13 @@ namespace slskd.Configuration
         public VolatileOverlayConfigurationProvider()
         {
             TargetType = typeof(T);
-            Namespace = TargetType.Namespace.Split('.').First();
+            Namespace = (TargetType.Namespace ?? string.Empty).Split('.').First();
         }
 
         /// <summary>
         ///     Gets the current overlay value.
         /// </summary>
-        public T CurrentValue { get; private set; }
+        public T? CurrentValue { get; private set; }
 
         private string Namespace { get; set; }
         private Type TargetType { get; set; }

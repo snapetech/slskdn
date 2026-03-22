@@ -53,20 +53,20 @@ public class PodService : IPodService
     private readonly Dictionary<string, Pod> pods = new();
     private readonly Dictionary<string, List<PodMember>> podMembers = new();
     private readonly Dictionary<string, List<SignedMembershipRecord>> membershipHistory = new(); // podId -> history
-    private readonly IPodPublisher podPublisher;
-    private readonly IPodMembershipSigner membershipSigner;
+    private readonly IPodPublisher? podPublisher;
+    private readonly IPodMembershipSigner? membershipSigner;
 
     public PodService(
-        IPodPublisher podPublisher = null,
-        IPodMembershipSigner membershipSigner = null,
-        IContentLinkService contentLinkService = null)
+        IPodPublisher? podPublisher = null,
+        IPodMembershipSigner? membershipSigner = null,
+        IContentLinkService? contentLinkService = null)
     {
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
         ContentLinkService = contentLinkService;
     }
 
-    private IContentLinkService ContentLinkService { get; }
+    private IContentLinkService? ContentLinkService { get; }
 
     public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
     {
@@ -588,9 +588,9 @@ public class PodMessaging : IPodMessaging
     private readonly IMessageSigner messageSigner;
     private readonly ISoulseekChatBridge chatBridge;
     private readonly Microsoft.Extensions.Logging.ILogger<PodMessaging> logger;
-    private readonly Mesh.IMeshSyncService meshSync;
-    private readonly Soulseek.ISoulseekClient soulseekClient;
-    private readonly Mesh.Overlay.IOverlayClient overlayClient;
+    private readonly Mesh.IMeshSyncService? meshSync;
+    private readonly Soulseek.ISoulseekClient? soulseekClient;
+    private readonly Mesh.Overlay.IOverlayClient? overlayClient;
 
     private readonly HashSet<string> seenMessageIds = new();
     private readonly Dictionary<string, List<PodMessage>> messageStorage = new(); // podId:channelId -> messages
@@ -604,9 +604,9 @@ public class PodMessaging : IPodMessaging
         IMessageSigner messageSigner,
         ISoulseekChatBridge chatBridge,
         Microsoft.Extensions.Logging.ILogger<PodMessaging> logger,
-        Mesh.IMeshSyncService meshSync = null,
-        Soulseek.ISoulseekClient soulseekClient = null,
-        Mesh.Overlay.IOverlayClient overlayClient = null)
+        Mesh.IMeshSyncService? meshSync = null,
+        Soulseek.ISoulseekClient? soulseekClient = null,
+        Mesh.Overlay.IOverlayClient? overlayClient = null)
     {
         this.podService = podService;
         this.membershipVerifier = membershipVerifier;

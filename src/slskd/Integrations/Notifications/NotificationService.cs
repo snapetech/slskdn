@@ -50,7 +50,7 @@ namespace slskd.Integrations.Notifications
         private IOptionsMonitor<slskd.Options> OptionsMonitor { get; }
         private IPushbulletService Pushbullet { get; }
 
-        public async Task SendAsync(string title, string body, string cacheKey = null)
+        public async Task SendAsync(string title, string body, string? cacheKey = null)
         {
             var options = OptionsMonitor.CurrentValue.Integration;
 

@@ -67,7 +67,7 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
     /// </summary>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>An enumerable of cover traffic messages to send.</returns>
-    public async IAsyncEnumerable<byte[]> GenerateCoverTrafficAsync(CancellationToken cancellationToken)
+    public async IAsyncEnumerable<byte[]> GenerateCoverTrafficAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         _logger.LogDebug("Starting cover traffic generation");
 

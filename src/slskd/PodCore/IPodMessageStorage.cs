@@ -44,7 +44,7 @@ public interface IPodMessageStorage
     /// <param name="limit">Maximum number of results to return.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The list of matching messages.</returns>
-    Task<IReadOnlyList<PodMessage>> SearchMessagesAsync(string podId, string query, string channelId = null, int limit = 50, CancellationToken ct = default);
+    Task<IReadOnlyList<PodMessage>> SearchMessagesAsync(string podId, string query, string? channelId = null, int limit = 50, CancellationToken ct = default);
 
     /// <summary>
     ///     Deletes messages older than the specified timestamp.

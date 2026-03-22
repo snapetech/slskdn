@@ -140,15 +140,15 @@ namespace slskd.Audio.Analyzers
     /// </summary>
     public class OpusAnalysisResult
     {
-        public string OpusStreamHash { get; set; }
+        public string OpusStreamHash { get; set; } = string.Empty;
         public int? OpusNominalBitrateKbps { get; set; }
-        public string OpusApplication { get; set; }
-        public string OpusBandwidthMode { get; set; }
+        public string OpusApplication { get; set; } = string.Empty;
+        public string OpusBandwidthMode { get; set; } = string.Empty;
         public double? EffectiveBandwidthHz { get; set; }
         public double? HfEnergyRatio { get; set; }
         public double QualityScore { get; set; }
         public bool TranscodeSuspect { get; set; }
-        public string TranscodeReason { get; set; }
-        public string AnalyzerVersion { get; set; }
+        public string TranscodeReason { get; set; } = string.Empty;
+        public string AnalyzerVersion { get; set; } = string.Empty;
     }
 }

@@ -1091,12 +1091,12 @@ namespace slskd
             }
         }
 
-        private void Client_BrowseProgressUpdated(object sender, BrowseProgressUpdatedEventArgs args)
+        private void Client_BrowseProgressUpdated(object? sender, BrowseProgressUpdatedEventArgs args)
         {
             BrowseTracker.AddOrUpdate(args.Username, args);
         }
 
-        private void Client_Connected(object sender, EventArgs e)
+        private void Client_Connected(object? sender, EventArgs e)
         {
             ConnectionWatchdog.Stop();
             Log.Information("Connected to the Soulseek server");
@@ -1104,7 +1104,7 @@ namespace slskd
             EventBus.Raise(new Events.SoulseekClientConnectedEvent());
         }
 
-        private void Client_DiagnosticGenerated(object sender, DiagnosticEventArgs args)
+        private void Client_DiagnosticGenerated(object? sender, DiagnosticEventArgs args)
         {
             static LogEventLevel TranslateLogLevel(DiagnosticLevel diagnosticLevel) => diagnosticLevel switch
             {
@@ -1116,7 +1116,7 @@ namespace slskd
                 _ => default,
             };
 
-            var source = sender.GetType().FullName;
+            var source = sender?.GetType().FullName ?? "Unknown";
 
             if (source.EndsWith("DistributedConnectionManager") && !Options.Soulseek.DistributedNetwork.Logging)
             {
@@ -1134,7 +1134,7 @@ namespace slskd
             logger.Write(TranslateLogLevel(args.Level), "{@Message}", args.Message);
         }
 
-        private void Client_Disconnected(object sender, SoulseekClientDisconnectedEventArgs args)
+        private void Client_Disconnected(object? sender, SoulseekClientDisconnectedEventArgs args)
         {
             if (State.CurrentValue.PendingReconnect)
             {
@@ -1199,7 +1199,7 @@ namespace slskd
             }
         }
 
-        private async void Client_LoggedIn(object sender, EventArgs e)
+        private async void Client_LoggedIn(object? sender, EventArgs e)
         {
             Log.Information("Logged in to the Soulseek server as {Username}", Client.Username);
 
@@ -1249,7 +1249,7 @@ namespace slskd
             }
         }
 
-        private void Client_PrivateMessageReceived(object sender, PrivateMessageReceivedEventArgs args)
+        private void Client_PrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs args)
         {
             if (Users.IsBlacklisted(args.Username))
             {
@@ -1381,7 +1381,7 @@ namespace slskd
             }
         }
 
-        private void Client_RoomMessageReceived(object sender, RoomMessageReceivedEventArgs args)
+        private void Client_RoomMessageReceived(object? sender, RoomMessageReceivedEventArgs args)
         {
             // note: this event is also subscribed in the RoomService class
             // this handler is only used for notifications.
@@ -1398,7 +1398,7 @@ namespace slskd
             }
         }
 
-        private void Client_StateChanged(object sender, SoulseekClientStateChangedEventArgs e)
+        private void Client_StateChanged(object? sender, SoulseekClientStateChangedEventArgs e)
         {
             State.SetValue(state => state with
             {
@@ -1415,7 +1415,7 @@ namespace slskd
             });
         }
 
-        private void Client_DistributedNetworkStateChanged(object sender, DistributedNetworkInfo e)
+        private void Client_DistributedNetworkStateChanged(object? sender, DistributedNetworkInfo e)
         {
             State.SetValue(state => state with
             {
@@ -1438,7 +1438,7 @@ namespace slskd
             Metrics.DistributedNetwork.Children.Set(e.Children.Count);
         }
 
-        private void Clock_EveryThirtySeconds(object sender, ClockEventArgs e)
+        private void Clock_EveryThirtySeconds(object? sender, ClockEventArgs e)
         {
             State.SetValue(state => state with
             {
@@ -1457,25 +1457,25 @@ namespace slskd
             });
         }
 
-        private void Clock_EveryMinute(object sender, ClockEventArgs e)
+        private void Clock_EveryMinute(object? sender, ClockEventArgs e)
         {
             Metrics.DistributedNetwork.BroadcastLatency.Observe(Client.DistributedNetwork.AverageBroadcastLatency ?? 0);
             Metrics.DistributedNetwork.CurrentBroadcastLatency.Set(Client.DistributedNetwork.AverageBroadcastLatency ?? 0);
         }
 
-        private void Clock_EveryFiveMinutes(object sender, ClockEventArgs e)
+        private void Clock_EveryFiveMinutes(object? sender, ClockEventArgs e)
         {
             _ = Task.Run(() => PruneSearches());
             _ = Task.Run(() => PruneTransfers());
             _ = Task.Run(() => PruneEvents());
         }
 
-        private void Clock_EveryThirtyMinutes(object sender, ClockEventArgs e)
+        private void Clock_EveryThirtyMinutes(object? sender, ClockEventArgs e)
         {
             _ = Task.Run(() => PruneFiles());
         }
 
-        private void Clock_EveryHour(object sender, ClockEventArgs e)
+        private void Clock_EveryHour(object? sender, ClockEventArgs e)
         {
             _ = Task.Run(() => MaybeRescanShares());
         }
@@ -1637,18 +1637,18 @@ namespace slskd
             }
         }
 
-        private void Client_ExcludedSearchPhrasesReceived(object sender, IReadOnlyCollection<string> e)
+        private void Client_ExcludedSearchPhrasesReceived(object? sender, IReadOnlyCollection<string> e)
         {
             Log.Debug("Excluded search phrases: {Phrases}", string.Join(", ", e));
             ExcludedSearchPhrases = e.ToList();
         }
 
-        private void Client_TransferProgressUpdated(object sender, TransferProgressUpdatedEventArgs args)
+        private void Client_TransferProgressUpdated(object? sender, TransferProgressUpdatedEventArgs args)
         {
             // no-op. this is really verbose, use for troubleshooting.
         }
 
-        private void Client_TransferStateChanged(object sender, TransferStateChangedEventArgs args)
+        private void Client_TransferStateChanged(object? sender, TransferStateChangedEventArgs args)
         {
             var xfer = args.Transfer;
             var direction = xfer.Direction.ToString().ToUpper();
@@ -1678,7 +1678,7 @@ namespace slskd
             }
         }
 
-        private void Client_UserStatusChanged(object sender, UserStatus args)
+        private void Client_UserStatusChanged(object? sender, UserStatus args)
         {
             // todo: react to watched user status changes
         }

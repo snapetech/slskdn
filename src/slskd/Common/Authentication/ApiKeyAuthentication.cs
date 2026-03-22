@@ -79,7 +79,19 @@ namespace slskd.Authentication
 
             try
             {
-                var key = Security.AuthenticateWithApiKey(headerKeyValue, Request.HttpContext.Connection.RemoteIpAddress);
+                var remoteIpAddress = Request.HttpContext.Connection.RemoteIpAddress;
+                if (remoteIpAddress == null)
+                {
+                    return AuthenticateResult.Fail("Remote IP address is unavailable");
+                }
+
+                var apiKey = headerKeyValue.ToString();
+                if (string.IsNullOrWhiteSpace(apiKey))
+                {
+                    return AuthenticateResult.Fail("API key header is empty");
+                }
+
+                var key = Security.AuthenticateWithApiKey(apiKey, remoteIpAddress);
 
                 var identity = new GenericIdentity(key.Name);
                 var principal = new GenericPrincipal(identity, new[] { key.Role.ToString() });

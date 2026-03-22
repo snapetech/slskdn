@@ -17,7 +17,7 @@
 
 public record TransferDirectorySummary
 {
-    public string Directory { get; init; }
+    public string Directory { get; init; } = string.Empty;
     public long Count { get; init; }
     public long DistinctUsers { get; init; }
 }

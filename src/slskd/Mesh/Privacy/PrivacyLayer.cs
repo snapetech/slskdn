@@ -197,7 +197,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// </summary>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>An async enumerable of cover traffic messages.</returns>
-    public async IAsyncEnumerable<byte[]> GetCoverTrafficAsync(CancellationToken cancellationToken)
+    public async IAsyncEnumerable<byte[]> GetCoverTrafficAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (!IsEnabled || _coverTrafficGenerator == null)
         {

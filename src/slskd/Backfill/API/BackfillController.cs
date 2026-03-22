@@ -147,10 +147,10 @@ namespace slskd.Backfill.API
     public class BackfillFileRequest
     {
         /// <summary>Gets or sets the peer ID (username).</summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file path.</summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long Size { get; set; }

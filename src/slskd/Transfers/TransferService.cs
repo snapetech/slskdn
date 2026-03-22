@@ -48,11 +48,11 @@ namespace slskd.Transfers
         ///     Initializes a new instance of the <see cref="TransferService"/> class.
         /// </summary>
         public TransferService(
-            IUploadService uploadService = null,
-            IDownloadService downloadService = null)
+            IUploadService? uploadService = null,
+            IDownloadService? downloadService = null)
         {
-            Uploads = uploadService;
-            Downloads = downloadService;
+            Uploads = uploadService!;
+            Downloads = downloadService!;
         }
 
         /// <summary>

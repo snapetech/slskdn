@@ -67,7 +67,7 @@ namespace slskd.Search
         /// <param name="limit">Maximum number of searches to return (0 for unlimited, which is the default).</param>
         /// <param name="offset">Number of searches to skip (for pagination).</param>
         /// <returns>The list of searches matching the specified expression, or all searches if no expression is specified.</returns>
-        Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = null, int limit = 0, int offset = 0);
+        Task<List<Search>> ListAsync(Expression<Func<Search, bool>>? expression = null, int limit = 0, int offset = 0);
 
         /// <summary>
         ///     Updates the specified <paramref name="search"/>.
@@ -87,7 +87,7 @@ namespace slskd.Search
         /// <param name="options">Search options.</param>
         /// <param name="requestedProviders">Optional list of provider names for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"]).</param>
         /// <returns>The completed search.</returns>
-        Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null);
+        Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<string>? requestedProviders = null);
 
         /// <summary>
         ///     Cancels the search matching the specified <paramref name="id"/>, if it is in progress.
@@ -130,12 +130,12 @@ namespace slskd.Search
             ISoulseekClient soulseekClient,
             IDbContextFactory<SearchDbContext> contextFactory,
             slskd.Common.Security.ISoulseekSafetyLimiter safetyLimiter,
-            slskd.Events.EventBus eventBus = null,
-            slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator disasterModeCoordinator = null,
-            slskd.VirtualSoulfind.DisasterMode.IMeshSearchService meshSearchService = null,
-            slskd.DhtRendezvous.Search.IMeshOverlaySearchService meshOverlaySearchService = null,
-            slskd.VirtualSoulfind.Capture.ITrafficObserver trafficObserver = null,
-            IEnumerable<ISearchProvider> searchProviders = null)
+            slskd.Events.EventBus? eventBus = null,
+            slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator? disasterModeCoordinator = null,
+            slskd.VirtualSoulfind.DisasterMode.IMeshSearchService? meshSearchService = null,
+            slskd.DhtRendezvous.Search.IMeshOverlaySearchService? meshOverlaySearchService = null,
+            slskd.VirtualSoulfind.Capture.ITrafficObserver? trafficObserver = null,
+            IEnumerable<ISearchProvider>? searchProviders = null)
         {
             SearchHub = searchHub;
             OptionsMonitor = optionsMonitor;
@@ -155,15 +155,15 @@ namespace slskd.Search
 
         private ISoulseekClient Client { get; }
         private IDbContextFactory<SearchDbContext> ContextFactory { get; }
-        private slskd.Events.EventBus EventBus { get; }
+        private slskd.Events.EventBus? EventBus { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<Application>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private slskd.Common.Security.ISoulseekSafetyLimiter SafetyLimiter { get; }
         private IHubContext<SearchHub> SearchHub { get; set; }
-        private slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator DisasterModeCoordinator { get; }
-        private slskd.VirtualSoulfind.DisasterMode.IMeshSearchService MeshSearchService { get; }
-        private slskd.DhtRendezvous.Search.IMeshOverlaySearchService MeshOverlaySearchService { get; }
-        private slskd.VirtualSoulfind.Capture.ITrafficObserver TrafficObserver { get; }
+        private slskd.VirtualSoulfind.DisasterMode.IDisasterModeCoordinator? DisasterModeCoordinator { get; }
+        private slskd.VirtualSoulfind.DisasterMode.IMeshSearchService? MeshSearchService { get; }
+        private slskd.DhtRendezvous.Search.IMeshOverlaySearchService? MeshOverlaySearchService { get; }
+        private slskd.VirtualSoulfind.Capture.ITrafficObserver? TrafficObserver { get; }
         private List<ISearchProvider> SearchProviders { get; }
 
         /// <summary>
@@ -225,7 +225,7 @@ namespace slskd.Search
         /// <param name="limit">Maximum number of searches to return (0 for unlimited, which is the default).</param>
         /// <param name="offset">Number of searches to skip (for pagination).</param>
         /// <returns>The list of searches matching the specified expression, or all searches if no expression is specified.</returns>
-        public Task<List<Search>> ListAsync(Expression<Func<Search, bool>> expression = null, int limit = 0, int offset = 0)
+        public Task<List<Search>> ListAsync(Expression<Func<Search, bool>>? expression = null, int limit = 0, int offset = 0)
         {
             expression ??= s => true;
             using var context = ContextFactory.CreateDbContext();
@@ -268,7 +268,7 @@ namespace slskd.Search
         /// <param name="scope">The search scope.</param>
         /// <param name="options">Search options.</param>
         /// <returns>The completed search.</returns>
-        public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null)
+        public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<string>? requestedProviders = null)
         {
             using var activity = SearchActivitySource.Source.StartActivity("search.start");
             activity?.SetTag("search.id", id.ToString());
@@ -622,7 +622,7 @@ namespace slskd.Search
         /// <param name="query">The search query.</param>
         /// <param name="options">Search options.</param>
         /// <returns>The completed search with mesh-only results.</returns>
-        private async Task<Search> StartMeshOnlySearchAsync(Guid id, SearchQuery query, SearchOptions options = null)
+        private async Task<Search> StartMeshOnlySearchAsync(Guid id, SearchQuery query, SearchOptions? options = null)
         {
             Log.Information("[VSF-DISASTER-SEARCH] Starting mesh-only search for query: {Query} (id: {Id})", query.SearchText, id);
 

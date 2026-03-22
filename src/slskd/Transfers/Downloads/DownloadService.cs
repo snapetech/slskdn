@@ -351,7 +351,7 @@ namespace slskd.Transfers.Downloads
                 }
 
                 var maxTimeToWaitForEnqueueRequestAck = TimeSpan.FromMinutes(3);
-                var enqueueSemaphore = new SemaphoreSlim(initialCount: concurrentEnqueueRequests, maxCount: concurrentEnqueueRequests);
+                using var enqueueSemaphore = new SemaphoreSlim(initialCount: concurrentEnqueueRequests, maxCount: concurrentEnqueueRequests);
 
                 /*
                     iterate over each of the files in the request.  each file must be dispositioned as one of the following:
@@ -662,7 +662,7 @@ namespace slskd.Transfers.Downloads
         /// <param name="expression">An optional expression used to match downloads.</param>
         /// <param name="includeRemoved">Optionally include downloads that have been removed previously.</param>
         /// <returns>The list of downloads matching the specified expression, or all downloads if no expression is specified.</returns>
-        public List<Transfer> List(Expression<Func<Transfer, bool>> expression = null, bool includeRemoved = false)
+        public List<Transfer> List(Expression<Func<Transfer, bool>>? expression = null, bool includeRemoved = false)
         {
             expression ??= t => true;
 
@@ -821,7 +821,11 @@ namespace slskd.Transfers.Downloads
             // of the transfer to Cancelled.  _should_!
             if (CancellationTokens.TryRemove(id, out var cts))
             {
-                cts.Cancel();
+                using (cts)
+                {
+                    cts.Cancel();
+                }
+
                 return true;
             }
 
@@ -938,7 +942,7 @@ namespace slskd.Transfers.Downloads
         /// <exception cref="TransferNotFoundException">Thrown if the specified Transfer ID can't be found in the database.</exception>
         /// <exception cref="InvalidOperationException">Thrown if the specified Transfer is not in the Queued | Locally state.</exception>
         /// <exception cref="DuplicateTransferException">Thrown if a download matching the username and filename is already tracked by Soulseek.NET.</exception>
-        private async Task<Transfer> DownloadAsync(Transfer transfer, Action<Transfer> stateChanged = null, CancellationToken cancellationToken = default)
+        private async Task<Transfer> DownloadAsync(Transfer transfer, Action<Transfer>? stateChanged = null, CancellationToken cancellationToken = default)
         {
             if (transfer is null)
             {
@@ -965,7 +969,7 @@ namespace slskd.Transfers.Downloads
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cancellationTokenSource?.Token ?? CancellationToken.None);
             cancellationToken = cts.Token;
 
-            var updateSyncRoot = new SemaphoreSlim(1, 1);
+            using var updateSyncRoot = new SemaphoreSlim(1, 1);
 
             // Track bytes for throughput calculation
             long lastBytesTransferred = 0;
