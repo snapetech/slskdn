@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xBE. Transport Status, Moderation Health, And SongID Evidence Are Observable Contracts Too
+
+**The Bug**: transport `LastError` fields, moderation provider health/status fields, and SongID run evidence/summary strings were still storing raw exception text. Those surfaces feel like diagnostics, but they are exposed to users, tests, and runtime dashboards just like any other contract.
+
+**Files Affected**:
+- `src/slskd/Common/Security/WebSocketTransport.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `src/slskd/Common/Security/MeekTransport.cs`
+- `src/slskd/Common/Security/HttpTunnelTransport.cs`
+- `src/slskd/Common/Moderation/HttpLlmModerationProvider.cs`
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+_status.LastError = ex.Message;
+_lastErrorMessage = ex.Message;
+run.Evidence.Add($"Analysis failed: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+_status.LastError = "WebSocket tunnel connection failed";
+_lastErrorMessage = "LLM moderation request failed";
+run.Evidence.Add("Analysis failed.");
+```
+
+**Why This Keeps Happening**: diagnostic strings often start life as developer convenience and then quietly become UI/API/test-visible runtime state. If a field can be observed outside the logger, it needs the same sanitization discipline as controller responses: keep detail in logs, return stable generic text in status/evidence fields.
+
 ### 0xBD. Harness, Batch, And Utility Result Records Must Not Echo Raw Exception Text
 
 **The Bug**: non-controller utility paths such as regression harness results, auto-replace batch details, and dump helper tuples were still copying `ex.Message` into observable result fields. Those surfaces are easy to mistake for “internal diagnostics,” but they still become user-visible or test-visible runtime contracts.
