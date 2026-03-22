@@ -258,6 +258,39 @@ if (messageType == "RESPKEY")
 
 **Correct**:
 ```csharp
+if (!VerifySignature(response))
+{
+    return;
+}
+```
+
+**Why This Keeps Happening**: Protocol handlers often get implemented incrementally, and it is easy to wire the "happy path" response first while leaving sibling message types or signature checks for later. In mesh code that creates silent protocol drift. If a service advertises a response type, make sure dispatch, verification, and completion-state updates are all wired together before claiming support.
+
+### 0x9. Optional Persistence Features Must Switch Implementations At Registration Time, Not Behind A Permanent No-Op Store
+
+**The Bug**: Virtual Soulfind exposed `PersistRawObservations` and a persistence-shaped observation store API, but DI always registered the in-memory no-op implementation. Enabling the option changed nothing and raw capture data was silently discarded.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Capture/ObservationStore.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+services.AddSingleton<IObservationStore, InMemoryObservationStore>();
+```
+
+**Correct**:
+```csharp
+services.AddSingleton<IObservationStore>(sp =>
+{
+    var options = sp.GetRequiredService<IOptionsMonitor<Options>>();
+    return options.CurrentValue.VirtualSoulfind?.Privacy?.PersistRawObservations == true
+        ? new SqliteObservationStore(...)
+        : new InMemoryObservationStore(...);
+});
+```
+
+**Why This Keeps Happening**: Feature flags are easy to add at the config layer without actually switching the implementation underneath. That is worse than an explicit TODO because operators believe the feature is active. If an option is meant to toggle behavior, wire the implementation choice at registration time or remove the option until the backing implementation exists.
 if (response != null && messageSigner.VerifyMessage(response))
 {
     tcs.SetResult(response);
