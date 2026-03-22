@@ -5,6 +5,7 @@
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Runtime.Versioning;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
@@ -14,6 +15,9 @@ namespace slskd.Mesh.Transport;
 /// Direct QUIC dialer for clearnet connectivity.
 /// Wraps the existing QUIC overlay client connection logic.
 /// </summary>
+[SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
+[SupportedOSPlatform("windows")]
 public class DirectQuicDialer : ITransportDialer
 {
     private readonly ILogger<DirectQuicDialer> _logger;
@@ -261,9 +265,7 @@ public class DirectQuicDialer : ITransportDialer
                 if (disposing)
                 {
                     _stream.Dispose();
-
-                    // QuicConnection uses async disposal
-                    _ = _connection.DisposeAsync();
+                    _connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
                     _onDispose?.Invoke();
                 }
             }

@@ -82,15 +82,19 @@ public class TorIntegrationTests : IDisposable
     public async Task TorTransport_ConnectionTimeout_HandledGracefully()
     {
         // Arrange
+        using var silentServer = new SilentTcpServer();
+        await silentServer.StartAsync();
+
         var torOptions = new TorOptions
         {
-            SocksAddress = "127.0.0.1:12345" // Non-existent port
+            SocksAddress = $"127.0.0.1:{silentServer.Port}",
         };
 
         using var transport = new TorSocksTransport(torOptions, _logger);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
-        // Act & Assert - connection to non-existent port throws (e.g. SocketException)
-        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+        // Act & Assert - a silent SOCKS endpoint should fail within a bounded time
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, cts.Token));
         Assert.False(transport.GetStatus().IsAvailable);
     }
 
@@ -401,6 +405,63 @@ public class TorIntegrationTests : IDisposable
             public void Dispose() { }
         }
     }
-}
 
+    private sealed class SilentTcpServer : IDisposable
+    {
+        private readonly CancellationTokenSource _cts = new();
+        private TcpListener? _listener;
+        private Task? _serverTask;
+
+        public int Port { get; private set; }
+
+        public Task StartAsync()
+        {
+            _listener = new TcpListener(IPAddress.Loopback, 0);
+            _listener.Start();
+            Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+            _serverTask = Task.Run(async () =>
+            {
+                while (!_cts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        var client = await _listener.AcceptTcpClientAsync(_cts.Token);
+                        _ = Task.Run(async () =>
+                        {
+                            using (client)
+                            {
+                                await Task.Delay(Timeout.InfiniteTimeSpan, _cts.Token);
+                            }
+                        }, _cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                }
+            });
+
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _listener?.Stop();
+
+            try
+            {
+                _serverTask?.GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+    }
+}
 

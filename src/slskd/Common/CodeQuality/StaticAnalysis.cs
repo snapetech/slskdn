@@ -354,10 +354,12 @@ namespace slskd.Common.CodeQuality
         public static bool ExposesSensitiveData(PropertyInfo property)
         {
             return SensitiveTypes.Contains(property.PropertyType) &&
-                   property.Name.Contains("password", StringComparison.OrdinalIgnoreCase) ||
-                   property.Name.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
-                   property.Name.Contains("key", StringComparison.OrdinalIgnoreCase) ||
-                   property.Name.Contains("token", StringComparison.OrdinalIgnoreCase);
+                (
+                    property.Name.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+                    property.Name.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+                    property.Name.Contains("key", StringComparison.OrdinalIgnoreCase) ||
+                    property.Name.Contains("token", StringComparison.OrdinalIgnoreCase)
+                );
         }
 
         public static bool TypeStoresSensitiveData(Type type)

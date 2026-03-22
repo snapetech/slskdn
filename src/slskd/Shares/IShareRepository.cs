@@ -84,7 +84,7 @@ namespace slskd.Shares
         ///     Finds and returns the most recent scan record.
         /// </summary>
         /// <returns>The most recent scan record, or default if no scan was found.</returns>
-        Scan FindLatestScan();
+        Scan? FindLatestScan();
 
         /// <summary>
         ///     Flags the latest scan as suspect, indicating that the cached contents may have diverged from physical storage.
@@ -233,7 +233,7 @@ namespace slskd.Shares
             string workId,
             string maskedFilename,
             bool isAdvertisable,
-            string moderationReason,
+            string? moderationReason,
             long checkedAt);
 
         /// <summary>

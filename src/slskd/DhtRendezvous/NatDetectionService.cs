@@ -373,16 +373,19 @@ public sealed class NatDetectionService : IAsyncDisposable
             var attrLen = (response[offset + 2] << 8) | response[offset + 3];
             offset += 4;
 
-            // XOR-MAPPED-ADDRESS (0x0020) or MAPPED-ADDRESS (0x0001)
+            // XOR-MAPPED-ADDRESS (0x0020) or MAPPED-ADDRESS (0x0001).
             if ((attrType == 0x0020 || attrType == 0x0001) && attrLen >= 8)
             {
                 var family = response[offset + 1];
-                if (family == 0x01) // IPv4
+
+                // IPv4.
+                if (family == 0x01)
                 {
                     var ipBytes = new byte[4];
                     Array.Copy(response, offset + 4, ipBytes, 0, 4);
 
-                    if (attrType == 0x0020) // XOR with magic cookie
+                    // XOR with magic cookie.
+                    if (attrType == 0x0020)
                     {
                         ipBytes[0] ^= 0x21;
                         ipBytes[1] ^= 0x12;

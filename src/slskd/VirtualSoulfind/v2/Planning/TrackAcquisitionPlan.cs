@@ -51,7 +51,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         /// <summary>
         ///     Gets or initializes the source candidates to try.
         /// </summary>
-        public IReadOnlyList<SourceCandidate> Candidates { get; init; }
+        public IReadOnlyList<SourceCandidate> Candidates { get; init; } = Array.Empty<SourceCandidate>();
 
         /// <summary>
         ///     Gets or initializes the maximum number of parallel attempts.
@@ -85,7 +85,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         /// <summary>
         ///     Gets or initializes the track ID this plan is for.
         /// </summary>
-        public string TrackId { get; init; }
+        public string TrackId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the desired track information.
@@ -118,7 +118,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         /// <remarks>
         ///     Steps are tried in order. If a step fails, move to the next.
         /// </remarks>
-        public IReadOnlyList<PlanStep> Steps { get; init; }
+        public IReadOnlyList<PlanStep> Steps { get; init; } = Array.Empty<PlanStep>();
 
         /// <summary>
         ///     Gets or initializes when this plan was created.

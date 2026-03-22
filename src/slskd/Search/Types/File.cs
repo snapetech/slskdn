@@ -27,8 +27,8 @@ namespace slskd.Search
         public int? BitDepth { get; init; }
         public int? BitRate { get; init; }
         public int Code { get; init; }
-        public string Extension { get; init; }
-        public string Filename { get; init; }
+        public string Extension { get; init; } = string.Empty;
+        public string Filename { get; init; } = string.Empty;
         public bool? IsVariableBitRate { get; init; }
         public int? Length { get; init; }
         public int? SampleRate { get; init; }

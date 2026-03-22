@@ -218,7 +218,7 @@ public sealed class CapabilityFileService
         _cache.Clear();
     }
 
-    private async Task<byte[]?> DownloadSmallFileAsync(
+    private Task<byte[]?> DownloadSmallFileAsync(
         string username,
         string filename,
         int maxBytes,
@@ -235,12 +235,12 @@ public sealed class CapabilityFileService
             // TODO: Implement via ISoulseekClient download APIs
             _logger.LogDebug("Capability file download not yet implemented for {Username}/{Path}",
                 username, filename);
-            return null;
+            return Task.FromResult<byte[]?>(null);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Error downloading capability file");
-            return null;
+            return Task.FromResult<byte[]?>(null);
         }
     }
 

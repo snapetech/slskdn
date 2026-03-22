@@ -46,7 +46,7 @@ namespace slskd.Users
         /// <param name="username"></param>
         /// <param name="progress"></param>
         /// <returns></returns>
-        bool TryGet(string username, out BrowseProgressUpdatedEventArgs progress);
+        bool TryGet(string username, out BrowseProgressUpdatedEventArgs? progress);
 
         /// <summary>
         ///     Removes a tracked browse operation for the specified user.

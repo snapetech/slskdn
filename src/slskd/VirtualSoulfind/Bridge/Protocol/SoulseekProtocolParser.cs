@@ -64,7 +64,9 @@ public class SoulseekProtocolParser
             }
 
             var messageLength = BitConverter.ToInt32(lengthBuffer, 0);
-            if (messageLength < 4 || messageLength > 1024 * 1024) // Max 1MB message
+
+            // Max 1MB message.
+            if (messageLength < 4 || messageLength > 1024 * 1024)
             {
                 logger.LogWarning("[SOULSEEK-PROTO] Invalid message length: {Length}", messageLength);
                 return null;
@@ -262,7 +264,9 @@ public class SoulseekProtocolParser
     private string ReadString(BinaryReader reader)
     {
         var length = reader.ReadInt32();
-        if (length < 0 || length > 1024 * 1024) // Max 1MB string
+
+        // Max 1MB string.
+        if (length < 0 || length > 1024 * 1024)
         {
             throw new InvalidOperationException($"Invalid string length: {length}");
         }

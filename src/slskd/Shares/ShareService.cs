@@ -431,11 +431,11 @@ namespace slskd.Shares
         /// <summary>
         /// Publishes content-to-peer hints for all shared content.
         /// </summary>
-        private async Task PublishContentPeerHintsAsync()
+        private Task PublishContentPeerHintsAsync()
         {
             if (ContentPeerHintService == null)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             try
@@ -477,6 +477,8 @@ namespace slskd.Shares
             {
                 Log.Error(ex, "Failed to publish content-to-peer hints: {Message}", ex.Message);
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -552,7 +554,7 @@ namespace slskd.Shares
                 var latestScan = Local.Repository.FindLatestScan();
                 Log.Debug("Latest scan: {Scan}, current options {@Options}", latestScan, options);
 
-                if (latestScan == default)
+                if (latestScan is null)
                 {
                     throw new ShareInitializationException("Shares not yet scanned");
                 }

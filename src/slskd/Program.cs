@@ -37,6 +37,7 @@ namespace slskd
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.ComponentModel.DataAnnotations;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -175,17 +176,21 @@ namespace slskd
         /// <remarks>
         ///     Inaccurate when running locally.
         /// </remarks>
-        private static readonly Version AssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version.Equals(new Version(1, 0, 0, 0)) ? new Version(0, 0, 0, 0) : Assembly.GetExecutingAssembly().GetName().Version;
+        private static readonly Version AssemblyVersion = (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0, 0)).Equals(new Version(1, 0, 0, 0))
+            ? new Version(0, 0, 0, 0)
+            : (Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0, 0));
 
         /// <remarks>
         ///     Inaccurate when running locally.
         /// </remarks>
-        private static readonly string InformationalVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion == "1.0.0" ? "0.0.0" : Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+        private static readonly string InformationalVersion = (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0") == "1.0.0"
+            ? "0.0.0"
+            : (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0");
 
         /// <summary>
         ///     Occurs when a new log event is emitted.
         /// </summary>
-        public static event EventHandler<LogRecord> LogEmitted;
+        public static event EventHandler<LogRecord> LogEmitted = (_, _) => { };
 
         /// <summary>
         ///     Gets the semantic application version.
@@ -215,61 +220,61 @@ namespace slskd
         /// <summary>
         ///     Gets the application flags.
         /// </summary>
-        public static Options.FlagsOptions Flags { get; private set; }
+        public static Options.FlagsOptions Flags { get; private set; } = new();
 
         /// <summary>
         ///     Gets the path where application data is saved.
         /// </summary>
         [Argument('a', "app-dir", "path where application data is saved")]
         [EnvironmentVariable("APP_DIR")]
-        public static string AppDirectory { get; private set; } = null;
+        public static string AppDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the fully qualified path to the application configuration file.
         /// </summary>
         [Argument('c', "config", "path to configuration file")]
         [EnvironmentVariable("CONFIG")]
-        public static string ConfigurationFile { get; private set; } = null;
+        public static string ConfigurationFile { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the current configuration overlay, if one has been applied.
         /// </summary>
-        public static OptionsOverlay ConfigurationOverlay => VolatileOverlayConfigurationSource?.CurrentValue;
+        public static OptionsOverlay? ConfigurationOverlay => VolatileOverlayConfigurationSource?.CurrentValue;
 
         /// <summary>
         ///     Gets the path where persistent data is saved.
         /// </summary>
-        public static string DataDirectory { get; private set; } = null;
+        public static string DataDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the path where backups of persistent data saved.
         /// </summary>
-        public static string DataBackupDirectory { get; private set; } = null;
+        public static string DataBackupDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the default fully qualified path to the configuration file.
         /// </summary>
-        public static string DefaultConfigurationFile { get; private set; }
+        public static string DefaultConfigurationFile { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the default downloads directory.
         /// </summary>
-        public static string DefaultDownloadsDirectory { get; private set; }
+        public static string DefaultDownloadsDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the default incomplete download directory.
         /// </summary>
-        public static string DefaultIncompleteDirectory { get; private set; }
+        public static string DefaultIncompleteDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the path where application logs are saved.
         /// </summary>
-        public static string LogDirectory { get; private set; } = null;
+        public static string LogDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets the path where user-defined scripts are stored.
         /// </summary>
-        public static string ScriptDirectory { get; private set; } = null;
+        public static string ScriptDirectory { get; private set; } = string.Empty;
 
         /// <summary>
         ///     Gets a buffer containing the last few log events.
@@ -286,7 +291,7 @@ namespace slskd
         /// </remarks>
         public static CancellationTokenSource MasterCancellationTokenSource { get; } = new CancellationTokenSource();
 
-        private static IConfigurationRoot Configuration { get; set; }
+        private static IConfigurationRoot? Configuration { get; set; }
         private static OptionsAtStartup OptionsAtStartup { get; } = new OptionsAtStartup();
 
         // Explicit Serilog.ILogger type to avoid ambiguity with Microsoft.Extensions.Logging.ILogger
@@ -295,7 +300,7 @@ namespace slskd
             .CreateLogger();
 
         // Mutex is created lazily after AppDirectory is set to allow multiple test instances with different app dirs
-        private static Mutex Mutex { get; set; }
+        private static Mutex? Mutex { get; set; }
 
         private static string GetMutexName()
         {
@@ -304,7 +309,7 @@ namespace slskd
             return $"{AppName}_{Compute.Sha256Hash(dir)}";
         }
 
-        private static IDisposable DotNetRuntimeStats { get; set; }
+        private static IDisposable? DotNetRuntimeStats { get; set; }
         private static VolatileOverlayConfigurationSource<OptionsOverlay> VolatileOverlayConfigurationSource { get; set; } = new VolatileOverlayConfigurationSource<OptionsOverlay>();
 
         [Argument('g', "generate-cert", "generate X509 certificate and password for HTTPs")]
@@ -407,7 +412,10 @@ namespace slskd
             }
 
             // derive the application directory value and defaults that are dependent upon it
-            AppDirectory ??= DefaultAppDirectory;
+            if (string.IsNullOrWhiteSpace(AppDirectory))
+            {
+                AppDirectory = DefaultAppDirectory;
+            }
 
             // the application isn't being run in command mode. check the mutex to ensure
             // only one long-running instance per app directory.
@@ -430,7 +438,10 @@ namespace slskd
 
             // the location of the configuration file might have been overridden by command line or envar.
             // if not, set it to the default.
-            ConfigurationFile ??= DefaultConfigurationFile;
+            if (string.IsNullOrWhiteSpace(ConfigurationFile))
+            {
+                ConfigurationFile = DefaultConfigurationFile;
+            }
 
             // verify(create if needed) default application directories. if the downloads or complete
             // directories are overridden in config, those will be validated after the config is loaded.
@@ -608,7 +619,7 @@ namespace slskd
                         options.Listen(listenAddress, webPort);
                         Log.Information($"[Kestrel] HTTP listener configured");
 
-                        if (OptionsAtStartup.Web.Socket != null)
+                        if (!string.IsNullOrWhiteSpace(OptionsAtStartup.Web.Socket))
                         {
                             Log.Information($"Configuring HTTP listener on unix domain socket (UDS) {OptionsAtStartup.Web.Socket}");
                             options.ListenUnixSocket(OptionsAtStartup.Web.Socket);
@@ -713,7 +724,7 @@ namespace slskd
                     Log.Debug($"Running Migrate()...");
 
                     // note: if this ever throws, we've forgotten to register a Migrator following database DI config
-                    app.Services.GetService<Migrator>().Migrate(force: OptionsAtStartup.Flags.ForceMigrations);
+                    app.Services.GetRequiredService<Migrator>().Migrate(force: OptionsAtStartup.Flags.ForceMigrations);
                 }
 
                 if (OptionsAtStartup.Flags.AudioReanalyze && !OptionsAtStartup.Flags.Volatile)
@@ -892,7 +903,7 @@ namespace slskd
             // use when the current Options are to be used (generally anything not marked RequiresRestart)
             // the monitor should be used for services with Singleton lifetime, snapshots for everything else
             services.AddOptions<Options>()
-                .Bind(Configuration.GetSection(AppName), o => { o.BindNonPublicProperties = true; })
+                .Bind(Configuration!.GetSection(AppName), o => { o.BindNonPublicProperties = true; })
                 .Validate(options =>
                 {
                     if (!options.TryValidate(out var result))
@@ -1536,13 +1547,13 @@ namespace slskd
                 Log.Information("[DI] Resolving IDbContextFactory<PodDbContext> for SqlitePodService...");
                 var factory = sp.GetRequiredService<IDbContextFactory<PodCore.PodDbContext>>();
                 Log.Information("[DI] Resolving IPodPublisher for SqlitePodService (optional)...");
-                var podPublisher = sp.GetService<PodCore.IPodPublisher>();
+                var podPublisher = sp.GetRequiredService<PodCore.IPodPublisher>();
                 Log.Information("[DI] Resolving IPodMembershipSigner for SqlitePodService (optional)...");
-                var membershipSigner = sp.GetService<PodCore.IPodMembershipSigner>();
+                var membershipSigner = sp.GetRequiredService<PodCore.IPodMembershipSigner>();
                 Log.Information("[DI] Resolving ILogger<SqlitePodService> for SqlitePodService...");
                 var logger = sp.GetRequiredService<ILogger<PodCore.SqlitePodService>>();
                 Log.Information("[DI] Resolving IServiceScopeFactory for SqlitePodService (for lazy IContentLinkService resolution)...");
-                var scopeFactory = sp.GetService<IServiceScopeFactory>();
+                var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
                 Log.Information("[DI] All SqlitePodService dependencies resolved, creating instance (IContentLinkService will be resolved lazily via scope)...");
                 var service = new PodCore.SqlitePodService(factory, podPublisher, membershipSigner, logger, scopeFactory);
                 Log.Information("[DI] SqlitePodService constructed");
@@ -1572,7 +1583,7 @@ namespace slskd
             // Content link service for pod content validation
             services.AddScoped<PodCore.IContentLinkService>(sp =>
             {
-                var musicBrainzClient = sp.GetService<Integrations.MusicBrainz.IMusicBrainzClient>();
+                var musicBrainzClient = sp.GetRequiredService<Integrations.MusicBrainz.IMusicBrainzClient>();
                 return new PodCore.ContentLinkService(
                     musicBrainzClient,
                     sp.GetRequiredService<ILogger<PodCore.ContentLinkService>>());
@@ -1595,7 +1606,7 @@ namespace slskd
             services.AddScoped<PodCore.IPodOpinionService>(sp =>
             {
                 var podService = sp.GetRequiredService<PodCore.IPodService>();
-                var dhtClient = sp.GetService<Mesh.Dht.IMeshDhtClient>();
+                var dhtClient = sp.GetRequiredService<Mesh.Dht.IMeshDhtClient>();
                 var messageSigner = sp.GetRequiredService<PodCore.IMessageSigner>();
                 return new PodCore.PodOpinionService(
                     podService,
@@ -1898,7 +1909,11 @@ namespace slskd
             });
 
             // Transport dialers (Tor/I2P integration Phase 2)
-            services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows())
+            {
+                services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
+            }
+
             services.AddSingleton<Mesh.Transport.ITransportDialer>(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<Mesh.TorTransportOptions>>();
@@ -1981,13 +1996,19 @@ namespace slskd
                 Log.Information("[DI] UdpOverlayServer constructed");
                 return service;
             });
-            services.AddHostedService(p =>
+            if (IsQuicSupportedPlatform())
             {
-                Log.Information("[DI] Constructing QuicOverlayServer hosted service...");
-                var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(p);
-                Log.Information("[DI] QuicOverlayServer constructed");
-                return service;
-            });
+#pragma warning disable CA1416 // Runtime OS guard ensures QUIC hosted service is only registered on supported platforms.
+                services.AddHostedService(p =>
+                {
+                    Log.Information("[DI] Constructing QuicOverlayServer hosted service...");
+                    var service = CreateQuicOverlayServer(p);
+                    Log.Information("[DI] QuicOverlayServer constructed");
+                    return service;
+                });
+#pragma warning restore CA1416 // Runtime OS guard ensures QUIC hosted service is only registered on supported platforms.
+            }
+
             services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
             {
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.QuicOverlayClient>>();
@@ -2437,7 +2458,13 @@ namespace slskd
                                         {
                                             // check to see if the provided value is a valid API key
                                             var service = services.BuildServiceProvider().GetRequiredService<ISecurityService>();
-                                            var (name, role) = service.AuthenticateWithApiKey(token, callerIpAddress: context.HttpContext.Connection.RemoteIpAddress);
+                                            var remoteIpAddress = context.HttpContext.Connection.RemoteIpAddress;
+                                            if (string.IsNullOrWhiteSpace(token) || remoteIpAddress == null)
+                                            {
+                                                throw new InvalidOperationException("API key token or caller IP address was unavailable.");
+                                            }
+
+                                            var (name, role) = service.AuthenticateWithApiKey(token, callerIpAddress: remoteIpAddress);
 
                                             // the API key is valid. create a new, short lived jwt for the key name and role
                                             context.Token = service.GenerateJwt(name, role, ttl: 1000).Serialize();
@@ -2821,12 +2848,12 @@ namespace slskd
             Log.Information("Using base url {UrlBase}", urlBase);
 
             // serve static content from the configured path
-            FileServerOptions fileServerOptions = default;
+            FileServerOptions? fileServerOptions = null;
             var contentPath = Path.Combine(AppContext.BaseDirectory, OptionsAtStartup.Web.ContentPath);
 
             fileServerOptions = new FileServerOptions
             {
-                FileProvider = new PhysicalFileProvider(contentPath),
+                FileProvider = CreateOwnedPhysicalFileProvider(contentPath),
                 RequestPath = string.Empty,
                 EnableDirectoryBrowsing = false,
                 EnableDefaultFiles = true,
@@ -3235,7 +3262,7 @@ namespace slskd
                         outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"))
                 .WriteTo.Sink(new DelegatingSink(logEvent =>
                 {
-                    string message = default;
+                    string message = string.Empty;
 
                     try
                     {
@@ -3250,7 +3277,7 @@ namespace slskd
                         {
                             Timestamp = logEvent.Timestamp.LocalDateTime,
                             Context = logEvent.Properties["SourceContext"].ToString().TrimStart('"').TrimEnd('"'),
-                            SubContext = logEvent.Properties.ContainsKey("SubContext") ? logEvent.Properties["SubContext"].ToString().TrimStart('"').TrimEnd('"') : null,
+                            SubContext = logEvent.Properties.ContainsKey("SubContext") ? logEvent.Properties["SubContext"].ToString().TrimStart('"').TrimEnd('"') : string.Empty,
                             Level = logEvent.Level.ToString(),
                             Message = message.TrimStart('"').TrimEnd('"'),
                         };
@@ -3285,7 +3312,7 @@ namespace slskd
                 }
                 else
                 {
-                    Serilog.Log.Logger.Error(exception, "Unhandled exception: {Message}", exception.Message);
+                    Serilog.Log.Logger.Error(exception, "Unhandled exception: {Message}", exception?.Message ?? "Unknown exception");
                 }
             };
         }
@@ -3312,8 +3339,9 @@ namespace slskd
                         .Where(a => a.AttributeType == typeof(ArgumentAttribute))
                         .Select(a => new[] { a.ConstructorArguments[0].Value, a.ConstructorArguments[1].Value })
                         .SelectMany(v => v))
-                .Select(v => v.ToString())
+                .Select(v => v?.ToString())
                 .Where(v => v != "\u0000")
+                .OfType<string>()
                 .ToArray();
 
             var configurationDirectory = Path.GetDirectoryName(configurationFile);
@@ -3328,12 +3356,14 @@ namespace slskd
                 .AddEnvironmentVariables(
                     targetType: typeof(Options),
                     prefix: environmentVariablePrefix)
+#pragma warning disable CA2000 // Framework configuration infrastructure owns the file provider lifecycle.
                 .AddYamlFile(
                     path: Path.GetFileName(configurationFile),
                     targetType: typeof(Options),
                     optional: true,
                     reloadOnChange: reloadOnChange,
-                    provider: new PhysicalFileProvider(configurationDirectory, ExclusionFilters.None)) // required for locations outside of the app directory
+                    provider: CreateOwnedPhysicalFileProvider(configurationDirectory, ExclusionFilters.None)) // required for locations outside of the app directory
+#pragma warning restore CA2000
                 .AddCommandLine(
                     targetType: typeof(Options),
                     multiValuedArguments,
@@ -3390,7 +3420,7 @@ namespace slskd
                 journalCmd.CommandText = "PRAGMA journal_mode;";
                 var journalMode = journalCmd.ExecuteScalar()?.ToString();
 
-                if (!journalMode.Equals("WAL", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(journalMode, "WAL", StringComparison.OrdinalIgnoreCase))
                 {
                     Log.Warning("Failed to set database {Type} journal_mode PRAGMA to WAL; performance may be reduced", typeof(T).Name);
                 }
@@ -3399,7 +3429,7 @@ namespace slskd
                 syncCmd.CommandText = "PRAGMA synchronous;";
                 var sync = syncCmd.ExecuteScalar()?.ToString();
 
-                if (!sync.Equals("1", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(sync, "1", StringComparison.OrdinalIgnoreCase))
                 {
                     Log.Warning("Failed to set database {Type} synchronous PRAGMA to 1; performance may be reduced", typeof(T).Name);
                 }
@@ -3443,6 +3473,10 @@ namespace slskd
             return (filename, password);
         }
 
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The assigned framework options/configuration source owns the file provider lifecycle.")]
+        private static PhysicalFileProvider CreateOwnedPhysicalFileProvider(string root, ExclusionFilters exclusionFilters = ExclusionFilters.Sensitive)
+            => new(root, exclusionFilters);
+
         private static void PrintCommandLineArguments(Type targetType)
         {
             static string GetLongName(string longName, Type type)
@@ -3465,8 +3499,8 @@ namespace slskd
 
                         if (attribute != default)
                         {
-                            var shortName = (char)attribute.ConstructorArguments[0].Value;
-                            var longName = (string)attribute.ConstructorArguments[1].Value;
+                            var shortName = attribute.ConstructorArguments[0].Value is char shortNameValue ? shortNameValue : default;
+                            var longName = attribute.ConstructorArguments[1].Value?.ToString() ?? string.Empty;
                             var description = descriptionAttribute?.ConstructorArguments[0].Value;
 
                             var suffix = isRequired ? " (required)" : $" (default: {property.GetValue(defaults) ?? "<null>"})";
@@ -3520,7 +3554,7 @@ namespace slskd
 
                         if (attribute != default)
                         {
-                            var name = (string)attribute.ConstructorArguments[0].Value;
+                            var name = attribute.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
                             var description = descriptionAttribute?.ConstructorArguments[0].Value;
 
                             var suffix = isRequired ? " (required)" : $" (default: {property.GetValue(defaults) ?? "<null>"})";
@@ -3690,6 +3724,22 @@ namespace slskd
 
                 e.SetObserved(); // Prevent process termination
             };
+        }
+
+        [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+        [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+        private static Mesh.Overlay.QuicOverlayServer CreateQuicOverlayServer(IServiceProvider serviceProvider)
+        {
+            return ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(serviceProvider);
+        }
+
+        [System.Runtime.Versioning.SupportedOSPlatformGuard("linux")]
+        [System.Runtime.Versioning.SupportedOSPlatformGuard("macos")]
+        [System.Runtime.Versioning.SupportedOSPlatformGuard("windows")]
+        private static bool IsQuicSupportedPlatform()
+        {
+            return OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
         }
     }
 }

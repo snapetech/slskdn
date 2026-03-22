@@ -93,7 +93,7 @@ public class QuicOverlayClient : IOverlayClient
             }
 
             // Serialize envelope
-            var payload = MessagePackSerializer.Serialize(envelope);
+            var payload = MessagePackSerializer.Serialize(envelope, cancellationToken: CancellationToken.None);
             if (payload.Length > options.MaxDatagramBytes)
             {
                 logger.LogWarning("[Overlay-QUIC] Refusing to send oversized envelope size={Size}", payload.Length);

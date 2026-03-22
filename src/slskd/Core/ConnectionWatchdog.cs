@@ -101,7 +101,7 @@ namespace slskd
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
         private object StateLock { get; } = new object();
         private System.Timers.Timer WatchdogTimer { get; }
-        private CancellationTokenSource CancellationTokenSource { get; set; }
+        private CancellationTokenSource? CancellationTokenSource { get; set; }
 
         /// <summary>
         ///     Disposes this instance.

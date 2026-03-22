@@ -219,6 +219,8 @@ namespace slskd.VirtualSoulfind.v2.Resolution
                 {
                     if (!TryParseMeshBackendRef(candidate.BackendRef, out var peerId, out var contentId))
                         continue;
+                    if (string.IsNullOrWhiteSpace(peerId))
+                        continue;
                     try
                     {
                         var payload = JsonSerializer.SerializeToUtf8Bytes(new { contentId });

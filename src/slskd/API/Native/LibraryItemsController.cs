@@ -62,10 +62,10 @@ public class LibraryItemsController : ControllerBase
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> SearchItems(
-    [FromQuery] string? query = null,
-    [FromQuery] string? kinds = null,
-    [FromQuery] int limit = 100,
-            CancellationToken cancellationToken = default)
+        [FromQuery] string? query = null,
+        [FromQuery] string? kinds = null,
+        [FromQuery] int limit = 100,
+        CancellationToken cancellationToken = default)
     {
         logger?.LogInformation("Library items search: query={Query}, kinds={Kinds}, limit={Limit}", query, kinds, limit);
 

@@ -16,7 +16,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Provides secure DNS resolution with rebinding protection and IP validation for VPN services.
 /// </summary>
-public class DnsSecurityService : IDnsSecurityService
+public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
 {
     private readonly ILogger<DnsSecurityService> _logger;
 
@@ -35,6 +35,12 @@ public class DnsSecurityService : IDnsSecurityService
 
         // Start cleanup timer (runs every 5 minutes)
         _cleanupTimer = new Timer(CleanupExpiredEntries, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    public void Dispose()
+    {
+        _cleanupTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -228,7 +234,7 @@ public class DnsSecurityService : IDnsSecurityService
     {
         try
         {
-            var addresses = await Dns.GetHostAddressesAsync(hostname);
+            var addresses = await Dns.GetHostAddressesAsync(hostname, cancellationToken);
             return addresses.Select(addr => addr.ToString()).ToList();
         }
         catch (Exception ex)

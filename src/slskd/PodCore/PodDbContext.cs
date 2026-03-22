@@ -38,22 +38,22 @@ namespace slskd.PodCore
         /// <summary>
         ///     Gets or sets the pods.
         /// </summary>
-        public DbSet<PodEntity> Pods { get; set; }
+        public DbSet<PodEntity> Pods { get; set; } = null!;
 
         /// <summary>
         ///     Gets or sets the pod members.
         /// </summary>
-        public DbSet<PodMemberEntity> Members { get; set; }
+        public DbSet<PodMemberEntity> Members { get; set; } = null!;
 
         /// <summary>
         ///     Gets or sets the pod messages.
         /// </summary>
-        public DbSet<PodMessageEntity> Messages { get; set; }
+        public DbSet<PodMessageEntity> Messages { get; set; } = null!;
 
         /// <summary>
         ///     Gets or sets the signed membership records.
         /// </summary>
-        public DbSet<SignedMembershipRecordEntity> MembershipRecords { get; set; }
+        public DbSet<SignedMembershipRecordEntity> MembershipRecords { get; set; } = null!;
 
         /// <inheritdoc/>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -102,8 +102,8 @@ namespace slskd.PodCore
     /// </summary>
     public class PodEntity
     {
-        public string PodId { get; set; }
-        public string Name { get; set; }
+        public string PodId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public PodVisibility Visibility { get; set; }
         public bool IsPublic { get; set; }
@@ -111,10 +111,10 @@ namespace slskd.PodCore
         public bool AllowGuests { get; set; }
         public bool RequireApproval { get; set; }
         public DateTimeOffset UpdatedAt { get; set; }
-        public string FocusContentId { get; set; }
-        public string Tags { get; set; } // JSON array
-        public string Channels { get; set; } // JSON array
-        public string ExternalBindings { get; set; } // JSON array
+        public string FocusContentId { get; set; } = string.Empty;
+        public string Tags { get; set; } = string.Empty; // JSON array
+        public string Channels { get; set; } = string.Empty; // JSON array
+        public string ExternalBindings { get; set; } = string.Empty; // JSON array
         /// <summary>JSON array of <see cref="PodCapability"/> (e.g. [0] for PrivateServiceGateway).</summary>
         public string? Capabilities { get; set; }
         /// <summary>JSON of <see cref="PodPrivateServicePolicy"/> when Capabilities includes PrivateServiceGateway.</summary>
@@ -126,10 +126,10 @@ namespace slskd.PodCore
     /// </summary>
     public class PodMemberEntity
     {
-        public string PodId { get; set; }
-        public string PeerId { get; set; }
-        public string Role { get; set; }
-        public string PublicKey { get; set; }
+        public string PodId { get; set; } = string.Empty;
+        public string PeerId { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string PublicKey { get; set; } = string.Empty;
         public bool IsBanned { get; set; }
     }
 
@@ -138,12 +138,12 @@ namespace slskd.PodCore
     /// </summary>
     public class PodMessageEntity
     {
-        public string PodId { get; set; }
-        public string ChannelId { get; set; }
+        public string PodId { get; set; } = string.Empty;
+        public string ChannelId { get; set; } = string.Empty;
         public long TimestampUnixMs { get; set; }
-        public string SenderPeerId { get; set; }
-        public string Body { get; set; }
-        public string Signature { get; set; }
+        public string SenderPeerId { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
+        public string Signature { get; set; } = string.Empty;
         public int SigVersion { get; set; }
     }
 
@@ -152,11 +152,11 @@ namespace slskd.PodCore
     /// </summary>
     public class PodMessageFts
     {
-        public string PodId { get; set; }
-        public string ChannelId { get; set; }
+        public string PodId { get; set; } = string.Empty;
+        public string ChannelId { get; set; } = string.Empty;
         public long TimestampUnixMs { get; set; }
-        public string SenderPeerId { get; set; }
-        public string Body { get; set; }
+        public string SenderPeerId { get; set; } = string.Empty;
+        public string Body { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -164,10 +164,10 @@ namespace slskd.PodCore
     /// </summary>
     public class SignedMembershipRecordEntity
     {
-        public string PodId { get; set; }
-        public string PeerId { get; set; }
+        public string PodId { get; set; } = string.Empty;
+        public string PeerId { get; set; } = string.Empty;
         public long TimestampUnixMs { get; set; }
-        public string Action { get; set; }
-        public string Signature { get; set; }
+        public string Action { get; set; } = string.Empty;
+        public string Signature { get; set; } = string.Empty;
     }
 }

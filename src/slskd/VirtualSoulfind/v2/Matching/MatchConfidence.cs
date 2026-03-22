@@ -70,7 +70,7 @@ namespace slskd.VirtualSoulfind.v2.Matching
         /// <summary>
         ///     Gets or initializes the reason/explanation.
         /// </summary>
-        public string Reason { get; init; }
+        public string Reason { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets whether this is a usable match (Medium or better).

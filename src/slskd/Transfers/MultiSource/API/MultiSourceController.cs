@@ -25,10 +25,10 @@ namespace slskd.Transfers.MultiSource.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
+    using slskd.Core.Security;
     using slskd.Transfers.MultiSource.Discovery;
     using Soulseek;
     using IOPath = System.IO.Path;
-    using slskd.Core.Security;
 
     /// <summary>
     ///     Experimental multi-source download API.
@@ -318,7 +318,8 @@ namespace slskd.Transfers.MultiSource.API
                     bestGroup.SizeMB,
                     bestGroup.SourceCount,
                     canMultiSource = bestGroup.SourceCount >= 2,
-                } : null,
+                }
+                : null,
                 hint = bestGroup?.SourceCount >= 2
                     ? $"Use POST /api/v0/multisource/download-file with filename and size={bestGroup.Size} to start multi-source download"
                     : "Not enough sources with identical file size for multi-source download",
@@ -509,8 +510,8 @@ namespace slskd.Transfers.MultiSource.API
                 allSources.Count, request.ChunkSize, request.SkipVerification);
 
             List<VerifiedSource> verifiedSources;
-            string expectedHash = null;
-            ContentVerificationResult verificationResult = null;
+            string? expectedHash = null;
+            ContentVerificationResult? verificationResult = null;
 
             if (request.SkipVerification)
             {
@@ -635,7 +636,7 @@ namespace slskd.Transfers.MultiSource.API
             }
 
             List<VerifiedSource> verifiedSources;
-            string expectedHash = null;
+            string? expectedHash = null;
 
             if (request.SkipVerification)
             {
@@ -1051,8 +1052,8 @@ namespace slskd.Transfers.MultiSource.API
                 cancellationToken: HttpContext.RequestAborted);
 
             testResult.VerifiedSources = verificationResult.BestSources.Count;
-            testResult.VerificationMethod = verificationResult.BestSources.FirstOrDefault()?.Method.ToString();
-            testResult.ContentHash = verificationResult.BestHash;
+            testResult.VerificationMethod = verificationResult.BestSources.FirstOrDefault()?.Method.ToString() ?? string.Empty;
+            testResult.ContentHash = verificationResult.BestHash ?? string.Empty;
 
             if (verificationResult.BestSources.Count < 2)
             {
@@ -1112,19 +1113,19 @@ namespace slskd.Transfers.MultiSource.API
     public class MultiSourceCandidate
     {
         /// <summary>Gets or sets the filename.</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the full path from first source.</summary>
-        public string FullPath { get; set; }
+        public string FullPath { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long Size { get; set; }
 
         /// <summary>Gets or sets the file extension.</summary>
-        public string Extension { get; set; }
+        public string Extension { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the list of sources.</summary>
-        public List<SourceInfo> Sources { get; set; }
+        public List<SourceInfo> Sources { get; set; } = new();
 
         /// <summary>Gets the source count.</summary>
         public int SourceCount => Sources?.Count ?? 0;
@@ -1136,10 +1137,10 @@ namespace slskd.Transfers.MultiSource.API
     public class SourceInfo
     {
         /// <summary>Gets or sets the username.</summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the full path.</summary>
-        public string FullPath { get; set; }
+        public string FullPath { get; set; } = string.Empty;
 
         /// <summary>Gets or sets whether user has free upload slots.</summary>
         public bool HasFreeUploadSlot { get; set; }
@@ -1166,13 +1167,13 @@ namespace slskd.Transfers.MultiSource.API
     public class VerifyRequest
     {
         /// <summary>Gets or sets the filename.</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long FileSize { get; set; }
 
         /// <summary>Gets or sets the usernames to verify.</summary>
-        public List<string> Usernames { get; set; }
+        public List<string> Usernames { get; set; } = new();
     }
 
     /// <summary>
@@ -1181,19 +1182,19 @@ namespace slskd.Transfers.MultiSource.API
     public class DownloadRequest
     {
         /// <summary>Gets or sets the filename.</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long FileSize { get; set; }
 
         /// <summary>Gets or sets the expected content hash.</summary>
-        public string ExpectedHash { get; set; }
+        public string? ExpectedHash { get; set; }
 
         /// <summary>Gets or sets the chunk size in bytes (default 256KB).</summary>
         public long ChunkSize { get; set; } = 512 * 1024;  // 512KB default
 
         /// <summary>Gets or sets the verified sources.</summary>
-        public List<SourceRequest> Sources { get; set; }
+        public List<SourceRequest> Sources { get; set; } = new();
     }
 
     /// <summary>
@@ -1202,13 +1203,13 @@ namespace slskd.Transfers.MultiSource.API
     public class SourceRequest
     {
         /// <summary>Gets or sets the username.</summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the full path on the user's share.</summary>
-        public string FullPath { get; set; }
+        public string FullPath { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the content hash.</summary>
-        public string ContentHash { get; set; }
+        public string ContentHash { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the verification method.</summary>
         public VerificationMethod Method { get; set; }
@@ -1220,7 +1221,7 @@ namespace slskd.Transfers.MultiSource.API
     public class TestRequest
     {
         /// <summary>Gets or sets the search text.</summary>
-        public string SearchText { get; set; }
+        public string SearchText { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -1229,7 +1230,7 @@ namespace slskd.Transfers.MultiSource.API
     public class TestResult
     {
         /// <summary>Gets or sets the search text.</summary>
-        public string SearchText { get; set; }
+        public string SearchText { get; set; } = string.Empty;
 
         /// <summary>Gets or sets when the test started.</summary>
         public DateTime StartedAt { get; set; }
@@ -1241,7 +1242,7 @@ namespace slskd.Transfers.MultiSource.API
         public int SearchResponseCount { get; set; }
 
         /// <summary>Gets or sets the selected file.</summary>
-        public string SelectedFile { get; set; }
+        public string SelectedFile { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long FileSize { get; set; }
@@ -1253,10 +1254,10 @@ namespace slskd.Transfers.MultiSource.API
         public int VerifiedSources { get; set; }
 
         /// <summary>Gets or sets the verification method used.</summary>
-        public string VerificationMethod { get; set; }
+        public string? VerificationMethod { get; set; }
 
         /// <summary>Gets or sets the content hash.</summary>
-        public string ContentHash { get; set; }
+        public string? ContentHash { get; set; }
 
         /// <summary>Gets or sets whether download succeeded.</summary>
         public bool DownloadSuccess { get; set; }
@@ -1271,16 +1272,16 @@ namespace slskd.Transfers.MultiSource.API
         public int SourcesUsed { get; set; }
 
         /// <summary>Gets or sets the output path.</summary>
-        public string OutputPath { get; set; }
+        public string OutputPath { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the final hash.</summary>
-        public string FinalHash { get; set; }
+        public string FinalHash { get; set; } = string.Empty;
 
         /// <summary>Gets or sets average speed in MB/s.</summary>
         public double AverageSpeedMBps { get; set; }
 
         /// <summary>Gets or sets the error message.</summary>
-        public string Error { get; set; }
+        public string Error { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -1289,7 +1290,7 @@ namespace slskd.Transfers.MultiSource.API
     public class FileSourceRequest
     {
         /// <summary>Gets or sets the filename.</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size (0 to match any size).</summary>
         public long Size { get; set; }
@@ -1301,7 +1302,7 @@ namespace slskd.Transfers.MultiSource.API
     public class SwarmDownloadRequest
     {
         /// <summary>Gets or sets the filename/search term (optional if using discovery DB).</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the exact file size.</summary>
         public long Size { get; set; }

@@ -230,6 +230,6 @@ public class NormalizationPipeline : INormalizationPipeline
         using var sha256 = SHA256.Create();
         await using var stream = System.IO.File.OpenRead(filePath);
         var hash = await sha256.ComputeHashAsync(stream, ct);
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
     }
 }

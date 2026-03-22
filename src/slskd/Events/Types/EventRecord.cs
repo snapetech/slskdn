@@ -67,8 +67,8 @@ public record EventRecord
         where T : Event
     {
         // construct the data for the record by serializing the event and removing redundant properties
-        var json = JsonSerializer.Serialize(e as T, JsonSerializerOptions);
-        var data = JsonNode.Parse(json).AsObject();
+        var json = JsonSerializer.Serialize((T)e, JsonSerializerOptions);
+        var data = JsonNode.Parse(json)?.AsObject() ?? [];
         data.Remove(nameof(Timestamp).ToLower());
         data.Remove(nameof(Type).ToLower());
         data.Remove(nameof(Id).ToLower());

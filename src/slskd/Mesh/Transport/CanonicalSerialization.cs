@@ -120,18 +120,36 @@ public static class CanonicalSerialization
 [MessagePackObject]
 public class CanonicalDescriptor
 {
-    [Key(0)] public string PeerId { get; set; } = string.Empty;
-    [Key(1)] public long SequenceNumber { get; set; }
-    [Key(2)] public long ExpiresAtUnixMs { get; set; }
-    [Key(3)] public string[] Endpoints { get; set; } = Array.Empty<string>();
-    [Key(4)] public CanonicalTransportEndpoint[] TransportEndpoints { get; set; } = Array.Empty<CanonicalTransportEndpoint>();
-    [Key(5)] public string[] CertificatePins { get; set; } = Array.Empty<string>();
-    [Key(6)] public string[] ControlSigningKeys { get; set; } = Array.Empty<string>();
+    [Key(0)]
+    public string PeerId { get; set; } = string.Empty;
+
+    [Key(1)]
+    public long SequenceNumber { get; set; }
+
+    [Key(2)]
+    public long ExpiresAtUnixMs { get; set; }
+
+    [Key(3)]
+    public string[] Endpoints { get; set; } = Array.Empty<string>();
+
+    [Key(4)]
+    public CanonicalTransportEndpoint[] TransportEndpoints { get; set; } = Array.Empty<CanonicalTransportEndpoint>();
+
+    [Key(5)]
+    public string[] CertificatePins { get; set; } = Array.Empty<string>();
+
+    [Key(6)]
+    public string[] ControlSigningKeys { get; set; } = Array.Empty<string>();
 
     // Legacy fields for backward compatibility
-    [Key(7)] public string? NatType { get; set; }
-    [Key(8)] public bool RelayRequired { get; set; }
-    [Key(9)] public long TimestampUnixMs { get; set; }
+    [Key(7)]
+    public string? NatType { get; set; }
+
+    [Key(8)]
+    public bool RelayRequired { get; set; }
+
+    [Key(9)]
+    public long TimestampUnixMs { get; set; }
 }
 
 /// <summary>
@@ -140,12 +158,27 @@ public class CanonicalDescriptor
 [MessagePackObject]
 public class CanonicalTransportEndpoint
 {
-    [Key(0)] public TransportType TransportType { get; set; }
-    [Key(1)] public string Host { get; set; } = string.Empty;
-    [Key(2)] public int Port { get; set; }
-    [Key(3)] public TransportScope Scope { get; set; }
-    [Key(4)] public int Preference { get; set; }
-    [Key(5)] public int Cost { get; set; }
-    [Key(6)] public long? ValidFromUnixMs { get; set; }
-    [Key(7)] public long? ValidToUnixMs { get; set; }
+    [Key(0)]
+    public TransportType TransportType { get; set; }
+
+    [Key(1)]
+    public string Host { get; set; } = string.Empty;
+
+    [Key(2)]
+    public int Port { get; set; }
+
+    [Key(3)]
+    public TransportScope Scope { get; set; }
+
+    [Key(4)]
+    public int Preference { get; set; }
+
+    [Key(5)]
+    public int Cost { get; set; }
+
+    [Key(6)]
+    public long? ValidFromUnixMs { get; set; }
+
+    [Key(7)]
+    public long? ValidToUnixMs { get; set; }
 }

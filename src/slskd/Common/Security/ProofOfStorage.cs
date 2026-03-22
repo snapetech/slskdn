@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 /// Implements proof-of-storage challenges to verify file possession.
 /// SECURITY: Prevents peers from advertising files they don't actually have.
 /// </summary>
-public sealed class ProofOfStorage
+public sealed class ProofOfStorage : IDisposable
 {
     private readonly ConcurrentDictionary<string, Challenge> _pendingChallenges = new();
     private readonly Timer _cleanupTimer;
@@ -150,6 +150,11 @@ public sealed class ProofOfStorage
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
+    public void Dispose()
+    {
+        _cleanupTimer.Dispose();
+    }
+
     /// <summary>
     /// Verify a challenge response from a peer.
     /// Requires knowing what the correct response should be.
@@ -245,13 +250,6 @@ public sealed class ProofOfStorage
         }
     }
 
-    /// <summary>
-    /// Dispose resources.
-    /// </summary>
-    public void Dispose()
-    {
-        _cleanupTimer.Dispose();
-    }
 }
 
 /// <summary>

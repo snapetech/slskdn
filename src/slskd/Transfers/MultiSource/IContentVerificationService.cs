@@ -45,7 +45,7 @@ namespace slskd.Transfers.MultiSource
         /// <param name="fileSize">The file size in bytes.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The content hash, or null if verification failed.</returns>
-        Task<string> GetContentHashAsync(
+        Task<string?> GetContentHashAsync(
             string username,
             string filename,
             long fileSize,
@@ -60,7 +60,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the filename to verify (used for logging only).
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the expected file size in bytes.
@@ -92,7 +92,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the filename that was verified.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size in bytes.
@@ -112,7 +112,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the expected hash from the hash database (if found).
         /// </summary>
-        public string ExpectedHash { get; set; }
+        public string? ExpectedHash { get; set; }
 
         /// <summary>
         ///     Gets a value indicating whether the hash was found in the database.
@@ -122,11 +122,11 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets the hash with the most verified sources (best candidate for multi-source).
         /// </summary>
-        public string BestHash
+        public string? BestHash
         {
             get
             {
-                string bestHash = null;
+                string? bestHash = null;
                 int maxCount = 0;
 
                 foreach (var (hash, sources) in SourcesByHash)
@@ -160,17 +160,17 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets the selected semantic key (MBID+codec) for grouping chunks.
         /// </summary>
-        public string BestSemanticKey { get; set; }
+        public string? BestSemanticKey { get; set; }
 
         /// <summary>
         ///     Gets the MusicBrainz recording ID associated with the best semantic group.
         /// </summary>
-        public string BestSemanticRecordingId => BestSemanticSources.FirstOrDefault()?.MusicBrainzRecordingId;
+        public string? BestSemanticRecordingId => BestSemanticSources.FirstOrDefault()?.MusicBrainzRecordingId;
 
         /// <summary>
         ///     Gets the fingerprint tied to the best semantic group.
         /// </summary>
-        public string BestSemanticFingerprint => BestSemanticSources.FirstOrDefault()?.AudioFingerprint;
+        public string? BestSemanticFingerprint => BestSemanticSources.FirstOrDefault()?.AudioFingerprint;
     }
 
     /// <summary>
@@ -181,17 +181,17 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the username.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the full file path on the user's share.
         /// </summary>
-        public string FullPath { get; set; }
+        public string FullPath { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the content hash.
         /// </summary>
-        public string ContentHash { get; set; }
+        public string ContentHash { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the verification method used.
@@ -206,17 +206,17 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the MusicBrainz recording ID resolved via AcoustID.
         /// </summary>
-        public string MusicBrainzRecordingId { get; set; }
+        public string? MusicBrainzRecordingId { get; set; }
 
         /// <summary>
         ///     Gets or sets the fingerprint stored in the local hash database.
         /// </summary>
-        public string AudioFingerprint { get; set; }
+        public string? AudioFingerprint { get; set; }
 
         /// <summary>
         ///     Gets or sets the expected codec profile or identifier (dummy placeholder for future use).
         /// </summary>
-        public string CodecProfile { get; set; }
+        public string? CodecProfile { get; set; }
     }
 
     /// <summary>
@@ -227,12 +227,12 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the username.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the reason for failure.
         /// </summary>
-        public string Reason { get; set; }
+        public string Reason { get; set; } = string.Empty;
     }
 
     /// <summary>

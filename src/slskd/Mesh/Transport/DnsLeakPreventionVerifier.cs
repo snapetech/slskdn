@@ -169,8 +169,9 @@ public class DnsLeakPreventionVerifier
             lowerHostname.EndsWith(".net") ||
             lowerHostname.Contains("amazonaws.com") ||
             lowerHostname.Contains("google") ||
-            IPAddress.TryParse(hostname, out _)) // Reject IP addresses
+            IPAddress.TryParse(hostname, out _))
         {
+            // Reject IP addresses and common clearnet hostnames.
             return HostnameValidationResult.Invalid(
                 $"Hostname {hostname} appears to be a clearnet address that would cause DNS leaks");
         }
@@ -218,7 +219,7 @@ public class DnsLeakPreventionVerifier
         if (i2pOptions.Enabled)
         {
             var i2pResult = await VerifySocksConfigurationAsync(
-                i2pOptions.SocksHost,
+                i2pOptions.SocksHost ?? string.Empty,
                 i2pOptions.SocksPort ?? 7656, // Default I2P SAM port
                 "stats.i2p", // Known I2P test address
                 true);
@@ -227,7 +228,7 @@ public class DnsLeakPreventionVerifier
         }
 
         var passed = results.All(r => r.Success);
-        var errors = results.Where(r => !r.Success).Select(r => r.ErrorMessage).ToList();
+        var errors = results.Where(r => !r.Success).Select(r => r.ErrorMessage ?? string.Empty).ToList();
 
         return new DnsLeakAuditResult
         {

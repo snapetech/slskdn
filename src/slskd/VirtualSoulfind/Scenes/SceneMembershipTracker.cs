@@ -81,7 +81,7 @@ public class SceneMembershipTracker : ISceneMembershipTracker
         SceneMetadata metadata;
         try
         {
-            metadata = MessagePack.MessagePackSerializer.Deserialize<SceneMetadata>(data);
+            metadata = MessagePack.MessagePackSerializer.Deserialize<SceneMetadata>(data, cancellationToken: ct);
             if (metadata == null)
             {
                 throw new InvalidOperationException("Deserialized metadata is null");

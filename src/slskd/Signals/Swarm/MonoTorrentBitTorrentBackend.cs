@@ -21,7 +21,7 @@ using slskd.VirtualSoulfind.v2.Backends;
 ///     MonoTorrent-based <see cref="IBitTorrentBackend"/> for private swarms and fetch-by-infohash (def-3).
 ///     Respects <see cref="PrivateTorrentModeOptions"/> (DisableDht, DisablePex, InviteList).
 /// </summary>
-public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
+public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend, IDisposable
 {
     private readonly ILogger<MonoTorrentBitTorrentBackend> _logger;
     private readonly IOptionsMonitor<TorrentBackendOptions> _options;
@@ -57,7 +57,7 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
         return _options.CurrentValue.Enabled;
     }
 
-    public async Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken ct = default)
+    public async Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken cancellationToken = default)
     {
         var hash = job.File?.Hash;
         if (string.IsNullOrWhiteSpace(hash))
@@ -74,10 +74,10 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
         TorrentManager? manager = null;
         try
         {
-            manager = await _engine.AddAsync(magnet, savePath);
+            manager = await _engine.AddAsync(magnet, savePath).WaitAsync(cancellationToken);
             ApplyPrivateSettings(manager);
-            await AddManualPeersAsync(manager, PeersFromSources(job.Sources));
-            await manager.StartAsync();
+            await AddManualPeersAsync(manager, PeersFromSources(job.Sources)).WaitAsync(cancellationToken);
+            await manager.StartAsync().WaitAsync(cancellationToken);
             return infohash.ToHex();
         }
         catch (Exception ex)
@@ -85,7 +85,7 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
             _logger.LogWarning(ex, "PreparePrivateTorrentAsync failed for job {JobId}", job.JobId);
             if (manager != null)
             {
-                try { await _engine.RemoveAsync(manager); } catch { /* ignore */ }
+                try { await _engine.RemoveAsync(manager).WaitAsync(cancellationToken); } catch { /* ignore */ }
             }
 
             return string.Empty;
@@ -118,7 +118,7 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
 
             await manager.StartAsync();
             if (!manager.HasMetadata)
-                await manager.WaitForMetadataAsync();
+                await WaitForMetadataAsync(manager, ct);
 
             // Wait for completion (with timeout)
             var timeout = TimeSpan.FromMinutes(60);
@@ -151,7 +151,15 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
             _logger.LogWarning(ex, "FetchByInfoHashOrMagnetAsync failed for {Ref}", refPreview);
             if (manager != null)
             {
-                try { await manager.StopAsync(); await _engine.RemoveAsync(manager); } catch { /* ignore */ }
+                try
+                {
+                    await manager.StopAsync();
+                    await _engine.RemoveAsync(manager);
+                }
+                catch
+                {
+                    /* ignore */
+                }
             }
 
             return null;
@@ -187,6 +195,11 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
         return Task.CompletedTask;
     }
 
+    private static Task WaitForMetadataAsync(TorrentManager manager, CancellationToken cancellationToken)
+    {
+        return manager.WaitForMetadataAsync(CancellationToken.None).WaitAsync(cancellationToken);
+    }
+
     private static InfoHash? ParseInfohash(string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
@@ -202,5 +215,10 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend
         }
 
         return null;
+    }
+
+    public void Dispose()
+    {
+        _engine.Dispose();
     }
 }

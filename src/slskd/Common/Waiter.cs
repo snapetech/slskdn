@@ -192,7 +192,7 @@ namespace slskd
         /// <param name="key">The unique WaitKey for the wait.</param>
         public void Complete(WaitKey key)
         {
-            Complete<object>(key, null);
+            Complete<object?>(key, null);
         }
 
         /// <summary>
@@ -420,7 +420,7 @@ namespace slskd
             private bool Disposed { get; set; }
             private Action TimeoutAction { get; set; }
             private CancellationTokenRegistration TimeoutTokenRegistration { get; set; }
-            private CancellationTokenSource TimeoutTokenSource { get; set; }
+            private CancellationTokenSource? TimeoutTokenSource { get; set; }
 
             /// <summary>
             ///     Releases the managed and unmanaged resources used by the <see cref="PendingWait"/>.

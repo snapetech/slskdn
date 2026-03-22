@@ -190,7 +190,7 @@ public class SharesController : ControllerBase
             {
                 _log.LogWarning(ex, "[ShareGrantAnnounce] Announcement task failed for share {ShareId}", created.Id);
             }
-        });
+        }, CancellationToken.None);
 
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
@@ -611,9 +611,15 @@ public class SharesController : ControllerBase
 
 public class CreateShareGrantRequest
 {
-    [Required] public Guid CollectionId { get; set; }
-    [Required] public string? AudienceType { get; set; }
-    [Required] public string? AudienceId { get; set; }
+    [Required]
+    public Guid CollectionId { get; set; }
+
+    [Required]
+    public string? AudienceType { get; set; }
+
+    [Required]
+    public string? AudienceId { get; set; }
+
     /// <summary>Contact PeerId when AudienceType is User and audience is Contact-based (Identity &amp; Friends).</summary>
     public string? AudiencePeerId { get; set; }
     public bool AllowStream { get; set; } = true;

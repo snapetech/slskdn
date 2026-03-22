@@ -35,6 +35,7 @@ namespace slskd.SocialFederation
         /// <param name="keyStore">The ActivityPub key store.</param>
         /// <param name="musicActor">The music library actor (optional).</param>
         /// <param name="logger">The logger.</param>
+        /// <param name="loggerFactory">The logger factory for generated actor instances.</param>
         public LibraryActorService(
             IOptionsMonitor<SocialFederationOptions> federationOptions,
             IActivityPubKeyStore keyStore,

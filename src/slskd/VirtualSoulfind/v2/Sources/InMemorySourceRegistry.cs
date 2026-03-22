@@ -35,7 +35,7 @@ namespace slskd.VirtualSoulfind.v2.Sources
 
         public Task<IReadOnlyList<SourceCandidate>> FindCandidatesForItemAsync(
             ContentItemId itemId,
-            CancellationToken ct = default)
+            CancellationToken cancellationToken = default)
         {
             var results = _candidates.Values
                 .Where(c => c.ItemId.Equals(itemId))
@@ -47,7 +47,7 @@ namespace slskd.VirtualSoulfind.v2.Sources
         public Task<IReadOnlyList<SourceCandidate>> FindCandidatesForItemAsync(
             ContentItemId itemId,
             ContentBackendType backend,
-            CancellationToken ct = default)
+            CancellationToken cancellationToken = default)
         {
             var results = _candidates.Values
                 .Where(c => c.ItemId.Equals(itemId) && c.Backend == backend)
@@ -56,19 +56,19 @@ namespace slskd.VirtualSoulfind.v2.Sources
             return Task.FromResult<IReadOnlyList<SourceCandidate>>(results);
         }
 
-        public Task UpsertCandidateAsync(SourceCandidate candidate, CancellationToken ct = default)
+        public Task UpsertCandidateAsync(SourceCandidate candidate, CancellationToken cancellationToken = default)
         {
             _candidates[candidate.Id] = candidate;
             return Task.CompletedTask;
         }
 
-        public Task RemoveCandidateAsync(string candidateId, CancellationToken ct = default)
+        public Task RemoveCandidateAsync(string candidateId, CancellationToken cancellationToken = default)
         {
             _candidates.TryRemove(candidateId, out _);
             return Task.CompletedTask;
         }
 
-        public Task<int> RemoveStaleCandidatesAsync(DateTimeOffset olderThan, CancellationToken ct = default)
+        public Task<int> RemoveStaleCandidatesAsync(DateTimeOffset olderThan, CancellationToken cancellationToken = default)
         {
             var stale = _candidates.Values
                 .Where(c => c.LastSeenAt < olderThan)
@@ -82,7 +82,7 @@ namespace slskd.VirtualSoulfind.v2.Sources
             return Task.FromResult(stale.Count);
         }
 
-        public Task<int> CountCandidatesAsync(CancellationToken ct = default)
+        public Task<int> CountCandidatesAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_candidates.Count);
         }

@@ -70,18 +70,18 @@ namespace slskd
     {
         public string Full { get; init; } = Program.FullVersion;
         public string Current { get; init; } = Program.SemanticVersion;
-        public string Latest { get; init; } = null;
-        public bool? IsUpdateAvailable { get; init; } = null;
+        public string Latest { get; init; } = string.Empty;
+        public bool? IsUpdateAvailable { get; init; }
         public bool IsCanary { get; init; } = Program.IsCanary;
         public bool IsDevelopment { get; init; } = Program.IsDevelopment;
     }
 
     public record ServerState
     {
-        public string Address { get; init; }
+        public string Address { get; init; } = string.Empty;
 
         [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint IPEndPoint { get; init; }
+        public IPEndPoint IPEndPoint { get; init; } = new IPEndPoint(IPAddress.None, 0);
         public SoulseekClientStates State { get; init; }
         public bool IsConnected => State.HasFlag(SoulseekClientStates.Connected);
         public bool IsConnecting => State.HasFlag(SoulseekClientStates.Connecting);
@@ -95,16 +95,16 @@ namespace slskd
         public bool IsEnabled { get; init; } = false;
         public bool IsAttemptingConnection { get; init; } = false;
         public bool IsAwaitingVpn { get; init; } = false;
-        public DateTime? NextAttemptAt { get; init; } = null;
+        public DateTime? NextAttemptAt { get; init; }
     }
 
     public record VpnState
     {
         public bool IsReady { get; init; } = false;
         public bool IsConnected { get; init; } = false;
-        public IPAddress PublicIPAddress { get; init; } = null;
-        public string Location { get; init; } = null;
-        public int? ForwardedPort { get; init; } = null;
+        public IPAddress? PublicIPAddress { get; init; }
+        public string Location { get; init; } = string.Empty;
+        public int? ForwardedPort { get; init; }
     }
 
     public record RelayState
@@ -116,13 +116,13 @@ namespace slskd
 
     public record RelayControllerState
     {
-        public string Address { get; init; }
+        public string Address { get; init; } = string.Empty;
         public RelayClientState State { get; init; } = RelayClientState.Disconnected;
     }
 
     public record UserState
     {
-        public string Username { get; init; }
+        public string Username { get; init; } = string.Empty;
         public UserPrivilegeState Privileges { get; init; } = new UserPrivilegeState();
         public UserStatisticsState Statistics { get; init; } = new UserStatisticsState();
     }
@@ -144,13 +144,13 @@ namespace slskd
     public record DistributedNetworkState
     {
         public int BranchLevel { get; init; }
-        public string BranchRoot { get; init; }
+        public string BranchRoot { get; init; } = string.Empty;
         public bool CanAcceptChildren { get; init; }
         public int ChildLimit { get; init; }
         public IReadOnlyCollection<string> Children { get; init; } = new List<string>().AsReadOnly();
         public bool HasParent { get; init; }
         public bool IsBranchRoot { get; init; }
-        public string Parent { get; init; }
+        public string Parent { get; init; } = string.Empty;
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ namespace slskd
         public bool Faulted { get; init; }
         public bool Cancelled { get; init; }
         public double ScanProgress { get; init; }
-        public IReadOnlyCollection<string> Hosts { get; init; }
+        public IReadOnlyCollection<string> Hosts { get; init; } = Array.Empty<string>();
         public int Directories { get; init; }
         public int Files { get; init; }
     }

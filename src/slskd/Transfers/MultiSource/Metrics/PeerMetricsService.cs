@@ -58,15 +58,15 @@ namespace slskd.Transfers.MultiSource.Metrics
         }
 
         /// <inheritdoc/>
-        public async Task<PeerPerformanceMetrics> GetMetricsAsync(string peerId, PeerSource source, CancellationToken ct = default)
+        public async Task<PeerPerformanceMetrics> GetMetricsAsync(string peerId, PeerSource source, CancellationToken cancellationToken = default)
         {
-            return await GetOrCreateMetricsAsync(peerId, source, ct).ConfigureAwait(false);
+            return await GetOrCreateMetricsAsync(peerId, source, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task RecordRttSampleAsync(string peerId, double rttMs, CancellationToken ct = default)
+        public async Task RecordRttSampleAsync(string peerId, double rttMs, CancellationToken cancellationToken = default)
         {
-            var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, ct).ConfigureAwait(false);
+            var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, cancellationToken).ConfigureAwait(false);
             var sourceLabel = metrics.Source.ToString().ToLowerInvariant();
             PeerRttMilliseconds.WithLabels(sourceLabel).Observe(rttMs);
 
@@ -103,18 +103,18 @@ namespace slskd.Transfers.MultiSource.Metrics
                 metrics.LastUpdated = DateTimeOffset.UtcNow;
             }
 
-            await PersistMetricsAsync(metrics, ct).ConfigureAwait(false);
+            await PersistMetricsAsync(metrics, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task RecordThroughputSampleAsync(string peerId, long bytesTransferred, TimeSpan duration, CancellationToken ct = default)
+        public async Task RecordThroughputSampleAsync(string peerId, long bytesTransferred, TimeSpan duration, CancellationToken cancellationToken = default)
         {
             if (duration.TotalSeconds <= 0)
             {
                 return; // Invalid duration
             }
 
-            var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, ct).ConfigureAwait(false);
+            var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, cancellationToken).ConfigureAwait(false);
             var sourceLabel = metrics.Source.ToString().ToLowerInvariant();
 
             double bytesPerSec = bytesTransferred / duration.TotalSeconds;
@@ -158,13 +158,13 @@ namespace slskd.Transfers.MultiSource.Metrics
                 metrics.LastUpdated = DateTimeOffset.UtcNow;
             }
 
-            await PersistMetricsAsync(metrics, ct).ConfigureAwait(false);
+            await PersistMetricsAsync(metrics, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task RecordChunkCompletionAsync(string peerId, ChunkCompletionResult result, CancellationToken ct = default)
+        public async Task RecordChunkCompletionAsync(string peerId, ChunkCompletionResult result, CancellationToken cancellationToken = default)
         {
-            var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, ct).ConfigureAwait(false);
+            var metrics = await GetOrCreateMetricsAsync(peerId, PeerSource.Soulseek, cancellationToken).ConfigureAwait(false);
             var sourceLabel = metrics.Source.ToString().ToLowerInvariant();
 
             // Update Prometheus metrics
@@ -207,14 +207,14 @@ namespace slskd.Transfers.MultiSource.Metrics
                 metrics.LastUpdated = DateTimeOffset.UtcNow;
             }
 
-            await PersistMetricsAsync(metrics, ct).ConfigureAwait(false);
+            await PersistMetricsAsync(metrics, cancellationToken).ConfigureAwait(false);
         }
 
         /// <inheritdoc/>
-        public async Task<List<PeerPerformanceMetrics>> GetRankedPeersAsync(int limit = 100, CancellationToken ct = default)
+        public async Task<List<PeerPerformanceMetrics>> GetRankedPeersAsync(int limit = 100, CancellationToken cancellationToken = default)
         {
             // Get all peers from cache and database
-            var allMetrics = await hashDb.GetAllPeerMetricsAsync(ct).ConfigureAwait(false);
+            var allMetrics = await hashDb.GetAllPeerMetricsAsync(cancellationToken).ConfigureAwait(false);
 
             // Use cost function to rank peers
             var costFunction = new PeerCostFunction();

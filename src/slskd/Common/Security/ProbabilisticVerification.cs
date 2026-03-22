@@ -19,7 +19,7 @@ using Microsoft.Extensions.Logging;
 /// Implements probabilistic verification with random sampling.
 /// SECURITY: Unpredictable verification makes attacks harder to optimize against.
 /// </summary>
-public sealed class ProbabilisticVerification
+public sealed class ProbabilisticVerification : IDisposable
 {
     private readonly ILogger<ProbabilisticVerification> _logger;
     private readonly ConcurrentDictionary<string, VerificationSession> _sessions = new();
@@ -57,6 +57,15 @@ public sealed class ProbabilisticVerification
     {
         _logger = logger;
         _cleanupTimer = new Timer(CleanupExpired, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    /// <summary>
+    /// Dispose timer resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _cleanupTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -385,13 +394,6 @@ public sealed class ProbabilisticVerification
         }
     }
 
-    /// <summary>
-    /// Dispose resources.
-    /// </summary>
-    public void Dispose()
-    {
-        _cleanupTimer.Dispose();
-    }
 }
 
 /// <summary>

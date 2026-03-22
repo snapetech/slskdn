@@ -45,8 +45,8 @@ namespace slskd.Integrations.AcoustId
                 return null;
             }
 
-            var client = httpClientFactory.CreateClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{options.BaseUrl.TrimEnd('/')}/lookup");
+            using var client = httpClientFactory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{options.BaseUrl.TrimEnd('/')}/lookup");
 
             var payload = new Dictionary<string, string>
             {

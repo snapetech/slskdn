@@ -34,11 +34,11 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
         }
 
         /// <inheritdoc/>
-        public async Task<GenericFileItem?> TryGetItemByLocalMetadataAsync(LocalFileMetadata fileMetadata, CancellationToken cancellationToken = default)
+        public Task<GenericFileItem?> TryGetItemByLocalMetadataAsync(LocalFileMetadata fileMetadata, CancellationToken cancellationToken = default)
         {
             if (fileMetadata == null)
             {
-                return null;
+                return Task.FromResult<GenericFileItem?>(null);
             }
 
             try
@@ -47,21 +47,21 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
                 // In a full implementation, this might check a cache or database for existing items
                 var item = GenericFileItem.FromLocalFileMetadata(fileMetadata, isAdvertisable: false);
                 _logger.LogDebug("Created GenericFile item for {Filename} ({Size} bytes)", item.Filename, item.SizeBytes);
-                return item;
+                return Task.FromResult<GenericFileItem?>(item);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to create GenericFile item from local metadata: {Path}", fileMetadata.Id);
-                return null;
+                return Task.FromResult<GenericFileItem?>(null);
             }
         }
 
         /// <inheritdoc/>
-        public async Task<GenericFileItem?> TryGetItemByHashAndFilenameAsync(string primaryHash, string filename, long sizeBytes, CancellationToken cancellationToken = default)
+        public Task<GenericFileItem?> TryGetItemByHashAndFilenameAsync(string primaryHash, string filename, long sizeBytes, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(primaryHash) || string.IsNullOrWhiteSpace(filename))
             {
-                return null;
+                return Task.FromResult<GenericFileItem?>(null);
             }
 
             try
@@ -73,7 +73,7 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
                 if (string.IsNullOrWhiteSpace(safeFilename))
                 {
                     _logger.LogWarning("Invalid filename provided (empty after path extraction): {OriginalFilename}", filename);
-                    return null;
+                    return Task.FromResult<GenericFileItem?>(null);
                 }
 
                 var fileMetadata = new LocalFileMetadata
@@ -85,12 +85,12 @@ namespace slskd.VirtualSoulfind.Core.GenericFile
 
                 var item = GenericFileItem.FromLocalFileMetadata(fileMetadata, isAdvertisable: false);
                 _logger.LogDebug("Created GenericFile item for {Filename} with hash {Hash}", item.Filename, item.PrimaryHash);
-                return item;
+                return Task.FromResult<GenericFileItem?>(item);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to create GenericFile item from hash/filename: {Hash}/{Filename}", primaryHash, filename);
-                return null;
+                return Task.FromResult<GenericFileItem?>(null);
             }
         }
     }

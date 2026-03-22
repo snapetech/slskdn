@@ -66,17 +66,17 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the file ID (sha256 of peer_id + path + size).
         /// </summary>
-        public string FileId { get; set; }
+        public string FileId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the owner's username.
         /// </summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the full remote path.
         /// </summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size in bytes.
@@ -96,22 +96,22 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the SHA256 hash of the first 32KB (for byte-identical verification).
         /// </summary>
-        public string HashValue { get; set; }
+        public string? HashValue { get; set; }
 
         /// <summary>
         ///     Gets or sets the source of the hash.
         /// </summary>
-        public string HashSourceStr { get; set; }
+        public string? HashSourceStr { get; set; }
 
         /// <summary>
         ///     Gets or sets the FLAC audio MD5 (from STREAMINFO - MD5 of decoded PCM audio).
         /// </summary>
-        public string FlacAudioMd5 { get; set; }
+        public string? FlacAudioMd5 { get; set; }
 
         /// <summary>
         ///     Gets or sets the SHA256 hash of the entire file (populated after download).
         /// </summary>
-        public string FullFileHash { get; set; }
+        public string? FullFileHash { get; set; }
 
         /// <summary>
         ///     Gets or sets the audio sample rate.
@@ -146,12 +146,12 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the FLAC encoder info string (if available from VORBIS_COMMENT).
         /// </summary>
-        public string EncoderInfo { get; set; }
+        public string? EncoderInfo { get; set; }
 
         /// <summary>
         ///     Gets or sets the album hash (for grouping files from the same album).
         /// </summary>
-        public string AlbumHash { get; set; }
+        public string? AlbumHash { get; set; }
 
         /// <summary>
         ///     Gets or sets the number of times probing this file has failed.
@@ -161,7 +161,7 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the reason for the last probe failure.
         /// </summary>
-        public string ProbeFailReason { get; set; }
+        public string? ProbeFailReason { get; set; }
 
         /// <summary>
         ///     Gets or sets when we last attempted to probe this file (Unix timestamp).

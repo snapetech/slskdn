@@ -102,11 +102,11 @@ public class ContentLinkService : IContentLinkService
         }
     }
 
-    public async Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
+    public Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Array.Empty<ContentSearchResult>();
+            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
         }
 
         var results = new List<ContentSearchResult>();
@@ -133,12 +133,12 @@ public class ContentLinkService : IContentLinkService
                 });
             }
 
-            return results.Take(limit).ToList();
+            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(results.Take(limit).ToList());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching content with query '{Query}'", query);
-            return Array.Empty<ContentSearchResult>();
+            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
         }
     }
 
@@ -207,11 +207,11 @@ public class ContentLinkService : IContentLinkService
         return null;
     }
 
-    private async Task<ContentMetadata?> GetVideoMetadataAsync(ContentId parsed, CancellationToken ct)
+    private Task<ContentMetadata?> GetVideoMetadataAsync(ContentId parsed, CancellationToken ct)
     {
         // Placeholder for video content (IMDb, TMDB, etc.)
         // For now, return basic metadata without external validation
-        return new ContentMetadata(
+        return Task.FromResult<ContentMetadata?>(new ContentMetadata(
             ContentId: parsed.FullId,
             Title: $"{parsed.Type}: {parsed.Id}",
             Artist: "Unknown",
@@ -223,6 +223,6 @@ public class ContentLinkService : IContentLinkService
                 ["domain"] = ContentDomains.Video,
                 ["type"] = parsed.Type,
                 ["note"] = "Video metadata integration pending"
-            });
+            }));
     }
 }

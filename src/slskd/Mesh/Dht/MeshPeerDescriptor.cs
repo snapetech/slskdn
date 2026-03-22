@@ -69,7 +69,7 @@ public class MeshPeerDescriptor
     public string? Signature { get; set; }
 
     /// <summary>
-    /// Initializes a new instance with default expiry (24 hours from now).
+    /// Initializes a new instance of the <see cref="MeshPeerDescriptor"/> class.
     /// </summary>
     public MeshPeerDescriptor()
     {

@@ -15,11 +15,11 @@ using Serilog;
 using slskd.Search.API;
 using slskd.Search.Providers;
 using Soulseek;
+using ILogger = Serilog.ILogger;
 using SearchOptions = Soulseek.SearchOptions;
 using SearchQuery = Soulseek.SearchQuery;
 using SearchScope = Soulseek.SearchScope;
 using SearchStates = Soulseek.SearchStates;
-using ILogger = Serilog.ILogger;
 
 /// <summary>
 ///     Scene ↔ Pod Bridging search implementation.
@@ -44,20 +44,13 @@ public partial class SearchService
             StartedAt = DateTime.UtcNow,
         };
 
-        bool searchCreated = false;
-        bool searchBroadcasted = false;
-
         try
         {
             using var context = ContextFactory.CreateDbContext();
             context.Add(search);
             context.SaveChanges();
 
-            searchCreated = true;
-
             await SearchHub.BroadcastCreateAsync(search);
-
-            searchBroadcasted = true;
 
             // Create aggregator and provider request
             var aggregator = new SearchAggregator(

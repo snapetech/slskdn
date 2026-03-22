@@ -19,13 +19,13 @@ namespace slskd.Transfers.MultiSource.Metrics
 
         public bool ThrottleOverlayDownloads { get; init; }
 
-        public string Reason { get; init; }
+        public string Reason { get; init; } = string.Empty;
 
         public double OverlayUploadDownloadRatio { get; init; }
 
         public double OverlayToSoulseekUploadRatio { get; init; }
 
-        public TrafficTotals Totals { get; init; }
+        public TrafficTotals Totals { get; init; } = new();
     }
 
     /// <summary>

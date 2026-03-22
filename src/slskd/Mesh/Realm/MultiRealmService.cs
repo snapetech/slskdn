@@ -84,9 +84,10 @@ namespace slskd.Mesh.Realm
                 // Initialize each realm service
                 foreach (var realmConfig in config.Realms)
                 {
+                    RealmService? realmService = null;
                     try
                     {
-                        var realmService = CreateRealmService(realmConfig);
+                        realmService = CreateRealmService(realmConfig);
                         await realmService.InitializeAsync(cancellationToken);
 
                         _realmServices[realmConfig.Id] = realmService;
@@ -98,6 +99,7 @@ namespace slskd.Mesh.Realm
                     }
                     catch (Exception ex)
                     {
+                        realmService?.Dispose();
                         _logger.LogError(ex, "[MultiRealm] Failed to initialize realm '{RealmId}'", realmConfig.Id);
                         throw;
                     }

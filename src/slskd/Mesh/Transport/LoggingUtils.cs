@@ -72,7 +72,6 @@ public static class LoggingUtils
     /// <summary>
     /// Safely logs a peer ID, showing only a truncated version for privacy.
     /// </summary>
-    /// <param name="logger">The logger instance.</param>
     /// <param name="peerId">The peer ID to log.</param>
     /// <returns>A privacy-safe representation of the peer ID.</returns>
     public static string SafePeerId(string? peerId)
@@ -148,11 +147,15 @@ public static class LoggingUtils
             return "[null]";
         }
 
-        var subject = certificate.Subject;
         var thumbprint = certificate.Thumbprint;
 
         // Show thumbprint (safe for correlation) but redact full subject
-        return $"[cert:{thumbprint[..8]}...]";
+        if (string.IsNullOrEmpty(thumbprint))
+        {
+            return "[cert:unknown]";
+        }
+
+        return $"[cert:{thumbprint[..Math.Min(8, thumbprint.Length)]}...]";
     }
 
     /// <summary>
@@ -180,7 +183,7 @@ public static class LoggingUtils
     {
         if (args == null || args.Length == 0)
         {
-            return args;
+            return Array.Empty<object?>();
         }
 
         var redacted = new object?[args.Length];

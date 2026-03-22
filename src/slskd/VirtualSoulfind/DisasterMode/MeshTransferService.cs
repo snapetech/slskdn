@@ -123,7 +123,7 @@ public class MeshTransferService : IMeshTransferService
         this.scenePeers = scenePeers;
     }
 
-    public async Task<string> StartTransferAsync(
+    public Task<string> StartTransferAsync(
         string peerId,
         string fileHash,
         long fileSize,
@@ -158,7 +158,7 @@ public class MeshTransferService : IMeshTransferService
         // Start transfer asynchronously
         _ = Task.Run(async () => await ExecuteTransferAsync(transferId, ct), ct);
 
-        return transferId;
+        return Task.FromResult(transferId);
     }
 
     public Task<MeshTransferStatus?> GetTransferStatusAsync(string transferId, CancellationToken ct)
@@ -379,7 +379,7 @@ public class MeshTransferService : IMeshTransferService
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         await using var stream = System.IO.File.OpenRead(status.TargetPath);
         var computedHash = await sha256.ComputeHashAsync(stream, ct);
-        var computedHashHex = BitConverter.ToString(computedHash).Replace("-", "").ToLowerInvariant();
+        var computedHashHex = BitConverter.ToString(computedHash).Replace("-", string.Empty).ToLowerInvariant();
 
         // Compare with expected hash
         if (!string.IsNullOrEmpty(status.FileHash) &&

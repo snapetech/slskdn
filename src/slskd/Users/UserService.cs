@@ -117,8 +117,8 @@ namespace slskd.Users
         public IReadOnlyList<string> WatchedUsernames => WatchedUsernamesDictionary.Keys.ToList().AsReadOnly();
 
         private ISoulseekClient Client { get; }
-        private string LastOptionsHash { get; set; }
-        private string LastBlacklistOptionsHash { get; set; }
+        private string LastOptionsHash { get; set; } = string.Empty;
+        private string LastBlacklistOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; set; } = Serilog.Log.ForContext<UserService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private Blacklist Blacklist { get; } = new Blacklist();
@@ -380,7 +380,7 @@ namespace slskd.Users
                     UserDictionary.AddOrUpdate(
                         key: username,
                         addValue: new User() { Username = username },
-                        updateValueFactory: (key, user) => user with { Username = username, Group = null });
+                        updateValueFactory: (key, user) => user with { Username = username, Group = string.Empty });
                 }
 
                 // sort by priority, descending. this will cause the highest priority group for the user to be persisted when the
@@ -428,7 +428,7 @@ namespace slskd.Users
                     // if the file is missing/unreadable
                     try
                     {
-                        Blacklist.Load(options.Blacklist.File, BlacklistFormat.AutoDetect);
+                        Blacklist.Load(options.Blacklist.File, BlacklistFormat.AutoDetect).GetAwaiter().GetResult();
                         Log.Information("Blacklist loaded with {Count} CIDRs from file {File}", Blacklist.Count, options.Blacklist.File);
                     }
                     catch (Exception ex)

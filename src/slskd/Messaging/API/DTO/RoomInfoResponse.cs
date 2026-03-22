@@ -27,7 +27,7 @@ namespace slskd.Messaging.API
         /// <summary>
         ///     Gets the room name.
         /// </summary>
-        public string Name { get; init; }
+        public string Name { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets the number of users in the room.

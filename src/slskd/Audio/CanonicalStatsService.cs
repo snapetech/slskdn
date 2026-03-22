@@ -29,7 +29,7 @@ namespace slskd.Audio
             var variants = await hashDb.GetVariantsByRecordingAndProfileAsync(recordingId, codecProfileKey, ct).ConfigureAwait(false);
             if (variants == null || variants.Count == 0)
             {
-                return null;
+                return null!;
             }
 
             // Deduplicate identical streams within the profile using codec-specific hashes

@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 /// Implements Byzantine fault-tolerant consensus for multi-source downloads.
 /// SECURITY: Ensures data integrity when peers may be malicious or faulty.
 /// </summary>
-public sealed class ByzantineConsensus
+public sealed class ByzantineConsensus : IDisposable
 {
     private readonly ILogger<ByzantineConsensus> _logger;
     private readonly ConcurrentDictionary<string, ConsensusSession> _sessions = new();
@@ -44,6 +44,15 @@ public sealed class ByzantineConsensus
     {
         _logger = logger;
         _cleanupTimer = new Timer(CleanupExpired, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    /// <summary>
+    /// Dispose timer resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _cleanupTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -346,13 +355,6 @@ public sealed class ByzantineConsensus
         }
     }
 
-    /// <summary>
-    /// Dispose resources.
-    /// </summary>
-    public void Dispose()
-    {
-        _cleanupTimer.Dispose();
-    }
 }
 
 /// <summary>

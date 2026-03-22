@@ -41,16 +41,16 @@ public class PerceptualHashController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Computed perceptual hash</returns>
     [HttpPost("audio")]
-    public async Task<IActionResult> ComputeAudioHash([FromBody] AudioHashRequest request, CancellationToken cancellationToken = default)
+    public Task<IActionResult> ComputeAudioHash([FromBody] AudioHashRequest request, CancellationToken cancellationToken = default)
     {
         if (request?.Samples == null || request.Samples.Length == 0)
         {
-            return BadRequest("Audio samples are required");
+            return Task.FromResult<IActionResult>(BadRequest("Audio samples are required"));
         }
 
         if (request.SampleRate <= 0)
         {
-            return BadRequest("Valid sample rate is required");
+            return Task.FromResult<IActionResult>(BadRequest("Valid sample rate is required"));
         }
 
         try
@@ -62,12 +62,12 @@ public class PerceptualHashController : ControllerBase
                 "[PerceptualHash] Computed {Algorithm} hash for {SampleCount} samples at {SampleRate}Hz",
                 algorithm, request.Samples.Length, request.SampleRate);
 
-            return Ok(hash);
+            return Task.FromResult<IActionResult>(Ok(hash));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PerceptualHash] Failed to compute audio hash");
-            return StatusCode(500, new { error = "Failed to compute audio perceptual hash" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { error = "Failed to compute audio perceptual hash" }));
         }
     }
 
@@ -78,16 +78,16 @@ public class PerceptualHashController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Computed perceptual hash</returns>
     [HttpPost("image")]
-    public async Task<IActionResult> ComputeImageHash([FromBody] ImageHashRequest request, CancellationToken cancellationToken = default)
+    public Task<IActionResult> ComputeImageHash([FromBody] ImageHashRequest request, CancellationToken cancellationToken = default)
     {
         if (request?.Pixels == null || request.Pixels.Length == 0)
         {
-            return BadRequest("Image pixels are required");
+            return Task.FromResult<IActionResult>(BadRequest("Image pixels are required"));
         }
 
         if (request.Width <= 0 || request.Height <= 0)
         {
-            return BadRequest("Valid image dimensions are required");
+            return Task.FromResult<IActionResult>(BadRequest("Valid image dimensions are required"));
         }
 
         try
@@ -99,12 +99,12 @@ public class PerceptualHashController : ControllerBase
                 "[PerceptualHash] Computed {Algorithm} hash for {Width}x{Height} image",
                 algorithm, request.Width, request.Height);
 
-            return Ok(hash);
+            return Task.FromResult<IActionResult>(Ok(hash));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PerceptualHash] Failed to compute image hash");
-            return StatusCode(500, new { error = "Failed to compute image perceptual hash" });
+            return Task.FromResult<IActionResult>(StatusCode(500, new { error = "Failed to compute image perceptual hash" }));
         }
     }
 

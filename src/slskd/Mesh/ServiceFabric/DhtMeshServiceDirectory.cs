@@ -149,14 +149,14 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         }
     }
 
-    public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
+    public Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
         string serviceId,
         CancellationToken cancellationToken = default)
     {
-        return await FindByIdAsync(serviceId, requestPeerId: null, cancellationToken);
+        return FindByIdAsync(serviceId, requestPeerId: null, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
+    public Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
         string serviceId,
         string? requestPeerId,
         CancellationToken cancellationToken = default)
@@ -164,7 +164,7 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         if (string.IsNullOrWhiteSpace(serviceId))
         {
             _logger.LogWarning("[ServiceDirectory] FindById called with empty service ID");
-            return Array.Empty<MeshServiceDescriptor>();
+            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
         }
 
         // Track discovery metrics if peer ID provided
@@ -187,12 +187,12 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             // 2. Scan known service names (inefficient but works for now)
             // 3. Use DHT FindValue with serviceId directly
             // Current implementation returns empty array (service not found)
-            return Array.Empty<MeshServiceDescriptor>();
+            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[ServiceDirectory] Error finding service by ID: {ServiceId}", serviceId);
-            return Array.Empty<MeshServiceDescriptor>();
+            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
         }
     }
 

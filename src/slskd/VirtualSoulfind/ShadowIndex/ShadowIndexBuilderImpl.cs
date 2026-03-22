@@ -73,13 +73,13 @@ public class ShadowIndexBuilder : IShadowIndexBuilder
             recordingId, peerId);
     }
 
-    public Task<ShadowIndexShard?> BuildShardAsync(string mbid, CancellationToken ct)
+    public Task<ShadowIndexShard?> BuildShardAsync(string recordingId, CancellationToken ct)
     {
-        logger.LogDebug("[VSF-SHADOW] Building shard for {MBID}", mbid);
+        logger.LogDebug("[VSF-SHADOW] Building shard for {MBID}", recordingId);
 
-        if (!observations.TryGetValue(mbid, out var variantList))
+        if (!observations.TryGetValue(recordingId, out var variantList))
         {
-            logger.LogDebug("[VSF-SHADOW] No observations for {MBID}", mbid);
+            logger.LogDebug("[VSF-SHADOW] No observations for {MBID}", recordingId);
             return Task.FromResult<ShadowIndexShard?>(null);
         }
 
@@ -135,7 +135,7 @@ public class ShadowIndexBuilder : IShadowIndexBuilder
         };
 
         logger.LogInformation("[VSF-SHADOW] Built shard for {MBID}: {PeerCount} peers, {VariantCount} variants",
-            mbid, shard.ApproximatePeerCount, shard.CanonicalVariants.Count);
+            recordingId, shard.ApproximatePeerCount, shard.CanonicalVariants.Count);
 
         return Task.FromResult<ShadowIndexShard?>(shard);
     }

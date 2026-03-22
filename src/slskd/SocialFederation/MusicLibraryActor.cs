@@ -86,14 +86,14 @@ namespace slskd.SocialFederation
                             workRefs.Add(workRef);
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // Log warning - we can't access base logger directly
                         // This will be handled by the base class error handling
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log error - handled by base class
             }

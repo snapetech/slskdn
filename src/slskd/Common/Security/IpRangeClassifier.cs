@@ -104,11 +104,12 @@ public static class IpRangeClassifier
         if (IPAddress.IsLoopback(ip))
             return IpClassification.Loopback;
 
-        if (ip.AddressFamily == AddressFamily.InterNetwork) // IPv4
+        if (ip.AddressFamily == AddressFamily.InterNetwork)
         {
             return ClassifyIpv4(ip);
         }
-        else if (ip.AddressFamily == AddressFamily.InterNetworkV6) // IPv6
+
+        if (ip.AddressFamily == AddressFamily.InterNetworkV6)
         {
             return ClassifyIpv6(ip);
         }
@@ -274,7 +275,7 @@ public static class IpRangeClassifier
 
     private static bool IsCloudMetadata(IPAddress ip)
     {
-        if (ip.AddressFamily == AddressFamily.InterNetwork) // IPv4
+        if (ip.AddressFamily == AddressFamily.InterNetwork)
         {
             var bytes = ip.GetAddressBytes();
 

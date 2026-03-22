@@ -36,8 +36,8 @@ namespace slskd.VirtualSoulfind.v2.Execution
     /// </summary>
     public sealed class PlanExecutionState
     {
-        public string ExecutionId { get; init; }
-        public string TrackId { get; init; }
+        public string ExecutionId { get; init; } = string.Empty;
+        public string TrackId { get; init; } = string.Empty;
         public PlanExecutionStatus Status { get; init; }
         public int CurrentStepIndex { get; init; }
         public int TotalSteps { get; init; }

@@ -519,10 +519,10 @@ public sealed class SongIdService : ISongIdService
 
         try
         {
-            var httpClient = _httpClientFactory.CreateClient();
+            using var httpClient = _httpClientFactory.CreateClient();
             using var request = new HttpRequestMessage(HttpMethod.Get, source);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
-            var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var html = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -1775,7 +1775,7 @@ public sealed class SongIdService : ISongIdService
         if (!string.IsNullOrWhiteSpace(run.Metadata.PreviewUrl))
         {
             var audioPath = Path.Combine(workspace, "spotify-preview.mp3");
-            var client = _httpClientFactory.CreateClient();
+            using var client = _httpClientFactory.CreateClient();
             var bytes = await client.GetByteArrayAsync(run.Metadata.PreviewUrl!, cancellationToken).ConfigureAwait(false);
             await File.WriteAllBytesAsync(audioPath, bytes, cancellationToken).ConfigureAwait(false);
             return new PreparedAnalysisAssets
@@ -2810,9 +2810,7 @@ public sealed class SongIdService : ISongIdService
                 : 0.08;
         var score = Math.Min(
             1.0,
-            (periodicityStrength * 0.55) +
-            Math.Min(0.25, peakDensity * 18.0) +
-            Math.Min(0.20, residualRatio * 0.8));
+            periodicityStrength * 0.55 + Math.Min(0.25, peakDensity * 18.0) + Math.Min(0.20, residualRatio * 0.8));
 
         return new SongIdAiHeuristicFinding
         {

@@ -36,7 +36,10 @@ namespace slskd.Transfers
         private readonly IOptionsMonitor<Options> _optionsMonitor;
         private readonly Func<DateTime> _getNow;
 
-        /// <param name="optionsMonitor">Options.</param>
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ScheduledRateLimitService"/> class.
+        /// </summary>
+        /// <param name="optionsMonitor">The application options monitor.</param>
         /// <param name="getNow">Time provider for testing; when null, uses DateTime.Now.</param>
         public ScheduledRateLimitService(IOptionsMonitor<Options> optionsMonitor, Func<DateTime>? getNow = null)
         {

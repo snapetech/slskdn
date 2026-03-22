@@ -22,8 +22,8 @@ namespace slskd.VirtualSoulfind.v2.Api
     /// </summary>
     public sealed class TrackDto
     {
-        public string TrackId { get; init; }
-        public string Title { get; init; }
+        public string TrackId { get; init; } = string.Empty;
+        public string Title { get; init; } = string.Empty;
         public int TrackNumber { get; init; }
         public int? DurationSeconds { get; init; }
         public string? MusicBrainzRecordingId { get; init; }
@@ -33,8 +33,8 @@ namespace slskd.VirtualSoulfind.v2.Api
 
     public sealed class ReleaseDto
     {
-        public string ReleaseId { get; init; }
-        public string Title { get; init; }
+        public string ReleaseId { get; init; } = string.Empty;
+        public string Title { get; init; } = string.Empty;
         public int? Year { get; init; }
         public string? Country { get; init; }
         public int TrackCount { get; init; }
@@ -43,8 +43,8 @@ namespace slskd.VirtualSoulfind.v2.Api
 
     public sealed class ArtistDto
     {
-        public string ArtistId { get; init; }
-        public string Name { get; init; }
+        public string ArtistId { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
         public string? SortName { get; init; }
         public int ReleaseCount { get; init; }
     }

@@ -56,7 +56,7 @@ namespace slskd.Configuration
             {
                 s.TargetType = targetType;
                 s.CommandLine = commandLine ?? Environment.CommandLine;
-                s.MultiValuedArguments = multiValuedArguments;
+                s.MultiValuedArguments = multiValuedArguments ?? Array.Empty<string>();
             });
         }
 

@@ -35,7 +35,7 @@ public class SqlitePodMessageStorage : IPodMessageStorage
     {
         this.dbContext = dbContext;
         this.logger = logger;
-        connectionString = dbContext.Database.GetConnectionString();
+        connectionString = dbContext.Database.GetConnectionString() ?? string.Empty;
 
         // FTS tables will be initialized lazily on first use
     }

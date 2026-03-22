@@ -41,7 +41,7 @@ namespace slskd.Mesh
     /// <summary>
     ///     Service for epidemic mesh synchronization of hash databases.
     /// </summary>
-    public class MeshSyncService : IMeshSyncService, IChunkRequestSender
+    public class MeshSyncService : IMeshSyncService, IChunkRequestSender, IDisposable
     {
         /// <summary>Minimum seconds between syncs with same peer.</summary>
         public const int SyncIntervalMinSeconds = 1800; // 30 minutes
@@ -66,9 +66,9 @@ namespace slskd.Mesh
         private readonly int _rateLimitWindowMinutes;
         private readonly int _quarantineViolationThreshold;
         private readonly int _quarantineDurationMinutes;
-        private readonly IOptions<MeshSyncSecurityOptions> _syncSecurityOptions;
+        private readonly IOptions<MeshSyncSecurityOptions>? _syncSecurityOptions;
         private readonly ICapabilityService capabilities;
-        private readonly IManagedState<State> appState;
+        private readonly IManagedState<State>? appState;
         private readonly ISoulseekClient soulseekClient;
         private readonly IMeshMessageSigner messageSigner;
         private readonly Common.Security.PeerReputation? peerReputation;
@@ -84,8 +84,9 @@ namespace slskd.Mesh
         // Pending chunk requests for proof-of-possession (T-1434): "{peer}:{flacKey}:{offset}" -> TCS
         private readonly ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>> pendingChunkRequests = new();
         private const string MeshMessagePrefix = "MESH:";
-        private readonly IFlacKeyToPathResolver _pathResolver;
-        private readonly IProofOfPossessionService _proofOfPossession;
+        private readonly IFlacKeyToPathResolver? _pathResolver;
+        private readonly IProofOfPossessionService? _proofOfPossession;
+        private bool _disposed;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MeshSyncService"/> class.
@@ -124,7 +125,7 @@ namespace slskd.Mesh
             }
         }
 
-        private void SoulseekClient_PrivateMessageReceived(object sender, PrivateMessageReceivedEventArgs e)
+        private void SoulseekClient_PrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs e)
         {
             // Check if this is a mesh message
             if (!e.Message.StartsWith(MeshMessagePrefix, StringComparison.OrdinalIgnoreCase))
@@ -172,7 +173,7 @@ namespace slskd.Mesh
                 {
                     try
                     {
-                        MeshMessage message = messageType switch
+                        MeshMessage? message = messageType switch
                         {
                             "REQKEY" => JsonSerializer.Deserialize<MeshReqKeyMessage>(payload),
                             "REQDELTA" => JsonSerializer.Deserialize<MeshReqDeltaMessage>(payload),
@@ -198,6 +199,23 @@ namespace slskd.Mesh
                     }
                 });
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed || !disposing)
+            {
+                return;
+            }
+
+            syncLock.Dispose();
+            _disposed = true;
         }
 
         private async Task SendMeshMessageAsync(string username, MeshMessage message)
@@ -391,7 +409,7 @@ namespace slskd.Mesh
         }
 
         /// <inheritdoc/>
-        public async Task<MeshMessage> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default)
+        public async Task<MeshMessage?> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default)
         {
             // SECURITY: Validate username before any processing
             var usernameValidation = MessageValidator.ValidateUsername(fromUser);
@@ -573,7 +591,7 @@ namespace slskd.Mesh
         }
 
         /// <inheritdoc/>
-        public async Task<MeshHashEntry> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
+        public async Task<MeshHashEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
         {
             // First check local DB
             var local = await hashDb.LookupHashAsync(flacKey, cancellationToken);
@@ -626,6 +644,7 @@ namespace slskd.Mesh
             // T-1435: Group by (FlacKey, ByteHash, Size); only accept if >= ConsensusMinAgreements
             var groups = results
                 .Where(r => r != null && !string.IsNullOrEmpty(r.ByteHash))
+                .Select(r => r!)
                 .GroupBy(r => (r.FlacKey ?? string.Empty, r.ByteHash ?? string.Empty, r.Size))
                 .ToList();
             var agreed = groups.FirstOrDefault(g => g.Count() >= minAgreements);
@@ -666,7 +685,7 @@ namespace slskd.Mesh
         /// <summary>
         ///     Queries a specific peer for a hash entry. Overridable for tests.
         /// </summary>
-        protected virtual async Task<MeshHashEntry> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
+        protected virtual async Task<MeshHashEntry?> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
         {
             // Check if peer supports mesh sync
             var peerCaps = capabilities.GetPeerCapabilities(username);
@@ -996,8 +1015,10 @@ namespace slskd.Mesh
             return merged;
         }
 
-        private async Task<MeshMessage> HandleHelloAsync(string fromUser, MeshHelloMessage hello, CancellationToken cancellationToken)
+        private Task<MeshMessage> HandleHelloAsync(string fromUser, MeshHelloMessage hello, CancellationToken cancellationToken)
         {
+            _ = cancellationToken;
+
             var state = GetOrCreatePeerState(fromUser);
             state.LatestSeqId = hello.LatestSeqId;
             state.ClientVersion = hello.ClientVersion;
@@ -1005,7 +1026,7 @@ namespace slskd.Mesh
             log.Information("[MESH] Received HELLO from {Peer}: seq={SeqId}, count={Count}", fromUser, hello.LatestSeqId, hello.HashCount);
 
             // Respond with our own HELLO
-            return GenerateHelloMessage();
+            return Task.FromResult<MeshMessage>(GenerateHelloMessage());
         }
 
         private async Task<MeshMessage> HandleReqDeltaAsync(string fromUser, MeshReqDeltaMessage req, CancellationToken cancellationToken)
@@ -1062,10 +1083,10 @@ namespace slskd.Mesh
         {
             log.Debug("[MESH] {Peer} requested chunk {Key} @ {Offset} len={Length}", fromUser, req.FlacKey, req.Offset, req.Length);
 
-            string path = _pathResolver != null ? await _pathResolver.TryGetFilePathAsync(req.FlacKey, cancellationToken) : null;
+            string? path = _pathResolver != null ? await _pathResolver.TryGetFilePathAsync(req.FlacKey, cancellationToken) : null;
             if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
             {
-                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = string.Empty, Success = false };
             }
 
             try
@@ -1073,7 +1094,7 @@ namespace slskd.Mesh
                 using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 if (req.Offset >= fs.Length)
                 {
-                    return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+                    return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = string.Empty, Success = false };
                 }
 
                 var toRead = (int)Math.Min(req.Length, fs.Length - req.Offset);
@@ -1082,7 +1103,7 @@ namespace slskd.Mesh
                 var read = await fs.ReadAsync(buf, 0, toRead, cancellationToken);
                 if (read <= 0)
                 {
-                    return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+                    return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = string.Empty, Success = false };
                 }
 
                 var b64 = read < buf.Length ? Convert.ToBase64String(buf.AsSpan(0, read)) : Convert.ToBase64String(buf);
@@ -1091,7 +1112,7 @@ namespace slskd.Mesh
             catch (Exception ex)
             {
                 log.Debug(ex, "[MESH] Failed to read chunk for {Key} from {Peer}", req.FlacKey, fromUser);
-                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = null, Success = false };
+                return new MeshRespChunkMessage { FlacKey = req.FlacKey, Offset = req.Offset, DataBase64 = string.Empty, Success = false };
             }
         }
 
@@ -1290,17 +1311,17 @@ namespace slskd.Mesh
         /// </summary>
         private class MeshPeerState
         {
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             public bool IsMeshCapable { get; set; }
             public long LatestSeqId { get; set; }
             public long LastSeqSeen { get; set; }
             public DateTime? LastSyncTime { get; set; }
             public DateTime LastSeen { get; set; }
-            public string ClientVersion { get; set; }
+            public string ClientVersion { get; set; } = string.Empty;
 
             // SECURITY: Rate limiting for invalid entries/messages (T-1432)
-            public readonly Queue<DateTime> InvalidEntryTimestamps = new();
-            public readonly Queue<DateTime> InvalidMessageTimestamps = new();
+            public Queue<DateTime> InvalidEntryTimestamps { get; } = new();
+            public Queue<DateTime> InvalidMessageTimestamps { get; } = new();
             public int InvalidEntryCount { get; set; }
             public int InvalidMessageCount { get; set; }
 

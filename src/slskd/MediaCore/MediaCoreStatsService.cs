@@ -141,7 +141,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
     }
 
     /// <inheritdoc/>
-    public async Task<FuzzyMatchingStats> GetFuzzyMatchingStatsAsync(CancellationToken cancellationToken = default)
+    public Task<FuzzyMatchingStats> GetFuzzyMatchingStatsAsync(CancellationToken cancellationToken = default)
     {
         var accuracyByAlgorithm = new Dictionary<string, MatchAccuracyStats>
         {
@@ -154,18 +154,18 @@ public class MediaCoreStatsService : IMediaCoreStatsService
         var successRate = _totalFuzzyMatches > 0 ? (double)_successfulFuzzyMatches / _totalFuzzyMatches : 0.0;
         var averageConfidenceScore = 0.75; // Placeholder - would need to track actual scores
 
-        return new FuzzyMatchingStats(
+        return Task.FromResult(new FuzzyMatchingStats(
             TotalMatches: _totalFuzzyMatches,
             SuccessfulMatches: _successfulFuzzyMatches,
             SuccessRate: successRate,
             AverageMatchingTime: TimeSpan.FromMilliseconds(5), // Placeholder
             AccuracyByAlgorithm: accuracyByAlgorithm,
             MatchesByDomain: matchesByDomain,
-            AverageConfidenceScore: averageConfidenceScore);
+            AverageConfidenceScore: averageConfidenceScore));
     }
 
     /// <inheritdoc/>
-    public async Task<IpldMappingStats> GetIpldMappingStatsAsync(CancellationToken cancellationToken = default)
+    public Task<IpldMappingStats> GetIpldMappingStatsAsync(CancellationToken cancellationToken = default)
     {
         // This would need to be implemented in IpldMapper to track statistics
         // For now, return placeholder stats
@@ -179,7 +179,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
 
         var graphsByRoot = new Dictionary<string, GraphStats>(); // Would need to be tracked
 
-        return new IpldMappingStats(
+        return Task.FromResult(new IpldMappingStats(
             TotalLinks: 0,
             TotalNodes: 0,
             TotalGraphs: 0,
@@ -188,11 +188,11 @@ public class MediaCoreStatsService : IMediaCoreStatsService
             BrokenLinksDetected: 0,
             OrphanedNodes: 0,
             AverageTraversalTime: TimeSpan.Zero,
-            GraphConnectivityRatio: 0.0);
+            GraphConnectivityRatio: 0.0));
     }
 
     /// <inheritdoc/>
-    public async Task<PerceptualHashingStats> GetPerceptualHashingStatsAsync(CancellationToken cancellationToken = default)
+    public Task<PerceptualHashingStats> GetPerceptualHashingStatsAsync(CancellationToken cancellationToken = default)
     {
         var statsByAlgorithm = new Dictionary<PerceptualHashAlgorithm, AlgorithmStats>
         {
@@ -219,17 +219,17 @@ public class MediaCoreStatsService : IMediaCoreStatsService
             ["image"] = _totalHashesComputed / 3
         };
 
-        return new PerceptualHashingStats(
+        return Task.FromResult(new PerceptualHashingStats(
             TotalHashesComputed: _totalHashesComputed,
             AverageComputationTime: TimeSpan.FromMilliseconds(_totalHashesComputed > 0 ? _totalHashComputationTimeNs / (_totalHashesComputed * 1000000.0) : 0),
             StatsByAlgorithm: statsByAlgorithm,
             OverallAccuracy: 0.92,
             HashesByContentType: hashesByContentType,
-            DuplicateHashesDetected: 0);
+            DuplicateHashesDetected: 0));
     }
 
     /// <inheritdoc/>
-    public async Task<MetadataPortabilityStats> GetMetadataPortabilityStatsAsync(CancellationToken cancellationToken = default)
+    public Task<MetadataPortabilityStats> GetMetadataPortabilityStatsAsync(CancellationToken cancellationToken = default)
     {
         var conflictsByType = new Dictionary<string, int>
         {
@@ -249,7 +249,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
 
         var importSuccessRate = _totalImports > 0 ? (double)_successfulImports / _totalImports : 0.0;
 
-        return new MetadataPortabilityStats(
+        return Task.FromResult(new MetadataPortabilityStats(
             TotalExports: _totalExports,
             TotalImports: _totalImports,
             SuccessfulImports: _successfulImports,
@@ -258,7 +258,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
             ResolutionsUsed: resolutionsUsed,
             AverageExportTime: TimeSpan.FromSeconds(0.5), // Placeholder
             AverageImportTime: TimeSpan.FromSeconds(1.0), // Placeholder
-            TotalDataTransferred: 0); // Would need to be tracked
+            TotalDataTransferred: 0)); // Would need to be tracked
     }
 
     /// <inheritdoc/>
@@ -279,7 +279,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
     }
 
     /// <inheritdoc/>
-    public async Task ResetStatsAsync(CancellationToken cancellationToken = default)
+    public Task ResetStatsAsync(CancellationToken cancellationToken = default)
     {
         _fuzzyMatchAttempts.Clear();
         _fuzzyMatchSuccesses.Clear();
@@ -299,13 +299,14 @@ public class MediaCoreStatsService : IMediaCoreStatsService
         _failedPublications = 0;
 
         _logger.LogInformation("[MediaCoreStats] All statistics have been reset");
+        return Task.CompletedTask;
     }
 
-    private static async Task<SystemResourceStats> GetSystemResourceStatsAsync(CancellationToken cancellationToken)
+    private static Task<SystemResourceStats> GetSystemResourceStatsAsync(CancellationToken cancellationToken)
     {
         var process = Process.GetCurrentProcess();
 
-        return new SystemResourceStats(
+        return Task.FromResult(new SystemResourceStats(
             WorkingSetBytes: process.WorkingSet64,
             PrivateMemoryBytes: process.PrivateMemorySize64,
             CpuUsagePercent: 0.0, // Would need performance counter
@@ -316,7 +317,7 @@ public class MediaCoreStatsService : IMediaCoreStatsService
                 [0] = GC.CollectionCount(0),
                 [1] = GC.CollectionCount(1),
                 [2] = GC.CollectionCount(2)
-            });
+            }));
     }
 
     // Public methods for other components to report statistics

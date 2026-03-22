@@ -220,7 +220,7 @@ public sealed class ProfileService : IProfileService
     {
         // For MVP: simple lookup by matching friend codes. Later: fuzzy match.
         // Remove dashes and decode
-        var clean = code.Replace("-", "").ToUpperInvariant();
+        var clean = code.Replace("-", string.Empty).ToUpperInvariant();
         if (clean.Length < 16) return null;
 
         // This is a simplified version - in practice you'd need to store a mapping

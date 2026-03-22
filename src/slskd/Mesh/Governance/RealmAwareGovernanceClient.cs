@@ -190,7 +190,7 @@ namespace slskd.Mesh.Governance
         }
 
         /// <inheritdoc/>
-        public async Task<GovernanceDocument?> GetDocumentAsync(string documentId, CancellationToken cancellationToken = default)
+        public Task<GovernanceDocument?> GetDocumentAsync(string documentId, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(documentId))
             {
@@ -202,15 +202,15 @@ namespace slskd.Mesh.Governance
             {
                 if (realmDocuments.TryGetValue(documentId, out var document))
                 {
-                    return document;
+                    return Task.FromResult<GovernanceDocument?>(document);
                 }
             }
 
-            return null;
+            return Task.FromResult<GovernanceDocument?>(null);
         }
 
         /// <inheritdoc/>
-        public async Task<IReadOnlyCollection<GovernanceDocument>> GetDocumentsForRealmAsync(
+        public Task<IReadOnlyCollection<GovernanceDocument>> GetDocumentsForRealmAsync(
             string realmId,
             CancellationToken cancellationToken = default)
         {
@@ -221,10 +221,10 @@ namespace slskd.Mesh.Governance
 
             if (_documentsByRealm.TryGetValue(realmId, out var realmDocuments))
             {
-                return realmDocuments.Values.ToList();
+                return Task.FromResult<IReadOnlyCollection<GovernanceDocument>>(realmDocuments.Values.ToList());
             }
 
-            return Array.Empty<GovernanceDocument>();
+            return Task.FromResult<IReadOnlyCollection<GovernanceDocument>>(Array.Empty<GovernanceDocument>());
         }
 
         /// <summary>
@@ -244,7 +244,7 @@ namespace slskd.Mesh.Governance
         /// <param name="document">The document to validate.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>True if the signature is valid.</returns>
-        private static async Task<bool> ValidateDocumentSignatureAsync(GovernanceDocument document, CancellationToken cancellationToken)
+        private static Task<bool> ValidateDocumentSignatureAsync(GovernanceDocument document, CancellationToken cancellationToken)
         {
             try
             {
@@ -257,13 +257,13 @@ namespace slskd.Mesh.Governance
                 var expectedSignature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToSign)));
                 var isValid = string.Equals(document.Signature, expectedSignature, StringComparison.Ordinal);
 
-                return isValid;
+                return Task.FromResult(isValid);
             }
             catch (Exception ex)
             {
                 // Log the error but don't expose details
                 Console.WriteLine($"Signature validation failed: {ex.Message}");
-                return false;
+                return Task.FromResult(false);
             }
         }
 

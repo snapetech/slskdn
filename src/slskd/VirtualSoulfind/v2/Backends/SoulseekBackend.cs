@@ -287,18 +287,23 @@ namespace slskd.VirtualSoulfind.v2.Backends
         /// </remarks>
         private float CalculateTrustScore(SearchResponse response, SoulseekBackendOptions opts)
         {
-            float score = 50.0f; // Base score
+            float score = 50.0f;
 
             // Upload speed factor (0-30 points)
-            if (response.UploadSpeed >= 10_000_000) // 10 MB/s+
+            // 10 MB/s+.
+            if (response.UploadSpeed >= 10_000_000)
             {
                 score += 30;
             }
-            else if (response.UploadSpeed >= 5_000_000) // 5 MB/s+
+
+            // 5 MB/s+.
+            else if (response.UploadSpeed >= 5_000_000)
             {
                 score += 20;
             }
-            else if (response.UploadSpeed >= 1_000_000) // 1 MB/s+
+
+            // 1 MB/s+.
+            else if (response.UploadSpeed >= 1_000_000)
             {
                 score += 10;
             }

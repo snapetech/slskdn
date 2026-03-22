@@ -253,7 +253,7 @@ namespace slskd.Backfill
                     cts.CancelAfter(TimeSpan.FromSeconds(config.TransferTimeoutSeconds));
 
                     using var memoryStream = new System.IO.MemoryStream(config.MaxHeaderBytes);
-                    var limitedStream = new LimitedWriteStream(memoryStream, config.MaxHeaderBytes, cts);
+                    using var limitedStream = new LimitedWriteStream(memoryStream, config.MaxHeaderBytes, cts);
 
                     try
                     {
@@ -401,13 +401,13 @@ namespace slskd.Backfill
         {
             if (length < 42)
             {
-                return null;
+                return string.Empty;
             }
 
             // Check FLAC magic
             if (buffer[0] != 'f' || buffer[1] != 'L' || buffer[2] != 'a' || buffer[3] != 'C')
             {
-                return null;
+                return string.Empty;
             }
 
             // STREAMINFO block should be at offset 4
@@ -415,14 +415,14 @@ namespace slskd.Backfill
             var blockType = buffer[4] & 0x7F;
             if (blockType != 0)
             {
-                return null;
+                return string.Empty;
             }
 
             // Block length in next 3 bytes
             var blockLength = (buffer[5] << 16) | (buffer[6] << 8) | buffer[7];
             if (blockLength < 34 || 8 + blockLength > length)
             {
-                return null;
+                return string.Empty;
             }
 
             // STREAMINFO is 34 bytes, MD5 is last 16 bytes

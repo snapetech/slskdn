@@ -45,8 +45,8 @@ public class DownloadsCompatibilityController : ControllerBase
     [HttpPost("downloads")]
     [Authorize]
     public async Task<IActionResult> CreateDownloads(
-    [FromBody] DownloadRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] DownloadRequest request,
+        CancellationToken cancellationToken)
     {
         logger.LogInformation("Compatibility download: {ItemCount} items", request.Items?.Count ?? 0);
 
@@ -107,8 +107,8 @@ public class DownloadsCompatibilityController : ControllerBase
     [HttpGet("downloads")]
     [Authorize]
     public async Task<IActionResult> GetDownloads(
-    [FromQuery] string? status,
-            CancellationToken cancellationToken)
+        [FromQuery] string? status,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting downloads list with status filter: {Status}", status);
 

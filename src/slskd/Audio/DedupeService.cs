@@ -61,7 +61,7 @@ namespace slskd.Audio
                 {
                     group = new DedupeGroup
                     {
-                        AudioSketchHash = sketch == "none" ? null : sketch,
+                        AudioSketchHash = sketch == "none" ? string.Empty : sketch,
                         RepresentativeDurationMs = durationKey,
                         Variants = new List<DedupeVariant>(),
                     };

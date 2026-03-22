@@ -22,10 +22,10 @@ using Soulseek;
 
 public record TransferExceptionDetail
 {
-    public string Id { get; init; }
-    public string Username { get; init; }
+    public string Id { get; init; } = string.Empty;
+    public string Username { get; init; } = string.Empty;
     public TransferDirection Direction { get; init; }
-    public string Filename { get; init; }
+    public string Filename { get; init; } = string.Empty;
     public long Size { get; set; }
     public long StartOffset { get; init; }
     public TransferStates State { get; set; } = TransferStates.None;
@@ -35,5 +35,5 @@ public record TransferExceptionDetail
     public DateTime? EndedAt { get; set; }
     public long BytesTransferred { get; set; }
     public double AverageSpeed { get; set; }
-    public string Exception { get; set; }
+    public string? Exception { get; set; }
 }

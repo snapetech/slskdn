@@ -72,14 +72,14 @@ namespace slskd.Mesh.Messages
         ///     SECURITY: Used for message authentication.
         /// </summary>
         [JsonPropertyName("public_key")]
-        public string PublicKey { get; set; }
+        public string PublicKey { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the Ed25519 signature of the message (Base64-encoded).
         ///     SECURITY: Signature covers: type|timestamp|payload_json
         /// </summary>
         [JsonPropertyName("signature")]
-        public string Signature { get; set; }
+        public string Signature { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the message timestamp (Unix milliseconds).
@@ -101,13 +101,13 @@ namespace slskd.Mesh.Messages
         ///     Gets or sets the client's username.
         /// </summary>
         [JsonPropertyName("client_id")]
-        public string ClientId { get; set; }
+        public string ClientId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the client version string.
         /// </summary>
         [JsonPropertyName("client_version")]
-        public string ClientVersion { get; set; }
+        public string ClientVersion { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the highest local sequence ID.
@@ -182,7 +182,7 @@ namespace slskd.Mesh.Messages
         ///     Gets or sets the FLAC key to look up.
         /// </summary>
         [JsonPropertyName("flac_key")]
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -197,7 +197,7 @@ namespace slskd.Mesh.Messages
         ///     Gets or sets the FLAC key that was requested.
         /// </summary>
         [JsonPropertyName("flac_key")]
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets a value indicating whether the key was found.
@@ -209,7 +209,7 @@ namespace slskd.Mesh.Messages
         ///     Gets or sets the hash entry (if found).
         /// </summary>
         [JsonPropertyName("entry")]
-        public MeshHashEntry Entry { get; set; }
+        public MeshHashEntry? Entry { get; set; }
     }
 
     /// <summary>
@@ -222,7 +222,7 @@ namespace slskd.Mesh.Messages
 
         /// <summary>Gets or sets the FLAC key.</summary>
         [JsonPropertyName("flac_key")]
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the byte offset to read from.</summary>
         [JsonPropertyName("offset")]
@@ -243,7 +243,7 @@ namespace slskd.Mesh.Messages
 
         /// <summary>Gets or sets the FLAC key.</summary>
         [JsonPropertyName("flac_key")]
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the byte offset that was read.</summary>
         [JsonPropertyName("offset")]
@@ -251,7 +251,7 @@ namespace slskd.Mesh.Messages
 
         /// <summary>Gets or sets the chunk data Base64-encoded.</summary>
         [JsonPropertyName("data_base64")]
-        public string DataBase64 { get; set; }
+        public string DataBase64 { get; set; } = string.Empty;
 
         /// <summary>Gets or sets whether the chunk was successfully read.</summary>
         [JsonPropertyName("success")]
@@ -294,13 +294,13 @@ namespace slskd.Mesh.Messages
         ///     Gets or sets the FLAC key (64-bit truncated hash).
         /// </summary>
         [JsonPropertyName("flac_key")]
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the SHA256 hash of first 32KB bytes.
         /// </summary>
         [JsonPropertyName("byte_hash")]
-        public string ByteHash { get; set; }
+        public string ByteHash { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size in bytes.

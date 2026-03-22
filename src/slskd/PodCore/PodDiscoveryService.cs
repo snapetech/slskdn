@@ -133,9 +133,9 @@ public class PodDiscoveryService : IPodDiscoveryService
         {
             _logger.LogInformation("[PodDiscovery] Unregistering pod {PodId} from discovery", podId);
 
-            // Remove from DHT (publish null values to clear entries)
+            // Remove from DHT by publishing empty values to clear the entries.
             var removalTasks = registration.DiscoveryKeys.Select(key =>
-                _dhtClient.PutAsync(key, null, ttlSeconds: 300, cancellationToken));
+                _dhtClient.PutAsync(key, string.Empty, ttlSeconds: 300, cancellationToken));
 
             await Task.WhenAll(removalTasks);
 
@@ -377,7 +377,7 @@ public class PodDiscoveryService : IPodDiscoveryService
     }
 
     /// <inheritdoc/>
-    public async Task<PodDiscoveryStats> GetStatsAsync(CancellationToken cancellationToken = default)
+    public Task<PodDiscoveryStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         // Clean up expired entries
         var expired = _registeredPods.Where(kvp => kvp.Value.ExpiresAt < DateTimeOffset.UtcNow)
@@ -397,14 +397,14 @@ public class PodDiscoveryService : IPodDiscoveryService
             ? TimeSpan.FromMilliseconds(_totalSearchTimeMs / _searchesByType.Values.Sum())
             : TimeSpan.Zero;
 
-        return new PodDiscoveryStats(
+        return Task.FromResult(new PodDiscoveryStats(
             TotalRegisteredPods: _registeredPods.Count,
             ActiveDiscoveryEntries: _activeEntries,
             ExpiredEntries: _expiredEntries,
             RegistrationsByTag: _registrationsByTag.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             SearchesByType: _searchesByType.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             LastDiscoveryOperation: _lastOperation,
-            AverageDiscoveryTime: averageSearchTime);
+            AverageDiscoveryTime: averageSearchTime));
     }
 
     /// <inheritdoc/>
@@ -419,7 +419,7 @@ public class PodDiscoveryService : IPodDiscoveryService
             try
             {
                 var now = DateTimeOffset.UtcNow;
-                if (registration.ExpiresAt < now.AddHours(6)) // Refresh if < 6 hours left
+                if (registration.ExpiresAt < now.AddHours(6))
                 {
                     // Get current pod info and refresh registration
                     var pod = await GetPodFromPublisherAsync(podId, cancellationToken);
@@ -533,12 +533,12 @@ public class PodDiscoveryService : IPodDiscoveryService
         return pods;
     }
 
-    private async Task<Pod?> GetPodFromPublisherAsync(string podId, CancellationToken cancellationToken)
+    private Task<Pod?> GetPodFromPublisherAsync(string podId, CancellationToken cancellationToken)
     {
         // This would need to be implemented - perhaps through a pod storage service
         // For now, return null as placeholder
         _logger.LogWarning("[PodDiscovery] GetPodFromPublisherAsync not implemented - using placeholder");
-        return null;
+        return Task.FromResult<Pod?>(null);
     }
 
     private void TrackSearch(string searchType, DateTimeOffset startTime)

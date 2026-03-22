@@ -51,8 +51,8 @@ public class PodContentController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> ValidateContentId(
-    [FromBody] string contentId,
-            CancellationToken cancellationToken = default)
+        [FromBody] string contentId,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
         {
@@ -85,8 +85,8 @@ public class PodContentController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> GetContentMetadata(
-    [FromQuery] string contentId,
-            CancellationToken cancellationToken = default)
+        [FromQuery] string contentId,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
         {
@@ -126,10 +126,10 @@ public class PodContentController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> SearchContent(
-    [FromQuery] string query,
-    [FromQuery] string? domain = null,
-    [FromQuery] int limit = 20,
-            CancellationToken cancellationToken = default)
+        [FromQuery] string query,
+        [FromQuery] string? domain = null,
+        [FromQuery] int limit = 20,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -165,8 +165,8 @@ public class PodContentController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> CreateContentLinkedPod(
-    [FromBody] ContentLinkedPodRequest request,
-            CancellationToken cancellationToken = default)
+        [FromBody] ContentLinkedPodRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request == null)
         {

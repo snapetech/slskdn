@@ -32,7 +32,7 @@ namespace slskd.Users.Notes
         /// <param name="username">The username.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>The user note, or null if none exists.</returns>
-        Task<UserNote> GetNoteAsync(string username, CancellationToken cancellationToken = default);
+        Task<UserNote?> GetNoteAsync(string username, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Gets all user notes.

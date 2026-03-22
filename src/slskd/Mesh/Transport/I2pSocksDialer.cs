@@ -165,9 +165,13 @@ public class I2pSocksDialer : ITransportDialer
 
     private async Task<Stream> ConnectViaSocks5Async(string destination, int port, string? isolationKey, CancellationToken cancellationToken)
     {
-        var tcpClient = new TcpClient();
+        TcpClient? tcpClient = null;
         try
         {
+#pragma warning disable CA2000 // Ownership is transferred to the returned stream on success and disposed on failure.
+            tcpClient = new TcpClient();
+#pragma warning restore CA2000
+
             // Connect to SOCKS proxy
             await tcpClient.ConnectAsync(_options.SocksHost, _options.SocksPort, cancellationToken);
 

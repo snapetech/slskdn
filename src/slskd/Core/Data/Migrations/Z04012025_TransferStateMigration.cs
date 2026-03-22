@@ -184,7 +184,7 @@ public class Z04012025_TransferStateMigration : IMigration
             /*
                 copy the existing (string) State value from State to StateDescription
             */
-            var copyColumnCommand = new SqliteCommand("UPDATE Transfers SET StateDescription = State", connection, transaction);
+            using var copyColumnCommand = new SqliteCommand("UPDATE Transfers SET StateDescription = State", connection, transaction);
             copyColumnCommand.ExecuteNonQuery();
 
             /*
@@ -205,7 +205,7 @@ public class Z04012025_TransferStateMigration : IMigration
 
                 Log.Debug("Setting {String} to {Int}", state.Key, state.Value);
 
-                var mapCommand = new SqliteCommand($"UPDATE Transfers SET State = {state.Value} WHERE State = '{state.Key}';", connection, transaction);
+                using var mapCommand = new SqliteCommand($"UPDATE Transfers SET State = {state.Value} WHERE State = '{state.Key}';", connection, transaction);
                 mapCommand.ExecuteNonQuery();
 
                 Log.Debug("{String} to {Int} in {Duration}", state.Key, state.Value, sw.ElapsedMilliseconds);

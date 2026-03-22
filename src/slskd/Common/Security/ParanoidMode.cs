@@ -304,8 +304,9 @@ public sealed class ParanoidMode
     {
         var bytes = ip.GetAddressBytes();
 
-        if (bytes.Length == 4) // IPv4
+        if (bytes.Length == 4)
         {
+            // IPv4.
             // 10.0.0.0/8
             if (bytes[0] == 10)
             {

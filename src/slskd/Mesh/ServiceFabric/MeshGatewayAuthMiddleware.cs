@@ -27,11 +27,11 @@ public class MeshGatewayAuthMiddleware
 
     public MeshGatewayAuthMiddleware(
         RequestDelegate next,
-        ILogger<MeshGatewayAuthMiddleware> _logger,
+        ILogger<MeshGatewayAuthMiddleware> logger,
         IOptions<MeshGatewayOptions> options)
     {
         _next = next;
-        this._logger = _logger;
+        _logger = logger;
         _options = options.Value;
     }
 

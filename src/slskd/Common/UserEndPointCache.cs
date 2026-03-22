@@ -57,8 +57,6 @@ namespace slskd
         /// <param name="endPoint">The cached endpoint, if it exists.</param>
         /// <returns>A value indicating whether the endpoint was found in the cache.</returns>
         public bool TryGet(string username, out IPEndPoint endPoint)
-        {
-            return Cache.TryGetValue(username, out endPoint);
-        }
+            => Cache.TryGetValue(username, out endPoint!);
     }
 }

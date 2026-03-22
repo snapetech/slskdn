@@ -369,7 +369,7 @@ namespace slskd.Transfers.MultiSource.Scheduling
         /// <summary>
         ///     Gets or sets the expected hash (for verification).
         /// </summary>
-        public string ExpectedHash { get; set; }
+        public string ExpectedHash { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -385,7 +385,7 @@ namespace slskd.Transfers.MultiSource.Scheduling
         /// <summary>
         ///     Gets or sets the assigned peer ID (null if assignment failed).
         /// </summary>
-        public string AssignedPeer { get; set; }
+        public string? AssignedPeer { get; set; }
 
         /// <summary>
         ///     Gets or sets a value indicating whether assignment was successful.
@@ -395,7 +395,7 @@ namespace slskd.Transfers.MultiSource.Scheduling
         /// <summary>
         ///     Gets or sets the reason for assignment result.
         /// </summary>
-        public string Reason { get; set; }
+        public string Reason { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the computed cost of the assigned peer.

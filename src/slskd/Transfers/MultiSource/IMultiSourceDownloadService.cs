@@ -71,7 +71,7 @@ namespace slskd.Transfers.MultiSource
         /// </summary>
         /// <param name="downloadId">The download ID.</param>
         /// <returns>The download status, or null if not found.</returns>
-        MultiSourceDownloadStatus GetStatus(Guid downloadId);
+        MultiSourceDownloadStatus? GetStatus(Guid downloadId);
 
         /// <summary>
         ///     Gets all active downloads.
@@ -92,7 +92,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the filename to download.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size in bytes.
@@ -102,7 +102,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the expected content hash.
         /// </summary>
-        public string ExpectedHash { get; set; }
+        public string? ExpectedHash { get; set; }
 
         /// <summary>
         ///     Gets or sets the verified sources to download from.
@@ -112,7 +112,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the local output path.
         /// </summary>
-        public string OutputPath { get; set; }
+        public string OutputPath { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the chunk size in bytes. Default is 1MB.
@@ -122,17 +122,17 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the semantic group key derived from MusicBrainz recording and codec.
         /// </summary>
-        public string TargetSemanticKey { get; set; }
+        public string? TargetSemanticKey { get; set; }
 
         /// <summary>
         ///     Gets or sets the MusicBrainz recording ID targeted by this download.
         /// </summary>
-        public string TargetMusicBrainzRecordingId { get; set; }
+        public string? TargetMusicBrainzRecordingId { get; set; }
 
         /// <summary>
         ///     Gets or sets the fingerprint expected for the target.
         /// </summary>
-        public string TargetFingerprint { get; set; }
+        public string? TargetFingerprint { get; set; }
 
         /// <summary>
         ///     Gets or sets the expected duration in milliseconds for the recording.
@@ -158,12 +158,12 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the filename.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the final file path.
         /// </summary>
-        public string OutputPath { get; set; }
+        public string OutputPath { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the total bytes downloaded.
@@ -188,17 +188,17 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the error message if failed.
         /// </summary>
-        public string Error { get; set; }
+        public string Error { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the verified content hash of the downloaded file.
         /// </summary>
-        public string FinalHash { get; set; }
+        public string FinalHash { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the fingerprint extracted from the completed download.
         /// </summary>
-        public string Fingerprint { get; set; }
+        public string Fingerprint { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets whether the fingerprint matches the target semantic key/recording.
@@ -208,7 +208,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the resolved MusicBrainz recording ID from the fingerprint.
         /// </summary>
-        public string ResolvedRecordingId { get; set; }
+        public string? ResolvedRecordingId { get; set; }
 
     }
 
@@ -220,17 +220,17 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the source username.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the MusicBrainz recording ID used for this chunk.
         /// </summary>
-        public string MusicBrainzRecordingId { get; set; }
+        public string? MusicBrainzRecordingId { get; set; }
 
         /// <summary>
         ///     Gets or sets the fingerprint associated with this chunk.
         /// </summary>
-        public string Fingerprint { get; set; }
+        public string? Fingerprint { get; set; }
 
         /// <summary>
         ///     Gets or sets the start offset.
@@ -275,7 +275,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the error message if failed.
         /// </summary>
-        public string Error { get; set; }
+        public string Error { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets the average speed in bytes per second (total time).
@@ -307,7 +307,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the filename.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size.
@@ -363,7 +363,7 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Fingerprint extracted from the completed download.
         /// </summary>
-        public string Fingerprint { get; set; }
+        public string? Fingerprint { get; set; }
 
         /// <summary>
         ///     Whether the fingerprint matched the target (MBID/semantic key).
@@ -373,22 +373,22 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Resolved MusicBrainz recording ID for this download.
         /// </summary>
-        public string ResolvedRecordingId { get; set; }
+        public string? ResolvedRecordingId { get; set; }
 
         /// <summary>
         ///     Gets or sets the target MusicBrainz recording ID being satisfied.
         /// </summary>
-        public string TargetMusicBrainzRecordingId { get; set; }
+        public string? TargetMusicBrainzRecordingId { get; set; }
 
         /// <summary>
         ///     Gets or sets the fingerprint expected for the download.
         /// </summary>
-        public string TargetFingerprint { get; set; }
+        public string? TargetFingerprint { get; set; }
 
         /// <summary>
         ///     Gets or sets the semantic group key for this download.
         /// </summary>
-        public string TargetSemanticKey { get; set; }
+        public string? TargetSemanticKey { get; set; }
 
         /// <summary>
         ///     Gets the percent complete.

@@ -114,7 +114,7 @@ namespace slskd.Common.Moderation
         /// <remarks>
         ///     Examples: "user_flagged", "external_signal", "policy_violation"
         /// </remarks>
-        public string ReasonCode { get; init; }
+        public string ReasonCode { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes optional notes.
@@ -137,7 +137,7 @@ namespace slskd.Common.Moderation
         ///     - "served_bad_copy"
         ///     - "repeated_violations"
         /// </remarks>
-        public string ReasonCode { get; init; }
+        public string ReasonCode { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes optional notes.

@@ -49,8 +49,8 @@ public class JobsController : ControllerBase
     [HttpPost("mb-release")]
     [Authorize]
     public async Task<IActionResult> CreateMbReleaseJob(
-    [FromBody] MbReleaseJobRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] MbReleaseJobRequest request,
+        CancellationToken cancellationToken)
     {
         logger.LogInformation("Creating MB release job for {ReleaseId}", request.MbReleaseId);
 
@@ -84,8 +84,8 @@ public class JobsController : ControllerBase
     [HttpPost("discography")]
     [Authorize]
     public async Task<IActionResult> CreateDiscographyJob(
-    [FromBody] DiscographyJobRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] DiscographyJobRequest request,
+        CancellationToken cancellationToken)
     {
         logger.LogInformation("Creating discography job for {ArtistId}", request.ArtistId);
 
@@ -105,8 +105,8 @@ public class JobsController : ControllerBase
     [HttpPost("label-crate")]
     [Authorize]
     public async Task<IActionResult> CreateLabelCrateJob(
-    [FromBody] LabelCrateJobRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] LabelCrateJobRequest request,
+        CancellationToken cancellationToken)
     {
         logger.LogInformation("Creating label crate job for {Label}", request.LabelName);
 
@@ -125,14 +125,14 @@ public class JobsController : ControllerBase
     /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> GetJobs(
-    [FromQuery] string? type,
-    [FromQuery] string? status,
-    [FromQuery] int? limit,
-    [FromQuery] int? offset,
-    [FromQuery] string? sortBy,
-    [FromQuery] string? sortOrder,
-            CancellationToken cancellationToken)
+    public Task<IActionResult> GetJobs(
+        [FromQuery] string? type,
+        [FromQuery] string? status,
+        [FromQuery] int? limit,
+        [FromQuery] int? offset,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? sortOrder,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting jobs with filters: type={Type}, status={Status}, limit={Limit}, offset={Offset}, sortBy={SortBy}, sortOrder={SortOrder}",
             type, status, limit, offset, sortBy, sortOrder);
@@ -237,15 +237,14 @@ public class JobsController : ControllerBase
             .Take(effectiveLimit)
             .ToList();
 
-        await Task.CompletedTask;
-        return Ok(new
+        return Task.FromResult<IActionResult>(Ok(new
         {
             jobs = paginatedJobs,
             total = totalCount,
             limit = effectiveLimit,
             offset = effectiveOffset,
             has_more = (effectiveOffset + effectiveLimit) < totalCount,
-        });
+        }));
     }
 
     /// <summary>
@@ -255,8 +254,8 @@ public class JobsController : ControllerBase
     [HttpGet("{id}")]
     [Authorize]
     public async Task<IActionResult> GetJob(
-            string id,
-            CancellationToken cancellationToken)
+        string id,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting job: {JobId}", id);
 

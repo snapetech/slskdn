@@ -40,10 +40,6 @@ public class PodMessageRouter : IPodMessageRouter
     private readonly ConcurrentDictionary<string, long> _routingStatsByPod = new();
     private DateTimeOffset _lastRoutingOperation = DateTimeOffset.MinValue;
 
-    // Cleanup configuration
-    private static readonly TimeSpan SeenMessageExpiration = TimeSpan.FromHours(24);
-    private static readonly int MaxSeenMessagesPerPod = 10000;
-
     public PodMessageRouter(
         ILogger<PodMessageRouter> logger,
         IPodService podService,
@@ -289,8 +285,10 @@ public class PodMessageRouter : IPodMessageRouter
     }
 
     /// <inheritdoc/>
-    public async Task<PodMessageCleanupResult> CleanupSeenMessagesAsync(CancellationToken cancellationToken = default)
+    public Task<PodMessageCleanupResult> CleanupSeenMessagesAsync(CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
+
         var startTime = DateTimeOffset.UtcNow;
 
         // Force cleanup of the time-windowed Bloom filter
@@ -305,11 +303,11 @@ public class PodMessageRouter : IPodMessageRouter
             "[PodMessageRouter] Bloom filter cleanup completed in {Duration}ms. Stats: {Items} items, {FillRatio:P2} fill ratio, {FPRate:P4} estimated false positive rate",
             duration.TotalMilliseconds, itemCount, fillRatio, estimatedFalsePositiveRate);
 
-        return new PodMessageCleanupResult(
+        return Task.FromResult(new PodMessageCleanupResult(
             MessagesCleaned: 0, // Time-windowed filter handles cleanup automatically
             MessagesRetained: (int)itemCount,
             CleanupDuration: duration,
-            CompletedAt: DateTimeOffset.UtcNow);
+            CompletedAt: DateTimeOffset.UtcNow));
     }
 
     // Helper method to route a message to a single peer via overlay

@@ -360,8 +360,8 @@ namespace slskd.Relay
 
         private FileService Files { get; }
         private IHttpClientFactory HttpClientFactory { get; }
-        private string LastControllerOptionsHash { get; set; }
-        private string LastOptionsHash { get; set; }
+        private string LastControllerOptionsHash { get; set; } = string.Empty;
+        private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayService>();
         private MemoryCache MemoryCache { get; } = new MemoryCache(new MemoryCacheOptions());
         private IOptionsMonitor<Options> OptionsMonitor { get; }
@@ -584,7 +584,7 @@ namespace slskd.Relay
         ///     upload is complete.
         /// </summary>
         /// <remarks>
-        ///     Assumes <see cref="TryValidateFileStreamResponseCredential"/> has previously been used to ensure the Id and agent match.
+        ///     Assumes <see cref="TryValidateFileStreamResponseCredential(Guid, string, string, string)"/> has previously been used to ensure the Id and agent match.
         /// </remarks>
         /// <param name="agentName">The name of the agent.</param>
         /// <param name="id">The ID of the request.</param>
@@ -798,7 +798,7 @@ namespace slskd.Relay
             }
 
             var key = Pbkdf2.GetKey(password: agentOptions.Secret, salt: agentName, length: 48);
-            var tokenBytes = System.Text.Encoding.UTF8.GetBytes((string)challengeToken);
+            var tokenBytes = System.Text.Encoding.UTF8.GetBytes(challengeToken as string ?? string.Empty);
             var expectedCredential = Convert.ToBase64String(System.Security.Cryptography.HMACSHA256.HashData(key, tokenBytes));
 
             if (expectedCredential != credential)
@@ -932,7 +932,7 @@ namespace slskd.Relay
 
         private bool TryValidateCredential(string token, string agentName, string credential, string cacheKey, out string validatedAgentName, bool suppressRemoval = false)
         {
-            validatedAgentName = null;
+            validatedAgentName = string.Empty;
 
             try
             {
@@ -993,7 +993,7 @@ namespace slskd.Relay
 
         private bool TryValidateCredential(string token, string credential, string cacheKey, out string validatedAgentName, bool suppressRemoval = false)
         {
-            validatedAgentName = null;
+            validatedAgentName = string.Empty;
 
             if (!MemoryCache.TryGetValue(cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
             {

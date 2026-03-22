@@ -52,7 +52,7 @@ namespace slskd.Common.Moderation
         /// <inheritdoc/>
         public async Task<ModerationDecision> AnalyzeFileAsync(
             LocalFileMetadata file,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             if (file == null)
             {
@@ -78,14 +78,14 @@ namespace slskd.Common.Moderation
             try
             {
                 // Rate limiting
-                await _rateLimiter.WaitAsync(cancellationToken);
+                await _rateLimiter.WaitAsync(ct);
                 try
                 {
                     // Create sanitized moderation request
                     var request = CreateModerationRequest(file);
 
                     // Make HTTP call to LLM service
-                    var response = await CallLlmApiAsync(request, opts, cancellationToken);
+                    var response = await CallLlmApiAsync(request, opts, ct);
 
                     // Parse response and create decision
                     var decision = ParseLlmResponse(response, file.Id);

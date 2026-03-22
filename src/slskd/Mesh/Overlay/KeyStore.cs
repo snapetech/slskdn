@@ -41,7 +41,7 @@ public class FileKeyStore : IKeyStore
     public Ed25519KeyPair Current => current;
     public IEnumerable<byte[]> VerificationPublicKeys => verifyKeys;
 
-    private (Ed25519KeyPair current, Ed25519KeyPair? previous) LoadOrCreate()
+    private (Ed25519KeyPair Current, Ed25519KeyPair? Previous) LoadOrCreate()
     {
         var path = options.KeyPath;
         var prevPath = $"{path}.prev";

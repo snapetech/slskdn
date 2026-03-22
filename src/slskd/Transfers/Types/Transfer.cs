@@ -30,13 +30,13 @@ namespace slskd.Transfers
     {
         [Key]
         public Guid Id { get; init; }
-        public string Username { get; init; }
+        public string Username { get; init; } = string.Empty;
         public TransferDirection Direction { get; init; }
 
         /// <summary>
         ///     Gets the remote filename.
         /// </summary>
-        public string Filename { get; init; }
+        public string Filename { get; init; } = string.Empty;
         public long Size { get; set; }
         public long StartOffset { get; init; }
 

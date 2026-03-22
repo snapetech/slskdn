@@ -79,7 +79,7 @@ namespace slskd
             }
         }
 
-        private void Elapsed(object sender, ElapsedEventArgs args)
+        private void Elapsed(object? sender, ElapsedEventArgs args)
         {
             var count = Count;
             Count = 0;

@@ -74,9 +74,9 @@ public class SearchActionsController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> DownloadItem(
-    [FromRoute] Guid searchId,
-    [FromRoute] string itemId,
-            CancellationToken cancellationToken)
+        [FromRoute] Guid searchId,
+        [FromRoute] string itemId,
+        CancellationToken cancellationToken)
     {
         _logger.LogDebug("[SearchActions] Download request: searchId={SearchId}, itemId={ItemId}", searchId, itemId);
 
@@ -166,9 +166,9 @@ public class SearchActionsController : ControllerBase
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> StreamItem(
-    [FromRoute] Guid searchId,
-    [FromRoute] string itemId,
-            CancellationToken cancellationToken)
+        [FromRoute] Guid searchId,
+        [FromRoute] string itemId,
+        CancellationToken cancellationToken)
     {
         _logger.LogDebug("[SearchActions] Stream request: searchId={SearchId}, itemId={ItemId}", searchId, itemId);
 

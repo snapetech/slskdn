@@ -82,7 +82,7 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            var message = Messages.Conversations.FindMessageAsync(username, id);
+            var message = await Messages.Conversations.FindMessageAsync(username, id);
 
             if (message == default)
             {
@@ -112,7 +112,7 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            var conversation = Messages.Conversations.FindAsync(username);
+            var conversation = await Messages.Conversations.FindAsync(username);
 
             if (conversation == default)
             {
@@ -141,7 +141,7 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            var conversation = Messages.Conversations.FindAsync(username, includeInactive: false);
+            var conversation = await Messages.Conversations.FindAsync(username, includeInactive: false);
 
             if (conversation == default)
             {

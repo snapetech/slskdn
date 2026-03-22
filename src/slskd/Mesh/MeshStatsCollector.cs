@@ -7,6 +7,7 @@ namespace slskd.Mesh;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,10 +17,10 @@ using System.Threading.Tasks;
 public class MeshStatsCollector : IMeshStatsCollector
 {
     private readonly ILogger<MeshStatsCollector> logger;
-    private readonly Lazy<INatDetector> natDetector;
-    private readonly Lazy<Dht.InMemoryDhtClient> dhtClient;
-    private readonly Lazy<Overlay.QuicOverlayServer> overlayServer;
-    private readonly Lazy<Overlay.QuicOverlayClient> overlayClient;
+    private readonly Lazy<INatDetector?> natDetector;
+    private readonly Lazy<Dht.InMemoryDhtClient?> dhtClient;
+    private readonly Lazy<Overlay.QuicOverlayServer?> overlayServer;
+    private readonly Lazy<Overlay.QuicOverlayClient?> overlayClient;
 
     // Statistics tracking
     private long messagesSent;
@@ -42,20 +43,24 @@ public class MeshStatsCollector : IMeshStatsCollector
         ILogger<MeshStatsCollector> logger,
         IServiceProvider serviceProvider)
     {
-        logger.LogInformation("[MeshStatsCollector] Constructor called");
         this.logger = logger;
+        this.logger.LogInformation("[MeshStatsCollector] Constructor called");
 
         // Use Lazy to avoid circular dependencies and handle optional services
-        logger.LogInformation("[MeshStatsCollector] Creating lazy service resolvers...");
-        this.natDetector = new Lazy<INatDetector>(() =>
+        this.logger.LogInformation("[MeshStatsCollector] Creating lazy service resolvers...");
+        this.natDetector = new Lazy<INatDetector?>(() =>
             serviceProvider.GetService(typeof(INatDetector)) as INatDetector);
-        this.dhtClient = new Lazy<Dht.InMemoryDhtClient>(() =>
+        this.dhtClient = new Lazy<Dht.InMemoryDhtClient?>(() =>
             serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as Dht.InMemoryDhtClient);
-        this.overlayServer = new Lazy<Overlay.QuicOverlayServer>(() =>
-            serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.QuicOverlayServer);
-        this.overlayClient = new Lazy<Overlay.QuicOverlayClient>(() =>
+#pragma warning disable CA1416 // Runtime OS guards already gate QUIC-only service resolution.
+        this.overlayServer = new Lazy<Overlay.QuicOverlayServer?>(() =>
+            IsQuicSupportedPlatform()
+                ? GetOverlayServer(serviceProvider)
+                : null);
+#pragma warning restore CA1416 // Runtime OS guards already gate QUIC-only service resolution.
+        this.overlayClient = new Lazy<Overlay.QuicOverlayClient?>(() =>
             serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.QuicOverlayClient);
-        logger.LogInformation("[MeshStatsCollector] Constructor completed");
+        this.logger.LogInformation("[MeshStatsCollector] Constructor completed");
     }
 
     /// <summary>
@@ -93,7 +98,7 @@ public class MeshStatsCollector : IMeshStatsCollector
             }
 
             // Overlay connection counts
-            if (overlayServer.Value != null)
+            if (IsQuicSupportedPlatform() && overlayServer.Value != null)
             {
                 try
                 {
@@ -167,5 +172,26 @@ public class MeshStatsCollector : IMeshStatsCollector
             logger.LogWarning(ex, "Failed to collect mesh transport stats");
             return new MeshTransportStats(0, 0, 0, NatType.Unknown);
         }
+    }
+
+    [SupportedOSPlatformGuard("linux")]
+    [SupportedOSPlatformGuard("macos")]
+    [SupportedOSPlatformGuard("windows")]
+    private static bool IsQuicSupportedPlatform()
+    {
+        return OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static Overlay.QuicOverlayServer? GetOverlayServer(IServiceProvider serviceProvider)
+    {
+        if (!IsQuicSupportedPlatform())
+        {
+            return null;
+        }
+
+        return serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.QuicOverlayServer;
     }
 }

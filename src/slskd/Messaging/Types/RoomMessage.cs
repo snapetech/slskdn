@@ -36,17 +36,17 @@ namespace slskd.Messaging
         /// <summary>
         ///     The username of the user who sent the message.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     The message.
         /// </summary>
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
 
         /// <summary>
         ///     The room to which the message pertains.
         /// </summary>
-        public string RoomName { get; set; }
+        public string RoomName { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the message direction.

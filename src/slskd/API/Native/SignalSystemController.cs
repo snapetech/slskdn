@@ -83,7 +83,8 @@ public class SignalSystemController : ControllerBase
                 signals_received = statistics.SignalsReceived,
                 duplicate_signals_dropped = statistics.DuplicateSignalsDropped,
                 expired_signals_dropped = statistics.ExpiredSignalsDropped
-            } : new
+            }
+            : new
             {
                 signals_sent = 0L,
                 signals_received = 0L,

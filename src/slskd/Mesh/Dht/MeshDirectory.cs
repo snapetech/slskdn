@@ -47,6 +47,10 @@ public class MeshDirectory : IMeshDirectory
         {
             // Deserialize DHT descriptor (safe parse: size limit)
             var dhtDesc = SecurityUtils.ParseMessagePackSafely<MeshPeerDescriptor>(raw, _maxPayload);
+            if (dhtDesc == null)
+            {
+                return null;
+            }
 
             // Convert to interface descriptor
             var endpoint = dhtDesc.Endpoints?.FirstOrDefault();
@@ -110,7 +114,7 @@ public class MeshDirectory : IMeshDirectory
     /// <summary>
     /// Parse an endpoint string (e.g., "host:port") into address and port.
     /// </summary>
-    private (string? address, int? port) ParseEndpoint(string? endpoint)
+    private (string? Address, int? Port) ParseEndpoint(string? endpoint)
     {
         if (string.IsNullOrEmpty(endpoint)) return (null, null);
 

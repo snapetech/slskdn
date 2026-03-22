@@ -35,7 +35,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the internal release ID.
         /// </summary>
-        public string ReleaseId { get; init; }
+        public string ReleaseId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the MusicBrainz release ID (if available).
@@ -45,7 +45,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the release group ID.
         /// </summary>
-        public string ReleaseGroupId { get; init; }
+        public string ReleaseGroupId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the release title.
@@ -53,7 +53,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <remarks>
         ///     Usually same as release group title, but may differ for special editions.
         /// </remarks>
-        public string Title { get; init; }
+        public string Title { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the release year.

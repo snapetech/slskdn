@@ -47,7 +47,7 @@ namespace slskd.Search.API
         /// <returns>The operation context.</returns>
         public static Task BroadcastUpdateAsync(this IHubContext<SearchHub> hub, Search search)
         {
-            return hub.Clients.All.SendAsync(SearchHubMethods.Update, search with { Responses = null });
+            return hub.Clients.All.SendAsync(SearchHubMethods.Update, search with { Responses = Array.Empty<Response>() });
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace slskd.Search.API
         /// <returns>The operation context.</returns>
         public static Task BroadcastCreateAsync(this IHubContext<SearchHub> hub, Search search)
         {
-            return hub.Clients.All.SendAsync(SearchHubMethods.Create, search with { Responses = null });
+            return hub.Clients.All.SendAsync(SearchHubMethods.Create, search with { Responses = Array.Empty<Response>() });
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace slskd.Search.API
         /// <returns>The operation context.</returns>
         public static Task BroadcastDeleteAsync(this IHubContext<SearchHub> hub, Search search)
         {
-            return hub.Clients.All.SendAsync(SearchHubMethods.Delete, search with { Responses = null });
+            return hub.Clients.All.SendAsync(SearchHubMethods.Delete, search with { Responses = Array.Empty<Response>() });
         }
     }
 

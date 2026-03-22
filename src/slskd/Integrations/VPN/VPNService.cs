@@ -87,8 +87,8 @@ public class VPNService : IDisposable
     public VPNStatus Status { get; private set; } = new VPNStatus();
 
     private ISoulseekClient SoulseekClient { get; }
-    private IVPNClient Client { get; set; }
-    private System.Timers.Timer Timer { get; }
+    private IVPNClient? Client { get; set; }
+    private System.Timers.Timer? Timer { get; }
     private IStateMutator<State> StateMutator { get; }
     private ILogger Log { get; } = Serilog.Log.ForContext<VPNService>();
     private IHttpClientFactory HttpClientFactory { get; }
@@ -240,8 +240,8 @@ public class VPNService : IDisposable
                 else
                 {
                     // port could possibly come first, if the client allows the user to specify it
-                    string port = status.ForwardedPort.HasValue ? status.ForwardedPort.ToString() : "?";
-                    string ip = status.PublicIPAddress == default ? "?" : status.PublicIPAddress.ToString();
+                    string port = status.ForwardedPort.HasValue ? status.ForwardedPort.Value.ToString() : "?";
+                    string ip = status.PublicIPAddress == default ? "?" : status.PublicIPAddress?.ToString() ?? "?";
                     Log.Information("Waiting for VPN client; IP: {PublicIP}, Forwarded port: {Port}", ip, port);
                 }
             }
@@ -259,10 +259,10 @@ public class VPNService : IDisposable
                 Vpn = new VpnState()
                 {
                     IsReady = IsReady,
-                    IsConnected = Status?.IsConnected ?? false,
-                    PublicIPAddress = Status?.PublicIPAddress,
-                    Location = Status?.Location,
-                    ForwardedPort = Status?.ForwardedPort,
+                    IsConnected = Status.IsConnected,
+                    PublicIPAddress = Status.PublicIPAddress,
+                    Location = Status.Location ?? string.Empty,
+                    ForwardedPort = Status.ForwardedPort,
                 },
             });
         }

@@ -189,19 +189,21 @@ public class PodMembershipVerifier : IPodMembershipVerifier
     }
 
     /// <inheritdoc/>
-    public async Task<VerificationStats> GetStatsAsync(CancellationToken cancellationToken = default)
+    public Task<VerificationStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
+
         var totalVerifications = _totalVerifications;
         var averageTime = totalVerifications > 0 ? _totalVerificationTimeMs / (double)totalVerifications : 0.0;
 
-        return new VerificationStats(
+        return Task.FromResult(new VerificationStats(
             TotalVerifications: totalVerifications,
             SuccessfulVerifications: _successfulVerifications,
             FailedMembershipChecks: _failedMembershipChecks,
             FailedSignatureChecks: _failedSignatureChecks,
             BannedMemberRejections: _bannedMemberRejections,
             AverageVerificationTimeMs: averageTime,
-            LastVerification: _lastVerification);
+            LastVerification: _lastVerification));
     }
 
     // Helper methods

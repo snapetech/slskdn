@@ -224,9 +224,9 @@ public class HoneypotPolicy : ISecurityPolicy
             if (!string.IsNullOrEmpty(context.Operation))
             {
                 tracker.RecentOperations.Add((context.Operation, now));
-                tracker.RecentOperations.RemoveAll(o => o.Item2 < now.AddMinutes(-10));
+                tracker.RecentOperations.RemoveAll(o => o.Timestamp < now.AddMinutes(-10));
 
-                var uniqueOperations = tracker.RecentOperations.Select(o => o.Item1).Distinct().Count();
+                var uniqueOperations = tracker.RecentOperations.Select(o => o.Operation).Distinct().Count();
                 if (uniqueOperations > 20)
                 {
                     logger.LogWarning("[Honeypot] Suspicious operation pattern from {PeerId}: {Count} unique operations in 10 minutes", context.PeerId, uniqueOperations);

@@ -28,7 +28,7 @@ namespace slskd.Mesh.Realm
         /// </remarks>
         [MinLength(1, ErrorMessage = "At least one realm configuration is required.")]
         public RealmConfig[] Realms { get; set; } = new[]
-                {
+        {
             new RealmConfig
             {
                 Id = "default-realm-v1",
@@ -114,7 +114,10 @@ namespace slskd.Mesh.Realm
         /// <summary>
         ///     Gets all realm IDs configured.
         /// </summary>
-        public IReadOnlySet<string> RealmIds => Realms?.Select(r => r?.Id).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>();
+        public IReadOnlySet<string> RealmIds => Realms?
+            .Select(r => r?.Id)
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         ///     Gets a realm configuration by ID.

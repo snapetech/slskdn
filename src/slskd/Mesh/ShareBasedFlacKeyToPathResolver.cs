@@ -29,7 +29,7 @@ namespace slskd.Mesh
     ///     Resolves FlacKey to local path using the share repository. Used to serve ReqChunk
     ///     for proof-of-possession (T-1434). Builds an in-memory FlacKey→path cache from
     ///     <see cref="IShareRepository.ListLocalPathsAndSizes"/> and refreshes it after
-    ///     <see cref="CacheTTL"/>.
+    ///     <see cref="DefaultCacheTTL"/>.
     /// </summary>
     public class ShareBasedFlacKeyToPathResolver : IFlacKeyToPathResolver
     {
@@ -44,7 +44,7 @@ namespace slskd.Mesh
         private DateTime _cacheBuilt = DateTime.MinValue;
 
         /// <summary>
-        ///     Creates a new resolver.
+        ///     Initializes a new instance of the <see cref="ShareBasedFlacKeyToPathResolver"/> class.
         /// </summary>
         /// <param name="repositoryFactory">Share repository factory.</param>
         /// <param name="localHostName">Local host name (e.g. <c>Program.LocalHostName</c>).</param>

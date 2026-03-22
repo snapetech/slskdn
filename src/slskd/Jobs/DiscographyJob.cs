@@ -18,15 +18,15 @@ namespace slskd.Jobs
 
     public class DiscographyJob
     {
-        public string JobId { get; set; }
+        public string JobId { get; set; } = string.Empty;
 
-        public string ArtistId { get; set; }
+        public string ArtistId { get; set; } = string.Empty;
 
-        public string ArtistName { get; set; }
+        public string ArtistName { get; set; } = string.Empty;
 
         public DiscographyProfile Profile { get; set; }
 
-        public string TargetDirectory { get; set; }
+        public string TargetDirectory { get; set; } = string.Empty;
 
         public List<string> ReleaseJobIds { get; set; } = new();
 
@@ -45,7 +45,7 @@ namespace slskd.Jobs
 
     public class DiscographyReleaseJobStatus
     {
-        public string ReleaseId { get; set; }
+        public string ReleaseId { get; set; } = string.Empty;
 
         public JobStatus Status { get; set; } = JobStatus.Pending;
     }

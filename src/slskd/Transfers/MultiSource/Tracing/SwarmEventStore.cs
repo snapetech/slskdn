@@ -82,7 +82,7 @@ namespace slskd.Transfers.MultiSource.Tracing
             await using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var reader = new StreamReader(stream, Encoding.UTF8);
             string? line;
-            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+            while ((line = await reader.ReadLineAsync(ct).ConfigureAwait(false)) != null)
             {
                 ct.ThrowIfCancellationRequested();
                 if (string.IsNullOrWhiteSpace(line))

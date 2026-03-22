@@ -97,7 +97,7 @@ namespace slskd.Transfers.Ranking
             var ranked = candidateList.Select(candidate =>
             {
                 histories.TryGetValue(candidate.Username, out var history);
-                return CalculateScore(candidate, history);
+                return CalculateScore(candidate, history ?? new UserDownloadHistory { Username = candidate.Username });
             });
 
             // Sort by smart score descending

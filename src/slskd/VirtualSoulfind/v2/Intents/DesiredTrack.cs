@@ -36,12 +36,12 @@ namespace slskd.VirtualSoulfind.v2.Intents
         /// <summary>
         ///     Gets or initializes the unique ID for this intent.
         /// </summary>
-        public string DesiredTrackId { get; init; }
+        public string DesiredTrackId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the track ID from the catalogue.
         /// </summary>
-        public string TrackId { get; init; }
+        public string TrackId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the parent DesiredRelease ID (if part of a release).

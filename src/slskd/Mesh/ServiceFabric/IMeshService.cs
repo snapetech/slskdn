@@ -3,6 +3,7 @@
 // </copyright>
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using slskd.Common.Security;
@@ -95,6 +96,7 @@ public class MeshServiceContext
 /// Represents a bidirectional stream for long-lived service interactions.
 /// NOTE: Streaming support is optional and may not be fully implemented in initial version.
 /// </summary>
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1302:Interface names should begin with I", Justification = "This is a protocol-facing stream shape used intentionally without the I prefix.")]
 public interface MeshServiceStream
 {
     /// <summary>

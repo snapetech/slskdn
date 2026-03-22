@@ -48,6 +48,15 @@ public static class Metrics
             /// </summary>
             public static Counter RequestsReceived { get; } = Prometheus.Metrics.CreateCounter("slskd_search_incoming_requests_received", "Total number of search requests received");
 
+            private static Gauge CurrentResponseLatencyGauge { get; } =
+                Prometheus.Metrics.CreateGauge("slskd_search_incoming_response_latency_current", "The average time taken to resolve and return a response to an incoming search request, in milliseconds");
+            private static Gauge CurrentRequestReceiveRateGauge { get; } =
+                Prometheus.Metrics.CreateGauge("slskd_search_incoming_request_receive_rate_current", "Number of search requests received in the last minute");
+            private static Gauge CurrentRequestDropRateGauge { get; } =
+                Prometheus.Metrics.CreateGauge("slskd_search_incoming_request_drop_rate_current", "Number of search requests dropped in the last minute");
+            private static Gauge CurrentResponseSendRateGauge { get; } =
+                Prometheus.Metrics.CreateGauge("slskd_search_incoming_response_send_rate_current", "Number of search responses sent in the last minute");
+
             /// <summary>
             ///     Gets an automatically resetting counter of the number of search requests received per minute.
             /// </summary>
@@ -94,20 +103,13 @@ public static class Metrics
             /// </summary>
             public static Gauge CurrentRequestQueueDepth { get; } = Prometheus.Metrics.CreateGauge("slskd_search_incoming_request_queue_depth_current", "The number of incoming search requests waiting to be processed");
 
-            private static Gauge CurrentResponseLatencyGauge { get; } =
-                Prometheus.Metrics.CreateGauge("slskd_search_incoming_response_latency_current", "The average time taken to resolve and return a response to an incoming search request, in milliseconds");
-            private static Gauge CurrentRequestReceiveRateGauge { get; } =
-                Prometheus.Metrics.CreateGauge("slskd_search_incoming_request_receive_rate_current", "Number of search requests received in the last minute");
-            private static Gauge CurrentRequestDropRateGauge { get; } =
-                Prometheus.Metrics.CreateGauge("slskd_search_incoming_request_drop_rate_current", "Number of search requests dropped in the last minute");
-            private static Gauge CurrentResponseSendRateGauge { get; } =
-                Prometheus.Metrics.CreateGauge("slskd_search_incoming_response_send_rate_current", "Number of search responses sent in the last minute");
-
             /// <summary>
             ///     Metrics related to the filtering of incoming search requests.
             /// </summary>
             public static class Filter
             {
+                private static Gauge CurrentLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_search_incoming_filter_latency_current", "The average time taken to apply filters to an incoming search request, in milliseconds");
+
                 /// <summary>
                 ///     Gets a histogram representing the time taken to apply filters to an incoming search request, in milliseconds.
                 /// </summary>
@@ -124,7 +126,6 @@ public static class Metrics
                 /// </summary>
                 public static ExponentialMovingAverage CurrentLatency { get; } = new ExponentialMovingAverage(smoothingFactor: 0.5, onUpdate: value => CurrentLatencyGauge.Set(value));
 
-                private static Gauge CurrentLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_search_incoming_filter_latency_current", "The average time taken to apply filters to an incoming search request, in milliseconds");
             }
 
             /// <summary>
@@ -132,6 +133,8 @@ public static class Metrics
             /// </summary>
             public static class Query
             {
+                private static Gauge CurrentLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_search_incoming_query_latency_current", "The average time taken to query share database(s) for results, in milliseconds");
+
                 /// <summary>
                 ///     Gets a histogram representing the time taken to query share database(s) for results, in milliseconds.
                 /// </summary>
@@ -147,7 +150,6 @@ public static class Metrics
                 ///     Gets an EMA representing the average time taken to query share database(s) for results, in milliseconds.
                 /// </summary>
                 public static ExponentialMovingAverage CurrentLatency { get; } = new ExponentialMovingAverage(smoothingFactor: 0.5, onUpdate: value => CurrentLatencyGauge.Set(value));
-                private static Gauge CurrentLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_search_incoming_query_latency_current", "The average time taken to query share database(s) for results, in milliseconds");
             }
         }
     }
@@ -157,6 +159,8 @@ public static class Metrics
     /// </summary>
     public static class Browse
     {
+        private static Gauge CurrentResponseLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_browse_response_latency_current", "The average time taken to resolve a response to an incoming browse request, in milliseconds");
+
         /// <summary>
         ///     Gets a histogram representing the time taken to resolve a response to an incoming browse request, in milliseconds.
         /// </summary>
@@ -183,7 +187,6 @@ public static class Metrics
         /// </summary>
         public static Counter ResponsesSent { get; } = Prometheus.Metrics.CreateCounter("slskd_browse_responses_sent", "Total number of browse responses sent");
 
-        private static Gauge CurrentResponseLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_browse_response_latency_current", "The average time taken to resolve a response to an incoming browse request, in milliseconds");
     }
 
     /// <summary>
@@ -191,6 +194,9 @@ public static class Metrics
     /// </summary>
     public static class Enqueue
     {
+        private static Gauge CurrentDecisionLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_enqueue_decision_latency_current", "The average time taken to evaluate an incoming request to enqueue a file against configured limits, in milliseconds");
+        private static Gauge CurrentLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_enqueue_latency_current", "The average total time taken to resolve a response to an incoming request to enqueue a file, in milliseconds");
+
         /// <summary>
         ///     Gets a histogram representing the time taken to evaluate an incoming request to enqueue a file against configured limits, in milliseconds.
         /// </summary>
@@ -248,8 +254,6 @@ public static class Metrics
         /// </summary>
         public static Gauge CurrentQueueDepth { get; } = Prometheus.Metrics.CreateGauge("slskd_enqueue_queue_depth_current", "The number of incoming enqueue requests waiting to be processed");
 
-        private static Gauge CurrentDecisionLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_enqueue_decision_latency_current", "The average time taken to evaluate an incoming request to enqueue a file against configured limits, in milliseconds");
-        private static Gauge CurrentLatencyGauge { get; } = Prometheus.Metrics.CreateGauge("slskd_enqueue_latency_current", "The average total time taken to resolve a response to an incoming request to enqueue a file, in milliseconds");
     }
 
     /// <summary>

@@ -238,13 +238,16 @@ public class PodMembershipService : IPodMembershipService
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<MembershipRetrievalResult>> ListPodMembershipsAsync(string podId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<MembershipRetrievalResult>> ListPodMembershipsAsync(string podId, CancellationToken cancellationToken = default)
     {
+        _ = podId;
+        _ = cancellationToken;
+
         // Note: DHT doesn't support efficient listing of all records for a pod
         // In a real implementation, this would require maintaining an index or
         // using a different approach. For now, return empty list.
         _logger.LogWarning("[PodMembership] ListPodMembershipsAsync not efficiently supported by DHT - requires index");
-        return Array.Empty<MembershipRetrievalResult>();
+        return Task.FromResult<IReadOnlyList<MembershipRetrievalResult>>(Array.Empty<MembershipRetrievalResult>());
     }
 
     /// <inheritdoc/>
@@ -369,7 +372,7 @@ public class PodMembershipService : IPodMembershipService
     }
 
     /// <inheritdoc/>
-    public async Task<MembershipStats> GetStatsAsync(CancellationToken cancellationToken = default)
+    public Task<MembershipStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         // Clean up expired memberships
         var expired = _activeMemberships.Where(kvp => kvp.Value.ExpiresAt < DateTimeOffset.UtcNow)
@@ -393,18 +396,18 @@ public class PodMembershipService : IPodMembershipService
             }
         }
 
-        return new MembershipStats(
+        return Task.FromResult(new MembershipStats(
             TotalMemberships: _totalMemberships,
             ActiveMemberships: _activeMembershipsCount,
             BannedMemberships: _bannedMemberships,
             ExpiredMemberships: _expiredMemberships,
             MembershipsByRole: _membershipsByRole.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             MembershipsByPod: _membershipsByPod.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            LastOperation: _lastOperation);
+            LastOperation: _lastOperation));
     }
 
     /// <inheritdoc/>
-    public async Task<MembershipCleanupResult> CleanupExpiredAsync(CancellationToken cancellationToken = default)
+    public Task<MembershipCleanupResult> CleanupExpiredAsync(CancellationToken cancellationToken = default)
     {
         var cleaned = 0;
         var errors = 0;
@@ -440,10 +443,10 @@ public class PodMembershipService : IPodMembershipService
 
         _logger.LogInformation("[PodMembership] Cleaned up {Cleaned} expired memberships, {Errors} errors", cleaned, errors);
 
-        return new MembershipCleanupResult(
+        return Task.FromResult(new MembershipCleanupResult(
             RecordsCleaned: cleaned,
             ErrorsEncountered: errors,
-            CompletedAt: DateTimeOffset.UtcNow);
+            CompletedAt: DateTimeOffset.UtcNow));
     }
 
     // Helper methods

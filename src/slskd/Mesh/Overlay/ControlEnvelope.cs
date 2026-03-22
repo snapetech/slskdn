@@ -14,19 +14,29 @@ namespace slskd.Mesh.Overlay;
 [MessagePackObject]
 public class ControlEnvelope
 {
-    [Key(0)] public string Type { get; set; } = string.Empty;
-    [Key(1)] public byte[] Payload { get; set; } = Array.Empty<byte>();
-    [Key(2)] public string PublicKey { get; set; } = string.Empty;
-    [Key(3)] public string Signature { get; set; } = string.Empty;
-    [Key(4)] public long TimestampUnixMs { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    [Key(0)]
+    public string Type { get; set; } = string.Empty;
+
+    [Key(1)]
+    public byte[] Payload { get; set; } = Array.Empty<byte>();
+
+    [Key(2)]
+    public string PublicKey { get; set; } = string.Empty;
+
+    [Key(3)]
+    public string Signature { get; set; } = string.Empty;
+
+    [Key(4)]
+    public long TimestampUnixMs { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
     /// <summary>
     /// Unique message identifier for replay protection.
     /// </summary>
-    [Key(5)] public string MessageId { get; set; } = Guid.NewGuid().ToString("N");
+    [Key(5)]
+    public string MessageId { get; set; } = Guid.NewGuid().ToString("N");
 
     /// <summary>
-    /// Initializes a new ControlEnvelope with a unique MessageId.
+    /// Initializes a new instance of the <see cref="ControlEnvelope"/> class with a unique message identifier.
     /// </summary>
     public ControlEnvelope()
     {

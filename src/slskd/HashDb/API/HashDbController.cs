@@ -40,7 +40,6 @@ namespace slskd.HashDb.API
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class HashDbController : ControllerBase
     {
-
         private IHashDbService HashDb { get; }
         private IDbContextFactory<SearchDbContext> SearchContextFactory { get; }
         private Optimization.IHashDbOptimizationService? OptimizationService { get; }
@@ -513,7 +512,7 @@ namespace slskd.HashDb.API
     public class MergeRequest
     {
         /// <summary>Gets or sets entries to merge.</summary>
-        public HashDbEntry[] Entries { get; set; }
+        public HashDbEntry[] Entries { get; set; } = Array.Empty<HashDbEntry>();
     }
 
     /// <summary>
@@ -522,13 +521,13 @@ namespace slskd.HashDb.API
     public class StoreHashRequest
     {
         /// <summary>Gets or sets the filename.</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long Size { get; set; }
 
         /// <summary>Gets or sets the SHA256 hash of first 32KB.</summary>
-        public string ByteHash { get; set; }
+        public string ByteHash { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the sample rate.</summary>
         public int? SampleRate { get; set; }

@@ -214,7 +214,7 @@ namespace slskd.Mesh.API
             }
 
             var messageType = (MeshMessageType)typeElement.GetInt32();
-            MeshMessage message = messageType switch
+            MeshMessage? message = messageType switch
             {
                 MeshMessageType.Hello => JsonSerializer.Deserialize<MeshHelloMessage>(messageJson.GetRawText()),
                 MeshMessageType.ReqDelta => JsonSerializer.Deserialize<MeshReqDeltaMessage>(messageJson.GetRawText()),
@@ -232,7 +232,7 @@ namespace slskd.Mesh.API
             var response = await MeshSync.HandleMessageAsync(fromUser, message);
             if (response == null)
             {
-                return Ok(new { handled = true, response = (object)null });
+                return Ok(new { handled = true, response = (object?)null });
             }
 
             return Ok(new { handled = true, response });
@@ -271,10 +271,10 @@ namespace slskd.Mesh.API
     public class PublishHashRequest
     {
         /// <summary>Gets or sets the FLAC key.</summary>
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the SHA256 hash of first 32KB.</summary>
-        public string ByteHash { get; set; }
+        public string ByteHash { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size.</summary>
         public long Size { get; set; }
@@ -289,6 +289,6 @@ namespace slskd.Mesh.API
     public class MergeEntriesRequest
     {
         /// <summary>Gets or sets the entries to merge.</summary>
-        public MeshHashEntry[] Entries { get; set; }
+        public MeshHashEntry[] Entries { get; set; } = Array.Empty<MeshHashEntry>();
     }
 }

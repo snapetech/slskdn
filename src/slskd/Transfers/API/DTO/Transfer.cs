@@ -62,7 +62,7 @@ namespace slskd.Transfers.API
         /// <summary>
         ///     Gets the filename of the file to be transferred.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets the transfer id.
@@ -72,7 +72,7 @@ namespace slskd.Transfers.API
         /// <summary>
         ///     Gets the ip endpoint of the remote transfer connection, if one has been established.
         /// </summary>
-        public IPEndPoint IPEndPoint { get; set; }
+        public IPEndPoint? IPEndPoint { get; set; }
 
         /// <summary>
         ///     Gets the current progress in percent.
@@ -122,12 +122,12 @@ namespace slskd.Transfers.API
         /// <summary>
         ///     Gets the username of the peer to or from which the file is to be transferred.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets the Exception that caused the failure of the transfer, if applicable.
         /// </summary>
-        public string Exception { get; set; }
+        public string? Exception { get; set; }
 
         public static Transfer FromSoulseekTransfer(Soulseek.Transfer transfer)
         {

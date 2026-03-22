@@ -103,7 +103,7 @@ namespace slskd.Common.CodeQuality
             {
                 // Some types may fail to load (e.g. MSBuild task types when MSBuild assemblies
                 // are not present in the probe path). Use the partial type list instead.
-                rawTypes = ex.Types.Where(t => t != null).ToArray();
+                rawTypes = ex.Types.Where(t => t != null).Cast<Type>().ToArray();
             }
 
             var types = rawTypes
@@ -142,9 +142,14 @@ namespace slskd.Common.CodeQuality
         {
             var hotspots = new List<Hotspot>();
 
-            foreach (var criterion in Criteria.Where(c => c.Condition is Func<Type, bool>))
+            foreach (var criterion in Criteria.OfType<HotspotCriteria>().Where(c => c.Condition is Func<Type, bool>))
             {
-                var typeCondition = (Func<Type, bool>)criterion.Condition;
+                var typeCondition = criterion.Condition as Func<Type, bool>;
+                if (typeCondition is null)
+                {
+                    continue;
+                }
+
                 if (typeCondition(type))
                 {
                     hotspots.Add(new Hotspot
@@ -153,8 +158,8 @@ namespace slskd.Common.CodeQuality
                         Location = type.FullName ?? "Unknown",
                         Type = HotspotType.Class,
                         Severity = criterion.Severity,
-                        Issues = new[] { criterion.Description },
-                        Recommendations = new[] { criterion.Recommendation },
+                        Issues = new[] { criterion.Description ?? "Unknown issue" },
+                        Recommendations = new[] { criterion.Recommendation ?? "No recommendation provided" },
                         Metrics = new Dictionary<string, object>
                         {
                             ["MethodCount"] = type.GetMethods(BindingFlags.Public | BindingFlags.Instance).Length,
@@ -172,9 +177,14 @@ namespace slskd.Common.CodeQuality
         {
             var hotspots = new List<Hotspot>();
 
-            foreach (var criterion in Criteria.Where(c => c.Condition is Func<string, bool>))
+            foreach (var criterion in Criteria.OfType<HotspotCriteria>().Where(c => c.Condition is Func<string, bool>))
             {
-                var fileCondition = (Func<string, bool>)criterion.Condition;
+                var fileCondition = criterion.Condition as Func<string, bool>;
+                if (fileCondition is null)
+                {
+                    continue;
+                }
+
                 if (fileCondition(filePath))
                 {
                     var typesInFile = types.Where(t => GetSourceFile(t) == filePath).ToList();
@@ -185,8 +195,8 @@ namespace slskd.Common.CodeQuality
                         Location = filePath,
                         Type = HotspotType.File,
                         Severity = criterion.Severity,
-                        Issues = new[] { criterion.Description },
-                        Recommendations = new[] { criterion.Recommendation },
+                        Issues = new[] { criterion.Description ?? "Unknown issue" },
+                        Recommendations = new[] { criterion.Recommendation ?? "No recommendation provided" },
                         Metrics = new Dictionary<string, object>
                         {
                             ["LineCount"] = GetLineCount(filePath),

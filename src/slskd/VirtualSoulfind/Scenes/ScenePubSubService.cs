@@ -51,12 +51,13 @@ public class SceneMessageReceivedEventArgs : EventArgs
 /// Overlay pubsub service for scene gossip.
 /// Phase 6C: T-816 - DHT-based pubsub implementation (can be enhanced with real overlay pubsub later).
 /// </summary>
-public class ScenePubSubService : IScenePubSubService
+public class ScenePubSubService : IScenePubSubService, IDisposable
 {
     private readonly ILogger<ScenePubSubService> logger;
     private readonly VirtualSoulfind.ShadowIndex.IDhtClient dht;
     private readonly ConcurrentDictionary<string, DateTimeOffset> subscriptions = new();
     private readonly System.Threading.Timer? pollTimer;
+    private bool disposed;
 
     public ScenePubSubService(
         ILogger<ScenePubSubService> logger,
@@ -108,6 +109,27 @@ public class ScenePubSubService : IScenePubSubService
         await dht.PutAsync(key, message, ttlSeconds: 300, ct);
 
         logger.LogInformation("[VSF-PUBSUB] Published message to scene {SceneId}", sceneId);
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            pollTimer?.Dispose();
+        }
+
+        disposed = true;
     }
 
     private async Task PollSubscribedScenesAsync()

@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -219,7 +220,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                     var verified = await verifier.VerifyChunkAsync(
                                         job.File.ContentId,
                                         chunk.Index,
-                                        chunkResult.Data,
+                                        chunkResult.Data ?? Array.Empty<byte>(),
                                         ct);
 
                                     if (verified)
@@ -309,7 +310,11 @@ public class SwarmDownloadOrchestrator : BackgroundService
 
             // Assemble final file
             var outputPath = IOPath.Combine(IOPath.GetTempPath(), "slskdn-swarm-output", $"{job.JobId}_{IOPath.GetFileName(job.File.ContentId)}");
-            IODirectory.CreateDirectory(IOPath.GetDirectoryName(outputPath));
+            var outputDirectory = IOPath.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDirectory))
+            {
+                IODirectory.CreateDirectory(outputDirectory);
+            }
 
             await AssembleFileAsync(chunks, completedChunks, tempDir, outputPath, ct);
 
@@ -387,7 +392,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 cts.CancelAfter(TimeSpan.FromSeconds(30)); // 30s timeout per chunk
 
                 using var fileStream = IOFile.Create(tempFile);
-                var limitedStream = new LimitedWriteStream(fileStream, chunkSize, cts);
+                using var limitedStream = new LimitedWriteStream(fileStream, chunkSize, cts);
 
                 try
                 {
@@ -517,12 +522,15 @@ public class SwarmDownloadOrchestrator : BackgroundService
 /// </summary>
 public class SwarmJobStatus
 {
-    public string JobId { get; set; }
+    public string JobId { get; set; } = string.Empty;
     public SwarmJobState State { get; set; }
     public int TotalChunks { get; set; }
+
+    [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1401:Fields should be private", Justification = "Interlocked requires a field reference.")]
     public int CompletedChunks; // Field, not property, for Interlocked operations
-    public string OutputPath { get; set; }
-    public string Error { get; set; }
+
+    public string? OutputPath { get; set; }
+    public string? Error { get; set; }
 }
 
 /// <summary>
@@ -553,6 +561,6 @@ public class ChunkResult
 {
     public int ChunkIndex { get; set; }
     public bool Success { get; set; }
-    public byte[] Data { get; set; }
-    public string Error { get; set; }
+    public byte[]? Data { get; set; }
+    public string? Error { get; set; }
 }

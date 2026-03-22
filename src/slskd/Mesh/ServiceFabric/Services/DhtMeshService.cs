@@ -382,7 +382,7 @@ public class DhtMeshService : IMeshService
         // Update routing table with the pinging peer
         _ = Task.Run(() => _routingTable.TouchAsync(
             pingReq?.RequesterId ?? Array.Empty<byte>(),
-            context.RemotePeerId));
+            context.RemotePeerId), cancellationToken);
 
         var response = new PingResponse
         {

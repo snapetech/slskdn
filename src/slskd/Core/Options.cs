@@ -749,7 +749,7 @@ namespace slskd
                 [Description("controller address url")]
                 [Url]
                 [NotNullOrWhiteSpace]
-                public string Address { get; init; }
+                public string Address { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets a value indicating whether controller certificate errors should be ignored.
@@ -768,7 +768,7 @@ namespace slskd
                 [StringLength(255, MinimumLength = 16)]
                 [NotNullOrWhiteSpace]
                 [Secret]
-                public string ApiKey { get; init; }
+                public string ApiKey { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the controller secret.
@@ -779,7 +779,7 @@ namespace slskd
                 [StringLength(255, MinimumLength = 16)]
                 [NotNullOrWhiteSpace]
                 [Secret]
-                public string Secret { get; init; }
+                public string Secret { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets a value indicating whether to receive completed downloads from the controller.
@@ -802,7 +802,7 @@ namespace slskd
                 [StringLength(255, MinimumLength = 1)]
                 [NotNullOrWhiteSpace]
                 [Secret]
-                public string InstanceName { get; init; }
+                public string InstanceName { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the agent secret.
@@ -811,7 +811,7 @@ namespace slskd
                 [StringLength(255, MinimumLength = 16)]
                 [NotNullOrWhiteSpace]
                 [Secret]
-                public string Secret { get; init; }
+                public string Secret { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the comma separated list of CIDRs that are authorized to connect as this agent.
@@ -875,7 +875,7 @@ namespace slskd
                 [Argument(default, "file-permission-mode")]
                 [EnvironmentVariable("FILE_PERMISSION_MODE")]
                 [Description("the permissions to apply to newly created files (chmod syntax, non-Windows only)")]
-                public string Mode { get; init; }
+                public string Mode { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Extended validation.
@@ -1002,7 +1002,7 @@ namespace slskd
 #pragma warning restore S3878 // Arrays should not be created for params parameters
                 }
 
-                var digestedShared = directories
+                var digestedShared = (directories ?? Enumerable.Empty<string>())
                     .Select(share => Digest(share.TrimEnd('/', '\\')))
                     .ToHashSet();
 
@@ -1603,7 +1603,7 @@ namespace slskd
             [EnvironmentVariable("BLACKLIST_FILE")]
             [Description("path to blacklist file")]
             [FileExists(FileAccess.Read)]
-            public string File { get; init; }
+            public string File { get; init; } = string.Empty;
 
             /// <summary>
             ///     Extended validation.
@@ -1775,12 +1775,12 @@ namespace slskd
             /// <summary>
             ///     Gets the display name for this destination.
             /// </summary>
-            public string Name { get; init; }
+            public string Name { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets the path to this destination.
             /// </summary>
-            public string Path { get; init; }
+            public string Path { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets a value indicating whether this is the default destination.
@@ -1800,7 +1800,7 @@ namespace slskd
             [EnvironmentVariable("LOKI")]
             [Description("optional; url to a Grafana Loki instance to which to log")]
             [RequiresRestart]
-            public string Loki { get; init; } = null;
+            public string Loki { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets a value indicating whether to write logs to disk.
@@ -2113,7 +2113,7 @@ namespace slskd
             [EnvironmentVariable("SLSK_USERNAME")]
             [Description("username for the Soulseek network")]
             [RequiresReconnect]
-            public string Username { get; init; } = null;
+            public string Username { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets the password for the Soulseek network.
@@ -2123,7 +2123,7 @@ namespace slskd
             [Description("password for the Soulseek network")]
             [Secret]
             [RequiresReconnect]
-            public string Password { get; init; } = null;
+            public string Password { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets the description of the Soulseek user.
@@ -2140,7 +2140,7 @@ namespace slskd
             [EnvironmentVariable("SLSK_PICTURE")]
             [Description("user picture for the Soulseek network")]
             [FileExists(FileAccess.Read)]
-            public string Picture { get; init; } = null;
+            public string Picture { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets the local IP address on which to listen for incoming connections.
@@ -2305,8 +2305,7 @@ namespace slskd
                     [Argument(default, "slsk-proxy-address")]
                     [EnvironmentVariable("SLSK_PROXY_ADDRESS")]
                     [Description("connection proxy address")]
-                    [StringLength(255, MinimumLength = 1)]
-                    public string Address { get; init; }
+                    public string Address { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the proxy port.
@@ -2323,8 +2322,7 @@ namespace slskd
                     [Argument(default, "slsk-proxy-username")]
                     [EnvironmentVariable("SLSK_PROXY_USERNAME")]
                     [Description("connection proxy username")]
-                    [StringLength(255, MinimumLength = 1)]
-                    public string Username { get; init; }
+                    public string Username { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the proxy password, if applicable.
@@ -2332,9 +2330,8 @@ namespace slskd
                     [Argument(default, "slsk-proxy-password")]
                     [EnvironmentVariable("SLSK_PROXY_PASSWORD")]
                     [Description("connection proxy password")]
-                    [StringLength(255, MinimumLength = 1)]
                     [Secret]
-                    public string Password { get; init; }
+                    public string Password { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Extended validation.
@@ -2349,10 +2346,24 @@ namespace slskd
                         {
                             results.Add(new ValidationResult($"The Enabled field is true, but no Address has been specified."));
                         }
+                        else if (!string.IsNullOrWhiteSpace(Address) && Address.Length > 255)
+                        {
+                            results.Add(new ValidationResult("The field Address must be a string with a maximum length of 255."));
+                        }
 
                         if (Enabled && !Port.HasValue)
                         {
                             results.Add(new ValidationResult($"The Enabled field is true, but no Port has been specified."));
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(Username) && Username.Length > 255)
+                        {
+                            results.Add(new ValidationResult("The field Username must be a string with a maximum length of 255."));
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(Password) && Password.Length > 255)
+                        {
+                            results.Add(new ValidationResult("The field Password must be a string with a maximum length of 255."));
                         }
 
                         return results;
@@ -2484,7 +2495,7 @@ namespace slskd
             [Description("HTTP listen unix domain socket (UDS) path for web UI")]
             [AbsoluteFilePath]
             [RequiresRestart]
-            public string Socket { get; init; }
+            public string Socket { get; init; } = string.Empty;
 
             /// <summary>
             ///     Gets HTTPS options.
@@ -2725,7 +2736,7 @@ namespace slskd
                     [Description("API key value")]
                     [StringLength(255, MinimumLength = 16)]
                     [Secret]
-                    public string Key { get; init; }
+                    public string Key { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the role for the key.
@@ -2835,7 +2846,7 @@ namespace slskd
                     [Description("path to X509 certificate .pfx")]
                     [FileExists(FileAccess.Read)]
                     [RequiresRestart]
-                    public string Pfx { get; init; }
+                    public string Pfx { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the password for the X509 certificate.
@@ -2845,7 +2856,7 @@ namespace slskd
                     [Description("X509 certificate password")]
                     [RequiresRestart]
                     [Secret]
-                    public string Password { get; init; }
+                    public string Password { get; init; } = string.Empty;
                 }
             }
         }
@@ -2988,7 +2999,7 @@ namespace slskd
                     [Argument(default, "vpn-gluetun-url")]
                     [EnvironmentVariable("VPN_GLUETUN_URL")]
                     [Description("URL for gluetun control server")]
-                    public string Url { get; init; }
+                    public string Url { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the timeout for HTTP requests to the Gluetun control server, in milliseconds.
@@ -3005,7 +3016,7 @@ namespace slskd
                     [Argument(default, "vpn-gluetun-username")]
                     [EnvironmentVariable("VPN_GLUETUN_USERNAME")]
                     [Description("username for gluetun control server")]
-                    public string Username { get; init; }
+                    public string Username { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the password used for basic auth.
@@ -3014,7 +3025,7 @@ namespace slskd
                     [EnvironmentVariable("VPN_GLUETUN_PASSWORD")]
                     [Description("password for gluetun control server")]
                     [Secret]
-                    public string Password { get; init; }
+                    public string Password { get; init; } = string.Empty;
 
                     /// <summary>
                     ///     Gets the API key used for API key auth.
@@ -3023,7 +3034,7 @@ namespace slskd
                     [EnvironmentVariable("VPN_GLUETUN_API_KEY")]
                     [Description("API key for gluetun control server")]
                     [Secret]
-                    public string ApiKey { get; init; }
+                    public string ApiKey { get; init; } = string.Empty;
                 }
             }
 
@@ -3066,7 +3077,7 @@ namespace slskd
                 ///     Gets the fully qualified URL for the webhook.
                 /// </summary>
                 [NotNullOrWhiteSpace]
-                public string Url { get; init; }
+                public string Url { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the HTTP headers to include with the webhook.
@@ -3097,12 +3108,12 @@ namespace slskd
                 ///     Gets the name of the header.
                 /// </summary>
                 [NotNullOrWhiteSpace]
-                public string Name { get; init; }
+                public string Name { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the header's value.
                 /// </summary>
-                public string Value { get; init; }
+                public string Value { get; init; } = string.Empty;
             }
 
             /// <summary>
@@ -3142,12 +3153,12 @@ namespace slskd
                 /// <summary>
                 ///     Gets the shell command to run.
                 /// </summary>
-                public string Command { get; init; }
+                public string Command { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the executable to start.
                 /// </summary>
-                public string Executable { get; init; }
+                public string Executable { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the arguments to pass to the executable.
@@ -3155,7 +3166,7 @@ namespace slskd
                 /// <remarks>
                 ///     Mutually exclusive with <see cref="Arglist"/>.
                 /// </remarks>
-                public string Args { get; init; }
+                public string Args { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the list of arguments to pass to the executable.
@@ -3163,7 +3174,7 @@ namespace slskd
                 /// <remarks>
                 ///     Mutually exclusive with <see cref="Args"/>.
                 /// </remarks>
-                public string[] Arglist { get; init; } = null;
+                public string[] Arglist { get; init; } = Array.Empty<string>();
 
                 public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
                 {
@@ -3204,7 +3215,7 @@ namespace slskd
                 [Argument(default, "ftp-address")]
                 [EnvironmentVariable("FTP_ADDRESS")]
                 [Description("FTP address")]
-                public string Address { get; init; }
+                public string Address { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the FTP port.
@@ -3238,7 +3249,7 @@ namespace slskd
                 [Argument(default, "ftp-username")]
                 [EnvironmentVariable("FTP_USERNAME")]
                 [Description("FTP username")]
-                public string Username { get; init; }
+                public string Username { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the FTP password.
@@ -3247,7 +3258,7 @@ namespace slskd
                 [EnvironmentVariable("FTP_PASSWORD")]
                 [Description("FTP password")]
                 [Secret]
-                public string Password { get; init; }
+                public string Password { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the remote path for uploads.
@@ -3321,7 +3332,7 @@ namespace slskd
                 [EnvironmentVariable("PUSHBULLET_ACCESS_TOKEN")]
                 [Description("Pushbullet access token")]
                 [Secret]
-                public string AccessToken { get; init; }
+                public string AccessToken { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the prefix for Pushbullet notification titles.
@@ -3402,7 +3413,7 @@ namespace slskd
                 [Argument(default, "ntfy-url")]
                 [EnvironmentVariable("NTFY_URL")]
                 [Description("Ntfy topic URL (e.g. https://ntfy.sh/mytopic)")]
-                public string Url { get; init; }
+                public string Url { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the Ntfy access token (optional).
@@ -3411,7 +3422,7 @@ namespace slskd
                 [EnvironmentVariable("NTFY_TOKEN")]
                 [Description("Ntfy access token (optional)")]
                 [Secret]
-                public string AccessToken { get; init; }
+                public string AccessToken { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the prefix for Ntfy notification titles.
@@ -3475,7 +3486,7 @@ namespace slskd
                 [EnvironmentVariable("PUSHOVER_USER_KEY")]
                 [Description("Pushover user key")]
                 [Secret]
-                public string UserKey { get; init; }
+                public string UserKey { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the Pushover API token.
@@ -3484,7 +3495,7 @@ namespace slskd
                 [EnvironmentVariable("PUSHOVER_TOKEN")]
                 [Description("Pushover API token")]
                 [Secret]
-                public string Token { get; init; }
+                public string Token { get; init; } = string.Empty;
 
                 /// <summary>
                 ///     Gets the prefix for Pushover notification titles.

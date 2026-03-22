@@ -124,7 +124,7 @@ public class Gluetun : IVPNClient
 
     private class GluetunStatusResponse
     {
-        public string Status { get; init; }
+        public string Status { get; init; } = string.Empty;
     }
 
     private class GluetunPortForwardResponse
@@ -135,15 +135,15 @@ public class Gluetun : IVPNClient
     private class GluetunPublicIpResponse
     {
         [JsonPropertyName("public_ip")]
-        public string PublicIp { get; init; }
-        public string Region { get; init; }
-        public string Country { get; init; }
-        public string City { get; init; }
-        public string Location { get; init; }
-        public string Organization { get; init; }
+        public string PublicIp { get; init; } = string.Empty;
+        public string Region { get; init; } = string.Empty;
+        public string Country { get; init; } = string.Empty;
+        public string City { get; init; } = string.Empty;
+        public string Location { get; init; } = string.Empty;
+        public string Organization { get; init; } = string.Empty;
 
         [JsonPropertyName("postal_code")]
-        public string PostalCode { get; init; }
-        public string Timezone { get; init; }
+        public string PostalCode { get; init; } = string.Empty;
+        public string Timezone { get; init; } = string.Empty;
     }
 }

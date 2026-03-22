@@ -61,11 +61,11 @@ namespace slskd.LibraryHealth.Remediation
             healthService ??= serviceProvider.GetRequiredService<ILibraryHealthService>();
 
         /// <inheritdoc/>
-        public async Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)
+        public async Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken cancellationToken = default)
         {
             // Fetch issues from database
             var issues = new List<LibraryIssue>();
-            var allIssues = await hashDb.GetLibraryIssuesAsync(new LibraryHealthIssueFilter(), ct).ConfigureAwait(false);
+            var allIssues = await hashDb.GetLibraryIssuesAsync(new LibraryHealthIssueFilter(), cancellationToken).ConfigureAwait(false);
 
             foreach (var issueId in issueIds)
             {
@@ -85,20 +85,20 @@ namespace slskd.LibraryHealth.Remediation
             // Determine remediation strategy
             var strategy = DetermineRemediationStrategy(issues);
 
-            string jobId = null;
+            string? jobId = null;
 
             switch (strategy)
             {
                 case RemediationStrategy.RedownloadTracks:
-                    jobId = await CreateTrackRedownloadJobAsync(issues, ct).ConfigureAwait(false);
+                    jobId = await CreateTrackRedownloadJobAsync(issues, cancellationToken).ConfigureAwait(false);
                     break;
 
                 case RemediationStrategy.CompleteAlbum:
-                    jobId = await CreateAlbumCompletionJobAsync(issues, ct).ConfigureAwait(false);
+                    jobId = await CreateAlbumCompletionJobAsync(issues, cancellationToken).ConfigureAwait(false);
                     break;
 
                 case RemediationStrategy.ReplaceWithCanonical:
-                    jobId = await CreateCanonicalReplacementJobAsync(issues, ct).ConfigureAwait(false);
+                    jobId = await CreateCanonicalReplacementJobAsync(issues, cancellationToken).ConfigureAwait(false);
                     break;
 
                 default:
@@ -106,15 +106,15 @@ namespace slskd.LibraryHealth.Remediation
             }
 
             // Link job to issues
-            await LinkJobToIssuesAsync(jobId, issueIds, ct).ConfigureAwait(false);
+            await LinkJobToIssuesAsync(jobId, issueIds, cancellationToken).ConfigureAwait(false);
 
             return jobId;
         }
 
         /// <inheritdoc/>
-        public async Task LinkJobToIssuesAsync(string jobId, List<string> issueIds, CancellationToken ct = default)
+        public async Task LinkJobToIssuesAsync(string jobId, List<string> issueIds, CancellationToken cancellationToken = default)
         {
-            var allIssues = await hashDb.GetLibraryIssuesAsync(new LibraryHealthIssueFilter(), ct).ConfigureAwait(false);
+            var allIssues = await hashDb.GetLibraryIssuesAsync(new LibraryHealthIssueFilter(), cancellationToken).ConfigureAwait(false);
 
             foreach (var issueId in issueIds)
             {
@@ -123,7 +123,7 @@ namespace slskd.LibraryHealth.Remediation
                 if (issue != null)
                 {
                     // Update in database
-                    await hashDb.UpdateLibraryIssueStatusAsync(issueId, LibraryIssueStatus.Fixing, ct).ConfigureAwait(false);
+                    await hashDb.UpdateLibraryIssueStatusAsync(issueId, LibraryIssueStatus.Fixing, cancellationToken).ConfigureAwait(false);
 
                     log.LogInformation("[LH-Remediation] Linked issue {IssueId} to job {JobId}", issueId, jobId);
                 }
@@ -131,7 +131,7 @@ namespace slskd.LibraryHealth.Remediation
         }
 
         /// <inheritdoc/>
-        public async Task CheckJobStatusAndResolveIssuesAsync(string jobId, CancellationToken ct = default)
+        public async Task CheckJobStatusAndResolveIssuesAsync(string jobId, CancellationToken cancellationToken = default)
         {
             // Get all issues linked to this job
             var filter = new LibraryHealthIssueFilter
@@ -139,7 +139,7 @@ namespace slskd.LibraryHealth.Remediation
                 Statuses = new List<LibraryIssueStatus> { LibraryIssueStatus.Fixing }
             };
 
-            var allFixingIssues = await hashDb.GetLibraryIssuesAsync(filter, ct).ConfigureAwait(false);
+            var allFixingIssues = await hashDb.GetLibraryIssuesAsync(filter, cancellationToken).ConfigureAwait(false);
             var linkedIssues = allFixingIssues.Where(i => i.RemediationJobId == jobId).ToList();
 
             if (linkedIssues.Count == 0)
@@ -168,7 +168,7 @@ namespace slskd.LibraryHealth.Remediation
             {
                 foreach (var issue in linkedIssues)
                 {
-                    await hashDb.UpdateLibraryIssueStatusAsync(issue.IssueId, LibraryIssueStatus.Resolved, ct).ConfigureAwait(false);
+                    await hashDb.UpdateLibraryIssueStatusAsync(issue.IssueId, LibraryIssueStatus.Resolved, cancellationToken).ConfigureAwait(false);
                     log.LogInformation("[LH-Remediation] Resolved issue {IssueId} - download completed", issue.IssueId);
                 }
             }
@@ -176,7 +176,7 @@ namespace slskd.LibraryHealth.Remediation
             {
                 foreach (var issue in linkedIssues)
                 {
-                    await hashDb.UpdateLibraryIssueStatusAsync(issue.IssueId, LibraryIssueStatus.Failed, ct).ConfigureAwait(false);
+                    await hashDb.UpdateLibraryIssueStatusAsync(issue.IssueId, LibraryIssueStatus.Failed, cancellationToken).ConfigureAwait(false);
                     log.LogWarning("[LH-Remediation] Failed to fix issue {IssueId} - download failed", issue.IssueId);
                 }
             }
@@ -223,7 +223,7 @@ namespace slskd.LibraryHealth.Remediation
             }
 
             // Determine target directory from first issue
-            string targetDir = Path.GetDirectoryName(issues.First().FilePath);
+            string? targetDir = Path.GetDirectoryName(issues.First().FilePath);
             if (string.IsNullOrEmpty(targetDir))
             {
                 targetDir = Path.GetDirectoryName(Path.GetFullPath(issues.First().FilePath));
@@ -289,7 +289,7 @@ namespace slskd.LibraryHealth.Remediation
                         Filename = constructedFilename,
                         FileSize = fileSize,
                         Sources = sources,
-                        OutputPath = Path.Combine(targetDir, constructedFilename),
+                        OutputPath = Path.Combine(targetDir ?? string.Empty, constructedFilename),
                         TargetMusicBrainzRecordingId = recordingId,
                         TargetSemanticKey = verificationResult.BestSemanticKey
                     };
@@ -336,8 +336,10 @@ namespace slskd.LibraryHealth.Remediation
             return jobId;
         }
 
-        private async Task<string> CreateAlbumCompletionJobAsync(List<LibraryIssue> issues, CancellationToken ct)
+        private Task<string> CreateAlbumCompletionJobAsync(List<LibraryIssue> issues, CancellationToken ct)
         {
+            _ = ct;
+
             // Extract unique release ID
             var releaseIds = issues
                 .Where(i => !string.IsNullOrEmpty(i.MusicBrainzReleaseId))
@@ -364,7 +366,11 @@ namespace slskd.LibraryHealth.Remediation
                         {
                             if (trackElement.TryGetProperty("recording_id", out var recIdProperty))
                             {
-                                missingRecordingIds.Add(recIdProperty.GetString());
+                                var recordingId = recIdProperty.GetString();
+                                if (!string.IsNullOrWhiteSpace(recordingId))
+                                {
+                                    missingRecordingIds.Add(recordingId);
+                                }
                             }
                         }
                     }
@@ -392,7 +398,7 @@ namespace slskd.LibraryHealth.Remediation
                 "[LH-Remediation] Created album completion job {JobId} (placeholder - full integration pending)",
                 jobId);
 
-            return jobId;
+            return Task.FromResult(jobId);
         }
 
         private async Task<string> CreateCanonicalReplacementJobAsync(List<LibraryIssue> issues, CancellationToken ct)

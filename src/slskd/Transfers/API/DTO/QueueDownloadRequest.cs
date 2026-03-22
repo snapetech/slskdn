@@ -28,7 +28,7 @@ namespace slskd.Transfers.API
         ///     Gets or sets the filename to download.
         /// </summary>
         [Required]
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the size of the file.

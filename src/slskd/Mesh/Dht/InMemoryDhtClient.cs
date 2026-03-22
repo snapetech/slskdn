@@ -150,7 +150,7 @@ public class InMemoryDhtClient : IDhtClient
     /// <summary>
     /// Stats: stored keys and how many are content-peer hints.
     /// </summary>
-    public (int totalKeys, int contentHintKeys) GetStoreStats()
+    public (int TotalKeys, int ContentHintKeys) GetStoreStats()
     {
         var keys = store.Keys.ToList();
         var total = keys.Count;

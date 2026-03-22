@@ -141,7 +141,7 @@ namespace slskd.Integrations.MusicBrainz
                 request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue("en"));
                 request.Headers.UserAgent.ParseAdd(options.UserAgent);
 
-                var http = httpClientFactory.CreateClient();
+                using var http = httpClientFactory.CreateClient();
                 http.Timeout = options.Timeout;
 
                 try
@@ -208,14 +208,14 @@ namespace slskd.Integrations.MusicBrainz
                 return null;
             }
 
-            var position = ResolvePosition(trackResponse.Position, fallbackPosition);
+            var position = ResolvePosition(trackResponse?.Position, fallbackPosition);
             var duration = recording.Length.HasValue ? TimeSpan.FromMilliseconds(recording.Length.Value) : TimeSpan.Zero;
 
             return new TrackTarget
             {
                 MusicBrainzRecordingId = recording.Id,
                 Position = position,
-                Title = string.IsNullOrWhiteSpace(trackResponse.Title) ? recording.Title : trackResponse.Title,
+                Title = string.IsNullOrWhiteSpace(trackResponse?.Title) ? recording.Title ?? string.Empty : trackResponse.Title ?? string.Empty,
                 Artist = FormatArtistCredit(recording.ArtistCredit),
                 Duration = duration,
                 Isrc = recording.Isrcs?.FirstOrDefault(),
@@ -372,7 +372,7 @@ namespace slskd.Integrations.MusicBrainz
         private sealed record RecordingSearchItem(
             string Id,
             string? Title,
-[property: System.Text.Json.Serialization.JsonPropertyName("artist-credit")] ArtistCreditSearchItem[]? ArtistCredit);
+            [property: System.Text.Json.Serialization.JsonPropertyName("artist-credit")] ArtistCreditSearchItem[]? ArtistCredit);
 
         private sealed record ArtistCreditSearchItem(string? Name, ArtistRef? Artist);
 

@@ -126,10 +126,15 @@ public class EnforceInvalidConfigIntegrationTests
         {
             Directory.CreateDirectory(tempDir);
             // Use dotnet slskd.dll to avoid dotnet run's host loading the app (which can hold the single-instance mutex).
-            var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
+            var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd.dll");
             if (!File.Exists(slskdDll))
             {
-                return; // slskd not built in Release; build slskd first or run without --no-build.
+                slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
+            }
+
+            if (!File.Exists(slskdDll))
+            {
+                return; // slskd not built in Debug or Release; build slskd first or run without --no-build.
             }
 
             var contentPath = "test-wwwroot-" + Guid.NewGuid().ToString("N")[..8];

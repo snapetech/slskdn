@@ -215,7 +215,7 @@ public class PerceptualHasher : IPerceptualHasher
         {
             if (features[i] > median)
             {
-                hash |= (1UL << i);
+                hash |= 1UL << i;
             }
         }
 
@@ -323,7 +323,7 @@ public class PerceptualHasher : IPerceptualHasher
             }
 
             for (int sb = 0; sb < superBands; sb++)
-                hashValues[(i * superBands) + sb] = chromaVec[(sb * 3)] + chromaVec[(sb * 3) + 1] + chromaVec[(sb * 3) + 2];
+                hashValues[(i * superBands) + sb] = chromaVec[sb * 3] + chromaVec[(sb * 3) + 1] + chromaVec[(sb * 3) + 2];
         }
 
         return GenerateHash(hashValues);
@@ -363,9 +363,10 @@ public class PerceptualHasher : IPerceptualHasher
 
         for (int i = 0; i < HashBits && i * step < pixels.Length; i++)
         {
-            if (pixels[i * step] > 128) // Simple threshold
+            // Simple threshold.
+            if (pixels[i * step] > 128)
             {
-                hash |= (1UL << i);
+                hash |= 1UL << i;
             }
         }
 
@@ -447,7 +448,7 @@ public class PerceptualHasher : IPerceptualHasher
         {
             if (lowFreq[i] > median)
             {
-                hash |= (1UL << i);
+                hash |= 1UL << i;
             }
         }
 
@@ -538,13 +539,17 @@ public static class AudioUtilities
         var stderr = await stderrTask.ConfigureAwait(false);
 
         if (process.ExitCode != 0)
+        {
             throw new InvalidOperationException(
                 $"ffmpeg exited with code {process.ExitCode} while decoding {audioFilePath}. stderr: {stderr.Trim()}");
+        }
 
         var bytes = ms.ToArray();
         if (bytes.Length == 0)
+        {
             throw new InvalidOperationException(
                 $"ffmpeg produced no PCM output for {audioFilePath}. ffmpeg stderr: {stderr}");
+        }
 
         if (bytes.Length % sizeof(short) != 0)
         {

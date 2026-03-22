@@ -11,7 +11,7 @@ namespace slskd.Transfers.MultiSource.Tracing
     /// </summary>
     public class SwarmEvent
     {
-        public string JobId { get; set; }
+        public string JobId { get; set; } = string.Empty;
 
         public string? TrackId { get; set; }
 

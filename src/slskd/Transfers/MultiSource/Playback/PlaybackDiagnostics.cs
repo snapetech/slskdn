@@ -6,7 +6,7 @@ namespace slskd.Transfers.MultiSource.Playback
 {
     public class PlaybackDiagnostics
     {
-        public string JobId { get; set; }
+        public string JobId { get; set; } = string.Empty;
 
         public string? TrackId { get; set; }
 

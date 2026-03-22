@@ -184,7 +184,7 @@ public class StunNatDetector : INatDetector
     {
         try
         {
-            var resolveTask = Dns.GetHostAddressesAsync(host);
+            var resolveTask = Dns.GetHostAddressesAsync(host, ct);
             var completed = await Task.WhenAny(resolveTask, Task.Delay(DnsResolveTimeout, ct));
             if (completed != resolveTask)
             {
@@ -228,7 +228,8 @@ public class StunNatDetector : INatDetector
             offset += 4;
             if (offset + attrLen > buf.Length) break;
 
-            if (attrType == 0x0020) // XOR-MAPPED-ADDRESS
+            // XOR-MAPPED-ADDRESS.
+            if (attrType == 0x0020)
             {
                 // Family
                 var family = buf[offset + 1];

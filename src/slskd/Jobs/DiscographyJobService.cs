@@ -134,13 +134,13 @@ namespace slskd.Jobs
     public class DiscographyJobRequest
     {
         [JsonPropertyName("artist_id")]
-        public string ArtistId { get; set; }
+        public string ArtistId { get; set; } = string.Empty;
 
         [JsonPropertyName("profile")]
         public DiscographyProfile Profile { get; set; } = DiscographyProfile.CoreDiscography;
 
         [JsonPropertyName("target_dir")]
-        public string TargetDirectory { get; set; }
+        public string TargetDirectory { get; set; } = string.Empty;
 
         [JsonPropertyName("release_ids")]
         public List<string>? ReleaseIds { get; set; }

@@ -191,12 +191,12 @@ namespace slskd.Common.CodeQuality
 
             // Find source types in this subsystem
             var subsystemSourceTypes = allSourceTypes
-                .Where(t => t.Namespace?.Contains(subsystem.Replace(".", ""), StringComparison.OrdinalIgnoreCase) == true)
+                .Where(t => t.Namespace?.Contains(subsystem.Replace(".", string.Empty), StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();
 
             // Find test classes for this subsystem
             var subsystemTestClasses = allTestClasses
-                .Where(t => t.Namespace?.Contains(subsystem.Replace(".", ""), StringComparison.OrdinalIgnoreCase) == true)
+                .Where(t => t.Namespace?.Contains(subsystem.Replace(".", string.Empty), StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();
 
             report.SourceTypesCount = subsystemSourceTypes.Count;
@@ -225,7 +225,7 @@ namespace slskd.Common.CodeQuality
             // Calculate class coverage
             var totalClasses = subsystemSourceTypes.Count;
             var testedClasses = subsystemSourceTypes.Count(t =>
-                subsystemTestClasses.Any(tc => tc.Name.Contains(t.Name.Replace("Tests", "").Replace("Test", ""))));
+                subsystemTestClasses.Any(tc => tc.Name.Contains(t.Name.Replace("Tests", string.Empty).Replace("Test", string.Empty))));
 
             report.ClassCoverage = totalClasses > 0 ? (double)testedClasses / totalClasses : 0;
 
@@ -258,7 +258,7 @@ namespace slskd.Common.CodeQuality
                 // Find test classes for this subsystem
                 var testClasses = testAssemblies
                     .SelectMany(a => a.GetTypes())
-                    .Where(t => t.Namespace?.Contains(subsystem.Replace(".", ""), StringComparison.OrdinalIgnoreCase) == true &&
+                    .Where(t => t.Namespace?.Contains(subsystem.Replace(".", string.Empty), StringComparison.OrdinalIgnoreCase) == true &&
                                (t.Name.EndsWith("Tests", StringComparison.OrdinalIgnoreCase) ||
                                 t.Name.EndsWith("Test", StringComparison.OrdinalIgnoreCase)))
                     .ToList();
@@ -266,7 +266,11 @@ namespace slskd.Common.CodeQuality
                 foreach (var testClass in testClasses)
                 {
                     var testMethods = testClass.GetMethods()
-                        .Where(m => m.GetCustomAttributes(false).Any(a => { var n = a.GetType().FullName; return n == "Xunit.FactAttribute" || n == "Xunit.TheoryAttribute"; }))
+                        .Where(m => m.GetCustomAttributes(false).Any(a =>
+                        {
+                            var n = a.GetType().FullName;
+                            return n == "Xunit.FactAttribute" || n == "Xunit.TheoryAttribute";
+                        }))
                         .ToList();
 
                     results.TotalTests += testMethods.Count;
@@ -335,7 +339,7 @@ namespace slskd.Common.CodeQuality
             foreach (var sourceType in sourceTypes)
             {
                 var hasTests = testClasses.Any(tc =>
-                    tc.Name.Contains(sourceType.Name.Replace("Tests", "").Replace("Test", "")));
+                    tc.Name.Contains(sourceType.Name.Replace("Tests", string.Empty).Replace("Test", string.Empty)));
 
                 if (!hasTests)
                 {

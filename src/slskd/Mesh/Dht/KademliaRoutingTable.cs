@@ -61,8 +61,7 @@ public class KademliaRoutingTable
             BucketCount: BucketCount,
             BucketSizes: bucketSizes,
             MaxBucketSize: bucketSizes.Values.DefaultIfEmpty(0).Max(),
-            MinBucketSize: bucketSizes.Values.DefaultIfEmpty(0).Min()
-        );
+            MinBucketSize: bucketSizes.Values.DefaultIfEmpty(0).Min());
     }
 
     /// <summary>
@@ -84,8 +83,6 @@ public class KademliaRoutingTable
 
         // Handle ping-before-evict outside the lock to avoid async in lock
         KNode? nodeToRemove = null;
-        bool shouldAddNewNode = true;
-
         lock (splitLock)
         {
             var bucketIndex = GetBucketIndex(nodeId);
@@ -117,7 +114,6 @@ public class KademliaRoutingTable
             {
                 // Find the least recently seen node (but don't ping yet)
                 nodeToRemove = bucket.Nodes.OrderBy(n => n.LastSeen).First();
-                shouldAddNewNode = false; // Wait for ping result
             }
             else
             {

@@ -773,7 +773,7 @@ public class PrivateGatewayMeshService : IMeshService
                     else
                     {
                         // Check for client-side timeout
-                        var pod = await _podService.GetPodAsync(session.PodId);
+                        var pod = await _podService.GetPodAsync(session.PodId, cancellationToken);
                         var idleTimeout = pod?.PrivateServicePolicy?.IdleTimeout ?? TimeSpan.FromSeconds(120);
 
                         if (DateTimeOffset.UtcNow - session.LastActivity > idleTimeout)
@@ -807,12 +807,16 @@ public class PrivateGatewayMeshService : IMeshService
 
     private async Task CloseTunnelAsync(string tunnelId)
     {
-        if (_tunnelStreams.TryRemove(tunnelId, out var stream))
+        NetworkStream? ownedStream = null;
+#pragma warning disable CA2000 // TryRemove transfers stream ownership to this cleanup path, which disposes it immediately.
+        if (_tunnelStreams.TryRemove(tunnelId, out ownedStream))
+#pragma warning restore CA2000
         {
             try
             {
-                stream.Close();
-                await stream.DisposeAsync();
+                ownedStream.Close();
+                await ownedStream.DisposeAsync();
+                ownedStream = null;
             }
             catch (Exception ex)
             {
@@ -1012,7 +1016,7 @@ public class PrivateGatewayMeshService : IMeshService
                 return false;
 
             // Always block cloud metadata services
-            if (ip.AddressFamily == AddressFamily.InterNetwork) // IPv4
+            if (ip.AddressFamily == AddressFamily.InterNetwork)
             {
                 var bytes = ip.GetAddressBytes();
 
@@ -1030,7 +1034,7 @@ public class PrivateGatewayMeshService : IMeshService
                 return true;
 
             // Block multicast addresses
-            if (ip.AddressFamily == AddressFamily.InterNetwork) // IPv4
+            if (ip.AddressFamily == AddressFamily.InterNetwork)
             {
                 var bytes = ip.GetAddressBytes();
                 if (bytes[0] >= 224 && bytes[0] <= 239) // 224.0.0.0/4

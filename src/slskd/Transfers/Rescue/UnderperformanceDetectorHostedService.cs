@@ -95,7 +95,7 @@ namespace slskd.Transfers.Rescue
                         // 1) QueuedTooLong
                         if (t.State.HasFlag(TransferStates.Queued))
                         {
-                            var since = (t.EnqueuedAt ?? t.RequestedAt);
+                            var since = t.EnqueuedAt ?? t.RequestedAt;
                             var elapsed = (DateTime.UtcNow - since).TotalSeconds;
                             if (elapsed >= rescue.MaxQueueTimeSeconds)
                             {
@@ -107,7 +107,7 @@ namespace slskd.Transfers.Rescue
                         // 2) ThroughputTooLow and 3) Stalled — only for InProgress
                         if (t.State != TransferStates.InProgress) continue;
 
-                        var minBytesPerSec = (rescue.MinThroughputKBps) * 1024L;
+                        var minBytesPerSec = rescue.MinThroughputKBps * 1024L;
                         var duration = t.StartedAt.HasValue ? (DateTime.UtcNow - t.StartedAt.Value).TotalSeconds : 0;
 
                         // 2) ThroughputTooLow: require MinDurationSeconds before judging

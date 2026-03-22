@@ -140,13 +140,18 @@ public class SecurityEventLogger
         string method,
         Exception exception)
     {
-        _logger.LogError(
-            exception,
+        const string message =
             "[SECURITY] Service call exception | " +
             "PeerId: {PeerId} | " +
             "Service: {ServiceName} | " +
-            "Method: {Method}",
-            peerId, serviceName, method);
+            "Method: {Method}";
+
+        _logger.LogError(
+            exception,
+            message,
+            peerId,
+            serviceName,
+            method);
     }
 
     /// <summary>

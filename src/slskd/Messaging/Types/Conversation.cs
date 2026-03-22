@@ -24,10 +24,10 @@ namespace slskd.Messaging
 
     public class Conversation
     {
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
         public int UnAcknowledgedMessageCount { get; set; }
         public bool HasUnAcknowledgedMessages => UnAcknowledgedMessageCount > 0;
-        public IEnumerable<PrivateMessage> Messages { get; set; }
+        public IEnumerable<PrivateMessage> Messages { get; set; } = new List<PrivateMessage>();
     }
 }

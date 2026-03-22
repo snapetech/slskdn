@@ -196,7 +196,7 @@ public class UdpHolePuncher : IUdpHolePuncher
     {
         try
         {
-            var receiveTask = udp.ReceiveAsync();
+            var receiveTask = udp.ReceiveAsync(ct).AsTask();
 
             // Wait for response with timeout
             if (await Task.WhenAny(receiveTask, Task.Delay(ReceiveTimeoutMs, ct)) == receiveTask)

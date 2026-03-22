@@ -31,12 +31,12 @@ namespace slskd.VirtualSoulfind.v2.Intents
         /// <summary>
         ///     Gets or initializes the unique ID for this intent.
         /// </summary>
-        public string DesiredReleaseId { get; init; }
+        public string DesiredReleaseId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the release ID from the catalogue.
         /// </summary>
-        public string ReleaseId { get; init; }
+        public string ReleaseId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the priority.

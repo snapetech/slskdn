@@ -48,7 +48,7 @@ namespace slskd.Mesh
         /// <param name="message">The mesh message.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Response message, or null if no response needed.</returns>
-        Task<MeshMessage> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default);
+        Task<MeshMessage?> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Looks up hash in local DB first, then queries mesh neighbors.
@@ -56,7 +56,7 @@ namespace slskd.Mesh
         /// <param name="flacKey">The FLAC key to look up.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Hash entry if found, null otherwise.</returns>
-        Task<MeshHashEntry> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default);
+        Task<MeshHashEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Publishes a newly discovered hash to the mesh.
@@ -108,7 +108,7 @@ namespace slskd.Mesh
         public bool Success { get; set; }
 
         /// <summary>Gets or sets the peer's username.</summary>
-        public string PeerUsername { get; set; }
+        public string PeerUsername { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the number of entries received.</summary>
         public int EntriesReceived { get; set; }
@@ -123,7 +123,7 @@ namespace slskd.Mesh
         public long PeerLatestSeqId { get; set; }
 
         /// <summary>Gets or sets error message if sync failed.</summary>
-        public string Error { get; set; }
+        public string Error { get; set; } = string.Empty;
 
         /// <summary>Gets or sets sync duration in milliseconds.</summary>
         public long DurationMs { get; set; }
@@ -196,7 +196,7 @@ namespace slskd.Mesh
     public class MeshPeerInfo
     {
         /// <summary>Gets or sets the peer's username.</summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the peer's latest known sequence ID.</summary>
         public long LatestSeqId { get; set; }
@@ -211,6 +211,6 @@ namespace slskd.Mesh
         public DateTime LastSeen { get; set; }
 
         /// <summary>Gets or sets the peer's client version.</summary>
-        public string ClientVersion { get; set; }
+        public string ClientVersion { get; set; } = string.Empty;
     }
 }

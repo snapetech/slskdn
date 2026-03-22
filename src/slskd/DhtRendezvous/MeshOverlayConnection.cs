@@ -7,6 +7,7 @@ namespace slskd.DhtRendezvous;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -125,15 +126,19 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// <summary>
     /// Create a client connection (outbound).
     /// </summary>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "TCP and TLS resources are transferred to the returned MeshOverlayConnection on success and disposed on failure.")]
     public static async Task<MeshOverlayConnection> ConnectAsync(
         IPEndPoint endpoint,
         X509Certificate2 clientCertificate,
         CancellationToken cancellationToken = default)
     {
-        var tcpClient = new TcpClient();
+        TcpClient? tcpClient = null;
+        SslStream? sslStream = null;
 
         try
         {
+            tcpClient = new TcpClient();
+
             // Connect with timeout
             using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             connectCts.CancelAfter(OverlayTimeouts.Connect);
@@ -141,7 +146,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             await tcpClient.ConnectAsync(endpoint.Address, endpoint.Port, connectCts.Token);
 
             // Establish TLS
-            var sslStream = new SslStream(
+            sslStream = new SslStream(
                 tcpClient.GetStream(),
                 leaveInnerStreamOpen: false,
                 ValidateServerCertificate);
@@ -157,18 +162,23 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
             }, tlsCts.Token);
 
-            var connection = new MeshOverlayConnection(tcpClient, sslStream, endpoint)
+            var ownedTcpClient = tcpClient ?? throw new InvalidOperationException("TCP client was not initialized");
+            var ownedSslStream = sslStream ?? throw new InvalidOperationException("TLS stream was not initialized");
+            tcpClient = null;
+            sslStream = null;
+
+            var connection = new MeshOverlayConnection(ownedTcpClient, ownedSslStream, endpoint)
             {
                 State = ConnectionState.TlsEstablished,
-                CertificateThumbprint = sslStream.RemoteCertificate?.GetCertHashString(),
+                CertificateThumbprint = ownedSslStream.RemoteCertificate?.GetCertHashString(),
                 IsOutbound = true,
             };
-
             return connection;
         }
         catch
         {
-            tcpClient.Dispose();
+            sslStream?.Dispose();
+            tcpClient?.Dispose();
             throw;
         }
     }
@@ -176,6 +186,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// <summary>
     /// Create a server connection (inbound).
     /// </summary>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "TCP and TLS resources are transferred to the returned MeshOverlayConnection on success and disposed on failure.")]
     public static async Task<MeshOverlayConnection> AcceptAsync(
         TcpClient tcpClient,
         X509Certificate2 serverCertificate,
@@ -183,10 +194,12 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     {
         var remoteEndPoint = (IPEndPoint)tcpClient.Client.RemoteEndPoint!;
 
+        SslStream? sslStream = null;
+
         try
         {
             // Establish TLS
-            var sslStream = new SslStream(
+            sslStream = new SslStream(
                 tcpClient.GetStream(),
                 leaveInnerStreamOpen: false,
                 ValidateClientCertificate);
@@ -202,16 +215,19 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
             }, tlsCts.Token);
 
-            var connection = new MeshOverlayConnection(tcpClient, sslStream, remoteEndPoint)
+            var ownedSslStream = sslStream ?? throw new InvalidOperationException("TLS stream was not initialized");
+            sslStream = null;
+
+            var connection = new MeshOverlayConnection(tcpClient, ownedSslStream, remoteEndPoint)
             {
                 State = ConnectionState.TlsEstablished,
-                CertificateThumbprint = sslStream.RemoteCertificate?.GetCertHashString(),
+                CertificateThumbprint = ownedSslStream.RemoteCertificate?.GetCertHashString(),
             };
-
             return connection;
         }
         catch
         {
+            sslStream?.Dispose();
             tcpClient.Dispose();
             throw;
         }

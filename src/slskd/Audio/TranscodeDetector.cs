@@ -11,7 +11,7 @@ namespace slskd.Audio
     /// </summary>
     public class TranscodeDetector
     {
-        public (bool isSuspect, string reason) DetectTranscode(AudioVariant variant)
+        public (bool IsSuspect, string Reason) DetectTranscode(AudioVariant variant)
         {
             if (variant == null)
             {
@@ -42,8 +42,9 @@ namespace slskd.Audio
             {
                 // Check encoder signature for clues
                 if (variant.EncoderSignature != null &&
-                    variant.EncoderSignature.Contains("LAME", StringComparison.OrdinalIgnoreCase)) // MP3 encoder in FLAC
+                    variant.EncoderSignature.Contains("LAME", StringComparison.OrdinalIgnoreCase))
                 {
+                    // MP3 encoder in FLAC.
                     return (true, "Lossy encoder signature in lossless file");
                 }
             }
@@ -60,7 +61,7 @@ namespace slskd.Audio
                 }
             }
 
-            return (false, null);
+            return (false, string.Empty);
         }
 
         private double EstimateSpectralBandwidth(AudioVariant variant)

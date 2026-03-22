@@ -44,8 +44,8 @@ public class AnalyticsController : ControllerBase
     /// <returns>Performance metrics.</returns>
     [HttpGet("performance")]
     public async Task<IActionResult> GetPerformanceMetrics(
-    [FromQuery] int? timeWindowHours = null,
-            CancellationToken cancellationToken = default)
+        [FromQuery] int? timeWindowHours = null,
+        CancellationToken cancellationToken = default)
     {
         var timeWindow = timeWindowHours.HasValue
             ? TimeSpan.FromHours(timeWindowHours.Value)
@@ -63,8 +63,8 @@ public class AnalyticsController : ControllerBase
     /// <returns>Peer rankings.</returns>
     [HttpGet("peers/rankings")]
     public async Task<IActionResult> GetPeerRankings(
-    [FromQuery] int limit = 20,
-            CancellationToken cancellationToken = default)
+        [FromQuery] int limit = 20,
+        CancellationToken cancellationToken = default)
     {
         if (limit < 1 || limit > 100)
         {
@@ -83,8 +83,8 @@ public class AnalyticsController : ControllerBase
     /// <returns>Efficiency metrics.</returns>
     [HttpGet("efficiency")]
     public async Task<IActionResult> GetEfficiencyMetrics(
-    [FromQuery] int? timeWindowHours = null,
-            CancellationToken cancellationToken = default)
+        [FromQuery] int? timeWindowHours = null,
+        CancellationToken cancellationToken = default)
     {
         var timeWindow = timeWindowHours.HasValue
             ? TimeSpan.FromHours(timeWindowHours.Value)
@@ -103,9 +103,9 @@ public class AnalyticsController : ControllerBase
     /// <returns>Trend data.</returns>
     [HttpGet("trends")]
     public async Task<IActionResult> GetTrends(
-    [FromQuery] int timeWindowHours = 24,
-    [FromQuery] int dataPoints = 24,
-            CancellationToken cancellationToken = default)
+        [FromQuery] int timeWindowHours = 24,
+        [FromQuery] int dataPoints = 24,
+        CancellationToken cancellationToken = default)
     {
         if (timeWindowHours < 1 || timeWindowHours > 168)
         {

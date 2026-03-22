@@ -25,21 +25,21 @@ namespace slskd.Users
         /// <summary>
         ///     Gets the username of the user.
         /// </summary>
-        public string Username { get; init; }
+        public string Username { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets the user's configured group.
         /// </summary>
-        public string Group { get; init; }
+        public string Group { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets the user's statistics.
         /// </summary>
-        public Statistics Statistics { get; init; }
+        public Statistics Statistics { get; init; } = new();
 
         /// <summary>
         ///     Gets the user's status.
         /// </summary>
-        public Status Status { get; init; }
+        public Status Status { get; init; } = new();
     }
 }

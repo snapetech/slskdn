@@ -18,7 +18,7 @@ namespace slskd.Integrations.Chromaprint
         {
             try
             {
-                var handle = Native.chromaprint_new(algorithm);
+                var handle = NativeMethods.chromaprint_new(algorithm);
                 if (handle == IntPtr.Zero)
                 {
                     throw new InvalidOperationException("Unable to allocate Chromaprint context.");
@@ -42,13 +42,13 @@ namespace slskd.Integrations.Chromaprint
 
         protected override bool ReleaseHandle()
         {
-            Native.chromaprint_free(handle);
+            NativeMethods.chromaprint_free(handle);
             return true;
         }
 
         public bool Start(int sampleRate, int channels)
         {
-            return Native.chromaprint_start(handle, sampleRate, channels) != 0;
+            return NativeMethods.chromaprint_start(handle, sampleRate, channels) != 0;
         }
 
         public bool Feed(ReadOnlySpan<short> samples)
@@ -68,7 +68,7 @@ namespace slskd.Integrations.Chromaprint
             try
             {
                 var pointer = handle.AddrOfPinnedObject();
-                return Native.chromaprint_feed(handle: this.handle, data: pointer, size: samples.Length) != 0;
+                return NativeMethods.chromaprint_feed(handle: this.handle, data: pointer, size: samples.Length) != 0;
             }
             finally
             {
@@ -78,12 +78,12 @@ namespace slskd.Integrations.Chromaprint
 
         public bool Finish()
         {
-            return Native.chromaprint_finish(handle) != 0;
+            return NativeMethods.chromaprint_finish(handle) != 0;
         }
 
         public string? GetFingerprint()
         {
-            if (Native.chromaprint_get_fingerprint(handle, out var pointer) == 0)
+            if (NativeMethods.chromaprint_get_fingerprint(handle, out var pointer) == 0)
             {
                 return null;
             }
@@ -94,11 +94,11 @@ namespace slskd.Integrations.Chromaprint
             }
             finally
             {
-                Native.chromaprint_dealloc(pointer);
+                NativeMethods.chromaprint_dealloc(pointer);
             }
         }
 
-        private static class Native
+        private static class NativeMethods
         {
             private const string LibraryName = "chromaprint";
 

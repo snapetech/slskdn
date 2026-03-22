@@ -134,7 +134,9 @@ public class PodMembershipSigner : IPodMembershipSigner
 
             // Verify signature
             var signatureBytes = Convert.FromBase64String(record.Signature);
-            if (signatureBytes.Length != 64) // Ed25519 signatures are 64 bytes
+
+            // Ed25519 signatures are 64 bytes.
+            if (signatureBytes.Length != 64)
             {
                 logger.LogWarning("[PodMembershipSigner] Invalid signature length: {Length}", signatureBytes.Length);
                 return Task.FromResult(false);

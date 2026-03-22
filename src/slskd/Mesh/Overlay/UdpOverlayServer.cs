@@ -80,12 +80,15 @@ public class UdpOverlayServer : BackgroundService
             }
             catch (SocketException ex)
             {
+                var message = "[Overlay] UDP overlay failed to bind to port {Port} (error: {Error}). Continuing without UDP overlay server. " +
+                    "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
+                    "but direct inbound UDP connections will be unavailable.";
+
                 logger.LogWarning(
                     ex,
-                    "[Overlay] UDP overlay failed to bind to port {Port} (error: {Error}). Continuing without UDP overlay server. " +
-                    "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
-                    "but direct inbound UDP connections will be unavailable.",
-                    options.ListenPort, ex.SocketErrorCode);
+                    message,
+                    options.ListenPort,
+                    ex.SocketErrorCode);
                 return; // Gracefully exit - mesh can still function via other transports
             }
 

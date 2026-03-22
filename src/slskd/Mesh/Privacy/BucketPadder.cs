@@ -165,7 +165,8 @@ public class BucketPadder : IMessagePadder
         // Find the smallest bucket that can fit the message
         foreach (var size in StandardBucketSizes.OrderBy(s => s))
         {
-            if (size >= messageSize + 2) // +2 for length header
+            // +2 for length header.
+            if (size >= messageSize + 2)
             {
                 return size;
             }

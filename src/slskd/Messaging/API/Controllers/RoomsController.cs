@@ -100,7 +100,7 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            if (Tracker.TryGet(roomName, out var room))
+            if (Tracker.TryGet(roomName, out var room) && room is not null)
             {
                 return Ok(MapRoomToRoomResponse(room));
             }
@@ -210,7 +210,7 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            if (Tracker.TryGet(roomName, out var room))
+            if (Tracker.TryGet(roomName, out var room) && room is not null)
             {
                 var response = room.Users
                     .Select(user => UserDataResponse.FromUserData(user, self: user.Username == ApplicationStateMonitor.CurrentValue.User.Username));
@@ -239,7 +239,7 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            if (Tracker.TryGet(roomName, out var room))
+            if (Tracker.TryGet(roomName, out var room) && room is not null)
             {
                 var response = room.Messages
                     .Select(message => RoomMessageResponse.FromRoomMessage(message, self: message.Username == ApplicationStateMonitor.CurrentValue.User.Username));

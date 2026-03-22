@@ -30,6 +30,7 @@ public interface IFuzzyMatcher
     /// <param name="contentIdA">First ContentID with perceptual hash</param>
     /// <param name="contentIdB">Second ContentID with perceptual hash</param>
     /// <param name="registry">ContentID registry for lookup</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Match confidence score (0.0 to 1.0)</returns>
     Task<double> ScorePerceptualAsync(string contentIdA, string contentIdB, IContentIdRegistry registry, CancellationToken cancellationToken = default);
 
@@ -40,6 +41,7 @@ public interface IFuzzyMatcher
     /// <param name="candidates">Candidate ContentIDs to compare against</param>
     /// <param name="registry">ContentID registry</param>
     /// <param name="minConfidence">Minimum confidence threshold</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of matches with confidence scores</returns>
     Task<IReadOnlyList<FuzzyMatchResult>> FindSimilarContentAsync(
         string targetContentId,

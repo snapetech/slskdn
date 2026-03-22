@@ -89,15 +89,15 @@ namespace slskd.Audio.Analyzers
                 var buffer = new byte[length];
                 using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 var read = fs.Read(buffer, 0, length);
-                return read == length ? buffer : null;
+                return read == length ? buffer : Array.Empty<byte>();
             }
             catch (IOException)
             {
-                return null;
+                return Array.Empty<byte>();
             }
             catch (UnauthorizedAccessException)
             {
-                return null;
+                return Array.Empty<byte>();
             }
         }
 

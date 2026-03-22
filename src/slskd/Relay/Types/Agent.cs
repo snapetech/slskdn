@@ -28,11 +28,11 @@ namespace slskd.Relay
         /// <summary>
         ///     The name of the agent.
         /// </summary>
-        public string Name { get; init; }
+        public string Name { get; init; } = string.Empty;
 
         /// <summary>
         ///     The IP address associated with the active connection.
         /// </summary>
-        public string IPAddress { get; init; }
+        public string IPAddress { get; init; } = string.Empty;
     }
 }

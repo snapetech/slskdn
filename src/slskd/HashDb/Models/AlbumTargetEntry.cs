@@ -12,42 +12,42 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the MusicBrainz release identifier.
         /// </summary>
-        public string ReleaseId { get; set; }
+        public string ReleaseId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the Discogs release identifier (if known).
         /// </summary>
-        public string DiscogsReleaseId { get; set; }
+        public string DiscogsReleaseId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the album title.
         /// </summary>
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the main artist credit.
         /// </summary>
-        public string Artist { get; set; }
+        public string Artist { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the release date as stored (YYYY-MM-DD).
         /// </summary>
-        public string ReleaseDate { get; set; }
+        public string ReleaseDate { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the country of release.
         /// </summary>
-        public string Country { get; set; }
+        public string Country { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the label name.
         /// </summary>
-        public string Label { get; set; }
+        public string Label { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the release status (e.g., official, bootleg).
         /// </summary>
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the timestamp when this entry was created.

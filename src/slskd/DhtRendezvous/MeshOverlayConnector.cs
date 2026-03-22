@@ -7,6 +7,7 @@ namespace slskd.DhtRendezvous;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -114,6 +115,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         return successCount;
     }
 
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The connection is either registered for ongoing ownership or explicitly disconnected on failure paths.")]
     public async Task<MeshOverlayConnection?> ConnectToEndpointAsync(
         IPEndPoint endpoint,
         CancellationToken cancellationToken = default)
@@ -179,7 +181,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 if (_blocklist.IsBlocked(ack.Username))
                 {
                     _logger.LogWarning("Connected to blocked user {Username}, disconnecting", ack.Username);
-                    await connection.DisconnectAsync("Blocked");
+                    await connection.DisconnectAsync("Blocked", cancellationToken);
                     Interlocked.Increment(ref _failedConnections);
                     return null;
                 }
@@ -197,7 +199,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                                 "TOFU: First connection to {Username}, pinning certificate {Thumbprint}",
                                 ack.Username,
                                 connection.CertificateThumbprint?[..16] + "...");
-                            _pinStore.SetPin(ack.Username, connection.CertificateThumbprint);
+                            _pinStore.SetPin(ack.Username, connection.CertificateThumbprint ?? string.Empty);
                             break;
 
                         case PinCheckResult.Valid:
@@ -210,7 +212,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                                 ack.Username);
                             _blocklist.BlockUsername(ack.Username, "Certificate pin mismatch", TimeSpan.FromHours(1));
                             _rateLimiter.RecordViolation(endpoint.Address);
-                            await connection.DisconnectAsync("Certificate mismatch");
+                            await connection.DisconnectAsync("Certificate mismatch", cancellationToken);
                             Interlocked.Increment(ref _failedConnections);
                             return null;
                     }
@@ -220,7 +222,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 if (!await _registry.RegisterAsync(connection))
                 {
                     _logger.LogDebug("Failed to register connection to {Username}", ack.Username);
-                    await connection.DisconnectAsync("Registration failed");
+                    await connection.DisconnectAsync("Registration failed", cancellationToken);
                     Interlocked.Increment(ref _failedConnections);
                     return null;
                 }
@@ -233,13 +235,19 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     endpoint,
                     string.Join(", ", (IEnumerable<string>?)ack.Features ?? Array.Empty<string>()));
 
+                connection = null;
                 return connection;
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Handshake failed with {Endpoint}", endpoint);
                 _rateLimiter.RecordViolation(endpoint.Address);
-                await connection.DisposeAsync();
+                if (connection != null)
+                {
+                    await connection.DisposeAsync();
+                    connection = null;
+                }
+
                 Interlocked.Increment(ref _failedConnections);
                 return null;
             }

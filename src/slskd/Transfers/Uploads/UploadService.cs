@@ -27,6 +27,7 @@ namespace slskd.Transfers.Uploads
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
     using System.Linq.Expressions;
@@ -67,7 +68,7 @@ namespace slskd.Transfers.Uploads
         /// <param name="username">The username of the requesting user.</param>
         /// <param name="filename">The local filename of the requested file.</param>
         /// <returns>The operation context.</returns>
-        Task<Transfer> EnqueueAsync(string username, string filename);
+        Task<Transfer?> EnqueueAsync(string username, string filename);
 
         /// <summary>
         ///     Uploads the specified enqueued <paramref name="transfer"/> to the requesting user.
@@ -79,14 +80,14 @@ namespace slskd.Transfers.Uploads
         /// <exception cref="InvalidOperationException">Thrown if the specified Transfer is not in the Queued | Locally state.</exception>
         /// <exception cref="DuplicateTransferException">Thrown if an upload matching the username and filename is already tracked by Soulseek.NET.</exception>
         /// <exception cref="NotFoundException">Thrown if the specified file can't be found on disk.</exception>
-        Task<Transfer> UploadAsync(Transfer transfer);
+        Task<Transfer?> UploadAsync(Transfer transfer);
 
         /// <summary>
         ///     Finds a single upload matching the specified <paramref name="expression"/>.
         /// </summary>
         /// <param name="expression">The expression to use to match uploads.</param>
         /// <returns>The found transfer, or default if not found.</returns>
-        Transfer Find(Expression<Func<Transfer, bool>> expression);
+        Transfer? Find(Expression<Func<Transfer, bool>> expression);
 
         /// <summary>
         ///     Returns a summary of the uploads matching the specified <paramref name="expression"/>. This can be expensive;
@@ -241,13 +242,11 @@ namespace slskd.Transfers.Uploads
         /// <exception cref="InvalidOperationException">Thrown if the specified Transfer is not in the Queued | Locally state.</exception>
         /// <exception cref="DuplicateTransferException">Thrown if an upload matching the username and filename is already tracked by Soulseek.NET.</exception>
         /// <exception cref="NotFoundException">Thrown if the specified file can't be found on disk.</exception>
-        public async Task<Transfer> UploadAsync(Transfer transfer)
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The upload sync semaphore is disposed in the method-level finally block after all callbacks and transfer cleanup complete.")]
+        public async Task<Transfer?> UploadAsync(Transfer transfer)
         {
-            var cts = new CancellationTokenSource();
-            var syncRoot = new SemaphoreSlim(1, 1);
-
-            string host = default;
-            string localFilename = default;
+            string? host = null;
+            string localFilename = string.Empty;
             long localFileLength = default;
 
             var lockName = $"{nameof(UploadAsync)}:{transfer.Username}:{transfer.Filename}";
@@ -255,8 +254,11 @@ namespace slskd.Transfers.Uploads
             if (!Locks.TryAdd(lockName, true))
             {
                 Log.Debug("Ignoring concurrent invocation; lock {LockName} already held", lockName);
-                return null;
+                return default;
             }
+
+            CancellationTokenSource? cts = null;
+            SemaphoreSlim? syncRoot = null;
 
             /*
                 from this point forward, any exit from this method MUST result in an update to the Transfer record
@@ -268,6 +270,9 @@ namespace slskd.Transfers.Uploads
             */
             try
             {
+                cts = new CancellationTokenSource();
+                syncRoot = new SemaphoreSlim(1, 1);
+
                 Log.Debug("Acquired lock {LockName}", lockName);
 
                 /*
@@ -433,7 +438,7 @@ namespace slskd.Transfers.Uploads
 
                 EventBus.Raise(new UploadFileCompleteEvent
                 {
-                    Timestamp = transfer.EndedAt.Value,
+                    Timestamp = transfer.EndedAt ?? DateTime.UtcNow,
                     LocalFilename = localFilename,
                     RemoteFilename = transfer.Filename,
                     Transfer = transfer,
@@ -448,7 +453,10 @@ namespace slskd.Transfers.Uploads
                 TryFail(transfer.Id, "File could not be found", TransferStates.Completed | TransferStates.Aborted);
 
                 // todo: broadcast
-                SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+                if (syncRoot != null)
+                {
+                    SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+                }
 
                 throw;
             }
@@ -459,7 +467,10 @@ namespace slskd.Transfers.Uploads
                 TryFail(transfer.Id, exception: ex);
 
                 // todo: broadcast
-                SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+                if (syncRoot != null)
+                {
+                    SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+                }
 
                 throw;
             }
@@ -470,13 +481,16 @@ namespace slskd.Transfers.Uploads
                 TryFail(transfer.Id, exception: ex);
 
                 // todo: broadcast
-                SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+                if (syncRoot != null)
+                {
+                    SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+                }
 
                 throw;
             }
             finally
             {
-                if (host != Program.LocalHostName)
+                if (!string.IsNullOrEmpty(host) && host != Program.LocalHostName)
                 {
                     try
                     {
@@ -493,12 +507,20 @@ namespace slskd.Transfers.Uploads
                     Locks.TryRemove(lockName, out _);
                     Log.Debug("Released lock {LockName}", lockName);
 
-                    CancellationTokens.TryRemove(transfer.Id, out _);
+                    if (CancellationTokens.TryRemove(transfer.Id, out var removedCts))
+                    {
+                        removedCts.Dispose();
+                    }
+                    else
+                    {
+                        cts?.Dispose();
+                    }
 
                     // if for some reason this logic exits without the slotReleased delegate and Complete() being invoked,
                     // the file will get stuck in the queue and prevent any further uploads to the user. be extra cautious
                     // and ensure it gets removed
                     Queue.TryComplete(username: transfer.Username, filename: transfer.Filename);
+                    syncRoot?.Dispose();
                 }
                 catch (Exception ex)
                 {
@@ -513,7 +535,7 @@ namespace slskd.Transfers.Uploads
         /// <param name="username">The username of the requesting user.</param>
         /// <param name="filename">The local filename of the requested file.</param>
         /// <returns>The operation context.</returns>
-        public async Task<Transfer> EnqueueAsync(string username, string filename)
+        public async Task<Transfer?> EnqueueAsync(string username, string filename)
         {
             if (string.IsNullOrEmpty(username))
             {
@@ -530,7 +552,7 @@ namespace slskd.Transfers.Uploads
             if (!Locks.TryAdd(lockName, true))
             {
                 Log.Debug("Ignoring concurrent upload enqueue attempt; lock {LockName} already held", lockName);
-                return null;
+                return default;
             }
 
             Guid id = Guid.NewGuid();
@@ -564,7 +586,7 @@ namespace slskd.Transfers.Uploads
                 if (existingInProgressRecords.Count != 0)
                 {
                     Log.Information("Upload of {Filename} to {Username} is already queued or is in progress (ids: {Ids})", filename, username, string.Join(", ", existingInProgressRecords.Select(t => t.Id)));
-                    return null;
+                    return default;
                 }
 
                 /*
@@ -582,8 +604,8 @@ namespace slskd.Transfers.Uploads
                     we do this after checking the database because database I/O is "cheaper" than disk and potentially
                     network (if we check a relay)
                 */
-                string host = default;
-                string localFilename = default;
+                string host = string.Empty;
+                string localFilename = string.Empty;
                 long localFileLength = default;
 
                 try
@@ -663,11 +685,14 @@ namespace slskd.Transfers.Uploads
                         * transfer record updated so that it's no longer in Queued | Locally
                         * Soulseek.NET already tracking an identical upload (slskd <> Soulseek.NET desync)
                     */
-                    Log.Error(task.Exception, "Task for upload of {Filename} to {Username} did not complete successfully: {Error}", filename, username, task.Exception.Message);
+                    Log.Error(task.Exception, "Task for upload of {Filename} to {Username} did not complete successfully: {Error}", filename, username, task.Exception?.Message);
 
-                    if (!TryFail(id, task.Exception))
+                    Exception taskException = task.Exception is Exception ex
+                        ? ex
+                        : new InvalidOperationException("Upload task failed without an exception.");
+                    if (!TryFail(id, taskException))
                     {
-                        Log.Error(task.Exception, "Failed to clean up transfer {Id} after failed execution: {Message}", id, task.Exception.Message);
+                        Log.Error(taskException, "Failed to clean up transfer {Id} after failed execution: {Message}", id, taskException.Message);
                     }
                 });
 
@@ -699,7 +724,7 @@ namespace slskd.Transfers.Uploads
         /// </summary>
         /// <param name="expression">The expression to use to match uploads.</param>
         /// <returns>The found transfer, or default if not found.</returns>
-        public Transfer Find(Expression<Func<Transfer, bool>> expression)
+        public Transfer? Find(Expression<Func<Transfer, bool>> expression)
         {
             try
             {
@@ -879,6 +904,7 @@ namespace slskd.Transfers.Uploads
             if (CancellationTokens.TryRemove(id, out var cts))
             {
                 cts.Cancel();
+                cts.Dispose();
                 return true;
             }
 

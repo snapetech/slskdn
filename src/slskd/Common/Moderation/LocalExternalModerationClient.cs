@@ -53,7 +53,7 @@ namespace slskd.Common.Moderation
         /// <inheritdoc/>
         public async Task<ModerationDecision> AnalyzeFileAsync(
             LocalFileMetadata file,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             if (file == null)
             {
@@ -79,14 +79,14 @@ namespace slskd.Common.Moderation
             try
             {
                 // Rate limiting for local calls (still important to prevent abuse)
-                await _rateLimiter.WaitAsync(cancellationToken);
+                await _rateLimiter.WaitAsync(ct);
                 try
                 {
                     // Create moderation request (can include more data for local services)
                     var request = CreateModerationRequest(file);
 
                     // Make HTTP call to local LLM service
-                    var response = await CallLocalLlmApiAsync(request, opts, cancellationToken);
+                    var response = await CallLocalLlmApiAsync(request, opts, ct);
 
                     // Parse response and create decision
                     var decision = ParseLlmResponse(response, file.Id);
@@ -151,15 +151,15 @@ namespace slskd.Common.Moderation
 
         private static bool IsLocalNetworkIp(string host)
         {
-            // Check if it's a local network IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
             if (IPAddress.TryParse(host, out var ip))
             {
                 var bytes = ip.GetAddressBytes();
-                if (bytes.Length == 4) // IPv4
+
+                if (bytes.Length == 4)
                 {
-                    return (bytes[0] == 192 && bytes[1] == 168) || // 192.168.x.x
-                           (bytes[0] == 10) || // 10.x.x.x
-                           (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31); // 172.16-31.x.x
+                    return (bytes[0] == 192 && bytes[1] == 168)
+                        || (bytes[0] == 10)
+                        || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31);
                 }
             }
 

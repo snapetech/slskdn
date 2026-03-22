@@ -170,7 +170,7 @@ namespace slskd.Wishlist
         {
             using var context = ContextFactory.CreateDbContext();
 
-            var item = await context.WishlistItems.FindAsync(id);
+            var item = await context.WishlistItems.FindAsync([id], cancellationToken);
             if (item == null)
             {
                 throw new NotFoundException($"Wishlist item {id} not found");

@@ -74,7 +74,7 @@ namespace slskd.Integrations.MusicBrainz
             var baseUrl = options.BaseUrl.TrimEnd('/');
             var userAgent = options.UserAgent;
 
-            var http = httpClientFactory.CreateClient();
+            using var http = httpClientFactory.CreateClient();
             http.Timeout = options.Timeout;
 
             log.LogInformation("[MusicBrainz] Fetching artist metadata from MusicBrainz API: {ArtistId}", artistId);
@@ -135,7 +135,7 @@ namespace slskd.Integrations.MusicBrainz
                         ReleaseGroupId = rg.Id,
                         Title = rg.Title ?? string.Empty,
                         Type = type,
-                        FirstReleaseDate = rg.FirstReleaseDate,
+                        FirstReleaseDate = rg.FirstReleaseDate ?? string.Empty,
                     };
 
                     // Fetch releases for this group (rate-limit 1 req/sec)
@@ -192,7 +192,8 @@ namespace slskd.Integrations.MusicBrainz
             };
         }
 
-        private static async Task<T?> GetAsync<T>(string uri, HttpClient http, string userAgent, CancellationToken ct) where T : class
+        private static async Task<T?> GetAsync<T>(string uri, HttpClient http, string userAgent, CancellationToken ct)
+            where T : class
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -211,13 +212,13 @@ namespace slskd.Integrations.MusicBrainz
         private class ArtistResponse
         {
             [JsonPropertyName("id")]
-            public string Id { get; set; }
+            public string Id { get; set; } = string.Empty;
 
             [JsonPropertyName("name")]
-            public string Name { get; set; }
+            public string Name { get; set; } = string.Empty;
 
             [JsonPropertyName("sort-name")]
-            public string SortName { get; set; }
+            public string SortName { get; set; } = string.Empty;
         }
 
         private class ReleaseGroupSearchResponse
@@ -232,16 +233,16 @@ namespace slskd.Integrations.MusicBrainz
         private class ReleaseGroupItem
         {
             [JsonPropertyName("id")]
-            public string Id { get; set; }
+            public string Id { get; set; } = string.Empty;
 
             [JsonPropertyName("title")]
-            public string Title { get; set; }
+            public string Title { get; set; } = string.Empty;
 
             [JsonPropertyName("primary-type")]
-            public string PrimaryType { get; set; }
+            public string? PrimaryType { get; set; }
 
             [JsonPropertyName("first-release-date")]
-            public string FirstReleaseDate { get; set; }
+            public string? FirstReleaseDate { get; set; }
         }
 
         private class ReleaseGroupResponse
@@ -253,19 +254,19 @@ namespace slskd.Integrations.MusicBrainz
         private class ReleaseItem
         {
             [JsonPropertyName("id")]
-            public string Id { get; set; }
+            public string Id { get; set; } = string.Empty;
 
             [JsonPropertyName("title")]
-            public string Title { get; set; }
+            public string Title { get; set; } = string.Empty;
 
             [JsonPropertyName("country")]
-            public string Country { get; set; }
+            public string Country { get; set; } = string.Empty;
 
             [JsonPropertyName("status")]
-            public string Status { get; set; }
+            public string Status { get; set; } = string.Empty;
 
             [JsonPropertyName("date")]
-            public string Date { get; set; }
+            public string Date { get; set; } = string.Empty;
         }
     }
 }

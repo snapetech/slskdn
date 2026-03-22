@@ -75,12 +75,12 @@ namespace slskd.Shares
             var code = 1;
             var size = Files.ResolveFileInfo(filename).Length;
             var extension = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
-            List<FileAttribute> attributeList = default;
+            List<FileAttribute>? attributeList = null;
 
             if (SupportedExtensions.Contains(extension))
             {
                 attributeList = new List<FileAttribute>();
-                TagLib.File file = default;
+                TagLib.File? file = null;
 
                 try
                 {

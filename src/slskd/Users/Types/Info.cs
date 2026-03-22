@@ -22,10 +22,10 @@ namespace slskd.Users
 {
     public record Info
     {
-        public string Description { get; init; }
+        public string Description { get; init; } = string.Empty;
         public bool HasFreeUploadSlot { get; init; }
         public bool HasPicture { get; init; }
-        public byte[] Picture { get; init; }
+        public byte[] Picture { get; init; } = Array.Empty<byte>();
         public int QueueLength { get; init; }
         public int UploadSlots { get; init; }
     }

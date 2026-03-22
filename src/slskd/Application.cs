@@ -67,6 +67,8 @@ namespace slskd
 
     public sealed class Application : IApplication
     {
+        private readonly List<PosixSignalRegistration> _posixSignalRegistrations = new();
+
         /// <summary>
         ///     The name of the default user group.
         /// </summary>
@@ -131,13 +133,13 @@ namespace slskd
 
             foreach (var signal in new[] { PosixSignal.SIGINT, PosixSignal.SIGQUIT, PosixSignal.SIGTERM })
             {
-                PosixSignalRegistration.Create(signal, context =>
+                _posixSignalRegistrations.Add(PosixSignalRegistration.Create(signal, context =>
                 {
                     ShuttingDown = true;
                     Program.MasterCancellationTokenSource.Cancel();
                     Log.Fatal("Received {Signal}", signal);
                     Environment.Exit(1);
-                });
+                }));
             }
 
             OptionsAtStartup = optionsAtStartup;
@@ -446,13 +448,13 @@ namespace slskd
 
             Log.Debug("Configuring client");
 
-            ProxyOptions proxyOptions = default;
+            ProxyOptions? proxyOptions = null;
 
             if (OptionsAtStartup.Soulseek.Connection.Proxy.Enabled)
             {
                 proxyOptions = new ProxyOptions(
                     address: OptionsAtStartup.Soulseek.Connection.Proxy.Address,
-                    port: OptionsAtStartup.Soulseek.Connection.Proxy.Port.Value,
+                    port: OptionsAtStartup.Soulseek.Connection.Proxy.Port.GetValueOrDefault(),
                     username: OptionsAtStartup.Soulseek.Connection.Proxy.Username,
                     password: OptionsAtStartup.Soulseek.Connection.Proxy.Password);
             }
@@ -593,7 +595,7 @@ namespace slskd
             Log.Information("[Application] Initialization complete");
         }
 
-        private async Task RegisterMeshServicesAsync(CancellationToken cancellationToken)
+        private Task RegisterMeshServicesAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -646,6 +648,8 @@ namespace slskd
             {
                 Log.Error(ex, "Failed to register mesh services");
             }
+
+            return Task.CompletedTask;
         }
 
         Task IHostedService.StopAsync(CancellationToken cancellationToken)
@@ -657,6 +661,11 @@ namespace slskd
 
             Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
             Client.Dispose();
+            foreach (var registration in _posixSignalRegistrations)
+            {
+                registration.Dispose();
+            }
+
             Log.Information("Client stopped");
             return Task.CompletedTask;
         }
@@ -715,8 +724,8 @@ namespace slskd
             var stopwatch = new Stopwatch();
             var decisionStopwatch = new Stopwatch();
 
-            SemaphoreSlim userSemaphore = null;
-            Task userSemaphoreWaitTask;
+            SemaphoreSlim? userSemaphore = null;
+            Task userSemaphoreWaitTask = Task.CompletedTask;
             bool userSemaphoreAcquired = false;
 
             bool enqueueRequestsSemaphoreAcquired = false;
@@ -840,8 +849,8 @@ namespace slskd
                     }
                 }
 
-                bool IsNull(Options.LimitsOptions.Limits lim, Options.LimitsOptions.Limits global)
-                    => (lim is null && global is null) || ((lim?.Files ?? global?.Files ?? lim?.Megabytes ?? global?.Megabytes ?? lim.Failures ?? global.Failures) is null);
+                static bool IsNull(Options.LimitsOptions.Limits? lim, Options.LimitsOptions.Limits? global)
+                    => (lim?.Files ?? global?.Files ?? lim?.Megabytes ?? global?.Megabytes ?? lim?.Failures ?? global?.Failures) is null;
 
                 /*
                  * we have limits set, so now we have to fetch the data and compare to see if any would be hit if we allow this transfer to be enqueued.
@@ -852,8 +861,8 @@ namespace slskd
                 */
                 (bool Files, bool Megabytes) OverLimits(
                     (int Files, long Bytes) stats,
-                    Options.LimitsOptions.Limits options,
-                    Options.LimitsOptions.Limits defaults,
+                    Options.LimitsOptions.Limits? options,
+                    Options.LimitsOptions.Limits? defaults,
                     long size)
                 {
                     var filesOver = false;
@@ -1027,7 +1036,7 @@ namespace slskd
 
                 if (userSemaphoreAcquired)
                 {
-                    userSemaphore.Release();
+                    userSemaphore!.Release();
                 }
 
                 if (enqueueRequestsSemaphoreAcquired)
@@ -1058,7 +1067,7 @@ namespace slskd
                 var sw = new Stopwatch();
                 sw.Start();
 
-                BrowseResponse response = default;
+                BrowseResponse? response = null;
 
                 var cacheFilename = Path.Combine(Program.DataDirectory, "browse.cache");
                 var cacheFileInfo = Files.ResolveFileInfo(cacheFilename);
@@ -1404,8 +1413,8 @@ namespace slskd
             {
                 Server = state.Server with
                 {
-                    Address = Client.State.HasFlag(SoulseekClientStates.Disconnected) ? null : Client.Address,
-                    IPEndPoint = Client.State.HasFlag(SoulseekClientStates.Disconnected) ? default : Client.IPEndPoint,
+                    Address = Client.State.HasFlag(SoulseekClientStates.Disconnected) ? string.Empty : Client.Address ?? string.Empty,
+                    IPEndPoint = Client.State.HasFlag(SoulseekClientStates.Disconnected) ? new IPEndPoint(IPAddress.None, 0) : Client.IPEndPoint ?? new IPEndPoint(IPAddress.None, 0),
                     State = Client.State,
                 },
                 User = state.User with
@@ -1762,7 +1771,7 @@ namespace slskd
                     var requiresRestart = HasAttribute<RequiresRestartAttribute>(property);
                     var requiresReconnect = HasAttribute<RequiresReconnectAttribute>(property);
 
-                    Log.Debug($"{fqn} changed from '{left.ToJson() ?? "<null>"}' to '{right.ToJson() ?? "<null>"}'{(requiresRestart ? ". Restart required to take effect." : string.Empty)}{(requiresReconnect ? "; Reconnect required to take effect." : string.Empty)}");
+                    Log.Debug($"{fqn} changed from '{left?.ToJson() ?? "<null>"}' to '{right?.ToJson() ?? "<null>"}'{(requiresRestart ? ". Restart required to take effect." : string.Empty)}{(requiresReconnect ? "; Reconnect required to take effect." : string.Empty)}");
 
                     pendingRestart |= requiresRestart;
                     pendingReconnect |= requiresReconnect;
@@ -1835,22 +1844,22 @@ namespace slskd
                     // patch doesn't make a lot of sense anyway.
                     var connectionDiff = old.Connection.DiffWith(update.Connection);
 
-                    ConnectionOptions connectionPatch = null;
-                    ConnectionOptions serverPatch = null;
-                    ConnectionOptions distributedPatch = null;
-                    ConnectionOptions transferPatch = null;
+                    ConnectionOptions? connectionPatch = null;
+                    ConnectionOptions? serverPatch = null;
+                    ConnectionOptions? distributedPatch = null;
+                    ConnectionOptions? transferPatch = null;
 
                     if (connectionDiff.Any())
                     {
                         var connection = update.Connection;
 
-                        ProxyOptions proxyPatch = null;
+                        ProxyOptions? proxyPatch = null;
 
                         if (connection.Proxy.Enabled)
                         {
                             proxyPatch = new ProxyOptions(
                                 address: connection.Proxy.Address,
-                                port: connection.Proxy.Port.Value,
+                                port: connection.Proxy.Port.GetValueOrDefault(),
                                 username: connection.Proxy.Username,
                                 password: connection.Proxy.Password);
                         }
@@ -1930,7 +1939,7 @@ namespace slskd
         /// <param name="token">The search token.</param>
         /// <param name="query">The search query.</param>
         /// <returns>A Task resolving a SearchResponse, or null.</returns>
-        private async Task<SearchResponse> SearchResponseResolver(string username, int token, SearchQuery query)
+        private async Task<SearchResponse?> SearchResponseResolver(string username, int token, SearchQuery query)
         {
             Metrics.Search.Incoming.RequestsReceived.Inc(1);
             Metrics.Search.Incoming.CurrentRequestReceiveRate.CountUp(1);
@@ -2005,7 +2014,7 @@ namespace slskd
                     Metrics.Search.Incoming.Query.Latency.Observe(queryLatency);
                     Metrics.Search.Incoming.Query.CurrentLatency.Update(queryLatency);
 
-                    SearchResponse response = null;
+                    SearchResponse? response = null;
 
                     if (results.Any())
                     {
@@ -2216,7 +2225,7 @@ namespace slskd
         /// <returns>A Task resolving the UserInfo instance.</returns>
         private async Task<UserInfo> UserInfoResolver(string username, IPEndPoint endpoint)
         {
-            byte[] pictureBytes = null;
+            byte[]? pictureBytes = null;
 
             if (!string.IsNullOrWhiteSpace(Options.Soulseek.Picture))
             {

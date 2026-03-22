@@ -266,10 +266,10 @@ public class MeekTransport : IAnonymityTransport, IDisposable
     /// </summary>
     private record MeekTunnelRequest
     {
-        public string Host { get; init; } = "";
+        public string Host { get; init; } = string.Empty;
         public int Port { get; init; }
-        public string SessionId { get; init; } = "";
-        public string FrontDomain { get; init; } = "";
+        public string SessionId { get; init; } = string.Empty;
+        public string FrontDomain { get; init; } = string.Empty;
     }
 
     /// <summary>

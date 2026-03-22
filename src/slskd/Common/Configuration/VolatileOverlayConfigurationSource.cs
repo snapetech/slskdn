@@ -75,9 +75,13 @@ namespace slskd.Configuration
                 {
                     var key = ConfigurationPath.Combine(path, property.Name.ToLowerInvariant());
 
-                    if (property.PropertyType.Namespace.StartsWith(Namespace))
+                    if ((property.PropertyType.Namespace ?? string.Empty).StartsWith(Namespace))
                     {
-                        Map(property.PropertyType, key, property.GetValue(instance));
+                        var childInstance = property.GetValue(instance);
+                        if (childInstance != null)
+                        {
+                            Map(property.PropertyType, key, childInstance);
+                        }
                     }
                     else
                     {
@@ -140,7 +144,7 @@ namespace slskd.Configuration
         /// <summary>
         ///     Gets the current overlay value.
         /// </summary>
-        public T CurrentValue => Provider.CurrentValue;
+        public T CurrentValue => Provider.CurrentValue!;
 
         private VolatileOverlayConfigurationProvider<T> Provider { get; set; }
 

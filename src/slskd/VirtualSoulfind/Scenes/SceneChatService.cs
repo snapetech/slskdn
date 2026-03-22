@@ -5,9 +5,9 @@
 namespace slskd.VirtualSoulfind.Scenes;
 
 using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using slskd;
 using OptionsModel = slskd.Options;
-using System.Collections.Concurrent;
 
 /// <summary>
 /// Interface for scene chat.

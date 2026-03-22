@@ -42,8 +42,8 @@ namespace slskd.LibraryHealth.API
         [HttpPost("scans")]
         [Authorize]
         public async Task<ActionResult<StartScanResponse>> StartScan(
-        [FromBody] LibraryHealthScanRequest request,
-                    CancellationToken ct)
+            [FromBody] LibraryHealthScanRequest request,
+            CancellationToken ct)
         {
             log.LogInformation("Starting library health scan for path: {Path}", request.LibraryPath);
 
@@ -52,7 +52,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new StartScanResponse
             {
                 ScanId = scanId,
-                Message = "Scan started successfully"
+                Message = "Scan started successfully",
             });
         }
 
@@ -65,8 +65,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("scans/{scanId}")]
         [Authorize]
         public async Task<ActionResult<LibraryHealthScan>> GetScanStatus(
-                    string scanId,
-                    CancellationToken ct)
+            string scanId,
+            CancellationToken ct)
         {
             var scan = await libraryHealth.GetScanStatusAsync(scanId, ct);
 
@@ -87,8 +87,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("summary")]
         [Authorize]
         public async Task<ActionResult<LibraryHealthSummary>> GetSummary(
-        [FromQuery] string libraryPath,
-                    CancellationToken ct)
+            [FromQuery] string libraryPath,
+            CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(libraryPath))
             {
@@ -111,8 +111,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues")]
         [Authorize]
         public async Task<ActionResult<IssuesResponse>> GetIssues(
-        [FromQuery] LibraryHealthIssueFilter filter,
-                    CancellationToken ct)
+            [FromQuery] LibraryHealthIssueFilter filter,
+            CancellationToken ct)
         {
             log.LogInformation(
                 "Getting library health issues: Types={Types}, Severities={Severities}, Statuses={Statuses}, Limit={Limit}",
@@ -140,8 +140,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues/by-type")]
         [Authorize]
         public async Task<ActionResult<IssuesByTypeResponse>> GetIssuesByType(
-        [FromQuery] string libraryPath,
-                    CancellationToken ct)
+            [FromQuery] string libraryPath,
+            CancellationToken ct)
         {
             var filter = new LibraryHealthIssueFilter { LibraryPath = libraryPath };
             var issues = await libraryHealth.GetIssuesAsync(filter, ct);
@@ -161,7 +161,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new IssuesByTypeResponse
             {
                 Groups = grouped,
-                TotalIssues = issues.Count
+                TotalIssues = issues.Count,
             });
         }
 
@@ -174,8 +174,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues/by-artist")]
         [Authorize]
         public async Task<ActionResult<IssuesByArtistResponse>> GetIssuesByArtist(
-        [FromQuery] int limit = 20,
-                    CancellationToken ct = default)
+            [FromQuery] int limit = 20,
+            CancellationToken ct = default)
         {
             var filter = new LibraryHealthIssueFilter();
             var issues = await libraryHealth.GetIssuesAsync(filter, ct);
@@ -197,7 +197,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new IssuesByArtistResponse
             {
                 Groups = grouped,
-                TotalArtists = grouped.Count
+                TotalArtists = grouped.Count,
             });
         }
 
@@ -210,8 +210,8 @@ namespace slskd.LibraryHealth.API
         [HttpGet("issues/by-release")]
         [Authorize]
         public async Task<ActionResult<IssuesByReleaseResponse>> GetIssuesByRelease(
-        [FromQuery] int limit = 20,
-                    CancellationToken ct = default)
+            [FromQuery] int limit = 20,
+            CancellationToken ct = default)
         {
             var filter = new LibraryHealthIssueFilter();
             var issues = await libraryHealth.GetIssuesAsync(filter, ct);
@@ -235,7 +235,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new IssuesByReleaseResponse
             {
                 Groups = grouped,
-                TotalReleases = grouped.Count
+                TotalReleases = grouped.Count,
             });
         }
 
@@ -291,9 +291,9 @@ namespace slskd.LibraryHealth.API
         [HttpPatch("issues/{issueId}")]
         [Authorize]
         public async Task<IActionResult> UpdateIssueStatus(
-                    string issueId,
-        [FromBody] UpdateIssueStatusRequest request,
-                    CancellationToken ct)
+            string issueId,
+            [FromBody] UpdateIssueStatusRequest request,
+            CancellationToken ct)
         {
             log.LogInformation("Updating issue {IssueId} status to {Status}", issueId, request.Status);
 
@@ -311,8 +311,8 @@ namespace slskd.LibraryHealth.API
         [HttpPost("issues/fix")]
         [Authorize]
         public async Task<ActionResult<RemediationResponse>> CreateRemediationJob(
-        [FromBody] RemediationRequest request,
-                    CancellationToken ct)
+            [FromBody] RemediationRequest request,
+            CancellationToken ct)
         {
             log.LogInformation("Creating remediation job for {Count} issues", request.IssueIds.Count);
 
@@ -321,7 +321,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new RemediationResponse
             {
                 JobId = jobId,
-                Message = $"Remediation job created for {request.IssueIds.Count} issue(s)"
+                Message = $"Remediation job created for {request.IssueIds.Count} issue(s)",
             });
         }
     }
@@ -329,20 +329,20 @@ namespace slskd.LibraryHealth.API
     // Response DTOs
     public class StartScanResponse
     {
-        public string ScanId { get; set; }
-        public string Message { get; set; }
+        public string ScanId { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
     }
 
     public class IssuesResponse
     {
-        public List<LibraryIssue> Issues { get; set; }
+        public List<LibraryIssue> Issues { get; set; } = new();
         public int TotalCount { get; set; }
-        public LibraryHealthIssueFilter Filter { get; set; }
+        public LibraryHealthIssueFilter Filter { get; set; } = new();
     }
 
     public class IssuesByTypeResponse
     {
-        public List<IssueTypeGroup> Groups { get; set; }
+        public List<IssueTypeGroup> Groups { get; set; } = new();
         public int TotalIssues { get; set; }
     }
 
@@ -350,35 +350,35 @@ namespace slskd.LibraryHealth.API
     {
         public LibraryIssueType Type { get; set; }
         public int Count { get; set; }
-        public Dictionary<LibraryIssueSeverity, int> BySeverity { get; set; }
+        public Dictionary<LibraryIssueSeverity, int> BySeverity { get; set; } = new();
     }
 
     public class IssuesByArtistResponse
     {
-        public List<IssueArtistGroup> Groups { get; set; }
+        public List<IssueArtistGroup> Groups { get; set; } = new();
         public int TotalArtists { get; set; }
     }
 
     public class IssueArtistGroup
     {
-        public string Artist { get; set; }
+        public string Artist { get; set; } = string.Empty;
         public int Count { get; set; }
-        public Dictionary<LibraryIssueType, int> ByType { get; set; }
+        public Dictionary<LibraryIssueType, int> ByType { get; set; } = new();
     }
 
     public class IssuesByReleaseResponse
     {
-        public List<IssueReleaseGroup> Groups { get; set; }
+        public List<IssueReleaseGroup> Groups { get; set; } = new();
         public int TotalReleases { get; set; }
     }
 
     public class IssueReleaseGroup
     {
-        public string Artist { get; set; }
-        public string Album { get; set; }
-        public string MusicBrainzReleaseId { get; set; }
+        public string Artist { get; set; } = string.Empty;
+        public string Album { get; set; } = string.Empty;
+        public string MusicBrainzReleaseId { get; set; } = string.Empty;
         public int Count { get; set; }
-        public Dictionary<LibraryIssueType, int> ByType { get; set; }
+        public Dictionary<LibraryIssueType, int> ByType { get; set; } = new();
     }
 
     public class UpdateIssueStatusRequest
@@ -388,12 +388,12 @@ namespace slskd.LibraryHealth.API
 
     public class RemediationRequest
     {
-        public List<string> IssueIds { get; set; }
+        public List<string> IssueIds { get; set; } = new();
     }
 
     public class RemediationResponse
     {
-        public string JobId { get; set; }
-        public string Message { get; set; }
+        public string JobId { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
     }
 }

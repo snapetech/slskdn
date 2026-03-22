@@ -60,7 +60,7 @@ namespace slskd.Messaging
         /// <param name="roomName"></param>
         /// <param name="room"></param>
         /// <returns></returns>
-        bool TryGet(string roomName, out Room room);
+        bool TryGet(string roomName, out Room? room);
 
         /// <summary>
         ///     Removes a tracked room.

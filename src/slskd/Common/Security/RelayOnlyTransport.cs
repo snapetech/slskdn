@@ -125,14 +125,25 @@ public class RelayOnlyTransport : IAnonymityTransport
             while (n < lineBuf.Length)
             {
                 var r = await stream.ReadAsync(lineBuf.AsMemory(n, 1), cancellationToken);
-                if (r == 0) break;
-                if (lineBuf[n] == (byte)'\n') { n++; break; }
+                if (r == 0)
+                {
+                    break;
+                }
+
+                if (lineBuf[n] == (byte)'\n')
+                {
+                    n++;
+                    break;
+                }
+
                 n += r;
             }
 
-            var line = n > 0 ? Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : "";
+            var line = n > 0 ? Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : string.Empty;
             if (!line.StartsWith("OK", StringComparison.Ordinal))
+            {
                 throw new InvalidOperationException("Relay refused: " + (string.IsNullOrEmpty(line) ? "no response" : line));
+            }
 
             lock (_statusLock)
             {
@@ -159,13 +170,18 @@ public class RelayOnlyTransport : IAnonymityTransport
     {
         var idx = hostPort.LastIndexOf(':');
         if (idx < 0)
+        {
             throw new ArgumentException("Relay endpoint must be host:port: " + hostPort);
+        }
+
         var host = hostPort[..idx];
         var port = int.Parse(hostPort[(idx + 1)..]);
 
         IPAddress ip;
         if (IPAddress.TryParse(host, out var a))
+        {
             ip = a;
+        }
         else
         {
             var he = await Dns.GetHostEntryAsync(host, ct);

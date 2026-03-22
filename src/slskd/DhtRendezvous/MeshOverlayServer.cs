@@ -7,6 +7,7 @@ namespace slskd.DhtRendezvous;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -80,12 +81,12 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     public long TotalConnectionsAccepted => _totalAccepted;
     public long TotalConnectionsRejected => _totalRejected;
 
-    public async Task StartAsync(CancellationToken cancellationToken = default)
+    public Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (_listener is not null)
         {
             _logger.LogWarning("Server already running");
-            return;
+            return Task.CompletedTask;
         }
 
         _cts = new CancellationTokenSource();
@@ -109,6 +110,8 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             _listener = null;
             throw;
         }
+
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync()
@@ -169,6 +172,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         }
     }
 
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Accepted connections are registered for ongoing ownership or explicitly disconnected on rejection and error paths.")]
     private async Task HandleConnectionAsync(TcpClient tcpClient, CancellationToken cancellationToken)
     {
         var remoteEndPoint = (IPEndPoint)tcpClient.Client.RemoteEndPoint!;
@@ -221,7 +225,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 {
                     _logger.LogWarning("Rejected connection from blocked user {Username}", hello.Username);
                     Interlocked.Increment(ref _totalRejected);
-                    await connection.DisconnectAsync("Blocked");
+                    await connection.DisconnectAsync("Blocked", cancellationToken);
                     return;
                 }
 
@@ -239,7 +243,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                                 "TOFU: First connection from {Username}, pinning certificate {Thumbprint}",
                                 hello.Username,
                                 connection.CertificateThumbprint?[..16] + "...");
-                            _pinStore.SetPin(hello.Username, connection.CertificateThumbprint);
+                            _pinStore.SetPin(hello.Username, connection.CertificateThumbprint ?? string.Empty);
                             break;
 
                         case PinCheckResult.Valid:
@@ -255,7 +259,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             _blocklist.BlockUsername(hello.Username, "Certificate pin mismatch", TimeSpan.FromHours(1));
                             Interlocked.Increment(ref _totalRejected);
                             _rateLimiter.RecordViolation(remoteIp);
-                            await connection.DisconnectAsync("Certificate mismatch");
+                            await connection.DisconnectAsync("Certificate mismatch", cancellationToken);
                             return;
                     }
                 }
@@ -265,7 +269,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 {
                     _logger.LogDebug("Failed to register connection from {Username}", hello.Username);
                     Interlocked.Increment(ref _totalRejected);
-                    await connection.DisconnectAsync("Registration failed");
+                    await connection.DisconnectAsync("Registration failed", cancellationToken);
                     return;
                 }
 
@@ -279,13 +283,18 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 
                 // Start message handling loop in background
                 _ = HandleMessagesAsync(connection, cancellationToken);
+                connection = null;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Handshake failed with {Endpoint}", remoteEndPoint);
                 Interlocked.Increment(ref _totalRejected);
                 _rateLimiter.RecordViolation(remoteIp);
-                await connection.DisposeAsync();
+                if (connection != null)
+                {
+                    await connection.DisposeAsync();
+                    connection = null;
+                }
             }
         }
         catch (Exception ex)

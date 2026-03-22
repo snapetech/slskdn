@@ -29,12 +29,12 @@ namespace slskd.VirtualSoulfind.v2.Matching
         /// <summary>
         ///     Gets or initializes the filename (basename only, no path).
         /// </summary>
-        public string Filename { get; init; }
+        public string Filename { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the file extension (e.g., ".flac", ".mp3").
         /// </summary>
-        public string Extension { get; init; }
+        public string Extension { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the file size in bytes.

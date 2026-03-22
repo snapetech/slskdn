@@ -94,8 +94,7 @@ public class ProfileController : ControllerBase
                 return Problem(
                     title: "Profile not available",
                     detail: "Cannot create invite: profile not available. Please ensure Identity & Friends is properly configured.",
-                    statusCode: StatusCodes.Status400BadRequest
-                );
+                    statusCode: StatusCodes.Status400BadRequest);
             }
 
             var invite = new FriendInvite
@@ -115,15 +114,16 @@ public class ProfileController : ControllerBase
             return Problem(
                 title: "Failed to create invite",
                 detail: $"Cannot create invite: {ex.Message}",
-                statusCode: StatusCodes.Status400BadRequest
-            );
+                statusCode: StatusCodes.Status400BadRequest);
         }
     }
 }
 
 public class UpdateProfileRequest
 {
-    [Required] public string? DisplayName { get; set; }
+    [Required]
+    public string? DisplayName { get; set; }
+
     public string? Avatar { get; set; }
     public int? Capabilities { get; set; }
     public List<PeerEndpoint>? Endpoints { get; set; }

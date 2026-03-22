@@ -199,7 +199,7 @@ namespace slskd.Common.CodeQuality
                 Recommendations = new List<string>()
             };
 
-            foreach (var entryPoint in criticalPath.EntryPoints)
+            foreach (var entryPoint in criticalPath.EntryPoints ?? Array.Empty<string>())
             {
                 var analysis = AnalyzeEntryPoint(entryPoint, criticalPath, sourceAssemblies, logger);
                 result.EntryPointsAnalyzed.Add(analysis);
@@ -211,7 +211,7 @@ namespace slskd.Common.CodeQuality
                 .Distinct()
                 .ToHashSet();
 
-            foreach (var requiredCheck in criticalPath.RequiredChecks)
+            foreach (var requiredCheck in criticalPath.RequiredChecks ?? Array.Empty<string>())
             {
                 if (!implementedChecks.Contains(requiredCheck))
                 {
@@ -259,7 +259,7 @@ namespace slskd.Common.CodeQuality
             foreach (var assembly in sourceAssemblies)
             {
                 var type = assembly.GetTypes().FirstOrDefault(t =>
-                    t.FullName?.Replace(".", "") == typeName.Replace(".", "") ||
+                    t.FullName?.Replace(".", string.Empty) == typeName.Replace(".", string.Empty) ||
                     t.Name == parts[parts.Length - 2]);
 
                 if (type != null)
@@ -271,10 +271,10 @@ namespace slskd.Common.CodeQuality
                     if (method != null)
                     {
                         // Analyze method for moderation checks
-                        var checks = DetectModerationChecks(method, criticalPath.RequiredChecks);
+                        var checks = DetectModerationChecks(method, criticalPath.RequiredChecks ?? Array.Empty<string>());
                         analysis.FoundChecks.AddRange(checks);
 
-                        var missing = criticalPath.RequiredChecks.Except(checks).ToList();
+                        var missing = (criticalPath.RequiredChecks ?? Array.Empty<string>()).Except(checks).ToList();
                         analysis.MissingChecks.AddRange(missing);
                         analysis.HasRequiredChecks = !missing.Any();
                     }

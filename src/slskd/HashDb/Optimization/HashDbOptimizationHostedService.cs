@@ -34,12 +34,12 @@ public class HashDbOptimizationHostedService : IHostedService
     }
 
     /// <inheritdoc/>
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         if (!_options.AutoOptimizeOnStartup)
         {
             _logger.LogDebug("[HashDbOptimization] Auto-optimization on startup is disabled");
-            return;
+            return Task.CompletedTask;
         }
 
         try
@@ -64,6 +64,8 @@ public class HashDbOptimizationHostedService : IHostedService
         {
             _logger.LogWarning(ex, "[HashDbOptimization] Failed to start automatic optimization (non-critical)");
         }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

@@ -136,7 +136,7 @@ public class MeshServicePublisher : BackgroundService
             var dhtKey = $"svc:{serviceName}";
 
             // Serialize the list of descriptors
-            var serialized = MessagePackSerializer.Serialize(descriptors);
+            var serialized = MessagePackSerializer.Serialize(descriptors, cancellationToken: cancellationToken);
 
             // Check size limit
             if (serialized.Length > _options.MaxDhtValueBytes)
@@ -150,7 +150,7 @@ public class MeshServicePublisher : BackgroundService
                 var reduced = descriptors.Take(descriptors.Count / 2).ToList();
                 if (reduced.Any())
                 {
-                    serialized = MessagePackSerializer.Serialize(reduced);
+                    serialized = MessagePackSerializer.Serialize(reduced, cancellationToken: cancellationToken);
                 }
                 else
                 {

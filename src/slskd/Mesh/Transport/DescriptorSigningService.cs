@@ -208,8 +208,4 @@ public class DescriptorSigningService
             _lastAcceptedSequences.Remove(peerId);
         }
     }
-
-    /// <summary>
-    /// Ed25519 signing and verification utility.
-    /// </summary>
 }

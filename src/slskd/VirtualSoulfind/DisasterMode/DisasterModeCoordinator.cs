@@ -179,17 +179,22 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
             DisasterModeLevel targetLevel;
             string reason;
 
-            if (elapsedMinutes >= 30) // 30+ minutes down
+            // 30+ minutes down.
+            if (elapsedMinutes >= 30)
             {
                 targetLevel = DisasterModeLevel.FullFallback;
                 reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - full fallback mode";
             }
-            else if (elapsedMinutes >= 10) // 10+ minutes down
+
+            // 10+ minutes down.
+            else if (elapsedMinutes >= 10)
             {
                 targetLevel = DisasterModeLevel.SoulseekUnavailable;
                 reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - mesh primary";
             }
-            else if (elapsedMinutes >= 2) // 2+ minutes down
+
+            // 2+ minutes down.
+            else if (elapsedMinutes >= 2)
             {
                 targetLevel = DisasterModeLevel.SoulseekDegraded;
                 reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - mesh assisting";

@@ -40,44 +40,44 @@ namespace slskd.LibraryHealth
 
     public class LibraryIssue
     {
-        public string IssueId { get; set; }
+        public string IssueId { get; set; } = string.Empty;
         public LibraryIssueType Type { get; set; }
         public LibraryIssueSeverity Severity { get; set; }
 
         // Affected entities
-        public string FilePath { get; set; }
-        public string MusicBrainzRecordingId { get; set; }
-        public string MusicBrainzReleaseId { get; set; }
-        public string Artist { get; set; }
-        public string Album { get; set; }
-        public string Title { get; set; }
+        public string FilePath { get; set; } = string.Empty;
+        public string MusicBrainzRecordingId { get; set; } = string.Empty;
+        public string MusicBrainzReleaseId { get; set; } = string.Empty;
+        public string Artist { get; set; } = string.Empty;
+        public string Album { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
 
         // Issue details
-        public string Reason { get; set; }
+        public string Reason { get; set; } = string.Empty;
         public Dictionary<string, object> Metadata { get; set; } = new();
 
         // Remediation
         public bool CanAutoFix { get; set; }
-        public string SuggestedAction { get; set; }
-        public string RemediationJobId { get; set; }
+        public string SuggestedAction { get; set; } = string.Empty;
+        public string RemediationJobId { get; set; } = string.Empty;
 
         // Status
         public LibraryIssueStatus Status { get; set; }
         public DateTimeOffset DetectedAt { get; set; }
         public DateTimeOffset? ResolvedAt { get; set; }
-        public string ResolvedBy { get; set; }
+        public string ResolvedBy { get; set; } = string.Empty;
     }
 
     public class LibraryHealthScan
     {
-        public string ScanId { get; set; }
-        public string LibraryPath { get; set; }
+        public string ScanId { get; set; } = string.Empty;
+        public string LibraryPath { get; set; } = string.Empty;
         public DateTimeOffset StartedAt { get; set; }
         public DateTimeOffset? CompletedAt { get; set; }
         public ScanStatus Status { get; set; }
         public int FilesScanned { get; set; }
         public int IssuesDetected { get; set; }
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 
     public enum ScanStatus
@@ -90,7 +90,7 @@ namespace slskd.LibraryHealth
 
     public class LibraryHealthSummary
     {
-        public string LibraryPath { get; set; }
+        public string LibraryPath { get; set; } = string.Empty;
         public int TotalIssues { get; set; }
         public int IssuesOpen { get; set; }
         public int IssuesResolved { get; set; }
@@ -98,7 +98,7 @@ namespace slskd.LibraryHealth
 
     public class IssueCodecGroup
     {
-        public string Codec { get; set; }
+        public string Codec { get; set; } = string.Empty;
 
         public int Count { get; set; }
 
@@ -107,7 +107,7 @@ namespace slskd.LibraryHealth
 
     public class LibraryHealthScanRequest
     {
-        public string LibraryPath { get; set; }
+        public string LibraryPath { get; set; } = string.Empty;
         public bool IncludeSubdirectories { get; set; } = true;
         public List<string> FileExtensions { get; set; } = new() { ".flac", ".mp3", ".m4a", ".ogg" };
         public bool SkipPreviouslyScanned { get; set; } = false;
@@ -116,11 +116,11 @@ namespace slskd.LibraryHealth
 
     public class LibraryHealthIssueFilter
     {
-        public string LibraryPath { get; set; }
-        public List<LibraryIssueType> Types { get; set; }
-        public List<LibraryIssueSeverity> Severities { get; set; }
-        public List<LibraryIssueStatus> Statuses { get; set; }
-        public string MusicBrainzReleaseId { get; set; }
+        public string LibraryPath { get; set; } = string.Empty;
+        public List<LibraryIssueType> Types { get; set; } = new();
+        public List<LibraryIssueSeverity> Severities { get; set; } = new();
+        public List<LibraryIssueStatus> Statuses { get; set; } = new();
+        public string MusicBrainzReleaseId { get; set; } = string.Empty;
         public int Limit { get; set; } = 100;
         public int Offset { get; set; } = 0;
     }

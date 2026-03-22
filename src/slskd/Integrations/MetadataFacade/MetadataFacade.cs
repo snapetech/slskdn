@@ -263,7 +263,7 @@ namespace slskd.Integrations.MetadataFacade
         }
 
         /// <summary>Parses common Soulseek filename patterns into (Artist, Title, Album).</summary>
-        private static (string? artist, string? title, string? album) ParseSoulseekFilename(string filename)
+        private static (string? Artist, string? Title, string? Album) ParseSoulseekFilename(string filename)
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(filename);
             if (string.IsNullOrWhiteSpace(name)) return (null, null, null);

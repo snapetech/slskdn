@@ -37,8 +37,16 @@ namespace slskd
                 using var http = new HttpClient();
                 http.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
 
-                var response = await http.GetFromJsonAsync<JsonDocument>(url);
-                return Version.Parse(response.RootElement.GetProperty("tag_name").GetString());
+                var response = await http.GetFromJsonAsync<JsonDocument>(url)
+                    ?? throw new GitHubException("GitHub returned an empty response");
+                var tagName = response.RootElement.GetProperty("tag_name").GetString();
+
+                if (string.IsNullOrWhiteSpace(tagName))
+                {
+                    throw new GitHubException("GitHub returned a release without a tag_name");
+                }
+
+                return Version.Parse(tagName);
             }
             catch (Exception ex)
             {

@@ -29,6 +29,7 @@ coverage.json
 /*.patch
 
 # Local key backups
+/mesh-overlay.key.prev
 /src/slskd/mesh-overlay.key.prev
 
 # Generated key files (private keys; created at runtime)

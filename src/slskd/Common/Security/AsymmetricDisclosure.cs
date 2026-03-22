@@ -177,6 +177,7 @@ public sealed class AsymmetricDisclosure
     /// </summary>
     /// <param name="username">Peer requesting files.</param>
     /// <param name="files">All available files.</param>
+    /// <param name="getFileTier">Selector used to determine each file's disclosure tier.</param>
     /// <returns>Files the peer is allowed to see.</returns>
     public IReadOnlyList<T> FilterFiles<T>(string username, IEnumerable<T> files, Func<T, DisclosureTier> getFileTier)
     {

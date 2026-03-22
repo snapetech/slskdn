@@ -19,7 +19,7 @@ namespace slskd.Mesh.Dht;
 /// </summary>
 public interface IMeshDhtClient
 {
-    Task PutAsync(string key, object value, int ttlSeconds, CancellationToken ct = default);
+    Task PutAsync(string key, object? value, int ttlSeconds, CancellationToken ct = default);
     Task<byte[]?> GetRawAsync(string key, CancellationToken ct = default);
     Task<T?> GetAsync<T>(string key, CancellationToken ct = default);
 
@@ -52,9 +52,9 @@ public class MeshDhtClient : IMeshDhtClient
         this.dhtService = new Lazy<DhtService?>(() => serviceProvider?.GetService<DhtService>());
     }
 
-    public async Task PutAsync(string key, object value, int ttlSeconds, CancellationToken ct = default)
+    public async Task PutAsync(string key, object? value, int ttlSeconds, CancellationToken ct = default)
     {
-        var payload = value as byte[] ?? MessagePackSerializer.Serialize(value);
+        var payload = value as byte[] ?? MessagePackSerializer.Serialize(value, cancellationToken: ct);
         var ttl = Math.Min(Math.Max(ttlSeconds, 60), 3600); // clamp 1m..1h
         await inner.PutAsync(KeyBytes(key), payload, ttl, ct);
         logger.LogDebug("[MeshDHT] Put {Key} ttl={Ttl}s size={Size}", key, ttl, payload.Length);

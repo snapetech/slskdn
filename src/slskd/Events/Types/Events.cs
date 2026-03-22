@@ -63,7 +63,7 @@ public sealed record SoulseekClientDisconnectedEvent : Event
     public override EventType Type => EventType.SoulseekClientDisconnected;
     public override int Version { get; } = 0;
     public required string Message { get; init; }
-    public required Exception Exception { get; init; }
+    public Exception? Exception { get; init; }
 }
 
 public sealed record DownloadFileCompleteEvent : Event

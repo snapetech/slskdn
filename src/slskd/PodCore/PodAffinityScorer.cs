@@ -138,18 +138,21 @@ public class PodAffinityScorer : IPodAffinityScorer
     /// <summary>
     /// Trust score based on known/trusted members in the pod.
     /// </summary>
-    private async Task<double> ComputeTrustScoreAsync(
+    private Task<double> ComputeTrustScoreAsync(
         string podId,
         string userId,
         IReadOnlyList<PodMember> members,
         CancellationToken ct)
     {
+        _ = podId;
+        _ = ct;
+
         // TODO: Integrate with SecurityCore PeerReputation system
         // For now, use simple heuristics:
 
         // 1. Is user already a member? → high trust
         if (members.Any(m => m.PeerId == userId))
-            return 1.0;
+            return Task.FromResult(1.0);
 
         // 2. Are there verified/trusted peers? (placeholder)
         var verifiedCount = members.Count(m => !string.IsNullOrEmpty(m.PublicKey));
@@ -159,7 +162,7 @@ public class PodAffinityScorer : IPodAffinityScorer
         var bannedCount = members.Count(m => m.IsBanned);
         var bannedPenalty = bannedCount > 0 ? 0.5 : 1.0;
 
-        return verifiedRatio * bannedPenalty;
+        return Task.FromResult(verifiedRatio * bannedPenalty);
     }
 
     /// <summary>

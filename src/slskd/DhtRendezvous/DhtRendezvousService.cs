@@ -534,7 +534,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         return DateTimeOffset.UtcNow - _lastDiscoveryTime.Value > TimeSpan.FromSeconds(_options.DiscoveryIntervalSeconds);
     }
 
-    private async Task<bool> DetectBeaconCapabilityAsync(CancellationToken cancellationToken)
+    private Task<bool> DetectBeaconCapabilityAsync(CancellationToken cancellationToken)
     {
         // Simplified beacon detection
         // In production, this would:
@@ -546,17 +546,16 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         // For now, check if we can bind to the overlay port
         try
         {
-            var listener = new System.Net.Sockets.TcpListener(IPAddress.Any, _options.OverlayPort);
+            using var listener = new System.Net.Sockets.TcpListener(IPAddress.Any, _options.OverlayPort);
             listener.Start();
-            listener.Stop();
 
             _logger.LogDebug("Successfully bound to overlay port {Port}", _options.OverlayPort);
-            return true;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Could not bind to overlay port {Port}", _options.OverlayPort);
-            return false;
+            return Task.FromResult(false);
         }
     }
 }

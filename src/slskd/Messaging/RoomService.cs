@@ -181,7 +181,7 @@ namespace slskd.Messaging
             }
         }
 
-        private async void Client_LoggedIn(object sender, EventArgs e)
+        private async void Client_LoggedIn(object? sender, EventArgs e)
         {
             try
             {
@@ -207,7 +207,7 @@ namespace slskd.Messaging
             }
         }
 
-        private void Client_RoomJoined(object sender, RoomJoinedEventArgs args)
+        private void Client_RoomJoined(object? sender, RoomJoinedEventArgs args)
         {
             if (args.Username == Client.Username)
             {
@@ -220,7 +220,7 @@ namespace slskd.Messaging
             }
         }
 
-        private void Client_RoomLeft(object sender, RoomLeftEventArgs args)
+        private void Client_RoomLeft(object? sender, RoomLeftEventArgs args)
         {
             if (args.Username == Client.Username)
             {
@@ -233,7 +233,7 @@ namespace slskd.Messaging
             }
         }
 
-        private void Client_RoomMessageReceived(object sender, RoomMessageReceivedEventArgs args)
+        private void Client_RoomMessageReceived(object? sender, RoomMessageReceivedEventArgs args)
         {
             if (Users.IsBlacklisted(args.Username))
             {

@@ -137,7 +137,7 @@ namespace slskd
         /// <param name="value">The current value of the state.</param>
         public StateSnapshot(T value)
         {
-            Value = value.ToJson().FromJson<T>();
+            Value = value!.ToJson().FromJson<T>()!;
         }
 
         /// <summary>
@@ -152,7 +152,7 @@ namespace slskd
     /// <typeparam name="T">The type of the tracked state object.</typeparam>
     public class ManagedState<T> : IManagedState<T>
     {
-        private event Action<(T, T)> Changed;
+        private event Action<(T? Previous, T Current)>? Changed;
 
         /// <summary>
         ///     Gets the current application state.
@@ -187,7 +187,7 @@ namespace slskd
         {
             lock (Lock)
             {
-                var previous = CurrentValue.ToJson().FromJson<T>();
+                var previous = CurrentValue!.ToJson().FromJson<T>();
                 CurrentValue = setter(CurrentValue);
 
                 Changed?.Invoke((previous, CurrentValue));
@@ -217,7 +217,7 @@ namespace slskd
                 GC.SuppressFinalize(this);
             }
 
-            public void OnChange((T Previous, T Current) args) => Listener.Invoke(args);
+            public void OnChange((T? Previous, T Current) args) => Listener.Invoke((args.Previous!, args.Current));
 
             protected virtual void Dispose(bool disposing)
             {

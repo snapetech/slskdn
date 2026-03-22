@@ -133,7 +133,7 @@ public class DhtService
     /// <summary>
     /// Get DHT storage statistics.
     /// </summary>
-    public (int totalKeys, int contentHintKeys) GetStorageStats()
+    public (int TotalKeys, int ContentHintKeys) GetStorageStats()
     {
         if (_dhtClient is InMemoryDhtClient inMemoryClient)
         {

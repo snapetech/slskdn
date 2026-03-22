@@ -115,8 +115,12 @@ public class StreamsController : ControllerBase
         Stream? stream = null;
         try
         {
+#pragma warning disable CA2000 // Ownership is transferred to ReleaseOnDisposeStream/FileResult on success and disposed in finally on failure.
             stream = new FileStream(resolved.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var wrapped = new ReleaseOnDisposeStream(stream, () => _limiter.Release(limiterKey));
+            Stream? ownedStream = stream;
+            var wrapped = new ReleaseOnDisposeStream(ownedStream, () => _limiter.Release(limiterKey));
+#pragma warning restore CA2000
+            ownedStream = null;
             stream = null;
             return File(wrapped, resolved.ContentType, enableRangeProcessing: true);
         }

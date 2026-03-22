@@ -777,9 +777,9 @@ public static class HashDbMigrations
         public int Version { get; set; }
 
         /// <summary>Gets or sets the migration name/description.</summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the migration action.</summary>
-        public Action<SqliteConnection> Apply { get; set; }
+        public Action<SqliteConnection> Apply { get; set; } = _ => { };
     }
 }

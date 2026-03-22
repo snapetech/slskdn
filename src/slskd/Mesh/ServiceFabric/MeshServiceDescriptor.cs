@@ -159,8 +159,8 @@ public sealed record MeshServiceEndpoint
 
     public override string ToString()
     {
-        var portPart = Port > 0 ? $":{Port}" : "";
-        var pathPart = !string.IsNullOrEmpty(Path) ? $"/{Path}" : "";
+        var portPart = Port > 0 ? $":{Port}" : string.Empty;
+        var pathPart = !string.IsNullOrEmpty(Path) ? $"/{Path}" : string.Empty;
         return $"{Protocol}://{Host}{portPart}{pathPart}";
     }
 }

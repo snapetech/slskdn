@@ -48,7 +48,7 @@ public sealed class MdnsAdvertiser : IDisposable
             var hostnameLocal = $"{hostname}.local";
 
             _announceCts = new CancellationTokenSource();
-            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _announceCts.Token);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, _announceCts.Token);
 
             // Send initial announcement
             await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, linkedCts.Token).ConfigureAwait(false);
@@ -124,7 +124,7 @@ public sealed class MdnsAdvertiser : IDisposable
         EncodeName(serviceTypeLocal, packet);
         packet.AddRange(new byte[] { 0x00, 0x0C }); // Type = PTR (12)
         packet.AddRange(new byte[] { 0x00, 0x01 }); // Class = IN (1)
-        packet.AddRange(ToNetworkBytes((uint)120)); // TTL = 120 seconds
+        packet.AddRange(ToNetworkBytes(120U)); // TTL = 120 seconds
         var ptrNameBytes = EncodeNameToBytes(instanceName);
         packet.AddRange(ToNetworkBytes((ushort)ptrNameBytes.Length)); // RDLength
         packet.AddRange(ptrNameBytes);
@@ -133,7 +133,7 @@ public sealed class MdnsAdvertiser : IDisposable
         EncodeName(instanceName, packet);
         packet.AddRange(new byte[] { 0x00, 0x21 }); // Type = SRV (33)
         packet.AddRange(new byte[] { 0x00, 0x01 }); // Class = IN
-        packet.AddRange(ToNetworkBytes((uint)120)); // TTL
+        packet.AddRange(ToNetworkBytes(120U)); // TTL
         var srvData = new List<byte>();
         srvData.AddRange(new byte[] { 0x00, 0x00 }); // Priority = 0
         srvData.AddRange(new byte[] { 0x00, 0x00 }); // Weight = 0
@@ -146,7 +146,7 @@ public sealed class MdnsAdvertiser : IDisposable
         EncodeName(instanceName, packet);
         packet.AddRange(new byte[] { 0x00, 0x10 }); // Type = TXT (16)
         packet.AddRange(new byte[] { 0x00, 0x01 }); // Class = IN
-        packet.AddRange(ToNetworkBytes((uint)120)); // TTL
+        packet.AddRange(ToNetworkBytes(120U)); // TTL
         var txtData = new List<byte>();
         foreach (var kvp in properties)
         {
@@ -163,7 +163,7 @@ public sealed class MdnsAdvertiser : IDisposable
         EncodeName(hostname, packet);
         packet.AddRange(new byte[] { 0x00, 0x01 }); // Type = A (1)
         packet.AddRange(new byte[] { 0x00, 0x01 }); // Class = IN
-        packet.AddRange(ToNetworkBytes((uint)120)); // TTL
+        packet.AddRange(ToNetworkBytes(120U)); // TTL
         packet.AddRange(new byte[] { 0x00, 0x04 }); // RDLength = 4 (IPv4)
         var localIp = GetLocalIpAddress();
         packet.AddRange(localIp.GetAddressBytes());

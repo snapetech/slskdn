@@ -34,7 +34,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the internal track ID.
         /// </summary>
-        public string TrackId { get; init; }
+        public string TrackId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the MusicBrainz recording ID (if available).
@@ -44,7 +44,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the release ID this track belongs to.
         /// </summary>
-        public string ReleaseId { get; init; }
+        public string ReleaseId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the disc number (1-based).
@@ -59,7 +59,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the track title.
         /// </summary>
-        public string Title { get; init; }
+        public string Title { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the canonical duration in seconds.

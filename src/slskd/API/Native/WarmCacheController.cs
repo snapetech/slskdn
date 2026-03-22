@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using slskd;
-using OptionsModel = slskd.Options;
 using slskd.Transfers.MultiSource.Caching;
+using OptionsModel = slskd.Options;
 
 /// <summary>
 /// Provides slskdn-native warm cache hints API.
@@ -42,8 +42,8 @@ public class WarmCacheController : ControllerBase
     [HttpPost("hints")]
     [Authorize]
     public async Task<IActionResult> SubmitHints(
-    [FromBody] WarmCacheHintsRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] WarmCacheHintsRequest request,
+        CancellationToken cancellationToken)
     {
         var options = optionsMonitor.CurrentValue;
         if (options.WarmCache?.Enabled != true)

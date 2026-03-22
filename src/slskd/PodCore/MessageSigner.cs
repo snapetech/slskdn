@@ -262,8 +262,10 @@ public class MessageSigner : IMessageSigner
     }
 
     /// <inheritdoc/>
-    public async Task<SignatureStats> GetStatsAsync(CancellationToken cancellationToken = default)
+    public Task<SignatureStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
+
         var averageSigningTime = _totalSignaturesCreated > 0
             ? (double)_totalSigningTimeMs / _totalSignaturesCreated
             : 0.0;
@@ -272,14 +274,14 @@ public class MessageSigner : IMessageSigner
             ? (double)_totalVerificationTimeMs / _totalSignaturesVerified
             : 0.0;
 
-        return new SignatureStats(
+        return Task.FromResult(new SignatureStats(
             TotalSignaturesCreated: _totalSignaturesCreated,
             TotalSignaturesVerified: _totalSignaturesVerified,
             SuccessfulVerifications: _successfulVerifications,
             FailedVerifications: _failedVerifications,
             AverageSigningTimeMs: averageSigningTime,
             AverageVerificationTimeMs: averageVerificationTime,
-            LastSignatureOperation: _lastSignatureOperation);
+            LastSignatureOperation: _lastSignatureOperation));
     }
 
     // PR-12 canonical: SigVersion|PodId|ChannelId|MessageId|SenderPeerId|TimestampUnixMs|BodySha256 (base64)

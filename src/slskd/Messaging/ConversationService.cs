@@ -65,7 +65,7 @@ namespace slskd.Messaging
         /// <param name="includeInactive">A value indicating whether to include conversations marked as inactive.</param>
         /// <param name="includeMessages">A value indicating whether <see cref="PrivateMessage"/> records should be included in the return value.</param>
         /// <returns>The operation context, including the located conversation, if one was found.</returns>
-        Task<Conversation> FindAsync(string username, bool includeInactive = true, bool includeMessages = false);
+        Task<Conversation?> FindAsync(string username, bool includeInactive = true, bool includeMessages = false);
 
         /// <summary>
         ///     Returns the <see cref="PrivateMessage"/> record associated with the specified <paramref name="username"/> and <paramref name="id"/>.
@@ -73,7 +73,7 @@ namespace slskd.Messaging
         /// <param name="username">The username associated with the conversation.</param>
         /// <param name="id">The ID of the message.</param>
         /// <returns>The operation context, including the located message, if one was found.</returns>
-        Task<PrivateMessage> FindMessageAsync(string username, int id);
+        Task<PrivateMessage?> FindMessageAsync(string username, int id);
 
         /// <summary>
         ///     Returns the list of all <see cref="Conversation"/> records matching the specified <paramref name="expression"/>.
@@ -366,7 +366,7 @@ namespace slskd.Messaging
         /// <param name="includeInactive">A value indicating whether to include conversations marked as inactive.</param>
         /// <param name="includeMessages">A value indicating whether <see cref="PrivateMessage"/> records should be included in the return value.</param>
         /// <returns>The operation context, including the located conversation, if one was found.</returns>
-        public async Task<Conversation> FindAsync(string username, bool includeInactive = true, bool includeMessages = false)
+        public async Task<Conversation?> FindAsync(string username, bool includeInactive = true, bool includeMessages = false)
         {
             using var context = ContextFactory.CreateDbContext();
 
@@ -398,11 +398,11 @@ namespace slskd.Messaging
         /// <param name="username">The username associated with the conversation.</param>
         /// <param name="id">The ID of the message.</param>
         /// <returns>The operation context, including the located message, if one was found.</returns>
-        public Task<PrivateMessage> FindMessageAsync(string username, int id)
+        public Task<PrivateMessage?> FindMessageAsync(string username, int id)
         {
             using var context = ContextFactory.CreateDbContext();
 
-            var message = context.PrivateMessages
+            PrivateMessage? message = context.PrivateMessages
                 .AsNoTracking()
                 .Where(m => m.Username == username && m.Id == id)
                 .SingleOrDefault();

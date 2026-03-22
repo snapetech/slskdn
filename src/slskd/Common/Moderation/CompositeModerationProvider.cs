@@ -276,7 +276,7 @@ namespace slskd.Common.Moderation
                 {
                     Id = contentItem.Value.MaskedFilename,
                     SizeBytes = size,
-                    PrimaryHash = null, // Not available from FindFileInfo
+                    PrimaryHash = string.Empty, // Not available from FindFileInfo
                     MediaInfo = System.IO.Path.GetExtension(filename),
                 };
 

@@ -42,7 +42,7 @@ namespace slskd.Transfers.Rescue
         /// <summary>
         ///     Activate rescue mode for a transfer.
         /// </summary>
-        Task<RescueJob> ActivateRescueModeAsync(
+        Task<RescueJob?> ActivateRescueModeAsync(
             string transferId,
             string username,
             string filename,
@@ -67,13 +67,13 @@ namespace slskd.Transfers.Rescue
     /// </summary>
     public class RescueService : IRescueService
     {
-        private readonly IHashDbService hashDb;
-        private readonly IFingerprintExtractionService fingerprinting;
-        private readonly IAcoustIdClient acoustId;
-        private readonly IMeshSyncService meshSync;
-        private readonly IMeshDirectory meshDirectory;
-        private readonly IMultiSourceDownloadService multiSource;
-        private readonly IDownloadService downloadService;
+        private readonly IHashDbService? hashDb;
+        private readonly IFingerprintExtractionService? fingerprinting;
+        private readonly IAcoustIdClient? acoustId;
+        private readonly IMeshSyncService? meshSync;
+        private readonly IMeshDirectory? meshDirectory;
+        private readonly IMultiSourceDownloadService? multiSource;
+        private readonly IDownloadService? downloadService;
         private readonly IRescueGuardrailService guardrails;
         private readonly ConcurrentDictionary<string, string> activeRescueJobs = new(); // transferId -> multiSourceJobId (or "" when pending)
         private readonly ILogger log = Log.ForContext<RescueService>();
@@ -102,7 +102,7 @@ namespace slskd.Transfers.Rescue
         }
 
         /// <inheritdoc/>
-        public async Task<RescueJob> ActivateRescueModeAsync(
+        public async Task<RescueJob?> ActivateRescueModeAsync(
             string transferId,
             string username,
             string filename,
@@ -118,16 +118,16 @@ namespace slskd.Transfers.Rescue
             if (!allowed)
             {
                 log.Warning("[RESCUE] Rescue mode not allowed: {Reason}", guardReason);
-                return null;
+                return default;
             }
 
             // Step 1: Resolve MusicBrainz Recording ID
-            string recordingId = await ResolveRecordingIdAsync(filename, bytesTransferred, ct);
+            string? recordingId = await ResolveRecordingIdAsync(filename, bytesTransferred, ct);
 
             if (recordingId == null)
             {
                 log.Warning("[RESCUE] Cannot activate rescue: unable to resolve MusicBrainz Recording ID for {File}", filename);
-                return null;
+                return default;
             }
 
             log.Information("[RESCUE] Resolved recording ID: {RecordingId}", recordingId);
@@ -138,7 +138,7 @@ namespace slskd.Transfers.Rescue
             if (overlayPeers.Count == 0)
             {
                 log.Warning("[RESCUE] Cannot activate rescue: no overlay peers found for recording {RecordingId}", recordingId);
-                return null;
+                return default;
             }
 
             log.Information("[RESCUE] Found {Count} overlay peers with recording {RecordingId}", overlayPeers.Count, recordingId);
@@ -154,7 +154,7 @@ namespace slskd.Transfers.Rescue
             if (!jobAllowed)
             {
                 log.Warning("[RESCUE] Multi-source job not allowed: {Reason}", jobReason);
-                return null;
+                return default;
             }
 
             // Step 3: Determine missing byte ranges
@@ -176,7 +176,7 @@ namespace slskd.Transfers.Rescue
             };
 
             // Mark as rescue-active immediately so underperformance detector does not re-trigger
-            activeRescueJobs[transferId] = "";
+            activeRescueJobs[transferId] = string.Empty;
 
             // Step 5: Start overlay chunk transfers with IMultiSourceDownloadService
             if (multiSource != null && overlayPeers.Count > 0)
@@ -308,7 +308,7 @@ namespace slskd.Transfers.Rescue
             return Path.Combine(Path.GetTempPath(), "slskd", "rescue", $"rescue_{transferId}.tmp");
         }
 
-        private async Task<string> ResolveRecordingIdAsync(string filename, long bytesTransferred, CancellationToken ct)
+        private async Task<string?> ResolveRecordingIdAsync(string filename, long bytesTransferred, CancellationToken ct)
         {
             // Strategy 1: Check HashDb for existing fingerprint by file hash
             if (hashDb != null)
@@ -350,7 +350,8 @@ namespace slskd.Transfers.Rescue
             }
 
             // Strategy 2: Try fingerprinting partial file if enough data downloaded
-            if (fingerprinting != null && acoustId != null && bytesTransferred > 5 * 1024 * 1024) // At least 5 MB
+            // At least 5 MB.
+            if (fingerprinting != null && acoustId != null && bytesTransferred > 5 * 1024 * 1024)
             {
                 try
                 {
@@ -413,8 +414,8 @@ namespace slskd.Transfers.Rescue
                             PeerId = meshPeer.PeerId,
                             Endpoint = meshPeer.Address != null && meshPeer.Port.HasValue
                                 ? $"{meshPeer.Address}:{meshPeer.Port.Value}"
-                                : null,
-                            AvailabilityScore = 1.0 // Default score, could be improved with peer metrics
+                                : string.Empty,
+                            AvailabilityScore = 1.0, // Default score, could be improved with peer metrics
                         });
                     }
 
@@ -433,7 +434,7 @@ namespace slskd.Transfers.Rescue
             return peers;
         }
 
-        private string GetPartialFilePath(string filename)
+        private string? GetPartialFilePath(string filename)
         {
             if (downloadService == null)
             {
@@ -464,7 +465,7 @@ namespace slskd.Transfers.Rescue
             return null;
         }
 
-        private async Task<string> ComputeFileHashAsync(string filePath, CancellationToken ct)
+        private async Task<string?> ComputeFileHashAsync(string filePath, CancellationToken ct)
         {
             try
             {
@@ -503,7 +504,7 @@ namespace slskd.Transfers.Rescue
             return missingRanges;
         }
 
-        private string ExtractMbidFromFilename(string filename)
+        private string? ExtractMbidFromFilename(string filename)
         {
             // Simple regex to extract MBID from filename like "[mbid-UUID]"
             var match = System.Text.RegularExpressions.Regex.Match(
@@ -528,27 +529,27 @@ namespace slskd.Transfers.Rescue
         /// <summary>
         ///     Gets or sets the rescue job ID.
         /// </summary>
-        public string RescueJobId { get; set; }
+        public string RescueJobId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the original transfer ID.
         /// </summary>
-        public string OriginalTransferId { get; set; }
+        public string OriginalTransferId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the MusicBrainz Recording ID.
         /// </summary>
-        public string RecordingId { get; set; }
+        public string RecordingId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the filename.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the missing byte ranges.
         /// </summary>
-        public List<ByteRange> MissingRanges { get; set; }
+        public List<ByteRange> MissingRanges { get; set; } = new();
 
         /// <summary>
         ///     Gets or sets the number of overlay peers available.
@@ -568,7 +569,7 @@ namespace slskd.Transfers.Rescue
         /// <summary>
         ///     Gets or sets the multi-source job ID (if created).
         /// </summary>
-        public string MultiSourceJobId { get; set; }
+        public string MultiSourceJobId { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -595,12 +596,12 @@ namespace slskd.Transfers.Rescue
         /// <summary>
         ///     Gets or sets the peer ID.
         /// </summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the peer endpoint (IP:Port or overlay address).
         /// </summary>
-        public string Endpoint { get; set; }
+        public string Endpoint { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the availability score (0.0 - 1.0).

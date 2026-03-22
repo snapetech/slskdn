@@ -78,7 +78,7 @@ public class ContactsController : ControllerBase
 
         try
         {
-            var base64 = req.InviteLink.Replace("slskdn://invite/", "").Replace('-', '+').Replace('_', '/');
+            var base64 = req.InviteLink.Replace("slskdn://invite/", string.Empty).Replace('-', '+').Replace('_', '/');
             var padding = 4 - (base64.Length % 4);
             if (padding < 4) base64 += new string('=', padding);
             var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(base64));
@@ -169,14 +169,20 @@ public class ContactsController : ControllerBase
 
 public class AddFromInviteRequest
 {
-    [Required] public string? InviteLink { get; set; }
-    [Required] public string? Nickname { get; set; }
+    [Required]
+    public string? InviteLink { get; set; }
+
+    [Required]
+    public string? Nickname { get; set; }
 }
 
 public class AddFromDiscoveryRequest
 {
-    [Required] public string? PeerId { get; set; }
-    [Required] public string? Nickname { get; set; }
+    [Required]
+    public string? PeerId { get; set; }
+
+    [Required]
+    public string? Nickname { get; set; }
 }
 
 public class UpdateContactRequest

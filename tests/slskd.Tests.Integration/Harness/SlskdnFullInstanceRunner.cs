@@ -95,6 +95,13 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             WorkingDirectory = appDir
         };
 
+        if (enableBridge)
+        {
+            startInfo.Environment["SLSKDN_ENABLE_BRIDGE_PROXY"] = "1";
+        }
+
+        startInfo.Environment["APP_DIR"] = appDir;
+
         slskdnProcess = Process.Start(startInfo);
         if (slskdnProcess == null)
         {
@@ -254,6 +261,11 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
 
         while (attempt < maxAttempts && !ct.IsCancellationRequested)
         {
+            if (slskdnProcess?.HasExited == true)
+            {
+                throw BuildProcessExitException();
+            }
+
             try
             {
                 using var client = new HttpClient();
@@ -275,6 +287,22 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         }
 
         throw new TimeoutException($"slskdn instance did not become ready after {maxAttempts * 500}ms");
+    }
+
+    private InvalidOperationException BuildProcessExitException()
+    {
+        if (slskdnProcess == null)
+        {
+            return new InvalidOperationException("slskdn process exited before startup completed");
+        }
+
+        var stdout = slskdnProcess.StandardOutput.ReadToEnd();
+        var stderr = slskdnProcess.StandardError.ReadToEnd();
+
+        return new InvalidOperationException(
+            $"slskdn process exited before startup completed (exit code {slskdnProcess.ExitCode})" +
+            $"{Environment.NewLine}STDOUT:{Environment.NewLine}{stdout}" +
+            $"{Environment.NewLine}STDERR:{Environment.NewLine}{stderr}");
     }
 
     private async Task WaitForBridgeReadyAsync(int port, CancellationToken ct)

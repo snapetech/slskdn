@@ -71,6 +71,7 @@ namespace slskd.VirtualSoulfind.v2.Planning
         /// <param name="sourceRegistry">The source registry.</param>
         /// <param name="backends">Available content backends.</param>
         /// <param name="moderationProvider">The moderation provider for filtering.</param>
+        /// <param name="peerReputationService">Peer reputation service used for source weighting.</param>
         /// <param name="defaultMode">Default planning mode (defaults to SoulseekFriendly).</param>
         public MultiSourcePlanner(
             ICatalogueStore catalogueStore,

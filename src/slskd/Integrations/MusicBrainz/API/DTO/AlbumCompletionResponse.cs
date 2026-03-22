@@ -13,15 +13,15 @@ namespace slskd.Integrations.MusicBrainz.API.DTO
 
     public sealed class AlbumCompletionSummary
     {
-        public string ReleaseId { get; set; }
+        public string ReleaseId { get; set; } = string.Empty;
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string Artist { get; set; }
+        public string Artist { get; set; } = string.Empty;
 
-        public string ReleaseDate { get; set; }
+        public string ReleaseDate { get; set; } = string.Empty;
 
-        public string DiscogsReleaseId { get; set; }
+        public string DiscogsReleaseId { get; set; } = string.Empty;
 
         public int TotalTracks { get; set; }
 
@@ -34,9 +34,9 @@ namespace slskd.Integrations.MusicBrainz.API.DTO
     {
         public int Position { get; set; }
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string RecordingId { get; set; }
+        public string RecordingId { get; set; } = string.Empty;
 
         public int? DurationMs { get; set; }
 
@@ -47,7 +47,7 @@ namespace slskd.Integrations.MusicBrainz.API.DTO
 
     public sealed class HashMatch
     {
-        public string FlacKey { get; set; }
+        public string FlacKey { get; set; } = string.Empty;
 
         public long Size { get; set; }
 

@@ -102,7 +102,12 @@ namespace slskd.Core.API
         public IActionResult Restart()
         {
             Program.MasterCancellationTokenSource.Cancel();
-            Process.Start(Process.GetCurrentProcess().MainModule.FileName, Environment.CommandLine);
+            var currentExecutable = Process.GetCurrentProcess().MainModule?.FileName;
+            if (!string.IsNullOrEmpty(currentExecutable))
+            {
+                Process.Start(currentExecutable, Environment.CommandLine);
+            }
+
             Lifetime.StopApplication();
 
             return NoContent();
@@ -183,7 +188,7 @@ namespace slskd.Core.API
                 Log.Warning("Dump failed: {Error}", error);
 
                 // PR-06: when DiagnosticsClient/WriteDump unavailable (e.g. older runtime), return 501 with instructions
-                var e = error ?? "";
+                var e = error ?? string.Empty;
                 var isUnsupported = e.Contains("not supported", StringComparison.OrdinalIgnoreCase) ||
                     e.Contains("platform", StringComparison.OrdinalIgnoreCase) ||
                     e.Contains("Unable to load", StringComparison.OrdinalIgnoreCase) ||

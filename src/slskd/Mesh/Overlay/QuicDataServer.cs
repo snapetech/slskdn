@@ -107,7 +107,15 @@ public class QuicDataServer : BackgroundService
                     var ep = connection.RemoteEndPoint as IPEndPoint;
                     if (ep != null && !connectionThrottler.ShouldAllowConnection(ep.ToString(), TransportType.DirectQuic))
                     {
-                        try { await connection.CloseAsync(0); } catch { /* ignore */ }
+                        try
+                        {
+                            await connection.CloseAsync(0, stoppingToken);
+                        }
+                        catch
+                        {
+                            // Ignore close failures for rejected peers.
+                        }
+
                         await connection.DisposeAsync();
                         continue;
                     }
@@ -196,12 +204,21 @@ public class QuicDataServer : BackgroundService
                 while (n < lineBuf.Length)
                 {
                     var r = await stream.ReadAsync(lineBuf.AsMemory(n, 1), ct);
-                    if (r == 0) break;
-                    if (lineBuf[n] == (byte)'\n') { n++; break; }
+                    if (r == 0)
+                    {
+                        break;
+                    }
+
+                    if (lineBuf[n] == (byte)'\n')
+                    {
+                        n++;
+                        break;
+                    }
+
                     n += r;
                 }
 
-                var line = n > 0 ? System.Text.Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : "";
+                var line = n > 0 ? System.Text.Encoding.ASCII.GetString(lineBuf.AsSpan(0, n)).TrimEnd() : string.Empty;
 
                 if (line.StartsWith("RELAY_TCP ", StringComparison.Ordinal))
                 {

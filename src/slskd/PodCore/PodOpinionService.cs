@@ -297,15 +297,17 @@ public class PodOpinionService : IPodOpinionService
         }
     }
 
-    private async Task<PodVariantOpinion> SignOpinionAsync(PodVariantOpinion opinion, CancellationToken ct)
+    private Task<PodVariantOpinion> SignOpinionAsync(PodVariantOpinion opinion, CancellationToken ct)
     {
+        _ = ct;
+
         // For now, we'll generate a simple signature. In a real implementation,
         // we'd need to get the user's private key and use proper signing
         // TODO: Implement proper opinion signing with user keys
         var signableData = $"{opinion.ContentId}:{opinion.VariantHash}:{opinion.Score:F2}:{opinion.Note}:{opinion.SenderPeerId}";
         var signature = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(signableData));
 
-        return new PodVariantOpinion
+        return Task.FromResult(new PodVariantOpinion
         {
             ContentId = opinion.ContentId,
             VariantHash = opinion.VariantHash,
@@ -313,7 +315,7 @@ public class PodOpinionService : IPodOpinionService
             Note = opinion.Note,
             SenderPeerId = opinion.SenderPeerId,
             Signature = signature
-        };
+        });
     }
 
     private string ExtractPodIdFromKey(string dhtKey)

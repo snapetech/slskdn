@@ -51,11 +51,7 @@ public sealed class MeshContentFetcher : IMeshContentFetcher
             var request = new
             {
                 contentId = contentId,
-                range = offset > 0 || length > 0 ? new
-                {
-                    offset = offset,
-                    length = length
-                } : null
+                range = offset > 0 || length > 0 ? new { offset, length } : null
             };
 
             var payload = JsonSerializer.SerializeToUtf8Bytes(request);

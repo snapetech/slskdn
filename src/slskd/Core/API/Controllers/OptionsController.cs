@@ -30,9 +30,9 @@ namespace slskd.Core.API
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Configuration;
     using Serilog;
+    using slskd.Core.Security;
     using slskd.Validation;
     using IOFile = System.IO.File;
-    using slskd.Core.Security;
 
     /// <summary>
     ///     Options.
@@ -142,7 +142,11 @@ namespace slskd.Core.API
             // retrieve the IConfigurationRoot instance with reflection to avoid
             // exposing it as a public member of Program.
             var property = typeof(Program).GetProperty("Configuration", BindingFlags.NonPublic | BindingFlags.Static);
-            var configurationRoot = (IConfigurationRoot)property.GetValue(null, null);
+            var configurationRoot = property?.GetValue(null, null) as IConfigurationRoot;
+            if (configurationRoot is null)
+            {
+                return StatusCode(500, "Configuration root is unavailable");
+            }
 
             return Ok(configurationRoot.GetDebugView());
         }
@@ -230,7 +234,7 @@ namespace slskd.Core.API
 
         private bool TryValidateYaml(string yaml, out string error)
         {
-            error = null;
+            error = string.Empty;
 
             try
             {

@@ -156,7 +156,7 @@ public sealed class MeshSearchRpcHandler : IMeshSearchRpcHandler
     private static string? DeriveCodec(string? extension)
     {
         if (string.IsNullOrEmpty(extension)) return null;
-        return (extension.TrimStart('.').ToLowerInvariant()) switch
+        return extension.TrimStart('.').ToLowerInvariant() switch
         {
             "flac" => "FLAC",
             "mp3" => "MP3",

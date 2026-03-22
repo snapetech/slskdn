@@ -58,8 +58,9 @@ namespace slskd.Relay
         /// </summary>
         /// <param name="relayService"></param>
         /// <param name="shareRepository">The share repository for content moderation checks.</param>
-        /// <param name="optionsMonitor"></param>
-        /// <param name="optionsAtStartup"></param>
+        /// <param name="optionsMonitor">The options monitor.</param>
+        /// <param name="optionsAtStartup">The startup options snapshot.</param>
+        /// <param name="contentLocator">The optional content locator used for moderation checks.</param>
         public RelayController(
             IRelayService relayService,
             IShareRepository shareRepository,
@@ -136,16 +137,16 @@ namespace slskd.Relay
         /// <returns></returns>
         [HttpGet("controller/downloads/{token}")]
         [Authorize(Policy = AuthPolicy.ApiKeyOnly, Roles = AuthRole.Any)]
-        public async Task<IActionResult> DownloadFile([FromRoute] string token)
+        public Task<IActionResult> DownloadFile([FromRoute] string token)
         {
             if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
             {
-                return Forbid();
+                return Task.FromResult<IActionResult>(Forbid());
             }
 
             if (!Guid.TryParse(token, out var guid))
             {
-                return BadRequest("Token is not in a valid format");
+                return Task.FromResult<IActionResult>(BadRequest("Token is not in a valid format"));
             }
 
             var agentName = Request.Headers["X-Relay-Agent"].FirstOrDefault();
@@ -154,12 +155,12 @@ namespace slskd.Relay
 
             if (string.IsNullOrEmpty(credential))
             {
-                return Unauthorized();
+                return Task.FromResult<IActionResult>(Unauthorized());
             }
 
             if (string.IsNullOrEmpty(filename))
             {
-                return BadRequest();
+                return Task.FromResult<IActionResult>(BadRequest());
             }
 
             Log.Information("Handling file download of {Filename} ({Token}) from a caller claiming to be agent {Agent}", filename, token, agentName);
@@ -169,7 +170,7 @@ namespace slskd.Relay
             if (!Relay.TryValidateFileDownloadCredential(token: guid, filename, credential, out var validatedAgentName))
             {
                 Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
-                return Unauthorized();
+                return Task.FromResult<IActionResult>(Unauthorized());
             }
 
             var sourceFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
@@ -186,14 +187,13 @@ namespace slskd.Relay
                     Log.Warning(
                         "[SECURITY] MCP blocked relay download | Filename={Filename} | Reason=Content not advertisable",
                         filename);
-                    return Unauthorized();
+                    return Task.FromResult<IActionResult>(Unauthorized());
                 }
             }
 
             Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", GetAgentLogId(validatedAgentName), guid, filename);
 
-            var stream = new FileStream(sourceFile, FileMode.Open);
-            return File(stream, "application/octet-stream");
+            return Task.FromResult<IActionResult>(PhysicalFile(sourceFile, "application/octet-stream"));
         }
 
         /// <summary>
@@ -233,8 +233,8 @@ namespace slskd.Relay
                 return Unauthorized();
             }
 
-            Stream stream = default;
-            string filename = default;
+            Stream? stream = null;
+            string filename = string.Empty;
 
             try
             {
@@ -243,10 +243,21 @@ namespace slskd.Relay
                     // note: while the actual HTTP request is the same as the one we use for uploading shares, we handle it
                     // differently so that we can capture the stream 'in flight' and avoid any buffering. resist the urge to
                     // refactor one or the other to make them match!
-                    var reader = new MultipartReader(HeaderUtilities.RemoveQuotes(mediaTypeHeader.Boundary).Value, Request.Body);
+                    var boundary = HeaderUtilities.RemoveQuotes(mediaTypeHeader.Boundary).Value;
+                    if (string.IsNullOrWhiteSpace(boundary))
+                    {
+                        throw new ArgumentException("Upload boundary is null or empty");
+                    }
+
+                    var reader = new MultipartReader(boundary, Request.Body);
                     var fileSection = await reader.ReadNextSectionAsync();
+                    if (fileSection == null || fileSection.ContentDisposition == null)
+                    {
+                        throw new ArgumentException("Upload file section is missing");
+                    }
+
                     var contentDisposition = ContentDispositionHeaderValue.Parse(fileSection.ContentDisposition);
-                    filename = contentDisposition.FileName.Value;
+                    filename = contentDisposition.FileName.Value ?? string.Empty;
                     stream = fileSection.Body;
 
                     if (string.IsNullOrEmpty(filename))
@@ -345,7 +356,7 @@ namespace slskd.Relay
 
             try
             {
-                shares = Request.Form["shares"].ToString().FromJson<IEnumerable<Share>>();
+                shares = Request.Form["shares"].ToString().FromJson<IEnumerable<Share>>() ?? Array.Empty<Share>();
                 database = Request.Form.Files[0];
             }
             catch (Exception ex)

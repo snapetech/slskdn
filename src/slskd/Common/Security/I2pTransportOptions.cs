@@ -9,7 +9,6 @@ namespace slskd.Common.Security
     /// </summary>
     public class I2pTransportOptions
     {
-
         /// <summary>
         /// Gets or sets a value indicating whether this transport is enabled.
         /// </summary>

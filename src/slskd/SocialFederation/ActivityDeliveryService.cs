@@ -247,7 +247,12 @@ namespace slskd.SocialFederation
             var inKey = false;
             foreach (var line in lines)
             {
-                if (line.Contains("-----BEGIN", StringComparison.Ordinal)) { inKey = true; continue; }
+                if (line.Contains("-----BEGIN", StringComparison.Ordinal))
+                {
+                    inKey = true;
+                    continue;
+                }
+
                 if (line.Contains("-----END", StringComparison.Ordinal)) break;
                 if (inKey) b64.Add(line.Trim());
             }

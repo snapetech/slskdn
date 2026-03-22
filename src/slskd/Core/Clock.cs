@@ -41,27 +41,27 @@ namespace slskd
         /// <summary>
         ///     Fires every 30 seconds.
         /// </summary>
-        public static event EventHandler<ClockEventArgs> EveryThirtySeconds;
+        public static event EventHandler<ClockEventArgs> EveryThirtySeconds = (_, _) => { };
 
         /// <summary>
         ///     Fires every 5 minutes.
         /// </summary>
-        public static event EventHandler<ClockEventArgs> EveryFiveMinutes;
+        public static event EventHandler<ClockEventArgs> EveryFiveMinutes = (_, _) => { };
 
         /// <summary>
         ///     Fires every hour.
         /// </summary>
-        public static event EventHandler<ClockEventArgs> EveryHour;
+        public static event EventHandler<ClockEventArgs> EveryHour = (_, _) => { };
 
         /// <summary>
         ///     Fires every minute.
         /// </summary>
-        public static event EventHandler<ClockEventArgs> EveryMinute;
+        public static event EventHandler<ClockEventArgs> EveryMinute = (_, _) => { };
 
         /// <summary>
         ///     Fires every 30 minutes.
         /// </summary>
-        public static event EventHandler<ClockEventArgs> EveryThirtyMinutes;
+        public static event EventHandler<ClockEventArgs> EveryThirtyMinutes = (_, _) => { };
 
         private static Timer EveryThirtySecondsTimer { get; } = CreateTimer(interval: 1000 * 30);
         private static Timer EveryFiveMinutesTimer { get; } = CreateTimer(interval: 1000 * 60 * 5);

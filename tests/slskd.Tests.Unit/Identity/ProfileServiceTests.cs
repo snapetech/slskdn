@@ -15,6 +15,7 @@ using Moq;
 using slskd;
 using slskd.Identity;
 using slskd.Mesh.Transport;
+using System.Reflection;
 using Xunit;
 using TestOptionsMonitor = slskd.Tests.Unit.TestOptionsMonitor<slskd.Options>;
 
@@ -23,12 +24,15 @@ public class ProfileServiceTests : IDisposable
     private readonly Ed25519Signer _signer = new();
     private readonly Mock<ILogger<ProfileService>> _logMock = new();
     private readonly string _tempDir;
+    private readonly string? _originalAppDirectory;
     private IOptionsMonitor<slskd.Options> _options;
 
     public ProfileServiceTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "ProfileServiceTest_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
+        _originalAppDirectory = Program.AppDirectory;
+        typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static)?.SetValue(null, _tempDir);
         _options = new TestOptionsMonitor(new slskd.Options
         {
             Directories = new slskd.Options.DirectoriesOptions(),
@@ -48,20 +52,13 @@ public class ProfileServiceTests : IDisposable
             if (File.Exists(keyFile)) File.Delete(keyFile);
         }
         catch { }
+        typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static)?.SetValue(null, _originalAppDirectory);
         try { Directory.Delete(_tempDir, true); } catch { }
         _signer?.Dispose();
     }
 
     private ProfileService CreateService()
     {
-        // ProfileService uses Program.AppDirectory which is set at startup
-        // In tests, Program.AppDirectory might be null, so we need to ensure it's set
-        if (string.IsNullOrEmpty(Program.AppDirectory))
-        {
-            // Use reflection or just ensure the directory exists
-            // For now, tests will fail if AppDirectory is null - that's expected
-            // In a real scenario, Program.AppDirectory is set during startup
-        }
         return new ProfileService(_signer, _options, _logMock.Object);
     }
 
@@ -69,7 +66,7 @@ public class ProfileServiceTests : IDisposable
     public async Task GetMyProfile_FirstCall_GeneratesProfile()
     {
         // Delete any existing profile file to ensure fresh generation
-        var profileFile = Path.Combine(Program.AppDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "slskd"), "peer-profile.json");
+        var profileFile = Path.Combine(Program.AppDirectory ?? _tempDir, "peer-profile.json");
         var keyFile = Path.ChangeExtension(profileFile, ".key");
         try { if (File.Exists(profileFile)) File.Delete(profileFile); } catch { }
         try { if (File.Exists(keyFile)) File.Delete(keyFile); } catch { }

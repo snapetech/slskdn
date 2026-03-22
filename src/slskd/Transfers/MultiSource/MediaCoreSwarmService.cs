@@ -302,7 +302,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
 
                 // Calculate similarity (simplified - in practice would use perceptual hashes)
                 var similarity = CalculateFilenameSimilarity(filename, descriptor.Descriptor);
-                if (similarity > 0.6) // Similarity threshold
+                if (similarity > 0.6)
                 {
                     variants.Add(new ContentVariant(
                         ContentId: candidateId,
@@ -399,7 +399,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
             .ToList();
     }
 
-    private async Task<IReadOnlyList<SelectedPeer>> SelectBackupPeersAsync(
+    private Task<IReadOnlyList<SelectedPeer>> SelectBackupPeersAsync(
         ContentIdSwarmGrouping swarmGrouping,
         HashSet<string> usedUsernames,
         int maxCount,
@@ -407,7 +407,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
     {
         var backupPeers = new List<SelectedPeer>();
 
-        foreach (var contentId in swarmGrouping.RecommendedContentIds.Skip(1)) // Skip primary
+        foreach (var contentId in swarmGrouping.RecommendedContentIds.Skip(1))
         {
             if (backupPeers.Count >= maxCount)
                 break;
@@ -432,7 +432,7 @@ public class MediaCoreSwarmService : IMediaCoreSwarmService
             }
         }
 
-        return backupPeers;
+        return Task.FromResult<IReadOnlyList<SelectedPeer>>(backupPeers);
     }
 
     private static SwarmStrategy DetermineSwarmStrategy(IReadOnlyList<SelectedPeer> peers, ContentIdSwarmGrouping grouping)

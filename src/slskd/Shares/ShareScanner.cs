@@ -287,7 +287,7 @@ namespace slskd.Shares
                                     // T-MCP02: Check file against moderation provider before marking as shareable
                                     bool isBlocked = false;
                                     bool isQuarantined = false;
-                                    string moderationReason = null;
+                                    string? moderationReason = null;
 
                                     try
                                     {

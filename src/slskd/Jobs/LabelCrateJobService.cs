@@ -40,7 +40,8 @@ namespace slskd.Jobs
             }
 
             var limit = request.Limit <= 0 ? 10 : request.Limit;
-            var releases = await hashDb.GetReleaseIdsByLabelAsync(request.LabelName ?? request.LabelId, limit, ct).ConfigureAwait(false);
+            var labelNameOrId = request.LabelName ?? request.LabelId ?? string.Empty;
+            var releases = await hashDb.GetReleaseIdsByLabelAsync(labelNameOrId, limit, ct).ConfigureAwait(false);
 
             var job = new LabelCrateJob
             {

@@ -67,12 +67,12 @@ namespace slskd.Transfers.MultiSource
         /// <summary>
         ///     Gets or sets the MD5 signature of the unencoded audio data.
         /// </summary>
-        public byte[] AudioMd5 { get; set; }
+        public byte[] AudioMd5 { get; set; } = Array.Empty<byte>();
 
         /// <summary>
         ///     Gets the MD5 signature as a hex string.
         /// </summary>
-        public string AudioMd5Hex => AudioMd5 != null ? BitConverter.ToString(AudioMd5).Replace("-", string.Empty).ToLowerInvariant() : null;
+        public string AudioMd5Hex => AudioMd5 != null ? BitConverter.ToString(AudioMd5).Replace("-", string.Empty).ToLowerInvariant() : string.Empty;
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ namespace slskd.Transfers.MultiSource
         /// <returns>True if parsing succeeded, false otherwise.</returns>
         public static bool TryParse(byte[] data, out FlacStreamInfo streamInfo)
         {
-            streamInfo = null;
+            streamInfo = null!;
 
             if (data == null || data.Length < MinimumBytesNeeded)
             {

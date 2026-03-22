@@ -73,7 +73,7 @@ namespace slskd.Search.API
         /// <summary>
         ///     Gets or sets the search text.
         /// </summary>
-        public string SearchText { get; set; }
+        public string SearchText { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the search providers for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"], or ["pod", "scene"]).

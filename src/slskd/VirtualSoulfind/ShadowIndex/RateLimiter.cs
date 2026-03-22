@@ -18,12 +18,13 @@ public interface IDhtRateLimiter
 /// <summary>
 /// Token bucket rate limiter for DHT operations.
 /// </summary>
-public class DhtRateLimiter : IDhtRateLimiter
+public class DhtRateLimiter : IDhtRateLimiter, IDisposable
 {
     private readonly ILogger<DhtRateLimiter> logger;
     private readonly SemaphoreSlim semaphore;
     private readonly int maxOperationsPerMinute;
     private readonly ConcurrentQueue<DateTimeOffset> recentOperations = new();
+    private bool disposed;
 
     public DhtRateLimiter(
         ILogger<DhtRateLimiter> logger,
@@ -60,6 +61,27 @@ public class DhtRateLimiter : IDhtRateLimiter
     public void Release()
     {
         // Note: Tokens are automatically released after 1 minute via cleanup
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            semaphore.Dispose();
+        }
+
+        disposed = true;
     }
 }
 

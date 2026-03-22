@@ -22,9 +22,9 @@ using Soulseek;
 
 public record UserDirectionTransferSummary
 {
-    public Dictionary<TransferStates, TransferSummary> Summary { get; init; }
-    public UserDirectionTransferStatistics Statistics { get; init; }
-    public List<TransferExceptionSummary> Exceptions { get; init; }
+    public Dictionary<TransferStates, TransferSummary> Summary { get; init; } = new();
+    public UserDirectionTransferStatistics Statistics { get; init; } = new();
+    public List<TransferExceptionSummary> Exceptions { get; init; } = new();
 }
 
 public record UserDirectionTransferStatistics

@@ -120,7 +120,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                 connection.Username,
                 connection.RemoteEndPoint,
                 Count,
-                isFirstNeighbor ? " 🎉 First neighbor connected!" : "");
+                isFirstNeighbor ? " 🎉 First neighbor connected!" : string.Empty);
 
             NeighborAdded?.Invoke(this, new MeshNeighborEventArgs(connection));
 

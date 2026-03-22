@@ -105,17 +105,17 @@ public static class ContentDomainProviderAdapters
             return await _provider.TryGetItemByRecordingIdAsync(identifier, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IContentItem?> TryGetItemByHashAsync(string hash, long sizeBytes, string? filename = null, CancellationToken cancellationToken = default)
+        public Task<IContentItem?> TryGetItemByHashAsync(string hash, long sizeBytes, string? filename = null, CancellationToken cancellationToken = default)
         {
             // Music domain doesn't have a direct hash lookup - would need to search HashDb
-            return null;
+            return Task.FromResult<IContentItem?>(null);
         }
 
-        public async Task<IContentItem?> TryGetItemByLocalMetadataAsync(LocalFileMetadata fileMetadata, CancellationToken cancellationToken = default)
+        public Task<IContentItem?> TryGetItemByLocalMetadataAsync(LocalFileMetadata fileMetadata, CancellationToken cancellationToken = default)
         {
             // Music domain requires AudioTags - this is a limitation of the adapter
             // In practice, this would need to extract tags from the file
-            return null;
+            return Task.FromResult<IContentItem?>(null);
         }
 
         public Task<bool> VerifyItemMatchAsync(ContentItemId itemId, LocalFileMetadata fileMetadata, CancellationToken cancellationToken = default)
@@ -157,10 +157,10 @@ public static class ContentDomainProviderAdapters
             return await _provider.TryGetWorkByTitleAuthorAsync(title, creator ?? string.Empty, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IContentItem?> TryGetItemByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
+        public Task<IContentItem?> TryGetItemByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             // Book domain doesn't have item-level identifiers beyond ISBN
-            return null;
+            return Task.FromResult<IContentItem?>(null);
         }
 
         public async Task<IContentItem?> TryGetItemByHashAsync(string hash, long sizeBytes, string? filename = null, CancellationToken cancellationToken = default)
@@ -212,10 +212,10 @@ public static class ContentDomainProviderAdapters
             return await _provider.TryGetWorkByTitleYearAsync(title, year, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IContentItem?> TryGetItemByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
+        public Task<IContentItem?> TryGetItemByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             // Movie domain doesn't have item-level identifiers beyond IMDB ID
-            return null;
+            return Task.FromResult<IContentItem?>(null);
         }
 
         public async Task<IContentItem?> TryGetItemByHashAsync(string hash, long sizeBytes, string? filename = null, CancellationToken cancellationToken = default)
@@ -267,10 +267,10 @@ public static class ContentDomainProviderAdapters
             return await _provider.TryGetWorkByTitleAsync(title, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IContentItem?> TryGetItemByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
+        public Task<IContentItem?> TryGetItemByIdentifierAsync(string identifier, CancellationToken cancellationToken = default)
         {
             // TV domain doesn't have item-level identifiers beyond TVDB ID
-            return null;
+            return Task.FromResult<IContentItem?>(null);
         }
 
         public async Task<IContentItem?> TryGetItemByHashAsync(string hash, long sizeBytes, string? filename = null, CancellationToken cancellationToken = default)

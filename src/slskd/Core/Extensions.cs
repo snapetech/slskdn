@@ -39,7 +39,7 @@ namespace slskd
         /// <returns>A redacted instance.</returns>
         public static Options Redact(this Options options)
         {
-            var redacted = options.ToJson().FromJson<Options>();
+            var redacted = options.ToJson().FromJson<Options>()!;
             Redactor.Redact(redacted, redactWith: "*****");
             return redacted;
         }
@@ -54,7 +54,7 @@ namespace slskd
         /// <returns>A redacted instance.</returns>
         public static OptionsOverlay Redact(this OptionsOverlay options)
         {
-            var redacted = options.ToJson().FromJson<OptionsOverlay>();
+            var redacted = options.ToJson().FromJson<OptionsOverlay>()!;
             Redactor.Redact(redacted, redactWith: "*****");
             return redacted;
         }

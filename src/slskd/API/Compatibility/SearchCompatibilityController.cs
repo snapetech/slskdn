@@ -38,8 +38,8 @@ public class SearchCompatibilityController : ControllerBase
     [HttpPost("search")]
     [Authorize]
     public async Task<IActionResult> Search(
-    [FromBody] SearchRequest request,
-            CancellationToken cancellationToken)
+        [FromBody] SearchRequest request,
+        CancellationToken cancellationToken)
     {
         logger.LogInformation("Compatibility search: {Query}", request.Query);
 

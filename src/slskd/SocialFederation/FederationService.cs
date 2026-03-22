@@ -329,7 +329,7 @@ namespace slskd.SocialFederation
             return inboxUrls;
         }
 
-        private async Task<string?> ResolveActorToInboxAsync(string actorId, CancellationToken cancellationToken)
+        private Task<string?> ResolveActorToInboxAsync(string actorId, CancellationToken cancellationToken)
         {
             // TODO: Implement actor discovery to get inbox URL
             // For now, assume the actor ID ends with the actor name and construct inbox URL
@@ -337,10 +337,10 @@ namespace slskd.SocialFederation
             {
                 var baseUrl = actorId.Substring(0, actorId.LastIndexOf("/actors/"));
                 var actorName = actorId.Substring(actorId.LastIndexOf("/") + 1);
-                return $"{baseUrl}/actors/{actorName}/inbox";
+                return Task.FromResult<string?>($"{baseUrl}/actors/{actorName}/inbox");
             }
 
-            return null;
+            return Task.FromResult<string?>(null);
         }
 
         private static ListVisibility ParseVisibility(string visibility)

@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 /// Implements cryptographic commitment protocol for file transfers.
 /// SECURITY: Prevents bait-and-switch attacks by requiring hash commitments before transfer.
 /// </summary>
-public sealed class CryptographicCommitment
+public sealed class CryptographicCommitment : IDisposable
 {
     private readonly ConcurrentDictionary<string, Commitment> _commitments = new();
     private readonly Timer _cleanupTimer;
@@ -38,6 +38,15 @@ public sealed class CryptographicCommitment
     public CryptographicCommitment()
     {
         _cleanupTimer = new Timer(CleanupExpired, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    /// <summary>
+    /// Dispose timer resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _cleanupTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -232,13 +241,6 @@ public sealed class CryptographicCommitment
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    /// <summary>
-    /// Dispose resources.
-    /// </summary>
-    public void Dispose()
-    {
-        _cleanupTimer.Dispose();
-    }
 }
 
 /// <summary>

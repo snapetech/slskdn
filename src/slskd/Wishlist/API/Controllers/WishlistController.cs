@@ -179,8 +179,8 @@ namespace slskd.Wishlist.API
         [ProducesResponseType(typeof(Search.Search), 200)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> RunSearch(
-        [FromRoute, Required] Guid id,
-                    CancellationToken cancellationToken = default)
+            [FromRoute, Required] Guid id,
+            CancellationToken cancellationToken = default)
         {
             try
             {

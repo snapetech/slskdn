@@ -67,12 +67,12 @@ namespace slskd.Transfers.Ranking
         /// <summary>
         ///     Gets or sets the username.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the filename.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size in bytes.
@@ -144,7 +144,7 @@ namespace slskd.Transfers.Ranking
         /// <summary>
         ///     Gets or sets the username.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the number of successful downloads.

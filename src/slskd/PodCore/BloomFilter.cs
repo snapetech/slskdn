@@ -20,7 +20,7 @@ public class BloomFilter
     private long _itemCount;
 
     /// <summary>
-    /// Initializes a new instance of the BloomFilter class.
+    /// Initializes a new instance of the <see cref="BloomFilter"/> class.
     /// </summary>
     /// <param name="expectedItems">Expected number of items to be added.</param>
     /// <param name="falsePositiveRate">Desired false positive rate (between 0 and 1).</param>
@@ -220,7 +220,7 @@ public class TimeWindowedBloomFilter
     private DateTimeOffset _lastCleanup;
 
     /// <summary>
-    /// Initializes a new instance of the TimeWindowedBloomFilter class.
+    /// Initializes a new instance of the <see cref="TimeWindowedBloomFilter"/> class.
     /// </summary>
     /// <param name="expectedItemsPerWindow">Expected items per time window.</param>
     /// <param name="windowSize">Size of each time window.</param>

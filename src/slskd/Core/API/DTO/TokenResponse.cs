@@ -47,7 +47,7 @@ namespace slskd.Core.API
         /// <summary>
         ///     Gets the value of the Name claim from the Access Token.
         /// </summary>
-        public string Name => JwtSecurityToken.Claims.SingleOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+        public string Name => JwtSecurityToken.Claims.SingleOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? string.Empty;
 
         /// <summary>
         ///     Gets the value of the Not Before claim from the Access Token.

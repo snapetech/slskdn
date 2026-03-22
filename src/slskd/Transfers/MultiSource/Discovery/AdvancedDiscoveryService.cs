@@ -174,12 +174,15 @@ public class AdvancedDiscoveryService : IAdvancedDiscoveryService
     }
 
     /// <inheritdoc/>
-    public async Task<List<ContentVariant>> FindSimilarVariantsAsync(
+    public Task<List<ContentVariant>> FindSimilarVariantsAsync(
         string filename,
         long fileSize,
         string? recordingId = null,
         CancellationToken cancellationToken = default)
     {
+        _ = fileSize;
+        _ = cancellationToken;
+
         try
         {
             // Use fuzzy matching to find similar content
@@ -191,12 +194,12 @@ public class AdvancedDiscoveryService : IAdvancedDiscoveryService
                 "[AdvancedDiscovery] Finding variants for {Filename} (recording: {RecordingId})",
                 filename, recordingId ?? "none");
 
-            return variants;
+            return Task.FromResult(variants);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[AdvancedDiscovery] Error finding variants for {Filename}", filename);
-            return new List<ContentVariant>();
+            return Task.FromResult(new List<ContentVariant>());
         }
     }
 

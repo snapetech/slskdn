@@ -46,7 +46,7 @@ namespace slskd.Common.Moderation
         /// <inheritdoc/>
         public async Task<ModerationDecision> CheckLocalFileAsync(
             LocalFileMetadata file,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             if (file == null)
             {
@@ -81,7 +81,7 @@ namespace slskd.Common.Moderation
                     llmRequest.ContentType);
 
                 // Call LLM provider
-                var llmResponse = await _llmProvider.ModerateAsync(llmRequest, cancellationToken);
+                var llmResponse = await _llmProvider.ModerateAsync(llmRequest, ct);
 
                 // Transform LLM response to moderation decision
                 var decision = CreateDecisionFromLlmResponse(llmResponse, file.Id);
@@ -115,7 +115,7 @@ namespace slskd.Common.Moderation
         /// <inheritdoc/>
         public async Task<ModerationDecision> CheckContentIdAsync(
             string contentId,
-            CancellationToken cancellationToken = default)
+            CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(contentId))
             {
@@ -159,7 +159,7 @@ namespace slskd.Common.Moderation
                     SanitizeContentId(contentId));
 
                 // Call LLM provider
-                var llmResponse = await _llmProvider.ModerateAsync(llmRequest, cancellationToken);
+                var llmResponse = await _llmProvider.ModerateAsync(llmRequest, ct);
 
                 // Transform LLM response to moderation decision
                 var decision = CreateDecisionFromLlmResponse(llmResponse, contentId);

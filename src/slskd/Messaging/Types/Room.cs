@@ -29,7 +29,7 @@ namespace slskd.Messaging
         /// <summary>
         ///     The room name.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         ///     A value indicating whether the room is private.
@@ -44,12 +44,12 @@ namespace slskd.Messaging
         /// <summary>
         ///     The operators in the room, if private.
         /// </summary>
-        public IList<string> Operators { get; set; }
+        public IList<string> Operators { get; set; } = new List<string>();
 
         /// <summary>
         ///     The owner of the room, if private.
         /// </summary>
-        public string Owner { get; set; }
+        public string Owner { get; set; } = string.Empty;
 
         /// <summary>
         ///     The list of users in the room.
@@ -68,9 +68,9 @@ namespace slskd.Messaging
                 Name = roomData.Name,
                 IsPrivate = roomData.IsPrivate,
                 OperatorCount = roomData.OperatorCount,
-                Operators = roomData.Operators?.ToList(),
+                Operators = roomData.Operators?.ToList() ?? new List<string>(),
                 Owner = roomData.Owner,
-                Users = roomData.Users?.ToList(),
+                Users = roomData.Users?.ToList() ?? new List<UserData>(),
                 Messages = new List<RoomMessage>(),
             };
         }

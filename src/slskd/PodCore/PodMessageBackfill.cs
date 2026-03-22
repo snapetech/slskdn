@@ -115,7 +115,8 @@ public class PodMessageBackfill : IPodMessageBackfill
             }
 
             // Send backfill requests to multiple peers for redundancy
-            foreach (var peer in targetPeers.Take(3)) // Limit to 3 peers to avoid overwhelming the network
+            // Limit to 3 peers to avoid overwhelming the network.
+            foreach (var peer in targetPeers.Take(3))
             {
                 await semaphore.WaitAsync(ct);
                 var task = Task.Run(async () =>
@@ -334,21 +335,21 @@ public class PodMessageBackfill : IPodMessageBackfill
             : new Dictionary<string, long>();
     }
 
-    public async Task<PodBackfillStats> GetStatsAsync(CancellationToken ct = default)
+    public Task<PodBackfillStats> GetStatsAsync(CancellationToken ct = default)
     {
         lock (_statsLock)
         {
             // Calculate average duration (simplified - would need to track individual durations)
             var avgDuration = _totalBackfillRequestsSent > 0 ? 5000.0 : 0.0; // Placeholder
 
-            return new PodBackfillStats(
+            return Task.FromResult(new PodBackfillStats(
                 TotalBackfillRequestsSent: _totalBackfillRequestsSent,
                 TotalBackfillRequestsReceived: _totalBackfillRequestsReceived,
                 TotalMessagesBackfilled: _totalMessagesBackfilled,
                 TotalBackfillBytesTransferred: _totalBackfillBytesTransferred,
                 AverageBackfillDurationMs: avgDuration,
                 BackfillRequestsByPod: _backfillRequestsByPod.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-                LastBackfillOperation: _lastBackfillOperation);
+                LastBackfillOperation: _lastBackfillOperation));
         }
     }
 
@@ -359,12 +360,12 @@ public class PodMessageBackfill : IPodMessageBackfill
         return recentMessages.FirstOrDefault()?.TimestampUnixMs ?? 0;
     }
 
-    private async Task<IReadOnlyList<PodMember>> GetPodMembersAsync(string podId, CancellationToken ct)
+    private Task<IReadOnlyList<PodMember>> GetPodMembersAsync(string podId, CancellationToken ct)
     {
         // This would need to be implemented to get pod members
         // For now, return empty list - this needs integration with pod membership service
         _logger.LogWarning("GetPodMembersAsync not implemented - needs integration with pod membership service");
-        return Array.Empty<PodMember>();
+        return Task.FromResult<IReadOnlyList<PodMember>>(Array.Empty<PodMember>());
     }
 
     private string GetLocalPeerId()
@@ -374,12 +375,14 @@ public class PodMessageBackfill : IPodMessageBackfill
         return "local-peer";
     }
 
-    private async Task<PodBackfillProcessingResult> RequestBackfillFromPeerAsync(
+    private Task<PodBackfillProcessingResult> RequestBackfillFromPeerAsync(
         string podId,
         string peerId,
         Dictionary<string, MessageRange> channelRanges,
         CancellationToken ct)
     {
+        _ = ct;
+
         try
         {
             _logger.LogDebug("Requesting backfill from peer {PeerId} for pod {PodId}", peerId, podId);
@@ -393,15 +396,15 @@ public class PodMessageBackfill : IPodMessageBackfill
             // For now, simulate a response (this needs proper overlay integration)
             _logger.LogWarning("Backfill request sending not implemented - needs overlay client integration");
 
-            return new PodBackfillProcessingResult(
-                true, podId, peerId, 0, 0, 0, TimeSpan.Zero, "Not implemented");
+            return Task.FromResult(new PodBackfillProcessingResult(
+                true, podId, peerId, 0, 0, 0, TimeSpan.Zero, "Not implemented"));
 
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error requesting backfill from peer {PeerId} for pod {PodId}", peerId, podId);
-            return new PodBackfillProcessingResult(
-                false, podId, peerId, 0, 0, 0, TimeSpan.Zero, ex.Message);
+            return Task.FromResult(new PodBackfillProcessingResult(
+                false, podId, peerId, 0, 0, 0, TimeSpan.Zero, ex.Message));
         }
     }
 

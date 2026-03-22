@@ -107,8 +107,7 @@ public class ShareGroupsController : ControllerBase
             return Problem(
                 title: "Name is required.",
                 detail: "Name is required.",
-                statusCode: StatusCodes.Status400BadRequest
-            );
+                statusCode: StatusCodes.Status400BadRequest);
         }
 
         var currentUserId = await GetCurrentUserIdAsync(ct);
@@ -117,8 +116,7 @@ public class ShareGroupsController : ControllerBase
             return Problem(
                 title: "User identity not available",
                 detail: "Cannot create share group: user identity not available. Please configure Soulseek username or enable Identity & Friends.",
-                statusCode: StatusCodes.Status400BadRequest
-            );
+                statusCode: StatusCodes.Status400BadRequest);
         }
 
         var g = new ShareGroup { Name = req.Name.Trim(), OwnerUserId = currentUserId };
@@ -220,8 +218,17 @@ public class ShareGroupsController : ControllerBase
     }
 }
 
-public class CreateShareGroupRequest { [Required] public string? Name { get; set; } }
-public class UpdateShareGroupRequest { public string? Name { get; set; } }
+public class CreateShareGroupRequest
+{
+    [Required]
+    public string? Name { get; set; }
+}
+
+public class UpdateShareGroupRequest
+{
+    public string? Name { get; set; }
+}
+
 public class AddMemberRequest
 {
     /// <summary>Soulseek username (legacy).</summary>

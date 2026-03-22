@@ -52,7 +52,7 @@ namespace slskd.VirtualSoulfind.v2.Fingerprinting
         /// <summary>
         ///     Gets or initializes the raw fingerprint data (Chromaprint format).
         /// </summary>
-        public string FingerprintData { get; init; }
+        public string FingerprintData { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the duration of the audio in seconds.

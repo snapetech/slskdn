@@ -177,7 +177,7 @@ public class Phase8MeshTests
 
         // Should only keep max replicas (20)
         var stored = dht.GetStoreStats();
-        Assert.True(stored.totalKeys >= 1);
+        Assert.True(stored.TotalKeys >= 1);
     }
 
     [Fact]
@@ -336,4 +336,3 @@ public class Phase8MeshTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 }
-

@@ -26,7 +26,7 @@ namespace slskd.Transfers.Ranking
         /// <summary>
         ///     Gets or sets the download history entries.
         /// </summary>
-        public DbSet<DownloadHistoryEntry> DownloadHistory { get; set; }
+        public DbSet<DownloadHistoryEntry> DownloadHistory { get; set; } = null!;
 
         /// <inheritdoc/>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -49,7 +49,7 @@ namespace slskd.Transfers.Ranking
         /// </summary>
         [Key]
         [MaxLength(256)]
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the number of successful downloads.

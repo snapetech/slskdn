@@ -103,7 +103,7 @@ namespace slskd.HashDb
         /// <summary>
         ///     Gets a FLAC entry by file ID.
         /// </summary>
-        Task<FlacInventoryEntry> GetFlacEntryAsync(string fileId, CancellationToken cancellationToken = default);
+        Task<FlacInventoryEntry?> GetFlacEntryAsync(string fileId, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Gets FLAC entries by size (for multi-source matching).
@@ -130,7 +130,7 @@ namespace slskd.HashDb
         /// <summary>
         ///     Looks up a hash by FLAC key.
         /// </summary>
-        Task<HashDbEntry> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default);
+        Task<HashDbEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default);
 
         /// <summary>
         ///     Gets an AudioVariant by FlacKey (or VariantId that equals FlacKey). T-911 MediaVariant.

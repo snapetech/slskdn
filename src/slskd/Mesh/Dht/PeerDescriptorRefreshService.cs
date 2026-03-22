@@ -159,8 +159,9 @@ public class PeerDescriptorRefreshService : BackgroundService
                     {
                         if (!IPAddress.IsLoopback(unicast.Address) &&
                             unicast.Address.ToString() != "::" &&
-                            !unicast.Address.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase)) // Skip link-local
+                            !unicast.Address.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase))
                         {
+                            // Skip link-local.
                             endpoints.Add($"[{unicast.Address}]");
                         }
                     }

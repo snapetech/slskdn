@@ -141,24 +141,24 @@ namespace slskd.Common.Moderation
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(string peerId, int maxEvents = 50, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(string peerId, int maxEvents = 50, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(peerId))
             {
-                return Array.Empty<PeerReputationEvent>();
+                return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
             }
 
             if (!_eventCache.TryGetValue(peerId, out var events))
             {
-                return Array.Empty<PeerReputationEvent>();
+                return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
             }
 
             lock (events)
             {
-                return events
+                return Task.FromResult<IEnumerable<PeerReputationEvent>>(events
                     .OrderByDescending(e => e.Timestamp)
                     .Take(maxEvents)
-                    .ToList();
+                    .ToList());
             }
         }
 
@@ -278,11 +278,11 @@ namespace slskd.Common.Moderation
         /// <summary>
         ///     Checks if a peer is rate limited for reputation events.
         /// </summary>
-        private async Task<bool> IsRateLimitedAsync(string peerId, CancellationToken cancellationToken)
+        private Task<bool> IsRateLimitedAsync(string peerId, CancellationToken cancellationToken)
         {
             if (!_eventCache.TryGetValue(peerId, out var events))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             var oneHourAgo = DateTimeOffset.UtcNow.AddHours(-1);
@@ -290,7 +290,7 @@ namespace slskd.Common.Moderation
             lock (events)
             {
                 var recentEvents = events.Count(e => e.Timestamp >= oneHourAgo);
-                return recentEvents >= MaxEventsPerHour;
+                return Task.FromResult(recentEvents >= MaxEventsPerHour);
             }
         }
 

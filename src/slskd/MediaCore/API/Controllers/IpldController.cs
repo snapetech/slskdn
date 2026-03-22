@@ -43,10 +43,10 @@ public class IpldController : ControllerBase
     /// <returns>The traversal result.</returns>
     [HttpGet("traverse/{*startContentId}")]
     public async Task<IActionResult> Traverse(
-            string startContentId,
-    [FromQuery] string linkName,
-    [FromQuery] int maxDepth = 3,
-            CancellationToken cancellationToken = default)
+        string startContentId,
+        [FromQuery] string linkName,
+        [FromQuery] int maxDepth = 3,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(startContentId))
         {
@@ -84,9 +84,9 @@ public class IpldController : ControllerBase
     /// <returns>The content graph structure.</returns>
     [HttpGet("graph/{*contentId}")]
     public async Task<IActionResult> GetGraph(
-            string contentId,
-    [FromQuery] int maxDepth = 2,
-            CancellationToken cancellationToken = default)
+        string contentId,
+        [FromQuery] int maxDepth = 2,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
         {
@@ -119,9 +119,9 @@ public class IpldController : ControllerBase
     /// <returns>List of ContentIDs that link to the target.</returns>
     [HttpGet("inbound/{*targetContentId}")]
     public async Task<IActionResult> FindInboundLinks(
-            string targetContentId,
-    [FromQuery] string? linkName = null,
-            CancellationToken cancellationToken = default)
+        string targetContentId,
+        [FromQuery] string? linkName = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(targetContentId))
         {
@@ -169,9 +169,9 @@ public class IpldController : ControllerBase
     /// <returns>The operation result.</returns>
     [HttpPost("links/{*contentId}")]
     public async Task<IActionResult> AddLinks(
-            string contentId,
-    [FromBody] AddLinksRequest request,
-            CancellationToken cancellationToken = default)
+        string contentId,
+        [FromBody] AddLinksRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
         {

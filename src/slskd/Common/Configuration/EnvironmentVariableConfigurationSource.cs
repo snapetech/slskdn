@@ -79,7 +79,7 @@ namespace slskd.Configuration
         public EnvironmentVariableConfigurationProvider(EnvironmentVariableConfigurationSource source)
         {
             TargetType = source.TargetType;
-            Namespace = TargetType.Namespace.Split('.').First();
+            Namespace = (TargetType.Namespace ?? string.Empty).Split('.').FirstOrDefault() ?? string.Empty;
             Prefix = source.Prefix;
         }
 

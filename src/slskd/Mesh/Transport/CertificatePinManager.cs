@@ -79,8 +79,9 @@ public class CertificatePinManager
             if (certInfo.PreviousPins.Contains(currentPin))
             {
                 var timeSinceRotation = DateTimeOffset.UtcNow - certInfo.LastRotation;
-                if (timeSinceRotation < TimeSpan.FromDays(30)) // Allow previous pins for 30 days
+                if (timeSinceRotation < TimeSpan.FromDays(30))
                 {
+                    // Allow previous pins for 30 days.
                     _logger.LogInformation("Accepted previous pin for peer {PeerId} during transition period", peerId);
                     certInfo.LastValidation = DateTimeOffset.UtcNow;
                     return true;

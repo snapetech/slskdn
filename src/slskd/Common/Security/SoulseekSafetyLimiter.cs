@@ -126,7 +126,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
         var opts = _options.CurrentValue.Soulseek.Safety;
 
         var searchesBySource = _searchWindows.ToDictionary(
-            kvp => kvp.Key.Replace("search:", ""),
+            kvp => kvp.Key.Replace("search:", string.Empty),
             kvp =>
             {
                 lock (kvp.Value)
@@ -137,7 +137,7 @@ public class SoulseekSafetyLimiter : ISoulseekSafetyLimiter
             });
 
         var browsesBySource = _browseWindows.ToDictionary(
-            kvp => kvp.Key.Replace("browse:", ""),
+            kvp => kvp.Key.Replace("browse:", string.Empty),
             kvp =>
             {
                 lock (kvp.Value)

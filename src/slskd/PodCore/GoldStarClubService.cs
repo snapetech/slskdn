@@ -52,7 +52,7 @@ public interface IGoldStarClubService
 /// <summary>
 /// Implements Gold Star Club auto-join logic.
 /// </summary>
-public class GoldStarClubService : BackgroundService, IGoldStarClubService
+public sealed class GoldStarClubService : BackgroundService, IGoldStarClubService
 {
     public const string GoldStarClubPodId = "pod:gold-star-club";
     public const int MaxMembership = 1000;
@@ -74,8 +74,8 @@ public class GoldStarClubService : BackgroundService, IGoldStarClubService
         this.logger = logger;
     }
 
-    string IGoldStarClubService.GoldStarClubPodId => "pod:gold-star-club";
-    int IGoldStarClubService.MaxMembership => 1000;
+    string IGoldStarClubService.GoldStarClubPodId => GoldStarClubPodId;
+    int IGoldStarClubService.MaxMembership => MaxMembership;
 
     public async Task<bool> IsAcceptingMembersAsync(CancellationToken ct = default)
     {

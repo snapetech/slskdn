@@ -30,9 +30,9 @@ namespace slskd.Search.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
+    using slskd.Core.Security;
     using SearchQuery = Soulseek.SearchQuery;
     using SearchScope = Soulseek.SearchScope;
-    using slskd.Core.Security;
 
     /// <summary>
     ///     Search.

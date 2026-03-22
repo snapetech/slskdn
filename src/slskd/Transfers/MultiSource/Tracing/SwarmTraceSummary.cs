@@ -9,7 +9,7 @@ namespace slskd.Transfers.MultiSource.Tracing
 
     public class SwarmTraceSummary
     {
-        public string JobId { get; set; }
+        public string JobId { get; set; } = string.Empty;
 
         public DateTimeOffset? FirstEventAt { get; set; }
 
@@ -34,7 +34,7 @@ namespace slskd.Transfers.MultiSource.Tracing
 
     public class PeerContribution
     {
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         public int ChunksCompleted { get; set; }
 

@@ -134,7 +134,9 @@ namespace slskd.Mesh
                 // Check timestamp freshness (reject messages older than 1 hour or in future)
                 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 var age = Math.Abs(now - message.TimestampUnixMs);
-                if (age > 3600_000) // 1 hour in milliseconds
+
+                // 1 hour in milliseconds.
+                if (age > 3600_000)
                 {
                     logger.LogWarning("[MeshSigner] Message timestamp too old or in future: age={Age}ms", age);
                     return false;

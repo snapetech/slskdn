@@ -115,7 +115,7 @@ namespace slskd.SocialFederation.API
             var actor = await libraryActor.GetActorDocumentAsync(cancellationToken);
 
             // Add context for JSON-LD
-            Response.Headers.Add("Content-Type", "application/activity+json");
+            Response.Headers["Content-Type"] = "application/activity+json";
             return Ok(actor);
         }
 
@@ -133,23 +133,23 @@ namespace slskd.SocialFederation.API
         [HttpGet("{actorName}/inbox")]
         [AllowAnonymous]
         [Produces("application/activity+json")]
-        public async Task<IActionResult> GetInbox(
-                    string actorName,
-        [FromQuery] int? page = null,
-                    CancellationToken cancellationToken = default)
+        public Task<IActionResult> GetInbox(
+            string actorName,
+            [FromQuery] int? page = null,
+            CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
             if (!opts.Enabled || opts.IsHermit)
             {
-                return NotFound();
+                return Task.FromResult<IActionResult>(NotFound());
             }
 
             // Get the actor from the library actor service
             var libraryActor = _libraryActorService.GetActor(actorName);
             if (libraryActor == null)
             {
-                return NotFound();
+                return Task.FromResult<IActionResult>(NotFound());
             }
 
             // For now, return empty inbox
@@ -162,14 +162,13 @@ namespace slskd.SocialFederation.API
                 OrderedItems = Array.Empty<object>()
             };
 
-            return Ok(inbox);
+            return Task.FromResult<IActionResult>(Ok(inbox));
         }
 
         /// <summary>
         ///     Posts an activity to an actor's inbox.
         /// </summary>
         /// <param name="actorName">The actor name.</param>
-        /// <param name="activity">The activity object.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>The result of processing the activity.</returns>
         /// <remarks>
@@ -253,9 +252,9 @@ namespace slskd.SocialFederation.API
         [AllowAnonymous]
         [Produces("application/activity+json")]
         public async Task<IActionResult> GetOutbox(
-                    string actorName,
-        [FromQuery] int? page = null,
-                    CancellationToken cancellationToken = default)
+            string actorName,
+            [FromQuery] int? page = null,
+            CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
@@ -299,14 +298,14 @@ namespace slskd.SocialFederation.API
         [HttpPost("{actorName}/outbox")]
         [AllowAnonymous]
         [Consumes("application/activity+json")]
-        public async Task<IActionResult> PostToOutbox(
-                    string actorName,
-        [FromBody] ActivityPubActivity activity,
-                    CancellationToken cancellationToken = default)
+        public Task<IActionResult> PostToOutbox(
+            string actorName,
+            [FromBody] ActivityPubActivity activity,
+            CancellationToken cancellationToken = default)
         {
             // Outbox posting is typically restricted to the actor owner
             // For now, return not implemented
-            return StatusCode(501, "Outbox posting not yet implemented");
+            return Task.FromResult<IActionResult>(StatusCode(501, "Outbox posting not yet implemented"));
         }
 
         private bool IsAuthorizedRequest()
@@ -419,11 +418,12 @@ namespace slskd.SocialFederation.API
             return sb.ToString();
         }
 
-        private async Task ProcessActivityAsync(ActivityPubActivity activity, CancellationToken cancellationToken)
+        private Task ProcessActivityAsync(ActivityPubActivity activity, CancellationToken cancellationToken)
         {
             // TODO: Implement activity processing based on type
             // Handle Follow, Like, Announce, Create, etc.
             _logger.LogDebug("[ActivityPub] Processing activity of type {Type}", activity.Type);
+            return Task.CompletedTask;
         }
 
         /// <summary>

@@ -54,7 +54,7 @@ namespace slskd.SocialFederation
             // For now, we make them optional
 
             // Register the music library actor (depends on music provider)
-            services.AddSingleton<MusicLibraryActor?>(sp =>
+            services.AddSingleton(typeof(MusicLibraryActor), sp =>
             {
                 try
                 {
@@ -66,12 +66,12 @@ namespace slskd.SocialFederation
                     // Only create if we have a music provider
                     return musicProvider != null
                         ? new MusicLibraryActor(federationOptions, keyStore, musicProvider, logger)
-                        : null;
+                        : null!;
                 }
                 catch
                 {
                     // Return null if dependencies are not available
-                    return null;
+                    return null!;
                 }
             });
 

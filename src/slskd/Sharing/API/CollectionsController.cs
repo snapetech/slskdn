@@ -233,8 +233,46 @@ public class CollectionsController : ControllerBase
     }
 }
 
-public class CreateCollectionRequest { [Required] public string? Title { get; set; } public string? Description { get; set; } public string? Type { get; set; } }
-public class UpdateCollectionRequest { public string? Title { get; set; } public string? Description { get; set; } public string? Type { get; set; } }
-public class AddCollectionItemRequest { [Required] public string? ContentId { get; set; } public string? MediaKind { get; set; } public string? ContentHash { get; set; } }
-public class UpdateCollectionItemRequest { public string? ContentId { get; set; } public string? MediaKind { get; set; } public string? ContentHash { get; set; } }
-public class ReorderRequest { [Required] public List<Guid>? ItemIds { get; set; } }
+public class CreateCollectionRequest
+{
+    [Required]
+    public string? Title { get; set; }
+
+    public string? Description { get; set; }
+
+    public string? Type { get; set; }
+}
+
+public class UpdateCollectionRequest
+{
+    public string? Title { get; set; }
+
+    public string? Description { get; set; }
+
+    public string? Type { get; set; }
+}
+
+public class AddCollectionItemRequest
+{
+    [Required]
+    public string? ContentId { get; set; }
+
+    public string? MediaKind { get; set; }
+
+    public string? ContentHash { get; set; }
+}
+
+public class UpdateCollectionItemRequest
+{
+    public string? ContentId { get; set; }
+
+    public string? MediaKind { get; set; }
+
+    public string? ContentHash { get; set; }
+}
+
+public class ReorderRequest
+{
+    [Required]
+    public List<Guid>? ItemIds { get; set; }
+}

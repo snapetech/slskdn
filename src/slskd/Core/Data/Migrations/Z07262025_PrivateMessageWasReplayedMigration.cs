@@ -67,7 +67,7 @@ public class Z07262025_PrivateMessageWasReplayedMigration : IMigration
         {
             Log.Information("> Adding missing column WasReplayed to PrivateMessages table...");
 
-            var addColumnCommand = new SqliteCommand(@"
+            using var addColumnCommand = new SqliteCommand(@"
                 ALTER TABLE PrivateMessages ADD COLUMN WasReplayed INTEGER NOT NULL DEFAULT 0
             ", connection, transaction);
             addColumnCommand.ExecuteNonQuery();

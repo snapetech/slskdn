@@ -123,7 +123,7 @@ public class UrlEncodingModelBinderProvider : IModelBinderProvider
     /// </summary>
     /// <param name="context">The model binder context.</param>
     /// <returns>An instance of <see cref="UrlEncodingModelBinder"/>, or null if the conditions haven't been met.</returns>
-    public IModelBinder GetBinder(ModelBinderProviderContext context)
+    public IModelBinder? GetBinder(ModelBinderProviderContext context)
     {
         if (context.BindingInfo.BindingSource != BindingSource.Path)
         {

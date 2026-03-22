@@ -84,11 +84,13 @@ public sealed class TransferSecurity
                 "Invalid download path from {Username}: {Path} - {Error}",
                 username, peerPath, validation.Error);
 
+            var severity = validation.ViolationType == PathViolationType.DirectoryTraversal
+                ? SecuritySeverity.High
+                : SecuritySeverity.Medium;
+
             _eventSink?.Report(SecurityEvent.Create(
                 SecurityEventType.PathTraversal,
-                validation.ViolationType == PathViolationType.DirectoryTraversal
-                    ? SecuritySeverity.High
-                    : SecuritySeverity.Medium,
+                severity,
                 $"Invalid download path: {validation.Error}",
                 username: username));
 

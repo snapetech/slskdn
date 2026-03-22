@@ -21,18 +21,18 @@ using System.Collections.Generic;
 
 public class PrometheusMetric
 {
-    public string Name { get; set; }
-    public string Help { get; set; }
-    public string Type { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Help { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
     public double? Sum { get; set; }
     public double? Count { get; set; }
-    public List<PrometheusMetricSample> Samples { get; set; }
-    public Dictionary<string, PrometheusMetricSample> Buckets { get; set; }
-    public Dictionary<string, double> Quantiles { get; set; }
+    public List<PrometheusMetricSample> Samples { get; set; } = new();
+    public Dictionary<string, PrometheusMetricSample> Buckets { get; set; } = new();
+    public Dictionary<string, double> Quantiles { get; set; } = new();
 }
 
 public class PrometheusMetricSample
 {
     public double? Value { get; set; }
-    public Dictionary<string, string> Labels { get; set; }
+    public Dictionary<string, string> Labels { get; set; } = new();
 }

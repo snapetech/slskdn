@@ -529,7 +529,7 @@ public class ReportsService
     private record TransferSummaryRow
     {
         public DateTime? Interval { get; init; }
-        public string Username { get; init; }
+        public string Username { get; init; } = string.Empty;
         public TransferDirection Direction { get; init; }
         public TransferStates StateDescription { get; init; }
         public long TotalBytes { get; init; }

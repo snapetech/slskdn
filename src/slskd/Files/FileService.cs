@@ -118,7 +118,10 @@ namespace slskd.Files
             //   2) it is a symlink, meaning this line _SHOULD_ be guaranteed to return an instance of FileInfo.
             try
             {
-                info = (FileInfo)info.ResolveLinkTarget(returnFinalTarget: true);
+                var resolvedInfo = info.ResolveLinkTarget(returnFinalTarget: true);
+                var linkTarget = info.LinkTarget ?? "<unknown>";
+                info = resolvedInfo as FileInfo
+                    ?? throw new IOException($"An unexpected error was encountered while resolving FileInfo for linked file '{filename}->{linkTarget}'");
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException || ex is SecurityException)
             {
@@ -128,12 +131,6 @@ namespace slskd.Files
             {
                 Log.Error(ex, "Failed to resolve FileInfo for linked file '{File}->{Link}': {Message}", filename, info.LinkTarget, ex.Message);
                 throw new IOException($"Failed to resolve FileInfo for linked file '{filename}->{info.LinkTarget}': {ex.Message}", ex);
-            }
-
-            if (info is null)
-            {
-                Log.Error("Resolved FileInfo for linked file '{File}->{Link}' was unexpectedly null", filename, info.LinkTarget);
-                throw new IOException($"An unexpected error was encountered while resolving FileInfo for linked file '{filename}->{info.LinkTarget}'");
             }
 
             return info;
@@ -328,7 +325,9 @@ namespace slskd.Files
 
                 try
                 {
-                    var contents = dir.GetFileSystemInfos("*", enumerationOptions);
+                    var contents = enumerationOptions is null
+                        ? dir.GetFileSystemInfos("*")
+                        : dir.GetFileSystemInfos("*", enumerationOptions);
 
                     var files = contents
                         .OfType<FileInfo>()
@@ -378,6 +377,10 @@ namespace slskd.Files
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filename, nameof(filename));
 
             var path = Path.GetDirectoryName(filename);
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new IOException($"Failed to determine directory for file {Path.GetFileName(filename)}");
+            }
 
             UnixFileMode? unixCreateMode = options?.UnixCreateMode ?? OptionsMonitor.CurrentValue.Permissions.File.Mode?.ToUnixFileMode();
 
@@ -475,7 +478,9 @@ namespace slskd.Files
             {
                 Log.Debug("Destination file {Destination} exists, and overwrite option is not set; attempting to generate new filename", destinationFilename);
 
-                string extensionlessFilename = Path.Combine(Path.GetDirectoryName(destinationFilename), Path.GetFileNameWithoutExtension(sourceFilename));
+                var destinationPath = Path.GetDirectoryName(destinationFilename)
+                    ?? throw new IOException($"Failed to determine destination directory for file {destinationFilename}");
+                string extensionlessFilename = Path.Combine(destinationPath, Path.GetFileNameWithoutExtension(sourceFilename));
                 string extension = Path.GetExtension(sourceFilename);
 
                 while (File.Exists(destinationFilename))
@@ -499,9 +504,10 @@ namespace slskd.Files
                 }
 
                 // if the parent directory is empty after the move, delete it
-                if (deleteSourceDirectoryIfEmptyAfterMove && !Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(sourceFilename)).Any())
+                var sourceDirectory = Path.GetDirectoryName(sourceFilename);
+                if (deleteSourceDirectoryIfEmptyAfterMove && !string.IsNullOrWhiteSpace(sourceDirectory) && !Directory.EnumerateFileSystemEntries(sourceDirectory).Any())
                 {
-                    Directory.Delete(Path.GetDirectoryName(sourceFilename));
+                    Directory.Delete(sourceDirectory);
                 }
 
                 return destinationFilename;

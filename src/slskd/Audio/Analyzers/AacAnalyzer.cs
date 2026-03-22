@@ -102,7 +102,7 @@ namespace slskd.Audio.Analyzers
             }
             catch
             {
-                return null;
+                return string.Empty;
             }
         }
 
@@ -175,14 +175,14 @@ namespace slskd.Audio.Analyzers
                 // fall through
             }
 
-            return null;
+            return string.Empty;
         }
 
         private static void PopulateFromTags(string filePath, AacAnalysisResult result)
         {
             try
             {
-                var tagFile = TagLib.File.Create(filePath);
+                using var tagFile = TagLib.File.Create(filePath);
                 var props = tagFile?.Properties;
                 result.AacNominalBitrateKbps ??= props?.AudioBitrate;
 

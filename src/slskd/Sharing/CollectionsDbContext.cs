@@ -23,37 +23,37 @@ public class CollectionsDbContext : DbContext
     public DbSet<CollectionItem> CollectionItems { get; set; }
     public DbSet<ShareGrant> ShareGrants { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder mb)
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        mb.Entity<ShareGroup>(e =>
+        modelBuilder.Entity<ShareGroup>(e =>
         {
             e.HasIndex(x => x.OwnerUserId);
             e.Property(x => x.CreatedAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             e.Property(x => x.UpdatedAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
         });
 
-        mb.Entity<ShareGroupMember>(e =>
+        modelBuilder.Entity<ShareGroupMember>(e =>
         {
             e.HasKey(x => new { x.ShareGroupId, x.UserId });
             e.HasOne(x => x.ShareGroup).WithMany().HasForeignKey(x => x.ShareGroupId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => x.PeerId).HasFilter("[PeerId] IS NOT NULL");
         });
 
-        mb.Entity<Collection>(e =>
+        modelBuilder.Entity<Collection>(e =>
         {
             e.HasIndex(x => x.OwnerUserId);
             e.Property(x => x.CreatedAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             e.Property(x => x.UpdatedAt).HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
         });
 
-        mb.Entity<CollectionItem>(e =>
+        modelBuilder.Entity<CollectionItem>(e =>
         {
             e.HasOne(x => x.Collection).WithMany().HasForeignKey(x => x.CollectionId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => x.CollectionId);
             e.HasIndex(x => new { x.CollectionId, x.Ordinal });
         });
 
-        mb.Entity<ShareGrant>(e =>
+        modelBuilder.Entity<ShareGrant>(e =>
         {
             e.HasOne(x => x.Collection).WithMany().HasForeignKey(x => x.CollectionId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => x.CollectionId);

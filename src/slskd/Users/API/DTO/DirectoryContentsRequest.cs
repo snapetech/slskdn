@@ -22,6 +22,6 @@ namespace slskd.Users.API
 {
     public class DirectoryContentsRequest
     {
-        public string Directory { get; set; }
+        public string Directory { get; set; } = string.Empty;
     }
 }

@@ -174,9 +174,13 @@ public class TorSocksDialer : ITransportDialer
 
     private async Task<Stream> ConnectViaSocks5Async(string host, int port, string? isolationKey, CancellationToken cancellationToken)
     {
-        var tcpClient = new TcpClient();
+        TcpClient? tcpClient = null;
         try
         {
+#pragma warning disable CA2000 // Ownership is transferred to the returned stream on success and disposed on failure.
+            tcpClient = new TcpClient();
+#pragma warning restore CA2000
+
             // Connect to SOCKS proxy
             await tcpClient.ConnectAsync(_options.SocksHost, _options.SocksPort, cancellationToken);
 
@@ -274,7 +278,7 @@ public class TorSocksDialer : ITransportDialer
         }
 
         _logger.LogDebug("SOCKS5 handshake completed for {Host}:{Port}{Isolation}", host, port,
-            string.IsNullOrEmpty(isolationKey) ? "" : $" (isolated: {isolationKey})");
+            string.IsNullOrEmpty(isolationKey) ? string.Empty : $" (isolated: {isolationKey})");
     }
 
     private static bool IsValidOnionHostname(string hostname)
@@ -286,10 +290,12 @@ public class TorSocksDialer : ITransportDialer
             return false;
         }
 
-        var onionPart = hostname.Substring(0, hostname.Length - 6); // Remove .onion
+        // Remove .onion.
+        var onionPart = hostname.Substring(0, hostname.Length - 6);
 
-        // Check for valid onion address format (base32 encoded)
-        if (onionPart.Length != 16 && onionPart.Length != 56) // v2 (16) or v3 (56) addresses
+        // Check for valid onion address format (base32 encoded).
+        // v2 (16) or v3 (56) addresses.
+        if (onionPart.Length != 16 && onionPart.Length != 56)
         {
             return false;
         }

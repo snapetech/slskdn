@@ -208,12 +208,11 @@ public class MeekTransportTests : IDisposable
     public void EncryptPayload_ReturnsBase64String()
     {
         // Act - Use reflection to access private method
-        var method = typeof(MeekTransport).GetMethod("EncryptPayloadAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var method = typeof(MeekTransport).GetMethod("EncryptPayload",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
         var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
-        var task = (Task<string>)method?.Invoke(transport, new object[] { "test payload" });
-        var result = task?.Result;
+        var result = (string?)method?.Invoke(transport, new object[] { "test payload" });
 
         // Assert
         Assert.NotNull(result);
@@ -228,18 +227,16 @@ public class MeekTransportTests : IDisposable
         var originalPayload = "test payload for encryption";
 
         // Act - Use reflection to access private methods
-        var encryptMethod = typeof(MeekTransport).GetMethod("EncryptPayloadAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var decryptMethod = typeof(MeekTransport).GetMethod("DecryptPayloadAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var encryptMethod = typeof(MeekTransport).GetMethod("EncryptPayload",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var decryptMethod = typeof(MeekTransport).GetMethod("DecryptPayload",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
 
         var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
 
-        var encryptTask = (Task<string>)encryptMethod?.Invoke(transport, new object[] { originalPayload });
-        var encrypted = encryptTask?.Result;
+        var encrypted = (string?)encryptMethod?.Invoke(transport, new object[] { originalPayload });
 
-        var decryptTask = (Task<string>)decryptMethod?.Invoke(transport, new object[] { encrypted });
-        var decrypted = decryptTask?.Result;
+        var decrypted = (string?)decryptMethod?.Invoke(transport, new object?[] { encrypted });
 
         // Assert
         Assert.NotNull(encrypted);
@@ -247,5 +244,4 @@ public class MeekTransportTests : IDisposable
         Assert.Equal(originalPayload, decrypted); // Should round-trip correctly
     }
 }
-
 

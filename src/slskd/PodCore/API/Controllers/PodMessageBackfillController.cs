@@ -51,9 +51,9 @@ public class PodMessageBackfillController : ControllerBase
     [ProducesResponseType(400)]
     [ProducesResponseType(500)]
     public async Task<IActionResult> SyncOnRejoin(
-    [FromRoute] string podId,
-    [FromBody] Dictionary<string, long> lastSeenTimestamps,
-            CancellationToken cancellationToken = default)
+        [FromRoute] string podId,
+        [FromBody] Dictionary<string, long> lastSeenTimestamps,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(podId))
         {
@@ -188,7 +188,7 @@ public class PodMessageBackfillController : ControllerBase
     [HttpPost("sync-all")]
     [ProducesResponseType(typeof(List<PodBackfillResult>), 200)]
     [ProducesResponseType(500)]
-    public async Task<IActionResult> SyncAllPods(CancellationToken cancellationToken = default)
+    public Task<IActionResult> SyncAllPods(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -196,12 +196,12 @@ public class PodMessageBackfillController : ControllerBase
             // For now, return a placeholder response
             var results = new List<PodBackfillResult>();
             _logger.LogWarning("SyncAllPods not fully implemented - needs pod membership integration");
-            return Ok(results);
+            return Task.FromResult<IActionResult>(Ok(results));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing all pods for backfill");
-            return StatusCode(500, "An error occurred while syncing all pods");
+            return Task.FromResult<IActionResult>(StatusCode(500, "An error occurred while syncing all pods"));
         }
     }
 }

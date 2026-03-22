@@ -157,7 +157,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
         var skipped = 0;
 
         // Process in parallel with limited concurrency
-        var semaphore = new SemaphoreSlim(5); // Limit concurrent operations
+        using var semaphore = new SemaphoreSlim(5); // Limit concurrent operations
         var tasks = descriptorList.Select(async descriptor =>
         {
             await semaphore.WaitAsync(cancellationToken);
@@ -195,7 +195,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
     }
 
     /// <inheritdoc/>
-    public async Task<DescriptorUpdateResult> UpdateAsync(string contentId, DescriptorUpdates updates, CancellationToken cancellationToken = default)
+    public Task<DescriptorUpdateResult> UpdateAsync(string contentId, DescriptorUpdates updates, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
             throw new ArgumentException("ContentId cannot be empty", nameof(contentId));
@@ -224,28 +224,28 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 "[ContentDescriptorPublisher] Updated {ContentId} from v{PreviousVersion} to v{NewVersion} ({Updates})",
                 contentId, previousVersion, newVersion, string.Join(", ", appliedUpdates));
 
-            return new DescriptorUpdateResult(
+            return Task.FromResult(new DescriptorUpdateResult(
                 Success: true,
                 ContentId: contentId,
                 NewVersion: newVersion,
                 PreviousVersion: previousVersion,
-                AppliedUpdates: appliedUpdates);
+                AppliedUpdates: appliedUpdates));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[ContentDescriptorPublisher] Failed to update {ContentId}", contentId);
-            return new DescriptorUpdateResult(
+            return Task.FromResult(new DescriptorUpdateResult(
                 Success: false,
                 ContentId: contentId,
                 NewVersion: "error",
                 PreviousVersion: "unknown",
                 AppliedUpdates: Array.Empty<string>(),
-                ErrorMessage: ex.Message);
+                ErrorMessage: ex.Message));
         }
     }
 
     /// <inheritdoc/>
-    public async Task<RepublishResult> RepublishExpiringAsync(IEnumerable<string>? contentIds = null, CancellationToken cancellationToken = default)
+    public Task<RepublishResult> RepublishExpiringAsync(IEnumerable<string>? contentIds = null, CancellationToken cancellationToken = default)
     {
         var startTime = DateTimeOffset.UtcNow;
         var checkedCount = 0;
@@ -294,16 +294,16 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
 
         var duration = DateTimeOffset.UtcNow - startTime;
 
-        return new RepublishResult(
+        return Task.FromResult(new RepublishResult(
             TotalChecked: checkedCount,
             Republished: republished,
             Failed: failed,
             StillValid: stillValid,
-            Duration: duration);
+            Duration: duration));
     }
 
     /// <inheritdoc/>
-    public async Task<UnpublishResult> UnpublishAsync(string contentId, CancellationToken cancellationToken = default)
+    public Task<UnpublishResult> UnpublishAsync(string contentId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
             throw new ArgumentException("ContentId cannot be empty", nameof(contentId));
@@ -318,24 +318,24 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 "[ContentDescriptorPublisher] Unpublished {ContentId} (was published: {WasPublished})",
                 contentId, wasPublished);
 
-            return new UnpublishResult(
+            return Task.FromResult(new UnpublishResult(
                 Success: true,
                 ContentId: contentId,
-                WasPublished: wasPublished);
+                WasPublished: wasPublished));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[ContentDescriptorPublisher] Failed to unpublish {ContentId}", contentId);
-            return new UnpublishResult(
+            return Task.FromResult(new UnpublishResult(
                 Success: false,
                 ContentId: contentId,
                 WasPublished: false,
-                ErrorMessage: ex.Message);
+                ErrorMessage: ex.Message));
         }
     }
 
     /// <inheritdoc/>
-    public async Task<PublishingStats> GetStatsAsync(CancellationToken cancellationToken = default)
+    public Task<PublishingStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
         var publicationsByDomain = new Dictionary<string, int>();
@@ -351,7 +351,8 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
             {
                 activeCount++;
 
-                if (info.ExpiresAt <= now.AddMinutes(60)) // Expires within 1 hour
+                // Expires within 1 hour.
+                if (info.ExpiresAt <= now.AddMinutes(60))
                 {
                     expiringSoonCount++;
                 }
@@ -373,14 +374,14 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
 
         var averageTtlHours = activeCount > 0 ? totalTtlHours / activeCount : 0;
 
-        return new PublishingStats(
+        return Task.FromResult(new PublishingStats(
             TotalPublishedDescriptors: _publishedDescriptors.Count,
             ActivePublications: activeCount,
             ExpiringSoon: expiringSoonCount,
             LastPublishOperation: lastPublish,
             PublicationsByDomain: publicationsByDomain,
             TotalStorageBytes: totalStorageBytes,
-            AverageTtlHours: averageTtlHours);
+            AverageTtlHours: averageTtlHours));
     }
 
     private static string GenerateVersion(ContentDescriptor descriptor)
@@ -389,7 +390,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var content = $"{descriptor.ContentId}:{descriptor.Codec}:{descriptor.SizeBytes}";
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
-        var versionHash = BitConverter.ToString(hash).Replace("-", "").Substring(0, 8).ToLower();
+        var versionHash = BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 8).ToLower();
 
         return $"{timestamp}-{versionHash}";
     }
@@ -399,7 +400,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var content = $"{contentId}:{updates.NewCodec}:{updates.NewSizeBytes}:{updates.NewConfidence}";
         var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
-        var versionHash = BitConverter.ToString(hash).Replace("-", "").Substring(0, 8).ToLower();
+        var versionHash = BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 8).ToLower();
 
         return $"{timestamp}-{versionHash}";
     }
@@ -419,7 +420,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
 
         return new DescriptorSignature(
             PublicKey: "mock-public-key",
-            Signature: BitConverter.ToString(signatureHash).Replace("-", "").ToLower(),
+            Signature: BitConverter.ToString(signatureHash).Replace("-", string.Empty).ToLower(),
             TimestampUnixMs: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
     }
 }

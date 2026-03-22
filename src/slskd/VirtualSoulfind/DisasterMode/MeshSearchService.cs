@@ -127,7 +127,7 @@ public class MeshSearchService : IMeshSearchService
                 });
 
             var peerContentResults = await Task.WhenAll(queryTasks);
-            var validResults = peerContentResults.Where(r => r != null).ToList();
+            var validResults = peerContentResults.Where(r => r != null).Select(r => r!).ToList();
 
             // Filter content by query (simple text matching for now)
             var queryLower = query.ToLowerInvariant();
@@ -141,8 +141,8 @@ public class MeshSearchService : IMeshSearchService
                 {
                     // Simple matching: check if content ID or codec contains query
                     // In a real implementation, would parse ContentDescriptor metadata
-                    var contentIdLower = content.ContentId?.ToLowerInvariant() ?? "";
-                    var codecLower = content.Codec?.ToLowerInvariant() ?? "";
+                    var contentIdLower = content.ContentId?.ToLowerInvariant() ?? string.Empty;
+                    var codecLower = content.Codec?.ToLowerInvariant() ?? string.Empty;
 
                     if (contentIdLower.Contains(queryLower) || codecLower.Contains(queryLower))
                     {

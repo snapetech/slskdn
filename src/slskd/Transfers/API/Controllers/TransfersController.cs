@@ -74,6 +74,7 @@ namespace slskd.Transfers.API
         /// <param name="username">The username of the download source.</param>
         /// <param name="id">The id of the download.</param>
         /// <param name="remove">A value indicating whether the tracked download should be removed after cancellation.</param>
+        /// <param name="deleteFile">A value indicating whether the underlying file should also be deleted.</param>
         /// <returns></returns>
         /// <response code="204">The download was cancelled successfully.</response>
         /// <response code="404">The specified download was not found.</response>
@@ -230,12 +231,14 @@ namespace slskd.Transfers.API
                 return BadRequest(ModelState.GetReadableString());
             }
 
-            if (!requests?.Any() ?? true)
+            var requestList = requests?.ToList();
+
+            if (requestList == null || !requestList.Any())
             {
                 return BadRequest("At least one file is required");
             }
 
-            if (requests.Any(r => r is null))
+            if (requestList.Any(r => r is null))
             {
                 return BadRequest("One or more records in the request are null");
             }
@@ -247,13 +250,13 @@ namespace slskd.Transfers.API
 
             try
             {
-                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, requests.Select(r => (r.Filename, r.Size)));
+                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, requestList.Select(r => (r!.Filename, r!.Size)));
 
                 return StatusCode(201, new { Enqueued = enqueued, Failed = failed });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to enqueue {Count} files for {Username}: {Message}", requests.Count(), username, ex.Message);
+                Log.Error(ex, "Failed to enqueue {Count} files for {Username}: {Message}", requestList.Count, username, ex.Message);
                 return StatusCode(500, ex.Message);
             }
             finally
@@ -563,8 +566,8 @@ namespace slskd.Transfers.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(200)]
         public async Task<IActionResult> FindAlternativeAsync(
-        [FromBody] FindAlternativeRequest request,
-                    CancellationToken cancellationToken = default)
+            [FromBody] FindAlternativeRequest request,
+            CancellationToken cancellationToken = default)
         {
             if (Program.IsRelayAgent)
             {
@@ -588,8 +591,8 @@ namespace slskd.Transfers.API
         [ProducesResponseType(200)]
         [ProducesResponseType(500)]
         public async Task<IActionResult> ReplaceDownloadAsync(
-        [FromBody] ReplaceDownloadRequest request,
-                    CancellationToken cancellationToken = default)
+            [FromBody] ReplaceDownloadRequest request,
+            CancellationToken cancellationToken = default)
         {
             if (Program.IsRelayAgent)
             {
@@ -616,8 +619,8 @@ namespace slskd.Transfers.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(AutoReplaceResult), 200)]
         public async Task<IActionResult> AutoReplaceAsync(
-        [FromBody] AutoReplaceRequest request,
-                    CancellationToken cancellationToken = default)
+            [FromBody] AutoReplaceRequest request,
+            CancellationToken cancellationToken = default)
         {
             if (Program.IsRelayAgent)
             {
@@ -688,7 +691,7 @@ namespace slskd.Transfers.API
     /// </summary>
     public class UserDownloadStats
     {
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public int TotalDownloads { get; set; }
         public int SuccessfulDownloads { get; set; }
         public int FailedDownloads { get; set; }

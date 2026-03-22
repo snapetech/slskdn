@@ -73,7 +73,7 @@ public class NowPlayingController : ControllerBase
     [Consumes("application/json", "multipart/form-data", "application/x-www-form-urlencoded")]
     public IActionResult Webhook()
     {
-        string json = null;
+        string json = string.Empty;
 
         // Plex sends multipart/form-data with a "payload" field
         if (Request.HasFormContentType)
@@ -169,7 +169,7 @@ public class NowPlayingController : ControllerBase
 
 public record NowPlayingRequest
 {
-    public string Artist { get; init; }
-    public string Title { get; init; }
-    public string Album { get; init; }
+    public string Artist { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string Album { get; init; } = string.Empty;
 }

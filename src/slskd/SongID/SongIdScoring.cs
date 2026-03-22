@@ -552,7 +552,7 @@ internal static class SongIdScoring
                     : "Identity evidence is weak or unresolved.",
             Metrics = new Dictionary<string, string>
             {
-                ["exact_track"] = (run.Tracks.Any(track => track.IsExact)).ToString().ToLowerInvariant(),
+                ["exact_track"] = run.Tracks.Any(track => track.IsExact).ToString().ToLowerInvariant(),
                 ["songrec_hits"] = run.Clips.Count(clip => clip.SongRec != null).ToString(),
                 ["acoustid_recording_hits"] = run.Clips.Count(clip => !string.IsNullOrWhiteSpace(clip.AcoustId?.RecordingId)).ToString(),
                 ["corpus_top_score"] = (run.CorpusMatches.FirstOrDefault()?.SimilarityScore ?? 0).ToString("F2"),

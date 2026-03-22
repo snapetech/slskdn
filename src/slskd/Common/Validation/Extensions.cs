@@ -36,7 +36,7 @@ namespace slskd.Validation
         /// <returns>A value indicating whether the instance is valid.</returns>
         public static bool TryValidate(this Options options, out CompositeValidationResult result)
         {
-            result = null;
+            result = null!;
             var results = new List<ValidationResult>();
 
             if (!Validator.TryValidateObject(options, new ValidationContext(options), results, true))
@@ -56,7 +56,7 @@ namespace slskd.Validation
         /// <returns>A value indicating whether the instance is valid.</returns>
         public static bool TryValidate(this OptionsOverlay overlay, out CompositeValidationResult result)
         {
-            result = null;
+            result = null!;
             var results = new List<ValidationResult>();
 
             if (!Validator.TryValidateObject(overlay, new ValidationContext(overlay), results, true))

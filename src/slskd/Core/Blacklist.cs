@@ -104,7 +104,7 @@ public class Blacklist
             Share = FileShare.Read,
         });
 
-        string line = default;
+        string? line = null;
 
         // read the first non-empty, non-commented line from the file
         while ((line = await reader.ReadLineAsync()) != null)
@@ -197,7 +197,7 @@ public class Blacklist
         });
 
         var dict = new ConcurrentDictionary<int, List<(uint First, uint Last)>>();
-        string line = default;
+        string? line = null;
         int lineNumber = 0;
 
         while ((line = await reader.ReadLineAsync()) != null)
@@ -209,7 +209,7 @@ public class Blacklist
                 continue;
             }
 
-            IPAddressRange cidr = default;
+            IPAddressRange? cidr = null;
 
             /*
                 parse CIDR from string using specified or detected format
@@ -253,7 +253,7 @@ public class Blacklist
             }
 
             // grab the first octet of the first and last addresses in the range
-            var first = int.Parse(cidr.Begin.ToString().Split('.')[0]);
+            var first = int.Parse(cidr!.Begin.ToString().Split('.')[0]);
             var last = int.Parse(cidr.End.ToString().Split('.')[0]);
 
             var entry = (ToUint32(cidr.Begin), ToUint32(cidr.End));
@@ -305,7 +305,7 @@ public class Blacklist
 
         // check to see if *any* CIDRs covering this offset are in the blacklist
         // best case scenario for performance if not, roughly O(1)
-        if (!Cache.TryGetValue(first, out (uint, uint)[] cidrs))
+        if (!Cache.TryGetValue(first, out (uint, uint)[]? cidrs))
         {
             return false;
         }

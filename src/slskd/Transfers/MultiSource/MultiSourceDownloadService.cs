@@ -23,8 +23,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using slskd.Telemetry;
-using static slskd.Telemetry.SwarmMetrics;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,20 +30,22 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Soulseek;
 using slskd;
-using slskdOptions = slskd.Options;
+using slskd.Audio;
 using slskd.HashDb;
 using slskd.HashDb.Models;
 using slskd.Integrations.AcoustId;
 using slskd.Integrations.AutoTagging;
 using slskd.Integrations.Chromaprint;
-using slskd.Audio;
 using slskd.Mesh;
+using slskd.Telemetry;
 using slskd.Transfers.MultiSource.Playback;
+using static slskd.Telemetry.SwarmMetrics;
+using FileAccess = System.IO.FileAccess;
+using FileMode = System.IO.FileMode;
+using FileStream = System.IO.FileStream;
 using IODirectory = System.IO.Directory;
 using IOPath = System.IO.Path;
-using FileStream = System.IO.FileStream;
-using FileMode = System.IO.FileMode;
-using FileAccess = System.IO.FileAccess;
+using slskdOptions = slskd.Options;
 using Stream = System.IO.Stream;
 
 /// <summary>
@@ -67,10 +67,10 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     private readonly IHashDbService? _hashDb;
     private readonly IMeshSyncService? _meshSync;
     private readonly ICanonicalStatsService? canonicalStatsService;
-    private readonly IFingerprintExtractionService fingerprintExtractionService;
-    private readonly IAcoustIdClient acoustIdClient;
-    private readonly IAutoTaggingService autoTaggingService;
-    private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
+    private readonly IFingerprintExtractionService? fingerprintExtractionService;
+    private readonly IAcoustIdClient? acoustIdClient;
+    private readonly IAutoTaggingService? autoTaggingService;
+    private readonly IOptionsMonitor<slskdOptions>? optionsMonitor;
     private readonly IMediaCoreSwarmService? _mediaCoreSwarmService;
     private readonly IPlaybackPriorityService? _playbackPriorityService;
     private readonly Optimization.IChunkSizeOptimizer? _chunkSizeOptimizer;
@@ -83,6 +83,14 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     /// <param name="contentVerificationService">The content verification service.</param>
     /// <param name="hashDb">The hash database service (optional).</param>
     /// <param name="meshSync">The mesh sync service (optional).</param>
+    /// <param name="fingerprintExtractionService">The fingerprint extraction service (optional).</param>
+    /// <param name="acoustIdClient">The AcoustID client (optional).</param>
+    /// <param name="autoTaggingService">The auto-tagging service (optional).</param>
+    /// <param name="optionsMonitor">The options monitor (optional).</param>
+    /// <param name="canonicalStatsService">The canonical stats service (optional).</param>
+    /// <param name="mediaCoreSwarmService">The MediaCore swarm service (optional).</param>
+    /// <param name="playbackPriorityService">The playback priority service (optional).</param>
+    /// <param name="chunkSizeOptimizer">The chunk size optimizer (optional).</param>
     public MultiSourceDownloadService(
         ILogger<MultiSourceDownloadService> logger,
         ISoulseekClient soulseekClient,
@@ -256,7 +264,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         _logger.LogInformation("Searching for alternative sources: {SearchTerm}", searchTerm);
 
         // Use MediaCore to discover content variants if available
-        ContentVariantsResult contentVariants = null;
+        ContentVariantsResult? contentVariants = null;
         if (_mediaCoreSwarmService != null)
         {
             try
@@ -477,7 +485,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             // Limit concurrency to avoid opening unbounded Soulseek peer connections when
             // a download has many sources (exhausts router connection tables).
             var workerTasks = new List<Task>();
-            var maxSwarm = optionsMonitor.CurrentValue.Soulseek.Safety.MaxConcurrentSwarmConnections;
+            var maxSwarm = optionsMonitor?.CurrentValue.Soulseek.Safety.MaxConcurrentSwarmConnections ?? 0;
             using var swarmSemaphore = maxSwarm > 0 ? new SemaphoreSlim(maxSwarm, maxSwarm) : null;
 
             foreach (var source in request.Sources)
@@ -700,18 +708,22 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 return result;
             }
 
-            var verification = await VerifyFinalFileAsync(
-                request.OutputPath,
-                request.TargetFingerprint,
-                request.TargetSemanticKey,
-                request.TargetMusicBrainzRecordingId,
-                request.FileSize,
-                status,
-                cancellationToken);
-            result.Fingerprint = verification.Fingerprint;
+            var verification = string.IsNullOrWhiteSpace(request.TargetFingerprint)
+                && string.IsNullOrWhiteSpace(request.TargetSemanticKey)
+                && string.IsNullOrWhiteSpace(request.TargetMusicBrainzRecordingId)
+                ? new FingerprintVerificationResult(null, false, null)
+                : await VerifyFinalFileAsync(
+                    request.OutputPath,
+                    request.TargetFingerprint,
+                    request.TargetSemanticKey,
+                    request.TargetMusicBrainzRecordingId,
+                    request.FileSize,
+                    status,
+                    cancellationToken);
+            result.Fingerprint = verification.Fingerprint ?? string.Empty;
             result.FingerprintVerified = verification.Verified;
             result.ResolvedRecordingId = verification.ResolvedRecordingId;
-            status.Fingerprint = verification.Fingerprint;
+            status.Fingerprint = verification.Fingerprint ?? string.Empty;
             status.FingerprintVerified = verification.Verified;
             status.ResolvedRecordingId = verification.ResolvedRecordingId;
 
@@ -881,11 +893,11 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 {
                     // AGGRESSIVE timeout - 10s max per chunk to prevent stragglers
                     // Fast peers do 256KB chunks in 1-5 seconds; 10s is plenty
-                    CancellationTokenSource? chunkCts = null;
                     ChunkResult result;
-                    try
+#pragma warning disable CA2000 // The timeout source is disposed by the using scope immediately after the chunk request completes.
+                    using (var chunkCts = CreateChunkTimeoutSource(cancellationToken))
+#pragma warning restore CA2000
                     {
-                        chunkCts = CreateChunkTimeoutSource(cancellationToken);
                         chunkCts.CancelAfter(10000); // 10s max per chunk
 
                         result = await DownloadChunkAsync(
@@ -897,10 +909,6 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             workerTempPath,  // Write to worker-specific temp file
                             status,
                             chunkCts.Token);
-                    }
-                    finally
-                    {
-                        chunkCts?.Dispose();
                     }
 
                     result.MusicBrainzRecordingId = source.MusicBrainzRecordingId ?? status.TargetMusicBrainzRecordingId;
@@ -1059,7 +1067,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
     }
 
     /// <inheritdoc/>
-    public MultiSourceDownloadStatus GetStatus(Guid downloadId)
+    public MultiSourceDownloadStatus? GetStatus(Guid downloadId)
     {
         return ActiveDownloads.TryGetValue(downloadId, out var status) ? status : null;
     }
@@ -1424,9 +1432,9 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
 
     private async Task<FingerprintVerificationResult> VerifyFinalFileAsync(
         string filePath,
-        string targetFingerprint,
-        string targetSemanticKey,
-        string targetRecordingId,
+        string? targetFingerprint,
+        string? targetSemanticKey,
+        string? targetRecordingId,
         long fileSize,
         MultiSourceDownloadStatus status,
         CancellationToken cancellationToken)
@@ -1445,7 +1453,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 await _hashDb.UpdateHashFingerprintAsync(HashDbEntry.GenerateFlacKey(status.Filename ?? filePath, fileSize), fingerprint, cancellationToken).ConfigureAwait(false);
             }
 
-            var resolvedRecordingId = (string)null;
+            string? resolvedRecordingId = null;
             var verified = false;
 
             if (!string.IsNullOrWhiteSpace(fingerprint))
@@ -1488,5 +1496,5 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         }
     }
 
-    private sealed record FingerprintVerificationResult(string Fingerprint, bool Verified, string ResolvedRecordingId);
+    private sealed record FingerprintVerificationResult(string? Fingerprint, bool Verified, string? ResolvedRecordingId);
 }

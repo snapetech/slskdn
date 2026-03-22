@@ -72,7 +72,7 @@ public class TransferProgressProxy : ITransferProgressProxy
         this.filenameGenerator = filenameGenerator;
     }
 
-    public async Task<string> StartProxyAsync(
+    public Task<string> StartProxyAsync(
         string meshTransferId,
         string legacyClientId,
         CancellationToken ct)
@@ -97,12 +97,11 @@ public class TransferProgressProxy : ITransferProgressProxy
             .Subscribe(
                 update => OnMeshProgressUpdate(proxyId, update),
                 ex => logger.LogError(ex, "[VSF-BRIDGE-PROXY] Proxy {ProxyId} error", proxyId),
-                () => logger.LogDebug("[VSF-BRIDGE-PROXY] Proxy {ProxyId} completed", proxyId)
-            );
+                () => logger.LogDebug("[VSF-BRIDGE-PROXY] Proxy {ProxyId} completed", proxyId));
 
         session.Subscription = subscription;
 
-        return proxyId;
+        return Task.FromResult(proxyId);
     }
 
     public async Task<LegacyTransferProgress?> GetLegacyProgressAsync(

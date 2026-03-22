@@ -50,7 +50,7 @@ public class MeshServiceClient : IMeshServiceClient
         _statsCollector = statsCollector;
     }
 
-    public async Task<ServiceReply> CallAsync(
+    public Task<ServiceReply> CallAsync(
         string targetPeerId,
         ServiceCall call,
         CancellationToken cancellationToken = default)
@@ -68,12 +68,12 @@ public class MeshServiceClient : IMeshServiceClient
                 "[ServiceClient] Max total pending calls reached: {Count}",
                 _pendingCalls.Count);
 
-            return new ServiceReply
+            return Task.FromResult(new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.RateLimited,
                 ErrorMessage = "Too many pending calls (global limit)"
-            };
+            });
         }
 
         // MEDIUM-3 FIX 2: Check per-peer concurrent call limit
@@ -84,12 +84,12 @@ public class MeshServiceClient : IMeshServiceClient
                 "[ServiceClient] Max concurrent calls to peer reached: {PeerId}, count: {Count}",
                 targetPeerId, currentPeerCalls);
 
-            return new ServiceReply
+            return Task.FromResult(new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.RateLimited,
                 ErrorMessage = "Too many concurrent calls to this peer"
-            };
+            });
         }
 
         // Increment per-peer counter
@@ -106,83 +106,39 @@ public class MeshServiceClient : IMeshServiceClient
             throw new InvalidOperationException("Duplicate correlation ID");
         }
 
-        try
-        {
-            // Serialize the call
-            var callBytes = MessagePackSerializer.Serialize(call, cancellationToken: CancellationToken.None);
-
-            // Create control envelope
-            var envelope = new ControlEnvelope
-            {
-                Type = OverlayControlTypes.ServiceCall, // NEW control type
-                Payload = callBytes,
-                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            };
-
-            // Sign envelope
-            _signer.Sign(envelope);
-
-            // Track message sent
-            _statsCollector?.RecordMessageSent();
-
-            // CRITICAL: Mesh service calls are not implemented - fail fast instead of hanging
-            throw new FeatureNotImplementedException("Mesh service calls are not yet implemented. This feature will be available in a future version.");
-
-            // Wait for reply with timeout
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(_defaultTimeout);
-
-            var reply = await tcs.Task.WaitAsync(cts.Token);
-
-            _logger.LogDebug(
-                "[ServiceClient] Received reply from {PeerId}: status={Status} (id: {CorrelationId})",
-                targetPeerId, reply.StatusCode, call.CorrelationId);
-
-            return reply;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested)
         {
             _logger.LogDebug(
                 "[ServiceClient] Call cancelled: {Service}.{Method}",
                 call.ServiceName, call.Method);
-            throw;
+            return Task.FromCanceled<ServiceReply>(cancellationToken);
         }
-        catch (OperationCanceledException)
-        {
-            _logger.LogWarning(
-                "[ServiceClient] Call timed out: {Service}.{Method} to {PeerId}",
-                call.ServiceName, call.Method, targetPeerId);
 
-            return new ServiceReply
-            {
-                CorrelationId = call.CorrelationId,
-                StatusCode = ServiceStatusCodes.Timeout,
-                ErrorMessage = "Call timed out"
-            };
-        }
-        catch (Exception ex)
+        try
         {
+            var callBytes = MessagePackSerializer.Serialize(call, cancellationToken: CancellationToken.None);
+            var envelope = new ControlEnvelope
+            {
+                Type = OverlayControlTypes.ServiceCall,
+                Payload = callBytes,
+                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            };
+
+            _signer.Sign(envelope);
+            _statsCollector?.RecordMessageSent();
+
+            var exception = new FeatureNotImplementedException("Mesh service calls are not yet implemented. This feature will be available in a future version.");
             _logger.LogError(
-                ex,
+                exception,
                 "[ServiceClient] Error calling service: {Service}.{Method} to {PeerId}",
                 call.ServiceName, call.Method, targetPeerId);
-
-            return new ServiceReply
-            {
-                CorrelationId = call.CorrelationId,
-                StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = "Client error"
-            };
+            return Task.FromException<ServiceReply>(exception);
         }
         finally
         {
-            // Clean up pending call
             _pendingCalls.TryRemove(call.CorrelationId, out _);
-
-            // MEDIUM-3 FIX 3: Decrement per-peer counter
             _perPeerCallCounts.AddOrUpdate(targetPeerId, 0, (_, count) => Math.Max(0, count - 1));
 
-            // Clean up zero entries to prevent memory leak
             if (_perPeerCallCounts.TryGetValue(targetPeerId, out var remainingCalls) && remainingCalls == 0)
             {
                 _perPeerCallCounts.TryRemove(targetPeerId, out _);

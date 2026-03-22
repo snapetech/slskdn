@@ -97,16 +97,16 @@ namespace slskd.Transfers.MultiSource.Discovery
     public class DiscoveredSource
     {
         /// <summary>Gets or sets the username.</summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the full file path on the user's share.</summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the file size in bytes.</summary>
         public long Size { get; set; }
 
         /// <summary>Gets or sets the content hash (if verified).</summary>
-        public string Hash { get; set; }
+        public string? Hash { get; set; }
 
         /// <summary>Gets or sets the user's upload speed.</summary>
         public int UploadSpeed { get; set; }
@@ -130,7 +130,7 @@ namespace slskd.Transfers.MultiSource.Discovery
         public int SourceCount { get; set; }
 
         /// <summary>Gets or sets sample filename.</summary>
-        public string SampleFilename { get; set; }
+        public string SampleFilename { get; set; } = string.Empty;
     }
 
     /// <summary>

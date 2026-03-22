@@ -26,7 +26,7 @@ public static class OpenTelemetryExtensions
         this IServiceCollection services,
         slskdOptions options)
     {
-        if (!options.Telemetry?.Tracing?.Enabled ?? false)
+        if (options.Telemetry?.Tracing?.Enabled != true)
         {
             return services;
         }

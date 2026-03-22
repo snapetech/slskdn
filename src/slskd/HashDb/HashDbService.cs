@@ -23,12 +23,13 @@ namespace slskd.HashDb
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Data.Sqlite;
     using Microsoft.Extensions.Caching.Memory;
-    using slskd.Telemetry;
     using Microsoft.Extensions.Options;
+    using slskd.Telemetry;
     using Serilog;
     using slskd;
     using slskd.Audio;
@@ -42,10 +43,9 @@ namespace slskd.HashDb
     using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.MusicBrainz.Models;
     using slskd.Jobs;
-    using slskdOptions = slskd.Options;
     using slskd.Mesh;
     using TagLib;
-    using System.Text.Json;
+    using slskdOptions = slskd.Options;
 
     /// <summary>
     ///     SQLite-based hash database service.
@@ -59,13 +59,13 @@ namespace slskd.HashDb
 
         private readonly string dbPath;
         private readonly ILogger log = Log.ForContext<HashDbService>();
-        private readonly IServiceProvider serviceProvider;
-        private readonly IFingerprintExtractionService fingerprintExtractionService;
-        private readonly IAcoustIdClient acoustIdClient;
-        private readonly IAutoTaggingService autoTaggingService;
-        private readonly IMusicBrainzClient musicBrainzClient;
-        private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
-        private readonly AudioSketchService audioSketchService;
+        private readonly IServiceProvider? serviceProvider;
+        private readonly IFingerprintExtractionService? fingerprintExtractionService;
+        private readonly IAcoustIdClient? acoustIdClient;
+        private readonly IAutoTaggingService? autoTaggingService;
+        private readonly IMusicBrainzClient? musicBrainzClient;
+        private readonly IOptionsMonitor<slskdOptions>? optionsMonitor;
+        private readonly AudioSketchService? audioSketchService;
         private readonly QualityScorer qualityScorer = new();
         private readonly TranscodeDetector transcodeDetector = new();
         private readonly FlacAnalyzer flacAnalyzer = new();
@@ -81,6 +81,12 @@ namespace slskd.HashDb
         /// <param name="appDirectory">The application data directory.</param>
         /// <param name="eventBus">The event bus for subscribing to download events (optional).</param>
         /// <param name="serviceProvider">Service provider for lazy resolution of mesh sync (optional).</param>
+        /// <param name="fingerprintExtractionService">Fingerprint extraction service (optional).</param>
+        /// <param name="acoustIdClient">AcoustID client (optional).</param>
+        /// <param name="autoTaggingService">Auto-tagging service (optional).</param>
+        /// <param name="musicBrainzClient">MusicBrainz client (optional).</param>
+        /// <param name="optionsMonitor">Options monitor for feature-dependent behavior (optional).</param>
+        /// <param name="hashCache">Hash lookup cache (optional).</param>
         public HashDbService(
             string appDirectory,
             EventBus? eventBus = null,
@@ -303,7 +309,7 @@ namespace slskd.HashDb
         /// <summary>
         ///     Computes SHA256 hash of the first 32KB of a file.
         /// </summary>
-        private async Task<string> ComputeFileHashAsync(string filename)
+        private async Task<string?> ComputeFileHashAsync(string filename)
         {
             try
             {
@@ -349,7 +355,7 @@ namespace slskd.HashDb
             {
                 VariantId = flacKey,
                 FlacKey = flacKey,
-                MusicBrainzRecordingId = null,  // May be populated later via AcoustID/MB
+                MusicBrainzRecordingId = string.Empty,  // May be populated later via AcoustID/MB
                 Codec = codec,
                 Container = container,
                 SampleRateHz = props.AudioSampleRate,
@@ -361,7 +367,7 @@ namespace slskd.HashDb
                 FirstSeenAt = DateTimeOffset.UtcNow,
                 LastSeenAt = DateTimeOffset.UtcNow,
                 SeenCount = 1,
-                EncoderSignature = props.Codecs.FirstOrDefault()?.Description,
+                EncoderSignature = props.Codecs.FirstOrDefault()?.Description ?? string.Empty,
             };
 
             if (string.Equals(variant.Codec, "FLAC", StringComparison.OrdinalIgnoreCase))
@@ -504,7 +510,7 @@ namespace slskd.HashDb
             {
                 try
                 {
-                    variant.AudioSketchHash = audioSketchService.ComputeSketchHash(filePath);
+                    variant.AudioSketchHash = audioSketchService.ComputeSketchHash(filePath) ?? string.Empty;
                 }
                 catch (Exception ex)
                 {
@@ -744,13 +750,13 @@ namespace slskd.HashDb
             return new AlbumTargetEntry
             {
                 ReleaseId = reader.GetString(0),
-                DiscogsReleaseId = reader.IsDBNull(1) ? null : reader.GetString(1),
+                DiscogsReleaseId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
                 Title = reader.GetString(2),
                 Artist = reader.GetString(3),
-                ReleaseDate = reader.IsDBNull(4) ? null : reader.GetString(4),
-                Country = reader.IsDBNull(5) ? null : reader.GetString(5),
-                Label = reader.IsDBNull(6) ? null : reader.GetString(6),
-                Status = reader.IsDBNull(7) ? null : reader.GetString(7),
+                ReleaseDate = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                Country = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                Label = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                Status = reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
                 CreatedAt = reader.GetInt64(8),
             };
         }
@@ -761,11 +767,11 @@ namespace slskd.HashDb
             {
                 ReleaseId = reader.GetString(0),
                 Position = reader.GetInt32(1),
-                RecordingId = reader.IsDBNull(2) ? null : reader.GetString(2),
+                RecordingId = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
                 Title = reader.GetString(3),
                 Artist = reader.GetString(4),
                 DurationMs = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                Isrc = reader.IsDBNull(6) ? null : reader.GetString(6),
+                Isrc = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
             };
         }
 
@@ -1012,7 +1018,7 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
-        public async Task<FlacInventoryEntry> GetFlacEntryAsync(string fileId, CancellationToken cancellationToken = default)
+        public async Task<FlacInventoryEntry?> GetFlacEntryAsync(string fileId, CancellationToken cancellationToken = default)
         {
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
@@ -1097,13 +1103,13 @@ namespace slskd.HashDb
         // ========== Hash Database ==========
 
         /// <inheritdoc/>
-        public async Task<HashDbEntry> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
+        public async Task<HashDbEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
         {
             using var activity = HashDbActivitySource.Source.StartActivity("hashdb.lookup");
             activity?.SetTag("hashdb.lookup.key", flacKey);
 
             // Check cache first
-            if (hashCache != null && hashCache.TryGetValue($"hashdb:lookup:{flacKey}", out object cachedObj) && cachedObj is HashDbEntry cached)
+            if (hashCache != null && hashCache.TryGetValue($"hashdb:lookup:{flacKey}", out var cachedObj) && cachedObj is HashDbEntry cached)
             {
                 activity?.SetTag("hashdb.lookup.cache_hit", true);
                 log.Debug("[HashDb] Cache hit for flac_key: {Key}", flacKey);
@@ -1144,7 +1150,7 @@ namespace slskd.HashDb
         public async Task<AudioVariant?> GetAudioVariantByFlacKeyAsync(string flacKey, CancellationToken cancellationToken = default)
         {
             var entry = await LookupHashAsync(flacKey, cancellationToken).ConfigureAwait(false);
-            return MapEntryToVariant(entry);
+            return entry is null ? null : MapEntryToVariant(entry);
         }
 
         /// <inheritdoc/>
@@ -2915,7 +2921,7 @@ namespace slskd.HashDb
             return entry;
         }
 
-        private static AudioVariant MapEntryToVariant(HashDbEntry entry)
+        private static AudioVariant? MapEntryToVariant(HashDbEntry? entry)
         {
             if (entry == null)
             {
@@ -2988,7 +2994,7 @@ namespace slskd.HashDb
                 AvgQualityScore = reader.GetDouble(reader.GetOrdinal("avg_quality_score")),
                 MaxQualityScore = reader.GetDouble(reader.GetOrdinal("max_quality_score")),
                 PercentTranscodeSuspect = reader.GetDouble(reader.GetOrdinal("percent_transcode_suspect")),
-                BestVariantId = reader.IsDBNull(reader.GetOrdinal("best_variant_id")) ? null : reader.GetString(reader.GetOrdinal("best_variant_id")),
+                BestVariantId = reader.IsDBNull(reader.GetOrdinal("best_variant_id")) ? string.Empty : reader.GetString(reader.GetOrdinal("best_variant_id")),
                 CanonicalityScore = reader.GetDouble(reader.GetOrdinal("canonicality_score")),
                 LastUpdated = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("last_updated"))),
             };
@@ -3015,7 +3021,7 @@ namespace slskd.HashDb
                 Status = Enum.TryParse<LibraryHealth.ScanStatus>(reader.GetString(reader.GetOrdinal("status")), true, out var st) ? st : LibraryHealth.ScanStatus.Running,
                 FilesScanned = reader.IsDBNull(reader.GetOrdinal("files_scanned")) ? 0 : reader.GetInt32(reader.GetOrdinal("files_scanned")),
                 IssuesDetected = reader.IsDBNull(reader.GetOrdinal("issues_detected")) ? 0 : reader.GetInt32(reader.GetOrdinal("issues_detected")),
-                ErrorMessage = reader.IsDBNull(reader.GetOrdinal("error_message")) ? null : reader.GetString(reader.GetOrdinal("error_message")),
+                ErrorMessage = reader.IsDBNull(reader.GetOrdinal("error_message")) ? string.Empty : reader.GetString(reader.GetOrdinal("error_message")),
             };
         }
 
@@ -3026,20 +3032,20 @@ namespace slskd.HashDb
                 IssueId = reader.GetString(reader.GetOrdinal("issue_id")),
                 Type = Enum.TryParse<LibraryHealth.LibraryIssueType>(reader.GetString(reader.GetOrdinal("type")), true, out var t) ? t : LibraryHealth.LibraryIssueType.MissingMetadata,
                 Severity = Enum.TryParse<LibraryHealth.LibraryIssueSeverity>(reader.GetString(reader.GetOrdinal("severity")), true, out var sev) ? sev : LibraryHealth.LibraryIssueSeverity.Low,
-                FilePath = reader.IsDBNull(reader.GetOrdinal("file_path")) ? null : reader.GetString(reader.GetOrdinal("file_path")),
-                MusicBrainzRecordingId = reader.IsDBNull(reader.GetOrdinal("mb_recording_id")) ? null : reader.GetString(reader.GetOrdinal("mb_recording_id")),
-                MusicBrainzReleaseId = reader.IsDBNull(reader.GetOrdinal("mb_release_id")) ? null : reader.GetString(reader.GetOrdinal("mb_release_id")),
-                Artist = reader.IsDBNull(reader.GetOrdinal("artist")) ? null : reader.GetString(reader.GetOrdinal("artist")),
-                Album = reader.IsDBNull(reader.GetOrdinal("album")) ? null : reader.GetString(reader.GetOrdinal("album")),
-                Title = reader.IsDBNull(reader.GetOrdinal("title")) ? null : reader.GetString(reader.GetOrdinal("title")),
-                Reason = reader.IsDBNull(reader.GetOrdinal("reason")) ? null : reader.GetString(reader.GetOrdinal("reason")),
+                FilePath = reader.IsDBNull(reader.GetOrdinal("file_path")) ? string.Empty : reader.GetString(reader.GetOrdinal("file_path")),
+                MusicBrainzRecordingId = reader.IsDBNull(reader.GetOrdinal("mb_recording_id")) ? string.Empty : reader.GetString(reader.GetOrdinal("mb_recording_id")),
+                MusicBrainzReleaseId = reader.IsDBNull(reader.GetOrdinal("mb_release_id")) ? string.Empty : reader.GetString(reader.GetOrdinal("mb_release_id")),
+                Artist = reader.IsDBNull(reader.GetOrdinal("artist")) ? string.Empty : reader.GetString(reader.GetOrdinal("artist")),
+                Album = reader.IsDBNull(reader.GetOrdinal("album")) ? string.Empty : reader.GetString(reader.GetOrdinal("album")),
+                Title = reader.IsDBNull(reader.GetOrdinal("title")) ? string.Empty : reader.GetString(reader.GetOrdinal("title")),
+                Reason = reader.IsDBNull(reader.GetOrdinal("reason")) ? string.Empty : reader.GetString(reader.GetOrdinal("reason")),
                 CanAutoFix = !reader.IsDBNull(reader.GetOrdinal("can_auto_fix")) && reader.GetBoolean(reader.GetOrdinal("can_auto_fix")),
-                SuggestedAction = reader.IsDBNull(reader.GetOrdinal("suggested_action")) ? null : reader.GetString(reader.GetOrdinal("suggested_action")),
-                RemediationJobId = reader.IsDBNull(reader.GetOrdinal("remediation_job_id")) ? null : reader.GetString(reader.GetOrdinal("remediation_job_id")),
+                SuggestedAction = reader.IsDBNull(reader.GetOrdinal("suggested_action")) ? string.Empty : reader.GetString(reader.GetOrdinal("suggested_action")),
+                RemediationJobId = reader.IsDBNull(reader.GetOrdinal("remediation_job_id")) ? string.Empty : reader.GetString(reader.GetOrdinal("remediation_job_id")),
                 Status = Enum.TryParse<LibraryHealth.LibraryIssueStatus>(reader.GetString(reader.GetOrdinal("status")), true, out var st) ? st : LibraryHealth.LibraryIssueStatus.Detected,
                 DetectedAt = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("detected_at"))),
                 ResolvedAt = reader.IsDBNull(reader.GetOrdinal("resolved_at")) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("resolved_at"))),
-                ResolvedBy = reader.IsDBNull(reader.GetOrdinal("resolved_by")) ? null : reader.GetString(reader.GetOrdinal("resolved_by")),
+                ResolvedBy = reader.IsDBNull(reader.GetOrdinal("resolved_by")) ? string.Empty : reader.GetString(reader.GetOrdinal("resolved_by")),
             };
 
             var metaJson = reader.IsDBNull(reader.GetOrdinal("metadata")) ? "{}" : reader.GetString(reader.GetOrdinal("metadata"));
@@ -3077,7 +3083,7 @@ namespace slskd.HashDb
                 return Task.FromResult(ReadPeerMetrics(reader));
             }
 
-            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>(null);
+            return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>(null!);
         }
 
         /// <inheritdoc/>

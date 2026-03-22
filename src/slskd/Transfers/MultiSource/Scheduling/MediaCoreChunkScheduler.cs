@@ -52,7 +52,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
                 ChunkIndex = request.ChunkIndex,
                 AssignedPeer = null,
                 Success = false,
-                Reason = "No peers available"
+                Reason = "No peers available",
             };
         }
 
@@ -83,7 +83,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
                 ChunkIndex = request.ChunkIndex,
                 AssignedPeer = selectedPeer.Username,
                 Success = true,
-                Reason = $"Selected peer {selectedPeer.Username} with score {selectedPeer.Score:F2}"
+                Reason = $"Selected peer {selectedPeer.Username} with score {selectedPeer.Score:F2}",
             };
         }
         catch (Exception ex)
@@ -97,7 +97,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
                 ChunkIndex = request.ChunkIndex,
                 AssignedPeer = fallbackPeer,
                 Success = true,
-                Reason = "Fallback selection"
+                Reason = "Fallback selection",
             };
         }
     }
@@ -116,7 +116,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
                 ChunkIndex = r.ChunkIndex,
                 AssignedPeer = null,
                 Success = false,
-                Reason = "No peers available"
+                Reason = "No peers available",
             }).ToList();
         }
 
@@ -167,7 +167,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
                     ChunkIndex = request.ChunkIndex,
                     AssignedPeer = selectedPeer.Username,
                     Success = true,
-                    Reason = $"Batch assigned peer {selectedPeer.Username}"
+                    Reason = $"Batch assigned peer {selectedPeer.Username}",
                 });
 
                 // Update workload
@@ -212,7 +212,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         // Extract content information from the request
         // This is simplified - in practice, the ChunkRequest might contain content metadata
         // For now, we'll work without direct filename access
-        var contentId = (string)null; // TODO: Pass contentId through chunk request context
+        string? contentId = null; // TODO: Pass contentId through chunk request context
 
         if (contentId != null)
         {
@@ -323,21 +323,31 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         string username, ContentAnalysis contentAnalysis, CancellationToken ct)
     {
         if (contentAnalysis.ContentId == null || contentAnalysis.Descriptor == null)
+        {
             return 0.5;
+        }
+
+        var domain = ContentIdParser.GetDomain(contentAnalysis.ContentId);
+        if (string.IsNullOrWhiteSpace(domain))
+        {
+            return 0.5;
+        }
 
         try
         {
             // Find content variants this peer might have
-            var variants = await _contentRegistry.FindByDomainAsync(
-                ContentIdParser.GetDomain(contentAnalysis.ContentId),
-                ct);
+            var variants = await _contentRegistry.FindByDomainAsync(domain, ct);
 
             if (!variants.Any())
+            {
                 return 0.5;
+            }
 
             // Calculate similarity to the canonical content
             var similarities = new List<double>();
-            foreach (var variant in variants.Take(5)) // Limit for performance
+
+            // Limit for performance.
+            foreach (var variant in variants.Take(5))
             {
                 var similarity = await _fuzzyMatcher.ScorePerceptualAsync(
                     contentAnalysis.ContentId, variant, _contentRegistry, ct);
@@ -396,7 +406,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         };
     }
 
-    private static string ExtractContentIdFromFilename(string filename)
+    private static string? ExtractContentIdFromFilename(string filename)
     {
         // Simple extraction - look for content:domain:type:id pattern
         var contentPrefix = "content:";
@@ -447,11 +457,18 @@ public class MediaCoreChunkScheduler : IChunkScheduler
     }
 
     // Nested types
-    private enum ContentType { Audio, Video, Image, Text, Unknown }
+    private enum ContentType
+    {
+        Audio,
+        Video,
+        Image,
+        Text,
+        Unknown,
+    }
 
     private record ContentAnalysis(
-        string ContentId,
-        ContentDescriptor Descriptor,
+        string? ContentId,
+        ContentDescriptor? Descriptor,
         bool IsKnownContent,
         ContentType ContentType,
         QualityIndicators QualityIndicators);
@@ -470,7 +487,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         string Reason);
 
     /// <inheritdoc/>
-    public async Task<List<int>> HandlePeerDegradationAsync(
+    public Task<List<int>> HandlePeerDegradationAsync(
         string peerId,
         DegradationReason reason,
         CancellationToken ct = default)
@@ -507,7 +524,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         // 2. Adjust future peer scoring based on degradation history
         // 3. Trigger re-evaluation of optimal swarm configuration
         // 4. Log degradation patterns for content-specific optimization
-        return chunksToReassign;
+        return Task.FromResult(chunksToReassign);
     }
 
     public void RegisterAssignment(int chunkIndex, string peerId)

@@ -9,11 +9,11 @@ namespace slskd.Integrations.MusicBrainz.Models
 
     public class ArtistReleaseGraph
     {
-        public string ArtistId { get; set; }
+        public string ArtistId { get; set; } = string.Empty;
 
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
-        public string SortName { get; set; }
+        public string SortName { get; set; } = string.Empty;
 
         public List<ReleaseGroup> ReleaseGroups { get; set; } = new();
 
@@ -24,28 +24,28 @@ namespace slskd.Integrations.MusicBrainz.Models
 
     public class ReleaseGroup
     {
-        public string ReleaseGroupId { get; set; }
+        public string ReleaseGroupId { get; set; } = string.Empty;
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
         public ReleaseGroupType Type { get; set; }
 
-        public string FirstReleaseDate { get; set; }
+        public string FirstReleaseDate { get; set; } = string.Empty;
 
         public List<Release> Releases { get; set; } = new();
     }
 
     public class Release
     {
-        public string ReleaseId { get; set; }
+        public string ReleaseId { get; set; } = string.Empty;
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string Country { get; set; }
+        public string Country { get; set; } = string.Empty;
 
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
-        public string ReleaseDate { get; set; }
+        public string ReleaseDate { get; set; } = string.Empty;
     }
 
     public enum ReleaseGroupType

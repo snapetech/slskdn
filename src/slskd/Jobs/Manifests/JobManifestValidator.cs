@@ -89,7 +89,7 @@ namespace slskd.Jobs.Manifests
             }
         }
 
-        private static void ValidateMbReleaseSpec(MbReleaseJobSpec spec, List<string> errors)
+        private static void ValidateMbReleaseSpec(MbReleaseJobSpec? spec, List<string> errors)
         {
             if (spec == null)
             {
@@ -113,7 +113,7 @@ namespace slskd.Jobs.Manifests
             }
         }
 
-        private static void ValidateDiscographySpec(DiscographyJobSpec spec, List<string> errors)
+        private static void ValidateDiscographySpec(DiscographyJobSpec? spec, List<string> errors)
         {
             if (spec == null)
             {
@@ -132,7 +132,7 @@ namespace slskd.Jobs.Manifests
             }
         }
 
-        private static void ValidateLabelCrateSpec(LabelCrateJobSpec spec, List<string> errors)
+        private static void ValidateLabelCrateSpec(LabelCrateJobSpec? spec, List<string> errors)
         {
             if (spec == null)
             {

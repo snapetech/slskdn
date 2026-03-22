@@ -58,7 +58,7 @@ public class ScriptService
         }
         else
         {
-            DefaultExecutable = Environment.GetEnvironmentVariable("SHELL");
+            DefaultExecutable = Environment.GetEnvironmentVariable("SHELL") ?? string.Empty;
             DefaultCommandPrefix = "-c";
 
             if (string.IsNullOrEmpty(DefaultExecutable))
@@ -97,7 +97,7 @@ public class ScriptService
         {
             _ = Task.Run(async () =>
             {
-                Process process = default;
+                Process? process = null;
                 var processId = Guid.NewGuid();
 
                 // there are three 'modes' that we can use to execute a script, which are detailed below.

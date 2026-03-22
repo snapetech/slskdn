@@ -32,7 +32,7 @@ namespace slskd.Users.API
         /// <summary>
         ///     The user's country code, if provided.
         /// </summary>
-        public string CountryCode { get; set; }
+        public string CountryCode { get; set; } = string.Empty;
 
         /// <summary>
         ///     The number of directories shared by the user.
@@ -67,7 +67,7 @@ namespace slskd.Users.API
         /// <summary>
         ///     The username of the user.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         public static UserDataResponse FromUserData(UserData userData, bool self = false)
         {

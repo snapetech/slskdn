@@ -98,7 +98,7 @@ public class ContentDirectory : IMeshDirectory
     /// <summary>
     /// Parse an endpoint string (e.g., "host:port") into address and port.
     /// </summary>
-    private (string? address, int? port) ParseEndpoint(string? endpoint)
+    private (string? Address, int? Port) ParseEndpoint(string? endpoint)
     {
         if (string.IsNullOrEmpty(endpoint)) return (null, null);
 

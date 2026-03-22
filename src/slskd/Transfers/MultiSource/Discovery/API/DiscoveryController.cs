@@ -225,7 +225,7 @@ namespace slskd.Transfers.MultiSource.Discovery.API
     public class DiscoveryStartRequest
     {
         /// <summary>Gets or sets the search term (e.g., artist name).</summary>
-        public string SearchTerm { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
 
         /// <summary>Gets or sets whether to enable FLAC hash verification (default true).</summary>
         public bool? EnableHashVerification { get; set; }

@@ -58,9 +58,9 @@ namespace slskd.SocialFederation.API
         [AllowAnonymous]
         [Produces("application/jrd+json")]
         public async Task<IActionResult> GetWebFinger(
-        [FromQuery] string resource,
-        [FromQuery] string? rel = null,
-                    CancellationToken cancellationToken = default)
+            [FromQuery] string resource,
+            [FromQuery] string? rel = null,
+            CancellationToken cancellationToken = default)
         {
             var opts = _federationOptions.CurrentValue;
 
@@ -192,7 +192,7 @@ namespace slskd.SocialFederation.API
             return false;
         }
 
-        private async Task<bool> IsValidActorAsync(string username, CancellationToken cancellationToken)
+        private Task<bool> IsValidActorAsync(string username, CancellationToken cancellationToken)
         {
             // For now, we only support a "library" actor for content federation
             // This can be extended to support user actors in the future
@@ -202,12 +202,12 @@ namespace slskd.SocialFederation.API
             if (string.Equals(username, "library", StringComparison.OrdinalIgnoreCase))
             {
                 // TODO: Check if library actor is enabled and has content
-                return true;
+                return Task.FromResult(true);
             }
 
             // TODO: Add support for user actors
             // For now, only library actor is supported
-            return false;
+            return Task.FromResult(false);
         }
 
         /// <summary>

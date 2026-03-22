@@ -59,7 +59,7 @@ namespace slskd.Mesh
                 hash = sha.ComputeHash(bytes);
             }
 
-            var computed = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            var computed = BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
             var expected = (expectedByteHash ?? string.Empty).ToLowerInvariant();
             return string.Equals(computed, expected, StringComparison.Ordinal);
         }

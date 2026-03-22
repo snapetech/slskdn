@@ -22,7 +22,7 @@ namespace slskd.Transfers
 {
     public sealed record UploadGroup
     {
-        public string Name { get; init; }
+        public string Name { get; init; } = string.Empty;
         public int Priority { get; set; }
         public bool SlotAvailable => UsedSlots < Slots;
         public int Slots { get; set; }

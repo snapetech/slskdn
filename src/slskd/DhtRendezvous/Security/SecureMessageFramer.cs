@@ -214,6 +214,13 @@ public sealed class SecureMessageFramer
 /// </summary>
 public class ProtocolViolationException : Exception
 {
-    public ProtocolViolationException(string message) : base(message) { }
-    public ProtocolViolationException(string message, Exception inner) : base(message, inner) { }
+    public ProtocolViolationException(string message)
+        : base(message)
+    {
+    }
+
+    public ProtocolViolationException(string message, Exception inner)
+        : base(message, inner)
+    {
+    }
 }

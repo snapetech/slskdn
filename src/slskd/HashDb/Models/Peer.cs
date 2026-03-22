@@ -38,7 +38,7 @@ namespace slskd.HashDb.Models
         /// <summary>
         ///     Gets or sets the detected client version.
         /// </summary>
-        public string ClientVersion { get; set; } = string.Empty;
+        public string? ClientVersion { get; set; }
 
         /// <summary>
         ///     Gets or sets when this peer was last seen (Unix timestamp).

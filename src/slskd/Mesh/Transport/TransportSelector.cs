@@ -119,7 +119,9 @@ public class TransportSelector
 
         // Check connection throttling
         var remoteEndpoint = $"{remoteDescriptor.Endpoints?.FirstOrDefault() ?? "unknown"}";
-        if (!_connectionThrottler.ShouldAllowConnection(remoteEndpoint, TransportType.DirectQuic)) // Default to DirectQuic for throttling
+
+        // Default to DirectQuic for throttling.
+        if (!_connectionThrottler.ShouldAllowConnection(remoteEndpoint, TransportType.DirectQuic))
         {
             throw new InvalidOperationException(
                 $"Connection to peer {targetPeerId} blocked by rate limiting from endpoint {remoteEndpoint}");

@@ -91,7 +91,7 @@ namespace slskd.Messaging
         /// <param name="roomName"></param>
         /// <param name="room"></param>
         /// <returns></returns>
-        public bool TryGet(string roomName, out Room room) => Rooms.TryGetValue(roomName, out room);
+        public bool TryGet(string roomName, out Room? room) => Rooms.TryGetValue(roomName, out room);
 
         /// <summary>
         ///     Returns the list of messages for the specified <paramref name="roomName"/>, if it is tracked.

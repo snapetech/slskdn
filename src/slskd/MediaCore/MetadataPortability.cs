@@ -267,17 +267,17 @@ public class MetadataPortability : IMetadataPortability
         return result;
     }
 
-    private async Task<ContentDescriptor> CreateMockDescriptorAsync(string contentId, CancellationToken cancellationToken)
+    private Task<ContentDescriptor> CreateMockDescriptorAsync(string contentId, CancellationToken cancellationToken)
     {
         // In a real implementation, this would retrieve the actual descriptor
         // For now, create a mock descriptor
-        return new ContentDescriptor
+        return Task.FromResult(new ContentDescriptor
         {
             ContentId = contentId,
             SizeBytes = 1024 * 1024, // 1MB mock
             Codec = "mock",
             Confidence = 0.8
-        };
+        });
     }
 
     private async Task<MetadataConflict?> AnalyzeConflictAsync(
@@ -287,6 +287,12 @@ public class MetadataPortability : IMetadataPortability
     {
         // In a real implementation, we'd compare the existing descriptor with the new one
         // For now, we'll simulate a basic conflict analysis
+        var mergedDescriptor = await MergeMetadataAsync(contentId, new[]
+        {
+            new MetadataSource("existing", new ContentDescriptor { ContentId = contentId }, DateTimeOffset.UtcNow.AddDays(-1), 1),
+            new MetadataSource("imported", newEntry.Descriptor, newEntry.SourceInfo.Timestamp, 2),
+        }, cancellationToken: cancellationToken);
+
         var resolutions = new List<MetadataConflictResolution>
         {
             new MetadataConflictResolution(
@@ -302,12 +308,7 @@ public class MetadataPortability : IMetadataPortability
             new MetadataConflictResolution(
                 ConflictResolutionStrategy.Merge,
                 "Merge existing and imported metadata",
-                await MergeMetadataAsync(contentId,
-                    new[]
-                    {
-                        new MetadataSource("existing", new ContentDescriptor { ContentId = contentId }, DateTimeOffset.UtcNow.AddDays(-1), 1),
-                        new MetadataSource("imported", newEntry.Descriptor, newEntry.SourceInfo.Timestamp, 2)
-                    }, cancellationToken: cancellationToken)),
+                mergedDescriptor),
 
             new MetadataConflictResolution(
                 ConflictResolutionStrategy.KeepExisting,

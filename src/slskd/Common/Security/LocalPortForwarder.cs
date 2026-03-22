@@ -99,11 +99,21 @@ public class LocalPortForwarder : IDisposable
     /// <param name="localPort">The local port to stop forwarding.</param>
     public async Task StopForwardingAsync(int localPort)
     {
-        if (_activeForwarders.TryRemove(localPort, out var forwarder))
+        ForwarderInstance? forwarder = null;
+        if (_activeForwarders.TryRemove(localPort, out forwarder))
         {
-            await forwarder.StopAsync();
-            _logger.LogInformation(
-                "[PortForward] Stopped forwarding on local port {LocalPort}", localPort);
+            try
+            {
+                await forwarder.StopAsync();
+                forwarder.Dispose();
+                forwarder = null;
+                _logger.LogInformation(
+                    "[PortForward] Stopped forwarding on local port {LocalPort}", localPort);
+            }
+            finally
+            {
+                forwarder?.Dispose();
+            }
         }
     }
 
@@ -386,18 +396,32 @@ internal class ForwarderInstance : IDisposable
         _logger = logger;
     }
 
-    public async Task StartAsync()
+    public Task StartAsync()
     {
         _cts = new CancellationTokenSource();
         _listener = new TcpListener(IPAddress.Loopback, _localPort);
         _listener.Start();
 
         _listenTask = ListenForConnectionsAsync(_cts.Token);
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync()
     {
-        _cts?.Cancel();
+        var cts = _cts;
+        _cts = null;
+
+        if (cts != null)
+        {
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed via a previous stop/dispose path.
+            }
+        }
 
         if (_listenTask != null)
         {
@@ -412,7 +436,7 @@ internal class ForwarderInstance : IDisposable
         }
 
         _listener?.Stop();
-        _cts?.Dispose();
+        cts?.Dispose();
     }
 
     public PortForwardingStatus GetStatus()

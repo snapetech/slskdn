@@ -84,12 +84,12 @@ public class Z07062025_TransferIndexesMigration : IMigration
         {
             Log.Information("> Adding missing index(es) on the Transfers table...");
 
-            var directionCommand = new SqliteCommand(@"
+            using var directionCommand = new SqliteCommand(@"
                 CREATE INDEX IF NOT EXISTS IDX_Transfers_Direction ON Transfers (Direction)
             ", connection, transaction);
             directionCommand.ExecuteNonQuery();
 
-            var stateCommand = new SqliteCommand(@"
+            using var stateCommand = new SqliteCommand(@"
                 CREATE INDEX IF NOT EXISTS IDX_Transfers_State ON Transfers (State)
             ", connection, transaction);
             stateCommand.ExecuteNonQuery();

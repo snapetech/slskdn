@@ -162,28 +162,29 @@ public class DescriptorRetriever : IDescriptorRetriever
         var failed = 0;
 
         // Process in parallel with concurrency control
-        var semaphore = new SemaphoreSlim(10); // Allow more concurrent retrievals for batch
-        var tasks = contentIdList.Select(async contentId =>
-        {
-            await semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                var result = await RetrieveAsync(contentId, bypassCache: false, cancellationToken);
-                lock (results)
-                {
-                    results.Add(result);
-                    if (result.Found) found++;
-                    else if (result.ErrorMessage != null) failed++;
-                }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
+        using var semaphore = new SemaphoreSlim(10); // Allow more concurrent retrievals for batch
 
         try
         {
+            var tasks = contentIdList.Select(async contentId =>
+            {
+                await semaphore.WaitAsync(cancellationToken);
+                try
+                {
+                    var result = await RetrieveAsync(contentId, bypassCache: false, cancellationToken);
+                    lock (results)
+                    {
+                        results.Add(result);
+                        if (result.Found) found++;
+                        else if (result.ErrorMessage != null) failed++;
+                    }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
             await Task.WhenAll(tasks);
         }
         catch (Exception ex)
@@ -206,7 +207,7 @@ public class DescriptorRetriever : IDescriptorRetriever
     }
 
     /// <inheritdoc/>
-    public async Task<DescriptorQueryResult> QueryByDomainAsync(string domain, string? type = null, int maxResults = 50, CancellationToken cancellationToken = default)
+    public Task<DescriptorQueryResult> QueryByDomainAsync(string domain, string? type = null, int maxResults = 50, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(domain))
             throw new ArgumentException("Domain cannot be empty", nameof(domain));
@@ -252,13 +253,13 @@ public class DescriptorRetriever : IDescriptorRetriever
 
         var duration = DateTimeOffset.UtcNow - startTime;
 
-        return new DescriptorQueryResult(
+        return Task.FromResult(new DescriptorQueryResult(
             Domain: domain,
             Type: type,
             TotalFound: results.Count,
             QueryDuration: duration,
             Descriptors: results,
-            HasMoreResults: hasMore);
+            HasMoreResults: hasMore));
     }
 
     /// <inheritdoc/>
@@ -360,7 +361,7 @@ public class DescriptorRetriever : IDescriptorRetriever
     }
 
     /// <inheritdoc/>
-    public async Task<CacheOperationResult> ClearCacheAsync(CancellationToken cancellationToken = default)
+    public Task<CacheOperationResult> ClearCacheAsync(CancellationToken cancellationToken = default)
     {
         var entriesCleared = _cache.Count;
         var bytesFreed = _cache.Values.Sum(c => EstimateDescriptorSize(c.Descriptor));
@@ -372,16 +373,16 @@ public class DescriptorRetriever : IDescriptorRetriever
             "[DescriptorRetriever] Cleared cache: {Entries} entries, {Bytes} bytes freed",
             entriesCleared, bytesFreed);
 
-        return new CacheOperationResult(
+        return Task.FromResult(new CacheOperationResult(
             Success: true,
             EntriesCleared: entriesCleared,
-            BytesFreed: bytesFreed);
+            BytesFreed: bytesFreed));
     }
 
-    private async Task<bool> VerifySignatureAsync(ContentDescriptor descriptor, CancellationToken cancellationToken)
+    private Task<bool> VerifySignatureAsync(ContentDescriptor descriptor, CancellationToken cancellationToken)
     {
         if (descriptor.Signature == null)
-            return false;
+            return Task.FromResult(false);
 
         try
         {
@@ -390,13 +391,13 @@ public class DescriptorRetriever : IDescriptorRetriever
             if (string.IsNullOrWhiteSpace(descriptor.Signature.PublicKey) ||
                 string.IsNullOrWhiteSpace(descriptor.Signature.Signature))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             // Verify signature matches expected format (hex)
             if (!IsValidHex(descriptor.Signature.Signature))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             // Verify timestamp is reasonable (not in future, not too old)
@@ -404,26 +405,28 @@ public class DescriptorRetriever : IDescriptorRetriever
             var now = DateTimeOffset.UtcNow;
             var age = now - signatureTime;
 
-            if (signatureTime > now.AddMinutes(5)) // Allow 5 minute clock skew
+            if (signatureTime > now.AddMinutes(5))
             {
-                return false; // Future timestamp
+                // Allow 5 minute clock skew; anything beyond that looks forged.
+                return Task.FromResult(false);
             }
 
-            if (age > TimeSpan.FromDays(365)) // 1 year max age
+            if (age > TimeSpan.FromDays(365))
             {
-                return false; // Too old
+                // Descriptors older than one year are considered stale.
+                return Task.FromResult(false);
             }
 
-            return true;
+            return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[DescriptorRetriever] Signature verification error for {ContentId}", descriptor.ContentId);
-            return false;
+            return Task.FromResult(false);
         }
     }
 
-    private async Task PerformCacheCleanupAsync(CancellationToken cancellationToken)
+    private Task PerformCacheCleanupAsync(CancellationToken cancellationToken)
     {
         // Remove expired entries
         var expiredKeys = _cache
@@ -441,6 +444,8 @@ public class DescriptorRetriever : IDescriptorRetriever
             _lastCacheCleanup = DateTimeOffset.UtcNow;
             _logger.LogInformation("[DescriptorRetriever] Cleaned {Count} expired cache entries", expiredKeys.Count);
         }
+
+        return Task.CompletedTask;
     }
 
     private static bool IsExpired(CachedDescriptor cached)

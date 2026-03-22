@@ -48,7 +48,7 @@ namespace slskd.Transfers.AutoReplace
             OptionsMonitor = optionsMonitor;
             OptionsAtStartup = optionsAtStartup;
 
-            StateFilePath = Path.Combine(optionsAtStartup.AppDirectory, StateFileName);
+            StateFilePath = Path.Combine(Program.AppDirectory, StateFileName);
             LoadState();
         }
 

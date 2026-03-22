@@ -121,8 +121,7 @@ public class MeshSignalChannelHandler : ISignalChannelHandler
                 type: envelope.Type,
                 body: bodyDict,
                 ttl: envelope.Ttl,
-                preferredChannels: new[] { SignalChannel.Mesh } // Incoming signals don't need preferred channels
-            );
+                preferredChannels: new[] { SignalChannel.Mesh });
 
             // Only process if this signal is for us
             if (signal.ToPeerId != localPeerId)

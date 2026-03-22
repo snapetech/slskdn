@@ -7,7 +7,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Cover traffic generator that sends dummy messages when idle to maintain constant traffic patterns.
 /// </summary>
-public class CoverTrafficGenerator : ICoverTrafficGenerator
+public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
 {
     private readonly CoverTrafficOptions _options;
     private readonly Func<byte[]> _coverMessageFactory;
@@ -108,6 +108,12 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
                 IsActive = _generationTask != null && !_cts.IsCancellationRequested,
             };
         }
+    }
+
+    public void Dispose()
+    {
+        _cts.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private async Task GenerateCoverTrafficAsync(CancellationToken cancellationToken)

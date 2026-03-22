@@ -30,7 +30,7 @@ namespace slskd.Transfers.Rescue
         /// <summary>
         ///     Check if rescue mode is allowed for a transfer.
         /// </summary>
-        Task<(bool allowed, string reason)> CheckRescueAllowedAsync(
+        Task<(bool Allowed, string Reason)> CheckRescueAllowedAsync(
             string transferId,
             string filename,
             CancellationToken ct = default);
@@ -38,7 +38,7 @@ namespace slskd.Transfers.Rescue
         /// <summary>
         ///     Check if creating a multi-source job is allowed.
         /// </summary>
-        Task<(bool allowed, string reason)> CheckMultiSourceJobAllowedAsync(
+        Task<(bool Allowed, string Reason)> CheckMultiSourceJobAllowedAsync(
             int overlayPeerCount,
             int soulseekPeerCount,
             CancellationToken ct = default);
@@ -57,15 +57,17 @@ namespace slskd.Transfers.Rescue
         public RescueGuardrailConfig Config { get; set; } = new RescueGuardrailConfig();
 
         /// <inheritdoc/>
-        public async Task<(bool allowed, string reason)> CheckRescueAllowedAsync(
+        public Task<(bool Allowed, string Reason)> CheckRescueAllowedAsync(
             string transferId,
             string filename,
             CancellationToken ct = default)
         {
+            _ = ct;
+
             // Guardrail 1: Check if rescue mode is globally enabled
             if (!Config.Enabled)
             {
-                return (false, "Rescue mode is disabled");
+                return Task.FromResult((false, "Rescue mode is disabled"));
             }
 
             // Guardrail 2: Require at least one Soulseek origin
@@ -89,20 +91,22 @@ namespace slskd.Transfers.Rescue
             // - Check maximum concurrent rescue jobs
             // - Check daily rescue quota
             log.Debug("[GUARDRAIL] Rescue allowed for transfer {TransferId}, file {File}", transferId, filename);
-            return (true, "Allowed");
+            return Task.FromResult((true, "Allowed"));
         }
 
         /// <inheritdoc/>
-        public async Task<(bool allowed, string reason)> CheckMultiSourceJobAllowedAsync(
+        public Task<(bool Allowed, string Reason)> CheckMultiSourceJobAllowedAsync(
             int overlayPeerCount,
             int soulseekPeerCount,
             CancellationToken ct = default)
         {
+            _ = ct;
+
             // Guardrail 1: Require at least one Soulseek peer (unless overlay-only is explicitly enabled)
             if (!Config.AllowOverlayOnly && soulseekPeerCount == 0)
             {
                 log.Warning("[GUARDRAIL] Rejected multi-source job: no Soulseek peers (overlay-only not allowed)");
-                return (false, "At least one Soulseek peer required (overlay-only mode disabled)");
+                return Task.FromResult((false, "At least one Soulseek peer required (overlay-only mode disabled)"));
             }
 
             // Guardrail 2: Check overlay/Soulseek ratio limit
@@ -114,7 +118,7 @@ namespace slskd.Transfers.Rescue
                 {
                     log.Warning("[GUARDRAIL] Overlay ratio {Ratio:F2} exceeds limit {Limit:F2}",
                         overlayRatio, Config.MaxOverlayRatio);
-                    return (false, $"Overlay peer ratio {overlayRatio:F2} exceeds limit {Config.MaxOverlayRatio:F2}");
+                    return Task.FromResult((false, $"Overlay peer ratio {overlayRatio:F2} exceeds limit {Config.MaxOverlayRatio:F2}"));
                 }
             }
 
@@ -123,13 +127,13 @@ namespace slskd.Transfers.Rescue
             {
                 log.Warning("[GUARDRAIL] Soulseek peer count {Count} below minimum {Min}",
                     soulseekPeerCount, Config.MinSoulseekPeers);
-                return (false, $"Soulseek peer count {soulseekPeerCount} below minimum {Config.MinSoulseekPeers}");
+                return Task.FromResult((false, $"Soulseek peer count {soulseekPeerCount} below minimum {Config.MinSoulseekPeers}"));
             }
 
             log.Debug("[GUARDRAIL] Multi-source job allowed: {SoulseekCount} Soulseek peers, {OverlayCount} overlay peers",
                 soulseekPeerCount, overlayPeerCount);
 
-            return (true, "Allowed");
+            return Task.FromResult((true, "Allowed"));
         }
     }
 

@@ -160,7 +160,7 @@ public class ShardPublisher : BackgroundService, IShardPublisher
         var failedCount = 0;
 
         // Publish shards in parallel (with limit and rate limiting)
-        var semaphore = new SemaphoreSlim(5, 5); // Max 5 concurrent publishes
+        using var semaphore = new SemaphoreSlim(5, 5); // Max 5 concurrent publishes
         var publishTasks = idsToPublish.Select(async mbid =>
         {
             await semaphore.WaitAsync(ct);

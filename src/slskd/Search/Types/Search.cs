@@ -48,11 +48,11 @@ namespace slskd.Search
             get => JsonSerializer.Serialize(Responses);
             set
             {
-                Responses = JsonSerializer.Deserialize<IEnumerable<Response>>(value);
+                Responses = JsonSerializer.Deserialize<IEnumerable<Response>>(value) ?? Array.Empty<Response>();
             }
         }
 
-        public string SearchText { get; init; }
+        public string SearchText { get; init; } = string.Empty;
         public DateTime StartedAt { get; init; } = DateTime.Now;
         public SearchStates State { get; set; }
         public int Token { get; init; }

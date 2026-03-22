@@ -150,7 +150,9 @@ public sealed class FingerprintDetection : IDisposable
                 if (duration.TotalSeconds > 0)
                 {
                     var rate = profile.ConnectionAttempts / duration.TotalSeconds;
-                    if (rate > 1) // More than 1 connection/second
+
+                    // More than 1 connection/second.
+                    if (rate > 1)
                     {
                         indicators.Add(new ReconnaissanceIndicator
                         {

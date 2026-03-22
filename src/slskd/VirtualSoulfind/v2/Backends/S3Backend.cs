@@ -76,7 +76,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
             {
                 var allow = new HashSet<string>(opts.BucketAllowlist, StringComparer.OrdinalIgnoreCase);
                 return candidates
-                    .Where(c => TryParseRef(c.BackendRef, out var b, out _) && allow.Contains(b))
+                    .Where(c => TryParseRef(c.BackendRef, out var b, out _) && !string.IsNullOrEmpty(b) && allow.Contains(b))
                     .ToList();
             }
 

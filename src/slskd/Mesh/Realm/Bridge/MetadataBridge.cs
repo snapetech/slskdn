@@ -47,16 +47,16 @@ namespace slskd.Mesh.Realm.Bridge
         /// <remarks>
         ///     T-REALM-04: When metadata:read is allowed, enables querying remote realm metadata APIs.
         /// </remarks>
-        public async Task<BridgeOperationResult> QueryRemoteMetadataAsync(
+        public Task<BridgeOperationResult> QueryRemoteMetadataAsync(
             string localRealmId,
             string remoteRealmId,
             MetadataQuery query,
             CancellationToken cancellationToken = default)
         {
-            return await _flowEnforcer.PerformMetadataReadAsync(
+            return _flowEnforcer.PerformMetadataReadAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Validate query doesn't request sensitive information
@@ -70,7 +70,7 @@ namespace slskd.Mesh.Realm.Bridge
                     // Validate query safety
                     if (!IsQuerySafe(query))
                     {
-                        return BridgeOperationResult.Blocked("unsafe metadata query");
+                        return Task.FromResult(BridgeOperationResult.Blocked("unsafe metadata query"));
                     }
 
                     // Placeholder implementation
@@ -82,7 +82,7 @@ namespace slskd.Mesh.Realm.Bridge
                         Results = new[] { "safe-metadata-result-1", "safe-metadata-result-2" }
                     };
 
-                    return BridgeOperationResult.CreateSuccess(result);
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(result));
                 },
                 cancellationToken);
         }
@@ -98,17 +98,17 @@ namespace slskd.Mesh.Realm.Bridge
         /// <remarks>
         ///     T-REALM-04: When search:read is allowed, enables using remote realm search results locally.
         /// </remarks>
-        public async Task<BridgeOperationResult> SearchRemoteContentAsync(
+        public Task<BridgeOperationResult> SearchRemoteContentAsync(
             string localRealmId,
             string remoteRealmId,
             SearchQuery searchQuery,
             CancellationToken cancellationToken = default)
         {
             // Search read uses the same permission as metadata read for now
-            return await _flowEnforcer.PerformMetadataReadAsync(
+            return _flowEnforcer.PerformMetadataReadAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Validate search query doesn't contain sensitive terms
@@ -122,7 +122,7 @@ namespace slskd.Mesh.Realm.Bridge
                     // Validate search safety
                     if (!IsSearchSafe(searchQuery))
                     {
-                        return BridgeOperationResult.Blocked("unsafe search query");
+                        return Task.FromResult(BridgeOperationResult.Blocked("unsafe search query"));
                     }
 
                     // Placeholder implementation
@@ -138,7 +138,7 @@ namespace slskd.Mesh.Realm.Bridge
                         }
                     };
 
-                    return BridgeOperationResult.CreateSuccess(result);
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(result));
                 },
                 cancellationToken);
         }
@@ -153,15 +153,15 @@ namespace slskd.Mesh.Realm.Bridge
         /// <remarks>
         ///     T-REALM-04: Provides basic realm discovery while respecting bridge policies.
         /// </remarks>
-        public async Task<BridgeOperationResult> GetRemoteRealmInfoAsync(
+        public Task<BridgeOperationResult> GetRemoteRealmInfoAsync(
             string localRealmId,
             string remoteRealmId,
             CancellationToken cancellationToken = default)
         {
-            return await _flowEnforcer.PerformMetadataReadAsync(
+            return _flowEnforcer.PerformMetadataReadAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Query remote realm's public information endpoint
@@ -182,7 +182,7 @@ namespace slskd.Mesh.Realm.Bridge
                         // Never expose: GovernanceRoots, BootstrapNodes, internal policies
                     };
 
-                    return BridgeOperationResult.CreateSuccess(realmInfo);
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(realmInfo));
                 },
                 cancellationToken);
         }

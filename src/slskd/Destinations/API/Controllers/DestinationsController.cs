@@ -210,12 +210,12 @@ namespace slskd.Destinations.API
         /// <summary>
         ///     The display name.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         ///     The path.
         /// </summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         /// <summary>
         ///     Whether this is the default destination.
@@ -236,7 +236,7 @@ namespace slskd.Destinations.API
         /// <summary>
         ///     The path to validate.
         /// </summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -247,7 +247,7 @@ namespace slskd.Destinations.API
         /// <summary>
         ///     The path that was validated.
         /// </summary>
-        public string Path { get; set; }
+        public string Path { get; set; } = string.Empty;
 
         /// <summary>
         ///     Whether the path exists.

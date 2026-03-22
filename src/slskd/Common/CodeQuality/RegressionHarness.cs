@@ -259,12 +259,15 @@ namespace slskd.Common.CodeQuality
             try
             {
                 // Find and run the test methods for this scenario
+                var subsystem = scenario.Subsystem ?? string.Empty;
+                var testMethods = scenario.TestMethods ?? [];
+
                 var testClasses = testAssemblies
                     .SelectMany(a => a.GetTypes())
-                    .Where(t => t.Namespace?.Contains(scenario.Subsystem.Replace(".", ""), StringComparison.OrdinalIgnoreCase) == true)
+                    .Where(t => t.Namespace?.Contains(subsystem.Replace(".", string.Empty), StringComparison.OrdinalIgnoreCase) == true)
                     .ToList();
 
-                foreach (var testMethodName in scenario.TestMethods)
+                foreach (var testMethodName in testMethods)
                 {
                     var testResult = await RunTestMethodAsync(testMethodName, testClasses, logger);
                     result.TestResults.Add(testResult);
@@ -315,7 +318,11 @@ namespace slskd.Common.CodeQuality
                 var testMethod = testClasses
                     .SelectMany(tc => tc.GetMethods())
                     .FirstOrDefault(m => m.Name.Contains(testMethodName, StringComparison.OrdinalIgnoreCase) &&
-                                       m.GetCustomAttributes(false).Any(a => { var n = a.GetType().FullName; return n == "Xunit.FactAttribute" || n == "Xunit.TheoryAttribute"; }));
+                        m.GetCustomAttributes(false).Any(a =>
+                        {
+                            var n = a.GetType().FullName;
+                            return n == "Xunit.FactAttribute" || n == "Xunit.TheoryAttribute";
+                        }));
 
                 if (testMethod == null)
                 {

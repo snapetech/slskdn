@@ -10,10 +10,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using slskd.Transfers.MultiSource.Metrics;
 using slskd.Telemetry;
-using static slskd.Telemetry.SwarmMetrics;
+using slskd.Transfers.MultiSource.Metrics;
 using static slskd.Telemetry.PeerMetrics;
+using static slskd.Telemetry.SwarmMetrics;
 
 /// <summary>
 ///     Service for swarm analytics and reporting.
@@ -38,7 +38,7 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
     }
 
     /// <inheritdoc/>
-    public async Task<SwarmPerformanceMetrics> GetPerformanceMetricsAsync(TimeSpan? timeWindow = null, CancellationToken cancellationToken = default)
+    public Task<SwarmPerformanceMetrics> GetPerformanceMetricsAsync(TimeSpan? timeWindow = null, CancellationToken cancellationToken = default)
     {
         timeWindow ??= TimeSpan.FromHours(24);
 
@@ -83,12 +83,12 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
                 metrics.ChunkSuccessRate = (double)chunksSuccess / metrics.TotalChunksCompleted;
             }
 
-            return metrics;
+            return Task.FromResult(metrics);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting performance metrics");
-            return new SwarmPerformanceMetrics { TimeWindow = timeWindow.Value };
+            return Task.FromResult(new SwarmPerformanceMetrics { TimeWindow = timeWindow.Value });
         }
     }
 

@@ -19,7 +19,7 @@ namespace slskd.Telemetry;
 
 public record TransferExceptionSummary
 {
-    public string Exception { get; init; }
+    public string Exception { get; init; } = string.Empty;
     public long Count { get; init; }
     public long DistinctUsers { get; init; }
 }

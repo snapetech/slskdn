@@ -47,7 +47,7 @@ namespace slskd.Users.Notes
         }
 
         /// <inheritdoc/>
-        public async Task<UserNote> GetNoteAsync(string username, CancellationToken cancellationToken = default)
+        public async Task<UserNote?> GetNoteAsync(string username, CancellationToken cancellationToken = default)
         {
             await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
             return await context.UserNotes.FindAsync(new object[] { username }, cancellationToken);

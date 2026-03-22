@@ -18,7 +18,7 @@ public class WorkBudget
     private readonly int _initialUnits;
 
     /// <summary>
-    /// Creates a work budget with the specified initial units.
+    /// Initializes a new instance of the <see cref="WorkBudget"/> class.
     /// </summary>
     /// <param name="initialUnits">Initial work units available</param>
     public WorkBudget(int initialUnits)
@@ -199,7 +199,7 @@ public class PeerWorkBudgetTracker
     private readonly ConcurrentDictionary<string, PeerWorkWindow> _peerWindows = new();
 
     /// <summary>
-    /// Creates a peer work budget tracker with the specified options.
+    /// Initializes a new instance of the <see cref="PeerWorkBudgetTracker"/> class.
     /// </summary>
     public PeerWorkBudgetTracker(WorkBudgetOptions options)
     {

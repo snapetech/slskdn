@@ -93,7 +93,7 @@ namespace slskd.Common.Moderation
 
             public Task<ModerationDecision> AnalyzeFileAsync(
                 LocalFileMetadata file,
-                CancellationToken cancellationToken = default)
+                CancellationToken ct = default)
             {
                 _logger?.LogDebug("[NoopLlm] External moderation disabled, returning Unknown");
                 return Task.FromResult(ModerationDecision.Unknown("external_moderation_disabled"));

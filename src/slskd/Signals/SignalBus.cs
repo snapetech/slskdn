@@ -250,11 +250,23 @@ public class SignalBus : ISignalBus, IDisposable
 
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         if (disposed)
+        {
             return;
+        }
+
+        if (disposing)
+        {
+            seenSignalIdsLock.Dispose();
+            subscribersLock.Dispose();
+        }
 
         disposed = true;
-        seenSignalIdsLock?.Dispose();
-        subscribersLock?.Dispose();
     }
 }

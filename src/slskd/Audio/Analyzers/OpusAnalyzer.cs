@@ -77,7 +77,7 @@ namespace slskd.Audio.Analyzers
                 var read = fs.Read(buffer, 0, buffer.Length);
                 if (read <= 0)
                 {
-                    return null;
+                    return string.Empty;
                 }
 
                 using var sha = SHA256.Create();
@@ -87,7 +87,7 @@ namespace slskd.Audio.Analyzers
             }
             catch
             {
-                return null;
+                return string.Empty;
             }
         }
 
@@ -95,7 +95,7 @@ namespace slskd.Audio.Analyzers
         {
             try
             {
-                var tagFile = TagLib.File.Create(filePath);
+                using var tagFile = TagLib.File.Create(filePath);
                 var props = tagFile?.Properties;
 
                 // TagLib exposes Opus properties via container

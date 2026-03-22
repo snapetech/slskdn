@@ -28,17 +28,17 @@ public class FileSource
     /// <summary>
     ///     Gets or sets the content hash (SHA256 of first 32KB - links to HashDb.byte_hash).
     /// </summary>
-    public string ContentHash { get; set; }
+    public string ContentHash { get; set; } = string.Empty;
 
     /// <summary>
     ///     Gets or sets the peer username who has this file.
     /// </summary>
-    public string PeerId { get; set; }
+    public string PeerId { get; set; } = string.Empty;
 
     /// <summary>
     ///     Gets or sets the full path on the peer's share.
     /// </summary>
-    public string Path { get; set; }
+    public string Path { get; set; } = string.Empty;
 
     /// <summary>
     ///     Gets or sets the file size in bytes.

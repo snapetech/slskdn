@@ -48,8 +48,8 @@ namespace slskd.Transfers.MultiSource.Discovery
         private readonly string dbPath;
         private readonly ILogger log = Log.ForContext<SourceDiscoveryService>();
 
-        private CancellationTokenSource cts;
-        private Task discoveryTask;
+        private CancellationTokenSource? cts;
+        private Task? discoveryTask;
         private int searchCycles;
         private int lastCycleNewFiles;
         private bool enableHashVerification;
@@ -67,6 +67,7 @@ namespace slskd.Transfers.MultiSource.Discovery
         {
             client = soulseekClient;
             this.verificationService = verificationService;
+            CurrentSearchTerm = string.Empty;
 
             // Store DB in the app data directory (not LocalApplicationData which can be /slskd in containers)
             var slskdPath = Path.Combine(appDirectory, "discovery");

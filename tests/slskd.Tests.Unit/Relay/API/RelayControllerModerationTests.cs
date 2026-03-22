@@ -85,7 +85,7 @@ namespace slskd.Tests.Unit.Relay.API
                 var result = await controller.DownloadFile(token);
 
                 // Assert
-                var fileResult = Assert.IsType<FileStreamResult>(result);
+                var fileResult = Assert.IsAssignableFrom<FileResult>(result);
                 Assert.Equal("application/octet-stream", fileResult.ContentType);
             }
             finally

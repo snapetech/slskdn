@@ -27,7 +27,7 @@ namespace slskd.SocialFederation
         /// </summary>
         [JsonPropertyName("@context")]
         public object Context { get; set; } = new[]
-                {
+        {
             "https://www.w3.org/ns/activitystreams",
             "https://w3id.org/federation/workref#"
         };

@@ -30,7 +30,6 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     private readonly IMeshDhtClient dht;
     private readonly MeshOptions options;
     private readonly INatDetector natDetector;
-    private readonly Mesh.ServiceFabric.Services.HolePunchMeshService? holePunchService;
     private readonly MeshTransportOptions transportOptions;
     private readonly DescriptorSigningService signingService;
     private readonly Mesh.Overlay.IKeyStore? keyStore;
@@ -168,7 +167,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             transportOptions.Tor.PrivacyModeNoClearnetAdvertise ? "enabled" : "disabled");
     }
 
-    private async Task<List<string>> BuildLegacyEndpointsAsync(CancellationToken ct)
+    private Task<List<string>> BuildLegacyEndpointsAsync(CancellationToken ct)
     {
         // Start with configured endpoints
         var endpoints = new List<string>(options.SelfEndpoints);
@@ -199,7 +198,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             endpoints.AddRange(options.RelayEndpoints);
         }
 
-        return endpoints.Distinct().ToList();
+        return Task.FromResult(endpoints.Distinct().ToList());
     }
 
     private List<TransportEndpoint> BuildTransportEndpoints()
@@ -313,8 +312,9 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
                         var ip = unicast.Address;
                         if (!IPAddress.IsLoopback(ip) &&
                             ip.ToString() != "::" &&
-                            !ip.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase)) // Skip link-local
+                            !ip.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase))
                         {
+                            // Skip link-local.
                             // Add IPv6 endpoints with brackets
                             endpoints.Add($"[{ip}]:2234");
                             endpoints.Add($"[{ip}]:2235");

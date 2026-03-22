@@ -58,7 +58,7 @@ namespace slskd.Search
         /// <param name="includeResponses">A value indicating whether to include search responses in the result.</param>
         /// <returns>The found search, or default if not found.</returns>
         /// <exception cref="ArgumentException">Thrown when an expression is not supplied.</exception>
-        Task<Search> FindAsync(Expression<Func<Search, bool>> expression, bool includeResponses = false);
+        Task<Search?> FindAsync(Expression<Func<Search, bool>> expression, bool includeResponses = false);
 
         /// <summary>
         ///     Returns a list of all completed and in-progress searches, with responses omitted, matching the optional <paramref name="expression"/>.
@@ -124,6 +124,11 @@ namespace slskd.Search
         /// <param name="contextFactory">The database context to use.</param>
         /// <param name="safetyLimiter">The Soulseek safety limiter (H-08).</param>
         /// <param name="eventBus">The event bus for raising search events (optional).</param>
+        /// <param name="disasterModeCoordinator">The disaster-mode coordinator for mesh-backed search fallback.</param>
+        /// <param name="meshSearchService">The mesh search service for disaster-mode search execution.</param>
+        /// <param name="meshOverlaySearchService">The overlay search service for DHT-backed mesh search.</param>
+        /// <param name="trafficObserver">The optional traffic observer for bridged search capture.</param>
+        /// <param name="searchProviders">Optional explicit search provider set.</param>
         public SearchService(
             IHubContext<SearchHub> searchHub,
             IOptionsMonitor<Options> optionsMonitor,
@@ -197,7 +202,7 @@ namespace slskd.Search
         /// <param name="includeResponses">A value indicating whether to include search responses in the result.</param>
         /// <returns>The found search, or default if not found.</returns>
         /// <exception cref="ArgumentException">Thrown when an expression is not supplied.</exception>
-        public Task<Search> FindAsync(Expression<Func<Search, bool>> expression, bool includeResponses = false)
+        public Task<Search?> FindAsync(Expression<Func<Search, bool>> expression, bool includeResponses = false)
         {
             if (expression == default)
             {
@@ -267,6 +272,7 @@ namespace slskd.Search
         /// <param name="query">The search query.</param>
         /// <param name="scope">The search scope.</param>
         /// <param name="options">Search options.</param>
+        /// <param name="requestedProviders">Optional search providers to limit execution to.</param>
         /// <returns>The completed search.</returns>
         public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<string>? requestedProviders = null)
         {
@@ -311,7 +317,7 @@ namespace slskd.Search
             var cancellationTokenSource = new CancellationTokenSource();
             CancellationTokens.TryAdd(id, cancellationTokenSource);
 
-            var rateLimiter = new RateLimiter(250);
+            using var rateLimiter = new RateLimiter(250);
 
             // initialize the search record, save it to the database, and broadcast the creation
             // we do this so the UI has some feedback to show to the user that we've gotten their request
@@ -639,19 +645,13 @@ namespace slskd.Search
                 StartedAt = DateTime.UtcNow,
             };
 
-            bool searchCreated = false;
-            bool searchBroadcasted = false;
-
             try
             {
                 using var context = ContextFactory.CreateDbContext();
                 context.Add(search);
                 context.SaveChanges();
 
-                searchCreated = true;
-
                 await SearchHub.BroadcastCreateAsync(search);
-                searchBroadcasted = true;
 
                 // T-823: Mesh-only search implementation
                 // Step 1: Resolve query to MBIDs (MusicBrainz IDs)
@@ -694,11 +694,22 @@ namespace slskd.Search
                 // Step 2: Query mesh for each MBID and aggregate results
                 var meshResults = new List<slskd.VirtualSoulfind.DisasterMode.MeshPeerResult>();
 
-                foreach (var mbid in mbids.Take(5)) // Limit to 5 MBIDs to avoid flooding
+                // Limit to 5 MBIDs to avoid flooding.
+                foreach (var mbid in mbids.Take(5))
                 {
                     try
                     {
+                        if (MeshSearchService == null)
+                        {
+                            continue;
+                        }
+
                         var mbidResult = await MeshSearchService.SearchByMbidAsync(mbid, cancellationTokenSource.Token);
+                        if (mbidResult == null)
+                        {
+                            continue;
+                        }
+
                         meshResults.AddRange(mbidResult.PeerResults);
                     }
                     catch (Exception ex)
@@ -751,8 +762,10 @@ namespace slskd.Search
         /// <param name="query">The search query text.</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>List of MBIDs to search for.</returns>
-        private async Task<List<string>> ResolveQueryToMbidsAsync(string query, CancellationToken ct)
+        private Task<List<string>> ResolveQueryToMbidsAsync(string query, CancellationToken ct)
         {
+            _ = ct;
+
             // For now, implement simple query parsing to extract potential MBIDs
             // In a full implementation, this would integrate with MusicBrainz API
             var mbids = new List<string>();
@@ -761,7 +774,7 @@ namespace slskd.Search
             if (System.Text.RegularExpressions.Regex.IsMatch(query, @"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
             {
                 mbids.Add(query.ToLowerInvariant());
-                return mbids;
+                return Task.FromResult(mbids);
             }
 
             // For text queries, we would normally query MusicBrainz API
@@ -771,7 +784,7 @@ namespace slskd.Search
 
             // MusicBrainz API integration deferred: requires IMusicBrainzClient integration
             // For now, return empty to indicate no MBIDs found (mesh search will proceed with text query)
-            return mbids;
+            return Task.FromResult(mbids);
         }
 
         /// <summary>
@@ -797,7 +810,7 @@ namespace slskd.Search
                         Code = 1, // Download code
                         Filename = meshFile.Filename,
                         Size = meshFile.Size,
-                        Extension = System.IO.Path.GetExtension(meshFile.Filename) ?? "",
+                        Extension = System.IO.Path.GetExtension(meshFile.Filename) ?? string.Empty,
                         BitRate = 320, // Default bitrate
                         Length = (int)(meshFile.Size / 320000), // Estimate duration in seconds
                         IsLocked = false

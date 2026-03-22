@@ -252,7 +252,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
     /// </summary>
     private record TunnelRequest
     {
-        public string Host { get; init; } = "";
+        public string Host { get; init; } = string.Empty;
         public int Port { get; init; }
         public string? IsolationKey { get; init; }
         public string Method { get; init; } = "POST";

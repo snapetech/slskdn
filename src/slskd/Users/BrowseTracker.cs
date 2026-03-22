@@ -54,7 +54,7 @@ namespace slskd.Users
         /// <param name="username"></param>
         /// <param name="progress"></param>
         /// <returns></returns>
-        public bool TryGet(string username, out BrowseProgressUpdatedEventArgs progress)
+        public bool TryGet(string username, out BrowseProgressUpdatedEventArgs? progress)
             => Browses.TryGetValue(username, out progress);
     }
 }

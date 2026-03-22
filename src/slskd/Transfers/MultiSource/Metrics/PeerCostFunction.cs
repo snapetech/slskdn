@@ -182,12 +182,12 @@ namespace slskd.Transfers.MultiSource.Metrics
         /// <summary>
         ///     Gets or sets the peer identifier.
         /// </summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the peer performance metrics.
         /// </summary>
-        public PeerPerformanceMetrics Metrics { get; set; }
+        public PeerPerformanceMetrics Metrics { get; set; } = new();
 
         /// <summary>
         ///     Gets or sets the computed cost (lower is better).

@@ -74,12 +74,12 @@ namespace slskd.Transfers.AutoReplace
         /// <summary>
         ///     Gets or sets the username of the original source.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the filename to find an alternative for.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the expected file size.
@@ -100,22 +100,22 @@ namespace slskd.Transfers.AutoReplace
         /// <summary>
         ///     Gets or sets the ID of the original download.
         /// </summary>
-        public string OriginalId { get; set; }
+        public string OriginalId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the username of the original source.
         /// </summary>
-        public string OriginalUsername { get; set; }
+        public string OriginalUsername { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the username of the new source.
         /// </summary>
-        public string NewUsername { get; set; }
+        public string NewUsername { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the filename from the new source.
         /// </summary>
-        public string NewFilename { get; set; }
+        public string NewFilename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the size of the new file.
@@ -168,22 +168,22 @@ namespace slskd.Transfers.AutoReplace
         /// <summary>
         ///     Gets or sets the original filename.
         /// </summary>
-        public string OriginalFilename { get; set; }
+        public string OriginalFilename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the original username.
         /// </summary>
-        public string OriginalUsername { get; set; }
+        public string OriginalUsername { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the new username.
         /// </summary>
-        public string NewUsername { get; set; }
+        public string NewUsername { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the new filename.
         /// </summary>
-        public string NewFilename { get; set; }
+        public string NewFilename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the size difference percentage.
@@ -198,7 +198,7 @@ namespace slskd.Transfers.AutoReplace
         /// <summary>
         ///     Gets or sets the error message if the replacement failed.
         /// </summary>
-        public string Error { get; set; }
+        public string Error { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -209,12 +209,12 @@ namespace slskd.Transfers.AutoReplace
         /// <summary>
         ///     Gets or sets the username of the alternative source.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the filename from the alternative source.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the file size.
@@ -331,7 +331,7 @@ namespace slskd.Transfers.AutoReplace
                 var maxWait = TimeSpan.FromSeconds(30);
                 var pollInterval = TimeSpan.FromMilliseconds(1000);
                 var waited = TimeSpan.Zero;
-                slskd.Search.Search searchWithResponses = null;
+                slskd.Search.Search? searchWithResponses = null;
 
                 while (waited < maxWait)
                 {
@@ -653,7 +653,7 @@ namespace slskd.Transfers.AutoReplace
         /// <summary>
         ///     Get file extension handling both Windows and Unix paths.
         /// </summary>
-        private static string GetExtension(string filename)
+        private static string? GetExtension(string filename)
         {
             if (string.IsNullOrEmpty(filename))
             {

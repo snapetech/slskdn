@@ -249,7 +249,8 @@ namespace slskd.Mesh.Gossip
 
             lock (handlers)
             {
-                foreach (var handler in handlers.ToList()) // Create a copy to avoid modification during iteration
+                // Create a copy to avoid modification during iteration.
+                foreach (var handler in handlers.ToList())
                 {
                     tasks.Add(handler.HandleAsync(message, cancellationToken));
                 }

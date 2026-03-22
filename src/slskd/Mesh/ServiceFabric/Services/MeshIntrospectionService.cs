@@ -131,7 +131,8 @@ public class MeshIntrospectionService : IMeshService
                 ActivePeers = discoveryMetrics.ActivePeersLastMinute,
                 TotalQueries = discoveryMetrics.TotalQueriesLastMinute,
                 SuspiciousPeers = discoveryMetrics.SuspiciousPeers.Count
-            } : null,
+            }
+            : null,
 
             // DO NOT expose: hostname, OS username, filesystem paths, public IP
         };

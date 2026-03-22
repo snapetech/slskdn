@@ -72,6 +72,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
     /// <param name="adversarialOptions">The adversarial options containing both anonymity and obfuscated transport settings.</param>
     /// <param name="policyManager">The transport policy manager for per-peer/per-pod policies.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="loggerFactory">The logger factory for transport instances.</param>
     /// <param name="overlayDataPlane">Optional data-plane overlay; required for RelayOnly mode.</param>
     public AnonymityTransportSelector(
         AdversarialOptions adversarialOptions,
@@ -181,7 +182,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
             CancellationToken cancellationToken = default)
     {
         // Use default peer/pod context (no specific policy)
-        return await SelectAndConnectAsync(peerId: null, podId: null, host, port, isolationKey, cancellationToken);
+        return await SelectAndConnectAsync(peerId: string.Empty, podId: string.Empty, host, port, isolationKey, cancellationToken);
     }
 
     /// <summary>

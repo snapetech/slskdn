@@ -9,9 +9,14 @@ using Microsoft.Data.Sqlite;
 
 namespace slskd.HashDb;
 
+/// <summary>
+/// Partial hash database implementation for Virtual Soulfind pseudonym mappings.
+/// </summary>
 public partial class HashDbService
 {
-    // Virtual Soulfind pseudonym mapping implementation
+    /// <summary>
+    /// Upserts the Virtual Soulfind pseudonym mapping for a Soulseek username.
+    /// </summary>
     public async Task UpsertPseudonymAsync(
         string soulseekUsername,
         string peerId,
@@ -35,6 +40,9 @@ public partial class HashDbService
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the pseudonym mapped to the specified Soulseek username.
+    /// </summary>
     public async Task<string?> GetPseudonymAsync(
         string soulseekUsername,
         CancellationToken cancellationToken)
@@ -54,6 +62,9 @@ public partial class HashDbService
         return result as string;
     }
 
+    /// <summary>
+    /// Gets the Soulseek username mapped to the specified pseudonym.
+    /// </summary>
     public async Task<string?> GetUsernameFromPseudonymAsync(
         string peerId,
         CancellationToken cancellationToken)

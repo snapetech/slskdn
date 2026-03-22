@@ -72,11 +72,13 @@ public class PrivacyLayer : IPrivacyLayer
     /// <param name="message">The original message bytes.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The transformed message bytes.</returns>
-    public async Task<byte[]> ProcessOutboundMessageAsync(byte[] message, CancellationToken cancellationToken = default)
+    public Task<byte[]> ProcessOutboundMessageAsync(byte[] message, CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
+
         if (!IsEnabled || message == null)
         {
-            return message;
+            return Task.FromResult(message ?? Array.Empty<byte>());
         }
 
         var processedMessage = message;
@@ -97,7 +99,7 @@ public class PrivacyLayer : IPrivacyLayer
             {
                 // Message is queued for batching, return empty array to indicate no immediate send
                 _logger.LogTrace("Message queued for batching, not sending immediately");
-                return Array.Empty<byte>();
+                return Task.FromResult(Array.Empty<byte>());
             }
 
             // Batch is ready, get the batched messages
@@ -111,7 +113,7 @@ public class PrivacyLayer : IPrivacyLayer
             }
         }
 
-        return processedMessage;
+        return Task.FromResult(processedMessage);
     }
 
     /// <summary>
@@ -120,11 +122,13 @@ public class PrivacyLayer : IPrivacyLayer
     /// <param name="message">The received message bytes.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The original message bytes.</returns>
-    public async Task<byte[]> ProcessInboundMessageAsync(byte[] message, CancellationToken cancellationToken = default)
+    public Task<byte[]> ProcessInboundMessageAsync(byte[] message, CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
+
         if (!IsEnabled || message == null || message.Length == 0)
         {
-            return message;
+            return Task.FromResult(message ?? Array.Empty<byte>());
         }
 
         var processedMessage = message;
@@ -143,11 +147,11 @@ public class PrivacyLayer : IPrivacyLayer
                 _logger.LogWarning(ex, "Failed to unpad message, returning as-is");
 
                 // Return original message if unpadding fails
-                return message;
+                return Task.FromResult(message ?? Array.Empty<byte>());
             }
         }
 
-        return processedMessage;
+        return Task.FromResult(processedMessage);
     }
 
     /// <summary>

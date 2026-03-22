@@ -70,24 +70,24 @@ namespace slskd.VirtualSoulfind.Core.Music
         }
 
         /// <inheritdoc/>
-        public async Task<MusicWork?> TryGetWorkByTitleArtistAsync(string title, string artist, int? year = null, CancellationToken cancellationToken = default)
+        public Task<MusicWork?> TryGetWorkByTitleArtistAsync(string title, string artist, int? year = null, CancellationToken cancellationToken = default)
         {
             // T-VC02: Basic implementation - fuzzy matching by title/artist would require
             // additional HashDb search capabilities. For now, return null.
             // This could be implemented by adding search methods to IHashDbService.
             _logger.LogDebug("Title/artist matching not yet implemented for: {Title} / {Artist}", title, artist);
-            return null;
+            return Task.FromResult<MusicWork?>(null);
         }
 
         /// <inheritdoc/>
-        public async Task<MusicItem?> TryGetItemByRecordingIdAsync(string recordingId, CancellationToken cancellationToken = default)
+        public Task<MusicItem?> TryGetItemByRecordingIdAsync(string recordingId, CancellationToken cancellationToken = default)
         {
             // T-VC02: Basic implementation - direct track lookup by MBID would require
             // additional HashDb capabilities. For now, return null.
             // This could be implemented by adding track search methods to IHashDbService
             // or by iterating through all albums/tracks (expensive).
             _logger.LogDebug("Direct track lookup by MusicBrainz Recording ID not yet implemented: {RecordingId}", recordingId);
-            return null;
+            return Task.FromResult<MusicItem?>(null);
         }
 
         /// <inheritdoc/>
@@ -128,11 +128,11 @@ namespace slskd.VirtualSoulfind.Core.Music
         }
 
         /// <inheritdoc/>
-        public async Task<MusicItem?> TryMatchTrackByFingerprintAsync(string fingerprint, int durationSeconds, CancellationToken cancellationToken = default)
+        public Task<MusicItem?> TryMatchTrackByFingerprintAsync(string fingerprint, int durationSeconds, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(fingerprint))
             {
-                return null;
+                return Task.FromResult<MusicItem?>(null);
             }
 
             try
@@ -141,12 +141,12 @@ namespace slskd.VirtualSoulfind.Core.Music
                 // This would require Chromaprint integration in HashDb
                 // For T-VC02 implementation, we'll return null until Chromaprint is migrated
                 _logger.LogDebug("Chromaprint fingerprint matching not yet implemented");
-                return null;
+                return Task.FromResult<MusicItem?>(null);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to match track by fingerprint: {Fingerprint}", fingerprint);
-                return null;
+                return Task.FromResult<MusicItem?>(null);
             }
         }
 

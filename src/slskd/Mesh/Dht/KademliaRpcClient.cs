@@ -57,10 +57,10 @@ public class KademliaRpcClient
         if (targetId.Length != 20)
             throw new ArgumentException("Target ID must be 20 bytes", nameof(targetId));
 
-        var visited = new HashSet<string>(); // Track contacted peers
+        // Track contacted peers.
+        var visited = new HashSet<string>();
         var candidates = new SortedSet<NodeDistance>(
-            _routingTable.GetClosest(targetId, K).Select(n => new NodeDistance(n, targetId))
-        );
+            _routingTable.GetClosest(targetId, K).Select(n => new NodeDistance(n, targetId)));
         var closestFound = new SortedSet<NodeDistance>();
 
         for (int iteration = 0; iteration < MaxIterations && candidates.Any(); iteration++)
@@ -244,8 +244,7 @@ public class KademliaRpcClient
                     return response.Nodes.Select(n => new KNode(
                         n.NodeId,
                         n.Address,
-                        DateTimeOffset.FromUnixTimeMilliseconds(n.LastSeen.ToUnixTimeMilliseconds())
-                    )).ToArray();
+                        DateTimeOffset.FromUnixTimeMilliseconds(n.LastSeen.ToUnixTimeMilliseconds()))).ToArray();
                 }
             }
             else

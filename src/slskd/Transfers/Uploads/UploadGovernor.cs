@@ -82,7 +82,7 @@ namespace slskd.Transfers
         }
 
         private IOptionsMonitor<Options> OptionsMonitor { get; }
-        private string LastOptionsHash { get; set; }
+        private string LastOptionsHash { get; set; } = string.Empty;
         private int LastGlobalSpeedLimit { get; set; }
         private Dictionary<string, ITokenBucket> TokenBuckets { get; set; } = new Dictionary<string, ITokenBucket>();
         private IUserService Users { get; }

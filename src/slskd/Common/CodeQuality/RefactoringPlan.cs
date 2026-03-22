@@ -246,9 +246,9 @@ namespace slskd.Common.CodeQuality
                 HighPriority = recommendations.Count(r => r.Priority == RefactoringPriority.High),
                 MediumPriority = recommendations.Count(r => r.Priority == RefactoringPriority.Medium),
                 LowPriority = recommendations.Count(r => r.Priority == RefactoringPriority.Low),
-                TotalEstimatedEffort = recommendations.Sum(r => ParseEffortDays(r.EstimatedEffort)),
+                TotalEstimatedEffort = recommendations.Sum(r => ParseEffortDays(r.EstimatedEffort ?? "1")),
                 RiskDistribution = recommendations
-                    .GroupBy(r => r.RiskLevel)
+                    .GroupBy(r => r.RiskLevel ?? "Unknown")
                     .ToDictionary(g => g.Key, g => g.Count())
             };
         }

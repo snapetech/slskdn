@@ -68,7 +68,7 @@ public static class SearchResponseMerger
             {
                 merged.Add(new Response
                 {
-                    Username = r.Username,
+                    Username = r.Username ?? string.Empty,
                     Token = r.Token,
                     HasFreeUploadSlot = r.HasFreeUploadSlot,
                     UploadSpeed = r.UploadSpeed,

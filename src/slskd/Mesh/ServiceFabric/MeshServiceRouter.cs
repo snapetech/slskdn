@@ -26,10 +26,10 @@ public class MeshServiceRouter
     private readonly ConcurrentDictionary<string, IMeshService> _services = new();
 
     // Per-peer rate limiting: peerId -> (callCount, windowStart)
-    private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _perPeerCallCounts = new();
+    private readonly ConcurrentDictionary<string, (int Count, DateTimeOffset WindowStart)> _perPeerCallCounts = new();
 
     // Global per-peer rate limiting across all services: peerId -> (callCount, windowStart)
-    private readonly ConcurrentDictionary<string, (int count, DateTimeOffset windowStart)> _globalPeerCallCounts = new();
+    private readonly ConcurrentDictionary<string, (int Count, DateTimeOffset WindowStart)> _globalPeerCallCounts = new();
 
     // Circuit breaker per service: serviceName -> health tracker
     private readonly ConcurrentDictionary<string, ServiceHealthTracker> _serviceHealth = new();
@@ -421,11 +421,11 @@ public class MeshServiceRouter
 
         // Rate limit stats (active peers in last minute)
         var activeGlobalPeers = _globalPeerCallCounts
-            .Where(kvp => now - kvp.Value.windowStart <= TimeSpan.FromMinutes(1))
+            .Where(kvp => now - kvp.Value.WindowStart <= TimeSpan.FromMinutes(1))
             .Count();
 
         var activeServicePeers = _perPeerCallCounts
-            .Where(kvp => now - kvp.Value.windowStart <= TimeSpan.FromMinutes(1))
+            .Where(kvp => now - kvp.Value.WindowStart <= TimeSpan.FromMinutes(1))
             .Count();
 
         // Work budget stats

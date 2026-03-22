@@ -11,7 +11,7 @@ namespace slskd.Mesh.Privacy;
 /// Implements message batching with time-based windows to prevent traffic analysis.
 /// Collects messages for a configurable time window and sends them as a batch.
 /// </summary>
-public class TimedBatcher : IMessageBatcher
+public sealed class TimedBatcher : IMessageBatcher, IDisposable
 {
     private readonly ILogger<TimedBatcher> _logger;
     private readonly TimeSpan _batchWindow;
@@ -20,6 +20,7 @@ public class TimedBatcher : IMessageBatcher
     private readonly SemaphoreSlim _batchLock;
     private DateTimeOffset _batchStartTime;
     private bool _isBatchActive;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TimedBatcher"/> class.
@@ -253,5 +254,17 @@ public class TimedBatcher : IMessageBatcher
         /// </summary>
         public static TimedBatcher MaximumPrivacy(ILogger<TimedBatcher> logger)
             => new(logger, 10.0, 50);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _batchLock.Dispose();
+        _disposed = true;
     }
 }

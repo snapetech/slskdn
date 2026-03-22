@@ -42,7 +42,11 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
     }
 
-    public event EventHandler<DiscoveredPeer>? PeerDiscovered;
+    public event EventHandler<DiscoveredPeer>? PeerDiscovered
+    {
+        add { }
+        remove { }
+    }
 
     public async Task StartAdvertisingAsync(CancellationToken ct = default)
     {

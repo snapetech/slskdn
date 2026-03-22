@@ -35,12 +35,12 @@ namespace slskd.VirtualSoulfind.v2.Sources
         /// <summary>
         ///     Gets or initializes the unique identifier for this candidate.
         /// </summary>
-        public string Id { get; init; }
+        public string Id { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the content item ID this candidate provides.
         /// </summary>
-        public ContentItemId ItemId { get; init; }
+        public ContentItemId ItemId { get; init; } = default!;
 
         /// <summary>
         ///     Gets or initializes the backend type.
@@ -58,7 +58,7 @@ namespace slskd.VirtualSoulfind.v2.Sources
         ///     - Http: URL
         ///     - LocalLibrary: LocalFileId
         /// </remarks>
-        public string BackendRef { get; init; }
+        public string BackendRef { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the expected quality score.

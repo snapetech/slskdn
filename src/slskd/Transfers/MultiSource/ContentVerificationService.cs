@@ -69,11 +69,11 @@ namespace slskd.Transfers.MultiSource
         /// <param name="fileSize">The file size.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>The known hash, or null if not found.</returns>
-        public async Task<string> TryGetKnownHashAsync(string filename, long fileSize, CancellationToken cancellationToken = default)
+        public async Task<string?> TryGetKnownHashAsync(string filename, long fileSize, CancellationToken cancellationToken = default)
         {
             if (HashDb == null)
             {
-                return null;
+                return default;
             }
 
             try
@@ -98,7 +98,7 @@ namespace slskd.Transfers.MultiSource
                 Log.Warning(ex, "[HASHDB] Error looking up hash for {Filename}", filename);
             }
 
-            return null;
+            return default;
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace slskd.Transfers.MultiSource
             }
 
             // Verify all candidates in parallel
-            var verificationTasks = new List<Task<(string Username, string Hash, VerificationMethod Method, long TimeMs, string Error)>>();
+            var verificationTasks = new List<Task<(string Username, string? Hash, VerificationMethod Method, long TimeMs, string? Error)>>();
 
             foreach (var kvp in sourcesToVerify)
             {
@@ -186,13 +186,14 @@ namespace slskd.Transfers.MultiSource
             // Group results by hash
             foreach (var (username, hash, method, timeMs, error) in verificationResults)
             {
-                if (error != null)
+                if (error != null || hash == null)
                 {
                     result.FailedSources.Add(new FailedSource
                     {
                         Username = username,
-                        Reason = error,
+                        Reason = error ?? "Verification returned no hash",
                     });
+
                     continue;
                 }
 
@@ -271,7 +272,7 @@ namespace slskd.Transfers.MultiSource
         }
 
         /// <inheritdoc/>
-        public async Task<string> GetContentHashAsync(
+        public async Task<string?> GetContentHashAsync(
             string username,
             string filename,
             long fileSize,
@@ -287,7 +288,7 @@ namespace slskd.Transfers.MultiSource
             return error == null ? hash : null;
         }
 
-        private async Task<(string Username, string Hash, VerificationMethod Method, long TimeMs, string Error)> VerifySingleSourceAsync(
+        private async Task<(string Username, string? Hash, VerificationMethod Method, long TimeMs, string? Error)> VerifySingleSourceAsync(
             string username,
             string filename,
             long fileSize,
@@ -321,7 +322,7 @@ namespace slskd.Transfers.MultiSource
                 cts.CancelAfter(timeoutMs);
 
                 using var memoryStream = new MemoryStream(bytesNeeded);
-                var limitedStream = new LimitedWriteStream(memoryStream, bytesNeeded, cts);
+                using var limitedStream = new LimitedWriteStream(memoryStream, bytesNeeded, cts);
 
                 try
                 {
@@ -388,7 +389,7 @@ namespace slskd.Transfers.MultiSource
             }
         }
 
-        private async Task<HashDbEntry> LookupHashDbEntryAsync(string filename, long fileSize, CancellationToken cancellationToken)
+        private async Task<HashDbEntry?> LookupHashDbEntryAsync(string filename, long fileSize, CancellationToken cancellationToken)
         {
             if (HashDb == null)
             {

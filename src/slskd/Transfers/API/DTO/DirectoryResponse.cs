@@ -20,12 +20,13 @@
 // </copyright>
 namespace slskd.Transfers.API
 {
+    using System;
     using System.Collections.Generic;
 
     public record DirectoryResponse
     {
-        public string Directory { get; init; }
+        public string Directory { get; init; } = string.Empty;
         public int FileCount { get; init; }
-        public IEnumerable<Transfers.Transfer> Files { get; init; }
+        public IEnumerable<Transfers.Transfer> Files { get; init; } = Array.Empty<Transfers.Transfer>();
     }
 }

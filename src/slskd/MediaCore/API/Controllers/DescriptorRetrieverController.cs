@@ -43,9 +43,9 @@ public class DescriptorRetrieverController : ControllerBase
     [HttpGet("descriptor/{*contentId}")]
     [AllowAnonymous]
     public async Task<IActionResult> RetrieveDescriptor(
-            string contentId,
-    [FromQuery] bool bypassCache = false,
-            CancellationToken cancellationToken = default)
+        string contentId,
+        [FromQuery] bool bypassCache = false,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(contentId))
         {
@@ -117,10 +117,10 @@ public class DescriptorRetrieverController : ControllerBase
     [HttpGet("query/domain/{domain}")]
     [AllowAnonymous]
     public async Task<IActionResult> QueryByDomain(
-            string domain,
-    [FromQuery] string? type = null,
-    [FromQuery] int maxResults = 50,
-            CancellationToken cancellationToken = default)
+        string domain,
+        [FromQuery] string? type = null,
+        [FromQuery] int maxResults = 50,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(domain))
         {

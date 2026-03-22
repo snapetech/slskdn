@@ -86,7 +86,7 @@ public record PodUnpublishResult(
 public record PodMetadataResult(
     bool Found,
     string PodId,
-    Pod PublishedPod,
+    Pod? PublishedPod,
     DateTimeOffset RetrievedAt,
     DateTimeOffset ExpiresAt,
     bool IsValidSignature,

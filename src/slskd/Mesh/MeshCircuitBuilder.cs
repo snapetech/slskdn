@@ -202,7 +202,8 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
             .Where(p => p.PeerId != _meshOptions.SelfPeerId && p.PeerId != targetPeerId)
             .ToList();
 
-        if (filteredPeers.Count < circuitLength - 1) // Need length-1 intermediate peers
+        // Need length-1 intermediate peers.
+        if (filteredPeers.Count < circuitLength - 1)
         {
             throw new InvalidOperationException(
                 $"Not enough intermediate peers available. Need {circuitLength - 1}, found {filteredPeers.Count}");

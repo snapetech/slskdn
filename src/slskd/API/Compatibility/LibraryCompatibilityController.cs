@@ -36,8 +36,8 @@ public class LibraryCompatibilityController : ControllerBase
     [HttpPost("scan")]
     [Authorize]
     public async Task<IActionResult> StartScan(
-    [FromBody] LibraryHealthScanRequest? request = null,
-            CancellationToken cancellationToken = default)
+        [FromBody] LibraryHealthScanRequest? request = null,
+        CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Compatibility library scan requested");
 

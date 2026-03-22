@@ -4,14 +4,13 @@
 
 namespace slskd.API.Native;
 
-using slskd.Core.Security;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using slskd;
-using OptionsModel = slskd.Options;
+using slskd.Core.Security;
 using slskd.LibraryHealth;
+using OptionsModel = slskd.Options;
 
 /// <summary>
 /// Provides slskdn-native library health API.
@@ -42,18 +41,18 @@ public class LibraryHealthController : ControllerBase
     [HttpGet("health")]
     [Authorize]
     public async Task<IActionResult> GetHealth(
-    [FromQuery] string? path,
-    [FromQuery] int limit = 100,
-            CancellationToken cancellationToken = default)
+        [FromQuery] string? path,
+        [FromQuery] int limit = 100,
+        CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Library health check requested for path: {Path}", path ?? "(all)");
 
-        var summary = await healthService.GetSummaryAsync(path, cancellationToken);
+        var summary = await healthService.GetSummaryAsync(path ?? string.Empty, cancellationToken);
         var issues = await healthService.GetIssuesAsync(
             new LibraryHealthIssueFilter
             {
-                LibraryPath = path,
-                Limit = limit
+                LibraryPath = path ?? string.Empty,
+                Limit = limit,
             },
             cancellationToken);
 
@@ -83,8 +82,8 @@ public class LibraryHealthController : ControllerBase
     [HttpPost("remediate")]
     [Authorize]
     public async Task<IActionResult> CreateRemediationJob(
-    [FromBody] LibraryRemediationRequest request,
-            CancellationToken cancellationToken = default)
+        [FromBody] LibraryRemediationRequest request,
+        CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Remediation job requested for {IssueCount} issues", request?.IssueIds?.Count ?? 0);
 

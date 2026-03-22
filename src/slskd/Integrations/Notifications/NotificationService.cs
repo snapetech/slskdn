@@ -31,7 +31,7 @@ namespace slskd.Integrations.Notifications
     public class NotificationService : INotificationService
     {
         private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(30);
-        private readonly ConcurrentDictionary<string, DateTime> LastNotificationTimes = new();
+        private readonly ConcurrentDictionary<string, DateTime> lastNotificationTimes = new();
 
         public NotificationService(
             IHttpClientFactory httpClientFactory,
@@ -131,7 +131,7 @@ namespace slskd.Integrations.Notifications
             try
             {
                 using var client = HttpClientFactory.CreateClient();
-                var request = new HttpRequestMessage(HttpMethod.Post, options.Url);
+                using var request = new HttpRequestMessage(HttpMethod.Post, options.Url);
 
                 if (!string.IsNullOrWhiteSpace(options.AccessToken))
                 {
@@ -155,7 +155,7 @@ namespace slskd.Integrations.Notifications
             try
             {
                 using var client = HttpClientFactory.CreateClient();
-                var content = new FormUrlEncodedContent(new[]
+                using var content = new FormUrlEncodedContent(new[]
                 {
                     new KeyValuePair<string, string>("token", options.Token),
                     new KeyValuePair<string, string>("user", options.UserKey),
@@ -180,7 +180,7 @@ namespace slskd.Integrations.Notifications
         {
             var now = DateTime.UtcNow;
 
-            if (LastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
+            if (lastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
             {
                 if (now - lastTime < RateLimitWindow)
                 {
@@ -189,17 +189,17 @@ namespace slskd.Integrations.Notifications
                 }
             }
 
-            LastNotificationTimes[cacheKey] = now;
+            lastNotificationTimes[cacheKey] = now;
 
             // Clean up old entries periodically (keep dict from growing unbounded)
-            if (LastNotificationTimes.Count > 1000)
+            if (lastNotificationTimes.Count > 1000)
             {
                 var cutoff = now - RateLimitWindow;
-                foreach (var kvp in LastNotificationTimes)
+                foreach (var kvp in lastNotificationTimes)
                 {
                     if (kvp.Value < cutoff)
                     {
-                        LastNotificationTimes.TryRemove(kvp.Key, out _);
+                        lastNotificationTimes.TryRemove(kvp.Key, out _);
                     }
                 }
             }

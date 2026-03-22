@@ -10,7 +10,7 @@ namespace slskd.Mesh.Transport;
 /// <summary>
 /// Ed25519 signing and verification implementation using NSec (libsodium).
 /// </summary>
-public class Ed25519Signer : IDisposable
+public sealed class Ed25519Signer : IDisposable
 {
     // Using NSec library for proper Ed25519 support
     private static readonly SignatureAlgorithm Algorithm = SignatureAlgorithm.Ed25519;

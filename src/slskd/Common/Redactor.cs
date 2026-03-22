@@ -66,14 +66,21 @@ namespace slskd
                     {
                         foreach (string key in ((IDictionary)value).Keys)
                         {
-                            Redact(((IDictionary)value)[key]);
+                            var entry = ((IDictionary)value)[key];
+                            if (entry != null)
+                            {
+                                Redact(entry);
+                            }
                         }
                     }
                     else if (value.GetType().IsAssignableTo(typeof(IEnumerable)))
                     {
                         foreach (var element in (IEnumerable)value)
                         {
-                            Redact(element);
+                            if (element != null)
+                            {
+                                Redact(element);
+                            }
                         }
                     }
                     else

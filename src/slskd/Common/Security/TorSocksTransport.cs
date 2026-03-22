@@ -5,14 +5,17 @@
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace slskd.Common.Security;
 
 /// <summary>
 /// Tor SOCKS5 proxy transport for anonymity.
 /// </summary>
-public class TorSocksTransport : IAnonymityTransport, IDisposable
+public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
 {
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
+
     private readonly TorOptions _options;
     private readonly ILogger<TorSocksTransport> _logger;
 
@@ -133,8 +136,15 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
     /// <summary>
     /// Establishes a connection with proper circuit isolation.
     /// </summary>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Circuit connections are transferred to the returned stream on success and disposed on failure.")]
     private async Task<Stream> ConnectWithCircuitIsolationAsync(string host, int port, string circuitKey, CancellationToken cancellationToken = default)
     {
+        TcpClient? client = null;
+        IsolationCircuit? leasedCircuit = null;
+        using var timeoutCts = new CancellationTokenSource(ConnectTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        var effectiveToken = linkedCts.Token;
+
         lock (_statusLock)
         {
             _status.TotalConnectionsAttempted++;
@@ -143,24 +153,24 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
         try
         {
             // Get or create an isolated circuit for this key
-            var circuit = await GetOrCreateCircuitAsync(circuitKey, cancellationToken);
+            leasedCircuit = await GetOrCreateCircuitAsync(circuitKey, effectiveToken);
 
             // Get a connection from the circuit's pool
-            var client = circuit.GetConnection();
-            await client.ConnectAsync(circuit.SocksHost, circuit.SocksPort, cancellationToken);
+            client = leasedCircuit.GetConnection();
+            await client.ConnectAsync(leasedCircuit.SocksHost, leasedCircuit.SocksPort, effectiveToken);
 
             var stream = client.GetStream();
 
             // SOCKS5 handshake with authentication if circuit has credentials
             byte[] handshake;
-            if (circuit.Username != null && circuit.Password != null)
+            if (leasedCircuit.Username != null && leasedCircuit.Password != null)
             {
                 // Use username/password authentication for stream isolation
                 handshake = new byte[] { 0x05, 0x01, 0x02 }; // SOCKS5, 1 method, username/password auth
-                await stream.WriteAsync(handshake, 0, handshake.Length, cancellationToken);
+                await stream.WriteAsync(handshake, 0, handshake.Length, effectiveToken);
 
                 var handshakeResponse = new byte[2];
-                await stream.ReadAsync(handshakeResponse, 0, 2, cancellationToken);
+                await stream.ReadAsync(handshakeResponse, 0, 2, effectiveToken);
 
                 if (handshakeResponse[0] != 0x05 || handshakeResponse[1] != 0x02)
                 {
@@ -168,10 +178,10 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                 }
 
                 // Send username/password authentication
-                await SendSocks5AuthAsync(stream, circuit.Username, circuit.Password, cancellationToken);
+                await SendSocks5AuthAsync(stream, leasedCircuit.Username, leasedCircuit.Password, effectiveToken);
 
                 var authResponse = new byte[2];
-                await stream.ReadAsync(authResponse, 0, 2, cancellationToken);
+                await stream.ReadAsync(authResponse, 0, 2, effectiveToken);
 
                 if (authResponse[0] != 0x01 || authResponse[1] != 0x00)
                 {
@@ -182,10 +192,10 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
             {
                 // No authentication (standard SOCKS5)
                 handshake = new byte[] { 0x05, 0x01, 0x00 }; // SOCKS5, 1 method, no auth
-                await stream.WriteAsync(handshake, 0, handshake.Length, cancellationToken);
+                await stream.WriteAsync(handshake, 0, handshake.Length, effectiveToken);
 
                 var handshakeResponse = new byte[2];
-                await stream.ReadAsync(handshakeResponse, 0, 2, cancellationToken);
+                await stream.ReadAsync(handshakeResponse, 0, 2, effectiveToken);
 
                 if (handshakeResponse[0] != 0x05 || handshakeResponse[1] != 0x00)
                 {
@@ -195,10 +205,10 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
 
             // SOCKS5 connect request
             var connectRequest = CreateSocks5ConnectRequest(host, port);
-            await stream.WriteAsync(connectRequest, 0, connectRequest.Length, cancellationToken);
+            await stream.WriteAsync(connectRequest, 0, connectRequest.Length, effectiveToken);
 
             var connectResponse = new byte[10]; // Minimum response size
-            var responseLength = await stream.ReadAsync(connectResponse, 0, connectResponse.Length, cancellationToken);
+            var responseLength = await stream.ReadAsync(connectResponse, 0, connectResponse.Length, effectiveToken);
 
             if (responseLength < 10 || connectResponse[0] != 0x05 || connectResponse[1] != 0x00)
             {
@@ -214,6 +224,11 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
 
             _logger.LogDebug("Established Tor connection to {Host}:{Port} via circuit {CircuitKey}", host, port, circuitKey);
 
+            var ownedClient = client;
+            client = null;
+            var returnCircuit = leasedCircuit;
+            leasedCircuit = null;
+
             // Return a wrapper stream that tracks when the connection is closed
             return new TrackedStream(stream, () =>
             {
@@ -222,11 +237,26 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
 
-                circuit.ReleaseConnection(client);
+                returnCircuit.ReleaseConnection(ownedClient);
             });
+        }
+        catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            client?.Dispose();
+
+            lock (_statusLock)
+            {
+                _status.LastError = $"Timed out establishing Tor connection after {ConnectTimeout.TotalSeconds:0} seconds";
+            }
+
+            throw new TimeoutException(
+                $"Timed out establishing Tor connection to {host}:{port} via circuit {circuitKey}",
+                ex);
         }
         catch (Exception ex)
         {
+            client?.Dispose();
+
             lock (_statusLock)
             {
                 _status.LastError = ex.Message;
@@ -341,7 +371,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         var keyBytes = System.Text.Encoding.UTF8.GetBytes(isolationKey);
         var hash = sha256.ComputeHash(keyBytes);
-        return "tor-" + BitConverter.ToString(hash).Replace("-", "").Substring(0, 16).ToLower();
+        return "tor-" + BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 16).ToLower();
     }
 
     internal static string GenerateIsolationPassword(string isolationKey)
@@ -350,7 +380,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         var keyBytes = System.Text.Encoding.UTF8.GetBytes(isolationKey + "-password");
         var hash = sha256.ComputeHash(keyBytes);
-        return BitConverter.ToString(hash).Replace("-", "").Substring(0, 16).ToLower();
+        return BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 16).ToLower();
     }
 
     /// <summary>
@@ -390,7 +420,7 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
     /// <summary>
     /// Creates a new isolated circuit.
     /// </summary>
-    private async Task<IsolationCircuit> CreateIsolationCircuitAsync(string circuitKey, CancellationToken cancellationToken)
+    private Task<IsolationCircuit> CreateIsolationCircuitAsync(string circuitKey, CancellationToken cancellationToken)
     {
         if (_options.IsolateStreams)
         {
@@ -403,22 +433,22 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
 
             // For now, use the same SOCKS port but with authentication
             // In production, this would use separate Tor instances or control port circuit isolation
-            return new IsolationCircuit(
+            return Task.FromResult(new IsolationCircuit(
                 _options.SocksAddress.Split(':')[0],
                 int.Parse(_options.SocksAddress.Split(':')[1]),
                 username,
                 password,
-                circuitKey);
+                circuitKey));
         }
         else
         {
             // No isolation - use shared circuit
-            return new IsolationCircuit(
+            return Task.FromResult(new IsolationCircuit(
                 _options.SocksAddress.Split(':')[0],
                 int.Parse(_options.SocksAddress.Split(':')[1]),
                 null,
                 null,
-                circuitKey);
+                circuitKey));
         }
     }
 
@@ -463,15 +493,23 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
         /// <summary>
         /// Gets a connection from the pool or creates a new one.
         /// </summary>
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Healthy pooled connections are returned to the caller; unhealthy pooled connections are disposed before replacement.")]
         public TcpClient GetConnection()
         {
+            TcpClient? pooledClient = null;
+
             lock (_poolLock)
             {
-                if (_connectionPool.TryTake(out var client) && IsConnectionHealthy(client))
+                if (_connectionPool.TryTake(out pooledClient))
                 {
-                    return client;
+                    if (IsConnectionHealthy(pooledClient))
+                    {
+                        return pooledClient;
+                    }
                 }
             }
+
+            pooledClient?.Dispose();
 
             // Create new connection
             return new TcpClient();
@@ -490,7 +528,8 @@ public class TorSocksTransport : IAnonymityTransport, IDisposable
 
             lock (_poolLock)
             {
-                if (_connectionPool.Count < 5) // Max 5 connections per circuit
+                // Max 5 connections per circuit.
+                if (_connectionPool.Count < 5)
                 {
                     _connectionPool.Add(client);
                 }

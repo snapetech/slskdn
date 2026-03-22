@@ -23,10 +23,21 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Warning cleanup still in progress; current stable app-project warning floor is `1687` after another broad analyzer/disposal pass across `Program`, `Common/Security`, mesh overlay/service-fabric, SOLID/streaming, and multisource code
+- **Current Task**: Warning-cleanup, validation, and release-prep are complete locally; root backup-key ignore fixed and repo is ready to be landed on `master` and tagged for the next `build-main` release
 - **Branch**: `e2e-fixture-fix2`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Added the correct root-level ignore for `mesh-overlay.key.prev`; the repository already ignored `/src/slskd/mesh-overlay.key.prev`, but the actual local backup file lives at the repo root.
+  - Re-verified the current tree after the warning-reduction and regression-repair passes:
+    - `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0 -t:Rebuild` passes with `0 warnings, 0 errors`
+    - `dotnet test --no-restore` passes at solution root
+    - `bash ./bin/lint` passes
+  - Confirmed the working branch `e2e-fixture-fix2` is 16 commits ahead of `origin/master`; next step is to package this validated tip into a commit, fast-forward `master`, and trigger the next `build-main-*` tag from `master`.
+  - Finished the end-to-end validation pass after the warning-cleanup work and repaired the regressions it exposed:
+    - fixed full-instance startup for integration tests (`Program`, `SlskdnFullInstanceRunner`) so bridge tests no longer self-skip behind blank socket/app-dir/env gating bugs
+    - added fast-fail subprocess diagnostics to the full-instance runner and fixed the Tor SOCKS handshake timeout path with deterministic silent-endpoint coverage
+    - repaired the remaining root `dotnet test` blockers in unit tests and supporting code (`MeshStatsCollector`, `LocalPortForwarder`, `ProfileServiceTests`, `MeekTransportTests`, relay moderation test expectations, tuple-member fallout in `Phase8MeshTests`)
+    - reran root `dotnet test --no-restore` successfully and reran `bash ./bin/lint` successfully
   - Disabled GitHub default CodeQL setup via the API, verified recent `master` CodeQL runs are green, manually updated `Formula/slskdn.rb` to release `0.24.5-slskdn.57`, and patched `build-on-tag.yml` so the Homebrew, Nix, and Winget main-repo write-back steps rebase/retry before push.
   - Triggered release `build-main-0.24.5-slskdn.58`, confirmed Homebrew and Winget write-backs now succeed, and found the remaining failure in `Update Nix Flake (Main)` still comes from branch churn during concurrent repo write-backs.
   - Manually updated `flake.nix` to `0.24.5-slskdn.58` and strengthened the write-back retries again with explicit `origin/master` refspec fetches and a longer retry window.
@@ -61,7 +72,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Completed the final true-positive CodeQL pass locally: removed cleartext-style secret logging from `Program` and `AsymmetricDisclosure`, hardened relay token validation to trust server-side agent identity instead of request headers, rebuilt `SqliteShareRepository` connection strings from validated data sources, and constrained HashDb profiling to admin-only single-statement read-only SQL with focused unit coverage
  - Manually dismissed the first false-positive batch (CSRF cookie, SOCKS negotiation, login null-guard), then found GitHub’s fresh analysis still flagging relay agent identifiers as cleartext. Followed up by caching trusted relay connection ids instead of raw agent names and anonymizing relay completion logs/temp filenames with hashed agent ids
   - Continued the warning-reduction effort with another broad cleanup batch touching `HttpTunnelTransport`, `I2PTransport`, `WebSocketTransport`, `MeekTransport`, `LocalPortForwarder`, `Obfs4Transport`, `TimedBatcher`, `QuicOverlayServer`, `MeshServiceClient`, `ServicePayloadParser`, `SolidWebIdResolver`, `StreamsController`, and the `MediaCore*` / `MultiSourceDownloadService` seams
-  - Rebuilt the app project repeatedly during that pass and pushed the stable warning floor from `1729` to `1687` without breaking the build; the remaining hotspots are now concentrated in mesh transport/overlay analyzers, controller/style debt, and a few stubborn ownership warnings (`PhysicalFileProvider`, chunk CTS, selected transport dialers)
+  - Rebuilt the app project repeatedly during the current pass and pushed the stable warning floor from `1687` down through `1652`, `1625`, `1612`, `1578`, `1559`, `1552`, `1502`, `1492`, `1410`, and currently `1360` without breaking the build; this included real ownership fixes in mesh overlay accept/connect paths, controller whitespace cleanup, and large DTO/model default normalization across core config/state, MultiSource, PodCore, Rescue, LibraryHealth, and MusicBrainz paths
 
 ---
 
@@ -105,10 +116,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the large warning-reduction pass from the current seam instead of doing isolated one-offs:
-   the heaviest remaining buckets are now mesh transport/overlay analyzers (`DirectQuicDialer`, `PrivateGatewayMeshService`, `I2pSocksDialer`), controller/style debt (`SA1137`/`SA1108` clusters), and the remaining ownership cases in `Program`, `MultiSource*`, media/songid/search paths.
-2. Re-run the slow full-instance `DisasterModeTests` class separately if that harness is needed for CI confidence; the lighter `DisasterModeIntegrationTests` and `LoadTests` are green after the stub-host DI repair.
-3. If release workflows start warning on other third-party actions, repeat the same direct-release audit used here with `gh api repos/<owner>/<repo>/releases/latest`.
+1. Commit the validated warning-cleanup / validation-repair work and fast-forward `master` to that exact tip.
+2. Create and push the next stable release tag from `master` using the documented `build-main-0.24.5-slskdn.*` format.
+3. Monitor the resulting GitHub Actions release workflow and fix any release-only regressions if they appear.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

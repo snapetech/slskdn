@@ -242,8 +242,8 @@ public class PodsMeshService : IMeshService
         {
             MessageId = Guid.NewGuid().ToString("N"),
             ChannelId = request.ChannelId,
-            SenderPeerId = context.RemotePeerId,
-            Body = request.Body,
+            SenderPeerId = context.RemotePeerId ?? string.Empty,
+            Body = request.Body ?? string.Empty,
             TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             Signature = request.Signature ?? string.Empty
         };

@@ -29,7 +29,7 @@ namespace slskd.Transfers.MultiSource.Metrics
         /// <summary>
         ///     Gets or sets the peer identifier (mesh peer ID or Soulseek username).
         /// </summary>
-        public string PeerId { get; set; }
+        public string PeerId { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the peer source (Soulseek or Overlay).

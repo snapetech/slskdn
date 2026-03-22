@@ -97,7 +97,7 @@ namespace slskd.Audio.Analyzers
             }
             catch
             {
-                return null;
+                return string.Empty;
             }
         }
 
@@ -160,7 +160,7 @@ namespace slskd.Audio.Analyzers
         {
             try
             {
-                var tagFile = TagLib.File.Create(filePath);
+                using var tagFile = TagLib.File.Create(filePath);
                 var firstCodec = tagFile?.Properties?.Codecs?.FirstOrDefault();
                 var description = firstCodec?.Description;
 
@@ -175,8 +175,14 @@ namespace slskd.Audio.Analyzers
                 // Preset hints: TagLib reports some VBR/CBR info in Description
                 if (!string.IsNullOrWhiteSpace(description))
                 {
-                    if (description.Contains("V0", StringComparison.OrdinalIgnoreCase)) result.Mp3EncoderPreset = "V0";
-                    else if (description.Contains("V2", StringComparison.OrdinalIgnoreCase)) result.Mp3EncoderPreset = "V2";
+                    if (description.Contains("V0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        result.Mp3EncoderPreset = "V0";
+                    }
+                    else if (description.Contains("V2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        result.Mp3EncoderPreset = "V2";
+                    }
                     else if (description.Contains("CBR") || description.Contains("CBR", StringComparison.OrdinalIgnoreCase))
                     {
                         result.Mp3EncoderPreset = "CBR";

@@ -145,7 +145,7 @@ public class PrometheusService
                             var le = labels.FirstOrDefault(label => label.Key == "le");
 
                             metric.Buckets ??= [];
-                            metric.Buckets.Add(le.Value, new PrometheusMetricSample() { Labels = labels, Value = sampleValue });
+                            metric.Buckets.Add(le.Value ?? string.Empty, new PrometheusMetricSample() { Labels = labels, Value = sampleValue });
                         }
                     }
                     else if (type.Equals("summary"))
@@ -163,7 +163,7 @@ public class PrometheusService
                             var quantile = labels.FirstOrDefault(label => label.Key == "quantile");
 
                             metric.Quantiles ??= [];
-                            metric.Quantiles.Add(quantile.Value, sampleValue);
+                            metric.Quantiles.Add(quantile.Value ?? string.Empty, sampleValue);
                         }
                     }
                 }
@@ -179,14 +179,14 @@ public class PrometheusService
     {
         if (string.IsNullOrEmpty(labelString))
         {
-            return null;
+            return [];
         }
 
         var matches = PrometheusLabelSplittingRegex.Matches(labelString);
 
         if (matches.Count == 0)
         {
-            return null;
+            return [];
         }
 
         Dictionary<string, string> labels = [];

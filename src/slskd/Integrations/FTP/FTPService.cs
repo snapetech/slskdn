@@ -137,7 +137,13 @@ namespace slskd.Integrations.FTP
         private string GetFileAndParentDirectoryFromFilename(string filename)
         {
             var fileOnly = Path.GetFileName(filename);
-            return Path.Combine(Path.GetDirectoryName(filename).Replace(Path.GetDirectoryName(Path.GetDirectoryName(filename)), string.Empty), fileOnly).TrimStart('/').TrimStart('\\');
+            var parentDirectory = Path.GetDirectoryName(filename) ?? string.Empty;
+            var grandparentDirectory = Path.GetDirectoryName(parentDirectory) ?? string.Empty;
+            var relativeParent = string.IsNullOrEmpty(grandparentDirectory)
+                ? parentDirectory
+                : parentDirectory.Replace(grandparentDirectory, string.Empty, StringComparison.Ordinal);
+
+            return Path.Combine(relativeParent, fileOnly).TrimStart('/').TrimStart('\\');
         }
     }
 }

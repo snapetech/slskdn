@@ -101,7 +101,8 @@ namespace slskd
                     // something downstream responded with a 200, meaning there's data in the body
                     // we need to read it, so we can reset then play it back with the modified HTML
                     context.Response.Body.Seek(0, SeekOrigin.Begin);
-                    var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+                    using var reader = new StreamReader(context.Response.Body, leaveOpen: true);
+                    var body = await reader.ReadToEndAsync();
 
                     var headers = context.Response.Headers
                         .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)

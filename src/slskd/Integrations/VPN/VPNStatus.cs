@@ -22,7 +22,7 @@ namespace slskd;
 public record VPNStatus
 {
     public bool IsConnected { get; init; } = false;
-    public IPAddress PublicIPAddress { get; init; } = null;
-    public int? ForwardedPort { get; init; } = null;
-    public string Location { get; init; } = null;
+    public IPAddress? PublicIPAddress { get; init; }
+    public int? ForwardedPort { get; init; }
+    public string? Location { get; init; }
 }

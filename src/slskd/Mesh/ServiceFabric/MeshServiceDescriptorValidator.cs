@@ -19,8 +19,7 @@ public interface IMeshServiceDescriptorValidator
     /// Validates a service descriptor.
     /// </summary>
     /// <param name="descriptor">The descriptor to validate.</param>
-    /// <param name="reason">Output parameter describing why validation failed.</param>
-    /// <returns>True if valid, false otherwise.</returns>
+    /// <returns>A tuple indicating whether the descriptor is valid and the validation failure reason, if any.</returns>
     Task<(bool IsValid, string Reason)> ValidateAsync(MeshServiceDescriptor descriptor);
 
     /// <summary>
@@ -98,7 +97,6 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
                 return (false, $"Too many metadata entries ({descriptor.Metadata.Count} > {_options.MaxMetadataEntries})");
             }
 
-            // Check for PII-like patterns (basic check)
             foreach (var kvp in descriptor.Metadata)
             {
                 if (kvp.Key.Contains("username", StringComparison.OrdinalIgnoreCase) ||
@@ -127,14 +125,12 @@ public class MeshServiceDescriptorValidator : IMeshServiceDescriptorValidator
         // 6. Validate signature (if present) - CRITICAL SECURITY REQUIREMENT
         if (descriptor.Signature != null && descriptor.Signature.Length > 0)
         {
-            if (descriptor.Signature.Length != 64) // Ed25519 signature is 64 bytes
+            // Ed25519 signature is 64 bytes.
+            if (descriptor.Signature.Length != 64)
             {
                 return (false, $"Invalid signature length ({descriptor.Signature.Length}, expected 64)");
             }
 
-            // SECURITY: For now, require that signatures are present but defer full verification
-            // until key infrastructure is properly integrated. This prevents silent acceptance
-            // of unsigned descriptors while acknowledging current crypto limitations.
             _logger.LogDebug("Signature presence validated (full verification requires key infrastructure)");
         }
         else if (_options.ValidateDhtSignatures)

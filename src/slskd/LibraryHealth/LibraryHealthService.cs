@@ -99,7 +99,7 @@ namespace slskd.LibraryHealth
                 return active;
             }
 
-            return await hashDb.GetLibraryHealthScanAsync(scanId, ct).ConfigureAwait(false);
+            return await hashDb.GetLibraryHealthScanAsync(scanId, ct).ConfigureAwait(false) ?? null!;
         }
 
         public Task<List<LibraryIssue>> GetIssuesAsync(LibraryHealthIssueFilter filter, CancellationToken ct = default)
@@ -115,7 +115,7 @@ namespace slskd.LibraryHealth
         public async Task<string> CreateRemediationJobAsync(List<string> issueIds, CancellationToken ct = default)
         {
             log.LogInformation("[LH] Creating remediation job for {Count} issues", issueIds?.Count ?? 0);
-            return await remediationService.CreateRemediationJobAsync(issueIds, ct).ConfigureAwait(false);
+            return await remediationService.CreateRemediationJobAsync(issueIds ?? new List<string>(), ct).ConfigureAwait(false);
         }
 
         public async Task<LibraryHealthSummary> GetSummaryAsync(string libraryPath, CancellationToken ct = default)
@@ -156,7 +156,7 @@ namespace slskd.LibraryHealth
                 log.LogInformation("[LH] Found {Count} audio files to scan", files.Count);
 
                 // Process files in parallel with concurrency limit
-                var semaphore = new SemaphoreSlim(request.MaxConcurrentFiles);
+                using var semaphore = new SemaphoreSlim(request.MaxConcurrentFiles);
                 var scanLock = new object();
                 var scannedCount = 0;
 
@@ -290,8 +290,8 @@ namespace slskd.LibraryHealth
                         Severity = LibraryIssueSeverity.High,
                         FilePath = filePath,
                         MusicBrainzRecordingId = recordingId,
-                        Artist = metadata.Artist,
-                        Title = metadata.Title,
+                        Artist = metadata.Artist ?? string.Empty,
+                        Title = metadata.Title ?? string.Empty,
                         Reason = variant.TranscodeReason,
                         Metadata = new Dictionary<string, object>
                         {
@@ -315,7 +315,8 @@ namespace slskd.LibraryHealth
                         var bestCanonical = candidates.First();
                         double qualityGap = bestCanonical.QualityScore - variant.QualityScore;
 
-                        if (qualityGap > 0.2) // Significant quality gap
+                        // Significant quality gap.
+                        if (qualityGap > 0.2)
                         {
                             await EmitIssueAsync(new LibraryIssue
                             {
@@ -324,8 +325,8 @@ namespace slskd.LibraryHealth
                                 Severity = qualityGap > 0.4 ? LibraryIssueSeverity.High : LibraryIssueSeverity.Medium,
                                 FilePath = filePath,
                                 MusicBrainzRecordingId = recordingId,
-                                Artist = metadata.Artist,
-                                Title = metadata.Title,
+                                Artist = metadata.Artist ?? string.Empty,
+                                Title = metadata.Title ?? string.Empty,
                                 Reason = $"Canonical variant available with quality score {bestCanonical.QualityScore:F2} vs current {variant.QualityScore:F2}",
                                 Metadata = new Dictionary<string, object>
                                 {
@@ -409,7 +410,7 @@ namespace slskd.LibraryHealth
                         // Try to find file by FlacKey in the library directory
                         // Note: This is simplified - in practice, we'd need a reverse lookup from FlacKey to file path
                         // For now, we'll check if the recording ID matches any files in the directory
-                        var filesInDir = Directory.EnumerateFiles(libraryPath, "*.*", SearchOption.TopDirectoryOnly)
+                        var filesInDir = Directory.EnumerateFiles(libraryPath ?? string.Empty, "*.*", SearchOption.TopDirectoryOnly)
                             .Where(f => Path.GetExtension(f).ToLowerInvariant() is ".flac" or ".mp3" or ".m4a" or ".ogg" or ".opus");
 
                         // Simplified check: if we have hashes for this recording, assume it might be present
@@ -431,7 +432,7 @@ namespace slskd.LibraryHealth
                         IssueId = Guid.NewGuid().ToString(),
                         Type = LibraryIssueType.MissingTrackInRelease,
                         Severity = missingTracks.Count > tracks.Count() / 2 ? LibraryIssueSeverity.High : LibraryIssueSeverity.Medium,
-                        FilePath = libraryPath, // Directory, not specific file
+                        FilePath = libraryPath ?? string.Empty, // Directory, not specific file
                         MusicBrainzReleaseId = releaseId,
                         Artist = albumTarget.Artist,
                         Album = albumTarget.Title,

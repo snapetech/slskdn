@@ -137,7 +137,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// <param name="message">The received message bytes.</param>
     /// <param name="metadata">Optional metadata about the message.</param>
     /// <returns>Original message bytes.</returns>
-    public async Task<byte[]> TransformInboundAsync(byte[] message, IReadOnlyDictionary<string, object>? metadata = null)
+    public Task<byte[]> TransformInboundAsync(byte[] message, IReadOnlyDictionary<string, object>? metadata = null)
     {
         if (message == null)
             throw new ArgumentNullException(nameof(message));
@@ -161,14 +161,14 @@ public class PrivacyLayer : IPrivacyLayer
                     (_averageProcessingLatency.Ticks + processingTime.Ticks) / 2);
             }
 
-            return transformedMessage;
+            return Task.FromResult(transformedMessage);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error transforming inbound message");
 
             // Return original message on error
-            return message;
+            return Task.FromResult(message);
         }
     }
 

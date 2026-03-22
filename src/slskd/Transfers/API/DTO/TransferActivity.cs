@@ -25,12 +25,12 @@ namespace slskd.Transfers.API
         /// <summary>
         ///     Gets the username involved in the transfer.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets the filename being transferred.
         /// </summary>
-        public string Filename { get; set; }
+        public string Filename { get; set; } = string.Empty;
 
         /// <summary>
         ///     Gets the previous transfer state.

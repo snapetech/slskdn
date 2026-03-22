@@ -52,16 +52,16 @@ namespace slskd.Mesh.Realm.Bridge
         /// <remarks>
         ///     T-REALM-04: When activitypub:read is allowed, enables following actors from remote realms.
         /// </remarks>
-        public async Task<BridgeOperationResult> FollowRemoteActorAsync(
+        public Task<BridgeOperationResult> FollowRemoteActorAsync(
             string localRealmId,
             string remoteRealmId,
             string actorId,
             CancellationToken cancellationToken = default)
         {
-            return await _flowEnforcer.PerformActivityPubReadAsync(
+            return _flowEnforcer.PerformActivityPubReadAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Resolve the remote actor
@@ -72,7 +72,7 @@ namespace slskd.Mesh.Realm.Bridge
                         actorId, remoteRealmId, localRealmId);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.CreateSuccess(new { FollowedActor = actorId });
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(new { FollowedActor = actorId }));
                 },
                 cancellationToken);
         }
@@ -89,17 +89,17 @@ namespace slskd.Mesh.Realm.Bridge
         /// <remarks>
         ///     T-REALM-04: When activitypub:read is allowed, enables mirroring posts from remote realms.
         /// </remarks>
-        public async Task<BridgeOperationResult> MirrorRemotePostAsync(
+        public Task<BridgeOperationResult> MirrorRemotePostAsync(
             string localRealmId,
             string remoteRealmId,
             string postId,
             bool mirrorToLocal,
             CancellationToken cancellationToken = default)
         {
-            return await _flowEnforcer.PerformActivityPubReadAsync(
+            return _flowEnforcer.PerformActivityPubReadAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Fetch the remote post
@@ -111,11 +111,11 @@ namespace slskd.Mesh.Realm.Bridge
                         postId, remoteRealmId, localRealmId, mirrorToLocal);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.CreateSuccess(new
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(new
                     {
                         MirroredPost = postId,
                         LocalMirror = mirrorToLocal
-                    });
+                    }));
                 },
                 cancellationToken);
         }
@@ -132,16 +132,16 @@ namespace slskd.Mesh.Realm.Bridge
         ///     T-REALM-04: When activitypub:write is allowed, enables sharing content to remote realms.
         ///     This is more dangerous and should be carefully controlled.
         /// </remarks>
-        public async Task<BridgeOperationResult> ShareToRemoteRealmAsync(
+        public Task<BridgeOperationResult> ShareToRemoteRealmAsync(
             string localRealmId,
             string remoteRealmId,
             object content,
             CancellationToken cancellationToken = default)
         {
-            return await _flowEnforcer.PerformActivityPubWriteAsync(
+            return _flowEnforcer.PerformActivityPubWriteAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Validate content against local policies
@@ -154,11 +154,11 @@ namespace slskd.Mesh.Realm.Bridge
                         remoteRealmId, localRealmId);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.CreateSuccess(new
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(new
                     {
                         SharedContent = content,
                         RemoteRealm = remoteRealmId
-                    });
+                    }));
                 },
                 cancellationToken);
         }
@@ -176,17 +176,17 @@ namespace slskd.Mesh.Realm.Bridge
         ///     T-REALM-04: When activitypub:write is allowed, enables re-boosting remote content.
         ///     Should respect local realm policies and moderation rules.
         /// </remarks>
-        public async Task<BridgeOperationResult> AnnounceRemoteContentAsync(
+        public Task<BridgeOperationResult> AnnounceRemoteContentAsync(
             string localRealmId,
             string remoteRealmId,
             string originalPostId,
             string? announcementText,
             CancellationToken cancellationToken = default)
         {
-            return await _flowEnforcer.PerformActivityPubWriteAsync(
+            return _flowEnforcer.PerformActivityPubWriteAsync(
                 localRealmId,
                 remoteRealmId,
-                async () =>
+                () =>
                 {
                     // Implementation would:
                     // 1. Verify the original post exists and is accessible
@@ -199,12 +199,12 @@ namespace slskd.Mesh.Realm.Bridge
                         originalPostId, remoteRealmId, localRealmId);
 
                     // Placeholder implementation
-                    return BridgeOperationResult.CreateSuccess(new
+                    return Task.FromResult(BridgeOperationResult.CreateSuccess(new
                     {
                         AnnouncedPost = originalPostId,
                         AnnouncementText = announcementText,
                         LocalRealm = localRealmId
-                    });
+                    }));
                 },
                 cancellationToken);
         }

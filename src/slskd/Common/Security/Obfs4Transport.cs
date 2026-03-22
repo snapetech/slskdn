@@ -52,8 +52,6 @@ public class Obfs4Transport : IAnonymityTransport
     /// <returns>True if obfs4 is available, false otherwise.</returns>
     public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
     {
-        TcpClient? client = null;
-
         try
         {
             // Check if obfs4proxy binary exists
@@ -120,6 +118,7 @@ public class Obfs4Transport : IAnonymityTransport
     public async Task<Stream> ConnectAsync(string host, int port, string? isolationKey, CancellationToken cancellationToken = default)
     {
         TcpClient? client = null;
+        Obfs4Process? process = null;
 
         lock (_statusLock)
         {
@@ -136,10 +135,12 @@ public class Obfs4Transport : IAnonymityTransport
             }
 
             // Start obfs4proxy process for this connection
-            var process = await StartObfs4ProxyAsync(bridge, isolationKey, cancellationToken);
+            process = await StartObfs4ProxyAsync(bridge, isolationKey, cancellationToken);
 
             // Connect to the local obfs4proxy endpoint
+#pragma warning disable CA2000 // Ownership is transferred to Obfs4Stream on success and disposed in catch/finalizer paths.
             client = new TcpClient();
+#pragma warning restore CA2000
             await client.ConnectAsync("127.0.0.1", process.LocalPort, cancellationToken);
 
             lock (_statusLock)
@@ -150,14 +151,19 @@ public class Obfs4Transport : IAnonymityTransport
             }
 
             _logger.LogDebug("Established obfs4 connection to {Host}:{Port} via bridge {Bridge}", host, port, bridge.Address);
-            var stream = client.GetStream();
+            var establishedClient = client;
+            var stream = establishedClient.GetStream();
             client = null;
-            return new Obfs4Stream(stream, process, () =>
+            var establishedProcess = process;
+            process = null;
+            return new Obfs4Stream(stream, establishedProcess, () =>
             {
                 lock (_statusLock)
                 {
                     _status.ActiveConnections = Math.Max(0, _status.ActiveConnections - 1);
                 }
+
+                establishedClient.Dispose();
             });
         }
         catch (Exception ex)
@@ -168,6 +174,7 @@ public class Obfs4Transport : IAnonymityTransport
             }
 
             client?.Dispose();
+            process?.Dispose();
             _logger.LogError(ex, "Failed to establish obfs4 connection to {Host}:{Port}", host, port);
             throw;
         }
@@ -252,43 +259,54 @@ public class Obfs4Transport : IAnonymityTransport
         // Start obfs4proxy process
         var arguments = $"client -log-min-severity=warn 127.0.0.1:{localPort}";
 
-        var process = new Process
+        Process? process = null;
+
+        try
         {
-            StartInfo = new ProcessStartInfo
+            process = new Process
             {
-                FileName = _options.Obfs4ProxyPath,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                Environment =
+                StartInfo = new ProcessStartInfo
                 {
+                    FileName = _options.Obfs4ProxyPath,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    Environment =
+                    {
 ["TOR_PT_CLIENT_TRANSPORTS"] = "obfs4",
 ["TOR_PT_MANAGED_TRANSPORT_VER"] = "1",
 ["TOR_PT_STATE_LOCATION"] = Path.GetTempPath(),
 ["TOR_PT_EXIT_ON_STDIN_CLOSE"] = "0"
+                    }
                 }
+            };
+
+            // Set up bridge configuration via environment
+            process.StartInfo.Environment["TOR_PT_CLIENT_TRANSPORTS"] = "obfs4";
+            process.StartInfo.Environment[$"TOR_PT_CLIENT_TRANSPORT_obfs4_OPT"] =
+                $"node-id={bridge.Fingerprint},iat-mode={bridge.IatMode},cert={bridge.Cert}";
+
+            process.Start();
+
+            // Wait for obfs4proxy to be ready (it writes to stdout when ready)
+            var ready = await WaitForObfs4ProxyReadyAsync(process, cancellationToken);
+
+            if (!ready)
+            {
+                process.Kill();
+                throw new Exception("obfs4proxy failed to start properly");
             }
-        };
 
-        // Set up bridge configuration via environment
-        process.StartInfo.Environment["TOR_PT_CLIENT_TRANSPORTS"] = "obfs4";
-        process.StartInfo.Environment[$"TOR_PT_CLIENT_TRANSPORT_obfs4_OPT"] =
-            $"node-id={bridge.Fingerprint},iat-mode={bridge.IatMode},cert={bridge.Cert}";
-
-        process.Start();
-
-        // Wait for obfs4proxy to be ready (it writes to stdout when ready)
-        var ready = await WaitForObfs4ProxyReadyAsync(process, cancellationToken);
-
-        if (!ready)
-        {
-            process.Kill();
-            throw new Exception("obfs4proxy failed to start properly");
+            var startedProcess = new Obfs4Process(process, localPort, bridge);
+            process = null;
+            return startedProcess;
         }
-
-        return new Obfs4Process(process, localPort, bridge);
+        finally
+        {
+            process?.Dispose();
+        }
     }
 
     private async Task<bool> WaitForObfs4ProxyReadyAsync(Process process, CancellationToken cancellationToken)
@@ -313,17 +331,17 @@ public class Obfs4Transport : IAnonymityTransport
     /// </summary>
     private class Obfs4Bridge
     {
-        public string Address { get; init; } = "";
+        public string Address { get; init; } = string.Empty;
         public int Port { get; init; }
-        public string Fingerprint { get; init; } = "";
-        public string Cert { get; init; } = "";
+        public string Fingerprint { get; init; } = string.Empty;
+        public string Cert { get; init; } = string.Empty;
         public int IatMode { get; init; }
     }
 
     /// <summary>
     /// Represents a running obfs4proxy process.
     /// </summary>
-    private class Obfs4Process
+    private class Obfs4Process : IDisposable
     {
         public Process Process { get; }
         public int LocalPort { get; }
@@ -334,6 +352,11 @@ public class Obfs4Transport : IAnonymityTransport
             Process = process;
             LocalPort = localPort;
             Bridge = bridge;
+        }
+
+        public void Dispose()
+        {
+            Process.Dispose();
         }
     }
 

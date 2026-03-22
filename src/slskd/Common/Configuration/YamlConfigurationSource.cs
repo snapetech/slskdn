@@ -212,7 +212,7 @@ namespace slskd.Configuration
                 {
                     var rawKey = ((YamlScalarNode)node.Key).Value;
                     var key = Normalize(rawKey);
-                    var nextPath = path == null ? key : ConfigurationPath.Combine(path, key);
+                    var nextPath = path == null ? key : ConfigurationPath.Combine(path, key ?? string.Empty);
                     Traverse(node.Value, nextPath);
                 }
             }
@@ -220,7 +220,7 @@ namespace slskd.Configuration
             {
                 for (int i = 0; i < sequence.Children.Count; i++)
                 {
-                    Traverse(sequence.Children[i], ConfigurationPath.Combine(path, i.ToString()));
+                    Traverse(sequence.Children[i], ConfigurationPath.Combine(path ?? string.Empty, i.ToString()));
                 }
             }
         }

@@ -509,7 +509,7 @@ public class PodJoinLeaveService : IPodJoinLeaveService
     }
 
     // Helper methods for signature verification
-    private async Task<bool> VerifyJoinRequestSignatureAsync(PodJoinRequest request, CancellationToken cancellationToken)
+    private Task<bool> VerifyJoinRequestSignatureAsync(PodJoinRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -521,16 +521,16 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             }
 
             // For now, assume signature verification - in production this would use proper crypto
-            return !string.IsNullOrEmpty(request.Signature) && request.Signature.Length > 10;
+            return Task.FromResult(!string.IsNullOrEmpty(request.Signature) && request.Signature.Length > 10);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[PodJoinLeave] Error verifying join request signature");
-            return false;
+            return Task.FromResult(false);
         }
     }
 
-    private async Task<bool> VerifyAcceptanceSignatureAsync(PodJoinAcceptance acceptance, CancellationToken cancellationToken)
+    private Task<bool> VerifyAcceptanceSignatureAsync(PodJoinAcceptance acceptance, CancellationToken cancellationToken)
     {
         try
         {
@@ -542,16 +542,16 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             }
 
             // For now, assume signature verification
-            return !string.IsNullOrEmpty(acceptance.Signature) && acceptance.Signature.Length > 10;
+            return Task.FromResult(!string.IsNullOrEmpty(acceptance.Signature) && acceptance.Signature.Length > 10);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[PodJoinLeave] Error verifying acceptance signature");
-            return false;
+            return Task.FromResult(false);
         }
     }
 
-    private async Task<bool> VerifyLeaveRequestSignatureAsync(PodLeaveRequest request, CancellationToken cancellationToken)
+    private Task<bool> VerifyLeaveRequestSignatureAsync(PodLeaveRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -562,16 +562,16 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             }
 
             // For now, assume signature verification
-            return !string.IsNullOrEmpty(request.Signature) && request.Signature.Length > 10;
+            return Task.FromResult(!string.IsNullOrEmpty(request.Signature) && request.Signature.Length > 10);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[PodJoinLeave] Error verifying leave request signature");
-            return false;
+            return Task.FromResult(false);
         }
     }
 
-    private async Task<bool> VerifyLeaveAcceptanceSignatureAsync(PodLeaveAcceptance acceptance, CancellationToken cancellationToken)
+    private Task<bool> VerifyLeaveAcceptanceSignatureAsync(PodLeaveAcceptance acceptance, CancellationToken cancellationToken)
     {
         try
         {
@@ -582,12 +582,12 @@ public class PodJoinLeaveService : IPodJoinLeaveService
             }
 
             // For now, assume signature verification
-            return !string.IsNullOrEmpty(acceptance.Signature) && acceptance.Signature.Length > 10;
+            return Task.FromResult(!string.IsNullOrEmpty(acceptance.Signature) && acceptance.Signature.Length > 10);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[PodJoinLeave] Error verifying leave acceptance signature");
-            return false;
+            return Task.FromResult(false);
         }
     }
 }

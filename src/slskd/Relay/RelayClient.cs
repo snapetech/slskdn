@@ -24,6 +24,7 @@ using slskd.Files;
 namespace slskd.Relay
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics;
     using System.IO;
     using System.Net.Http;
@@ -74,14 +75,14 @@ namespace slskd.Relay
         private SemaphoreSlim ConfigurationSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private bool Disposed { get; set; }
         private IHttpClientFactory HttpClientFactory { get; }
-        private HubConnection HubConnection { get; set; }
-        private string LastOptionsHash { get; set; }
+        private HubConnection? HubConnection { get; set; }
+        private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayClient>();
         private bool LoggedIn { get; set; }
-        private TaskCompletionSource LoggedInTaskCompletionSource { get; set; }
+        private TaskCompletionSource LoggedInTaskCompletionSource { get; set; } = new();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IShareService Shares { get; }
-        private CancellationTokenSource StartCancellationTokenSource { get; set; }
+        private CancellationTokenSource? StartCancellationTokenSource { get; set; }
         private bool StartRequested { get; set; }
         private ManagedState<RelayClientState> State { get; } = new();
         private SemaphoreSlim StateSyncRoot { get; } = new SemaphoreSlim(1, 1);
@@ -129,9 +130,13 @@ namespace slskd.Relay
                         ResetLoggedInState();
                         State.SetValue(_ => TranslateState(HubConnectionState.Connecting));
 
-                        await HubConnection.StartAsync(StartCancellationTokenSource.Token);
+                        var startCancellationTokenSource = StartCancellationTokenSource
+                            ?? throw new InvalidOperationException("Relay start cancellation token source was not initialized.");
+                        var hubConnection = HubConnection
+                            ?? throw new InvalidOperationException("Relay hub connection was not initialized.");
+                        await hubConnection.StartAsync(startCancellationTokenSource.Token);
 
-                        State.SetValue(_ => TranslateState(HubConnection.State));
+                        State.SetValue(_ => TranslateState(hubConnection.State));
                         Log.Information("Relay controller connection established. Awaiting authentication...");
 
                         // the controller will send an authentication challenge immediately after connection
@@ -214,7 +219,7 @@ namespace slskd.Relay
             {
                 if (disposing)
                 {
-                    _ = HubConnection?.DisposeAsync();
+                    _ = HubConnection?.DisposeAsync().AsTask();
                 }
 
                 Disposed = true;
@@ -269,7 +274,7 @@ namespace slskd.Relay
                 HubConnection = new HubConnectionBuilder()
                     .WithUrl($"{options.Relay.Controller.Address}/hub/relay", builder =>
                     {
-                        builder.AccessTokenProvider = () => Task.FromResult(options.Relay.Controller.ApiKey);
+                        builder.AccessTokenProvider = () => Task.FromResult<string?>(options.Relay.Controller.ApiKey);
                         builder.HttpMessageHandlerFactory = (message) =>
                         {
                             if (message is HttpClientHandler clientHandler && options.Relay.Controller.IgnoreCertificateErrors)
@@ -311,6 +316,7 @@ namespace slskd.Relay
             }
         }
 
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "HttpClient takes ownership of the handler when disposeHandler is true.")]
         private HttpClient CreateHttpClient()
         {
             var options = OptionsMonitor.CurrentValue.Relay.Controller;
@@ -318,13 +324,15 @@ namespace slskd.Relay
 
             if (options.IgnoreCertificateErrors)
             {
-                client = new HttpClient(new HttpClientHandler()
+                var handler = new HttpClientHandler
                 {
                     ClientCertificateOptions = ClientCertificateOption.Manual,
 #pragma warning disable S4830 // Enable server certificate validation on this SSL/TLS connection
                     ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
 #pragma warning restore S4830 // Enable server certificate validation on this SSL/TLS connection
-                });
+                };
+                client = new HttpClient(handler, disposeHandler: true);
+                handler = null!;
             }
             else
             {
@@ -349,7 +357,8 @@ namespace slskd.Relay
 
                 Log.Information("Logging in...");
 
-                await HubConnection.InvokeAsync(nameof(RelayHub.Login), agent, response);
+                var hubConnection = HubConnection ?? throw new InvalidOperationException("Relay hub connection is not configured");
+                await hubConnection.InvokeAsync(nameof(RelayHub.Login), agent, response);
 
                 LoggedIn = true;
                 Log.Information("Login succeeded.");
@@ -358,7 +367,11 @@ namespace slskd.Relay
             }
             catch (UnauthorizedAccessException)
             {
-                await HubConnection.StopAsync();
+                if (HubConnection != null)
+                {
+                    await HubConnection.StopAsync();
+                }
+
                 Log.Error("Relay controller authentication failed. Check configuration.");
             }
             catch (Exception ex)
@@ -377,12 +390,16 @@ namespace slskd.Relay
 
                 var localFileInfo = Files.ResolveFileInfo(localFilename);
 
-                await HubConnection.InvokeAsync(nameof(RelayHub.ReturnFileInfo), id, localFileInfo.Exists, localFileInfo.Length);
+                var hubConnection = HubConnection ?? throw new InvalidOperationException("Relay hub connection is not configured");
+                await hubConnection.InvokeAsync(nameof(RelayHub.ReturnFileInfo), id, localFileInfo.Exists, localFileInfo.Length);
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Failed to handle file info request: {Message}", ex.Message);
-                await HubConnection.InvokeAsync(nameof(RelayHub.ReturnFileInfo), id, false, 0);
+                if (HubConnection != null)
+                {
+                    await HubConnection.InvokeAsync(nameof(RelayHub.ReturnFileInfo), id, false, 0);
+                }
             }
         }
 
@@ -438,7 +455,10 @@ namespace slskd.Relay
                     Log.Error(ex, "Failed to handle file request: {Message}", ex.Message);
 
                     // report the failure to the controller. this avoids a failure due to timeout.
-                    await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token);
+                    if (HubConnection != null)
+                    {
+                        await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token);
+                    }
                 }
             });
 
@@ -485,7 +505,9 @@ namespace slskd.Relay
 
                     using var remoteStream = await response.Content.ReadAsStreamAsync();
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
+                    var destinationDirectory = Path.GetDirectoryName(destinationFile)
+                        ?? throw new IOException($"Failed to determine destination directory for download {destinationFile}");
+                    Directory.CreateDirectory(destinationDirectory);
                     using var localStream = new FileStream(destinationFile, FileMode.Create);
                     await remoteStream.CopyToAsync(localStream);
                 },
@@ -500,15 +522,15 @@ namespace slskd.Relay
             return Task.CompletedTask;
         }
 
-        private Task HubConnection_Closed(Exception arg)
+        private Task HubConnection_Closed(Exception? arg)
         {
-            Log.Warning("Relay controller connection closed: {Message}", arg.Message);
+            Log.Warning("Relay controller connection closed: {Message}", arg?.Message);
             ResetLoggedInState();
 
             return Task.CompletedTask;
         }
 
-        private async Task HubConnection_Reconnected(string arg)
+        private async Task HubConnection_Reconnected(string? arg)
         {
             // upon reconnection, the authentication flow is started again. this may happen before the client
             // realizes the connection has been closed, so reset everything as though we're just learning that
@@ -539,9 +561,9 @@ namespace slskd.Relay
             Log.Information("Shares uploaded. Ready to relay files.");
         }
 
-        private Task HubConnection_Reconnecting(Exception arg)
+        private Task HubConnection_Reconnecting(Exception? arg)
         {
-            Log.Warning("Relay controller connection reconnecting: {Message}", arg.Message);
+            Log.Warning("Relay controller connection reconnecting: {Message}", arg?.Message);
             ResetLoggedInState();
 
             return Task.CompletedTask;
@@ -550,7 +572,7 @@ namespace slskd.Relay
         private void ResetLoggedInState()
         {
             LoggedIn = false;
-            State.SetValue(_ => TranslateState(HubConnection.State));
+            State.SetValue(_ => TranslateState(HubConnection?.State ?? HubConnectionState.Disconnected));
 
             var old = LoggedInTaskCompletionSource;
 
@@ -583,7 +605,8 @@ namespace slskd.Relay
             {
                 Log.Debug("Backing up shares to {Filename}", temp);
 
-                Directory.CreateDirectory(Path.GetDirectoryName(temp));
+                var tempDirectory = Path.GetDirectoryName(temp) ?? Path.GetTempPath();
+                Directory.CreateDirectory(tempDirectory);
 
                 await Shares.DumpAsync(temp);
 
@@ -597,7 +620,8 @@ namespace slskd.Relay
                 // worked out properly if we just wait a second and try again
                 await Retry.Do(task: async () =>
                     {
-                        token = await HubConnection.InvokeAsync<Guid>(nameof(RelayHub.BeginShareUpload));
+                        var hubConnection = HubConnection ?? throw new InvalidOperationException("Relay hub connection is not configured");
+                        token = await hubConnection.InvokeAsync<Guid>(nameof(RelayHub.BeginShareUpload));
                     },
                     isRetryable: (_, _) => true,
                     onFailure: (count, ex) => Log.Warning("Failed attempt #{Attempts} to obtain share upload token: {Message}", count, ex.Message),
@@ -607,7 +631,7 @@ namespace slskd.Relay
 
                 Log.Debug("Share upload token {Token}", token);
 
-                var stream = new FileStream(temp, FileMode.Open, FileAccess.Read);
+                using var stream = new FileStream(temp, FileMode.Open, FileAccess.Read);
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, $"api/v0/relay/controller/shares/{token}");
 
@@ -615,10 +639,12 @@ namespace slskd.Relay
                 request.Headers.Add("X-Relay-Agent", OptionsMonitor.CurrentValue.InstanceName);
                 request.Headers.Add("X-Relay-Credential", ComputeCredential(token));
 
+                using var sharesContent = new StringContent(Shares.LocalHost.Shares.ToJson());
+                using var databaseContent = new StreamContent(stream);
                 using var content = new MultipartFormDataContent
                 {
-                    { new StringContent(Shares.LocalHost.Shares.ToJson()), "shares" },
-                    { new StreamContent(stream), "database", "shares" },
+                    { sharesContent, "shares" },
+                    { databaseContent, "database", "shares" },
                 };
 
                 request.Content = content;
@@ -629,7 +655,8 @@ namespace slskd.Relay
 
                 Log.Information("Beginning upload of shares ({Size})", size);
                 Log.Debug("Shares: {Shares}", Shares.LocalHost.Shares.ToJson());
-                var response = await CreateHttpClient().SendAsync(request, cancellationToken);
+                using var client = CreateHttpClient();
+                using var response = await client.SendAsync(request, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {

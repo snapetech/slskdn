@@ -134,9 +134,11 @@ namespace slskd.Common.Security
             }
 
             // Reject formats that might leak other external identities
-            if (podPeerId.Contains("@") || // Email-like
-                podPeerId.Contains("/") || // URL-like
-                podPeerId.Contains("\\")) // Windows path-like
+            if (podPeerId.Contains("@")
+                || // Email-like
+                podPeerId.Contains("/")
+                || // URL-like
+                podPeerId.Contains("\\"))
             {
                 return false;
             }

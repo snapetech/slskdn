@@ -56,7 +56,7 @@ namespace slskd.Common.Moderation
         ///         🔒 NEVER use full paths like "/home/user/Music/artist/album/track.mp3"
         ///     </para>
         /// </remarks>
-        public string Id { get; init; }
+        public string Id { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the file size in bytes.
@@ -75,7 +75,7 @@ namespace slskd.Common.Moderation
         ///         - For errors: Do NOT include in error messages
         ///     </para>
         /// </remarks>
-        public string PrimaryHash { get; init; }
+        public string PrimaryHash { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the secondary content hash (optional).

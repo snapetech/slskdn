@@ -134,7 +134,7 @@ namespace slskd.Configuration
         /// <summary>
         ///     Gets or sets the type from which to map properties.
         /// </summary>
-        public Type TargetType { get; set; }
+        public Type TargetType { get; set; } = typeof(object);
 
         /// <summary>
         ///     Builds the <see cref="DefaultValueConfigurationProvider"/> for this source.

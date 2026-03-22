@@ -10,7 +10,7 @@ namespace slskd.Integrations.MusicBrainz.Models
     public sealed class LabelPresence
     {
         /// <summary>Label name.</summary>
-        public string Label { get; init; }
+        public string Label { get; init; } = string.Empty;
 
         /// <summary>Number of releases observed for this label.</summary>
         public int ReleaseCount { get; init; }

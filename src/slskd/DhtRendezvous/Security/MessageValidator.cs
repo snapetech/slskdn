@@ -244,7 +244,9 @@ public static partial class MessageValidator
         // Timestamp must be reasonable (within last 24 hours to prevent replay)
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var diff = Math.Abs(now - message.Timestamp);
-        if (diff > 86400000) // 24 hours in ms
+
+        // 24 hours in ms.
+        if (diff > 86400000)
         {
             return ValidationResult.Fail("Timestamp too old or in future");
         }

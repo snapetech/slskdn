@@ -6,8 +6,8 @@ namespace slskd.AudioCore
 {
     using System;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
-    using slskdOptions = slskd.Options;
     using slskd.Audio;
     using slskd.Events;
     using slskd.HashDb;
@@ -21,7 +21,7 @@ namespace slskd.AudioCore
     using slskd.LibraryHealth.Remediation;
     using slskd.MediaCore;
     using slskd.VirtualSoulfind.Core.Music;
-    using Microsoft.Extensions.Logging;
+    using slskdOptions = slskd.Options;
 
     /// <summary>
     ///     DI extensions for the AudioCore domain module. T-913.

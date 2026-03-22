@@ -115,14 +115,18 @@ public sealed class SharingService : ISharingService
     {
         ShareGrant? g;
         if (tokenForStreamUrl != null)
+        {
             g = await _grants.GetByIdAsync(shareGrantId, ct).ConfigureAwait(false);
+        }
         else if (currentUserId != null)
         {
             var accessible = await _grants.GetAccessibleByUserAsync(currentUserId, ct).ConfigureAwait(false);
             g = accessible.FirstOrDefault(x => x.Id == shareGrantId);
         }
         else
+        {
             return null;
+        }
 
         if (g == null) return null;
 

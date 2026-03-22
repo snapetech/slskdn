@@ -68,7 +68,7 @@ public class PodService : IPodService
 
     private IContentLinkService? ContentLinkService { get; }
 
-    public async Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
+    public Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
     {
         if (pod == null)
             throw new ArgumentNullException(nameof(pod));
@@ -122,10 +122,10 @@ public class PodService : IPodService
             }, ct);
         }
 
-        return pod;
+        return Task.FromResult(pod);
     }
 
-    public async Task<Pod> UpdateAsync(Pod pod, CancellationToken ct = default)
+    public Task<Pod> UpdateAsync(Pod pod, CancellationToken ct = default)
     {
         if (pod == null)
             throw new ArgumentNullException(nameof(pod));
@@ -167,7 +167,7 @@ public class PodService : IPodService
             }, ct);
         }
 
-        return pod;
+        return Task.FromResult(pod);
     }
 
     public Task<IReadOnlyList<Pod>> ListAsync(CancellationToken ct = default) =>
@@ -337,7 +337,7 @@ public class PodService : IPodService
     }
 
     // Channel management implementation
-    public async Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+    public Task<PodChannel> CreateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
     {
         // Validate pod exists
         if (!pods.ContainsKey(podId))
@@ -379,27 +379,27 @@ public class PodService : IPodService
             }, ct);
         }
 
-        return channel;
+        return Task.FromResult(channel);
     }
 
-    public async Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default)
+    public Task<bool> DeleteChannelAsync(string podId, string channelId, CancellationToken ct = default)
     {
         // Validate pod exists
         if (!pods.ContainsKey(podId))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         var pod = pods[podId];
         if (pod.Channels == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         var channelIndex = pod.Channels.FindIndex(c => c.ChannelId == channelId);
         if (channelIndex == -1)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         // Don't allow deletion of system channels (like "general")
@@ -429,49 +429,49 @@ public class PodService : IPodService
             }, ct);
         }
 
-        return true;
+        return Task.FromResult(true);
     }
 
-    public async Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default)
+    public Task<PodChannel?> GetChannelAsync(string podId, string channelId, CancellationToken ct = default)
     {
         if (!pods.ContainsKey(podId))
         {
-            return null;
+            return Task.FromResult<PodChannel?>(null);
         }
 
         var pod = pods[podId];
-        return pod.Channels?.FirstOrDefault(c => c.ChannelId == channelId);
+        return Task.FromResult(pod.Channels?.FirstOrDefault(c => c.ChannelId == channelId));
     }
 
-    public async Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default)
+    public Task<IReadOnlyList<PodChannel>> GetChannelsAsync(string podId, CancellationToken ct = default)
     {
         if (!pods.ContainsKey(podId))
         {
-            return Array.Empty<PodChannel>();
+            return Task.FromResult<IReadOnlyList<PodChannel>>(Array.Empty<PodChannel>());
         }
 
         var pod = pods[podId];
-        return (IReadOnlyList<PodChannel>)(pod.Channels ?? new List<PodChannel>());
+        return Task.FromResult((IReadOnlyList<PodChannel>)(pod.Channels ?? new List<PodChannel>()));
     }
 
-    public async Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
+    public Task<bool> UpdateChannelAsync(string podId, PodChannel channel, CancellationToken ct = default)
     {
         // Validate pod exists
         if (!pods.ContainsKey(podId))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         var pod = pods[podId];
         if (pod.Channels == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         var existingChannel = pod.Channels.FirstOrDefault(c => c.ChannelId == channel.ChannelId);
         if (existingChannel == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         // Validate channel data
@@ -509,7 +509,7 @@ public class PodService : IPodService
             }, ct);
         }
 
-        return true;
+        return Task.FromResult(true);
     }
 
     // Content linking implementation
@@ -803,12 +803,12 @@ public class PodMessaging : IPodMessaging
     /// <summary>
     /// Resolves a pod peer ID to a Soulseek username using peer resolution service.
     /// </summary>
-    private async Task<string?> ResolvePeerIdToUsernameAsync(string peerId, CancellationToken ct)
+    private Task<string?> ResolvePeerIdToUsernameAsync(string peerId, CancellationToken ct)
     {
         // Use peer resolution service if available, otherwise fallback to peer ID
         // Note: This requires IPeerResolutionService to be injected
         // For now, fallback to peer ID for backward compatibility
-        return peerId;
+        return Task.FromResult<string?>(peerId);
     }
 
     public Task<IReadOnlyList<PodMessage>> GetMessagesAsync(string podId, string channelId, long? sinceTimestamp = null, CancellationToken ct = default)
@@ -866,14 +866,18 @@ public class PodMessaging : IPodMessaging
 
             // Verify signature using Ed25519
             var signatureBytes = Convert.FromBase64String(message.Signature);
-            if (signatureBytes.Length != 64) // Ed25519 signatures are 64 bytes
+
+            // Ed25519 signatures are 64 bytes.
+            if (signatureBytes.Length != 64)
             {
                 logger.LogWarning("[PodMessaging] Invalid signature length: {Length}", signatureBytes.Length);
                 return false;
             }
 
             var publicKeyBytes = Convert.FromBase64String(senderMember.PublicKey);
-            if (publicKeyBytes.Length != 32) // Ed25519 public keys are 32 bytes
+
+            // Ed25519 public keys are 32 bytes.
+            if (publicKeyBytes.Length != 32)
             {
                 logger.LogWarning("[PodMessaging] Invalid public key length: {Length}", publicKeyBytes.Length);
                 return false;
@@ -958,7 +962,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         soulseekClient.RoomMessageReceived += SoulseekClient_RoomMessageReceived;
     }
 
-    private void SoulseekClient_RoomMessageReceived(object sender, RoomMessageReceivedEventArgs e)
+    private void SoulseekClient_RoomMessageReceived(object? sender, RoomMessageReceivedEventArgs e)
     {
         // Find bindings for this room
         List<RoomBinding> bindings;
@@ -1084,8 +1088,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             {
                 MessageId = Guid.NewGuid().ToString("N"),
                 ChannelId = binding.ChannelId,
-                SenderPeerId = peerId,
-                Body = formattedMessage,
+                SenderPeerId = peerId ?? string.Empty,
+                Body = formattedMessage ?? string.Empty,
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 Signature = string.Empty, // Bridge messages don't need signatures
             };
@@ -1109,7 +1113,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         }
     }
 
-    private string MapSoulseekToPodPeerId(string soulseekUsername)
+    private string? MapSoulseekToPodPeerId(string soulseekUsername)
     {
         if (string.IsNullOrWhiteSpace(soulseekUsername))
         {
@@ -1168,7 +1172,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     /// </summary>
     public async Task<bool> ForwardPodToSoulseekAsync(string channelId, PodMessage podMessage)
     {
-        RoomBinding binding;
+        RoomBinding? binding;
         lock (bindingsLock)
         {
             if (!activeBindings.TryGetValue(channelId, out binding) || binding.Mode != "mirror")
@@ -1214,7 +1218,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         }
     }
 
-    private string MapPodToSoulseekUsername(string podPeerId)
+    private string? MapPodToSoulseekUsername(string podPeerId)
     {
         if (string.IsNullOrWhiteSpace(podPeerId))
         {
@@ -1255,9 +1259,12 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 /// </summary>
 internal class RoomBinding
 {
-    public string PodId { get; set; }
-    public string ChannelId { get; set; }
-    public string RoomName { get; set; }
-    public string Mode { get; set; } // "readonly" or "mirror"
+    public string PodId { get; set; } = string.Empty;
+    public string ChannelId { get; set; } = string.Empty;
+    public string RoomName { get; set; } = string.Empty;
+
+    // "readonly" or "mirror"
+    public string Mode { get; set; } = string.Empty;
+
     public DateTimeOffset CreatedAt { get; set; }
 }

@@ -20,7 +20,7 @@ namespace slskd.Jobs.Manifests
         /// <summary>
         ///     Polymorphic spec based on JobType (see spec types below).
         /// </summary>
-        public object Spec { get; set; }
+        public object Spec { get; set; } = new();
 
         public JobManifestStatus Status { get; set; } = new();
     }
@@ -52,7 +52,7 @@ namespace slskd.Jobs.Manifests
 
         public long BytesDone { get; set; }
 
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 
     public class DownloadConstraints
@@ -74,22 +74,22 @@ namespace slskd.Jobs.Manifests
     {
         public int Position { get; set; }
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string MbRecordingId { get; set; }
+        public string MbRecordingId { get; set; } = string.Empty;
 
         public int? DurationMs { get; set; }
     }
 
     public class MbReleaseJobSpec
     {
-        public string MbReleaseId { get; set; }
+        public string MbReleaseId { get; set; } = string.Empty;
 
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
 
-        public string Artist { get; set; }
+        public string Artist { get; set; } = string.Empty;
 
-        public string TargetDir { get; set; }
+        public string TargetDir { get; set; } = string.Empty;
 
         public List<TrackSpec> Tracks { get; set; } = new();
 
@@ -98,23 +98,23 @@ namespace slskd.Jobs.Manifests
 
     public class DiscographyJobSpec
     {
-        public string ArtistId { get; set; }
+        public string ArtistId { get; set; } = string.Empty;
 
-        public string ArtistName { get; set; }
+        public string ArtistName { get; set; } = string.Empty;
 
         /// <summary>core | extended | all</summary>
-        public string Profile { get; set; }
+        public string Profile { get; set; } = string.Empty;
 
-        public string TargetDir { get; set; }
+        public string TargetDir { get; set; } = string.Empty;
 
         public DownloadConstraints Constraints { get; set; } = new();
     }
 
     public class LabelCrateJobSpec
     {
-        public string LabelId { get; set; }
+        public string LabelId { get; set; } = string.Empty;
 
-        public string LabelName { get; set; }
+        public string LabelName { get; set; } = string.Empty;
 
         public int Limit { get; set; } = 10;
 

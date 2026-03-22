@@ -64,7 +64,7 @@ public class DescriptorValidator : IDescriptorValidator
         // Rough estimate to enforce max size
         var hashes = string.Join(",", d.Hashes.Select(h => $"{h.Algorithm}:{h.Hex}"));
         var phash = string.Join(",", d.PerceptualHashes.Select(h => $"{h.Algorithm}:{h.Hex}"));
-        var sig = d.Signature is null ? "" : $"{d.Signature.PublicKey}:{d.Signature.Signature}";
+        var sig = d.Signature is null ? string.Empty : $"{d.Signature.PublicKey}:{d.Signature.Signature}";
         var payload = $"{d.ContentId}|{hashes}|{phash}|{d.SizeBytes}|{d.Codec}|{d.Confidence}|{sig}";
         return System.Text.Encoding.UTF8.GetByteCount(payload);
     }

@@ -127,7 +127,7 @@ public class PodDhtPublisher : IPodDhtPublisher
     }
 
     /// <inheritdoc/>
-    public async Task<PodUnpublishResult> UnpublishAsync(string podId, CancellationToken cancellationToken = default)
+    public Task<PodUnpublishResult> UnpublishAsync(string podId, CancellationToken cancellationToken = default)
     {
         var dhtKey = GetDhtKey(podId);
 
@@ -149,20 +149,20 @@ public class PodDhtPublisher : IPodDhtPublisher
                 "[PodDhtPublisher] Unpublished pod {PodId} from local tracking",
                 podId);
 
-            return new PodUnpublishResult(
+            return Task.FromResult(new PodUnpublishResult(
                 Success: true, // Always successful since we just remove from local tracking
                 PodId: podId,
                 DhtKey: dhtKey,
-                ErrorMessage: null);
+                ErrorMessage: null));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PodDhtPublisher] Error unpublishing pod {PodId}", podId);
-            return new PodUnpublishResult(
+            return Task.FromResult(new PodUnpublishResult(
                 Success: false,
                 PodId: podId,
                 DhtKey: dhtKey,
-                ErrorMessage: ex.Message);
+                ErrorMessage: ex.Message));
         }
     }
 
@@ -224,18 +224,18 @@ public class PodDhtPublisher : IPodDhtPublisher
     }
 
     /// <inheritdoc/>
-    public async Task<PodRefreshResult> RefreshAsync(string podId, CancellationToken cancellationToken = default)
+    public Task<PodRefreshResult> RefreshAsync(string podId, CancellationToken cancellationToken = default)
     {
         try
         {
             if (!_publishedPods.TryGetValue(podId, out var publishInfo))
             {
-                return new PodRefreshResult(
+                return Task.FromResult(new PodRefreshResult(
                     Success: false,
                     PodId: podId,
                     WasRepublished: false,
                     NextRefresh: DateTimeOffset.MinValue,
-                    ErrorMessage: "Pod not found in local tracking");
+                    ErrorMessage: "Pod not found in local tracking"));
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -245,11 +245,11 @@ public class PodDhtPublisher : IPodDhtPublisher
             if (!needsRefresh)
             {
                 var nextRefresh = publishInfo.ExpiresAt.AddHours(-6);
-                return new PodRefreshResult(
+                return Task.FromResult(new PodRefreshResult(
                     Success: true,
                     PodId: podId,
                     WasRepublished: false,
-                    NextRefresh: nextRefresh);
+                    NextRefresh: nextRefresh));
             }
 
             // Get current pod metadata (would need to be provided or retrieved from storage)
@@ -257,26 +257,26 @@ public class PodDhtPublisher : IPodDhtPublisher
             // In a real implementation, this would fetch the current pod and republish it
             _logger.LogInformation("[PodDhtPublisher] Pod {PodId} refreshed (placeholder implementation)", podId);
 
-            return new PodRefreshResult(
+            return Task.FromResult(new PodRefreshResult(
                 Success: true,
                 PodId: podId,
                 WasRepublished: true,
-                NextRefresh: now.AddHours(18)); // Next refresh in 18 hours
+                NextRefresh: now.AddHours(18))); // Next refresh in 18 hours
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PodDhtPublisher] Error refreshing pod {PodId}", podId);
-            return new PodRefreshResult(
+            return Task.FromResult(new PodRefreshResult(
                 Success: false,
                 PodId: podId,
                 WasRepublished: false,
                 NextRefresh: DateTimeOffset.MinValue,
-                ErrorMessage: ex.Message);
+                ErrorMessage: ex.Message));
         }
     }
 
     /// <inheritdoc/>
-    public async Task<PodPublishingStats> GetStatsAsync(CancellationToken cancellationToken = default)
+    public Task<PodPublishingStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         // Clean up expired publications
         var expired = _publishedPods.Where(kvp => kvp.Value.ExpiresAt < DateTimeOffset.UtcNow)
@@ -294,7 +294,7 @@ public class PodDhtPublisher : IPodDhtPublisher
             ? TimeSpan.FromMilliseconds(_totalPublishTimeMs / _totalPublished)
             : TimeSpan.Zero;
 
-        return new PodPublishingStats(
+        return Task.FromResult(new PodPublishingStats(
             TotalPublished: _totalPublished,
             ActivePublications: _activePublications,
             ExpiredPublications: _expiredPublications,
@@ -302,7 +302,7 @@ public class PodDhtPublisher : IPodDhtPublisher
             AveragePublishTime: averagePublishTime,
             PublicationsByDomain: _publicationsByDomain.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             PublicationsByVisibility: _publicationsByVisibility.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            LastPublishOperation: _lastPublishOperation);
+            LastPublishOperation: _lastPublishOperation));
     }
 
     // Helper methods

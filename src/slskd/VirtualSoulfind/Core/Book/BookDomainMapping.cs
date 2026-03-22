@@ -38,7 +38,7 @@ public static class BookDomainMapping
         }
 
         // Normalize ISBN (remove hyphens, spaces)
-        var normalizedIsbn = isbn.Replace("-", "").Replace(" ", "").ToLowerInvariant();
+        var normalizedIsbn = isbn.Replace("-", string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
 
         // Generate deterministic UUID v5
         var deterministicGuid = GenerateUuidV5(BookWorkNamespace, normalizedIsbn);

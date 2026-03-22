@@ -191,7 +191,7 @@ namespace slskd.Common.CodeQuality
             foreach (var scenario in regressionResults.Scenarios)
             {
                 var status = scenario.Success ? "✅ PASSED" : "❌ FAILED";
-                var perfNote = scenario.PerformanceRegression ? " (⚠️ Performance regression)" : "";
+                var perfNote = scenario.PerformanceRegression ? " (⚠️ Performance regression)" : string.Empty;
                 Log.LogMessage(MessageImportance.Normal,
                     $"    {scenario.ScenarioName}: {status} in {scenario.Duration.TotalSeconds:F1}s{perfNote}");
 
@@ -306,7 +306,7 @@ namespace slskd.Common.CodeQuality
                 var status = scenario.Success ? "✅ Passed" : "❌ Failed";
                 var duration = $"{scenario.Duration.TotalSeconds:F1}s";
                 var notes = scenario.PerformanceRegression ? "⚠️ Performance regression" :
-                           !scenario.Success ? scenario.ErrorMessage : "";
+                           !scenario.Success ? scenario.ErrorMessage : string.Empty;
                 sb.AppendLine($"| {scenario.ScenarioName} | {status} | {duration} | {notes} |");
             }
 
@@ -341,7 +341,7 @@ namespace slskd.Common.CodeQuality
                 {
                     var status = benchmark.Success ? "✅ Passed" : "❌ Failed";
                     var duration = $"{benchmark.AverageDuration.TotalMilliseconds:F2}ms";
-                    var notes = benchmark.Success ? "" : benchmark.PerformanceNotes ?? "Failed";
+                    var notes = benchmark.Success ? string.Empty : benchmark.PerformanceNotes ?? "Failed";
                     sb.AppendLine($"| {benchmark.BenchmarkName} | {status} | {duration} | {notes} |");
                 }
             }

@@ -66,7 +66,7 @@ public sealed class SolidController : ControllerBase
         ///     The WebID URI to resolve.
         /// </summary>
         [Required]
-        public string WebId { get; set; } = "";
+        public string WebId { get; set; } = string.Empty;
     }
 
     /// <summary>

@@ -97,7 +97,7 @@ namespace slskd.Relay
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
-        private IPAddress RemoteIpAddress => Context.Features.Get<IHttpConnectionFeature>().RemoteIpAddress;
+        private IPAddress? RemoteIpAddress => Context.Features.Get<IHttpConnectionFeature>()?.RemoteIpAddress;
 
         /// <summary>
         ///     Executed when a new connection is established.
@@ -141,7 +141,7 @@ namespace slskd.Relay
         /// <exception cref="UnauthorizedAccessException">Thrown when the challenge response is invalid.</exception>
         public void Login(string agent, string challengeResponse)
         {
-            bool TryGetAgentConfig(string agent, out Options.RelayOptions.RelayAgentConfigurationOptions options)
+            bool TryGetAgentConfig(string agent, out Options.RelayOptions.RelayAgentConfigurationOptions? options)
             {
                 var allAgents = OptionsMonitor.CurrentValue.Relay.Agents;
                 var found = allAgents.Values.SingleOrDefault(a => a.InstanceName == agent);
@@ -164,11 +164,13 @@ namespace slskd.Relay
                 throw new UnauthorizedAccessException();
             }
 
-            if (!agentOptions.Cidr.Split(',')
+            var configuredCidr = agentOptions?.Cidr ?? string.Empty;
+
+            if (!configuredCidr.Split(',')
                 .Select(cidr => IPAddressRange.Parse(cidr))
-                .Any(range => range.Contains(RemoteIpAddress)))
+                .Any(range => RemoteIpAddress != null && range.Contains(RemoteIpAddress)))
             {
-                Log.Warning("Unauthorized login attempt by Agent {Agent} (connection {Id}); remote IP address {IP} is not within the configured range {CIDR}", agent, Context.ConnectionId, RemoteIpAddress, agentOptions.Cidr);
+                Log.Warning("Unauthorized login attempt by Agent {Agent} (connection {Id}); remote IP address {IP} is not within the configured range {CIDR}", agent, Context.ConnectionId, RemoteIpAddress, configuredCidr);
                 throw new UnauthorizedAccessException();
             }
 
@@ -179,7 +181,7 @@ namespace slskd.Relay
                 throw new UnauthorizedAccessException();
             }
 
-            var remoteIp = Context.Features.Get<IHttpConnectionFeature>().RemoteIpAddress.ToString();
+            var remoteIp = RemoteIpAddress?.ToString() ?? string.Empty;
             var record = new Agent { Name = agent, IPAddress = remoteIp };
 
             Log.Information("Agent connection {Id} from {IP} authenticated as agent {Agent}", Context.ConnectionId, remoteIp, agent);

@@ -31,8 +31,8 @@ public class RoomsCompatibilityController : ControllerBase
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> JoinRoom(
-    [FromBody] JoinRoomRequest? request,
-            CancellationToken cancellationToken = default)
+        [FromBody] JoinRoomRequest? request,
+        CancellationToken cancellationToken = default)
     {
         var roomName = request?.Room;
         if (string.IsNullOrWhiteSpace(roomName))
@@ -42,7 +42,7 @@ public class RoomsCompatibilityController : ControllerBase
             {
                 Request.Body.Position = 0;
                 using var reader = new System.IO.StreamReader(Request.Body);
-                var body = await reader.ReadToEndAsync();
+                var body = await reader.ReadToEndAsync(cancellationToken);
                 if (!string.IsNullOrEmpty(body))
                 {
                     try

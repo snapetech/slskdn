@@ -144,8 +144,10 @@ public class I2PTransport : IAnonymityTransport
             if (string.IsNullOrWhiteSpace(host))
                 throw new ArgumentException("I2P destination (host) must be a base64 or .b32.i2p address.", nameof(host));
 
-            var tcpClient = new TcpClient();
-            client = tcpClient;
+#pragma warning disable CA2000 // Ownership is transferred to TrackedStream on success and disposed in catch/finalizer paths.
+            client = new TcpClient();
+#pragma warning restore CA2000
+            var tcpClient = client;
 
             var parts = _options.SamAddress.Split(':');
             var samHost = parts[0];

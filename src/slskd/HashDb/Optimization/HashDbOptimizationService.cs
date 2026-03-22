@@ -322,7 +322,8 @@ public class HashDbOptimizationService : IHashDbOptimizationService
                 recommendations.Recommendations.Add($"Missing {recommendations.MissingIndexes.Count} critical indexes. Run OptimizeIndexesAsync to create them.");
             }
 
-            if (recommendations.DatabaseSizeBytes > 100 * 1024 * 1024) // > 100 MB
+            // > 100 MB.
+            if (recommendations.DatabaseSizeBytes > 100 * 1024 * 1024)
             {
                 recommendations.Recommendations.Add("Database size exceeds 100MB. Consider running VACUUM to optimize.");
             }

@@ -43,7 +43,7 @@ namespace slskd
         ///     Gets options for the Soulseek client.
         /// </summary>
         [Validate]
-        public SoulseekOptionsPatch Soulseek { get; init; } = null;
+        public SoulseekOptionsPatch? Soulseek { get; init; }
 
         /// <summary>
         ///     Soulseek client options.
@@ -54,7 +54,7 @@ namespace slskd
             ///     Gets the local IP address on which to listen for incoming connections.
             /// </summary>
             [IPAddress]
-            public string ListenIpAddress { get; init; } = null;
+            public string? ListenIpAddress { get; init; }
 
             /// <summary>
             ///     Gets the port on which to listen for incoming connections.

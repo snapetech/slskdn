@@ -256,7 +256,7 @@ namespace slskd.Shares
         ///     Finds and returns the most recent scan record.
         /// </summary>
         /// <returns>The most recent scan record, or default if no scan was found.</returns>
-        public Scan FindLatestScan()
+        public Scan? FindLatestScan()
         {
             using var conn = GetConnection();
             using var cmd = new SqliteCommand("SELECT timestamp, options, COALESCE(end, -1), suspect FROM scans ORDER BY timestamp DESC LIMIT 1", conn);
@@ -778,7 +778,7 @@ namespace slskd.Shares
             string workId,
             string maskedFilename,
             bool isAdvertisable,
-            string moderationReason,
+            string? moderationReason,
             long checkedAt)
         {
             using var conn = GetConnection();
@@ -953,12 +953,15 @@ namespace slskd.Shares
                     throw new DataMisalignedException(msg);
                 }
 
-                // Additional check: verify we can query the filenames table (FTS5 virtual tables require special handling)
-                // This ensures the table is not just present but also functional
+                // Additional check: verify we can query the filenames table.
+                // FTS5 virtual tables require special handling, so presence alone is insufficient.
                 using var verifyCmd = new SqliteCommand("SELECT COUNT(*) FROM filenames LIMIT 1;", KeepaliveConnection);
+
                 verifyCmd.ExecuteScalar(); // If this throws, the table is corrupted
             }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == 1) // SQLITE_ERROR
+
+            // SQLITE_ERROR means the table is missing or corrupted.
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 1)
             {
                 // Table doesn't exist or is corrupted
                 var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/slskd/slskd/issues";

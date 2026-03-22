@@ -9,7 +9,7 @@ namespace slskd.Transfers.MultiSource.Playback
     /// </summary>
     public class PlaybackFeedback
     {
-        public string JobId { get; set; }
+        public string JobId { get; set; } = string.Empty;
 
         public string? TrackId { get; set; }
 

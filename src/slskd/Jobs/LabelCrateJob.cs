@@ -10,11 +10,11 @@ namespace slskd.Jobs
 
     public class LabelCrateJob
     {
-        public string JobId { get; set; }
+        public string JobId { get; set; } = string.Empty;
 
-        public string LabelId { get; set; }
+        public string LabelId { get; set; } = string.Empty;
 
-        public string LabelName { get; set; }
+        public string LabelName { get; set; } = string.Empty;
 
         public int Limit { get; set; }
 

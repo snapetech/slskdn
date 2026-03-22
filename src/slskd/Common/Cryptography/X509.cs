@@ -68,7 +68,7 @@ namespace slskd.Cryptography
 
             try
             {
-                _ = new X509Certificate2(fileName, password);
+                using var certificate = new X509Certificate2(fileName, password);
                 return true;
             }
             catch (Exception ex)

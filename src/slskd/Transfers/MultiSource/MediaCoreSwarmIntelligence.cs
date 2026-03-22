@@ -47,7 +47,8 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
 
             // Get content descriptor for intelligence analysis
             var descriptor = await _descriptorRetriever.RetrieveAsync(contentId, cancellationToken: cancellationToken);
-            var health = await AnalyzeSwarmHealthAsync(contentId, activePeerList, descriptor.Descriptor, cancellationToken);
+            var contentDescriptor = descriptor.Descriptor ?? new ContentDescriptor { ContentId = contentId };
+            var health = await AnalyzeSwarmHealthAsync(contentId, activePeerList, contentDescriptor, cancellationToken);
             var recommendations = await GeneratePeerRecommendationsAsync(contentId, activePeerList, cancellationToken);
             var optimizationAdvice = await GenerateOptimizationAdviceAsync(contentId, activePeerList, health, cancellationToken);
 
@@ -151,7 +152,8 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
 
             // Get content characteristics
             var descriptor = await _descriptorRetriever.RetrieveAsync(contentId, cancellationToken: cancellationToken);
-            var contentType = DetermineContentType(contentId, descriptor.Descriptor);
+            var contentDescriptor = descriptor.Descriptor ?? new ContentDescriptor { ContentId = contentId };
+            var contentType = DetermineContentType(contentId, contentDescriptor);
 
             // Analyze peer capabilities
             var peerAnalysis = AnalyzePeerCapabilities(availablePeers.ToList(), contentType);
@@ -223,11 +225,14 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
             Status: status);
     }
 
-    private async Task<IReadOnlyList<PeerRecommendation>> GeneratePeerRecommendationsAsync(
+    private Task<IReadOnlyList<PeerRecommendation>> GeneratePeerRecommendationsAsync(
         string contentId,
         IReadOnlyList<string> activePeers,
         CancellationToken cancellationToken)
     {
+        _ = contentId;
+        _ = cancellationToken;
+
         var recommendations = new List<PeerRecommendation>();
 
         // This is a simplified implementation - in practice, this would analyze
@@ -252,7 +257,7 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
                 Confidence: confidence));
         }
 
-        return recommendations;
+        return Task.FromResult<IReadOnlyList<PeerRecommendation>>(recommendations);
     }
 
     private async Task<SwarmOptimizationAdvice> GenerateOptimizationAdviceAsync(
@@ -497,22 +502,23 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
     }
 
     // Helper methods
-    private async Task<double> CalculateQualityScoreAsync(
+    private Task<double> CalculateQualityScoreAsync(
         string contentId, IReadOnlyList<string> activePeers, ContentDescriptor descriptor, CancellationToken cancellationToken)
     {
-        if (descriptor == null)
-            return 0.5;
+        _ = contentId;
+        _ = activePeers;
+        _ = cancellationToken;
 
         // Simplified quality calculation - in practice, this would analyze
         // codec quality, file size consistency, and descriptor completeness
         var codecQuality = descriptor.Codec != null ? 0.8 : 0.4;
         var sizeConsistency = descriptor.SizeBytes.HasValue ? 0.9 : 0.5;
-        var linksCount = descriptor.Links.LinkNames.Count + descriptor.Links.Targets.Count;
+        var linksCount = (descriptor.Links?.LinkNames?.Count ?? 0) + (descriptor.Links?.Targets?.Count ?? 0);
         var descriptorCompleteness = (descriptor.Hashes.Count > 0 ? 0.3 : 0) +
                                     (descriptor.PerceptualHashes.Count > 0 ? 0.3 : 0) +
                                     (linksCount > 0 ? 0.4 : 0);
 
-        return (codecQuality + sizeConsistency + descriptorCompleteness) / 3.0;
+        return Task.FromResult((codecQuality + sizeConsistency + descriptorCompleteness) / 3.0);
     }
 
     private static double CalculateDiversityScore(IReadOnlyList<string> activePeers)
@@ -638,7 +644,13 @@ public class MediaCoreSwarmIntelligence : IMediaCoreSwarmIntelligence
                $"Selected {peerCount} peers from {analysis.FastPeers} fast peers and {analysis.ReliablePeers} reliable peers.";
     }
 
-    private enum ContentType { Audio, Video, Image, Unknown }
+    private enum ContentType
+    {
+        Audio,
+        Video,
+        Image,
+        Unknown
+    }
 
     private record PeerCapabilityAnalysis(
         int CompatiblePeerCount,

@@ -120,7 +120,7 @@ namespace slskd.Transfers
         private int GlobalSlots { get; set; } = 0;
         private Dictionary<string, UploadGroup> Groups { get; set; } = new Dictionary<string, UploadGroup>();
         private int LastGlobalSlots { get; set; }
-        private string LastOptionsHash { get; set; }
+        private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<UploadQueue>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
@@ -216,7 +216,7 @@ namespace slskd.Transfers
                 // transfer. if so, do nothing.
                 if (Groups.ContainsKey(upload.Group ?? string.Empty))
                 {
-                    var group = Groups[upload.Group];
+                    var group = Groups[upload.Group ?? string.Empty];
 
                     group.UsedSlots = Math.Max(0, group.UsedSlots - 1);
                     Log.Debug("Group {Group} slots: {Used}/{Available}", group.Name, group.UsedSlots, group.Slots);
@@ -290,7 +290,10 @@ namespace slskd.Transfers
         public int EstimatePosition(string username, string filename)
         {
             var groupName = Users.GetGroup(username);
-            var groupRecord = Groups.GetValueOrDefault(groupName);
+            if (!Groups.TryGetValue(groupName, out var groupRecord))
+            {
+                throw new NotFoundException($"A group with the name {groupName} could not be found");
+            }
 
             // the Uploads dictionary is keyed by username; gather all of the users that belong to the same group as the requested user
             var uploadsForGroup = Uploads.Where(kvp => Users.GetGroup(kvp.Key) == groupName);
@@ -378,6 +381,11 @@ namespace slskd.Transfers
             if (Groups.TryGetValue(groupName, out var groupRecord) && groupRecord.SlotAvailable)
             {
                 return 0;
+            }
+
+            if (groupRecord == null)
+            {
+                throw new NotFoundException($"A group with the name {groupName} could not be found");
             }
 
             // the Uploads dictionary is keyed by username; gather all of the users that belong to the same group as the requested user
@@ -471,7 +479,7 @@ namespace slskd.Transfers
             }
         }
 
-        private Upload Process()
+        private Upload? Process()
         {
             SyncRoot.Wait();
 
@@ -497,7 +505,7 @@ namespace slskd.Transfers
 
                         if (ready.Any())
                         {
-                            var group = Users.GetGroup(user.Key);
+                            var group = Users.GetGroup(user.Key) ?? string.Empty;
 
                             groups.AddOrUpdate(
                                 key: group,

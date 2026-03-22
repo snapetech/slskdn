@@ -13,7 +13,7 @@ using slskd.Security;
 public class StubBitTorrentBackend : IBitTorrentBackend
 {
     public bool IsSupported() => false;
-    public Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken ct = default) =>
+    public Task<string> PreparePrivateTorrentAsync(SwarmJob job, string variantId, CancellationToken cancellationToken = default) =>
         Task.FromResult(string.Empty);
     public Task<string?> FetchByInfoHashOrMagnetAsync(string backendRef, string destDirectory, CancellationToken ct = default) =>
         Task.FromResult<string?>(null);
@@ -150,7 +150,7 @@ public class SwarmSignalHandlers
     /// <summary>
     /// Handle Swarm.RequestBtFallbackAck signal (sender side).
     /// </summary>
-    private async Task HandleRequestBtFallbackAckAsync(Signal signal, CancellationToken cancellationToken)
+    private Task HandleRequestBtFallbackAckAsync(Signal signal, CancellationToken cancellationToken)
     {
         try
         {
@@ -168,7 +168,7 @@ public class SwarmSignalHandlers
             if (string.IsNullOrWhiteSpace(jobId) || string.IsNullOrWhiteSpace(variantId))
             {
                 logger.LogWarning("Received invalid RequestBtFallbackAck signal {SignalId}", signal.SignalId);
-                return;
+                return Task.CompletedTask;
             }
 
             // Deferred: Look up pending fallback request and handle ack
@@ -192,12 +192,14 @@ public class SwarmSignalHandlers
         {
             logger.LogError(ex, "Error handling RequestBtFallbackAck signal {SignalId}", signal.SignalId);
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Handle Swarm.JobCancel signal.
     /// </summary>
-    private async Task HandleJobCancelAsync(Signal signal, CancellationToken cancellationToken)
+    private Task HandleJobCancelAsync(Signal signal, CancellationToken cancellationToken)
     {
         try
         {
@@ -207,7 +209,7 @@ public class SwarmSignalHandlers
             if (string.IsNullOrWhiteSpace(jobId))
             {
                 logger.LogWarning("Received invalid JobCancel signal {SignalId}", signal.SignalId);
-                return;
+                return Task.CompletedTask;
             }
 
             // Deferred: Cancel the job in SwarmCore
@@ -219,6 +221,8 @@ public class SwarmSignalHandlers
         {
             logger.LogError(ex, "Error handling JobCancel signal {SignalId}", signal.SignalId);
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

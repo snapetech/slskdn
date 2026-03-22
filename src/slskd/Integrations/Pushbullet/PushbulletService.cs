@@ -137,7 +137,7 @@ namespace slskd.Integrations.Pushbullet
                     type = "note",
                 });
 
-                var content = new StringContent(json);
+                using var content = new StringContent(json);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 content.Headers.Add("Access-Token", PushbulletOptions.AccessToken);
 

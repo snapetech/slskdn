@@ -102,7 +102,9 @@ namespace slskd.Common.Moderation
                     lock (_responseTimes)
                     {
                         _responseTimes.Add(processingTime.TotalMilliseconds);
-                        if (_responseTimes.Count > 100) // Keep last 100 measurements
+
+                        // Keep last 100 measurements.
+                        if (_responseTimes.Count > 100)
                         {
                             _responseTimes.RemoveAt(0);
                         }
@@ -322,7 +324,7 @@ Respond with JSON as described above.",
                     }
                 }
 
-                // Parse additional details
+                // Parse additional details.
                 if (root.TryGetProperty("details", out var detailsElement) && detailsElement.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var property in detailsElement.EnumerateObject())

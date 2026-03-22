@@ -91,7 +91,7 @@ public class BridgeProxyServer : BackgroundService
                         continue;
                     }
 
-                    var client = await listener.AcceptTcpClientAsync();
+                    var client = await listener.AcceptTcpClientAsync(stoppingToken);
                     var clientId = Guid.NewGuid().ToString("N");
 
                     logger.LogInformation("[VSF-BRIDGE-PROXY] New client connection: {ClientId} from {Endpoint}",
@@ -285,9 +285,10 @@ public class BridgeProxyServer : BackgroundService
 
             // Validate authentication if required (T-851.7)
             var options = optionsMonitor.CurrentValue;
-            if (options.VirtualSoulfind.Bridge.RequireAuth)
+            var bridgeOptions = options.VirtualSoulfind?.Bridge;
+            if (bridgeOptions?.RequireAuth == true)
             {
-                var configuredPassword = options.VirtualSoulfind.Bridge.Password;
+                var configuredPassword = bridgeOptions.Password;
                 if (string.IsNullOrWhiteSpace(configuredPassword))
                 {
                     logger.LogWarning("[VSF-BRIDGE-PROXY] RequireAuth is true but no password configured");

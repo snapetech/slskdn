@@ -26,11 +26,11 @@ namespace slskd.Transfers
     public sealed class Upload
     {
         public DateTime Enqueued { get; set; } = DateTime.UtcNow;
-        public string Filename { get; set; }
-        public string Group { get; set; }
+        public string Filename { get; set; } = string.Empty;
+        public string Group { get; set; } = string.Empty;
         public DateTime? Ready { get; set; } = null;
         public DateTime? Started { get; set; } = null;
         public TaskCompletionSource TaskCompletionSource { get; set; } = new TaskCompletionSource();
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
     }
 }

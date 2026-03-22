@@ -19,7 +19,7 @@ namespace slskd.Common.Security;
 /// WebSocket transport for DPI circumvention.
 /// Routes traffic through WebSocket connections that appear as normal web traffic.
 /// </summary>
-public class WebSocketTransport : IAnonymityTransport
+public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
 {
     private readonly WebSocketOptions _options;
     private readonly ILogger<WebSocketTransport> _logger;
@@ -230,6 +230,18 @@ public class WebSocketTransport : IAnonymityTransport
         }
     }
 
+    public void Dispose()
+    {
+        _connectionPoolLock.Dispose();
+
+        foreach (var connection in _connectionPool.Values)
+        {
+            connection.Dispose();
+        }
+
+        _connectionPool.Clear();
+    }
+
     /// <summary>
     /// Gets the current status of the WebSocket transport.
     /// </summary>
@@ -291,7 +303,7 @@ public class WebSocketTransport : IAnonymityTransport
     /// </summary>
     private record TunnelRequest
     {
-        public string Host { get; init; } = "";
+        public string Host { get; init; } = string.Empty;
         public int Port { get; init; }
         public string? IsolationKey { get; init; }
     }

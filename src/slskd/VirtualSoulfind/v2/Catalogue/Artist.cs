@@ -31,7 +31,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the internal artist ID.
         /// </summary>
-        public string ArtistId { get; init; }
+        public string ArtistId { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the MusicBrainz artist ID (if available).
@@ -41,7 +41,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         /// <summary>
         ///     Gets or initializes the artist name.
         /// </summary>
-        public string Name { get; init; }
+        public string Name { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or initializes the sort name (for alphabetization).

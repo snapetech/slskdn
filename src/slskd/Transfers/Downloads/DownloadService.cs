@@ -69,7 +69,7 @@ namespace slskd.Transfers.Downloads
         /// </summary>
         /// <param name="expression">The expression to use to match downloads.</param>
         /// <returns>The found transfer, or default if not found.</returns>
-        Transfer Find(Expression<Func<Transfer, bool>> expression);
+        Transfer? Find(Expression<Func<Transfer, bool>> expression);
 
         /// <summary>
         ///     Retrieves the place in the remote queue for the download matching the specified <paramref name="id"/>.
@@ -184,7 +184,7 @@ namespace slskd.Transfers.Downloads
         private ILogger Log { get; } = Serilog.Log.ForContext<DownloadService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private EventBus EventBus { get; }
-        private IPeerMetricsService PeerMetrics { get; }
+        private IPeerMetricsService? PeerMetrics { get; }
 
         /// <summary>
         ///     Allow only one enqueue operation for a given user at a time. Entries are added on the fly if they
@@ -509,7 +509,7 @@ namespace slskd.Transfers.Downloads
                                         return;
                                     }
 
-                                    Exception ex = task.IsCanceled ? new OperationCanceledException("Task was cancelled") : task.Exception;
+                                    Exception? ex = task.IsCanceled ? new OperationCanceledException("Task was cancelled") : task.Exception;
                                     ex = ex?.InnerException ?? ex ?? new Exception("Unknown error");
 
                                     Log.Error(ex, "Task for download of {Filename} from {Username} did not complete successfully: {Error}", file.Filename, username, ex.Message);
@@ -556,7 +556,7 @@ namespace slskd.Transfers.Downloads
                                 return;
                             }
 
-                            Exception ex = task.IsCanceled ? new OperationCanceledException("Task was cancelled") : task.Exception;
+                            Exception? ex = task.IsCanceled ? new OperationCanceledException("Task was cancelled") : task.Exception;
                             ex = ex?.InnerException ?? ex ?? new Exception("Unknown error");
 
                             Log.Error(ex, "Task for enqueue of {Filename} from {Username} did not complete successfully: {Error}", file.Filename, username, ex.Message);
@@ -606,7 +606,7 @@ namespace slskd.Transfers.Downloads
         /// </summary>
         /// <param name="expression">The expression to use to match downloads.</param>
         /// <returns>The found transfer, or default if not found.</returns>
-        public Transfer Find(Expression<Func<Transfer, bool>> expression)
+        public Transfer? Find(Expression<Func<Transfer, bool>> expression)
         {
             try
             {
@@ -736,6 +736,7 @@ namespace slskd.Transfers.Downloads
         /// </summary>
         /// <remarks>This is a soft delete; the record is retained for historical retrieval.</remarks>
         /// <param name="id">The unique identifier of the download.</param>
+        /// <param name="deleteFile">Whether the on-disk file should also be removed.</param>
         public void Remove(Guid id, bool deleteFile = false)
         {
             try
@@ -867,7 +868,7 @@ namespace slskd.Transfers.Downloads
         /// <returns>A value indicating whether the download was successfully failed.</returns>
         public bool TryFail(Guid id, Exception exception)
         {
-            Transfer t;
+            Transfer? t;
             try
             {
                 t = Find(t => t.Id == id);
@@ -1119,7 +1120,8 @@ namespace slskd.Transfers.Downloads
                 Log.Debug("Successfully updated Transfer for {Filename} from {Username} (state: {State}, progress: {Progress})", transfer.Filename, transfer.Username, transfer.State, transfer.PercentComplete);
 
                 // move the file from incomplete to complete
-                var destinationDirectory = System.IO.Path.GetDirectoryName(transfer.Filename.ToLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Downloads));
+                var destinationDirectory = System.IO.Path.GetDirectoryName(transfer.Filename.ToLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Downloads))
+                    ?? OptionsMonitor.CurrentValue.Directories.Downloads;
 
                 var finalFilename = Files.MoveFile(
                     sourceFilename: transfer.Filename.ToLocalFilename(baseDirectory: OptionsMonitor.CurrentValue.Directories.Incomplete),
@@ -1143,7 +1145,7 @@ namespace slskd.Transfers.Downloads
 
                     EventBus.Raise(new DownloadFileCompleteEvent
                     {
-                        Timestamp = transfer.EndedAt.Value,
+                        Timestamp = transfer.EndedAt ?? DateTime.UtcNow,
                         LocalFilename = finalFilename,
                         RemoteFilename = transfer.Filename,
                         Transfer = transfer,
@@ -1162,7 +1164,7 @@ namespace slskd.Transfers.Downloads
                     {
                         EventBus.Raise(new DownloadDirectoryCompleteEvent
                         {
-                            Timestamp = transfer.EndedAt.Value,
+                            Timestamp = transfer.EndedAt?.ToUniversalTime() ?? DateTime.UtcNow,
                             Username = transfer.Username,
                             LocalDirectoryName = destinationDirectory,
                             RemoteDirectoryName = remoteDirectoryName,
@@ -1262,7 +1264,7 @@ namespace slskd.Transfers.Downloads
                         if (await kvp.Value.WaitAsync(0).ConfigureAwait(false))
                         {
                             EnqueueSemaphores.TryRemove(kvp.Key, out var removed);
-                            removed.Dispose();
+                            removed?.Dispose();
                             Log.Debug("Cleaned up enqueue semaphore for {Key}", kvp.Key);
                         }
                     }

@@ -60,7 +60,7 @@ namespace slskd.Validation
 
                         if (result != ValidationResult.Success)
                         {
-                            compositeResults.AddResult(new CompositeValidationResult(key, new[] { result }.ToList()));
+                            compositeResults.AddResult(new CompositeValidationResult(key, new[] { result! }.ToList()));
                         }
                     }
                 }
@@ -73,7 +73,7 @@ namespace slskd.Validation
 
                         if (result != ValidationResult.Success)
                         {
-                            compositeResults.AddResult(new CompositeValidationResult(i.ToString(), new[] { result }.ToList()));
+                            compositeResults.AddResult(new CompositeValidationResult(i.ToString(), new[] { result! }.ToList()));
                         }
                     }
                 }

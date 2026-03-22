@@ -31,7 +31,7 @@ namespace slskd.Search
         public long QueueLength { get; init; }
         public int Token { get; init; }
         public int UploadSpeed { get; init; }
-        public string Username { get; init; }
+        public string Username { get; init; } = string.Empty;
 
         /// <summary>
         ///     Gets or sets the source providers (e.g., ["pod"], ["scene"], or ["pod", "scene"]).

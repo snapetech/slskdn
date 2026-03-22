@@ -20,11 +20,12 @@
 // </copyright>
 namespace slskd.Transfers.API
 {
+    using System;
     using System.Collections.Generic;
 
     public record UserResponse
     {
-        public string Username { get; init; }
-        public IEnumerable<DirectoryResponse> Directories { get; init; }
+        public string Username { get; init; } = string.Empty;
+        public IEnumerable<DirectoryResponse> Directories { get; init; } = Array.Empty<DirectoryResponse>();
     }
 }
