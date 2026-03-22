@@ -109,6 +109,28 @@ return SourceCandidateValidationResult.Invalid("HTTP validation failed");
 
 **Why This Keeps Happening**: once a path already “handles” exceptions by turning them into result DTOs, it is tempting to preserve the exact exception text for debugging. But these DTOs are part of the public/runtime contract, not private logs. Keep the detailed exception in logs/debug output and return stable sanitized failure strings instead.
 
+### 0xB8. Security Verification Result Objects Must Not Echo Transport Exception Text Either
+
+**The Bug**: DHT/mesh security helpers such as peer verification and DNS-leak checks were already returning typed result objects, but they still copied raw exception text into those results. That leaked local socket, DNS, and transport details through otherwise stable verification APIs.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/PeerVerificationService.cs`
+- `src/slskd/Mesh/Transport/DnsLeakPreventionVerifier.cs`
+
+**Wrong**:
+```csharp
+return VerificationResult.Failed($"Error: {ex.Message}");
+return DnsLeakVerificationResult.Failure($"Verification exception: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+return VerificationResult.Failed("Verification failed");
+return DnsLeakVerificationResult.Failure("DNS leak verification failed");
+```
+
+**Why This Keeps Happening**: security/helper services often feel “internal enough” that detailed exception text seems harmless, especially when they already wrap failures in result DTOs instead of throwing. But these DTOs are still observable contracts and can expose environment details. Log the exception privately and keep the result text stable and sanitized.
+
 ### 0xB1. Detached Startup Work Must Not Keep The `StartAsync` Token As Its Real Lifetime
 
 **The Bug**: several hosted services and startup tasks returned from `StartAsync`, but the detached work they queued still ran on the startup coordination token. Once host startup completed or shutdown raced in, accepted initialization and detector loops could be cancelled before they ever really became service-owned background work.
