@@ -12604,3 +12604,25 @@ Details = new Dictionary<string, string> { ["parse_error"] = "LLM response parsi
 ```
 
 **Why This Keeps Happening**: once the top-level error fields are sanitized, it is easy to forget about nested detail bags. Treat diagnostic dictionaries and metadata maps as public response surface, not as an internal dump bucket.
+
+### 0k87. Validation Results And Not-Implemented Status Must Not Expose Internal State
+
+**The Bug**: certificate validation and mesh-sync fallback paths were still exposing internal parser output or local runtime state in public result messages. Validation errors included backend certificate-validation detail, and mesh-sync returned the local sequence number in its user-visible failure string.
+
+**Files Affected**:
+- `src/slskd/Common/Validation/X509CertificateAttribute.cs`
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+return new ValidationResult($"Invalid HTTPs certificate: {certResult}");
+result.Error = $"Mesh sync transport is not implemented (local seq={hello.LatestSeqId})";
+```
+
+**Correct**:
+```csharp
+return new ValidationResult("Invalid HTTPs certificate");
+result.Error = "Mesh sync transport is not implemented";
+```
+
+**Why This Keeps Happening**: “helpful” validation and fallback messages tend to accumulate internal context over time. But these are still public contracts. Never include certificate parser details, local counters, sequence numbers, or similar runtime state in user-visible error text.

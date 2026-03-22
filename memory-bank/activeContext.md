@@ -216,3 +216,7 @@ dotnet test
 ## 2026-03-22 17:49
 - Folded in dirty moderation/detail-map spillover and restored the metrics validation test path drift.
 - Next: continue bughunt from the next clean head after recommitting the remaining dirty files.
+
+## 2026-03-22 17:53
+- Sanitized certificate validation and mesh-sync fallback messages that were still exposing internal parser/runtime state.
+- Next: continue the broader bughunt from the next clean head, focusing on remaining placeholder/null-heavy runtime paths rather than message leakage.

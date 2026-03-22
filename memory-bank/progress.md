@@ -5956,3 +5956,10 @@ Code quality improvements were completed as part of Option A:
 - Folded in dirty moderation spillover so `HttpLlmModerationProvider` no longer exposes parser internals through `Details["parse_error"]`.
 - Folded in the matching unit regression and the nested API-key options test-path correction that was left dirty in the tree.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for diagnostic detail-map leakage.
+
+## 2026-03-22 17:53 - Certificate and mesh-sync state sanitization pass
+
+- Fixed `X509CertificateAttribute` so invalid certificate validation no longer returns backend parser details through `ValidationResult`.
+- Fixed `MeshSyncService` so the not-implemented failure path no longer exposes the local sequence number in `result.Error`.
+- Added focused unit coverage for invalid certificate validation and sanitized mesh-sync transport failure text.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for validation/runtime state leakage.
