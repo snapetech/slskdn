@@ -288,7 +288,7 @@ test.skip(
 
 ### 0m. E2E Harnesses Should Launch The Prebuilt Release App, And UI Pages Must Tolerate Missing `server` State During Boot
 
-**The Bug**: The E2E harness launched `dotnet run` during test execution even though CI had already built the backend, which made the first node startup exceed the 30-second TCP wait on cold runs. Separately, `Searches.jsx` read `server.isConnected` before `applicationState.server` existed, so a harmless `/capabilities` failure turned into a page-crashing `TypeError`.
+**The Bug**: The E2E harness launched `dotnet run` during test execution even though CI had already built the backend, which made the first node startup exceed the 30-second TCP wait on cold runs. A follow-up patch then tried to point `Web.ContentPath` at an absolute `src/web/build` path, but startup validation only accepts relative paths under `AppContext.BaseDirectory`. Separately, `Searches.jsx` read `server.isConnected` before `applicationState.server` existed, so a harmless `/capabilities` failure turned into a page-crashing `TypeError`.
 
 **Files Affected**:
 - `src/web/e2e/harness/SlskdnNode.ts`
@@ -316,6 +316,11 @@ await waitForTcpListen('127.0.0.1', this.apiPort, 60_000);
 ```
 
 ```jsx
+await replaceDirectoryContents(webBuildPath, path.join(builtAppBaseDir, 'wwwroot'));
+const webContentPath = 'wwwroot';
+```
+
+```jsx
 const normalizedServer = server ?? { isConnected: false };
 disabled={creating || !normalizedServer.isConnected}
 placeholder={
@@ -325,7 +330,7 @@ placeholder={
 }
 ```
 
-**Why This Keeps Happening**: E2E harness code often grows around local developer assumptions, but CI already provides a built Release app and is much less tolerant of redundant startup work. On the frontend, boot-time state objects can be transiently missing even when the route eventually succeeds, so route components must normalize optional props before reading nested fields.
+**Why This Keeps Happening**: E2E harness code often grows around local developer assumptions, but CI already provides a built Release app and is much less tolerant of redundant startup work. Even when using the prebuilt app, the runtime still validates `Web.ContentPath` as a relative directory under the app base, so the harness has to stage fresh web assets into `wwwroot` instead of pointing at arbitrary absolute paths. On the frontend, boot-time state objects can be transiently missing even when the route eventually succeeds, so route components must normalize optional props before reading nested fields.
 
 ### 0a. Do Not Assume MusicBrainz Target Models Expose the Same ID Surface
 

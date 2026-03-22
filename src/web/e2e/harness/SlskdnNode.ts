@@ -106,6 +106,15 @@ async function runCommand(
   });
 }
 
+async function replaceDirectoryContents(
+  sourceDir: string,
+  destinationDir: string,
+): Promise<void> {
+  await fs.rm(destinationDir, { force: true, recursive: true });
+  await fs.mkdir(path.dirname(destinationDir), { recursive: true });
+  await fs.cp(sourceDir, destinationDir, { recursive: true });
+}
+
 async function getListenSummary(port: number): Promise<string> {
   return new Promise((resolve) => {
     execFile('ss', ['-ltnp'], (error, stdout, stderr) => {
@@ -207,6 +216,20 @@ export class SlskdnNode {
       throw new Error(
         'Web build not found at src/web/build. Run `npm run build` first.',
       );
+    }
+
+    const sourceWwwroot = path.join(repoRoot, 'src', 'slskd', 'wwwroot');
+    await replaceDirectoryContents(webBuildPath, sourceWwwroot);
+
+    const builtAppBaseDir = this.getBuiltAppBaseDir(repoRoot);
+    try {
+      await fs.access(builtAppBaseDir);
+      await replaceDirectoryContents(
+        webBuildPath,
+        path.join(builtAppBaseDir, 'wwwroot'),
+      );
+    } catch {
+      // No built Release app yet; fallback launch will copy from src/slskd/wwwroot.
     }
   }
 
@@ -332,8 +355,7 @@ export class SlskdnNode {
 
     const configPath = path.join(this.appDir, 'config', 'slskd.yml');
 
-    const webBuildPath = path.join(repoRoot, 'src', 'web', 'build');
-    const webContentPath = webBuildPath.replace(/\\/g, '/');
+    const webContentPath = 'wwwroot';
 
     // Note: YAML provider automatically prefixes with "slskd:" namespace, so DON'T wrap under slskd: here
     // If we wrap it, we'd get slskd:slskd:web:port instead of slskd:web:port
