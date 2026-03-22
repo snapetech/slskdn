@@ -10522,6 +10522,35 @@ catch (Exception ex)
 
 **Why This Keeps Happening**: once the main compatibility and bridge APIs are cleaned up, “helper” controllers start to look lower-risk and the old debug-friendly pattern sneaks back in. Any controller that returns structured HTTP errors needs the same rule: log the exception server-side, but return only stable public error text or status metadata.
 
+### 0k70. Plain-Text And Anonymous Error Responses Leak Just As Easily As JSON Ones
+
+**The Bug**: some controllers stopped using structured `{ error = ... }` payloads but still returned raw exception text directly as a plain string or interpolated it into anonymous responses. `TransfersController` returned `ex.Message` for enqueue and queue-position failures, and `PortForwardingController` embedded low-level socket/runtime messages in its `Error` field. Different payload shape, same leak.
+
+**Files Affected**:
+- `src/slskd/Transfers/API/Controllers/TransfersController.cs`
+- `src/slskd/API/Native/PortForwardingController.cs`
+- `tests/slskd.Tests.Unit/Transfers/API/TransfersControllerTests.cs`
+- `tests/slskd.Tests.Unit/API/Native/PortForwardingControllerTests.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    return StatusCode(500, ex.Message);
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Failed to enqueue downloads");
+    return StatusCode(500, "Failed to enqueue downloads");
+}
+```
+
+**Why This Keeps Happening**: once the obvious JSON leak is fixed, it is easy to miss the same bug in legacy string responses or interpolated status objects. The contract boundary rule is payload-shape agnostic: never send raw exception text back to clients, even when the endpoint historically returned plain text.
+
 ### 0k62. Auxiliary Status And Pod Controllers Must Not Lie About Config State Or Skip Boundary Normalization
 
 **The Bug**: small status and PodCore helper controllers kept drifting out of line with the larger boundary-normalization passes. `SignalSystemController` reported hardcoded active channels whenever `ISignalBus` was present, even if the signal system or a channel was disabled in config. `PodMessageStorageController` documented a bounded search `limit` but passed through invalid values. `PodMessageSigningController` and `PodDhtController` accepted padded or blank IDs/keys inside request objects because the payload looked “internal enough” to trust.
