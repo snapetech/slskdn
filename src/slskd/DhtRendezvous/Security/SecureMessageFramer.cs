@@ -96,7 +96,7 @@ public sealed class SecureMessageFramer
         }
         catch (JsonException ex)
         {
-            throw new ProtocolViolationException($"Invalid JSON: {ex.Message}", ex);
+            throw new ProtocolViolationException("Invalid JSON", ex);
         }
     }
 
@@ -138,7 +138,7 @@ public sealed class SecureMessageFramer
         }
         catch (JsonException ex)
         {
-            throw new ProtocolViolationException($"Invalid JSON: {ex.Message}", ex);
+            throw new ProtocolViolationException("Invalid JSON", ex);
         }
     }
 

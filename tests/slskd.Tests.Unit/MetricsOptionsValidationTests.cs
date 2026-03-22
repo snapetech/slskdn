@@ -75,4 +75,55 @@ public class MetricsOptionsValidationTests
         Assert.True(isValid);
         Assert.Empty(results);
     }
+
+    [Fact]
+    public void RelayAgentConfiguration_InvalidCidr_DoesNotLeakParserDetails()
+    {
+        var options = new Options.RelayOptions.RelayAgentConfigurationOptions
+        {
+            InstanceName = "agent",
+            Secret = "0123456789abcdef",
+            Cidr = "not-a-cidr",
+        };
+
+        var results = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(options, new ValidationContext(options), results, true);
+
+        Assert.False(isValid);
+        var error = Assert.Single(results).ErrorMessage;
+        Assert.Equal("CIDR not-a-cidr is invalid", error);
+    }
+
+    [Fact]
+    public void BlacklistedOptions_InvalidCidr_DoesNotLeakParserDetails()
+    {
+        var options = new Options.GroupsOptions.BlacklistedOptions
+        {
+            Cidrs = new[] { "not-a-cidr" },
+        };
+
+        var results = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(options, new ValidationContext(options), results, true);
+
+        Assert.False(isValid);
+        var error = Assert.Single(results).ErrorMessage;
+        Assert.Equal("CIDR not-a-cidr is invalid", error);
+    }
+
+    [Fact]
+    public void ApiKeyOptions_InvalidCidr_DoesNotLeakParserDetails()
+    {
+        var options = new Options.AuthenticationOptions.ApiKeysOptions.ApiKeyOptions
+        {
+            Key = "0123456789abcdef",
+            Cidr = "not-a-cidr",
+        };
+
+        var results = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(options, new ValidationContext(options), results, true);
+
+        Assert.False(isValid);
+        var error = Assert.Single(results).ErrorMessage;
+        Assert.Equal("CIDR not-a-cidr is invalid", error);
+    }
 }
