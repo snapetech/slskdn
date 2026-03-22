@@ -111,7 +111,7 @@ async function replaceDirectoryContents(
   destinationDir: string,
 ): Promise<void> {
   await fs.rm(destinationDir, { force: true, recursive: true });
-  await fs.mkdir(path.dirname(destinationDir), { recursive: true });
+  await fs.mkdir(destinationDir, { recursive: true });
   await fs.cp(sourceDir, destinationDir, { recursive: true });
 }
 
