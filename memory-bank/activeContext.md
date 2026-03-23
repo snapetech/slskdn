@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue packaging-oriented bughunting and broad-pattern validation, with current focus on release workflows and AUR validation edge-cases.
+- **Current Task**: Continue broad-pattern callback fanout hardening across repository runtime/service callback surfaces.
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
