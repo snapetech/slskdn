@@ -4,7 +4,9 @@
 
 namespace slskd.Tests.Unit.Signals;
 
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using slskd.Signals;
@@ -47,6 +49,40 @@ public class SignalChannelHandlerTests
     }
 
     [Fact]
+    public async Task MeshSignalChannelHandler_ConcurrentStartReceiving_DoesNotDuplicateDelivery()
+    {
+        var sender = new TestMeshMessageSender();
+        var handler = new MeshSignalChannelHandler(
+            NullLogger<MeshSignalChannelHandler>.Instance,
+            CreateOptions(),
+            sender,
+            "local-peer");
+
+        var deliveries = 0;
+        Task OnSignalReceived(Signal _, CancellationToken __)
+        {
+            Interlocked.Increment(ref deliveries);
+            return Task.CompletedTask;
+        }
+
+        await Task.WhenAll(Enumerable.Range(0, 32)
+            .Select(_ => handler.StartReceivingAsync(OnSignalReceived, CancellationToken.None)));
+
+        await sender.RaiseAsync(new SlskdnSignalMessage
+        {
+            SignalId = "sig-concurrent-1",
+            FromPeerId = "remote-peer",
+            ToPeerId = "local-peer",
+            Type = "test",
+            Body = "{}",
+            SentAt = DateTimeOffset.UtcNow,
+            Ttl = TimeSpan.FromMinutes(1),
+        });
+
+        Assert.Equal(1, deliveries);
+    }
+
+    [Fact]
     public async Task BtExtensionSignalChannelHandler_StartReceivingTwice_DoesNotDuplicateDelivery()
     {
         var sender = new TestBtExtensionSender();
@@ -68,6 +104,47 @@ public class SignalChannelHandlerTests
 
         var signal = new Signal(
             signalId: "sig-1",
+            fromPeerId: "remote-peer",
+            toPeerId: "local-peer",
+            sentAt: DateTimeOffset.UtcNow,
+            type: "test",
+            body: new Dictionary<string, object>(),
+            ttl: TimeSpan.FromMinutes(1),
+            preferredChannels: new[] { SignalChannel.BtExtension });
+
+        await sender.RaiseAsync(
+            new SlskdnExtensionMessage
+            {
+                Kind = SlskdnSignalKind.SignalEnvelope,
+                Payload = JsonSerializer.Serialize(signal),
+            },
+            "remote-peer");
+
+        Assert.Equal(1, deliveries);
+    }
+
+    [Fact]
+    public async Task BtExtensionSignalChannelHandler_ConcurrentStartReceiving_DoesNotDuplicateDelivery()
+    {
+        var sender = new TestBtExtensionSender();
+        var handler = new BtExtensionSignalChannelHandler(
+            NullLogger<BtExtensionSignalChannelHandler>.Instance,
+            CreateOptions(),
+            sender,
+            "local-peer");
+
+        var deliveries = 0;
+        Task OnSignalReceived(Signal _, CancellationToken __)
+        {
+            Interlocked.Increment(ref deliveries);
+            return Task.CompletedTask;
+        }
+
+        await Task.WhenAll(Enumerable.Range(0, 32)
+            .Select(_ => handler.StartReceivingAsync(OnSignalReceived, CancellationToken.None)));
+
+        var signal = new Signal(
+            signalId: "sig-concurrent-2",
             fromPeerId: "remote-peer",
             toPeerId: "local-peer",
             sentAt: DateTimeOffset.UtcNow,

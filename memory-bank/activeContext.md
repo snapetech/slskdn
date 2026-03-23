@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened another paired control-path race in signal channel startup:
+    - `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` now guard their one-time event subscription with a lock instead of a naked `receivingStarted` flag
+    - concurrent `StartReceivingAsync(...)` calls no longer double-subscribe and duplicate every later delivery
+  - Extended `tests/slskd.Tests.Unit/Signals/SignalChannelHandlerTests.cs` with concurrent-start regressions for both handlers
+  - Confirmed the focused signal-channel slice passed (`4/4`) and the runtime release build remained green (`0 warnings / 0 errors`)
+  - Added ADR-0001 gotcha `0k132` and committed it immediately per repo policy (`docs: Add gotcha for concurrent start subscription races`)
   - Completed the in-progress metrics/logging helper isolation batch:
     - `ExponentialMovingAverage.Update(...)` now isolates `onUpdate` observer failures after updating internal state
     - `DelegatingSink.Emit(...)` now swallows observer delegate failures so log observers cannot break the sink pipeline

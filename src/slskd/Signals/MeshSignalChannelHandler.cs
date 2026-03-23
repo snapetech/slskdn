@@ -18,6 +18,7 @@ public class MeshSignalChannelHandler : ISignalChannelHandler
     private readonly SignalSystemOptions options;
     private readonly IMeshMessageSender meshSender;
     private readonly string localPeerId;
+    private readonly object receivingLock = new();
     private Func<Signal, CancellationToken, Task>? onSignalReceived;
     private bool receivingStarted;
 
@@ -98,11 +99,14 @@ public class MeshSignalChannelHandler : ISignalChannelHandler
     {
         this.onSignalReceived = onSignalReceived ?? throw new ArgumentNullException(nameof(onSignalReceived));
 
-        if (!receivingStarted)
+        lock (receivingLock)
         {
-            // Subscribe to SlskdnSignal messages from Mesh only once.
-            meshSender.OnSlskdnSignalReceived += HandleIncomingSignal;
-            receivingStarted = true;
+            if (!receivingStarted)
+            {
+                // Subscribe to SlskdnSignal messages from Mesh only once.
+                meshSender.OnSlskdnSignalReceived += HandleIncomingSignal;
+                receivingStarted = true;
+            }
         }
 
         logger.LogInformation("Mesh signal channel handler started receiving");

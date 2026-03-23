@@ -38,6 +38,20 @@
 ### Remaining
 - Continue the broader helper/control-path sweep for other observer or callback adapters that still let ancillary delegates poison the primary path.
 
+## 2026-03-23 14:01 - Concurrent signal-channel start race hardening
+
+### Completed
+- Documented a new gotcha for idempotent-looking start methods that used unsynchronized subscription guards.
+- Hardened `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` so concurrent `StartReceivingAsync(...)` calls cannot double-subscribe their incoming-message handlers.
+- Extended `SignalChannelHandlerTests` from sequential duplicate-start coverage to concurrent-start coverage for both channel types.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SignalChannelHandlerTests"` passed (`4/4`).
+- `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+### Remaining
+- Continue the broader helper/control-path sweep for other public start/init surfaces that rely on unsynchronized one-time registration guards.
+
 ## 2026-03-23 13:20 - Broader helper callback-failure isolation pass
 
 ### Completed
