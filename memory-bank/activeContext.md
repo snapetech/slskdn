@@ -27,6 +27,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the ownership sweep into VirtualSoulfind service-event chains:
+    - `SoulseekClientWrapper` now detaches its proxied room-message handler on disposal
+    - `DisasterModeCoordinator`, `DisasterModeRecovery`, and `SceneChatService` now expose disposal and unsubscribe from long-lived health/pubsub publishers
+  - Added focused lifecycle regressions in `tests/slskd.Tests.Unit/VirtualSoulfind/DisasterMode/DisasterModeLifecycleTests.cs` and `tests/slskd.Tests.Unit/VirtualSoulfind/Scenes/SceneChatServiceTests.cs`
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~DisasterModeLifecycleTests|FullyQualifiedName~SceneChatServiceTests"` passed (`4/4`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`)
   - Continued the ownership sweep into global/static event owners:
     - `Application` now retains removable log/client lambdas and unsubscribes all clock + Soulseek event hooks during disposal
     - `DownloadService` now exposes disposal, detaches its `Clock.EveryMinute` cleanup callback, and releases owned cancellation token sources / semaphores on teardown

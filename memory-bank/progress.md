@@ -7128,3 +7128,11 @@ Code quality improvements were completed as part of Option A:
 - `DownloadService` now exposes disposal through `IDownloadService : IDisposable`, detaches its `Clock.EveryMinute` cleanup handler, and releases owned cancellation-token sources and semaphores on teardown using the standard dispose pattern.
 - Added focused regressions in `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs` and new `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs` covering static-event listener counts and Soulseek event unsubscription.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~DownloadServiceTests"` passed (`4/4`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+## 2026-03-23 18:26 CST
+
+- Continued the same ownership sweep into long-lived service-to-service event chains inside VirtualSoulfind.
+- `SoulseekClientWrapper` now exposes disposal and detaches its proxied room-message subscription from the real Soulseek client instead of leaking an anonymous forwarder.
+- `DisasterModeCoordinator`, `DisasterModeRecovery`, and `SceneChatService` now expose disposal through their interfaces and unsubscribe from health/pubsub publishers on teardown; the concrete classes were sealed to satisfy the standard dispose pattern cleanly.
+- Added focused lifecycle coverage in `tests/slskd.Tests.Unit/VirtualSoulfind/DisasterMode/DisasterModeLifecycleTests.cs` and `tests/slskd.Tests.Unit/VirtualSoulfind/Scenes/SceneChatServiceTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~DisasterModeLifecycleTests|FullyQualifiedName~SceneChatServiceTests"` passed (`4/4`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).

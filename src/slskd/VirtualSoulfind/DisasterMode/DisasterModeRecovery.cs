@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using System.Threading;
 using System.Threading.Tasks;
 
-public interface IDisasterModeRecovery
+public interface IDisasterModeRecovery : IDisposable
 {
     Task AttemptRecoveryAsync(CancellationToken ct = default);
     bool ShouldAttemptRecovery();
@@ -19,7 +19,7 @@ public interface IDisasterModeRecovery
 /// Recovery logic for disaster mode (re-enable Soulseek when healthy).
 /// Phase 6D: T-830 - Real implementation.
 /// </summary>
-public class DisasterModeRecovery : IDisasterModeRecovery
+public sealed class DisasterModeRecovery : IDisasterModeRecovery
 {
     private readonly ILogger<DisasterModeRecovery> logger;
     private readonly ISoulseekHealthMonitor healthMonitor;
@@ -27,6 +27,7 @@ public class DisasterModeRecovery : IDisasterModeRecovery
     private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
     private DateTimeOffset? lastRecoveryAttempt;
     private int consecutiveHealthyChecks;
+    private bool disposed;
 
     public DisasterModeRecovery(
         ILogger<DisasterModeRecovery> logger,
@@ -41,6 +42,18 @@ public class DisasterModeRecovery : IDisasterModeRecovery
 
         // Subscribe to health changes
         healthMonitor.HealthChanged += OnHealthChanged;
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        healthMonitor.HealthChanged -= OnHealthChanged;
+        disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     public async Task AttemptRecoveryAsync(CancellationToken ct = default)

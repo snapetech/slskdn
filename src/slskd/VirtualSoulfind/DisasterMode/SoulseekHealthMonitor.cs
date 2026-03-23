@@ -28,21 +28,24 @@ public class SoulseekHealthChangedEventArgs : EventArgs
     public string? Reason { get; set; }
 }
 
-public interface ISoulseekClient
+public interface ISoulseekClient : IDisposable
 {
     event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
 }
 
-public class SoulseekClientWrapper : ISoulseekClient
+public sealed class SoulseekClientWrapper : ISoulseekClient
 {
     private readonly Soulseek.ISoulseekClient client;
+    private readonly EventHandler<RoomMessageReceivedEventArgs> roomMessageReceivedHandler;
+    private bool disposed;
 
     public event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
 
     public SoulseekClientWrapper(Soulseek.ISoulseekClient client)
     {
         this.client = client;
-        this.client.RoomMessageReceived += (sender, e) => RaiseRoomMessageReceived(sender, e);
+        roomMessageReceivedHandler = (sender, e) => RaiseRoomMessageReceived(sender, e);
+        this.client.RoomMessageReceived += roomMessageReceivedHandler;
     }
 
     private void RaiseRoomMessageReceived(object? sender, RoomMessageReceivedEventArgs args)
@@ -63,9 +66,21 @@ public class SoulseekClientWrapper : ISoulseekClient
             }
         }
     }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        client.RoomMessageReceived -= roomMessageReceivedHandler;
+        disposed = true;
+        GC.SuppressFinalize(this);
+    }
 }
 
-public interface ISoulseekHealthMonitor
+public interface ISoulseekHealthMonitor : IDisposable
 {
     SoulseekHealth CurrentHealth { get; }
     event EventHandler<SoulseekHealthChangedEventArgs>? HealthChanged;

@@ -12,7 +12,7 @@ using OptionsModel = slskd.Options;
 /// <summary>
 /// Interface for scene chat.
 /// </summary>
-public interface ISceneChatService
+public interface ISceneChatService : IDisposable
 {
     /// <summary>
     /// Send a chat message to a scene.
@@ -37,13 +37,14 @@ public interface ISceneChatService
 /// Optional scene chat service (overlay pubsub-based).
 /// Phase 6C: T-819 - Real implementation with MessagePack serialization.
 /// </summary>
-public class SceneChatService : ISceneChatService
+public sealed class SceneChatService : ISceneChatService
 {
     private readonly ILogger<SceneChatService> logger;
     private readonly IScenePubSubService pubsub;
     private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
     private readonly Identity.IProfileService profileService;
     private readonly ConcurrentDictionary<string, List<SceneChatMessage>> messageCache = new();
+    private bool disposed;
 
     public SceneChatService(
         ILogger<SceneChatService> logger,
@@ -61,6 +62,18 @@ public class SceneChatService : ISceneChatService
     }
 
     public event EventHandler<SceneChatMessage>? MessageReceived;
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        pubsub.MessageReceived -= OnPubSubMessageReceived;
+        disposed = true;
+        GC.SuppressFinalize(this);
+    }
 
     public async Task SendMessageAsync(string sceneId, string content, CancellationToken ct)
     {

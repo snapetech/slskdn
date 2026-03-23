@@ -11,7 +11,7 @@ using OptionsModel = slskd.Options;
 /// <summary>
 /// Interface for the legacy fallback coordinator.
 /// </summary>
-public interface IDisasterModeCoordinator
+public interface IDisasterModeCoordinator : IDisposable
 {
     /// <summary>
     /// Current legacy fallback level (0 = normal dual-network operation, higher = more degraded).
@@ -79,7 +79,7 @@ public class DisasterModeLevelChangedEventArgs : EventArgs
 /// <summary>
 /// Coordinates the legacy fallback level for the default dual-network runtime.
 /// </summary>
-public class DisasterModeCoordinator : IDisasterModeCoordinator
+public sealed class DisasterModeCoordinator : IDisasterModeCoordinator
 {
     private readonly ILogger<DisasterModeCoordinator> logger;
     private readonly ISoulseekHealthMonitor healthMonitor;
@@ -87,6 +87,7 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
     private DisasterModeLevel currentLevel;
     private DateTimeOffset? lastHealthCheck;
     private int consecutiveUnhealthyChecks;
+    private bool disposed;
 
     public DisasterModeCoordinator(
         ILogger<DisasterModeCoordinator> logger,
@@ -111,6 +112,18 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
     }
 
     public event EventHandler<DisasterModeLevelChangedEventArgs>? DisasterModeLevelChanged;
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        healthMonitor.HealthChanged -= OnHealthChanged;
+        disposed = true;
+        GC.SuppressFinalize(this);
+    }
 
     public Task DeactivateDisasterModeAsync(CancellationToken ct = default)
     {
