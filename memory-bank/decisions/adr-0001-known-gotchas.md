@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDA. Detached Worker Completion Tasks Must Surface One Stable Failure, Not Re-throw And Re-fault
+
+**The Bug**: `ChannelReader<T>` runs its background read loop as fire-and-forget work and exposes completion through `Completed`. But on failure it both re-threw the exception from the detached task and let `ExceptionHandler` run unguarded inside the catch block. That means the callback could mask the original read/handler failure, and the background task could fault separately even though `Completed` was already supposed to be the public failure surface.
+
+**Files Affected**:
+- `src/slskd/Common/ChannelReader.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    ExceptionHandler?.Invoke(ex);
+    TaskCompletionSource.SetException(ex);
+    throw;
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    try
+    {
+        ExceptionHandler?.Invoke(ex);
+        TaskCompletionSource.TrySetException(ex);
+    }
+    catch (Exception exceptionHandlerException)
+    {
+        TaskCompletionSource.TrySetException(new AggregateException(ex, exceptionHandlerException));
+    }
+}
+```
+
+**Why This Keeps Happening**: once a background helper exposes a `Completed` task, that task should be the single authoritative failure path. Re-throwing from detached work or letting auxiliary error callbacks throw creates multiple competing fault surfaces and can hide the original bug. Signal failure once through the completion task, and treat exception callbacks as secondary paths that must not replace the primary error unless you aggregate explicitly.
+
 ### 0xDB. Public Event Contracts Must Not Use No-Op Accessors
 
 **The Bug**: `LanDiscoveryService` implemented `ILanDiscoveryService.PeerDiscovered` with empty add/remove accessors. That means subscriptions appear to succeed, but the service drops every handler and can never deliver discovery notifications. The interface contract existed, but the implementation was effectively dead.

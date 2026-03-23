@@ -127,9 +127,15 @@ namespace slskd.Shares
             }
             catch (Exception ex)
             {
-                ExceptionHandler?.Invoke(ex);
-                TaskCompletionSource.SetException(ex);
-                throw;
+                try
+                {
+                    ExceptionHandler?.Invoke(ex);
+                    TaskCompletionSource.TrySetException(ex);
+                }
+                catch (Exception exceptionHandlerException)
+                {
+                    TaskCompletionSource.TrySetException(new AggregateException(ex, exceptionHandlerException));
+                }
             }
             finally
             {

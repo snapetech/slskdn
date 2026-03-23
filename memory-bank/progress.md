@@ -6779,3 +6779,8 @@ Code quality improvements were completed as part of Option A:
 - `ILanDiscoveryService.PeerDiscovered` is now backed by a real event and raised as nearby peers are parsed during `BrowseAsync`, instead of silently discarding subscribers through no-op accessors.
 - Tightened the existing identity regression in `tests/slskd.Tests.Unit/Identity/LanDiscoveryServiceTests.cs` so it proves the event handler is actually retained and invoked.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `LanDiscoveryServiceTests` slice passed `7/7`.
+## 2026-03-23 11:00 CST
+
+- Fixed `ChannelReader<T>` so detached read-loop failures now surface through `Completed` without a second background rethrow, and a throwing `ExceptionHandler` no longer masks the original fault unless explicitly aggregated.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ChannelReaderTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `ChannelReaderTests` slice passed. The only warning was a transient `MSB3026` copy-retry from running build and test against the same output tree in parallel.
