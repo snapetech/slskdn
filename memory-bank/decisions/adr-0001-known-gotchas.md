@@ -149,6 +149,26 @@ return path.Trim().Replace('\\', '/');
 
 **Why This Keeps Happening**: it is easy to treat every “path-like” string as a local filesystem path. Wire identifiers and virtual protocol filenames have their own canonical format. Normalize toward the protocol format, not the host OS separator rules.
 
+### 0xD8. Top-Level Sanitized Failures Must Not Re-Append Nested Helper Error Text
+
+**The Bug**: a verifier returned a sanitized nested helper failure like `Connection test failed`, then the outer method interpolated that nested message back into its public error string. That reintroduced detail drift at the final boundary even though the lower layer had already sanitized itself.
+
+**Files Affected**:
+- `src/slskd/Mesh/Transport/DnsLeakPreventionVerifier.cs`
+
+**Wrong**:
+```csharp
+return DnsLeakVerificationResult.Failure(
+    $"SOCKS proxy connection failed: {connectionResult.ErrorMessage}");
+```
+
+**Correct**:
+```csharp
+return DnsLeakVerificationResult.Failure("SOCKS proxy connection failed");
+```
+
+**Why This Keeps Happening**: once lower layers return “safe enough” strings, it is tempting to compose them upward for more context. At public boundaries, that undoes the sanitization step. Final boundary methods need their own stable error vocabulary and should log detail separately.
+
 ### 0xD7. Transfer And Chunk Result DTOs Must Not Contain Per-Peer Diagnostics Or Exact Throughput Numbers
 
 **The Bug**: swarm and multi-source download helpers were still putting operator-grade diagnostics directly into result DTOs. Those messages included peer IDs, transport labels, exact byte shortfalls, and low-throughput measurements, and then bubbled out through API or job-status surfaces.
