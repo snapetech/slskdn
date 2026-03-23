@@ -429,7 +429,10 @@ public class PodsControllerTests
         var result = await _controller.JoinPod(podId, request);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("joined", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain(podId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("peer:joiner", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -459,7 +462,10 @@ public class PodsControllerTests
         var result = await _controller.LeavePod(podId, request);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("left", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain(podId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("peer:leaver", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -475,6 +481,28 @@ public class PodsControllerTests
 
         // Assert
         Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task BindRoom_ReturnsSanitizedSuccessPayload()
+    {
+        var podId = "pod:00000000000000000000000000000001";
+        var channelId = "general";
+        _chatBridgeMock
+            .Setup(x => x.BindRoomAsync(podId, channelId, "ambient", "readonly", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _controller.BindRoom(
+            podId,
+            channelId,
+            new BindRoomRequest("ambient", "readonly"),
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("bound", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain(podId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(channelId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ambient", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

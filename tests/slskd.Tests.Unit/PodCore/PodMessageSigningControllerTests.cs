@@ -69,4 +69,25 @@ public class PodMessageSigningControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
         signer.Verify(service => service.VerifyMessageAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task VerifyMessage_ReturnsSanitizedSuccessPayload()
+    {
+        var signer = new Mock<IMessageSigner>();
+        signer
+            .Setup(service => service.VerifyMessageAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var controller = new PodMessageSigningController(
+            NullLogger<PodMessageSigningController>.Instance,
+            signer.Object);
+
+        var result = await controller.VerifyMessage(
+            new PodMessage { MessageId = "msg-1", PodId = "pod-1" },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("isValid", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("msg-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

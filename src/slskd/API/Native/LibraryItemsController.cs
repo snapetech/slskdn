@@ -344,7 +344,7 @@ public class LibraryItemsController : ControllerBase
 
             if (foundFile == null)
             {
-                return NotFound(new { error = "Item not found", contentId });
+                return NotFound(new { error = "Item not found" });
             }
 
             var foundItem = await ConvertToLibraryItemAsync(

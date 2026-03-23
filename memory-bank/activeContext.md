@@ -639,3 +639,14 @@ dotnet test
   - rerun `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release`
   - rerun `bash packaging/scripts/run-release-gate.sh`
   - fix only the next blocker if either still fails
+
+## 2026-03-22 22:26 CST
+- Release-blocker triage is complete.
+- Confirmed green validation path:
+  - `dotnet build src/slskd/slskd.csproj -v q`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release`
+  - `bash ./bin/lint`
+  - `bash packaging/scripts/run-release-gate.sh`
+- Next steps:
+  - stop widening the code diff unless a new release blocker is found
+  - if desired, prepare the branch for release/tagging or produce a final release checklist

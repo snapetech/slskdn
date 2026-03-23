@@ -41,4 +41,44 @@ public class ShadowIndexControllerTests
 
         query.Verify(service => service.QueryAsync("mbid-1", It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task GetShadowIndex_WhenQueryThrows_DoesNotLeakMbid()
+    {
+        var query = new Mock<IShadowIndexQuery>();
+        query
+            .Setup(service => service.QueryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = new ShadowIndexController(
+            NullLogger<ShadowIndexController>.Instance,
+            query.Object);
+
+        var result = await controller.GetShadowIndex("mbid-1", CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.Contains("Failed to query shadow index", error.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("mbid-1", error.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetShadowIndex_WhenQuerySucceeds_DoesNotEchoMbid()
+    {
+        var query = new Mock<IShadowIndexQuery>();
+        query
+            .Setup(service => service.QueryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShadowIndexQueryResult());
+
+        var controller = new ShadowIndexController(
+            NullLogger<ShadowIndexController>.Instance,
+            query.Object);
+
+        var result = await controller.GetShadowIndex("mbid-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("mbid-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("variants", ok.Value?.ToString() ?? string.Empty);
+    }
 }

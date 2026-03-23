@@ -331,7 +331,7 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "Failed to join pod (may already be a member)" });
             }
 
-            return Ok(new { podId, peerId, joined = true });
+            return Ok(new { joined = true });
         }
         catch (Exception ex)
         {
@@ -371,7 +371,7 @@ public class PodsController : ControllerBase
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            return Ok(new { podId, peerId, left = true });
+            return Ok(new { left = true });
         }
         catch (Exception ex)
         {
@@ -411,7 +411,7 @@ public class PodsController : ControllerBase
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            return Ok(new { podId, peerId, banned = true });
+            return Ok(new { banned = true });
         }
         catch (Exception ex)
         {
@@ -589,7 +589,7 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "Failed to bind channel to room" });
             }
 
-            return Ok(new { podId, channelId, roomName, mode, bound = true });
+            return Ok(new { bound = true });
         }
         catch (Exception ex)
         {
@@ -623,7 +623,7 @@ public class PodsController : ControllerBase
                 return NotFound(new { error = "Channel binding not found" });
             }
 
-            return Ok(new { podId, channelId, unbound = true });
+            return Ok(new { unbound = true });
         }
         catch (Exception ex)
         {

@@ -6529,3 +6529,12 @@ Code quality improvements were completed as part of Option A:
   - `HashDbControllerTests` was still constructing `FlacInventoryEntry` with removed `Filename` instead of `Path`.
 - Fixed the test drift and documented the pattern in `adr-0001-known-gotchas.md`.
 - Next: rerun backend unit tests and the full `packaging/scripts/run-release-gate.sh`, then fix only whatever still blocks release.
+
+## 2026-03-22 22:26 CST
+- Cleared the remaining release blocker and revalidated the full release gate.
+- Validation passed:
+  - `dotnet build src/slskd/slskd.csproj -v q`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release`
+  - `bash ./bin/lint`
+  - `bash packaging/scripts/run-release-gate.sh`
+- Current state: release gate is green; remaining work is no longer blocker-driven and should be treated as optional hardening, packaging, or release-tagging work only.

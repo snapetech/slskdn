@@ -191,7 +191,7 @@ public class PodMembershipController : ControllerBase
             }
             else
             {
-                return NotFound(new { podId, peerId, found = false, error = "Membership not found" });
+                return NotFound(new { found = false, error = "Membership not found" });
             }
         }
         catch (Exception ex)

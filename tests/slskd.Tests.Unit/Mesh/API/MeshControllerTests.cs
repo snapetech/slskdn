@@ -61,6 +61,46 @@ public class MeshControllerTests
                 null,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("published", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("flac-key", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LookupKey_WhenFound_DoesNotEchoFlacKey()
+    {
+        var meshSync = new Mock<IMeshSyncService>();
+        meshSync
+            .Setup(service => service.LookupHashAsync("flac-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MeshHashEntry { FlacKey = "flac-key", ByteHash = "hash-1", Size = 10 });
+
+        var controller = CreateController(meshSync);
+
+        var result = await controller.LookupKey(" flac-key ");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("found = True", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("{ flacKey =", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        meshSync.Verify(service => service.LookupHashAsync("flac-key", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LookupKey_WhenMissing_DoesNotEchoFlacKey()
+    {
+        var meshSync = new Mock<IMeshSyncService>();
+        meshSync
+            .Setup(service => service.LookupHashAsync("flac-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MeshHashEntry?)null);
+
+        var controller = CreateController(meshSync);
+
+        var result = await controller.LookupKey(" flac-key ");
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Contains("found = False", notFound.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("flac-key", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        meshSync.Verify(service => service.LookupHashAsync("flac-key", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -180,7 +180,7 @@ public class PodMessageRoutingController : ControllerBase
         try
         {
             var isSeen = _messageRouter.IsMessageSeen(messageId, podId);
-            return Ok(new { messageId, podId, isSeen });
+            return Ok(new { isSeen });
         }
         catch (Exception ex)
         {
@@ -209,7 +209,7 @@ public class PodMessageRoutingController : ControllerBase
         try
         {
             var wasNew = _messageRouter.RegisterMessageSeen(messageId, podId);
-            return Ok(new { messageId, podId, wasNewlyRegistered = wasNew });
+            return Ok(new { wasNewlyRegistered = wasNew });
         }
         catch (Exception ex)
         {

@@ -51,7 +51,7 @@ public class ShadowIndexController : ControllerBase
 
             if (result == null)
             {
-                return Ok(new { mbid, variants = new List<object>() });
+                return Ok(new { variants = new List<object>() });
             }
 
             // Convert to API-friendly format
@@ -63,12 +63,12 @@ public class ShadowIndexController : ControllerBase
                 qualityScore = v.QualityScore
             }).ToList();
 
-            return Ok(new { mbid, variants });
+            return Ok(new { variants });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to query shadow index for MBID: {Mbid}", mbid);
-            return StatusCode(500, new { error = "Failed to query shadow index", mbid });
+            return StatusCode(500, new { error = "Failed to query shadow index" });
         }
     }
 }

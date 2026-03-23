@@ -74,7 +74,7 @@ public class RoomsCompatibilityController : ControllerBase
         logger.LogInformation("Join room requested: {Room}", roomName);
 
         await Task.CompletedTask;
-        return Ok(new { room = roomName, joined = true });
+        return Ok(new { joined = true });
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public class RoomsCompatibilityController : ControllerBase
         logger.LogInformation("Leave room requested: {Room}", roomName);
 
         await Task.CompletedTask;
-        return Ok(new { room = roomName, left = true });
+        return Ok(new { left = true });
     }
 }
 

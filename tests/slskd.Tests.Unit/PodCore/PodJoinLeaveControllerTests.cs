@@ -105,4 +105,42 @@ public class PodJoinLeaveControllerTests
         Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
         Assert.Contains("Leave request could not be processed", error.Value?.ToString() ?? string.Empty);
     }
+
+    [Fact]
+    public async Task GetPendingJoinRequests_ReturnsSanitizedSuccessPayload()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.GetPendingJoinRequestsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodJoinRequest>());
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.GetPendingJoinRequests(" pod-1 ", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("pendingJoinRequests", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("pod-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetPendingLeaveRequests_ReturnsSanitizedSuccessPayload()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.GetPendingLeaveRequestsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodLeaveRequest>());
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.GetPendingLeaveRequests(" pod-1 ", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("pendingLeaveRequests", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("pod-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

@@ -30,6 +30,7 @@ public class UsersCompatibilityControllerTests
         var error = Assert.IsType<ObjectResult>(result);
         Assert.Equal(500, error.StatusCode);
         Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
-        Assert.Contains("alice", error.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("alice", error.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Failed to browse user", error.Value?.ToString() ?? string.Empty);
     }
 }

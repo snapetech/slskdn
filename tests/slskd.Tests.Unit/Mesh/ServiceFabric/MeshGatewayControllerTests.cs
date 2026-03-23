@@ -145,6 +145,59 @@ public class MeshGatewayControllerTests
         Assert.Contains("Service returned an error", error.Value?.ToString() ?? string.Empty);
     }
 
+    [Fact]
+    public async Task CallService_WhenServiceNotAllowed_DoesNotLeakServiceName()
+    {
+        var controller = CreateController(new MeshGatewayOptions
+        {
+            Enabled = true,
+            AllowedServices = new() { "pods" }
+        });
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        controller.HttpContext.Request.Body = new MemoryStream();
+
+        var result = await controller.CallService("secret-service", "list", CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, error.StatusCode);
+        Assert.Contains("Requested service is not allowed", error.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("secret-service", error.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CallService_WhenNoProvidersFound_DoesNotLeakServiceName()
+    {
+        var directory = new Mock<IMeshServiceDirectory>();
+        directory
+            .Setup(service => service.FindByNameAsync("pods", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<MeshServiceDescriptor>());
+
+        var controller = CreateController(
+            new MeshGatewayOptions
+            {
+                Enabled = true,
+                AllowedServices = new() { "pods" }
+            },
+            directory);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        controller.HttpContext.Request.Body = new MemoryStream();
+
+        var result = await controller.CallService("pods", "list", CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(503, error.StatusCode);
+        Assert.Contains("No providers found for the requested service", error.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("pods", error.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static MeshGatewayController CreateController(
         MeshGatewayOptions options,
         Mock<IMeshServiceDirectory>? directory = null,

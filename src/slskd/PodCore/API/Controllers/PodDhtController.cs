@@ -182,7 +182,7 @@ public class PodDhtController : ControllerBase
             }
             else
             {
-                return NotFound(new { podId, found = false, error = "Pod not found" });
+                return NotFound(new { found = false, error = "Pod not found" });
             }
         }
         catch (Exception ex)

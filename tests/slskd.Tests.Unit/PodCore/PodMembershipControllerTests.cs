@@ -143,5 +143,7 @@ public class PodMembershipControllerTests
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
         Assert.DoesNotContain("sensitive detail", notFound.Value?.ToString() ?? string.Empty);
         Assert.Contains("Membership not found", notFound.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("pod-1", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("peer-1", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 }

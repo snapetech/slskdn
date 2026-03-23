@@ -69,4 +69,21 @@ public class IpldControllerTests
         Assert.Contains("Links added successfully", ok.Value?.ToString() ?? string.Empty);
         Assert.DoesNotContain("content:audio:track:1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task FindInboundLinks_WhenQuerySucceeds_DoesNotEchoRequestFields()
+    {
+        var mapper = new Mock<IIpldMapper>();
+        mapper.Setup(x => x.FindInboundLinksAsync("content:audio:track:1", "album", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { "content:audio:release:1" });
+
+        var controller = new IpldController(NullLogger<IpldController>.Instance, mapper.Object);
+
+        var result = await controller.FindInboundLinks("content:audio:track:1", "album", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("inboundLinks", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("targetContentId", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("linkName", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

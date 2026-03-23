@@ -122,7 +122,6 @@ namespace slskd.HashDb.API
             var entries = await HashDb.LookupHashesBySizeAsync(size);
             return Ok(new
             {
-                size,
                 count = entries.Count(),
                 entries,
             });
@@ -142,7 +141,7 @@ namespace slskd.HashDb.API
             }
 
             var key = HashDbEntry.GenerateFlacKey(filename, size);
-            return Ok(new { filename, size, flacKey = key });
+            return Ok(new { flacKey = key });
         }
 
         /// <summary>
@@ -155,7 +154,6 @@ namespace slskd.HashDb.API
             var entries = await HashDb.GetFlacEntriesBySizeAsync(size, limit);
             return Ok(new
             {
-                size,
                 count = entries.Count(),
                 entries,
             });
@@ -226,7 +224,6 @@ namespace slskd.HashDb.API
 
             return Ok(new
             {
-                sinceSeq,
                 latestSeq,
                 count = entries.Count(),
                 entries,
@@ -285,7 +282,7 @@ namespace slskd.HashDb.API
                 request.BitDepth);
 
             var key = HashDbEntry.GenerateFlacKey(request.Filename, request.Size);
-            return Ok(new { flacKey = key, stored = true });
+            return Ok(new { stored = true });
         }
 
         /// <summary>

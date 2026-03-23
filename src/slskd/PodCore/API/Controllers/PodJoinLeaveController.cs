@@ -255,7 +255,7 @@ public class PodJoinLeaveController : ControllerBase
         try
         {
             var requests = await _joinLeaveService.GetPendingJoinRequestsAsync(podId, cancellationToken);
-            return Ok(new { podId, pendingJoinRequests = requests });
+            return Ok(new { pendingJoinRequests = requests });
         }
         catch (Exception ex)
         {
@@ -282,7 +282,7 @@ public class PodJoinLeaveController : ControllerBase
         try
         {
             var requests = await _joinLeaveService.GetPendingLeaveRequestsAsync(podId, cancellationToken);
-            return Ok(new { podId, pendingLeaveRequests = requests });
+            return Ok(new { pendingLeaveRequests = requests });
         }
         catch (Exception ex)
         {

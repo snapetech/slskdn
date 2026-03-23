@@ -131,7 +131,7 @@ public class IpldController : ControllerBase
         try
         {
             var inboundLinks = await _ipldMapper.FindInboundLinksAsync(targetContentId, linkName, cancellationToken);
-            return Ok(new { targetContentId, linkName, inboundLinks });
+            return Ok(new { inboundLinks });
         }
         catch (Exception ex)
         {

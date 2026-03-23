@@ -36,7 +36,7 @@ namespace slskd.Audio.API
             }
 
             var updated = await migrationService.MigrateAsync(targetVersion, force, ct).ConfigureAwait(false);
-            return Ok(new { updated, targetVersion, force });
+            return Ok(new { updated });
         }
     }
 }

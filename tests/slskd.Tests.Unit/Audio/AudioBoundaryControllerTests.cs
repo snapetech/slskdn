@@ -76,4 +76,22 @@ public class AudioBoundaryControllerTests
 
         migration.Verify(service => service.MigrateAsync("audioqa-2", true, It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task AnalyzerMigration_WhenSuccessful_DoesNotEchoQueryFlags()
+    {
+        var migration = new Mock<IAnalyzerMigrationService>();
+        migration
+            .Setup(service => service.MigrateAsync("audioqa-2", true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(4);
+
+        var controller = new AnalyzerMigrationController(migration.Object);
+
+        var result = await controller.Migrate(" audioqa-2 ", true, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Contains("updated = 4", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("targetVersion", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("force", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

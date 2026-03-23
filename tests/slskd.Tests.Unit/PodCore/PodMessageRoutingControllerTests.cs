@@ -142,4 +142,44 @@ public class PodMessageRoutingControllerTests
         Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
         Assert.Contains("Failed to route message", error.Value?.ToString() ?? string.Empty);
     }
+
+    [Fact]
+    public void IsMessageSeen_ReturnsSanitizedSuccessPayload()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.IsMessageSeen("msg-1", "pod-1"))
+            .Returns(true);
+
+        var controller = new PodMessageRoutingController(
+            NullLogger<PodMessageRoutingController>.Instance,
+            router.Object);
+
+        var result = controller.IsMessageSeen("msg-1", "pod-1");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("isSeen", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("msg-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pod-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RegisterMessageSeen_ReturnsSanitizedSuccessPayload()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.RegisterMessageSeen("msg-1", "pod-1"))
+            .Returns(true);
+
+        var controller = new PodMessageRoutingController(
+            NullLogger<PodMessageRoutingController>.Instance,
+            router.Object);
+
+        var result = controller.RegisterMessageSeen("msg-1", "pod-1");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("wasNewlyRegistered", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("msg-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pod-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

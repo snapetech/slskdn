@@ -103,7 +103,7 @@ public class MeshGatewayController : ControllerBase
             return StatusCode(403, new
             {
                 error = "service_not_allowed",
-                message = $"Service '{serviceName}' is not in the allowed services list"
+                message = "Requested service is not allowed"
             });
         }
 
@@ -119,7 +119,7 @@ public class MeshGatewayController : ControllerBase
                 return StatusCode(413, new
                 {
                     error = "payload_too_large",
-                    message = $"Request body exceeds {max} bytes"
+                    message = "Request body exceeds the configured size limit"
                 });
             }
 
@@ -142,7 +142,7 @@ public class MeshGatewayController : ControllerBase
                         return StatusCode(413, new
                         {
                             error = "payload_too_large",
-                            message = $"Request body exceeds {max} bytes"
+                            message = "Request body exceeds the configured size limit"
                         });
                     }
 
@@ -174,7 +174,7 @@ public class MeshGatewayController : ControllerBase
                 return StatusCode(503, new
                 {
                     error = "service_unavailable",
-                    message = $"No providers found for service '{serviceName}'"
+                    message = "No providers found for the requested service"
                 });
             }
 
@@ -254,7 +254,7 @@ public class MeshGatewayController : ControllerBase
             return StatusCode(504, new
             {
                 error = "gateway_timeout",
-                message = $"Service call timed out after {_options.RequestTimeoutSeconds} seconds"
+                message = "Service call timed out"
             });
         }
         catch (Exception ex)

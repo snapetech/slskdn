@@ -185,10 +185,10 @@ namespace slskd.Mesh.API
             var entry = await MeshSync.LookupHashAsync(flacKey);
             if (entry == null)
             {
-                return NotFound(new { flacKey, found = false });
+                return NotFound(new { found = false });
             }
 
-            return Ok(new { flacKey, found = true, entry });
+            return Ok(new { found = true, entry });
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace slskd.Mesh.API
             }
 
             await MeshSync.PublishHashAsync(request.FlacKey, request.ByteHash, request.Size, request.MetaFlags);
-            return Ok(new { published = true, flacKey = request.FlacKey });
+            return Ok(new { published = true });
         }
 
         /// <summary>

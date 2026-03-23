@@ -128,8 +128,72 @@ public class HashDbControllerTests
         var result = controller.GenerateKey(" song.flac ", 123L);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        Assert.Contains("song.flac", ok.Value?.ToString() ?? string.Empty);
-        Assert.DoesNotContain(" song.flac ", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("filename", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("size =", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("flacKey", ok.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task LookupHashesBySize_WhenQueried_DoesNotEchoRequestedSize()
+    {
+        var hashDb = new Mock<IHashDbService>();
+        hashDb
+            .Setup(service => service.LookupHashesBySizeAsync(123L, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new HashDbEntry { FlacKey = "flac-key-1", ByteHash = "hash", Size = 123L } });
+
+        var controller = new HashDbController(
+            hashDb.Object,
+            Mock.Of<IDbContextFactory<SearchDbContext>>(),
+            Mock.Of<IHashDbOptimizationService>());
+
+        var result = await controller.LookupHashesBySize(123L);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("size = 123", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count = 1", ok.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetInventoryBySize_WhenQueried_DoesNotEchoRequestedSize()
+    {
+        var hashDb = new Mock<IHashDbService>();
+        hashDb
+            .Setup(service => service.GetFlacEntriesBySizeAsync(123L, 100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new FlacInventoryEntry { Path = "song.flac", Size = 123L } });
+
+        var controller = new HashDbController(
+            hashDb.Object,
+            Mock.Of<IDbContextFactory<SearchDbContext>>(),
+            Mock.Of<IHashDbOptimizationService>());
+
+        var result = await controller.GetInventoryBySize(123L);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("size = 123", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count = 1", ok.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetEntriesSinceSeq_WhenQueried_DoesNotEchoRequestedSequence()
+    {
+        var hashDb = new Mock<IHashDbService>();
+        hashDb
+            .Setup(service => service.GetEntriesSinceSeqAsync(42L, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new HashDbEntry { SeqId = 99, FlacKey = "flac-key-1", ByteHash = "hash", Size = 123L } });
+        hashDb
+            .Setup(service => service.GetLatestSeqIdAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(99L);
+
+        var controller = new HashDbController(
+            hashDb.Object,
+            Mock.Of<IDbContextFactory<SearchDbContext>>(),
+            Mock.Of<IHashDbOptimizationService>());
+
+        var result = await controller.GetEntriesSinceSeq(42L);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("sinceSeq", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("latestSeq = 99", ok.Value?.ToString() ?? string.Empty);
     }
 
     [Fact]
@@ -152,7 +216,9 @@ public class HashDbControllerTests
             ByteHash = " bytehash ",
         });
 
-        Assert.IsType<OkObjectResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("flacKey", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("stored", ok.Value?.ToString() ?? string.Empty);
         hashDb.Verify(
             service => service.StoreHashFromVerificationAsync("song.flac", 123L, "bytehash", null, null, null, It.IsAny<CancellationToken>()),
             Times.Once);

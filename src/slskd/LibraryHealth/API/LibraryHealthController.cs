@@ -326,7 +326,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new RemediationResponse
             {
                 JobId = jobId,
-                Message = $"Remediation job created for {request.IssueIds.Count} issue(s)",
+                Message = "Remediation job created",
             });
         }
     }

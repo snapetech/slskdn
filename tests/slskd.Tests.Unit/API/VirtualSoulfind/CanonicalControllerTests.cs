@@ -41,4 +41,44 @@ public class CanonicalControllerTests
 
         query.Verify(service => service.QueryAsync("mbid-1", It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task GetCanonical_WhenQueryThrows_DoesNotLeakMbid()
+    {
+        var query = new Mock<IShadowIndexQuery>();
+        query
+            .Setup(service => service.QueryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var controller = new CanonicalController(
+            NullLogger<CanonicalController>.Instance,
+            query.Object);
+
+        var result = await controller.GetCanonical("mbid-1", CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.Contains("Failed to select canonical variant", error.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("mbid-1", error.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetCanonical_WhenNoVariantsFound_DoesNotEchoMbid()
+    {
+        var query = new Mock<IShadowIndexQuery>();
+        query
+            .Setup(service => service.QueryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShadowIndexQueryResult());
+
+        var controller = new CanonicalController(
+            NullLogger<CanonicalController>.Instance,
+            query.Object);
+
+        var result = await controller.GetCanonical("mbid-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.DoesNotContain("mbid-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("available_variants", ok.Value?.ToString() ?? string.Empty);
+    }
 }

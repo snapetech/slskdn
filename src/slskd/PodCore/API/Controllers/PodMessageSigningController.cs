@@ -90,7 +90,7 @@ public class PodMessageSigningController : ControllerBase
         {
             var isValid = await _messageSigner.VerifyMessageAsync(normalizedMessage, cancellationToken);
 
-            return Ok(new { messageId = normalizedMessage.MessageId, isValid });
+            return Ok(new { isValid });
         }
         catch (Exception ex)
         {

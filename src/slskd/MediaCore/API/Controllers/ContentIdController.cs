@@ -96,7 +96,7 @@ public class ContentIdController : ControllerBase
                 return NotFound(new { error = "External ID not found" });
             }
 
-            return Ok(new { externalId, contentId });
+            return Ok(new { contentId });
         }
         catch (Exception ex)
         {
@@ -123,7 +123,7 @@ public class ContentIdController : ControllerBase
         try
         {
             var exists = await _registry.IsRegisteredAsync(externalId, cancellationToken);
-            return Ok(new { externalId, exists });
+            return Ok(new { exists });
         }
         catch (Exception ex)
         {
@@ -150,7 +150,7 @@ public class ContentIdController : ControllerBase
         try
         {
             var externalIds = await _registry.GetExternalIdsAsync(contentId, cancellationToken);
-            return Ok(new { contentId, externalIds });
+            return Ok(new { externalIds });
         }
         catch (Exception ex)
         {
@@ -198,7 +198,7 @@ public class ContentIdController : ControllerBase
             domain = domain.Trim();
             var normalizedDomain = ContentIdParser.NormalizeDomain(domain, string.Empty);
             var contentIds = await _registry.FindByDomainAsync(normalizedDomain, cancellationToken);
-            return Ok(new { domain, normalizedDomain, contentIds });
+            return Ok(new { normalizedDomain, contentIds });
         }
         catch (Exception ex)
         {
@@ -234,7 +234,7 @@ public class ContentIdController : ControllerBase
             var normalizedDomain = ContentIdParser.NormalizeDomain(domain, type);
             var normalizedType = ContentIdParser.NormalizeType(normalizedDomain, type);
             var contentIds = await _registry.FindByDomainAndTypeAsync(normalizedDomain, normalizedType, cancellationToken);
-            return Ok(new { domain, type, normalizedDomain, normalizedType, contentIds });
+            return Ok(new { normalizedDomain, normalizedType, contentIds });
         }
         catch (Exception ex)
         {
