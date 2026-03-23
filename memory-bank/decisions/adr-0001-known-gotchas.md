@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC3. Reused Local Names After Refactors Can Break Later Tuple Deconstruction
+
+**The Bug**: a refactor added local variables like `artist`, `title`, and `album` inside an earlier extraction block, then a later tuple deconstruction reused the same names lower in the same method. C# forbids that shadowing across the enclosing scope, so the file stopped compiling.
+
+**Files Affected**:
+- `src/slskd/Integrations/MetadataFacade/MetadataFacade.cs`
+
+**Wrong**:
+```csharp
+var artist = tag.FirstPerformer ?? tag.FirstAlbumArtist;
+...
+var (artist, title, album) = ParseSoulseekFilename(...);
+```
+
+**Correct**:
+```csharp
+var artist = tag.FirstPerformer ?? tag.FirstAlbumArtist;
+...
+var (parsedArtist, parsedTitle, parsedAlbum) = ParseSoulseekFilename(...);
+```
+
+**Why This Keeps Happening**: fallback code often mirrors the same domain names as the first extraction path. After refactors, those names may still be in scope even if they look visually separated by `try`/`catch` blocks. Use distinct fallback names like `parsedArtist` or `resolvedTitle` whenever you add a second extraction path in the same method.
+
 ### 0xC2. Metadata Search Hits Without MBIDs Are Still Useful And Must Not Be Dropped Prematurely
 
 **The Bug**: metadata and SongID flows were treating “no MusicBrainz recording ID” as equivalent to “no usable hit.” That caused file-analysis fallback, metadata search, and candidate-building paths to drop perfectly good artist/title evidence, which in turn made SongID bottom out early even when it had enough information to keep ranking and planning.
