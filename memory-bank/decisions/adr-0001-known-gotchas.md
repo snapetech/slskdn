@@ -16116,3 +16116,30 @@ ReplaceClient(client, stateRegistration);
 ```
 
 **Why This Keeps Happening**: replacing a live dependency looks like "just swap the field and dispose the old object", but reactive subscriptions are separate owned resources. If the old dependency exposes change notifications, the subscription must be disposed alongside the old instance or the old source can keep mutating shared state after replacement.
+
+### 0k141. Disposable Owners Must Retain And Release Their `OnChange(...)` Registrations
+
+**The Bug**: `Application`, `ConnectionWatchdog`, and `RelayClient` each subscribed to long-lived `OnChange(...)` sources but discarded the returned `IDisposable`. Their `Dispose()` paths tore down timers, hub connections, and token sources, yet the change subscriptions stayed attached and could still re-enter disposed objects or keep mutating shared state after shutdown.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `src/slskd/Core/ConnectionWatchdog.cs`
+- `src/slskd/Relay/RelayClient.cs`
+
+**Wrong**:
+```csharp
+OptionsMonitor.OnChange(options => Configure(options));
+State.OnChange(state => State_OnChange(state));
+Shares.StateMonitor.OnChange(state => ShareState_OnChange(state));
+```
+
+**Correct**:
+```csharp
+OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
+RegisterChange(State.OnChange(state => State_OnChange(state)));
+RegisterChange(Shares.StateMonitor.OnChange(state => ShareState_OnChange(state)));
+...
+OptionsMonitorRegistration?.Dispose();
+```
+
+**Why This Keeps Happening**: `OnChange(...)` registrations look lightweight, so they get treated like passive callbacks instead of owned resources. But the returned `IDisposable` is the actual unsubscribe handle. Any type with a real shutdown boundary must store those registrations and dispose them with its other owned runtime hooks, or post-dispose option/state changes can still hit dead instances.
