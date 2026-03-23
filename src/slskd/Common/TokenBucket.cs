@@ -196,6 +196,11 @@ namespace slskd
             {
                 if (disposing)
                 {
+                    Interlocked.Exchange(
+                        ref waitForReset,
+                        new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously))
+                        .TrySetException(new ObjectDisposedException(nameof(TokenBucket)));
+
                     Clock.Dispose();
                     SyncRoot.Dispose();
                 }
