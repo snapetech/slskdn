@@ -16,6 +16,44 @@ using Xunit;
 public class DhtPeerGreetingServiceTests
 {
     [Fact]
+    public async Task StartAsync_CalledTwice_DoesNotDuplicateNeighborSubscriptions()
+    {
+        await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
+        var service = new DhtPeerGreetingService(
+            NullLogger<DhtPeerGreetingService>.Instance,
+            registry,
+            Mock.Of<ISoulseekClient>());
+
+        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.Equal(1, GetEventInvocationCount(registry, "NeighborAdded"));
+        Assert.Equal(1, GetEventInvocationCount(registry, "FirstNeighborConnected"));
+
+        await service.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Dispose_DetachesNeighborSubscriptions()
+    {
+        await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
+        var service = new DhtPeerGreetingService(
+            NullLogger<DhtPeerGreetingService>.Instance,
+            registry,
+            Mock.Of<ISoulseekClient>());
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.Equal(1, GetEventInvocationCount(registry, "NeighborAdded"));
+        Assert.Equal(1, GetEventInvocationCount(registry, "FirstNeighborConnected"));
+
+        service.Dispose();
+
+        Assert.Equal(0, GetEventInvocationCount(registry, "NeighborAdded"));
+        Assert.Equal(0, GetEventInvocationCount(registry, "FirstNeighborConnected"));
+    }
+
+    [Fact]
     public async Task OnNeighborAdded_WhenGreetingIsAlreadyInFlight_DoesNotSendDuplicateGreeting()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
@@ -71,5 +109,13 @@ public class DhtPeerGreetingServiceTests
             ?? throw new InvalidOperationException($"Field '{fieldName}' was not found.");
 
         field.SetValue(target, value);
+    }
+
+    private static int GetEventInvocationCount(object target, string eventName)
+    {
+        var field = target.GetType().GetField(eventName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Event backing field '{eventName}' was not found.");
+
+        return (field.GetValue(target) as MulticastDelegate)?.GetInvocationList().Length ?? 0;
     }
 }

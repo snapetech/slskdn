@@ -24,6 +24,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
     private readonly MeshNeighborRegistry _neighborRegistry;
     private readonly ISoulseekClient _soulseekClient;
     private readonly ConcurrentDictionary<string, DateTimeOffset> _greetedPeers = new(StringComparer.OrdinalIgnoreCase);
+    private int _subscriptionsAttached;
 
     private static readonly string[] FirstConnectionMessages = new[]
     {
@@ -61,23 +62,38 @@ public sealed class DhtPeerGreetingService : BackgroundService
         _soulseekClient = soulseekClient;
     }
 
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        AttachNeighborSubscriptions();
+        return base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
         await Task.Yield();
 
-        _neighborRegistry.NeighborAdded += OnNeighborAdded;
-        _neighborRegistry.FirstNeighborConnected += OnFirstNeighborConnected;
-
         _logger.LogInformation("DHT Peer Greeting Service started (max greetings: {Max})", MaxAutoGreetings);
+
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-        _neighborRegistry.NeighborAdded -= OnNeighborAdded;
-        _neighborRegistry.FirstNeighborConnected -= OnFirstNeighborConnected;
-
+        DetachNeighborSubscriptions();
         return base.StopAsync(cancellationToken);
+    }
+
+    public override void Dispose()
+    {
+        DetachNeighborSubscriptions();
+        base.Dispose();
     }
 
     private void OnFirstNeighborConnected(object? sender, MeshNeighborEventArgs e)
@@ -163,6 +179,28 @@ public sealed class DhtPeerGreetingService : BackgroundService
         }
 
         _ = SendGreetingAsync(username, isFirstEver);
+    }
+
+    private void AttachNeighborSubscriptions()
+    {
+        if (Interlocked.Exchange(ref _subscriptionsAttached, 1) == 1)
+        {
+            return;
+        }
+
+        _neighborRegistry.NeighborAdded += OnNeighborAdded;
+        _neighborRegistry.FirstNeighborConnected += OnFirstNeighborConnected;
+    }
+
+    private void DetachNeighborSubscriptions()
+    {
+        if (Interlocked.Exchange(ref _subscriptionsAttached, 0) == 0)
+        {
+            return;
+        }
+
+        _neighborRegistry.NeighborAdded -= OnNeighborAdded;
+        _neighborRegistry.FirstNeighborConnected -= OnFirstNeighborConnected;
     }
 
     /// <summary>

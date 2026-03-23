@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the ownership sweep into the DHT service layer:
+    - `DhtRendezvousService` now starts its `BackgroundService` loop only once, initializes `DhtEngine`/listener through local ownership until startup succeeds, and detaches/releases the live engine/listener through stable local captures on stop/dispose
+    - `DhtPeerGreetingService` now attaches neighbor-registry handlers from `StartAsync()`, keeps the hosted service alive until cancellation, and detaches those handlers on both `StopAsync()` and `Dispose()`
+  - Added focused lifecycle regressions in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs` and `tests/slskd.Tests.Unit/DhtRendezvous/DhtPeerGreetingServiceTests.cs`
+  - Confirmed `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~HostedServiceLifecycleTests|FullyQualifiedName~DhtPeerGreetingServiceTests"` passed (`7/7`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed
+  - Next likely cluster remains the remaining long-lived external publishers around DHT/NAT and process-level hooks, especially any services that still subscribe during `ExecuteAsync()` or replace owned listeners/engines without a symmetric detach path
   - Continued the ownership sweep into VirtualSoulfind service-event chains:
     - `SoulseekClientWrapper` now detaches its proxied room-message handler on disposal
     - `DisasterModeCoordinator`, `DisasterModeRecovery`, and `SceneChatService` now expose disposal and unsubscribe from long-lived health/pubsub publishers

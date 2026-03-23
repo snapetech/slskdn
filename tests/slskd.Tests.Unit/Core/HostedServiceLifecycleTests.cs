@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MonoTorrent.Dht;
 using Moq;
 using slskd.DhtRendezvous;
 using slskd.HashDb.Optimization;
@@ -108,6 +109,51 @@ public class HostedServiceLifecycleTests
     }
 
     [Fact]
+    public void DhtRendezvousService_Dispose_CancelsInitializationAndDetachesDhtEngineSubscriptions()
+    {
+        var service = new DhtRendezvousService(
+            Mock.Of<ILogger<DhtRendezvousService>>(),
+            Mock.Of<IMeshOverlayServer>(),
+            Mock.Of<IMeshOverlayConnector>(),
+            new MeshNeighborRegistry(Mock.Of<ILogger<MeshNeighborRegistry>>()),
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+            });
+
+        var initializationCts = new CancellationTokenSource();
+        var dhtEngine = new DhtEngine();
+
+        var onPeersFoundMethod = typeof(DhtRendezvousService).GetMethod("OnPeersFound", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("OnPeersFound was not found.");
+        var onDhtStateChangedMethod = typeof(DhtRendezvousService).GetMethod("OnDhtStateChanged", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("OnDhtStateChanged was not found.");
+
+        var onPeersFound = (EventHandler<PeersFoundEventArgs>)Delegate.CreateDelegate(
+            typeof(EventHandler<PeersFoundEventArgs>),
+            service,
+            onPeersFoundMethod,
+            throwOnBindFailure: true);
+        var onDhtStateChanged = (EventHandler)Delegate.CreateDelegate(
+            typeof(EventHandler),
+            service,
+            onDhtStateChangedMethod,
+            throwOnBindFailure: true);
+
+        dhtEngine.PeersFound += onPeersFound;
+        dhtEngine.StateChanged += onDhtStateChanged;
+
+        SetPrivateField(service, "_backgroundInitializationCts", initializationCts);
+        SetPrivateField(service, "_dhtEngine", dhtEngine);
+
+        service.Dispose();
+
+        Assert.True(initializationCts.IsCancellationRequested);
+        Assert.Equal(0, GetEventInvocationCount(dhtEngine, "PeersFound"));
+        Assert.Equal(0, GetEventInvocationCount(dhtEngine, "StateChanged"));
+    }
+
+    [Fact]
     public async Task UnderperformanceDetectorHostedService_StartAsync_CancelsPreviousLoopTokenSource()
     {
         var optionsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();
@@ -152,5 +198,13 @@ public class HostedServiceLifecycleTests
             ?? throw new InvalidOperationException($"Field '{fieldName}' was not found on {instance.GetType().Name}.");
 
         field.SetValue(instance, value);
+    }
+
+    private static int GetEventInvocationCount(object instance, string eventName)
+    {
+        var field = instance.GetType().GetField(eventName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Event backing field '{eventName}' was not found on {instance.GetType().Name}.");
+
+        return (field.GetValue(instance) as MulticastDelegate)?.GetInvocationList().Length ?? 0;
     }
 }
