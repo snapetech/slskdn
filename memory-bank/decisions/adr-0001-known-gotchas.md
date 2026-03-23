@@ -14053,3 +14053,25 @@ return Ok(new { isValid });
 ```
 
 **Why This Keeps Happening**: acknowledgement endpoints often start as debugging-friendly payloads and then stick around unchanged. If the response is only confirming success or returning a collection/result that stands on its own, drop echoed route values unless the client genuinely needs them to continue the workflow.
+
+### 0k102. Request-Echo Acknowledgements Should Not Reflect Input Keys Or Counts Back To The Caller By Default
+
+**The Bug**: a few acknowledgement endpoints still reflected request-shaped values like `flacKey` or issue counts in otherwise generic success responses. The operation result was already clear, so those echoes only widened the public surface without adding meaningful state.
+
+**Files Affected**:
+- `src/slskd/Mesh/API/MeshController.cs`
+- `src/slskd/LibraryHealth/API/LibraryHealthController.cs`
+
+**Wrong**:
+```csharp
+return Ok(new { published = true, flacKey = request.FlacKey });
+Message = $"Remediation job created for {request.IssueIds.Count} issue(s)";
+```
+
+**Correct**:
+```csharp
+return Ok(new { published = true });
+Message = "Remediation job created";
+```
+
+**Why This Keeps Happening**: these responses usually evolve from manual debugging or admin tooling, where echoing inputs feels convenient. For release-facing contracts, make request echoes opt-in and only keep them when the client truly needs the reflected value to continue the workflow.

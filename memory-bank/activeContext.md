@@ -89,6 +89,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused coverage in `RoomsCompatibilityControllerTests`, `PodJoinLeaveControllerTests`, `PodsControllerTests`, and `PodMessageSigningControllerTests`
   - Confirmed the focused acknowledgement slice passed (`40/40`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Tightened two remaining request-echo acknowledgements:
+    - `MeshController` publish-hash success payloads no longer echo `flacKey`
+    - `LibraryHealth` remediation-job success messages no longer echo the submitted issue count
+  - Added focused coverage in `MeshControllerTests` and `ApiLibraryHealthControllerTests`
+  - Confirmed the focused acknowledgement slice passed (`9/9`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses

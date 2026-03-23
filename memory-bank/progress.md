@@ -6470,8 +6470,18 @@ Code quality improvements were completed as part of Option A:
 - `PodMessageSigningController` verify-message success payloads no longer echo `messageId`.
 - Validation state:
   - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
-  - focused unit slice for `RoomsCompatibilityControllerTests`, `PodJoinLeaveControllerTests`, `PodsControllerTests`, and `PodMessageSigningControllerTests` passed (`40/40`)
+- focused unit slice for `RoomsCompatibilityControllerTests`, `PodJoinLeaveControllerTests`, `PodsControllerTests`, and `PodMessageSigningControllerTests` passed (`40/40`)
 - Documented the acknowledgement-DTO route echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: keep sweeping for the last public response DTOs that still behave like debug echoes instead of minimal release-safe contracts.
+
+## 2026-03-22 23:31
+- Finished another tiny acknowledgement cleanup pass.
+- `MeshController` publish-hash success payloads no longer echo the submitted `flacKey`.
+- `LibraryHealth` remediation-job success messages no longer echo the submitted issue count.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `MeshControllerTests` and `ApiLibraryHealthControllerTests` passed (`9/9`)
+- Documented the request-echo acknowledgement pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: continue scanning for any remaining debug-shaped response DTOs, but the remaining obvious public leaks are getting sparse.
 
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.
