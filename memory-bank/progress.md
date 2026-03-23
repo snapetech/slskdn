@@ -6538,3 +6538,12 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`
   - `bash packaging/scripts/run-release-gate.sh`
 - Current state: release gate is green; remaining work is no longer blocker-driven and should be treated as optional hardening, packaging, or release-tagging work only.
+
+## 2026-03-22 22:59 CST
+- Investigated the failed GitHub tag build for `build-main-0.24.5-slskdn.92`.
+- Confirmed the main `Build` job was green; the failure was isolated to the separate `Nix Package Smoke` job.
+- Fixed the CI-only Nix syntax bug in `packaging/scripts/run-nix-package-smoke.sh`:
+  - the script was injecting a Bash-quoted absolute path into Nix source
+  - GitHub Actions failed at `builtins.getFlake` with `unexpected invalid token`
+- Documented the pattern in `adr-0001-known-gotchas.md` and will commit it immediately as required.
+- Next: commit the script fix, push it, and trigger the next release tag build.

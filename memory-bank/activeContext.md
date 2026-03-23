@@ -650,3 +650,16 @@ dotnet test
 - Next steps:
   - stop widening the code diff unless a new release blocker is found
   - if desired, prepare the branch for release/tagging or produce a final release checklist
+
+## 2026-03-22 22:59 CST
+- Current task: clear the GitHub-only `Nix Package Smoke` failure from the last release tag.
+- Confirmed Actions run `23420738086` failed in `Nix Package Smoke`, while the main release gate job passed.
+- Root cause:
+  - `packaging/scripts/run-nix-package-smoke.sh` injected `${ROOT@Q}` into a multiline `nix eval --expr`
+  - GitHub's Linux runner parsed that as invalid Nix syntax
+- Fix applied:
+  - the Nix expression now resolves the repo flake via `toString ./.`
+- Next steps:
+  - commit the script fix
+  - push it
+  - trigger the next release tag build

@@ -43,7 +43,7 @@ fi
 section "Evaluate NixOS module contract"
 exec_start="$(nix eval --impure --raw --no-write-lock-file --expr "
 let
-  flake = builtins.getFlake (toString ${ROOT@Q});
+  flake = builtins.getFlake (toString ./.);
   system = builtins.currentSystem;
   nixos = flake.inputs.nixpkgs.lib.nixosSystem {
     inherit system;

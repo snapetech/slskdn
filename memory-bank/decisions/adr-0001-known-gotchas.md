@@ -14162,3 +14162,22 @@ new FlacInventoryEntry { Path = "song.flac", Size = 123L }
 ```
 
 **Why This Keeps Happening**: controller-contract sweeps often touch tests late, and the runtime project can still build cleanly while the release gate fails inside the unit-test compile. When a release gate dies in `dotnet test`, check for test-project API drift before assuming the wrapper script or product code is broken.
+
+### 0k107. Do Not Inject Shell-Quoted Paths Into Nix Source Strings
+
+**The Bug**: the Nix package smoke script injected `${ROOT@Q}` into a multiline `nix eval --expr` block. That produced invalid Nix syntax on GitHub Actions, so the `Nix Package Smoke` job failed before the module-contract check even started.
+
+**Files Affected**:
+- `packaging/scripts/run-nix-package-smoke.sh`
+
+**Wrong**:
+```bash
+flake = builtins.getFlake (toString ${ROOT@Q});
+```
+
+**Correct**:
+```bash
+flake = builtins.getFlake (toString ./.);
+```
+
+**Why This Keeps Happening**: shell quoting and Nix quoting are different languages. A value that is safely quoted for Bash is not automatically valid inside Nix source. If the script already `cd`s to the repository root, use a repo-relative Nix path in the expression instead of splicing a shell-escaped absolute path into Nix code.
