@@ -16688,3 +16688,30 @@ sha256sums=('SKIP' '<service hash>' '<yml hash>' '<sysusers hash>')
 ```
 
 **Why This Keeps Happening**: release artifacts in GitHub are mutable across retries and reruns. Any pinned binary zip checksum on mutable assets turns a transient packaging detail into a hard install failure until the package metadata is manually repaired.
+
+### 0k14H. AUR Dev PKGBUILD Must Replace SHA256 Placeholders Before Publishing
+
+**The Bug**: `dev-release.yml` updated `PKGBUILD-dev` version/commit fields but did not replace `SHA256_*_PLACEHOLDER` tokens before generating `.SRCINFO`, so AUR updates could emit placeholder hashes instead of real values for static files.
+
+**Files Affected**:
+- `.github/workflows/dev-release.yml`
+
+**Wrong**:
+```sh
+sed -i "s/^pkgver=.*/pkgver=.../" PKGBUILD
+sed -i "s/^_commit=.*/_commit=.../" PKGBUILD
+sed -i "s|RELEASE_TAG_PLACEHOLDER|...|g" PKGBUILD
+# Missing SHA256_SERVICE_PLACEHOLDER / SHA256_YML_PLACEHOLDER / SHA256_SYSUSERS_PLACEHOLDER replacement
+```
+
+**Correct**:
+```sh
+SVC_SUM=$(sha256sum ../packaging/aur/slskd.service      | awk '{print $1}')
+YML_SUM=$(sha256sum ../packaging/aur/slskd.yml         | awk '{print $1}')
+SYS_SUM=$(sha256sum ../packaging/aur/slskd.sysusers    | awk '{print $1}')
+sed -i "s/SHA256_SERVICE_PLACEHOLDER/${SVC_SUM}/g" PKGBUILD
+sed -i "s/SHA256_YML_PLACEHOLDER/${YML_SUM}/g" PKGBUILD
+sed -i "s/SHA256_SYSUSERS_PLACEHOLDER/${SYS_SUM}/g" PKGBUILD
+```
+
+**Why This Keeps Happening**: placeholders for package artifacts look like “template-time only” values, so it is easy to treat them like version metadata and forget to replace them before publish. AUR metadata generation uses the whole PKGBUILD, so an unreplaced placeholder is enough to break packaging output.
