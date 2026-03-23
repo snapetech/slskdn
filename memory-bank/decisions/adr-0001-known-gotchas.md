@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC1. Small Utility Controllers Still Need Input Normalization Before Dispatch
+
+**The Bug**: low-traffic helper controllers were still forwarding raw route, query, and body strings straight into services. That let whitespace-only values slip through validation, turned padded identifiers into different storage keys, and in some cases converted simple bad input into service-level exceptions and `500`s.
+
+**Files Affected**:
+- `src/slskd/Backfill/API/BackfillController.cs`
+- `src/slskd/Audio/API/DedupeController.cs`
+- `src/slskd/Audio/API/CanonicalController.cs`
+- `src/slskd/Audio/API/AnalyzerMigrationController.cs`
+- `src/slskd/Users/Notes/API/UserNotesController.cs`
+
+**Wrong**:
+```csharp
+var result = await dedupeService.GetDedupeAsync(recordingId, ct);
+var updated = await migrationService.MigrateAsync(targetVersion, force, ct);
+await userNoteService.DeleteNoteAsync(username, cancellationToken);
+```
+
+**Correct**:
+```csharp
+recordingId = recordingId?.Trim() ?? string.Empty;
+targetVersion = targetVersion?.Trim() ?? string.Empty;
+username = username?.Trim() ?? string.Empty;
+
+if (string.IsNullOrWhiteSpace(recordingId))
+{
+    return BadRequest("RecordingId is required.");
+}
+```
+
+**Why This Keeps Happening**: small “obvious” controllers are easy to skip during hardening because they look like thin pass-through endpoints. But every route/query/body string crossing the HTTP boundary still needs canonicalization at the controller edge. Trim first, reject blank values early, and only then call the service layer.
+
 ### 0xC0. Helper Validation Strings And Ad-Hoc Test Endpoints Are Still Public Contracts
 
 **The Bug**: lower-level helpers and “diagnostic” API endpoints still relayed raw nested error text because they felt internal. The X509 helper returned parser/library exception text directly, and the multi-source `RunTest` endpoint copied the nested download-service error into its public result DTO.
