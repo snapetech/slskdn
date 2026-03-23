@@ -52,6 +52,39 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC5. Parallel Controller Families Drift Apart On The Same Boundary Rules
+
+**The Bug**: one controller family was already normalizing and trimming request payloads, but sibling endpoints for the same domain were not. The native jobs API handled some normalization, while the dedicated discography and label-crate job controllers still accepted raw `jobId`, `artistId`, `labelId`, `labelName`, and `releaseIds`.
+
+**Files Affected**:
+- `src/slskd/API/Native/JobsController.cs`
+- `src/slskd/Jobs/API/DiscographyJobsController.cs`
+- `src/slskd/Jobs/API/LabelCrateJobsController.cs`
+
+**Wrong**:
+```csharp
+if (request == null || string.IsNullOrWhiteSpace(request.ArtistId))
+{
+    return BadRequest("artistId is required");
+}
+
+var job = await jobService.GetJobAsync(jobId, ct);
+```
+
+**Correct**:
+```csharp
+request.ArtistId = request.ArtistId?.Trim() ?? string.Empty;
+request.ReleaseIds = request.ReleaseIds?
+    .Select(id => id?.Trim() ?? string.Empty)
+    .Where(id => !string.IsNullOrWhiteSpace(id))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToList();
+
+jobId = jobId?.Trim() ?? string.Empty;
+```
+
+**Why This Keeps Happening**: once one API surface gets hardened, nearby sibling controllers are easy to miss because they live under a different route prefix or were added later. When a domain has both “native” and “specialized” controllers, harden them as one unit and keep their normalization rules aligned.
+
 ### 0xC3. Reused Local Names After Refactors Can Break Later Tuple Deconstruction
 
 **The Bug**: a refactor added local variables like `artist`, `title`, and `album` inside an earlier extraction block, then a later tuple deconstruction reused the same names lower in the same method. C# forbids that shadowing across the enclosing scope, so the file stopped compiling.
