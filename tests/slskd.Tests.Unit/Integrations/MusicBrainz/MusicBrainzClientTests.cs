@@ -47,7 +47,7 @@ public sealed class MusicBrainzClientTests
                 MusicBrainz = new slskd.Options.IntegrationOptions.MusicBrainzOptions
                 {
                     BaseUrl = "https://musicbrainz.example.test/ws/2",
-                    Timeout = TimeSpan.FromSeconds(5),
+                    TimeoutSeconds = 5,
                     RetryAttempts = 1,
                     UserAgent = "slskdn-test/1.0",
                 },

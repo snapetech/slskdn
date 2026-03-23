@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Jobs;
 
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using slskd.Jobs;

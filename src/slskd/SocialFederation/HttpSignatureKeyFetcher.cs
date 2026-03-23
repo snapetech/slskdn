@@ -35,6 +35,7 @@ namespace slskd.SocialFederation
         /// <inheritdoc/>
         public async Task<byte[]?> FetchPublicKeyPkixAsync(string keyId, CancellationToken cancellationToken = default)
         {
+            keyId = keyId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(keyId))
                 return null;
 
@@ -68,11 +69,18 @@ namespace slskd.SocialFederation
             cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
             using var req = new HttpRequestMessage(HttpMethod.Get, uri);
             req.Headers.Add("Accept", "application/activity+json");
+            req.Headers.Add("Accept", "application/ld+json");
 
             try
             {
                 using var res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 res.EnsureSuccessStatusCode();
+
+                if (res.Content.Headers.ContentLength is long contentLength && contentLength > MaxResponseBytes)
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
+                    return null;
+                }
 
                 var finalUri = res.RequestMessage?.RequestUri;
                 if (finalUri == null ||
@@ -168,23 +176,90 @@ namespace slskd.SocialFederation
             try
             {
                 using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                if (!root.TryGetProperty("publicKey", out var pk) || pk.ValueKind != JsonValueKind.Object)
-                    return null;
-                var id = pk.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
-                if (string.IsNullOrEmpty(id) || !string.Equals(id, keyId, StringComparison.Ordinal))
-                    return null;
-                if (!pk.TryGetProperty("publicKeyPem", out var pemEl))
-                    return null;
-                var pem = pemEl.GetString();
-                if (string.IsNullOrWhiteSpace(pem))
-                    return null;
-                return PemToBytes(pem);
+                return ExtractPublicKeyPkix(doc.RootElement, keyId);
             }
             catch
             {
                 return null;
             }
+        }
+
+        private static byte[]? ExtractPublicKeyPkix(JsonElement element, string keyId)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    if (TryExtractPkixFromKeyObject(element, keyId, out var pkix))
+                    {
+                        return pkix;
+                    }
+
+                    if (element.TryGetProperty("publicKey", out var publicKey))
+                    {
+                        return ExtractPublicKeyPkix(publicKey, keyId);
+                    }
+
+                    return null;
+
+                case JsonValueKind.Array:
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        var pkix = ExtractPublicKeyPkix(item, keyId);
+                        if (pkix != null)
+                        {
+                            return pkix;
+                        }
+                    }
+
+                    return null;
+
+                default:
+                    return null;
+            }
+        }
+
+        private static bool TryExtractPkixFromKeyObject(JsonElement element, string keyId, out byte[]? pkix)
+        {
+            pkix = null;
+
+            if (!TryGetStringProperty(element, "publicKeyPem", out var pem))
+            {
+                return false;
+            }
+
+            if (!TryGetStringProperty(element, "id", out var id) || !KeyIdsMatch(id, keyId))
+            {
+                return false;
+            }
+
+            pkix = PemToBytes(pem);
+            return true;
+        }
+
+        private static bool TryGetStringProperty(JsonElement element, string propertyName, out string value)
+        {
+            value = string.Empty;
+            if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            value = property.GetString()?.Trim() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
+        private static bool KeyIdsMatch(string actual, string expected)
+        {
+            actual = actual.Trim();
+            expected = expected.Trim();
+
+            if (Uri.TryCreate(actual, UriKind.Absolute, out var actualUri) &&
+                Uri.TryCreate(expected, UriKind.Absolute, out var expectedUri))
+            {
+                return Uri.Compare(actualUri, expectedUri, UriComponents.AbsoluteUri, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
+            }
+
+            return string.Equals(actual, expected, StringComparison.Ordinal);
         }
 
         private static byte[] PemToBytes(string pem)

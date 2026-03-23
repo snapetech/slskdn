@@ -190,6 +190,8 @@ public static partial class PathGuard
             return null;
         }
 
+        path = path.Trim();
+
         if (path.Length > MaxPathLength)
         {
             return null;
@@ -217,6 +219,7 @@ public static partial class PathGuard
 
             var normalizedRoots = allowedRoots
                 .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Select(root => root.Trim())
                 .Select(NormalizeUnicode)
                 .Select(Path.GetFullPath)
                 .Distinct(StringComparer.OrdinalIgnoreCase)

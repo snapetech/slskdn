@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using slskd.API.Native;
 using slskd.Integrations.MusicBrainz;
+using slskd.Integrations.MusicBrainz.Models;
 using slskd.Jobs;
 using Xunit;
 
@@ -66,9 +67,9 @@ public class JobsControllerBoundaryTests
         var musicBrainzClient = new Mock<IMusicBrainzClient>();
         musicBrainzClient
             .Setup(client => client.GetReleaseAsync("release-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Release
+            .ReturnsAsync(new AlbumTarget
             {
-                Id = "release-1",
+                MusicBrainzReleaseId = "release-1",
                 MusicBrainzArtistId = "artist-1",
             });
         discographyService

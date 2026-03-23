@@ -6058,3 +6058,10 @@ Code quality improvements were completed as part of Option A:
 - Trim/dedupe normalization now covers `UpdateHashRecordingIdAsync`, `LookupHashesByRecordingIdAsync`, `UpsertDiscographyJobAsync`, `GetDiscographyJobAsync`, `UpsertLabelCrateJobAsync`, `GetLabelCrateJobAsync`, the related release-job list reads, and artist-release graph upserts.
 - Added focused HashDb tests covering trimmed recording-ID lookup and trimmed persisted/readback job identifiers.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for read/write key normalization symmetry.
+
+## 2026-03-22 19:21 - PathGuard drift and ActivityPub key-fetch completion
+
+- Replaced the weaker DHT rendezvous `PathGuard` behavior with the hardened shared implementation so URL-encoded traversal, canonical root containment, and normalized validation stay consistent across both security surfaces.
+- `HttpSignatureKeyFetcher` now trims inbound `keyId` values, rejects oversized responses before streaming, and accepts both top-level key documents and actor `publicKey` arrays when extracting `publicKeyPem`.
+- Tightened adjacent controller boundaries so destination validation rejects blank paths and wishlist create/update rejects non-positive `MaxResults`.
+- Added focused regressions for encoded traversal in the DHT `PathGuard`, top-level and array-shaped ActivityPub key documents, forbidden final redirect hosts, and the new destination/wishlist boundary rules.

@@ -283,3 +283,9 @@ dotnet test
 - Switched into the next dense HashDb completion slice.
 - Fixed symmetric key normalization for HashDb recording/job identifiers and added focused readback regression coverage.
 - Next: commit the current tree, then continue into the next HashDb null-heavy read path or return to the remaining Mesh/PathGuard clusters.
+
+## 2026-03-22 19:21
+- Tightened the next security/helper cluster by routing the weaker DHT rendezvous `PathGuard` through the hardened shared `Common.Security.PathGuard` instead of leaving two divergent implementations in the tree.
+- Expanded `HttpSignatureKeyFetcher` so it trims `keyId`, rejects oversized responses earlier, and can extract PEM keys from either top-level key documents or actor `publicKey` arrays.
+- Folded in adjacent dirty controller work for destinations/wishlist boundary validation and prepared focused regressions for the new pathguard/key-fetch behaviors.
+- Next: commit the current tree including all dirty files, then continue through the next placeholder/null-heavy Mesh/PodCore runtime cluster.

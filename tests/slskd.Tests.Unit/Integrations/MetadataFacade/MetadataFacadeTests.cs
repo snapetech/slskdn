@@ -29,7 +29,7 @@ public sealed class MetadataFacadeTests
 
         var facade = CreateFacade(mb.Object);
 
-        var results = await facade.SearchAsync(" artist title ", 10).ToListAsync();
+        var results = await ToListAsync(facade.SearchAsync(" artist title ", 10));
 
         var result = Assert.Single(results);
         Assert.Equal("Artist", result.Artist);
@@ -86,5 +86,16 @@ public sealed class MetadataFacadeTests
             new TestOptionsMonitor<slskd.Options>(options),
             Mock.Of<ILogger<MetadataFacade>>(),
             new MemoryCache(new MemoryCacheOptions()));
+    }
+
+    private static async Task<List<MetadataResult>> ToListAsync(IAsyncEnumerable<MetadataResult> source)
+    {
+        var results = new List<MetadataResult>();
+        await foreach (var item in source.ConfigureAwait(false))
+        {
+            results.Add(item);
+        }
+
+        return results;
     }
 }

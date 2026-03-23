@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using CommonPathGuard = slskd.Common.Security.PathGuard;
 
 /// <summary>
 /// Provides path sanitization and validation to prevent directory traversal attacks.
@@ -58,94 +59,7 @@ public static partial class PathGuard
     /// <returns>A safe absolute path, or null if the path is invalid/dangerous.</returns>
     public static string? SanitizeAndValidate(string? peerPath, string rootDirectory)
     {
-        if (string.IsNullOrWhiteSpace(peerPath))
-        {
-            return null;
-        }
-
-        // Check length limits
-        if (peerPath.Length > MaxPathLength)
-        {
-            return null;
-        }
-
-        // Check for control characters (potential null byte injection)
-        if (ControlCharsRegex().IsMatch(peerPath))
-        {
-            return null;
-        }
-
-        // Check for directory traversal attempts
-        if (DotDotRegex().IsMatch(peerPath))
-        {
-            return null;
-        }
-
-        // Reject absolute paths from peers
-        if (Path.IsPathRooted(peerPath))
-        {
-            return null;
-        }
-
-        // Reject Windows drive letters
-        if (WindowsDriveRegex().IsMatch(peerPath))
-        {
-            return null;
-        }
-
-        // Check directory depth
-        var separatorCount = peerPath.Count(c => c == '/' || c == '\\');
-        if (separatorCount > MaxDirectoryDepth)
-        {
-            return null;
-        }
-
-        // Normalize path separators
-        var normalizedPath = peerPath.Replace('\\', '/');
-
-        // Check each component
-        var parts = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var part in parts)
-        {
-            if (part.Length > MaxFilenameLength)
-            {
-                return null;
-            }
-
-            // Check for hidden files or suspicious names
-            if (part.StartsWith('.') && part != ".")
-            {
-                // Allow common hidden folder patterns like .config but be cautious
-            }
-
-            // Reject names that are entirely whitespace or dots
-            if (part.All(c => c == '.' || char.IsWhiteSpace(c)))
-            {
-                return null;
-            }
-        }
-
-        // Combine with root and get full path
-        try
-        {
-            var combinedPath = Path.Combine(rootDirectory, normalizedPath);
-            var fullPath = Path.GetFullPath(combinedPath);
-            var rootFullPath = Path.GetFullPath(rootDirectory);
-
-            // CRITICAL: Verify the resolved path is actually under the root
-            if (!fullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
-            {
-                // Path escaped the root - directory traversal detected!
-                return null;
-            }
-
-            return fullPath;
-        }
-        catch
-        {
-            // Path operations failed - treat as unsafe
-            return null;
-        }
+        return CommonPathGuard.NormalizeAndValidate(peerPath?.Trim(), rootDirectory?.Trim() ?? string.Empty);
     }
 
     /// <summary>
@@ -155,6 +69,8 @@ public static partial class PathGuard
     /// <returns>True if the filename is safe to use.</returns>
     public static bool IsFilenameValid(string? filename)
     {
+        filename = filename?.Trim();
+
         if (string.IsNullOrWhiteSpace(filename))
         {
             return false;
@@ -199,6 +115,8 @@ public static partial class PathGuard
     /// <returns>True if the extension is potentially dangerous.</returns>
     public static bool HasDangerousExtension(string? filename)
     {
+        filename = filename?.Trim();
+
         if (string.IsNullOrWhiteSpace(filename))
         {
             return false;
@@ -227,6 +145,8 @@ public static partial class PathGuard
     /// </summary>
     public static bool HasSafeAudioExtension(string? filename)
     {
+        filename = filename?.Trim();
+
         if (string.IsNullOrWhiteSpace(filename))
         {
             return false;
@@ -287,55 +207,24 @@ public static partial class PathGuard
     /// </summary>
     public static PathValidationResult ValidatePeerPath(string? peerPath, string rootDirectory)
     {
-        if (string.IsNullOrWhiteSpace(peerPath))
-        {
-            return PathValidationResult.Fail("Path is empty", PathViolationType.Empty);
-        }
+        var result = CommonPathGuard.Validate(peerPath?.Trim(), rootDirectory?.Trim() ?? string.Empty);
 
-        if (peerPath.Length > MaxPathLength)
-        {
-            return PathValidationResult.Fail($"Path too long: {peerPath.Length} > {MaxPathLength}", PathViolationType.TooLong);
-        }
-
-        if (ControlCharsRegex().IsMatch(peerPath))
-        {
-            return PathValidationResult.Fail("Path contains control characters", PathViolationType.ControlCharacters);
-        }
-
-        if (DotDotRegex().IsMatch(peerPath))
-        {
-            return PathValidationResult.Fail("Directory traversal detected", PathViolationType.DirectoryTraversal);
-        }
-
-        if (Path.IsPathRooted(peerPath) || WindowsDriveRegex().IsMatch(peerPath))
-        {
-            return PathValidationResult.Fail("Absolute paths not allowed", PathViolationType.AbsolutePath);
-        }
-
-        var separatorCount = peerPath.Count(c => c == '/' || c == '\\');
-        if (separatorCount > MaxDirectoryDepth)
-        {
-            return PathValidationResult.Fail($"Path too deep: {separatorCount} > {MaxDirectoryDepth}", PathViolationType.TooDeep);
-        }
-
-        try
-        {
-            var normalizedPath = peerPath.Replace('\\', '/');
-            var combinedPath = Path.Combine(rootDirectory, normalizedPath);
-            var fullPath = Path.GetFullPath(combinedPath);
-            var rootFullPath = Path.GetFullPath(rootDirectory);
-
-            if (!fullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
-            {
-                return PathValidationResult.Fail("Path escapes root directory", PathViolationType.EscapedRoot);
-            }
-
-            return PathValidationResult.Success(fullPath);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(ex);
-            return PathValidationResult.Fail("Invalid path", PathViolationType.InvalidComponent);
-        }
+        return result.IsValid
+            ? PathValidationResult.Success(result.SafePath!)
+            : PathValidationResult.Fail(result.Error ?? "Invalid path", MapViolationType(result.ViolationType));
     }
+
+    private static PathViolationType MapViolationType(slskd.Common.Security.PathViolationType violationType) => violationType switch
+    {
+        slskd.Common.Security.PathViolationType.None => PathViolationType.None,
+        slskd.Common.Security.PathViolationType.Empty => PathViolationType.Empty,
+        slskd.Common.Security.PathViolationType.TooLong => PathViolationType.TooLong,
+        slskd.Common.Security.PathViolationType.ControlCharacters => PathViolationType.ControlCharacters,
+        slskd.Common.Security.PathViolationType.DirectoryTraversal => PathViolationType.DirectoryTraversal,
+        slskd.Common.Security.PathViolationType.AbsolutePath => PathViolationType.AbsolutePath,
+        slskd.Common.Security.PathViolationType.TooDeep => PathViolationType.TooDeep,
+        slskd.Common.Security.PathViolationType.InvalidComponent => PathViolationType.InvalidComponent,
+        slskd.Common.Security.PathViolationType.EscapedRoot => PathViolationType.EscapedRoot,
+        _ => PathViolationType.InvalidComponent,
+    };
 }
