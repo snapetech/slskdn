@@ -23,10 +23,13 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release-blocker fix for the failed morning CI run caused by the Loki sink dependency bump
+- **Current Task**: Release-blocker fix for the failed `.94` tag build after the Loki issue was repaired
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Investigated the failed `build-main-0.24.5-slskdn.94` tag build and isolated the new blocker to `CoverTrafficGeneratorTests.StopAsync_AfterStart_CancelsGenerationPromptly`.
+  - Fixed `CoverTrafficGenerator.StartAsync()` to start `GenerateCoverTrafficAsync(...)` directly instead of routing it through `Task.Run`, removing the CI-only thread-pool scheduling race that delayed cancellation.
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
   - Investigated the failed morning GitHub Actions runs and confirmed the blocking compile error was the Dependabot `Serilog.Sinks.Grafana.Loki` upgrade.
   - Updated `Program.cs` to use the formatter-based `GrafanaLoki(..., textFormatter: ...)` overload required by Loki sink 8.3.2.
   - Corrected the formatter construction to pass the format provider positionally because the target `MessageTemplateTextFormatter` API does not expose a `provider:` named argument.

@@ -78,6 +78,25 @@ config => config.GrafanaLoki(
 
 **Why This Keeps Happening**: named arguments against third-party APIs are brittle when maintainers replace overload shapes instead of keeping obsolete shims, and formatter/helper constructors can drift the same way. For dependency bumps, prefer adapting to the current stable abstraction (`ITextFormatter` here), avoid speculative named arguments on helper constructors, and validate the build against the upgraded package, not just the currently pinned one.
 
+### 0xDB. Do Not Wrap Long-Lived Async Loops In `Task.Run` When The Async Method Already Starts The Wait Path
+
+**The Bug**: the cover-traffic generator started its delay loop with `Task.Run(() => GenerateCoverTrafficAsync(...))`. Under a loaded CI runner that extra thread-pool hop could delay the loop from starting long enough that `StopAsync()` hit its timeout before the task ever observed cancellation, even though the same test passed locally.
+
+**Files Affected**:
+- `src/slskd/Common/Security/CoverTrafficGenerator.cs`
+
+**Wrong**:
+```csharp
+_generationTask = Task.Run(() => GenerateCoverTrafficAsync(_generationCts.Token), CancellationToken.None);
+```
+
+**Correct**:
+```csharp
+_generationTask = GenerateCoverTrafficAsync(_generationCts.Token);
+```
+
+**Why This Keeps Happening**: `Task.Run` feels like the default way to make work “background,” but async methods already become asynchronous at their first await. Adding an extra scheduler hop makes startup dependent on thread-pool availability and introduces CI-only cancellation races. If the async loop immediately awaits a timer or I/O, start it directly and keep the returned task.
+
 ### 0xD9. Release Gates Must Exercise Release-Build Test Compiles, Not Just Debug `dotnet test`
 
 **The Bug**: several stale unit tests kept passing targeted Debug runs but still broke the release gate because Release-mode test compilation exercises a different path. In this case, tests were still referencing removed controller methods and old type names like `slskd.Downloads.Download`, so local focused validation looked green while `run-release-gate.sh` failed compiling the Release unit project.

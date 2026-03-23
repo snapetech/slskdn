@@ -6554,3 +6554,9 @@ Code quality improvements were completed as part of Option A:
 - Bumped the runtime package reference to `Serilog.Sinks.Grafana.Loki` 8.3.2 so the repo matches the dependency state CI was building.
 - Documented the named-argument dependency drift in `adr-0001-known-gotchas.md` before validation.
 - Follow-up correction: `MessageTemplateTextFormatter` also needed the second constructor argument passed positionally (`null`) because the named `provider:` argument is not available on the target Serilog formatter API.
+
+## 2026-03-23 12:38 - CoverTrafficGenerator CI race fix
+
+- Investigated the failed `.94` tag build and isolated the blocker to `CoverTrafficGeneratorTests.StopAsync_AfterStart_CancelsGenerationPromptly` timing out in CI.
+- Fixed `CoverTrafficGenerator.StartAsync()` to start the async delay loop directly instead of wrapping it in `Task.Run`, removing the thread-pool scheduling race that could delay cancellation observation on busy CI runners.
+- Documented the lifecycle gotcha in `adr-0001-known-gotchas.md` before rerunning the release validation path.
