@@ -91,7 +91,9 @@ public static class SignalServiceExtensions
             {
                 var logger = serviceProvider.GetRequiredService<ILogger<MeshSignalChannelHandler>>();
                 var optionsMonitor = serviceProvider.GetRequiredService<IOptionsMonitor<SignalSystemOptions>>();
+#pragma warning disable CA2000 // SignalBus takes ownership of registered channel handlers and disposes them.
                 var meshHandler = new MeshSignalChannelHandler(logger, optionsMonitor, meshSender, localPeerId);
+#pragma warning restore CA2000
                 signalBus.RegisterChannelHandler(SignalChannel.Mesh, meshHandler);
             }
         }
@@ -104,7 +106,9 @@ public static class SignalServiceExtensions
             {
                 var logger = serviceProvider.GetRequiredService<ILogger<BtExtensionSignalChannelHandler>>();
                 var optionsMonitor = serviceProvider.GetRequiredService<IOptionsMonitor<SignalSystemOptions>>();
+#pragma warning disable CA2000 // SignalBus takes ownership of registered channel handlers and disposes them.
                 var btHandler = new BtExtensionSignalChannelHandler(logger, optionsMonitor, btSender, localPeerId);
+#pragma warning restore CA2000
                 signalBus.RegisterChannelHandler(SignalChannel.BtExtension, btHandler);
             }
         }

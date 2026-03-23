@@ -259,6 +259,29 @@ public class SignalBusTests
     }
 
     [Fact]
+    public void Dispose_DisposesRegisteredChannelHandlers()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+        var meshHandlerMock = new Mock<ISignalChannelHandler>();
+        var btHandlerMock = new Mock<ISignalChannelHandler>();
+
+        meshHandlerMock
+            .Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        btHandlerMock
+            .Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        signalBus.RegisterChannelHandler(SignalChannel.Mesh, meshHandlerMock.Object);
+        signalBus.RegisterChannelHandler(SignalChannel.BtExtension, btHandlerMock.Object);
+
+        signalBus.Dispose();
+
+        meshHandlerMock.Verify(x => x.Dispose(), Times.Once);
+        btHandlerMock.Verify(x => x.Dispose(), Times.Once);
+    }
+
+    [Fact]
     public void RegisterChannelHandler_ShouldStartReceiving()
     {
         // Arrange

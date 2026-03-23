@@ -50,6 +50,7 @@ public class SignalBus : ISignalBus, IDisposable
 
         if (!channelHandlers.TryAdd(channel, handler))
         {
+            handler.Dispose();
             logger.LogDebug("Signal channel {Channel} is already registered; ignoring duplicate handler registration", channel);
             return;
         }
@@ -289,6 +290,12 @@ public class SignalBus : ISignalBus, IDisposable
 
         if (disposing)
         {
+            foreach (var handler in channelHandlers.Values)
+            {
+                handler.Dispose();
+            }
+
+            channelHandlers.Clear();
             cleanupCancellationTokenSource.Cancel();
 
             try

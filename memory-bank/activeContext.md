@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the same ownership sweep into the signal-system channel layer:
+    - `ISignalChannelHandler` now exposes disposal, `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` now detach from their sender event sources on dispose, and `SignalBus.Dispose()` now tears down owned channel handlers
+    - duplicate channel registrations now dispose the ignored handler immediately instead of leaking a sender subscription behind the rejected registration path
+  - Added focused lifecycle regressions in `tests/slskd.Tests.Unit/Signals/SignalChannelHandlerTests.cs` and `tests/slskd.Tests.Unit/Signals/SignalBusTests.cs`
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~SignalChannelHandlerTests|FullyQualifiedName~SignalBusTests"` passed (`16/16`), `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed
+  - Next likely cluster is the remaining direct event subscribers that still rely on constructor/execute-time hooks without an explicit ownership contract, with `MeshSyncService` the strongest current candidate
   - Continued the ownership sweep into the DHT service layer:
     - `DhtRendezvousService` now starts its `BackgroundService` loop only once, initializes `DhtEngine`/listener through local ownership until startup succeeds, and detaches/releases the live engine/listener through stable local captures on stop/dispose
     - `DhtPeerGreetingService` now attaches neighbor-registry handlers from `StartAsync()`, keeps the hosted service alive until cancellation, and detaches those handlers on both `StopAsync()` and `Dispose()`

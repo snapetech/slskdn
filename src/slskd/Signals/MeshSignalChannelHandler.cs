@@ -12,7 +12,7 @@ using slskd.Mesh.Messages;
 /// <summary>
 /// Channel handler for delivering signals over the Mesh overlay network.
 /// </summary>
-public class MeshSignalChannelHandler : ISignalChannelHandler
+public sealed class MeshSignalChannelHandler : ISignalChannelHandler
 {
     private readonly ILogger<MeshSignalChannelHandler> logger;
     private readonly SignalSystemOptions options;
@@ -21,6 +21,7 @@ public class MeshSignalChannelHandler : ISignalChannelHandler
     private readonly object receivingLock = new();
     private Func<Signal, CancellationToken, Task>? onSignalReceived;
     private bool receivingStarted;
+    private bool disposed;
 
     public MeshSignalChannelHandler(
         ILogger<MeshSignalChannelHandler> logger,
@@ -111,6 +112,26 @@ public class MeshSignalChannelHandler : ISignalChannelHandler
 
         logger.LogInformation("Mesh signal channel handler started receiving");
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        lock (receivingLock)
+        {
+            if (receivingStarted)
+            {
+                meshSender.OnSlskdnSignalReceived -= HandleIncomingSignal;
+                receivingStarted = false;
+            }
+        }
+
+        onSignalReceived = null;
+        disposed = true;
     }
 
     private async Task HandleIncomingSignal(SlskdnSignalMessage envelope, CancellationToken cancellationToken)

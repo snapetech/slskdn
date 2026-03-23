@@ -7,7 +7,7 @@ namespace slskd.Signals;
 /// <summary>
 /// Handler for delivering signals over a specific channel.
 /// </summary>
-public interface ISignalChannelHandler
+public interface ISignalChannelHandler : IDisposable
 {
     /// <summary>
     /// Check if this channel can send to the specified peer.

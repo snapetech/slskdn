@@ -15,6 +15,25 @@ using Xunit;
 public class SignalChannelHandlerTests
 {
     [Fact]
+    public async Task MeshSignalChannelHandler_Dispose_DetachesSenderSubscription()
+    {
+        var sender = new TestMeshMessageSender();
+        var handler = new MeshSignalChannelHandler(
+            NullLogger<MeshSignalChannelHandler>.Instance,
+            CreateOptions(),
+            sender,
+            "local-peer");
+
+        await handler.StartReceivingAsync((_, _) => Task.CompletedTask, CancellationToken.None);
+
+        Assert.Equal(1, sender.SubscriptionCount);
+
+        handler.Dispose();
+
+        Assert.Equal(0, sender.SubscriptionCount);
+    }
+
+    [Fact]
     public async Task MeshSignalChannelHandler_StartReceivingTwice_DoesNotDuplicateDelivery()
     {
         var sender = new TestMeshMessageSender();
@@ -80,6 +99,25 @@ public class SignalChannelHandlerTests
         });
 
         Assert.Equal(1, deliveries);
+    }
+
+    [Fact]
+    public async Task BtExtensionSignalChannelHandler_Dispose_DetachesSenderSubscription()
+    {
+        var sender = new TestBtExtensionSender();
+        var handler = new BtExtensionSignalChannelHandler(
+            NullLogger<BtExtensionSignalChannelHandler>.Instance,
+            CreateOptions(),
+            sender,
+            "local-peer");
+
+        await handler.StartReceivingAsync((_, _) => Task.CompletedTask, CancellationToken.None);
+
+        Assert.Equal(1, sender.SubscriptionCount);
+
+        handler.Dispose();
+
+        Assert.Equal(0, sender.SubscriptionCount);
     }
 
     [Fact]
@@ -185,6 +223,7 @@ public class SignalChannelHandlerTests
     private sealed class TestMeshMessageSender : IMeshMessageSender
     {
         public event Func<SlskdnSignalMessage, CancellationToken, Task>? OnSlskdnSignalReceived;
+        public int SubscriptionCount => OnSlskdnSignalReceived?.GetInvocationList().Length ?? 0;
 
         public Task SendToPeerAsync(string peerId, object message, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -197,6 +236,7 @@ public class SignalChannelHandlerTests
     private sealed class TestBtExtensionSender : IBtExtensionSender
     {
         public event Func<SlskdnExtensionMessage, string, CancellationToken, Task>? OnSlskdnExtensionMessageReceived;
+        public int SubscriptionCount => OnSlskdnExtensionMessageReceived?.GetInvocationList().Length ?? 0;
 
         public bool HasActiveSession(string peerId) => true;
 
