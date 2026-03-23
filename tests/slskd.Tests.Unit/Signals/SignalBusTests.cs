@@ -275,6 +275,26 @@ public class SignalBusTests
     }
 
     [Fact]
+    public void RegisterChannelHandler_WhenChannelAlreadyRegistered_IgnoresDuplicateHandler()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+
+        var firstHandlerMock = new Mock<ISignalChannelHandler>();
+        firstHandlerMock.Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var secondHandlerMock = new Mock<ISignalChannelHandler>();
+        secondHandlerMock.Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        signalBus.RegisterChannelHandler(SignalChannel.Mesh, firstHandlerMock.Object);
+        signalBus.RegisterChannelHandler(SignalChannel.Mesh, secondHandlerMock.Object);
+
+        firstHandlerMock.Verify(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Once);
+        secondHandlerMock.Verify(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public void Dispose_ShouldCancelCleanupTask()
     {
         var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);

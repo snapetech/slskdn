@@ -48,7 +48,12 @@ public class SignalBus : ISignalBus, IDisposable
         if (handler == null)
             throw new ArgumentNullException(nameof(handler));
 
-        channelHandlers[channel] = handler;
+        if (!channelHandlers.TryAdd(channel, handler))
+        {
+            logger.LogDebug("Signal channel {Channel} is already registered; ignoring duplicate handler registration", channel);
+            return;
+        }
+
         logger.LogInformation("Registered signal channel handler: {Channel}", channel);
 
         // Start receiving from this channel

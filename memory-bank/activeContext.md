@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened another signal-system registration seam:
+    - `SignalBus.RegisterChannelHandler(...)` now ignores duplicate registration for an already-registered channel instead of replacing the live handler and starting another receiver with no unsubscribe path
+    - repeated signal-system initialization no longer silently orphaned the old live handler behind a dictionary overwrite
+  - Extended `tests/slskd.Tests.Unit/Signals/SignalBusTests.cs` with duplicate-registration coverage
+  - Confirmed the focused signal-bus slice passed (`12/12`) and the runtime release build remained green (`0 warnings / 0 errors`)
+  - Added ADR-0001 gotcha `0k133` and committed it immediately per repo policy (`docs: Add gotcha for duplicate channel registration`)
   - Hardened another paired control-path race in signal channel startup:
     - `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` now guard their one-time event subscription with a lock instead of a naked `receivingStarted` flag
     - concurrent `StartReceivingAsync(...)` calls no longer double-subscribe and duplicate every later delivery

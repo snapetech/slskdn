@@ -52,6 +52,20 @@
 ### Remaining
 - Continue the broader helper/control-path sweep for other public start/init surfaces that rely on unsynchronized one-time registration guards.
 
+## 2026-03-23 14:10 - Signal bus duplicate-registration hardening
+
+### Completed
+- Documented a new gotcha for channel-registration APIs that silently replace live handlers without an unsubscribe path.
+- Hardened `SignalBus.RegisterChannelHandler(...)` so duplicate registration for the same channel is ignored instead of replacing the live handler and starting another receiver.
+- Extended `SignalBusTests` with focused coverage proving duplicate channel registration does not start the replacement handler.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SignalBusTests"` passed (`12/12`).
+- `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+### Remaining
+- Continue the broader initialization/control-path sweep for other registration APIs that overwrite live state without an explicit replacement/disposal contract.
+
 ## 2026-03-23 13:20 - Broader helper callback-failure isolation pass
 
 ### Completed
