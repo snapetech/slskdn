@@ -13013,3 +13013,22 @@ return slskd.Common.Security.PathGuard.NormalizeAndValidate(peerPath, rootDirect
 ```
 
 **Why This Keeps Happening**: copied security helpers look harmless at first, but the duplicate version quietly misses later hardening work. For traversal, path containment, SSRF, auth, and similar security primitives, do not maintain a second “almost the same” implementation. Route through the hardened shared helper or keep the logic in one place.
+
+### 0k91. Supported Domains Should Fall Back To Conservative Metadata Instead Of Becoming Invalid When Enrichment Is Missing
+
+**The Bug**: `ContentLinkService` treated some supported domains and types as invalid whenever an external metadata lookup was unavailable. That meant video content IDs and partially resolvable artist IDs failed validation outright even though the parsed content ID already carried enough information to return structured conservative metadata.
+
+**Files Affected**:
+- `src/slskd/PodCore/ContentLinkService.cs`
+
+**Wrong**:
+```csharp
+return Task.FromResult<ContentMetadata?>(null);
+```
+
+**Correct**:
+```csharp
+return Task.FromResult<ContentMetadata?>(CreateBasicMetadata(parsed, titleOverride: parsed.Id));
+```
+
+**Why This Keeps Happening**: once a feature grows around an external metadata provider, it is easy to accidentally couple basic validation to enrichment. Keep those concerns separate. If the content ID parses and the repo has enough local/domain information to describe it safely, return conservative metadata first and treat enrichment as optional.
