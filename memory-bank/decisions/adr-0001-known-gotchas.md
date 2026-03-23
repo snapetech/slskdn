@@ -15001,3 +15001,25 @@ catch (SocketException) when (_cts.IsCancellationRequested) { break; }
 ```
 
 **Why This Keeps Happening**: low-level cancellation and socket-shutdown tests are extremely sensitive to host load and platform-specific teardown behavior. If the intent is "shutdown is prompt" or "listener stops cleanly", the assertions need realistic slack and the mock server needs to recognize shutdown exceptions as part of normal disposal.
+
+### 0k117. Peer Resolution Caches Must Be Keyed by Both Peer ID and Username Alias
+
+**The Bug**: `PeerResolutionService` cached resolved metadata under peer IDs, but not under the corresponding username alias. A caller resolving by username could miss the cache entirely and fall through to DHT or `null` even though the service had already learned the mapping.
+
+**Files Affected**:
+- `src/slskd/PodCore/PeerResolutionService.cs`
+
+**Wrong**:
+```csharp
+peerMappings[normalizedPeerId] = mapping;
+peerMappings[metadataPeerId] = mapping;
+```
+
+**Correct**:
+```csharp
+peerMappings[normalizedPeerId] = mapping;
+peerMappings[metadataPeerId] = mapping;
+peerMappings[normalizedUsername] = mapping;
+```
+
+**Why This Keeps Happening**: identity services often start from a single canonical key and then later accept aliases. If the cache layer is not updated to mirror both identities, runtime callers see inconsistent behavior depending on which shape they pass first.
