@@ -680,6 +680,7 @@ namespace slskd.Shares
                 { "filenames_docsize", "CREATE TABLE 'filenames_docsize'(id INTEGER PRIMARY KEY, sz BLOB)" },
                 { "filenames_config", "CREATE TABLE 'filenames_config'(k PRIMARY KEY, v) WITHOUT ROWID" },
                 { "files", "CREATE TABLE files (maskedFilename TEXT PRIMARY KEY, originalFilename TEXT NOT NULL, size BIGINT NOT NULL, touchedAt TEXT NOT NULL, code INTEGER DEFAULT 1 NOT NULL, extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL, isBlocked INTEGER DEFAULT 0 NOT NULL, isQuarantined INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT)" },
+                { "content_items", "CREATE TABLE content_items (contentId TEXT PRIMARY KEY, domain TEXT NOT NULL, workId TEXT, maskedFilename TEXT NOT NULL, isAdvertisable INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT, checkedAt INTEGER NOT NULL, FOREIGN KEY(maskedFilename) REFERENCES files(maskedFilename) ON DELETE CASCADE)" },
             };
 
             try
@@ -705,31 +706,33 @@ namespace slskd.Shares
                 using var cmd = new SqliteCommand("SELECT name, sql from sqlite_master WHERE type = 'table';", conn);
 
                 var reader = cmd.ExecuteReader();
-                var rows = 0;
+                var validatedTables = 0;
 
                 while (reader.Read())
                 {
                     var table = reader.GetString(0);
                     var expectedSql = reader.GetString(1);
 
-                    if (schema.TryGetValue(table, out var actualSql))
+                    if (!schema.TryGetValue(table, out var actualSql))
                     {
-                        if (actualSql != expectedSql)
-                        {
-                            list.Add($"Expected {table} schema to be {expectedSql}, found {actualSql}");
-                        }
-                        else
-                        {
-                            Log.Debug("Shares database table {Table} is valid: {Actual}", table, actualSql);
-                        }
+                        continue;
                     }
 
-                    rows++;
+                    validatedTables++;
+
+                    if (actualSql != expectedSql)
+                    {
+                        list.Add($"Expected {table} schema to be {expectedSql}, found {actualSql}");
+                    }
+                    else
+                    {
+                        Log.Debug("Shares database table {Table} is valid: {Actual}", table, actualSql);
+                    }
                 }
 
-                if (rows != schema.Count)
+                if (validatedTables != schema.Count)
                 {
-                    list.Add($"Expected {schema.Count} tables, found {rows}");
+                    list.Add($"Expected {schema.Count} tables, found {validatedTables}");
                 }
 
                 return !problems.Any();

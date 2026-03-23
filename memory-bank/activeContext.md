@@ -1051,3 +1051,12 @@ dotnet test
 - Next steps:
   - continue bughunting adjacent manual SQLite initialization and validation seams that mix EF-managed tables with hand-created virtual tables or triggers
   - prioritize other repository/storage types where partial schema creation can leave the database in a state that later startup code no longer repairs
+
+## 2026-03-23 13:56 CST
+- Continued the same SQLite/manual-schema pattern sweep into `SqliteShareRepository`.
+- Fixed `TryValidate()` so the validator now tracks the `content_items` table created by `Create()` and counts only repository-owned schema tables instead of every `sqlite_master` table row.
+- Freshly created share repositories no longer report themselves invalid just because schema validation drifted behind the repository-owned DDL.
+- Extended `ShareScannerModerationTests` with a focused fresh-repository validation regression; confirmed the focused slice passed (`6/6`) and the release build stayed green (`0 warnings / 0 errors`).
+- Next steps:
+  - continue bughunting SQLite repositories that mix creation, validation, and liveness checks, especially where keepalive/corruption logic depends on a narrow hard-coded schema assumption
+  - prioritize follow-on sweeps where repository-created indexes or auxiliary tables are validated differently than they are created

@@ -7033,3 +7033,11 @@ Code quality improvements were completed as part of Option A:
 - `RebuildSearchIndexAsync()` now clears stale FTS rows before repopulating, so repeated rebuilds do not accumulate duplicate search hits.
 - Added focused regression coverage in `tests/slskd.Tests.Unit/PodCore/SqlitePodMessageStorageTests.cs` for first-use schema creation, recovery from an existing FTS-only artifact, and idempotent rebuild/backfill behavior.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SqlitePodMessageStorageTests"` passed (`3/3`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 13:56 CST
+
+- Continued the same manual SQLite schema/validation sweep into `SqliteShareRepository`.
+- Fixed `TryValidate()` so it now recognizes the `content_items` table created by `Create()` and counts only the schema tables the validator explicitly owns instead of every raw `sqlite_master` row.
+- A freshly created share repository no longer reports itself invalid purely because the validator drifted behind the repository-owned schema.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` to prove a clean newly created repository validates successfully.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`6/6`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.

@@ -156,6 +156,15 @@ public class ShareRepositoryModerationTests : IDisposable
     }
 
     [Fact]
+    public void TryValidate_OnFreshRepository_ReturnsTrue()
+    {
+        var isValid = _repository.TryValidate(out var problems);
+
+        Assert.True(isValid);
+        Assert.Empty(problems);
+    }
+
+    [Fact]
     public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
     {
         using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");
