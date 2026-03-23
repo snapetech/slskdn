@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xCB. Collected Evidence Must Feed Back Into Query Planning Or The Pipeline Still Bottoms Out
+
+**The Bug**: the pipeline was successfully collecting transcript phrases, OCR text, and other derived hints, but the later segment-query planner only looked at a narrower subset like chapters and timestamped comments. That made SongID look “data rich” in the run object while still generating too few actionable search candidates.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+await AddTranscriptFindingsAsync(run, ...);
+await AddOcrFindingsAsync(run, ...);
+
+foreach (var chapter in run.Chapters) { ... }
+foreach (var comment in run.Comments.Where(comment => comment.TimestampSeconds.HasValue)) { ... }
+```
+
+**Correct**:
+```csharp
+foreach (var transcript in run.Transcripts)
+{
+    foreach (var phrase in transcript.MusicBrainzQueries) { ... }
+}
+
+foreach (var ocr in run.Ocr)
+{
+    var cleaned = CleanSegmentTitle(ocr.Text);
+    ...
+}
+```
+
+**Why This Keeps Happening**: evidence collection and planning often live in separate methods, so it is easy to extend one side and forget the other. Every time SongID learns a new evidence source, check whether query planning, candidate generation, and ranking consume it too.
+
 ### 0xCA. Lightweight Parser Helpers Must Handle Stringified Payloads And Trimmed IDs Or Every Upstream Drift Becomes A False Miss
 
 **The Bug**: small helper parsers were assuming upstream tools and JSON payloads always used the ideal shape: numeric fields as numbers, IDs as clean strings, and metadata values already trimmed. In practice, helper tools drift between string and numeric fields, and transport/runtime IDs arrive padded. The result is a cascade of false misses in SongID and PodCore even though the payload still contains usable information.
