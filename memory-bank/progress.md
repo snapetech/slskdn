@@ -6764,3 +6764,12 @@ Code quality improvements were completed as part of Option A:
   - `RateLimiter` now clears staged callbacks before invoking them, so a throwing staged action is not retried forever on every timer tick or flush
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `CallbackInfrastructureTests` slice passed `2/2`.
+
+## 2026-03-23 10:57 CST
+- Continued the Pod/Mesh runtime completion pass and replaced the reachable no-op stream path in `PodsMeshService` with a conservative real implementation.
+- `PodsMeshService.HandleStreamAsync(...)` now accepts one `GetMessagesRequest`, trims pod/channel IDs, streams the current message snapshot as JSON, and closes cleanly.
+- Hardened two flaky shutdown/socket tests discovered during the full sweep so the repo stays green under normal CI load.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`

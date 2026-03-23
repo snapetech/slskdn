@@ -219,6 +219,10 @@ public class DnsLeakPreventionVerifierTests
                     {
                         break;
                     }
+                    catch (SocketException) when (_cts.IsCancellationRequested)
+                    {
+                        break;
+                    }
                 }
             });
         }

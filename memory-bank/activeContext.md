@@ -837,3 +837,13 @@ dotnet test
 - Next steps:
   - continue the remaining Pod/Mesh runtime seams from the placeholder inventory
   - then rerun the release gate after the next dense runtime pass
+
+## 2026-03-23 10:57 CST
+- Finished the Pods mesh stream/runtime tranche.
+- Current fixes in this batch:
+  - `PodsMeshService` streaming is now backed by a real one-shot message stream instead of an immediate close
+  - mesh callers can request current pod messages over the stream interface using the same `GetMessagesRequest` contract
+  - full-suite test flake from shutdown/socket teardown was hardened while validating the batch
+- Next steps:
+  - continue the remaining Pod/Mesh runtime seams from the placeholder inventory
+  - rerun the release gate after the next dense runtime batch

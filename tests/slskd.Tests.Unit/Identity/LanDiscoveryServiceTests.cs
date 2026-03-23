@@ -133,7 +133,22 @@ public class LanDiscoveryServiceTests : IDisposable
         DiscoveredPeer? discovered = null;
         svc.PeerDiscovered += (s, e) => discovered = e;
 
-        // Event may not fire in tests, but subscription should work
-        Assert.NotNull(svc);
+        var eventField = typeof(LanDiscoveryService).GetField(
+            "PeerDiscovered",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        var handler = Assert.IsAssignableFrom<EventHandler<DiscoveredPeer>>(eventField?.GetValue(svc));
+        var peer = new DiscoveredPeer
+        {
+            PeerCode = "ABCD-EFGH",
+            DisplayName = "Nearby Peer",
+            PeerId = "peer-1",
+            Endpoint = "http://127.0.0.1:8080",
+            Capabilities = 1,
+        };
+
+        handler.Invoke(svc, peer);
+
+        Assert.Same(peer, discovered);
     }
 }

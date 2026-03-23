@@ -84,8 +84,53 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[PodsMeshService] Streaming requested by {PeerId}, but pods streaming is not implemented", context.RemotePeerId);
-        return stream.CloseAsync(cancellationToken);
+        return HandleMessageStreamAsync(stream, context, cancellationToken);
+    }
+
+    private async Task HandleMessageStreamAsync(
+        MeshServiceStream stream,
+        MeshServiceContext context,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestPayload = await stream.ReceiveAsync(cancellationToken);
+            if (requestPayload == null || requestPayload.Length == 0)
+            {
+                _logger.LogWarning("[PodsMeshService] Empty stream payload from {PeerId}", context.RemotePeerId);
+                await stream.CloseAsync(cancellationToken);
+                return;
+            }
+
+            var request = JsonSerializer.Deserialize<GetMessagesRequest>(requestPayload);
+            var podId = request?.PodId?.Trim() ?? string.Empty;
+            var channelId = request?.ChannelId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                _logger.LogWarning("[PodsMeshService] Invalid stream request from {PeerId}: missing pod or channel ID", context.RemotePeerId);
+                await stream.CloseAsync(cancellationToken);
+                return;
+            }
+
+            var messages = await _podMessaging.GetMessagesAsync(
+                podId,
+                channelId,
+                request!.SinceTimestamp,
+                cancellationToken);
+
+            await stream.SendAsync(JsonSerializer.SerializeToUtf8Bytes(messages), cancellationToken);
+            await stream.CloseAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await stream.CloseAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PodsMeshService] Stream handling failed for {PeerId}", context.RemotePeerId);
+            await stream.CloseAsync(CancellationToken.None);
+        }
     }
 
     private async Task<ServiceReply> HandleListAsync(

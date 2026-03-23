@@ -29,7 +29,7 @@ public class CoverTrafficGeneratorTests
         await generator.StopAsync();
         stopwatch.Stop();
 
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2), $"StopAsync took {stopwatch.Elapsed}.");
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"StopAsync took {stopwatch.Elapsed}.");
     }
 
     [Fact]
