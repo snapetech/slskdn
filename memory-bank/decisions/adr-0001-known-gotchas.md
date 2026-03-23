@@ -82,6 +82,27 @@ var metadata = NormalizeMetadata(await dht.GetAsync<PodMetadata>(DeriveDhtKey(no
 
 **Why This Keeps Happening**: DHT payloads feel like canonical data because they are already serialized records, but they are just another trust boundary. Normalize both the lookup key and the returned record before validation, dedupe, or grouping, or equivalent records split into separate runtime identities.
 
+### 0xD5. Runtime Diagnostics Must Resolve The Same Concrete Service Shape The Runtime Actually Uses
+
+**The Bug**: diagnostics code was resolving an optional helper abstraction instead of the concrete runtime-backed service shape that actually held the live state. That made mesh stats under-report DHT peers when the in-memory DHT was registered directly or behind a different interface than the diagnostic code expected.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshStatsCollector.cs`
+
+**Wrong**:
+```csharp
+this.dhtClient = new Lazy<InMemoryDhtClient?>(() =>
+    serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as InMemoryDhtClient);
+```
+
+**Correct**:
+```csharp
+this.dhtClient = new Lazy<InMemoryDhtClient?>(() =>
+    ResolveInMemoryDhtClient(serviceProvider));
+```
+
+**Why This Keeps Happening**: optional diagnostics often get wired long after the main runtime services, so they end up depending on whichever interface was convenient in an earlier prototype. If stats or health code needs concrete runtime state, resolve the concrete service shape first, then fall back through aliases.
+
 ### 0xD4. Controller Validation And NotFound Replies Should Not Teach Callers About Usernames, Enum Sets, Or Source Counts
 
 **The Bug**: several controller actions were still turning exact lookup misses or validation details into public response text. That leaked usernames from cached search drill-down, relay agent names, enum option sets, and exact source-count thresholds in multi-source download flows.
