@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD9. Release Gates Must Exercise Release-Build Test Compiles, Not Just Debug `dotnet test`
+
+**The Bug**: several stale unit tests kept passing targeted Debug runs but still broke the release gate because Release-mode test compilation exercises a different path. In this case, tests were still referencing removed controller methods and old type names like `slskd.Downloads.Download`, so local focused validation looked green while `run-release-gate.sh` failed compiling the Release unit project.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/API/Native/LibraryHealthControllerTests.cs`
+- `tests/slskd.Tests.Unit/Search/API/SearchActionsControllerTests.cs`
+
+**Wrong**:
+```csharp
+var result = await controller.GetScanStatus("scan-123", default);
+
+.ReturnsAsync((new List<slskd.Downloads.Download>(), new List<string> { "alice: sensitive detail" }));
+```
+
+**Correct**:
+```csharp
+// Remove coverage for endpoints that no longer exist.
+
+.ReturnsAsync((new List<slskd.Transfers.Transfer>(), new List<string> { "alice: sensitive detail" }));
+```
+
+**Why This Keeps Happening**: focused repair loops often run narrow Debug slices first, which only proves the touched runtime path. Release gates compile the whole test graph under Release configuration and catch stale signatures that Debug-only or filtered runs can miss. Before calling a release secure, run the real release gate or at minimum a Release build of the unit and integration test projects.
+
 ### 0xD4. DHT-Backed Discovery Must Normalize Lookup Keys And Returned Records Together
 
 **The Bug**: discovery paths were trimming the lookup key at the boundary but then trusting raw DHT payloads after deserialization. That let padded or case-drifted service IDs, pod IDs, owner peer IDs, and endpoint aliases split one logical record into multiple cache or grouping entries. The result was “missing” services or pods even though the DHT already had the data.
