@@ -108,6 +108,7 @@ namespace slskd
                     }
 
                     Timer.Dispose();
+                    ConcurrentExecutionPreventionSemaphore?.Dispose();
                 }
 
                 Disposed = true;

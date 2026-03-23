@@ -50,4 +50,21 @@ public class CallbackInfrastructureTests
 
         Assert.Equal(1, attempts);
     }
+
+    [Fact]
+    public void RateLimiter_Dispose_DisposesConcurrencySemaphore()
+    {
+        var rateLimiter = new RateLimiter(interval: 1000, concurrencyLimit: 1);
+
+        var semaphoreProperty = typeof(RateLimiter).GetProperty(
+            "ConcurrentExecutionPreventionSemaphore",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("RateLimiter semaphore property was not found.");
+
+        var semaphore = (System.Threading.SemaphoreSlim)semaphoreProperty.GetValue(rateLimiter)!;
+
+        rateLimiter.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => semaphore.Wait(0));
+    }
 }
