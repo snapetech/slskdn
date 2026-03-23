@@ -224,3 +224,7 @@ dotnet test
 ## 2026-03-22 18:01
 - Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.
 - Next: keep widening through remaining placeholder/null-heavy runtime paths in PodCore, VirtualSoulfind, and Mesh.
+
+## 2026-03-22 18:08
+- Replaced the reachable empty-result placeholder in `ContentLinkService` with the existing MusicBrainz audio search integration and folded in the current dirty spillover batch.
+- Next: continue through the remaining placeholder/null-heavy runtime paths from a clean head.

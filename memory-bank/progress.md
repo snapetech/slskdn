@@ -5971,3 +5971,10 @@ Code quality improvements were completed as part of Option A:
 - Fixed `SqliteSourceRegistry` so rows with blank backend refs are deleted during reads instead of being served as valid source candidates.
 - Added focused unit coverage for the normalized peer-resolution fallback, trimmed pod discovery filters, non-positive pod-discovery limits, and invalid source-candidate cleanup.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for read-side key normalization drift.
+
+## 2026-03-22 18:08 - Content-link search completion and spillover commit
+
+- Fixed `ContentLinkService` so validation/metadata reads normalize whitespace and audio content search now uses the existing MusicBrainz recording search integration instead of always returning empty results.
+- Added focused unit coverage for normalized content-ID validation, audio search result mapping, and unsupported-domain short-circuiting.
+- Folded in the dirty X509/security/multi-source sanitization spillover that was already in the tree.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for reachable placeholder service methods.

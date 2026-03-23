@@ -12652,3 +12652,24 @@ if (string.IsNullOrWhiteSpace(backendRef)) { ... delete row ... }
 ```
 
 **Why This Keeps Happening**: read-side code looks low-risk because it is “just fetching data,” but once malformed or whitespace-drifted keys enter storage, every lookup path starts silently under-reporting. Normalize request keys and persisted identifiers on the read boundary before treating data as valid.
+
+### 0k89. Do Not Leave Reachable Service Methods Hardwired To Empty Results When An Integration Already Exists
+
+**The Bug**: `ContentLinkService.SearchContentAsync(...)` was still returning an empty list and a warning even though the repo already had a usable `IMusicBrainzClient.SearchRecordingsAsync(...)` integration. That made the feature look broken despite having enough backend support to serve real audio search results.
+
+**Files Affected**:
+- `src/slskd/PodCore/ContentLinkService.cs`
+
+**Wrong**:
+```csharp
+_logger.LogWarning("... search integration is not implemented");
+return Array.Empty<ContentSearchResult>();
+```
+
+**Correct**:
+```csharp
+var hits = await _musicBrainzClient.SearchRecordingsAsync(normalizedQuery, effectiveLimit, ct);
+return hits.Select(...).ToList();
+```
+
+**Why This Keeps Happening**: feature code often gets written before nearby integrations are complete, and the placeholder path survives long after the dependency exists. Before leaving a public method as “not implemented,” check whether the repo already has enough integration surface to provide a conservative real result.
