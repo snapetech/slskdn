@@ -130,6 +130,32 @@ var normalizedCall = new ServiceCall
 
 **Why This Keeps Happening**: most boundary normalization work happens at controller/service edges where mutable request models are common. In slskdN, many transport DTOs are intentionally immutable. Normalize by creating a fresh copied object or by using local normalized variables, never by mutating `init`-only properties after construction.
 
+### 0xD7. Transfer And Chunk Result DTOs Must Not Contain Per-Peer Diagnostics Or Exact Throughput Numbers
+
+**The Bug**: swarm and multi-source download helpers were still putting operator-grade diagnostics directly into result DTOs. Those messages included peer IDs, transport labels, exact byte shortfalls, and low-throughput measurements, and then bubbled out through API or job-status surfaces.
+
+**Files Affected**:
+- `src/slskd/Transfers/MultiSource/MultiSourceDownloadService.cs`
+- `src/slskd/Swarm/SwarmDownloadOrchestrator.cs`
+
+**Wrong**:
+```csharp
+result.Error = $"Too slow: {speedBps / 1024.0:F1} KB/s for {slowDuration / 1000.0:F0}s";
+result.Error = $"Only got {limitedStream.BytesWritten}/{chunkSize} bytes";
+Error = $"Source not found for peer {peerId}";
+Error = $"Unsupported transport: {source.Transport}";
+```
+
+**Correct**:
+```csharp
+result.Error = "Chunk download timed out due to low throughput";
+result.Error = "Incomplete chunk download";
+Error = "Chunk source not found";
+Error = "Unsupported chunk transport";
+```
+
+**Why This Keeps Happening**: download/orchestration code naturally wants rich debugging strings, and result DTOs look like an easy place to store them. But if those DTOs are returned directly from APIs or job-status endpoints, the diagnostics become public contract. Keep per-peer/throughput detail in logs and metrics, not in the returned error text.
+
 ### 0xD4. Controller Validation And NotFound Replies Should Not Teach Callers About Usernames, Enum Sets, Or Source Counts
 
 **The Bug**: several controller actions were still turning exact lookup misses or validation details into public response text. That leaked usernames from cached search drill-down, relay agent names, enum option sets, and exact source-count thresholds in multi-source download flows.
