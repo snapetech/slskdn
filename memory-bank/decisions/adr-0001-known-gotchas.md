@@ -259,6 +259,30 @@ Staged = null;
 staged?.Invoke();
 ```
 
+### 0xDD. AUR PKGBUILD Archive Naming Must Match Release Asset Filenames
+
+**The Bug**: `packaging/aur/PKGBUILD-bin` still referenced a hardcoded `slskdn-main-linux-x64.zip` artifact while release pipelines can emit versioned assets like `slskdn-${pkgver}-linux-x64.zip`. That mismatch causes checksum verification to fail when makepkg validates a non-existent or renamed release asset.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+source=(
+    "slskdn-main-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"
+)
+```
+
+**Correct**:
+```bash
+source=(
+    "slskdn-${pkgver}-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-${pkgver}-linux-x64.zip"
+)
+```
+
+**Why This Keeps Happening**: release workflows evolved from a single fixed artifact name to versioned artifact names, but packaging templates were not updated in the same sweep. Without explicit guards and synchronized naming, one stale template can survive multiple release cycles and only fail in user-facing install validation.
+
 ### 0xDD. AUR and Distribution Metadata Must Stay Version-Consistent
 
 **The Bug**: Packaging automation and validation relied on one-off checks (for example, `PKGBUILD-bin` first `sha256sums` entry), while related package metadata files were validated inconsistently. This allowed release metadata to drift: one manifest could be updated while another still referenced a stale release tag, and checks that should fail early were only partially applied.
