@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC0. Helper Validation Strings And Ad-Hoc Test Endpoints Are Still Public Contracts
+
+**The Bug**: lower-level helpers and “diagnostic” API endpoints still relayed raw nested error text because they felt internal. The X509 helper returned parser/library exception text directly, and the multi-source `RunTest` endpoint copied the nested download-service error into its public result DTO.
+
+**Files Affected**:
+- `src/slskd/Common/Cryptography/X509.cs`
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+
+**Wrong**:
+```csharp
+result = ex.Message;
+testResult.Error = downloadResult.Error;
+```
+
+**Correct**:
+```csharp
+result = "Invalid certificate";
+testResult.Error = "Multi-source test download failed";
+```
+
+**Why This Keeps Happening**: helper methods and test/probe endpoints are easy to treat as diagnostics-only, but once they return strings or DTO fields that travel beyond the logger they become part of the observable contract. If a helper or test action catches or forwards an error, sanitize it exactly like a normal API/controller response.
+
 ### 0xBF. Filters And Validators Still Need Sanitized Response Text
 
 **The Bug**: infrastructure code that is not a controller still produced API-visible error text. A CSRF filter placed raw exception text into `ProblemDetails.Detail`, and a mesh descriptor validator returned raw serializer exception text in its validation tuple.
