@@ -28,6 +28,8 @@ namespace slskd.Relay
     using System.Diagnostics;
     using System.IO;
     using System.Net.Http;
+    using System.Security.Cryptography;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.SignalR.Client;
@@ -86,6 +88,12 @@ namespace slskd.Relay
         private bool StartRequested { get; set; }
         private ManagedState<RelayClientState> State { get; } = new();
         private SemaphoreSlim StateSyncRoot { get; } = new SemaphoreSlim(1, 1);
+
+        private static string GetRelayTokenLogId(Guid token)
+        {
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(token.ToString()));
+            return $"relay-token:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
 
         /// <summary>
         ///     Disposes this instance.
@@ -405,7 +413,7 @@ namespace slskd.Relay
 
         private async Task HandleFileInfoRequest(string filename, Guid id)
         {
-            Log.Information("Relay controller requested file info for {Filename} with ID {Id}", filename, id);
+            Log.Information("Relay controller requested file info for {Filename} with ID {Id}", filename, GetRelayTokenLogId(id));
 
             try
             {
@@ -430,7 +438,7 @@ namespace slskd.Relay
         {
             _ = Task.Run(async () =>
             {
-                Log.Information("Relay controller requested file {Filename} with ID {Id}", filename, token);
+                Log.Information("Relay controller requested file {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
 
                 try
                 {
@@ -461,17 +469,17 @@ namespace slskd.Relay
 
                     request.Content = content;
 
-                    Log.Information("Beginning upload of file {Filename} with ID {Id}", filename, token);
+                    Log.Information("Beginning upload of file {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
                     using var client = CreateHttpClient();
                     using var response = await client.SendAsync(request);
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        Log.Error("Upload of file {Filename} with ID {Id} failed: {StatusCode}", filename, token, response.StatusCode);
+                        Log.Error("Upload of file {Filename} with ID {Id} failed: {StatusCode}", filename, GetRelayTokenLogId(token), response.StatusCode);
                     }
                     else
                     {
-                        Log.Information("Upload of file {Filename} with ID {Id} succeeded.", filename, token);
+                        Log.Information("Upload of file {Filename} with ID {Id} succeeded.", filename, GetRelayTokenLogId(token));
                     }
                 }
                 catch (Exception ex)
@@ -496,7 +504,7 @@ namespace slskd.Relay
                 return Task.CompletedTask;
             }
 
-            Log.Information("Relay controller sent a download notification for {Filename} ({Token})", filename, token);
+            Log.Information("Relay controller sent a download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token));
 
             _ = Task.Run(async () =>
             {
@@ -536,7 +544,7 @@ namespace slskd.Relay
                     await remoteStream.CopyToAsync(localStream);
                 },
                 isRetryable: (_, _) => true,
-                onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, token),
+                onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token)),
                 maxAttempts: 3,
                 maxDelayInMilliseconds: 60000);
 
@@ -653,7 +661,7 @@ namespace slskd.Relay
                     maxDelayInMilliseconds: 5000,
                     cancellationToken);
 
-                Log.Debug("Share upload token {Token}", token);
+                Log.Debug("Received share upload token {Token}", GetRelayTokenLogId(token));
 
                 using var stream = new FileStream(temp, FileMode.Open, FileAccess.Read);
 

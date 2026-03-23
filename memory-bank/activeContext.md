@@ -23,13 +23,16 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Fix CodeQL high alerts in `RelayService.cs` for cleartext sensitive-information logging
+- **Current Task**: Continue relay/security bughunt and remove adjacent cleartext token / connection-id logging across relay surfaces
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
   - Investigated CodeQL alerts `#2547` and `#2548` in `RelayService.cs` and confirmed they were caused by raw cached relay connection ids being written to debug logs during validation failures.
   - Hardened `RelayService` logging so relay connection ids are logged through a hashed `GetConnectionLogId(...)` helper, and direct credential/token value logging was removed from adjacent validation paths.
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
+  - Continued the same relay security sweep into `RelayHub`, `RelayController`, and `RelayClient`.
+  - Replaced remaining raw relay request token and SignalR connection-id logs with hashed log ids, and removed adjacent token-bearing warning/info messages from upload/share flows.
+  - Added the broader relay log-sanitization gotcha to `adr-0001-known-gotchas.md` and recorded the work in `progress.md`.
   - Investigated the failed `.95` main release and confirmed all build/publish jobs succeeded except `Publish to Snap (Main/Stable)`.
   - The Snap artifact built correctly; the only failing external response was the Snap Store processing error `binary_sha3_384: Error checking upload uniqueness.`
   - Hardened `.github/workflows/build-on-tag.yml` so both Snap publish paths retry this known store-side processing failure for longer with capped backoff instead of aborting after a short fixed retry window.

@@ -425,7 +425,7 @@ namespace slskd.Relay
 
             // allow a generous amount of time, in case it takes a while to upload the response
             MemoryCache.Set(GetShareTokenCacheKey(token), record.ConnectionId, TimeSpan.FromMinutes(5));
-            Log.Debug("Cached share upload token {Token} for agent {Agent}", token, GetAgentLogId(agentName));
+            Log.Debug("Cached share upload token for agent {Agent}", GetAgentLogId(agentName));
 
             return token;
         }
@@ -534,7 +534,7 @@ namespace slskd.Relay
             // to the wait using only the id, however caching the agent name along with the other elements of the request allows
             // us to ensure that tokens are used only by the agent they were intended for.
             MemoryCache.Set(GetFileTokenCacheKey(filename, id), record.ConnectionId, TimeSpan.FromMilliseconds(timeout));
-            Log.Debug("Cached file upload token {Token} for agent {Agent}", id, GetAgentLogId(agentName));
+            Log.Debug("Cached file upload token for agent {Agent}", GetAgentLogId(agentName));
 
             // create a wait for the agent response. this wait will be completed in the response handler, ultimately called from
             // the API controller when the agent makes an HTTP request to return the file
@@ -678,7 +678,7 @@ namespace slskd.Relay
                     var id = Guid.NewGuid();
 
                     MemoryCache.Set(GetDownloadTokenCacheKey(filename, id), record.ConnectionId, TimeSpan.FromMinutes(10));
-                    Log.Debug("Cached file download token {Token} for agent {Agent}", id, GetAgentLogId(record.Agent.Name));
+                    Log.Debug("Cached file download token for agent {Agent}", GetAgentLogId(record.Agent.Name));
 
                     await RelayHub.Clients.Client(record.ConnectionId).NotifyFileDownloadCompleted(filename, id);
                 }

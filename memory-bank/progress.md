@@ -6573,3 +6573,10 @@ Code quality improvements were completed as part of Option A:
 - Investigated CodeQL alerts `#2547` and `#2548` in `RelayService.cs` and confirmed the underlying issue was raw cached relay connection ids being written to debug logs during credential validation failures.
 - Replaced raw relay connection id logging with a hashed `GetConnectionLogId(...)` helper and removed direct credential/token value logging from the same validation path.
 - Documented the relay secret-log gotcha in `adr-0001-known-gotchas.md` before validation.
+
+## 2026-03-23 13:26 - Relay token/connection log sweep
+
+- Continued the relay security bughunt past the original CodeQL lines and found the same cleartext logging pattern in `RelayHub`, `RelayController`, and `RelayClient`.
+- Replaced raw relay request tokens and SignalR connection IDs with hashed log ids, and removed adjacent token/path detail from share/file upload logs.
+- Tightened one adjacent failure pattern too: relay upload/share parsing now keeps exception detail in debug logs instead of interpolating raw messages into the main warning line.
+- Documented the broader relay logging gotcha in `adr-0001-known-gotchas.md` before validation.

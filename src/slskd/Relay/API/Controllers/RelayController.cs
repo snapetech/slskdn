@@ -96,6 +96,12 @@ namespace slskd.Relay
             return $"agent:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
         }
 
+        private static string GetRelayTokenLogId(Guid token)
+        {
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(token.ToString()));
+            return $"relay-token:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
+
         /// <summary>
         ///     Connects to the configured controller.
         /// </summary>
@@ -178,13 +184,13 @@ namespace slskd.Relay
                 return Task.FromResult<IActionResult>(BadRequest());
             }
 
-            Log.Information("Handling file download of {Filename} ({Token}) from a caller claiming to be agent {Agent}", filename, token, agentName);
+            Log.Information("Handling file download of {Filename} for token {Token} from a caller claiming to be agent {Agent}", filename, GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
 
             // note: the token remains valid after the validation attempt, unlike most other endpoints.
             // this is done to support retries
             if (!Relay.TryValidateFileDownloadCredential(token: guid, filename, credential, out var validatedAgentName))
             {
-                Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
+                Log.Warning("Failed to authenticate relay download token {Token} from a caller claiming to be agent {Agent}", GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
                 return Task.FromResult<IActionResult>(Unauthorized());
             }
 
@@ -206,7 +212,7 @@ namespace slskd.Relay
                 }
             }
 
-            Log.Information("Agent {Agent} authenticated for token {Token}. Sending file {Filename}", GetAgentLogId(validatedAgentName), guid, filename);
+            Log.Information("Agent {Agent} authenticated for relay token {Token}. Sending file {Filename}", GetAgentLogId(validatedAgentName), GetRelayTokenLogId(guid), filename);
 
             return Task.FromResult<IActionResult>(PhysicalFile(sourceFile, "application/octet-stream"));
         }
@@ -288,13 +294,13 @@ namespace slskd.Relay
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning("Failed to handle file upload for token {Token} from a caller claiming to be agent {Agent}: {Message}", token, agentName, ex.Message);
+                    Log.Warning("Failed to handle file upload for relay token {Token} from a caller claiming to be agent {Agent}", GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
                     Log.Debug(ex, "Failed to handle file upload");
 
                     return BadRequest();
                 }
 
-                Log.Information("Handling file upload of {Filename} ({Token}) from a caller claiming to be agent {Agent}", filename, token, agentName);
+                Log.Information("Handling file upload of {Filename} for relay token {Token} from a caller claiming to be agent {Agent}", filename, GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
 
                 // agents must encrypt the Id they were given in the request with the secret they share with the controller, and
                 // provide the encrypted value as the credential with the request. the validation below verifies a bunch of
@@ -302,7 +308,7 @@ namespace slskd.Relay
                 // caller is the same caller that received the request, and that the caller knows the shared secret.
                 if (!Relay.TryValidateFileStreamResponseCredential(token: guid, filename: filename, credential: credential, out var validatedAgentName))
                 {
-                    Log.Warning("Failed to authenticate file upload token {Token} from a caller claiming to be agent {Agent}", guid, agentName);
+                    Log.Warning("Failed to authenticate relay upload token {Token} from a caller claiming to be agent {Agent}", GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
                     return Unauthorized();
                 }
 
@@ -316,13 +322,13 @@ namespace slskd.Relay
                     return BadRequest("Invalid filename");
                 }
 
-                Log.Information("Agent {Agent} authenticated for token {Token}. Forwarding file stream for {Filename}", GetAgentLogId(validatedAgentName), guid, filename);
+                Log.Information("Agent {Agent} authenticated for relay token {Token}. Forwarding file stream for {Filename}", GetAgentLogId(validatedAgentName), GetRelayTokenLogId(guid), filename);
 
                 // pass the stream back to the relay service, which will in turn pass it to the upload service, and use it to
                 // feed data into the remote upload. await this call, it will complete when the upload is complete, one way or the other.
                 await Relay.HandleFileStreamResponseAsync(validatedAgentName, id: guid, stream);
 
-                Log.Information("File upload of {Filename} ({Token}) from agent {Agent} complete", filename, token, GetAgentLogId(validatedAgentName));
+                Log.Information("File upload of {Filename} for relay token {Token} from agent {Agent} complete", filename, GetRelayTokenLogId(guid), GetAgentLogId(validatedAgentName));
                 return Ok();
             }
             finally
@@ -378,15 +384,16 @@ namespace slskd.Relay
             }
             catch (Exception ex)
             {
-                Log.Warning("Failed to handle share upload from agent {Agent}: {Message}", agentName, ex.Message);
+                Log.Warning("Failed to handle share upload from caller claiming to be agent {Agent}", GetAgentLogId(agentName ?? string.Empty));
+                Log.Debug(ex, "Failed to handle share upload");
                 return BadRequest();
             }
 
-            Log.Information("Handling share upload ({Token}) from a caller claiming to be agent {Agent}", token, agentName);
+            Log.Information("Handling share upload for relay token {Token} from a caller claiming to be agent {Agent}", GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
 
             if (!Relay.TryValidateShareUploadCredential(token: guid, credential, out var validatedAgentName))
             {
-                Log.Warning("Failed to authenticate share upload from caller claiming to be agent {Agent} using token {Token}", agentName, guid);
+                Log.Warning("Failed to authenticate share upload from caller claiming to be agent {Agent} using relay token {Token}", GetAgentLogId(agentName ?? string.Empty), GetRelayTokenLogId(guid));
                 return Unauthorized();
             }
 
@@ -395,7 +402,7 @@ namespace slskd.Relay
 
             try
             {
-                Log.Information("Agent {Agent} authenticated for token {Token}. Beginning download of shares to {Filename}", GetAgentLogId(validatedAgentName), guid, temp);
+                Log.Information("Agent {Agent} authenticated for relay token {Token}. Beginning download of shares to a temporary file", GetAgentLogId(validatedAgentName), GetRelayTokenLogId(guid));
 
                 var sw = new Stopwatch();
                 sw.Start();
@@ -407,7 +414,7 @@ namespace slskd.Relay
 
                 sw.Stop();
 
-                Log.Information("Download of shares from {Agent} ({Token}) complete ({Size} in {Duration}ms)", GetAgentLogId(validatedAgentName), guid, ((double)inputStream.Length).SizeSuffix(), sw.ElapsedMilliseconds);
+                Log.Information("Download of shares from {Agent} for relay token {Token} complete ({Size} in {Duration}ms)", GetAgentLogId(validatedAgentName), GetRelayTokenLogId(guid), ((double)inputStream.Length).SizeSuffix(), sw.ElapsedMilliseconds);
 
                 await Relay.HandleShareUploadAsync(validatedAgentName, id: guid, shares, temp);
 

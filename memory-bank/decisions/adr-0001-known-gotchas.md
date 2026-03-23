@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDE. Relay Logs Must Treat Request Tokens And SignalR Connection IDs Like Secrets
+
+**The Bug**: after fixing the first `RelayService` CodeQL hit, adjacent relay surfaces still logged raw share/file tokens and live SignalR connection IDs in `RelayHub`, `RelayController`, and `RelayClient`. Those values are short-lived secrets or session identifiers, but once they hit logs they become durable cleartext storage.
+
+**Files Affected**:
+- `src/slskd/Relay/API/Hubs/RelayHub.cs`
+- `src/slskd/Relay/API/Controllers/RelayController.cs`
+- `src/slskd/Relay/RelayClient.cs`
+- `src/slskd/Relay/RelayService.cs`
+
+**Wrong**:
+```csharp
+Log.Information("Agent connection {Id} from {IP} established. Sending authentication challenge {Token}...", Context.ConnectionId, RemoteIpAddress, token);
+Log.Information("Handling share upload ({Token}) from a caller claiming to be agent {Agent}", token, agentName);
+Log.Debug("Share upload token {Token}", token);
+```
+
+**Correct**:
+```csharp
+Log.Information("Relay connection {ConnectionId} from {IP} established. Sending authentication challenge.", GetConnectionLogId(Context.ConnectionId), RemoteIpAddress);
+Log.Information("Handling share upload for relay token {Token} from a caller claiming to be agent {Agent}", GetRelayTokenLogId(guid), GetAgentLogId(agentName ?? string.Empty));
+Log.Debug("Received share upload token {Token}", GetRelayTokenLogId(token));
+```
+
+**Why This Keeps Happening**: once one logging site gets sanitized, nearby “helpful” diagnostics still look harmless because they are only in debug/info logs. In relay code, request tokens, challenge tokens, and live connection ids should be treated as secrets by default. Hash or suppress them consistently across service, hub, controller, and client code, and keep exception detail in debug logs rather than interpolating raw values into durable structured logs.
+
 ### 0xDA. Named-Argument Calls To Third-Party Sinks Break Easily Across Dependency Upgrades
 
 **The Bug**: the Loki logger setup used the old `outputTemplate:` named argument on `GrafanaLoki(...)`. After `Serilog.Sinks.Grafana.Loki` moved to the formatter-based overload, Dependabot PRs started failing CI with `CS1739` even though the main branch still built against the older package.
