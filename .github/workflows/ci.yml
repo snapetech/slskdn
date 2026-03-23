@@ -90,6 +90,10 @@ jobs:
             [[ -f "$pb" ]] || continue
             sums_line=$(grep '^sha256sums=' "$pb" | head -1)
             sums=( $(echo "$sums_line" | grep -oP "(?<=')[^']+(?=')" ) )
+            if [[ "$pkgbuild" == "PKGBUILD-bin" && "${sums[0]:-}" != "SKIP" ]]; then
+              echo "::error::PKGBUILD-bin should keep the archive checksum on SKIP"
+              fail=1
+            fi
             declare -A files=( [1]="slskd.service" [2]="slskd.yml" [3]="slskd.sysusers" )
             for idx in "${!files[@]}"; do
               fname="${files[$idx]}"
