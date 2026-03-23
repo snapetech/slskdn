@@ -152,12 +152,17 @@ jobs:
         run: |
           cd publish-${{ matrix.runtime }}
           zip -r ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip .
+          if [[ "${{ needs.parse.outputs.channel }}" == "main" ]]; then
+            RELEASE_VERSION="${{ needs.parse.outputs.version }}"
+            RELEASE_VERSION="${RELEASE_VERSION//-/.}"
+            zip -r ../slskdn-${RELEASE_VERSION}-${{ matrix.runtime }}.zip .
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
           name: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}
-          path: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip
+          path: slskdn*.zip
           retention-days: 30
 
   release-dev:
