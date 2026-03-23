@@ -864,3 +864,5 @@ dotnet test
   - rerun the release gate after the next dense runtime batch
 
 - 2026-03-23: Completed peer-resolution alias-cache hardening and ChannelReader test collision fix; repo revalidated green. Next Steps: continue bughunt from the remaining Mesh/PodCore runtime inventory.
+
+- 2026-03-23: Completed MeshContent stream handling and repaired SceneServicesTests compile drift; full validation is green again. Next Steps: continue the remaining Mesh/PodCore runtime placeholder inventory.

@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,47 @@ using Xunit;
 
 public class MeshContentMeshServiceTests
 {
+    [Fact]
+    public async Task HandleStreamAsync_GetByContentIdRequest_SendsContentAndCloses()
+    {
+        var tempFile = Path.GetTempFileName();
+        await File.WriteAllBytesAsync(tempFile, new byte[] { 0x01, 0x02, 0x03, 0x04 });
+
+        try
+        {
+            var repo = new Mock<IShareRepository>();
+            repo.Setup(repository => repository.FindContentItem("content:audio:track:mb-12345"))
+                .Returns((Domain: "audio", WorkId: "work-1", MaskedFilename: "masked-file.flac", IsAdvertisable: true, ModerationReason: string.Empty, CheckedAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+            repo.Setup(repository => repository.FindFileInfo("masked-file.flac"))
+                .Returns((Filename: tempFile, Size: 4L));
+
+            var shareService = new Mock<IShareService>();
+            shareService.Setup(service => service.GetLocalRepository()).Returns(repo.Object);
+
+            var service = new MeshContentMeshService(
+                Mock.Of<ILogger<MeshContentMeshService>>(),
+                shareService.Object);
+
+            var stream = new TestMeshServiceStream(JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                contentId = " content:audio:track:mb-12345 ",
+            }));
+
+            await service.HandleStreamAsync(
+                stream,
+                new MeshServiceContext { RemotePeerId = "peer-1" },
+                CancellationToken.None);
+
+            Assert.True(stream.Closed);
+            Assert.Single(stream.SentPayloads);
+            Assert.Equal(new byte[] { 0x01, 0x02, 0x03, 0x04 }, stream.SentPayloads[0]);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
     [Fact]
     public async Task HandleCallAsync_UnknownMethod_ReturnsSanitizedMethodNotFound()
     {
@@ -169,5 +211,36 @@ public class MeshContentMeshServiceTests
 
         Assert.Equal(ServiceStatusCodes.InvalidPayload, reply.StatusCode);
         Assert.Equal("Invalid range request", reply.ErrorMessage);
+    }
+
+    private sealed class TestMeshServiceStream : MeshServiceStream
+    {
+        private readonly byte[] _requestPayload;
+
+        public TestMeshServiceStream(byte[] requestPayload)
+        {
+            _requestPayload = requestPayload;
+        }
+
+        public bool Closed { get; private set; }
+
+        public List<byte[]> SentPayloads { get; } = new();
+
+        public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
+        {
+            SentPayloads.Add(data.ToArray());
+            return Task.CompletedTask;
+        }
+
+        public Task<byte[]?> ReceiveAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<byte[]?>(_requestPayload);
+        }
+
+        public Task CloseAsync(CancellationToken cancellationToken = default)
+        {
+            Closed = true;
+            return Task.CompletedTask;
+        }
     }
 }

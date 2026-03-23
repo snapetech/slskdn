@@ -53,10 +53,32 @@ public sealed class MeshContentMeshService : IMeshService
 
     public string ServiceName => "MeshContent";
 
-    public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
+    public async Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[MeshContent] Streaming requested by {PeerId}, but MeshContent streaming is not implemented", context.RemotePeerId);
-        return stream.CloseAsync(cancellationToken);
+        var requestPayload = await stream.ReceiveAsync(cancellationToken);
+        if (requestPayload == null || requestPayload.Length == 0)
+        {
+            await stream.CloseAsync(cancellationToken);
+            return;
+        }
+
+        var reply = await HandleGetByContentIdAsync(
+            new ServiceCall
+            {
+                ServiceName = ServiceName,
+                Method = "GetByContentId",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = requestPayload,
+            },
+            context,
+            cancellationToken);
+
+        if (reply.StatusCode == ServiceStatusCodes.OK && reply.Payload.Length > 0)
+        {
+            await stream.SendAsync(reply.Payload, cancellationToken);
+        }
+
+        await stream.CloseAsync(cancellationToken);
     }
 
     public async Task<ServiceReply> HandleCallAsync(ServiceCall call, MeshServiceContext context, CancellationToken cancellationToken = default)
