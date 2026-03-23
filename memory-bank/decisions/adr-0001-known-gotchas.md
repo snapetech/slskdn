@@ -15938,3 +15938,28 @@ if (validatedTables != schema.Count)
 ```
 
 **Why This Keeps Happening**: hand-rolled SQLite repositories often have two separate sources of truth: the DDL in `Create()` and the expected schema snapshot in `TryValidate()`. Features add tables or indexes in one place and forget the validator, especially when the validator also compares raw counts from `sqlite_master`. If a repository owns both creation and validation, update both together and count only the tables the validator explicitly owns instead of every row SQLite exposes.
+
+### 0k136. Repository Reset Paths Must Drop Every Owned Table, Not Just The Original Core Set
+
+**The Bug**: `SqliteShareRepository.Create(discardExisting: true)` was meant to rebuild the share database from scratch, but after `content_items` was added the reset path still dropped only the original tables. That left stale content-item rows behind across a "fresh" rebuild, even though the repository treated the reset as a clean slate.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs`
+
+**Wrong**:
+```csharp
+if (discardExisting)
+{
+    conn.ExecuteNonQuery("DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS scans; DROP TABLE IF EXISTS directories; DROP TABLE IF EXISTS filenames; DROP TABLE IF EXISTS files;");
+}
+```
+
+**Correct**:
+```csharp
+if (discardExisting)
+{
+    conn.ExecuteNonQuery("DROP TABLE IF EXISTS content_items; DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS scans; DROP TABLE IF EXISTS directories; DROP TABLE IF EXISTS filenames; DROP TABLE IF EXISTS files;");
+}
+```
+
+**Why This Keeps Happening**: repository reset code often gets written once, then forgotten while new auxiliary tables are added elsewhere in the same class. The result is a false "fresh database" contract where old feature data survives reset and poisons later behavior. Whenever a repository adds a new owned table, audit the create, validate, reset, backup, and corruption-check paths together instead of treating the DDL addition as isolated.
