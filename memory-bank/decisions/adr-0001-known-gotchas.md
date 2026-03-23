@@ -103,6 +103,33 @@ this.dhtClient = new Lazy<InMemoryDhtClient?>(() =>
 
 **Why This Keeps Happening**: optional diagnostics often get wired long after the main runtime services, so they end up depending on whichever interface was convenient in an earlier prototype. If stats or health code needs concrete runtime state, resolve the concrete service shape first, then fall back through aliases.
 
+### 0xD6. Normalize Init-Only DTOs By Copying Into A New Instance, Not By Mutating After Entry
+
+**The Bug**: runtime boundary code tried to trim and normalize `init`-only transport DTO properties after the object had already been created. That compiles fine in your head when you treat request objects like mutable command models, but it fails at build time once those DTOs are declared with `init`.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshServiceClient.cs`
+
+**Wrong**:
+```csharp
+call.ServiceName = call.ServiceName?.Trim() ?? string.Empty;
+call.Method = call.Method?.Trim() ?? string.Empty;
+call.CorrelationId = call.CorrelationId?.Trim() ?? string.Empty;
+```
+
+**Correct**:
+```csharp
+var normalizedCall = new ServiceCall
+{
+    ServiceName = call.ServiceName?.Trim() ?? string.Empty,
+    Method = call.Method?.Trim() ?? string.Empty,
+    CorrelationId = call.CorrelationId?.Trim() ?? string.Empty,
+    Payload = call.Payload
+};
+```
+
+**Why This Keeps Happening**: most boundary normalization work happens at controller/service edges where mutable request models are common. In slskdN, many transport DTOs are intentionally immutable. Normalize by creating a fresh copied object or by using local normalized variables, never by mutating `init`-only properties after construction.
+
 ### 0xD4. Controller Validation And NotFound Replies Should Not Teach Callers About Usernames, Enum Sets, Or Source Counts
 
 **The Bug**: several controller actions were still turning exact lookup misses or validation details into public response text. That leaked usernames from cached search drill-down, relay agent names, enum option sets, and exact source-count thresholds in multi-source download flows.
