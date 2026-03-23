@@ -97,18 +97,33 @@ namespace slskd
             {
                 if (disposing)
                 {
-                    Timer.Elapsed -= Timer_Elapsed;
+                    Exception? flushException = null;
 
-                    // if an action is staged, invoke it to 'flush'
-                    if (FlushOnDispose)
+                    try
                     {
-                        var staged = Staged;
-                        Staged = null;
-                        staged?.Invoke();
+                        // if an action is staged, invoke it to 'flush'
+                        if (FlushOnDispose)
+                        {
+                            var staged = Staged;
+                            Staged = null;
+                            staged?.Invoke();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        flushException = ex;
+                    }
+                    finally
+                    {
+                        Timer.Elapsed -= Timer_Elapsed;
+                        Timer.Dispose();
+                        ConcurrentExecutionPreventionSemaphore?.Dispose();
                     }
 
-                    Timer.Dispose();
-                    ConcurrentExecutionPreventionSemaphore?.Dispose();
+                    if (flushException is not null)
+                    {
+                        throw flushException;
+                    }
                 }
 
                 Disposed = true;
