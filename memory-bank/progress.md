@@ -6370,6 +6370,27 @@ Code quality improvements were completed as part of Option A:
     - `PodMessageBackfillControllerTests`
 - Updated the existing init-only record gotcha in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `c4006a0d` (`docs: Add gotcha for init-only record normalization copies`).
 
+## 2026-03-22 21:49
+- Restored the remaining unit-project compile path and pushed another release-facing transfer-result batch.
+- Fixed stale test/runtime drift in:
+  - `tests/slskd.Tests.Unit/Search/API/SearchActionsControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/MeshContentMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/PodCore/PodMessageBackfillControllerTests.cs`
+  - `src/slskd/Mesh/ServiceFabric/MeshServiceClient.cs`
+    - service-call normalization now copies immutable transport DTOs instead of mutating init-only properties after entry
+- Hardened transfer/job status result contracts in:
+  - `src/slskd/Transfers/MultiSource/MultiSourceDownloadService.cs`
+    - chunk failures no longer expose live throughput numbers or exact byte shortfalls
+  - `src/slskd/Swarm/SwarmDownloadOrchestrator.cs`
+    - chunk errors no longer expose peer IDs, transport labels, or raw byte counts
+- Added focused regression coverage in:
+  - `tests/slskd.Tests.Unit/Swarm/SwarmDownloadOrchestratorTests.cs`
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for swarm, multi-source sanitization, DHT rendezvous, port forwarding, and pod-channel controllers passed (`20/20`)
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q 2>&1 | rg 'error CS|error :'` is now clean (no compile errors)
+- Documented the transfer-result diagnostic leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `8393d963` (`docs: Add gotcha for transfer result diagnostic leakage`).
+
 ## 2026-03-22 22:05
 - Tightened the next Pod/Mesh runtime completion batch around DHT-backed discovery and local service boundaries.
 - `DhtMeshServiceDirectory` now normalizes lookup keys and returned descriptors together, dedupes normalized service IDs, and stops trusting raw payload drift after deserialization.
@@ -6383,3 +6404,14 @@ Code quality improvements were completed as part of Option A:
 - `MeshStatsCollector` now resolves the concrete in-memory DHT through the real runtime service shapes, so DHT session stats no longer depend on a single alias registration.
 - `MeshServiceClient` now normalizes service-call boundaries and picks a deterministic valid provider instead of just taking the first arbitrary descriptor.
 - Next: commit the whole dirty tree, then run the full validation and release gate sweep before calling the secure release candidate ready.
+
+## 2026-03-22 22:33
+- Hardened another public validation/helper batch for the release push.
+- `EnumAttribute` no longer echoes raw invalid enum values or array contents in validation failures.
+- `JobManifestValidator` now returns stable category messages for unsupported manifest versions, unknown job types, and invalid status states instead of schema/tutorial text.
+- `DhtRendezvousController` now uses the stable unblock success message `Blocklist entry removed` instead of echoing the removed target.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `JobManifestValidatorTests`, `EnumAttributeTests`, and `DhtRendezvousControllerTests` passed (`10/10`)
+- Documented the validation-detail leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: continue the secure-release sweep through remaining API/result contracts that still embed caller-controlled identifiers or detailed lookup/tutorial text.

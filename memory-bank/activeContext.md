@@ -23,10 +23,27 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side bughunt from the stronger green release gate, focused on helper/result contracts that still leak internal error text across runtime subsystems
+- **Current Task**: Broad runtime/read-side secure-release bughunt from the stronger green release gate, focused on helper/result contracts that still leak internal error text or caller-controlled details across runtime subsystems
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Restored the remaining unit compile path:
+    - `SearchActionsControllerTests`, `MeshContentMeshServiceTests`, and `PodMessageBackfillControllerTests` now match current runtime contracts again
+    - `MeshServiceClient` now normalizes immutable `ServiceCall` DTOs via copied instances instead of mutating init-only properties
+  - Fixed another release-facing transfer-result leak cluster:
+    - `MultiSourceDownloadService` no longer returns exact throughput/byte-count diagnostics in chunk errors
+    - `SwarmDownloadOrchestrator` no longer returns peer IDs, transport names, or raw byte counts in chunk failure results
+  - Added focused `SwarmDownloadOrchestratorTests` coverage for sanitized chunk-result contracts
+  - Confirmed the runtime build is still green (`0 warnings / 0 errors`)
+  - Confirmed the unit project compiles again, and the focused touched slice passed (`20/20`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Hardened another public validation/helper batch:
+    - `EnumAttribute` no longer echoes raw invalid enum values or array contents in validation failures
+    - `JobManifestValidator` now returns stable category messages for unsupported manifest versions, unknown job types, and invalid status states
+    - `DhtRendezvousController` now uses a stable unblock success message instead of echoing the removed blocklist target
+  - Added focused `JobManifestValidatorTests` and `EnumAttributeTests`, and extended `DhtRendezvousControllerTests`
+  - Confirmed the focused helper/controller validation slice passed (`10/10`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses
@@ -166,9 +183,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially the remaining DHT/Jobs/compatibility endpoints and result DTOs.
-2. Fix the standing unit-test compile drift in `SearchActionsControllerTests`, `MeshContentMeshServiceTests`, and `PodMessageBackfillControllerTests` so focused regression slices are runnable again.
-3. Keep folding in adjacent dirty files carefully so the runtime build stays green between secure-release passes.
+1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially remaining controller/problem responses and service/result DTOs surfaced by HTTP or mesh APIs.
+2. Start using the restored unit-project compile path to run broader focused slices instead of build-only validation where practical.
+3. Keep folding in adjacent dirty files carefully so the runtime and unit build stay green between secure-release passes.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

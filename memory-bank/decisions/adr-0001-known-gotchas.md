@@ -13879,3 +13879,28 @@ var recordingId = reader.GetString(0).Trim();
 ```
 
 **Why This Keeps Happening**: once the “main” APIs are normalized, the smaller maintenance helpers are easy to overlook because they look low-risk. They are still storage boundaries. Treat helper updates, list reads, and status setters with the same normalization rules as the flagship lookup methods.
+
+### 0k96. Validation Helpers Must Not Echo Raw Enum Values, Allowed-Value Lists, Or Manifest Internals
+
+**The Bug**: shared validation helpers and manifest validators were still returning detailed parser/tutorial text directly to callers. That leaked raw invalid enum values, allowed-value lists, unsupported manifest version numbers, and internal manifest field names in otherwise public validation errors.
+
+**Files Affected**:
+- `src/slskd/Common/Validation/EnumAttribute.cs`
+- `src/slskd/Jobs/Manifests/JobManifestValidator.cs`
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+
+**Wrong**:
+```csharp
+return new ValidationResult($"The {validationContext.DisplayName} field has an invalid value '{value}'.");
+errors.Add($"Unsupported manifest version: {manifest.ManifestVersion}");
+return Ok(new { success = true, message = $"Unblocked {type} {target}" });
+```
+
+**Correct**:
+```csharp
+return new ValidationResult($"The {validationContext.DisplayName} field is invalid");
+errors.Add("Unsupported manifest version");
+return Ok(new { success = true, message = "Blocklist entry removed" });
+```
+
+**Why This Keeps Happening**: validation code often feels “safe” because it is not a catch block, but it still sits on a public boundary. Treat helper-generated validation text like any other external contract: stable category-level messages only, with detailed enum/tutorial/parser context kept in logs or internal diagnostics.
