@@ -489,7 +489,7 @@ namespace slskd.Relay
                     // report the failure to the controller. this avoids a failure due to timeout.
                     if (HubConnection != null)
                     {
-                        await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token);
+                        await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
                     }
                 }
             });

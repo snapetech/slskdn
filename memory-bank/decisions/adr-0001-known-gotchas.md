@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDF. SignalR Failure Paths Must Keep Method Signatures In Sync With The Hub Contract
+
+**The Bug**: `RelayClient` caught file-upload failures and tried to notify the controller through `RelayHub.NotifyFileUploadFailed`, but it only sent the request ID. The hub method requires both the ID and the exception, so the failure-report path silently invoked the wrong method shape and the controller side fell back to timeout behavior.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+- `src/slskd/Relay/API/Hubs/RelayHub.cs`
+
+**Wrong**:
+```csharp
+await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token);
+```
+
+**Correct**:
+```csharp
+await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
+```
+
+**Why This Keeps Happening**: SignalR calls are stringly typed at the call site, so normal refactors do not protect you from argument-count drift the way direct method calls would. When hub methods change or when you are wiring a failure path by hand, verify the client-side `InvokeAsync(...)` argument list against the actual hub method signature or you turn a recoverable failure into a timeout.
+
 ### 0xDE. Relay Logs Must Treat Request Tokens And SignalR Connection IDs Like Secrets
 
 **The Bug**: after fixing the first `RelayService` CodeQL hit, adjacent relay surfaces still logged raw share/file tokens and live SignalR connection IDs in `RelayHub`, `RelayController`, and `RelayClient`. Those values are short-lived secrets or session identifiers, but once they hit logs they become durable cleartext storage.

@@ -33,6 +33,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Continued the same relay security sweep into `RelayHub`, `RelayController`, and `RelayClient`.
   - Replaced remaining raw relay request token and SignalR connection-id logs with hashed log ids, and removed adjacent token-bearing warning/info messages from upload/share flows.
   - Added the broader relay log-sanitization gotcha to `adr-0001-known-gotchas.md` and recorded the work in `progress.md`.
+  - Found and fixed a real relay behavior bug while widening the same area:
+    - `RelayClient` was invoking `RelayHub.NotifyFileUploadFailed` with only the request ID instead of `(id, exception)`
+    - failed relay uploads can now notify the controller immediately instead of silently degrading into timeout behavior
+  - Added the corresponding hub-signature drift gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
   - Investigated the failed `.95` main release and confirmed all build/publish jobs succeeded except `Publish to Snap (Main/Stable)`.
   - The Snap artifact built correctly; the only failing external response was the Snap Store processing error `binary_sha3_384: Error checking upload uniqueness.`
   - Hardened `.github/workflows/build-on-tag.yml` so both Snap publish paths retry this known store-side processing failure for longer with capped backoff instead of aborting after a short fixed retry window.
