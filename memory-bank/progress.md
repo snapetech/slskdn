@@ -6592,3 +6592,16 @@ Code quality improvements were completed as part of Option A:
 - Found another real relay behavior bug in `RelayHub.OnConnectedAsync()`: the disallowed-connection branch called `Context.Abort()` but then continued into normal authentication-challenge generation.
 - Added the missing `return` so disabled or wrong-mode relay connections stop immediately instead of still exercising the connect workflow after abort.
 - Documented the abort-without-return gotcha in `adr-0001-known-gotchas.md` before validation.
+
+## 2026-03-23 09:26 CST
+- Investigated first-run Docker startup crash from latest image logs: host startup failed resolving `slskd.Shares.IShareRepository` for `slskd.VirtualSoulfind.v2.Backends.LocalLibraryBackend`.
+- Fixed root DI wiring in `Program.cs` by mapping `IShareRepository` to `IShareService.GetLocalRepository()` before VSF v2 backend registration.
+- Added a focused DI regression in `LocalLibraryBackendTests` and documented the gotcha in `adr-0001-known-gotchas.md` immediately.
+- Also completed and validated the pending dependency bump batch already in the worktree:
+  - .NET: Serilog, Serilog.AspNetCore, Serilog sinks, OpenTelemetry packages, AWSSDK.S3, prometheus-net.DotNetRuntime
+  - web: `yaml`, `jsdom`, `vite`
+- Validation passed on the full tree:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`
+  - `bash packaging/scripts/run-release-gate.sh`

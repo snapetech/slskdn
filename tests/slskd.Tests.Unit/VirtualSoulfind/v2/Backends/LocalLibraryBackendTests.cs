@@ -21,6 +21,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using Moq;
     using slskd.MediaCore;
     using slskd.Shares;
@@ -222,6 +223,28 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Assert
             Assert.False(result.IsValid);
             Assert.Contains("no longer advertisable", result.InvalidityReason);
+        }
+
+        [Fact]
+        public void DiRegistration_LocalShareRepositoryMapping_ResolvesBackend()
+        {
+            var mockRepo = new Mock<IShareRepository>();
+            var mockShareService = new Mock<IShareService>();
+            mockShareService.Setup(service => service.GetLocalRepository()).Returns(mockRepo.Object);
+
+            var services = new ServiceCollection();
+            services.AddSingleton(mockShareService.Object);
+            services.AddSingleton<IShareRepository>(sp =>
+                sp.GetRequiredService<IShareService>().GetLocalRepository());
+            services.AddSingleton<IContentIdRegistry, ContentIdRegistry>();
+            services.AddSingleton<LocalLibraryBackend>();
+
+            using var provider = services.BuildServiceProvider();
+
+            var backend = provider.GetRequiredService<LocalLibraryBackend>();
+
+            Assert.NotNull(backend);
+            Assert.Same(mockRepo.Object, provider.GetRequiredService<IShareRepository>());
         }
     }
 }

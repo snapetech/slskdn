@@ -689,3 +689,10 @@ dotnet test
   - commit the script fix
   - push it
   - trigger the next release tag build
+
+## 2026-03-23 09:26 CST
+- Fixed the first-run Docker startup regression where VSF v2 `LocalLibraryBackend` could not resolve `IShareRepository` from DI.
+- Current tree also includes the validated dependency-bump batch for Serilog/OpenTelemetry/AWS/prometheus and frontend `yaml`/`jsdom`/`vite`.
+- Next steps:
+  - commit the validated tree
+  - if desired, rebuild/publish a new image tag from this green head

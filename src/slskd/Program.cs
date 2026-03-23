@@ -1133,6 +1133,8 @@ namespace slskd
                 Log.Information("[DI] ShareService constructed");
                 return service;
             });
+            services.AddSingleton<IShareRepository>(sp =>
+                sp.GetRequiredService<IShareService>().GetLocalRepository());
             services.AddTransient<IShareRepositoryFactory, SqliteShareRepositoryFactory>();
 
             services.AddSingleton<IContentLocator, ContentLocator>();
