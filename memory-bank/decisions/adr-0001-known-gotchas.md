@@ -14950,3 +14950,28 @@ await stream.CloseAsync(cancellationToken);
 ```
 
 **Why This Keeps Happening**: service interfaces often add optional stream hooks early, and it is easy to leave a placeholder close in place because the request/response RPC path already works. If the surface is reachable in production, either implement a conservative real behavior or explicitly remove the route.
+
+### 0k116. Timing-Sensitive Shutdown Tests Need Slack, and Mock Listeners Must Treat Shutdown Socket Errors as Normal
+
+**The Bug**: full-suite validation exposed two flaky tests: a cover-traffic shutdown test with a hard two-second wall-clock assertion, and a fragmented SOCKS mock server whose accept loop treated shutdown-time `SocketException` as a real failure. Both fail intermittently under normal CI load even when the production code is behaving correctly.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Common/Security/CoverTrafficGeneratorTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/Transport/DnsLeakPreventionVerifierTests.cs`
+
+**Wrong**:
+```csharp
+Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+...
+catch (OperationCanceledException) { break; }
+catch (ObjectDisposedException) { break; }
+```
+
+**Correct**:
+```csharp
+Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4));
+...
+catch (SocketException) when (_cts.IsCancellationRequested) { break; }
+```
+
+**Why This Keeps Happening**: low-level cancellation and socket-shutdown tests are extremely sensitive to host load and platform-specific teardown behavior. If the intent is "shutdown is prompt" or "listener stops cleanly", the assertions need realistic slack and the mock server needs to recognize shutdown exceptions as part of normal disposal.
