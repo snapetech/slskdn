@@ -14791,3 +14791,27 @@ return routingResult.Success;
 ```
 
 **Why This Keeps Happening**: there are two `IPodMessaging` implementations in the repo, and the older in-memory `PodMessaging` already attempted routing. It is easy to patch the wrong class and miss that DI serves the SQLite-backed implementation in production.
+
+### 0k114. Pod Router Must Use `PodMessage.PodId`, Not Parse It From `ChannelId`
+
+**The Bug**: `PodMessageRouter.RouteMessageAsync(...)` split `message.ChannelId` on `:` and treated the first segment as the pod ID. Real `PodMessage` payloads already carry `PodId` and a plain channel ID separately, so valid routed messages would be rejected as having an invalid channel format once the live SQLite path started invoking the router.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodMessageRouter.cs`
+
+**Wrong**:
+```csharp
+var channelParts = message.ChannelId.Split(':', 2);
+if (channelParts.Length != 2) { ... }
+var podId = channelParts[0];
+var simpleChannelId = channelParts[1];
+```
+
+**Correct**:
+```csharp
+var podId = message.PodId?.Trim();
+var channelId = message.ChannelId?.Trim();
+if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId)) { ... }
+```
+
+**Why This Keeps Happening**: there are multiple historical channel identity shapes in the codebase (`podId:channelId` strings and separate `PodId`/`ChannelId` fields). It is easy to copy the legacy split logic into newer runtime paths even though the current message contract no longer encodes both values in `ChannelId`.
