@@ -16176,3 +16176,36 @@ if (Governor is IDisposable disposableGovernor)
 ```
 
 **Why This Keeps Happening**: helper objects that look "owned by a service" are easy to forget when they are constructed inline instead of being DI-managed singletons. If a helper allocates timers, semaphores, or change registrations, then both replacement and parent-service disposal must release those internals explicitly. Otherwise old helper instances keep their background timers and subscriptions even after the live service has moved on.
+
+### 0k143. Share Host Removal Must Dispose Repositories, And ShareService Must Tear Down Its Owned Hooks
+
+**The Bug**: `ShareService` creates repositories for the local host and every remote host, but `TryRemoveHost(...)` used to drop a host from `HostDictionary` without disposing the removed repository. The service also subscribed to scanner/options change monitors without retaining the unsubscribe handles, and it had no disposal contract to release those registrations or its owned repositories on shutdown.
+
+**Files Affected**:
+- `src/slskd/Shares/ShareService.cs`
+- `src/slskd/Shares/IShareService.cs`
+
+**Wrong**:
+```csharp
+Scanner.StateMonitor.OnChange(cacheState => { ... });
+OptionsMonitor.OnChange(options => Configure(options));
+...
+if (HostDictionary.TryRemove(name, out _))
+{
+    removed = true;
+}
+```
+
+**Correct**:
+```csharp
+ScannerStateMonitorRegistration = Scanner.StateMonitor.OnChange(cacheState => { ... });
+OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
+...
+if (HostDictionary.TryRemove(name, out var removedHost))
+{
+    removedHost.Repository.Dispose();
+    removed = true;
+}
+```
+
+**Why This Keeps Happening**: repository collections make ownership look like simple dictionary bookkeeping, but each entry is a live disposable resource with timers, connections, and registrations behind it. If a service creates repositories and subscribes to monitor callbacks, it needs an explicit disposal contract for both removal-time cleanup and final service teardown.
