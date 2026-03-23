@@ -85,6 +85,9 @@ public static partial class PathGuard
             return null;
         }
 
+        peerPath = peerPath.Trim();
+        root = root.Trim();
+
         // 2. Length check BEFORE any processing
         if (peerPath.Length > MaxPathLength)
         {
@@ -384,6 +387,8 @@ public static partial class PathGuard
             return false;
         }
 
+        filename = filename.Trim();
+
         var extension = Path.GetExtension(filename);
         if (string.IsNullOrEmpty(extension))
         {
@@ -404,6 +409,8 @@ public static partial class PathGuard
         {
             return false;
         }
+
+        filename = filename.Trim();
 
         var extension = Path.GetExtension(filename);
         if (string.IsNullOrEmpty(extension))
@@ -426,6 +433,8 @@ public static partial class PathGuard
         {
             return PathValidationResult.Fail("Path is empty", PathViolationType.Empty);
         }
+
+        peerPath = peerPath.Trim();
 
         if (peerPath.Length > MaxPathLength)
         {

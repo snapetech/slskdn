@@ -719,3 +719,12 @@ dotnet test
 - Next steps:
   - commit this validated batch
   - continue into the next placeholder/null-heavy cluster from the inventory
+
+## 2026-03-23 10:23 CST
+- Finished the PathGuard / HttpSignatureKeyFetcher hardening pass and validated it green.
+- Current fixes in this batch:
+  - padded peer paths and extensions are normalized before PathGuard validation/classification
+  - HTTP signature key fetching now fails closed for blank or unresolved hosts while still permitting literal-IP HTTPS key IDs
+- Next steps:
+  - continue the bughunt from the placeholder/null-heavy inventory
+  - focus next on remaining `SongIdService`, `HashDbService`, and Mesh/PodCore read-side/runtime bottom-out paths

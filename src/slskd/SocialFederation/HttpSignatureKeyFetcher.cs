@@ -46,21 +46,9 @@ namespace slskd.SocialFederation
             }
 
             // Resolve host to IP and reject forbidden ranges
-            try
+            if (!await IsSafeHostAsync(uri, cancellationToken))
             {
-                var addrs = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);
-                foreach (var a in addrs)
-                {
-                    if (IPAddress.IsLoopback(a) || IsLinkLocal(a) || IsPrivate(a) || IsMulticast(a))
-                    {
-                        _logger.LogDebug("[HttpSignatureKeyFetcher] keyId host resolves to forbidden IP: {Host} -> {Ip}", uri.Host, a);
-                        return null;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "[HttpSignatureKeyFetcher] DNS resolution failed for {Host}", uri.Host);
+                _logger.LogDebug("[HttpSignatureKeyFetcher] keyId host resolves to forbidden or unreadable IP: {Host}", uri.Host);
                 return null;
             }
 
@@ -123,9 +111,25 @@ namespace slskd.SocialFederation
 
         private async Task<bool> IsSafeHostAsync(Uri uri, CancellationToken cancellationToken)
         {
+            var host = uri.DnsSafeHost?.Trim();
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return false;
+            }
+
+            if (IPAddress.TryParse(host, out var parsedAddress))
+            {
+                return !(IPAddress.IsLoopback(parsedAddress) || IsLinkLocal(parsedAddress) || IsPrivate(parsedAddress) || IsMulticast(parsedAddress));
+            }
+
             try
             {
-                var addrs = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);
+                var addrs = await Dns.GetHostAddressesAsync(host, cancellationToken);
+                if (addrs.Length == 0)
+                {
+                    return false;
+                }
+
                 foreach (var a in addrs)
                 {
                     if (IPAddress.IsLoopback(a) || IsLinkLocal(a) || IsPrivate(a) || IsMulticast(a))

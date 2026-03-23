@@ -6639,3 +6639,13 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+
+## 2026-03-23 10:23 CST
+- Finished the PathGuard and HTTP signature key fetcher boundary-hardening batch.
+- `PathGuard` now trims padded peer paths before detailed validation and preserves trimmed extension checks for dangerous/safe audio detection.
+- `HttpSignatureKeyFetcher` now fails closed on blank hostnames and empty DNS resolution results while still allowing literal-IP HTTPS key IDs without a DNS lookup.
+- Added focused regressions for padded absolute-path validation and literal-IP key fetch handling.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`
