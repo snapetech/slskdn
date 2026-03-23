@@ -15457,3 +15457,32 @@ currentBatchTimer?.Dispose();
 ```
 
 **Why This Keeps Happening**: timer-backed helpers often treat "timer no longer active" as equivalent to "timer fully cleaned up". It is not. If a `CancellationTokenSource` owns timer state or registrations, every path that replaces or clears it must both cancel and dispose it, not just the startup/reset path.
+
+### 0k123. Disposal Of Waiting Primitives Must Wake Pending Callers, Not Leave Them Parked Forever
+
+**The Bug**: `TokenBucket.GetAsync(...)` waits on an internal `waitForReset` task whenever the bucket is depleted. `Dispose()` tore down the timer and semaphore but did nothing to the pending reset task, so callers already blocked on depletion could hang forever against a disposed bucket.
+
+**Files Affected**:
+- `src/slskd/Common/TokenBucket.cs`
+
+**Wrong**:
+```csharp
+protected virtual void Dispose(bool disposing)
+{
+    if (disposing)
+    {
+        Clock.Dispose();
+        SyncRoot.Dispose();
+    }
+}
+```
+
+**Correct**:
+```csharp
+Interlocked.Exchange(
+    ref waitForReset,
+    new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously))
+    .TrySetException(new ObjectDisposedException(nameof(TokenBucket)));
+```
+
+**Why This Keeps Happening**: helper classes often clean up owned resources during disposal and forget that callers may already be blocked on an internal `TaskCompletionSource` or waiter task. If dispose invalidates the primitive, it must also complete or fault any pending waiters so they can observe shutdown instead of hanging forever.

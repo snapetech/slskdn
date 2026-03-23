@@ -6897,3 +6897,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused cleanup regressions in `tests/slskd.Tests.Unit/Common/Security/TimedBatcherTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter TimedBatcherTests` passed (`25/25`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k122` for timer-backed batch CTS cleanup and committed it immediately per repo policy (`docs: Add gotcha for timer-backed batch CTS cleanup`).
+
+## 2026-03-23 13:00 CST
+
+- Fixed a disposal hang in `TokenBucket`.
+- Disposing a depleted bucket now faults the in-flight reset waiter so callers blocked in `GetAsync()` observe `ObjectDisposedException` instead of hanging forever on a disposed primitive.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Common/TokenBucketTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter TokenBucketTests` passed (`16/16`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k123` for disposal-unblocks-waiters semantics and committed it immediately per repo policy (`docs: Add gotcha for token bucket disposal waiters`).

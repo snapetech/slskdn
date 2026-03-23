@@ -955,3 +955,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - then return to any restartable services that still replace long-lived synchronization primitives unsafely
+
+## 2026-03-23 13:00 CST
+- Continued the low-level helper sweep into `TokenBucket`.
+- Fixed disposal so pending depleted-bucket waiters are faulted instead of hanging forever after the bucket has been disposed.
+- Extended `TokenBucketTests` with a focused blocked-waiter disposal regression and confirmed the focused slice passed (`16/16`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k123` and will commit it immediately per repo policy (`docs: Add gotcha for token bucket disposal waiters`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - prioritize helper types that expose internal wait tasks or callback hooks without explicit shutdown behavior
