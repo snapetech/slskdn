@@ -13131,3 +13131,25 @@ publicKey = publicKey?.Trim() ?? string.Empty;
 ```
 
 **Why This Keeps Happening**: cryptographic code feels “exact,” so it is easy to forget that request and storage boundaries can still introduce whitespace drift before the bytes are parsed. Canonicalize strings before cache lookup, membership matching, and base64/signature parsing, then verify the actual payload.
+
+### 0k93. Mesh Request Keys Must Be Canonicalized Before Local Lookup And Pending-Request Correlation
+
+**The Bug**: mesh sync lookup/query/publish paths were still using raw usernames and FLAC keys as transport strings. That let harmless whitespace drift create false cache misses, duplicate pending waiters, and inconsistent local DB lookups for the same logical key.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+var requestId = $"{username}:{flacKey}";
+var local = await hashDb.LookupHashAsync(flacKey, cancellationToken);
+```
+
+**Correct**:
+```csharp
+username = username?.Trim() ?? string.Empty;
+flacKey = flacKey?.Trim() ?? string.Empty;
+var requestId = $"{username}:{flacKey}";
+```
+
+**Why This Keeps Happening**: transport/runtime code often assumes identifiers are already normalized because they “came from inside the mesh.” They are still boundary inputs. Canonicalize before DB lookup, pending-request correlation, and peer-state indexing or you silently split one logical operation into several inconsistent ones.
