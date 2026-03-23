@@ -6593,6 +6593,12 @@ Code quality improvements were completed as part of Option A:
 - Added the missing `return` so disabled or wrong-mode relay connections stop immediately instead of still exercising the connect workflow after abort.
 - Documented the abort-without-return gotcha in `adr-0001-known-gotchas.md` before validation.
 
+## 2026-03-23 13:47 - Relay fire-and-forget fault observation fix
+
+- Found another real relay runtime bug in the detached agent handlers: upload failure reporting and download-notification retry exhaustion could still throw after the handler had already been detached with `Task.Run`.
+- Added explicit guarding around the failure-report callback and a top-level catch around the download-notification worker so relay failures no longer disappear as unobserved task faults.
+- Documented the detached relay-task gotcha in `adr-0001-known-gotchas.md` before validation.
+
 ## 2026-03-23 09:26 CST
 - Investigated first-run Docker startup crash from latest image logs: host startup failed resolving `slskd.Shares.IShareRepository` for `slskd.VirtualSoulfind.v2.Backends.LocalLibraryBackend`.
 - Fixed root DI wiring in `Program.cs` by mapping `IShareRepository` to `IShareService.GetLocalRepository()` before VSF v2 backend registration.

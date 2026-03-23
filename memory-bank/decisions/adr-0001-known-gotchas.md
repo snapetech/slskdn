@@ -52,6 +52,52 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE1. Fire-And-Forget Relay Tasks Need Their Own Top-Level Catch, Including Failure-Reporting Code
+
+**The Bug**: `RelayClient` handled upload requests and download notifications inside fire-and-forget `Task.Run(...)` callbacks. The main body had local catches, but the “report failure back to the hub” callback and the download retry loop could still throw after the handler had already detached. That produced unobserved task faults and turned real relay failures into silent background errors.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+
+**Wrong**:
+```csharp
+_ = Task.Run(async () =>
+{
+    ...
+    catch (Exception ex)
+    {
+        if (HubConnection != null)
+        {
+            await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
+        }
+    }
+});
+```
+
+**Correct**:
+```csharp
+_ = Task.Run(async () =>
+{
+    try
+    {
+        ...
+    }
+    catch (Exception ex)
+    {
+        try
+        {
+            await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
+        }
+        catch (Exception notifyEx)
+        {
+            Log.Error(notifyEx, "Failed to report relay upload failure for {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
+        }
+    }
+});
+```
+
+**Why This Keeps Happening**: a catch in the main body feels sufficient, but once you detach work with `Task.Run`, any nested error-reporting or retry helper can still throw after the first failure path is entered. Fire-and-forget code needs one explicit top-level observer and separate guards around failure-notification callbacks, or the backup path becomes another unobserved fault.
+
 ### 0xE0. `Context.Abort()` Is Not A Control-Flow Return
 
 **The Bug**: `RelayHub.OnConnectedAsync()` aborted disallowed relay connections but then kept running and still generated/sent an authentication challenge. The hub looked guarded, but the abort path did not stop execution, so disabled or wrong-mode relay connections still exercised the normal connect logic.

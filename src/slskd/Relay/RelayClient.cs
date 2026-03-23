@@ -489,7 +489,14 @@ namespace slskd.Relay
                     // report the failure to the controller. this avoids a failure due to timeout.
                     if (HubConnection != null)
                     {
-                        await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
+                        try
+                        {
+                            await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
+                        }
+                        catch (Exception notifyEx)
+                        {
+                            Log.Error(notifyEx, "Failed to report relay upload failure for {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
+                        }
                     }
                 }
             });
@@ -508,47 +515,54 @@ namespace slskd.Relay
 
             _ = Task.Run(async () =>
             {
-                var destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
-
-                if (OptionsMonitor.CurrentValue.Relay.Mode.ToEnum<RelayMode>() == RelayMode.Debug)
+                try
                 {
-                    // if we're debugging, we're referencing the same file for both the controller and agent which will lead to an
-                    // access violation. prefix the destination file to avoid this.
-                    destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, $"{filename}.relayed");
+                    var destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
+
+                    if (OptionsMonitor.CurrentValue.Relay.Mode.ToEnum<RelayMode>() == RelayMode.Debug)
+                    {
+                        // if we're debugging, we're referencing the same file for both the controller and agent which will lead to an
+                        // access violation. prefix the destination file to avoid this.
+                        destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, $"{filename}.relayed");
+                    }
+
+                    // if the controller is Windows and the agent is Linux or vice versa, we need to translate the filename to the
+                    // local OS or we're going to get funny results when we go to write the file
+                    destinationFile = destinationFile.LocalizePath();
+
+                    await Retry.Do(task: async () =>
+                    {
+                        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/v0/relay/controller/downloads/{token}");
+
+                        request.Headers.Add("X-API-Key", OptionsMonitor.CurrentValue.Relay.Controller.ApiKey);
+                        request.Headers.Add("X-Relay-Agent", OptionsMonitor.CurrentValue.InstanceName);
+                        request.Headers.Add("X-Relay-Credential", ComputeCredential(token));
+                        request.Headers.Add("X-Relay-Filename-Base64", filename.ToBase64());
+
+                        using var client = CreateHttpClient();
+                        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                        response.EnsureSuccessStatusCode();
+
+                        using var remoteStream = await response.Content.ReadAsStreamAsync();
+
+                        var destinationDirectory = Path.GetDirectoryName(destinationFile)
+                            ?? throw new IOException($"Failed to determine destination directory for download {destinationFile}");
+                        Directory.CreateDirectory(destinationDirectory);
+                        using var localStream = new FileStream(destinationFile, FileMode.Create);
+                        await remoteStream.CopyToAsync(localStream);
+                    },
+                    isRetryable: (_, _) => true,
+                    onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token)),
+                    maxAttempts: 3,
+                    maxDelayInMilliseconds: 60000);
+
+                    Log.Information("File {Filename} successfully downloaded to {Destination}", filename, destinationFile);
                 }
-
-                // if the controller is Windows and the agent is Linux or vice versa, we need to translate the filename to the
-                // local OS or we're going to get funny results when we go to write the file
-                destinationFile = destinationFile.LocalizePath();
-
-                await Retry.Do(task: async () =>
+                catch (Exception ex)
                 {
-                    using var request = new HttpRequestMessage(HttpMethod.Get, $"api/v0/relay/controller/downloads/{token}");
-
-                    request.Headers.Add("X-API-Key", OptionsMonitor.CurrentValue.Relay.Controller.ApiKey);
-                    request.Headers.Add("X-Relay-Agent", OptionsMonitor.CurrentValue.InstanceName);
-                    request.Headers.Add("X-Relay-Credential", ComputeCredential(token));
-                    request.Headers.Add("X-Relay-Filename-Base64", filename.ToBase64());
-
-                    using var client = CreateHttpClient();
-                    using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-
-                    response.EnsureSuccessStatusCode();
-
-                    using var remoteStream = await response.Content.ReadAsStreamAsync();
-
-                    var destinationDirectory = Path.GetDirectoryName(destinationFile)
-                        ?? throw new IOException($"Failed to determine destination directory for download {destinationFile}");
-                    Directory.CreateDirectory(destinationDirectory);
-                    using var localStream = new FileStream(destinationFile, FileMode.Create);
-                    await remoteStream.CopyToAsync(localStream);
-                },
-                isRetryable: (_, _) => true,
-                onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token)),
-                maxAttempts: 3,
-                maxDelayInMilliseconds: 60000);
-
-                Log.Information("File {Filename} successfully downloaded to {Destination}", filename, destinationFile);
+                    Log.Error(ex, "Relay download notification handling failed for {Filename} ({Token})", filename, GetRelayTokenLogId(token));
+                }
             });
 
             return Task.CompletedTask;
