@@ -243,8 +243,18 @@ dotnet test
 - Added focused regression coverage for the normalized/blank-input paths and revalidated the batch with a clean runtime build, targeted unit slice, and lint.
 - Next: keep widening the bughunt through other low-traffic controllers and helper endpoints that still look like thin pass-throughs and may be skipping controller-edge normalization.
 
+## 2026-03-22 18:23
+- Normalized `SongIdController`, `StreamsController`, and `SolidController` so route/query/body values are trimmed before dispatch and blank values fail as `400`s instead of leaking into service-layer behavior.
+- Fixed a separate compile blocker in `MetadataFacade` caused by reused local names during a fallback-refactor, and documented both patterns immediately in `adr-0001-known-gotchas.md`.
+- Next: continue through the next thin-controller/helper batch, with emphasis on native utility controllers and other low-traffic endpoints that still bypass controller-edge canonicalization.
+
 ## 2026-03-22 18:22
 - Executed Batch A against `SongIdService`, `MetadataFacade`, and `MusicBrainzClient`.
 - Replaced one major early-bottom-out pattern: metadata hits without MBIDs now continue through SongID with conservative synthetic IDs instead of being discarded.
 - Added new focused unit coverage for metadata search fallback, filename-derived local-file metadata, and trimmed/deduplicated MusicBrainz search results.
 - Next: continue Batch A deeper into the remaining `SongIdService` / `SongIdScoring` helper paths, then take Batch B (`MeshSync` + transport/runtime fallback completion).
+
+## 2026-03-22 18:31
+- Continued Batch A deeper into SongID helper/scoring paths.
+- Fixed helper/path normalization around Panako/Audfprint discovery, corpus fingerprint resolution, excerpt start determinism, and loose-text scoring equivalence.
+- Next: keep pushing through the remaining `SongIdService` bottom-out paths or switch to Batch B (`MeshSync` + transport/runtime fallback completion).

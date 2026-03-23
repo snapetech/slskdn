@@ -2535,14 +2535,17 @@ public sealed class SongIdService : ISongIdService
             return null;
         }
 
-        if (Path.IsPathRooted(entry.FingerprintPath))
+        metadataPath = metadataPath.Trim();
+        var fingerprintPath = entry.FingerprintPath.Trim();
+
+        if (Path.IsPathRooted(fingerprintPath))
         {
-            return File.Exists(entry.FingerprintPath) ? entry.FingerprintPath : null;
+            return File.Exists(fingerprintPath) ? fingerprintPath : null;
         }
 
         var metadataDirectory = Path.GetDirectoryName(metadataPath) ?? string.Empty;
         var metadataRoot = Path.GetFullPath(metadataDirectory);
-        var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, entry.FingerprintPath));
+        var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, fingerprintPath));
         if (!relativeToMetadata.StartsWith(metadataRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(relativeToMetadata, metadataRoot, StringComparison.OrdinalIgnoreCase))
         {
@@ -2612,7 +2615,11 @@ public sealed class SongIdService : ISongIdService
     {
         if (commentTimestamps.Count > 0)
         {
-            var target = Math.Max(0, commentTimestamps.First() - Math.Min(20, excerptSeconds / 4));
+            var earliestTimestamp = commentTimestamps
+                .Where(timestamp => timestamp >= 0)
+                .DefaultIfEmpty(0)
+                .Min();
+            var target = Math.Max(0, earliestTimestamp - Math.Min(20, excerptSeconds / 4));
             return Math.Min(target, Math.Max(0, durationSeconds - excerptSeconds));
         }
 
@@ -2777,7 +2784,7 @@ public sealed class SongIdService : ISongIdService
 
     private string? LocatePanakoJar()
     {
-        var configuredJar = Environment.GetEnvironmentVariable("PANAKO_JAR");
+        var configuredJar = Environment.GetEnvironmentVariable("PANAKO_JAR")?.Trim();
         if (!string.IsNullOrWhiteSpace(configuredJar) && File.Exists(configuredJar))
         {
             return configuredJar;
@@ -2799,16 +2806,23 @@ public sealed class SongIdService : ISongIdService
 
         foreach (var root in GetSiblingSearchRoots())
         {
-            var libsDir = Path.Combine(root, "external", "Panako", "build", "libs");
-            if (!Directory.Exists(libsDir))
+            foreach (var libsDir in new[]
             {
-                continue;
-            }
+                Path.Combine(root, "external", "Panako", "build", "libs"),
+                Path.Combine(root, "Panako", "build", "libs"),
+                Path.Combine(root, "build", "libs"),
+            })
+            {
+                if (!Directory.Exists(libsDir))
+                {
+                    continue;
+                }
 
-            var jar = Directory.EnumerateFiles(libsDir, "*.jar").OrderBy(path => path, StringComparer.OrdinalIgnoreCase).LastOrDefault();
-            if (!string.IsNullOrWhiteSpace(jar))
-            {
-                return jar;
+                var jar = Directory.EnumerateFiles(libsDir, "*.jar").OrderBy(path => path, StringComparer.OrdinalIgnoreCase).LastOrDefault();
+                if (!string.IsNullOrWhiteSpace(jar))
+                {
+                    return jar;
+                }
             }
         }
 
@@ -2849,7 +2863,7 @@ public sealed class SongIdService : ISongIdService
 
     private string? LocateAudfprintScript()
     {
-        var configuredScript = Environment.GetEnvironmentVariable("AUDFPRINT_SCRIPT");
+        var configuredScript = Environment.GetEnvironmentVariable("AUDFPRINT_SCRIPT")?.Trim();
         if (!string.IsNullOrWhiteSpace(configuredScript) && File.Exists(configuredScript))
         {
             return configuredScript;
@@ -2870,10 +2884,17 @@ public sealed class SongIdService : ISongIdService
 
         foreach (var root in GetSiblingSearchRoots())
         {
-            var script = Path.Combine(root, "external", "audfprint", "audfprint.py");
-            if (File.Exists(script))
+            foreach (var script in new[]
             {
-                return script;
+                Path.Combine(root, "external", "audfprint", "audfprint.py"),
+                Path.Combine(root, "audfprint", "audfprint.py"),
+                Path.Combine(root, "audfprint.py"),
+            })
+            {
+                if (File.Exists(script))
+                {
+                    return script;
+                }
             }
         }
 
@@ -2901,10 +2922,20 @@ public sealed class SongIdService : ISongIdService
             {
                 var direct = current.FullName;
                 roots.Add(direct);
-                var sibling = Path.Combine(current.FullName, "ytdlpchop");
-                if (Directory.Exists(sibling))
+
+                foreach (var sibling in new[]
                 {
-                    roots.Add(sibling);
+                    Path.Combine(current.FullName, "ytdlpchop"),
+                    Path.Combine(current.FullName, "Panako"),
+                    Path.Combine(current.FullName, "audfprint"),
+                    Path.Combine(current.FullName, "external", "Panako"),
+                    Path.Combine(current.FullName, "external", "audfprint"),
+                })
+                {
+                    if (Directory.Exists(sibling))
+                    {
+                        roots.Add(sibling);
+                    }
                 }
 
                 current = current.Parent;

@@ -6000,6 +6000,13 @@ Code quality improvements were completed as part of Option A:
 - Added focused unit coverage in `BackfillControllerTests`, `AudioBoundaryControllerTests`, and `UserNotesControllerTests`, and verified the targeted slice passed `14/14`.
 - Documented the recurring pattern in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and immediately committed the docs-only note.
 
+## 2026-03-22 18:23 - Thin controller normalization plus MetadataFacade compile fix
+
+- Hardened `SongIdController`, `StreamsController`, and `SolidController` so they trim incoming identifiers and tokens before dispatch, reject blank `contentId`/`source`/`WebId` values at the boundary, and normalize non-positive SongID list limits.
+- Added focused regression coverage in `SongIdControllerTests`, `StreamsControllerTests`, and `SolidControllerTests`; the targeted slice passed `22/22`.
+- Fixed an unrelated compile blocker in `MetadataFacade.GetByFileAsync(...)` where a later tuple deconstruction reused `artist/title/album` names already declared earlier in the method.
+- Added and immediately committed gotchas for thin controller edge normalization and local-name reuse after refactors in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md).
+
 ## 2026-03-22 18:22 - SongID and metadata completion batch A
 
 - `MetadataFacade` now trims cache/query keys, caches AcoustID-only fallback hits, yields artist/title-only search hits even without a MusicBrainz recording ID, and falls back to filename-derived metadata for local files when tag parsing bottoms out.
@@ -6007,3 +6014,11 @@ Code quality improvements were completed as part of Option A:
 - `SongIdService` now uses filename metadata fallback for local files, stops duplicating the Spotify title in query generation, and accepts metadata search hits without MBIDs by assigning conservative synthetic recording IDs instead of discarding them.
 - Added focused unit coverage in new `MetadataFacadeTests` and `MusicBrainzClientTests`, plus new SongID tests covering synthetic metadata candidates and local-file filename fallback.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for dropping metadata hits without MBIDs.
+
+## 2026-03-22 18:31 - SongID helper discovery and scoring normalization
+
+- `SongIdService` now trims persisted corpus fingerprint paths, uses the earliest timestamp instead of input-order drift for excerpt selection, and trims helper locator environment variables before Panako/Audfprint path resolution.
+- Expanded SongID helper discovery to search more realistic sibling roots for `Panako` and `audfprint` checkouts instead of only one narrow layout.
+- `SongIdScoring.NormalizeLooseText(...)` now normalizes `feat/ft/featuring` and `&` variants so corpus and loose-text scoring stop undercounting obvious equivalent artist strings.
+- Added focused SongID tests covering trimmed corpus fingerprint paths, deterministic excerpt selection, trimmed tool-locator env vars, and loose-text equivalence normalization.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for trimmed helper locator paths.

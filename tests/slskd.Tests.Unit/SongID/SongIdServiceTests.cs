@@ -439,6 +439,89 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Equal("Known Title", metadata.GetType().GetProperty("Title")!.GetValue(metadata));
     }
 
+    [Fact]
+    public void ResolveCorpusFingerprintPath_TrimsRelativeFingerprintPath()
+    {
+        var metadataDir = Path.Combine(_tempDir, "trimmed-corpus");
+        Directory.CreateDirectory(metadataDir);
+
+        var metadataPath = Path.Combine(metadataDir, "entry.json");
+        File.WriteAllText(metadataPath, "{}");
+
+        var fingerprintPath = Path.Combine(metadataDir, "fingerprint.fp");
+        File.WriteAllText(fingerprintPath, "FINGERPRINT=1,2,3");
+
+        var method = typeof(SongIdService).GetMethod("ResolveCorpusFingerprintPath", BindingFlags.NonPublic | BindingFlags.Static);
+        var entryType = typeof(SongIdService).GetNestedType("SongIdCorpusEntry", BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        Assert.NotNull(entryType);
+
+        var entry = Activator.CreateInstance(entryType!);
+        Assert.NotNull(entry);
+        entryType!.GetProperty("FingerprintPath")!.SetValue(entry, " fingerprint.fp ");
+
+        var result = method!.Invoke(null, new object[] { metadataPath, entry });
+
+        Assert.Equal(fingerprintPath, result);
+    }
+
+    [Fact]
+    public void ChooseExcerptStart_UsesEarliestTimestampInsteadOfInputOrder()
+    {
+        var method = typeof(SongIdService).GetMethod("ChooseExcerptStart", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var result = Assert.IsType<int>(method!.Invoke(null, new object[] { new[] { 95, 20, 60 }, 300, 90 })!);
+
+        Assert.Equal(0, result);
+    }
+
+    [Fact]
+    public void LocatePanakoJar_UsesTrimmedEnvironmentValue()
+    {
+        var jarPath = Path.Combine(_tempDir, "panako.jar");
+        File.WriteAllText(jarPath, "jar");
+        Environment.SetEnvironmentVariable("PANAKO_JAR", $"  {jarPath}  ");
+
+        try
+        {
+            var service = CreateService(new SongIdRunStore());
+            var method = typeof(SongIdService).GetMethod("LocatePanakoJar", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(method);
+
+            var result = method!.Invoke(service, Array.Empty<object>());
+
+            Assert.Equal(jarPath, result);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PANAKO_JAR", null);
+        }
+    }
+
+    [Fact]
+    public void LocateAudfprintScript_UsesTrimmedEnvironmentValue()
+    {
+        var scriptPath = Path.Combine(_tempDir, "audfprint.py");
+        File.WriteAllText(scriptPath, "print('ok')");
+        Environment.SetEnvironmentVariable("AUDFPRINT_SCRIPT", $"  {scriptPath}  ");
+
+        try
+        {
+            var service = CreateService(new SongIdRunStore());
+            var method = typeof(SongIdService).GetMethod("LocateAudfprintScript", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(method);
+
+            var result = method!.Invoke(service, Array.Empty<object>());
+
+            Assert.Equal(scriptPath, result);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AUDFPRINT_SCRIPT", null);
+        }
+    }
+
     public void Dispose()
     {
         var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
