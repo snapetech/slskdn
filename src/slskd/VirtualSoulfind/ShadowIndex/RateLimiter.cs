@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 /// <summary>
 /// Rate limiter for DHT write operations.
 /// </summary>
-public interface IDhtRateLimiter
+public interface IDhtRateLimiter : IDisposable
 {
     Task<bool> TryAcquireAsync(CancellationToken ct = default);
     void Release();

@@ -14,7 +14,7 @@ namespace slskd.VirtualSoulfind.Scenes;
 /// <summary>
 /// Interface for overlay pubsub (scene gossip).
 /// </summary>
-public interface IScenePubSubService
+public interface IScenePubSubService : IDisposable
 {
     /// <summary>
     /// Subscribe to a scene's pubsub topic.

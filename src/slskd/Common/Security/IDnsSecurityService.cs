@@ -12,7 +12,7 @@ namespace slskd.Common.Security;
 /// Abstraction for DNS resolution and validation for tunnel services.
 /// Allows tests to inject a mock that controls resolution outcomes (e.g. mixed allowed/blocked IPs).
 /// </summary>
-public interface IDnsSecurityService
+public interface IDnsSecurityService : IDisposable
 {
     /// <summary>
     /// Resolves a hostname and validates all IPs against security policies.

@@ -60,7 +60,7 @@ namespace slskd.Common.Moderation
     ///         - No sensitive data in requests (no raw hashes, no full paths)
     ///     </para>
     /// </remarks>
-    public interface IExternalModerationClient
+    public interface IExternalModerationClient : IDisposable
     {
         /// <summary>
         ///     Analyzes a file using an external moderation service.

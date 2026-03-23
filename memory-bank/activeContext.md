@@ -1159,3 +1159,12 @@ dotnet test
 - Next steps:
   - continue scanning other long-lived `OnChange(...)` subscribers that currently discard their returned `IDisposable`, especially `Application`, `ShareService`, and upload/relay/user services
   - prioritize subscribers that replace dependencies or aggregate state from multiple live sources, because those are the ones most likely to suffer real stale-callback behavior
+
+## 2026-03-23 19:10 CST
+- Continued the broader singleton/resource-ownership pass into privacy, moderation, discovery, and scene-pubsub contracts.
+- Widened the DI-facing disposal contract sweep across the remaining interfaces in that cluster, then closed the real follow-on bug family in the privacy layer instead of stopping at “implements IDisposable”.
+- `slskd.Common.Security.PrivacyLayer` now throws after disposal and explicitly tears down owned helper components, while `slskd.Mesh.Privacy.PrivacyLayer` now disposes replaced helpers during `UpdateConfiguration(...)` and tears down live helper state on disposal.
+- The mesh privacy helper family now disposes owned RNG/semaphore resources and fails closed after teardown, with focused integration coverage proving replacement/disposal behavior.
+- Next steps:
+  - continue the same clustered ownership scan on DI-facing services whose interfaces still hide disposal or whose reconfiguration paths replace owned helpers without disposing the old instance
+  - prioritize other replaceable helper families beneath singleton services, especially caches, schedulers, and transport selectors that rebuild internal strategy objects on options changes

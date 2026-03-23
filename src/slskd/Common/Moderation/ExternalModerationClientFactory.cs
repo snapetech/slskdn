@@ -98,6 +98,10 @@ namespace slskd.Common.Moderation
                 _logger?.LogDebug("[NoopLlm] External moderation disabled, returning Unknown");
                 return Task.FromResult(ModerationDecision.Unknown("external_moderation_disabled"));
             }
+
+            public void Dispose()
+            {
+            }
         }
     }
 }

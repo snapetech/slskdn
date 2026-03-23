@@ -171,6 +171,10 @@ public class SceneServicesTests
     {
         public event EventHandler<SceneMessageReceivedEventArgs>? MessageReceived;
 
+        public void Dispose()
+        {
+        }
+
         public Task PublishAsync(string sceneId, byte[] message, CancellationToken ct = default) => Task.CompletedTask;
 
         public void RaiseMessageReceived(SceneMessageReceivedEventArgs args)

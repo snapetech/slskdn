@@ -8,7 +8,7 @@ namespace slskd.Common.Security;
 /// Interface for privacy transformations (padding, timing, batching).
 /// Composable middleware pattern for message processing.
 /// </summary>
-public interface IPrivacyLayer
+public interface IPrivacyLayer : IDisposable
 {
     /// <summary>
     /// Transforms outbound message with privacy protections.

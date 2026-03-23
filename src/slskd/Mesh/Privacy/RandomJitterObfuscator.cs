@@ -11,12 +11,13 @@ namespace slskd.Mesh.Privacy;
 /// Implements random timing jitter to prevent traffic analysis by obscuring message send timing patterns.
 /// Adds configurable random delays to outbound messages to break timing correlation attacks.
 /// </summary>
-public class RandomJitterObfuscator : ITimingObfuscator
+public sealed class RandomJitterObfuscator : ITimingObfuscator, IDisposable
 {
     private readonly ILogger<RandomJitterObfuscator> _logger;
     private readonly RandomNumberGenerator _rng;
     private readonly TimeSpan _minDelay;
     private readonly TimeSpan _maxDelay;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RandomJitterObfuscator"/> class.
@@ -50,6 +51,8 @@ public class RandomJitterObfuscator : ITimingObfuscator
     /// <returns>The delay as a TimeSpan.</returns>
     public TimeSpan GetDelay()
     {
+        ThrowIfDisposed();
+
         var delayRange = _maxDelay - _minDelay;
         if (delayRange.TotalMilliseconds <= 0)
         {
@@ -76,6 +79,8 @@ public class RandomJitterObfuscator : ITimingObfuscator
     /// </summary>
     public void RecordSend()
     {
+        ThrowIfDisposed();
+
         // No-op for basic random jitter implementation
         // Future versions could implement adaptive timing based on send patterns
     }
@@ -123,5 +128,22 @@ public class RandomJitterObfuscator : ITimingObfuscator
         /// </summary>
         public static RandomJitterObfuscator Maximum(ILogger<RandomJitterObfuscator> logger)
             => new(logger, 200, 1000);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _rng.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

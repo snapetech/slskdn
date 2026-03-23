@@ -7,7 +7,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Privacy layer implementation that applies multiple privacy transformations.
 /// </summary>
-public class PrivacyLayer : IPrivacyLayer
+public sealed class PrivacyLayer : IPrivacyLayer
 {
     private readonly PrivacyLayerOptions _options;
     private readonly IMessagePadder? _padder;
@@ -23,6 +23,7 @@ public class PrivacyLayer : IPrivacyLayer
     private long _totalPaddingBytes;
     private TimeSpan _averageProcessingLatency = TimeSpan.Zero;
     private readonly object _statsLock = new();
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PrivacyLayer"/> class.
@@ -72,6 +73,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>Transformed message bytes.</returns>
     public async Task<byte[]> TransformOutboundAsync(byte[] message, IReadOnlyDictionary<string, object>? metadata = null)
     {
+        ThrowIfDisposed();
+
         if (message == null)
             throw new ArgumentNullException(nameof(message));
 
@@ -139,6 +142,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>Original message bytes.</returns>
     public Task<byte[]> TransformInboundAsync(byte[] message, IReadOnlyDictionary<string, object>? metadata = null)
     {
+        ThrowIfDisposed();
+
         if (message == null)
             throw new ArgumentNullException(nameof(message));
 
@@ -178,6 +183,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>Privacy metrics.</returns>
     public Task<PrivacyStatistics> GetStatisticsAsync()
     {
+        ThrowIfDisposed();
+
         lock (_statsLock)
         {
             return Task.FromResult(new PrivacyStatistics
@@ -199,6 +206,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>The batch of messages, or empty list if batching is disabled.</returns>
     public async Task<IReadOnlyList<BatchedMessage>> GetNextBatchAsync(CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
+
         if (_batcher == null)
             return Array.Empty<BatchedMessage>();
 
@@ -211,10 +220,27 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>The current batch of messages.</returns>
     public async Task<IReadOnlyList<BatchedMessage>> FlushBatchAsync()
     {
+        ThrowIfDisposed();
+
         if (_batcher == null)
             return Array.Empty<BatchedMessage>();
 
         return await _batcher.FlushAsync();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        (_coverTrafficGenerator as IDisposable)?.Dispose();
+        (_batcher as IDisposable)?.Dispose();
+        (_timingObfuscator as IDisposable)?.Dispose();
+        (_padder as IDisposable)?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -223,6 +249,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
+
         if (_coverTrafficGenerator != null)
         {
             await _coverTrafficGenerator.StartAsync(cancellationToken);
@@ -234,9 +262,16 @@ public class PrivacyLayer : IPrivacyLayer
     /// </summary>
     public async Task StopAsync()
     {
+        ThrowIfDisposed();
+
         if (_coverTrafficGenerator != null)
         {
             await _coverTrafficGenerator.StopAsync();
         }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

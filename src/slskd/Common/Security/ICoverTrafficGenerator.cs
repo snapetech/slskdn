@@ -7,7 +7,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Interface for cover traffic generation.
 /// </summary>
-public interface ICoverTrafficGenerator
+public interface ICoverTrafficGenerator : IDisposable
 {
     /// <summary>
     /// Starts the cover traffic generation.

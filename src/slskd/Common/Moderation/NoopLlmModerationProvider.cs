@@ -105,5 +105,9 @@ namespace slskd.Common.Moderation
                 }
             };
         }
+
+        public void Dispose()
+        {
+        }
     }
 }

@@ -10,7 +10,7 @@ namespace slskd.Mesh.Privacy;
 /// Main interface for the privacy layer that composes all privacy protection components.
 /// Provides comprehensive traffic analysis protection for adversarial environments.
 /// </summary>
-public interface IPrivacyLayer
+public interface IPrivacyLayer : IDisposable
 {
     /// <summary>
     /// Gets whether the privacy layer is enabled.
