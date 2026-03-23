@@ -3378,7 +3378,7 @@ namespace slskd
                         OptionsAtStartup.Logger.Loki ?? string.Empty,
                         textFormatter: new MessageTemplateTextFormatter(
                             "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
-                            provider: null)))
+                            null)))
                 .WriteTo.Sink(new DelegatingSink(logEvent =>
                 {
                     string message = string.Empty;

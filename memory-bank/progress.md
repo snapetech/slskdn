@@ -6553,3 +6553,4 @@ Code quality improvements were completed as part of Option A:
 - Updated `Program.cs` to use the current `GrafanaLoki(..., textFormatter: ...)` overload with `MessageTemplateTextFormatter` instead of the removed `outputTemplate:` named parameter.
 - Bumped the runtime package reference to `Serilog.Sinks.Grafana.Loki` 8.3.2 so the repo matches the dependency state CI was building.
 - Documented the named-argument dependency drift in `adr-0001-known-gotchas.md` before validation.
+- Follow-up correction: `MessageTemplateTextFormatter` also needed the second constructor argument passed positionally (`null`) because the named `provider:` argument is not available on the target Serilog formatter API.

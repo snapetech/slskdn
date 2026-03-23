@@ -73,10 +73,10 @@ config => config.GrafanaLoki(
     OptionsAtStartup.Logger.Loki ?? string.Empty,
     textFormatter: new MessageTemplateTextFormatter(
         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
-        provider: null))
+        null))
 ```
 
-**Why This Keeps Happening**: named arguments against third-party APIs are brittle when maintainers replace overload shapes instead of keeping obsolete shims. For dependency bumps, prefer adapting to the current stable abstraction (`ITextFormatter` here) and validate the build against the upgraded package, not just the currently pinned one.
+**Why This Keeps Happening**: named arguments against third-party APIs are brittle when maintainers replace overload shapes instead of keeping obsolete shims, and formatter/helper constructors can drift the same way. For dependency bumps, prefer adapting to the current stable abstraction (`ITextFormatter` here), avoid speculative named arguments on helper constructors, and validate the build against the upgraded package, not just the currently pinned one.
 
 ### 0xD9. Release Gates Must Exercise Release-Build Test Compiles, Not Just Debug `dotnet test`
 

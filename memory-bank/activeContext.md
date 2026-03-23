@@ -29,6 +29,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Last Activity**:
   - Investigated the failed morning GitHub Actions runs and confirmed the blocking compile error was the Dependabot `Serilog.Sinks.Grafana.Loki` upgrade.
   - Updated `Program.cs` to use the formatter-based `GrafanaLoki(..., textFormatter: ...)` overload required by Loki sink 8.3.2.
+  - Corrected the formatter construction to pass the format provider positionally because the target `MessageTemplateTextFormatter` API does not expose a `provider:` named argument.
   - Bumped `Serilog.Sinks.Grafana.Loki` in `src/slskd/slskd.csproj` to `8.3.2` so local and CI builds use the same dependency shape.
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and recorded the work in `progress.md`.
   - Closed the secure-release validation loop:
