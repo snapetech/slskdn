@@ -259,6 +259,34 @@ Staged = null;
 staged?.Invoke();
 ```
 
+### 0xDD. AUR and Distribution Metadata Must Stay Version-Consistent
+
+**The Bug**: Packaging automation and validation relied on one-off checks (for example, `PKGBUILD-bin` first `sha256sums` entry), while related package metadata files were validated inconsistently. This allowed release metadata to drift: one manifest could be updated while another still referenced a stale release tag, and checks that should fail early were only partially applied.
+
+**Files Affected**:
+- `packaging/scripts/validate-packaging-metadata.sh`
+- `.github/workflows/ci.yml`
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-bin`
+
+**Wrong**:
+```bash
+# Only one PKGBUILD path was required to keep a mutable asset checksum on SKIP.
+if [[ "$pkgbuild" == "PKGBUILD-bin" && "${sums[0]:-}" != "SKIP" ]]; then
+  fail ...
+fi
+```
+
+**Correct**:
+```bash
+# Any release-packaging PKGBUILD should avoid pinning mutable source archives.
+if [[ "${sums[0]:-}" != "SKIP" ]]; then
+  fail ...
+fi
+```
+
+**Why This Keeps Happening**: release-packaging flows touch multiple package formats, and teams naturally validate the one that failed last. Without shared, format-wide checks, stale hashes in one package path can persist while others are clean, creating intermittent installer failures across releases.
+
 **Why This Keeps Happening**: utility classes often assume they are “single-threaded enough,” but timer callbacks are already concurrent with callers. If shared state is modified on both paths, use atomic operations. If a queued callback slot is supposed to represent “run at most once,” clear the slot before invoking user code or a failing delegate will be retried forever.
 
 ### 0xDC. Scene Message Fanout Must Not Let One Subscriber Abort PubSub Or Chat Delivery
