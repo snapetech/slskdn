@@ -10,6 +10,8 @@ using Moq;
 using slskd.DhtRendezvous;
 using slskd.HashDb.Optimization;
 using slskd.Mesh.Realm;
+using slskd.Transfers.Downloads;
+using slskd.Transfers.Rescue;
 using Xunit;
 
 public class HostedServiceLifecycleTests
@@ -100,6 +102,27 @@ public class HostedServiceLifecycleTests
         await service.StartAsync(CancellationToken.None);
 
         Assert.True(previousInitializationCts.IsCancellationRequested);
+
+        await service.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task UnderperformanceDetectorHostedService_StartAsync_CancelsPreviousLoopTokenSource()
+    {
+        var optionsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();
+        optionsMonitor.SetupGet(monitor => monitor.CurrentValue).Returns(new slskd.Options());
+
+        var service = new UnderperformanceDetectorHostedService(
+            Mock.Of<IDownloadService>(),
+            Mock.Of<IRescueService>(),
+            optionsMonitor.Object);
+
+        var previousLoopCts = new CancellationTokenSource();
+        SetPrivateField(service, "loopCts", previousLoopCts);
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.True(previousLoopCts.IsCancellationRequested);
 
         await service.StopAsync(CancellationToken.None);
     }

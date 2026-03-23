@@ -58,6 +58,7 @@ namespace slskd.Transfers.Rescue
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             log.Information("[RESCUE] Underperformance detector started");
+            loopCts?.Cancel();
             loopCts?.Dispose();
             loopCts = new CancellationTokenSource();
             loopTask = Task.Run(() => RunLoopAsync(loopCts.Token), CancellationToken.None);
