@@ -6777,6 +6777,7 @@ Code quality improvements were completed as part of Option A:
 
 - Fixed a real dead-event contract bug in `LanDiscoveryService`.
 - `ILanDiscoveryService.PeerDiscovered` is now backed by a real event and raised as nearby peers are parsed during `BrowseAsync`, instead of silently discarding subscribers through no-op accessors.
+- Hardened `LanDiscoveryService` event fanout so one bad `PeerDiscovered` subscriber no longer aborts the rest of peer enumeration or turn a healthy browse into an error path.
 - Tightened the existing identity regression in `tests/slskd.Tests.Unit/Identity/LanDiscoveryServiceTests.cs` so it proves the event handler is actually retained and invoked.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `LanDiscoveryServiceTests` slice passed `7/7`.
 ## 2026-03-23 11:00 CST

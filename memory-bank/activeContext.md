@@ -32,6 +32,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Confirmed the focused slice passed and the runtime build remains green
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Fixed `LanDiscoveryService.PeerDiscovered` so the event is no longer a no-op contract
+  - Hardened `LanDiscoveryService.PeerDiscovered` fanout so one failing subscriber no longer aborts the rest of browse enumeration
   - Tightened `LanDiscoveryServiceTests` to prove subscribers are retained and invoked
   - Confirmed the focused identity slice passed (`7/7`) and the runtime build remains green
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy

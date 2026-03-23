@@ -108,10 +108,30 @@ public event EventHandler<DiscoveredPeer>? PeerDiscovered
 public event EventHandler<DiscoveredPeer>? PeerDiscovered;
 ...
 peers.Add(peer);
-PeerDiscovered?.Invoke(this, peer);
+RaisePeerDiscovered(peer);
+...
+private void RaisePeerDiscovered(DiscoveredPeer peer)
+{
+    if (PeerDiscovered is null)
+    {
+        return;
+    }
+
+    foreach (EventHandler<DiscoveredPeer> handler in PeerDiscovered.GetInvocationList())
+    {
+        try
+        {
+            handler.Invoke(this, peer);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[LanDiscovery] PeerDiscovered subscriber failed");
+        }
+    }
+}
 ```
 
-**Why This Keeps Happening**: empty event accessors are an easy way to silence analyzers or satisfy an interface quickly, but they create a false contract: callers believe they are subscribed when nothing is retained. If an interface exposes an event, either implement real backing storage and raise it at the logical emission point, or remove the event from the contract entirely.
+**Why This Keeps Happening**: empty event accessors are an easy way to silence analyzers or satisfy an interface quickly, but they create a false contract: callers believe they are subscribed when nothing is retained. The follow-on mistake is to replace the no-op accessor with raw `?.Invoke(...)` inside a shared enumeration loop, which lets one subscriber abort the rest of discovery. If an interface exposes an event, implement real backing storage and raise it through per-subscriber isolation when the emission sits inside shared scan/browse fanout.
 
 ### 0xDC. Timer-Backed Callback Infrastructure Must Clear Shared State Before Invoking User Code
 
