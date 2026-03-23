@@ -629,3 +629,13 @@ dotnet test
 - `MeshStatsCollector` now resolves live in-memory DHT state through the concrete runtime service shape or its aliases.
 - `MeshServiceClient` now normalizes service/method/correlation inputs and selects the freshest valid provider deterministically.
 - Next: commit all dirty files in the repo, then run full validation and the release gate.
+
+## 2026-03-22 21:49 CST
+- Current task: finish release validation and stop widening scope.
+- Confirmed the remaining blocker is in the unit-test project, not the runtime build or frontend gate stages.
+- Fixed one concrete release blocker:
+  - `tests/slskd.Tests.Unit/HashDb/API/HashDbControllerTests.cs` now uses `FlacInventoryEntry.Path` instead of removed `Filename`.
+- Next steps:
+  - rerun `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release`
+  - rerun `bash packaging/scripts/run-release-gate.sh`
+  - fix only the next blocker if either still fails

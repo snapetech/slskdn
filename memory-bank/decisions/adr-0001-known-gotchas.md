@@ -14143,3 +14143,22 @@ return Ok(new { updated });
 ```
 
 **Why This Keeps Happening**: operational/admin endpoints often start as “echo plus result” debugging helpers. Once the workflow stabilizes, keep only the newly produced result unless the caller truly needs the reflected flags for correlation.
+
+### 0k106. Release Gates Often Fail On Test-Project API Drift, Not Product Regressions
+
+**The Bug**: the full release gate was exiting in the backend unit-test stage because a recently updated unit test still constructed `FlacInventoryEntry` with a removed `Filename` property. The product build stayed green, but the release pipeline failed on test compile drift.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/HashDb/API/HashDbControllerTests.cs`
+
+**Wrong**:
+```csharp
+new FlacInventoryEntry { Filename = "song.flac", Size = 123L }
+```
+
+**Correct**:
+```csharp
+new FlacInventoryEntry { Path = "song.flac", Size = 123L }
+```
+
+**Why This Keeps Happening**: controller-contract sweeps often touch tests late, and the runtime project can still build cleanly while the release gate fails inside the unit-test compile. When a release gate dies in `dotnet test`, check for test-project API drift before assuming the wrapper script or product code is broken.

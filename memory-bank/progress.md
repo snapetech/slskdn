@@ -6522,3 +6522,10 @@ Code quality improvements were completed as part of Option A:
 - Next: continue the secure-release sweep through any remaining success envelopes that still behave like debug echoes instead of minimal release contracts.
 
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.
+
+## 2026-03-22 21:49 CST
+- Switched from open-ended hardening back to strict release-blocker triage.
+- Identified the current gate failure as a unit-test compile error, not a product/runtime regression:
+  - `HashDbControllerTests` was still constructing `FlacInventoryEntry` with removed `Filename` instead of `Path`.
+- Fixed the test drift and documented the pattern in `adr-0001-known-gotchas.md`.
+- Next: rerun backend unit tests and the full `packaging/scripts/run-release-gate.sh`, then fix only whatever still blocks release.
