@@ -928,3 +928,12 @@ dotnet test
 - Next steps:
   - continue bughunting restartable hosted/background services that replace long-lived CTS fields
   - then return to the remaining low-level callback and event-fanout helpers
+
+## 2026-03-23 12:33 CST
+- Continued the same restart-token sweep into `SoulseekHealthMonitor`.
+- Fixed `StartMonitoringAsync()` so it cancels the previous monitoring CTS before disposal/replacement; repeated starts no longer leave the prior health-monitor loop alive with an uncanceled token.
+- Extended `HostedServiceLifecycleTests` to cover the monitor restart path and confirmed the focused slice passed (`6/6`), the unit project still builds with `0 errors`, and the release build stayed green (`0 warnings / 0 errors`).
+- Extended the existing ADR-0001 startup-CTS gotcha entry and will commit it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+- Next steps:
+  - continue bughunting restartable hosted/background services that replace long-lived CTS fields
+  - then return to the remaining low-level callback and event-fanout helpers

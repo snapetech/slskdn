@@ -6873,3 +6873,11 @@ Code quality improvements were completed as part of Option A:
 - Extended focused lifecycle coverage in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `HostedServiceLifecycleTests` slice passed `5/5`.
 - Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+
+## 2026-03-23 12:33 CST
+
+- Fixed the same restart-token leak pattern in `SoulseekHealthMonitor`.
+- `StartMonitoringAsync()` now cancels the previous monitoring CTS before disposing/replacing it, so repeated monitor starts do not orphan the old health loop with a live uncanceled token.
+- Extended focused lifecycle coverage in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter HostedServiceLifecycleTests` passed (`6/6`); `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).

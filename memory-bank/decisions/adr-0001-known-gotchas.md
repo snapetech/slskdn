@@ -15335,6 +15335,7 @@ var reader = new slskd.Shares.ChannelReader<int>(channel, handler);
 - `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
 - `src/slskd/Identity/MdnsAdvertiser.cs`
 - `src/slskd/Transfers/Rescue/UnderperformanceDetectorHostedService.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
 
 **Wrong**:
 ```csharp
@@ -15366,7 +15367,7 @@ public void Dispose()
 }
 ```
 
-**Why This Keeps Happening**: it is easy to treat a CTS field as both the lifecycle handle and the worker's runtime dependency, but detached tasks need a stable local token source once they start. The same bug also appears in restartable hosted services that replace their loop CTS on a second `StartAsync()` call: disposing the old source without canceling it first orphans the old loop with no remaining shutdown handle. If background startup work can outlive the calling method, capture the CTS locally, cancel it before any disposal/replacement, and only then clear the shared field.
+**Why This Keeps Happening**: it is easy to treat a CTS field as both the lifecycle handle and the worker's runtime dependency, but detached tasks need a stable local token source once they start. The same bug also appears in restartable hosted services and background monitors that replace their loop CTS on a later `StartAsync()` or `StartMonitoringAsync()` call: disposing the old source without canceling it first orphans the old loop with no remaining shutdown handle. If background startup work can outlive the calling method, capture the CTS locally, cancel it before any disposal/replacement, and only then clear the shared field.
 
 ### 0k120. Natural Stream-Mapping Completion Must Clear And Dispose The Active CTS, Not Leave Stale Mapping State Behind
 
