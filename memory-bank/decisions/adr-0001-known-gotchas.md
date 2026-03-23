@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD2. Mesh Validation And Quota Replies Should Be Stable Categories, Not Schema Or Policy Tutorials
+
+**The Bug**: mesh service replies were still spelling out exact request-shape expectations and policy thresholds in public error text. That exposed field names like `targetPeerId` and internal limits like maximum tunnel counts or byte-length requirements even though the caller only needs to know the category of failure.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/HolePunchMeshService.cs`
+
+**Wrong**:
+```csharp
+ErrorMessage = $"Too many active tunnels per peer (max {policy.MaxConcurrentTunnelsPerPeer})";
+ErrorMessage = "Invalid FindNode request: target ID must be 20 bytes";
+ErrorMessage = "Invalid HolePunchRequest: targetPeerId and localEndpoints required";
+```
+
+**Correct**:
+```csharp
+ErrorMessage = "Too many active tunnels per peer";
+ErrorMessage = "Invalid request payload";
+ErrorMessage = "Tunnel creation rate limit exceeded";
+```
+
+**Why This Keeps Happening**: service-level validation often sits close to the exact policy check, so the literal condition becomes the response text. For secure release surfaces, public replies should communicate the failure class, not teach callers the schema or reveal enforcement thresholds. Keep the detailed reason in logs and tests, not the wire contract.
+
 ### 0xD1. Infrastructure Result Objects Must Not Reflect Local Paths, File Sizes, Or Raw Method Labels
 
 **The Bug**: infrastructure-facing result objects were still returning local-only details because they felt “operational” instead of public. That leaked absolute import paths from realm migration failures, local file sizes from mesh content fetch errors, and raw method labels from mesh introspection and DHT service replies.
