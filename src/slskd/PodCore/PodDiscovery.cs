@@ -114,7 +114,7 @@ public class PodDiscovery : IPodDiscovery
                 {
                     var dhtKey = DeriveDhtKey(podId);
                     var metadata = await dht.GetAsync<PodMetadata>(dhtKey, ct);
-                    return metadata;
+                    return NormalizeMetadata(metadata, podId);
                 }
                 catch (Exception ex)
                 {
@@ -179,7 +179,7 @@ public class PodDiscovery : IPodDiscovery
         try
         {
             var dhtKey = DeriveDhtKey(normalizedPodId);
-            var metadata = await dht.GetAsync<PodMetadata>(dhtKey, ct);
+            var metadata = NormalizeMetadata(await dht.GetAsync<PodMetadata>(dhtKey, ct), normalizedPodId);
 
             if (metadata != null)
             {
@@ -234,5 +234,24 @@ public class PodDiscovery : IPodDiscovery
     private static string DeriveDhtKey(string podId)
     {
         return $"{PodKeyPrefix}{podId}";
+    }
+
+    private static PodMetadata? NormalizeMetadata(PodMetadata? metadata, string requestedPodId)
+    {
+        if (metadata == null)
+        {
+            return null;
+        }
+
+        metadata.PodId = string.IsNullOrWhiteSpace(metadata.PodId) ? requestedPodId : metadata.PodId.Trim();
+        metadata.Name = metadata.Name?.Trim() ?? string.Empty;
+        metadata.FocusContentId = string.IsNullOrWhiteSpace(metadata.FocusContentId) ? null : metadata.FocusContentId.Trim();
+        metadata.Tags = metadata.Tags?
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? new List<string>();
+
+        return string.IsNullOrWhiteSpace(metadata.PodId) ? null : metadata;
     }
 }

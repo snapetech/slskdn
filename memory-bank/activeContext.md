@@ -333,6 +333,18 @@ dotnet test
   1. recommit the full tree
   2. continue the remaining `SongIdService`/`HashDbService` cluster, then move back into Mesh/PodCore runtime gaps
 
+## 2026-03-22 20:02
+- Returned to the Mesh/PodCore runtime slice:
+  - `PeerResolutionService` now supports trimmed hostname endpoints from DHT metadata
+  - `PodDiscovery` now normalizes returned metadata before filtering and deduping
+  - `MeshSyncService` now trims remote hash keys before consensus grouping
+- Added focused coverage for the PodCore runtime behaviors above.
+- Gotcha commit made immediately per repo policy:
+  - `4bcb1cb9` `docs: Add gotcha for dht metadata normalization`
+- Next:
+  1. recommit the full tree
+  2. continue the remaining Mesh/PodCore runtime gap after this clean head
+
 ## 2026-03-22 18:01
 - Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.
 - Next: keep widening through remaining placeholder/null-heavy runtime paths in PodCore, VirtualSoulfind, and Mesh.

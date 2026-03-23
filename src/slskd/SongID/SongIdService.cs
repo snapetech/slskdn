@@ -3828,7 +3828,7 @@ public sealed class SongIdService : ISongIdService
         return TimestampRegex.Replace(value ?? string.Empty, " ").Trim();
     }
 
-    private static string NormalizeSegmentQuery(string value)
+    private static string NormalizeSegmentQuery(string? value)
     {
         return Regex.Replace((value ?? string.Empty).ToLowerInvariant(), @"[^a-z0-9]+", " ").Trim();
     }

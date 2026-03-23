@@ -138,12 +138,13 @@ public class PodMessageBackfill : IPodMessageBackfill
                 .Take(3))
             {
                 await semaphore.WaitAsync(ct);
+                var normalizedPeerId = peer.PeerId?.Trim() ?? string.Empty;
                 var task = RequestBackfillWithConcurrencyLimitAsync(
                     semaphore,
                     podId,
-                    peer.PeerId.Trim(),
+                    normalizedPeerId,
                     channelsNeedingBackfill,
-                    localPeerId,
+                    normalizedLocalPeerId,
                     ct);
                 backfillTasks.Add(task);
             }
@@ -448,6 +449,7 @@ public class PodMessageBackfill : IPodMessageBackfill
     {
         podId = podId?.Trim() ?? string.Empty;
         channelId = channelId?.Trim() ?? string.Empty;
+
         // Get the most recent message timestamp for this channel
         var recentMessages = await _messageStorage.GetMessagesAsync(podId, channelId, limit: 1, ct: ct);
         return recentMessages.FirstOrDefault()?.TimestampUnixMs ?? 0;

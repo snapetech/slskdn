@@ -42,6 +42,26 @@ public class PeerResolutionServiceTests
     }
 
     [Fact]
+    public async Task ResolvePeerIdToEndpointAsync_ParsesTrimmedHostnameEndpoint()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PeerMetadata>("peer:metadata:peer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerMetadata
+            {
+                PeerId = "peer-1",
+                Username = "alice",
+                Endpoint = " tcp://localhost:2238 ",
+            });
+
+        var service = new PeerResolutionService(dht.Object, NullLogger<PeerResolutionService>.Instance);
+
+        var endpoint = await service.ResolvePeerIdToEndpointAsync(" peer-1 ");
+
+        Assert.NotNull(endpoint);
+        Assert.Equal(2238, endpoint!.Port);
+    }
+
+    [Fact]
     public async Task ResolvePeerIdToUsernameAsync_TrimsPeerIdAndUsername()
     {
         var dht = new Mock<IMeshDhtClient>();

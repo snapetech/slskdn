@@ -685,9 +685,9 @@ namespace slskd.Mesh
 
             // T-1435: Group by (FlacKey, ByteHash, Size); only accept if >= ConsensusMinAgreements
             var groups = results
-                .Where(r => r != null && !string.IsNullOrEmpty(r.ByteHash))
+                .Where(r => r != null && !string.IsNullOrWhiteSpace(r.ByteHash))
                 .Select(r => r!)
-                .GroupBy(r => (r.FlacKey ?? string.Empty, r.ByteHash ?? string.Empty, r.Size))
+                .GroupBy(r => ((r.FlacKey ?? string.Empty).Trim(), (r.ByteHash ?? string.Empty).Trim(), r.Size))
                 .ToList();
             var agreed = groups.FirstOrDefault(g => g.Count() >= requiredAgreements);
             var foundEntry = agreed?.FirstOrDefault();

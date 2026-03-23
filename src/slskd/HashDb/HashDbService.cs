@@ -1523,16 +1523,16 @@ namespace slskd.HashDb
         public async Task InsertLibraryIssueAsync(LibraryHealth.LibraryIssue issue, CancellationToken cancellationToken = default)
         {
             issue.IssueId = issue.IssueId?.Trim() ?? string.Empty;
-            issue.FilePath = string.IsNullOrWhiteSpace(issue.FilePath) ? null : issue.FilePath.Trim();
-            issue.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(issue.MusicBrainzRecordingId) ? null : issue.MusicBrainzRecordingId.Trim();
-            issue.MusicBrainzReleaseId = string.IsNullOrWhiteSpace(issue.MusicBrainzReleaseId) ? null : issue.MusicBrainzReleaseId.Trim();
-            issue.Artist = string.IsNullOrWhiteSpace(issue.Artist) ? null : issue.Artist.Trim();
-            issue.Album = string.IsNullOrWhiteSpace(issue.Album) ? null : issue.Album.Trim();
-            issue.Title = string.IsNullOrWhiteSpace(issue.Title) ? null : issue.Title.Trim();
-            issue.Reason = string.IsNullOrWhiteSpace(issue.Reason) ? null : issue.Reason.Trim();
-            issue.SuggestedAction = string.IsNullOrWhiteSpace(issue.SuggestedAction) ? null : issue.SuggestedAction.Trim();
-            issue.RemediationJobId = string.IsNullOrWhiteSpace(issue.RemediationJobId) ? null : issue.RemediationJobId.Trim();
-            issue.ResolvedBy = string.IsNullOrWhiteSpace(issue.ResolvedBy) ? null : issue.ResolvedBy.Trim();
+            issue.FilePath = string.IsNullOrWhiteSpace(issue.FilePath) ? string.Empty : issue.FilePath.Trim();
+            issue.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(issue.MusicBrainzRecordingId) ? string.Empty : issue.MusicBrainzRecordingId.Trim();
+            issue.MusicBrainzReleaseId = string.IsNullOrWhiteSpace(issue.MusicBrainzReleaseId) ? string.Empty : issue.MusicBrainzReleaseId.Trim();
+            issue.Artist = string.IsNullOrWhiteSpace(issue.Artist) ? string.Empty : issue.Artist.Trim();
+            issue.Album = string.IsNullOrWhiteSpace(issue.Album) ? string.Empty : issue.Album.Trim();
+            issue.Title = string.IsNullOrWhiteSpace(issue.Title) ? string.Empty : issue.Title.Trim();
+            issue.Reason = string.IsNullOrWhiteSpace(issue.Reason) ? string.Empty : issue.Reason.Trim();
+            issue.SuggestedAction = string.IsNullOrWhiteSpace(issue.SuggestedAction) ? string.Empty : issue.SuggestedAction.Trim();
+            issue.RemediationJobId = string.IsNullOrWhiteSpace(issue.RemediationJobId) ? string.Empty : issue.RemediationJobId.Trim();
+            issue.ResolvedBy = string.IsNullOrWhiteSpace(issue.ResolvedBy) ? string.Empty : issue.ResolvedBy.Trim();
             if (string.IsNullOrWhiteSpace(issue.IssueId))
             {
                 return;
@@ -1699,13 +1699,13 @@ namespace slskd.HashDb
             }
 
             variant.VariantId = string.IsNullOrWhiteSpace(variant.VariantId) ? flacKey : variant.VariantId.Trim();
-            variant.Codec = string.IsNullOrWhiteSpace(variant.Codec) ? null : variant.Codec.Trim();
-            variant.Container = string.IsNullOrWhiteSpace(variant.Container) ? null : variant.Container.Trim();
-            variant.FileSha256 = string.IsNullOrWhiteSpace(variant.FileSha256) ? null : variant.FileSha256.Trim();
-            variant.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(variant.MusicBrainzRecordingId) ? null : variant.MusicBrainzRecordingId.Trim();
-            variant.TranscodeReason = string.IsNullOrWhiteSpace(variant.TranscodeReason) ? null : variant.TranscodeReason.Trim();
-            variant.EncoderSignature = string.IsNullOrWhiteSpace(variant.EncoderSignature) ? null : variant.EncoderSignature.Trim();
-            variant.AnalyzerVersion = string.IsNullOrWhiteSpace(variant.AnalyzerVersion) ? null : variant.AnalyzerVersion.Trim();
+            variant.Codec = string.IsNullOrWhiteSpace(variant.Codec) ? string.Empty : variant.Codec.Trim();
+            variant.Container = string.IsNullOrWhiteSpace(variant.Container) ? string.Empty : variant.Container.Trim();
+            variant.FileSha256 = string.IsNullOrWhiteSpace(variant.FileSha256) ? string.Empty : variant.FileSha256.Trim();
+            variant.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(variant.MusicBrainzRecordingId) ? string.Empty : variant.MusicBrainzRecordingId.Trim();
+            variant.TranscodeReason = string.IsNullOrWhiteSpace(variant.TranscodeReason) ? string.Empty : variant.TranscodeReason.Trim();
+            variant.EncoderSignature = string.IsNullOrWhiteSpace(variant.EncoderSignature) ? string.Empty : variant.EncoderSignature.Trim();
+            variant.AnalyzerVersion = string.IsNullOrWhiteSpace(variant.AnalyzerVersion) ? string.Empty : variant.AnalyzerVersion.Trim();
 
             // Invalidate cache when updating metadata
             if (hashCache != null)

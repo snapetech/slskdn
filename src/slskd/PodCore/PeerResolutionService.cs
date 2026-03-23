@@ -207,7 +207,7 @@ public class PeerResolutionService : IPeerResolutionService
         try
         {
             // Support formats: "ip:port", "[ipv6]:port", "udp://ip:port", "tcp://ip:port"
-            var normalized = endpointString;
+            var normalized = endpointString.Trim();
             if (normalized.StartsWith("udp://", StringComparison.OrdinalIgnoreCase))
             {
                 normalized = normalized["udp://".Length..];
@@ -249,6 +249,16 @@ public class PeerResolutionService : IPeerResolutionService
                 port is > 0 and <= ushort.MaxValue)
             {
                 return new IPEndPoint(ip, port);
+            }
+
+            if (int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue)
+            {
+                var resolved = Dns.GetHostAddresses(hostPart.Trim())
+                    .FirstOrDefault(address => address.AddressFamily is System.Net.Sockets.AddressFamily.InterNetwork or System.Net.Sockets.AddressFamily.InterNetworkV6);
+                if (resolved != null)
+                {
+                    return new IPEndPoint(resolved, port);
+                }
             }
         }
         catch

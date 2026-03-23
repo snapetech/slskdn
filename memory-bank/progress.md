@@ -6211,3 +6211,17 @@ Code quality improvements were completed as part of Option A:
 - Added focused regressions in:
   - `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
   - `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`
+
+## 2026-03-22 20:02
+- Returned to the Mesh/PodCore runtime cluster.
+- `src/slskd/PodCore/PeerResolutionService.cs`
+  - endpoint parsing now trims transport strings and can resolve hostname endpoints like `tcp://localhost:2238`
+- `src/slskd/PodCore/PodDiscovery.cs`
+  - DHT-fed pod metadata is now normalized on read before filtering/deduping
+  - padded `PodId`, `Name`, `FocusContentId`, and `Tags` no longer cause false discovery misses
+- `src/slskd/Mesh/MeshSyncService.cs`
+  - remote hash consensus now trims returned `FlacKey`/`ByteHash` before grouping, so equivalent peer responses do not split on whitespace drift
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/PodCore/PeerResolutionServiceTests.cs`
+  - `tests/slskd.Tests.Unit/PodCore/PodDiscoveryTests.cs`
+- Documented the recurring DHT metadata normalization pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `4bcb1cb9` (`docs: Add gotcha for dht metadata normalization`).

@@ -93,6 +93,53 @@ public class PodDiscoveryTests
     }
 
     [Fact]
+    public async Task DiscoverPodsAsync_NormalizesReturnedMetadataBeforeFilteringAndDeduping()
+    {
+        var store = new ConcurrentDictionary<string, object?>();
+        store["pod:index:listed"] = new PodIndex
+        {
+            PodIds = new List<string> { " pod-1 ", "pod-2" },
+        };
+        store["pod:metadata:pod-1"] = new PodMetadata
+        {
+            PodId = " pod-1 ",
+            Name = " Alpha Pod ",
+            FocusContentId = " content:audio:track:1 ",
+            Tags = new List<string> { " rock ", "rock", " " },
+            PublishedAt = 10,
+        };
+        store["pod:metadata:pod-2"] = new PodMetadata
+        {
+            PodId = "pod-2",
+            Name = "Beta Pod",
+            FocusContentId = "content:audio:track:2",
+            Tags = new List<string> { "jazz" },
+            PublishedAt = 20,
+        };
+
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PodIndex>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>((key, _) => Task.FromResult(store[key] as PodIndex));
+        dht.Setup(x => x.GetAsync<PodMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>((key, _) => Task.FromResult(store.TryGetValue(key, out var value) ? value as PodMetadata : null));
+
+        var service = new PodDiscovery(dht.Object, NullLogger<PodDiscovery>.Instance);
+
+        var pods = await service.DiscoverPodsAsync(
+            searchQuery: " alpha ",
+            tags: new List<string> { " rock " },
+            focusContentId: " content:audio:track:1 ",
+            limit: 10);
+
+        var pod = Assert.Single(pods);
+        Assert.Equal("pod-1", pod.PodId);
+        Assert.Equal("Alpha Pod", pod.Name);
+        Assert.Equal("content:audio:track:1", pod.FocusContentId);
+        Assert.Single(pod.Tags);
+        Assert.Equal("rock", pod.Tags[0]);
+    }
+
+    [Fact]
     public async Task DiscoverPodsAsync_WithNonPositiveLimit_ReturnsEmpty()
     {
         var dht = new Mock<IMeshDhtClient>();
