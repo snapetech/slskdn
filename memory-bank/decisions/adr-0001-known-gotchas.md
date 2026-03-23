@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE4. Security Boundary Helpers Must Trim Inputs Before Validation, But Preserve Canonical Values For The Actual Check
+
+**The Bug**: security helper methods were validating raw user-supplied strings without trimming obvious boundary whitespace first. That made harmless padded paths, filenames, and key URLs fail validation or extension checks even though the canonical value was valid. The reverse problem is also possible: comparison helpers trim for matching but then accidentally reuse the trimmed value for the transport call.
+
+**Files Affected**:
+- `src/slskd/Common/Security/PathGuard.cs`
+- `src/slskd/SocialFederation/HttpSignatureKeyFetcher.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(filename))
+{
+    return false;
+}
+
+var extension = Path.GetExtension(filename);
+```
+
+**Correct**:
+```csharp
+if (string.IsNullOrWhiteSpace(filename))
+{
+    return false;
+}
+
+filename = filename.Trim();
+var extension = Path.GetExtension(filename);
+```
+
+**Why This Keeps Happening**: security code tends to prefer raw inputs to avoid “normalizing attacks away,” but basic boundary whitespace is not useful signal. Trim once at the boundary, then validate the canonical value. Keep that separate from transport/wire identifiers when the original exact value still matters downstream.
+
 ### 0xE3. Normalized Lookup Keys Must Not Replace The Original Wire Identifier
 
 **The Bug**: capability-file discovery normalized remote browse paths for matching and then reused the normalized string for the actual transfer call. The normalized path is fine for comparison, but it is not guaranteed to be the same path shape the remote peer exposed on the wire. That can turn a successful browse hit into a failed download.
