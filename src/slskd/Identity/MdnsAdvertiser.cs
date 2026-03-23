@@ -47,23 +47,26 @@ public sealed class MdnsAdvertiser : IDisposable
             var instanceName = $"{serviceName}.{serviceType}.local";
             var hostnameLocal = $"{hostname}.local";
 
-            _announceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _announceCts?.Cancel();
+            _announceCts?.Dispose();
+            var announceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _announceCts = announceCts;
 
             // Send initial announcement
-            await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, _announceCts.Token).ConfigureAwait(false);
+            await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, announceCts.Token).ConfigureAwait(false);
 
             // Send periodic announcements (mDNS requires this)
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    while (!_announceCts.Token.IsCancellationRequested)
+                    while (!announceCts.IsCancellationRequested)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(10), _announceCts.Token).ConfigureAwait(false);
-                        await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, _announceCts.Token).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromSeconds(10), announceCts.Token).ConfigureAwait(false);
+                        await SendAnnouncementAsync(instanceName, serviceType, hostnameLocal, port, properties, announceCts.Token).ConfigureAwait(false);
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (announceCts.IsCancellationRequested)
                 {
                     // Expected
                 }
@@ -250,8 +253,10 @@ public sealed class MdnsAdvertiser : IDisposable
 
         try
         {
-            _announceCts?.Cancel();
-            _announceCts?.Dispose();
+            var announceCts = _announceCts;
+            _announceCts = null;
+            announceCts?.Cancel();
+            announceCts?.Dispose();
         }
         catch (Exception ex)
         {

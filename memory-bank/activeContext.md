@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed another long-lived lifecycle bug cluster in startup/disposal helpers:
+    - `HashDbOptimizationHostedService`, `RealmHostedService`, `MultiRealmHostedService`, and `MdnsAdvertiser` now capture stable local CTS instances for detached startup work instead of dereferencing mutable fields from background tasks
+    - dispose/replacement paths now cancel before disposing so startup work does not outlive the owning service or trip disposed/null CTS races during shutdown
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs`
+  - Confirmed focused lifecycle tests passed (`3/3`), the runtime release build stayed green (`0 warnings / 0 errors`), full `dotnet test --no-restore` passed (`3587/3587`), and `bash ./bin/lint` passed
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`)
   - Fixed `ChannelReader<T>` failure propagation so `Completed` is the stable fault surface for detached read-loop errors
   - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ChannelReaderTests.cs`
   - Confirmed the focused slice passed and the runtime build remains green
@@ -348,8 +354,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public JSON/problem payloads and controller envelopes that still leak identifiers or mix canonical results with redundant request/query echoes.
-2. Keep future secure-release work behind the real release gate, not just focused Debug slices.
+1. Continue bughunting adjacent long-lived startup/shutdown helpers that still launch detached work from mutable shared fields.
+2. Keep future broad bughunt work behind the real validation gates (`dotnet test --no-restore`, `./bin/lint`), not just focused slices.
 3. Continue broad bughunt work only from this validated green head.
 
 

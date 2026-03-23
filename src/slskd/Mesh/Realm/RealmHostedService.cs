@@ -51,17 +51,19 @@ namespace slskd.Mesh.Realm
             }
 
             // Initialize in background to avoid blocking other hosted services
+            _initializationCts?.Cancel();
             _initializationCts?.Dispose();
-            _initializationCts = new CancellationTokenSource();
+            var initializationCts = new CancellationTokenSource();
+            _initializationCts = initializationCts;
             _initializationTask = Task.Run(async () =>
             {
                 try
                 {
                     _logger.LogInformation("[RealmHostedService] Starting realm initialization...");
-                    await _realmService.InitializeAsync(_initializationCts.Token).ConfigureAwait(false);
+                    await _realmService.InitializeAsync(initializationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[RealmHostedService] Realm initialization complete.");
                 }
-                catch (OperationCanceledException) when (_initializationCts.IsCancellationRequested)
+                catch (OperationCanceledException) when (initializationCts.IsCancellationRequested)
                 {
                     _logger.LogInformation("[RealmHostedService] Realm initialization cancelled");
                 }
@@ -98,6 +100,7 @@ namespace slskd.Mesh.Realm
 
         public void Dispose()
         {
+            _initializationCts?.Cancel();
             _initializationCts?.Dispose();
             _initializationCts = null;
             GC.SuppressFinalize(this);

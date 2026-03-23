@@ -47,18 +47,20 @@ public sealed class HashDbOptimizationHostedService : IHostedService, IDisposabl
         try
         {
             _logger.LogInformation("[HashDbOptimization] Running automatic index optimization on startup");
+            _startupOptimizationCts?.Cancel();
             _startupOptimizationCts?.Dispose();
-            _startupOptimizationCts = new CancellationTokenSource();
+            var startupOptimizationCts = new CancellationTokenSource();
+            _startupOptimizationCts = startupOptimizationCts;
 
             // Run index optimization (non-blocking, fire-and-forget)
             _startupOptimizationTask = Task.Run(async () =>
             {
                 try
                 {
-                    await _optimizationService.OptimizeIndexesAsync(_startupOptimizationCts.Token).ConfigureAwait(false);
+                    await _optimizationService.OptimizeIndexesAsync(startupOptimizationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[HashDbOptimization] Automatic index optimization completed");
                 }
-                catch (OperationCanceledException) when (_startupOptimizationCts.IsCancellationRequested)
+                catch (OperationCanceledException) when (startupOptimizationCts.IsCancellationRequested)
                 {
                     _logger.LogInformation("[HashDbOptimization] Automatic index optimization cancelled");
                 }
@@ -100,6 +102,7 @@ public sealed class HashDbOptimizationHostedService : IHostedService, IDisposabl
 
     public void Dispose()
     {
+        _startupOptimizationCts?.Cancel();
         _startupOptimizationCts?.Dispose();
         _startupOptimizationCts = null;
         GC.SuppressFinalize(this);

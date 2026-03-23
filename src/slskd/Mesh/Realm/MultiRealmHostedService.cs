@@ -51,17 +51,19 @@ namespace slskd.Mesh.Realm
             }
 
             // Initialize in background to avoid blocking other hosted services
+            _initializationCts?.Cancel();
             _initializationCts?.Dispose();
-            _initializationCts = new CancellationTokenSource();
+            var initializationCts = new CancellationTokenSource();
+            _initializationCts = initializationCts;
             _initializationTask = Task.Run(async () =>
             {
                 try
                 {
                     _logger.LogInformation("[MultiRealmHostedService] Initializing multi-realm service with {Count} realms", realms.Length);
-                    await _multiRealmService.InitializeAsync(_initializationCts.Token).ConfigureAwait(false);
+                    await _multiRealmService.InitializeAsync(initializationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization complete.");
                 }
-                catch (OperationCanceledException) when (_initializationCts?.IsCancellationRequested == true)
+                catch (OperationCanceledException) when (initializationCts.IsCancellationRequested)
                 {
                     _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization cancelled");
                 }

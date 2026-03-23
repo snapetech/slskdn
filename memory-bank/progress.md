@@ -6702,6 +6702,18 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
 
+## 2026-03-23 11:52 CST
+- Continued the long-lived startup/disposal lifecycle bughunt and fixed a shared cancellation-token race across hosted/background startup helpers.
+- `HashDbOptimizationHostedService`, `RealmHostedService`, `MultiRealmHostedService`, and `MdnsAdvertiser` now capture a stable local `CancellationTokenSource` for detached startup work instead of reading mutable CTS fields after startup has moved on.
+- The affected dispose paths now cancel before disposing so startup work does not continue past service disposal or fall into disposed/null CTS races during shutdown.
+- Added focused regressions in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs` for hosted-service disposal cancellation.
+- Documented the bug pattern in `adr-0001-known-gotchas.md` and committed the gotcha entry immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+- Validation passed:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter HostedServiceLifecycleTests`
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`
+
 ## 2026-03-23 11:29 CST
 - Continued the HashDb read/write helper bughunt and normalized several remaining boundary-sensitive helpers.
 - `HashDbService` now trims and deduplicates label presence and label-based release queries, trims hash-use and mesh peer keys, guards non-positive sequence/backfill limits, and normalizes peer metrics on write/readback.
