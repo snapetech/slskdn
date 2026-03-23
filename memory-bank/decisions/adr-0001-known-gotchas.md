@@ -14560,3 +14560,34 @@ flake = builtins.getFlake (toString ./.);
 ```
 
 **Why This Keeps Happening**: shell quoting and Nix quoting are different languages. A value that is safely quoted for Bash is not automatically valid inside Nix source. If the script already `cd`s to the repository root, use a repo-relative Nix path in the expression instead of splicing a shell-escaped absolute path into Nix code.
+
+### 0k108. Shared Waiters Must Only Be Removed By The Request That Created Them
+
+**The Bug**: `MeshSyncService.QueryPeerForHashAsync(...)` reuses an existing pending `REQKEY` waiter when a duplicate lookup is already in flight, but the follower call still removed the shared `pendingRequests` entry when its own wait timed out or faulted. That lets a secondary caller tear down the original request's state and causes avoidable mesh lookup timeouts.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+catch (OperationCanceledException)
+{
+    pendingRequests.TryRemove(requestId, out _);
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+catch (OperationCanceledException)
+{
+    if (createdRequest)
+    {
+        pendingRequests.TryRemove(requestId, out _);
+    }
+
+    return null;
+}
+```
+
+**Why This Keeps Happening**: once a deduplicated async request path starts sharing a `TaskCompletionSource`, it is easy to keep the old cleanup logic that assumed one caller owned one waiter. Any timeout/error cleanup on a shared waiter must be ownership-aware, or follower calls will accidentally delete the creator's in-flight state.
