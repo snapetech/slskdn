@@ -16633,3 +16633,58 @@ sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" 
 ```
 
 **Why This Keeps Happening**: release automation assumes asset hashes are stable across retries and reruns, but GitHub release artifacts are effectively mutable in practice for the workflows in this repo. Pinning the binary archive makes reinstall/rebuild flows brittle while users still hit hash validation failures when the cached bytes differ from the latest uploaded bytes for the same version tag.
+
+### 0k14F. Release Version Defaults Must Be Derived From Live Metadata
+
+**The Bug**: multiple release workflows used hardcoded fallback versions (for example `0.24.1`) when tag detection failed. As releases advance, those stale defaults can produce inconsistent package versions across CI images, package metadata, and changelog replacement steps.
+
+**Files Affected**:
+- `.github/workflows/ci.yml`
+- `.github/workflows/dev-release.yml`
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-packages.yml`
+
+**Wrong**:
+```bash
+LATEST_TAG=${LATEST_TAG:-0.24.5-slskdn.1}
+TAG="0.24.1-slskdn.1"
+DEB_VERSION="0.24.1.dev.9$(date +%s)"
+sed -i "s/0.24.1.slskdn.7/${NEW_VERSION}/g" debian/changelog
+```
+
+**Correct**:
+```bash
+LATEST_TAG=$(git tag ... | head -n1)
+if [ -z "$LATEST_TAG" ]; then
+    LATEST_TAG=$(extract_version_from_nuspec)
+fi
+
+DEB_BASE="${{ needs.parse.outputs.version }}"
+DEB_VERSION="${DEB_BASE%%.dev*}.dev.9$(date +%s)"
+
+sed -i -E "0,/^slskdn \\([^\\)]*\\)/ s/^slskdn \\([^\\)]*\\)/slskdn (${NEW_VERSION})/" debian/changelog
+```
+
+**Why This Keeps Happening**: release metadata naturally evolves with every release, but static placeholders assume one specific history point. If fallback logic is not version-driven, packaging jobs silently diverge and the first install-time symptom is often a user-facing checksum or version mismatch.
+
+### 0k14G. AUR Binary PKGBUILDs Must Keep Zip Hash as `SKIP`
+
+**The Bug**: the `sha256sums[0]` entry in `packaging/aur/PKGBUILD-bin` was briefly set to a concrete hash in release automation, which makes installs fail when the release zip changes while the version string stays the same.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-bin` (AUR package published contents, historical)
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-linux.yml`
+- `.github/workflows/upstream-release.yml`
+
+**Wrong**:
+```sh
+sha256sums=('deadbeef...' '...')
+```
+
+**Correct**:
+```sh
+sha256sums=('SKIP' '<service hash>' '<yml hash>' '<sysusers hash>')
+```
+
+**Why This Keeps Happening**: release artifacts in GitHub are mutable across retries and reruns. Any pinned binary zip checksum on mutable assets turns a transient packaging detail into a hard install failure until the package metadata is manually repaired.

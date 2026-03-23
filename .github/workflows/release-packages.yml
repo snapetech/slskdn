@@ -90,7 +90,7 @@ jobs:
         run: |
           cd pkg
           # Update changelog version
-          sed -i "s/0.24.1.slskdn.7/${{ steps.version.outputs.version }}/g" debian/changelog
+          sed -i -E "0,/^slskdn \\([^\\)]*\\)/ s/^slskdn \\([^\\)]*\\)/slskdn (${{ steps.version.outputs.version }})/" debian/changelog
           dpkg-buildpackage -us -uc -b
           cd ..
           mv *.deb slskdn_${{ steps.version.outputs.version }}_amd64.deb

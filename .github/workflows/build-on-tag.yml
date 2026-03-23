@@ -475,7 +475,8 @@ jobs:
       - name: Prepare Source Structure
         run: |
           # PPA requires version to always increase. Use epoch-based version (do NOT use tag version or date+time — PPA rejects "older").
-          DEB_VERSION="0.24.1.dev.9$(date +%s)"
+          DEB_BASE="${{ needs.parse.outputs.version }}"
+          DEB_VERSION="${DEB_BASE%%.dev*}.dev.9$(date +%s)"
           echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
           
           # Create proper directory structure for debian packaging

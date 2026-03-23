@@ -56,7 +56,12 @@ jobs:
         run: |
           # Get the latest slskdn release tag only (not build-trigger tags like build-main-*)
           LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' | head -n1)
-          LATEST_TAG=${LATEST_TAG:-0.24.5-slskdn.1}
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n1)
+          fi
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG='0.24.0-slskdn.1'
+          fi
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             PATCH=0
           else
@@ -219,7 +224,10 @@ jobs:
           # Get the latest slskdn tag only
           TAG=$(git tag --sort=-version:refname | grep -E '^\d+\.\d+\.\d+-slskdn\.\d+$' | head -n1)
           if [ -z "$TAG" ]; then
-            TAG="0.24.1-slskdn.19"
+            TAG=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n1)
+          fi
+          if [ -z "$TAG" ]; then
+            TAG='0.24.0-slskdn.1'
           fi
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "CONTAINER_VERSION=${TAG}.$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
