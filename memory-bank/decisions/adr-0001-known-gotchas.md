@@ -52,6 +52,42 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xCA. Lightweight Parser Helpers Must Handle Stringified Payloads And Trimmed IDs Or Every Upstream Drift Becomes A False Miss
+
+**The Bug**: small helper parsers were assuming upstream tools and JSON payloads always used the ideal shape: numeric fields as numbers, IDs as clean strings, and metadata values already trimmed. In practice, helper tools drift between string and numeric fields, and transport/runtime IDs arrive padded. The result is a cascade of false misses in SongID and PodCore even though the payload still contains usable information.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+
+**Wrong**:
+```csharp
+if (property.ValueKind != JsonValueKind.String)
+{
+    return null;
+}
+
+if (m.PeerId != localPeerId)
+{
+    targets.Add(m);
+}
+```
+
+**Correct**:
+```csharp
+return property.ValueKind switch
+{
+    JsonValueKind.String => property.GetString()?.Trim(),
+    JsonValueKind.Number => property.GetRawText(),
+    _ => null,
+};
+
+var normalizedLocalPeerId = localPeerId?.Trim() ?? string.Empty;
+var targetPeers = podMembers.Where(m => !string.Equals(m.PeerId?.Trim(), normalizedLocalPeerId, StringComparison.OrdinalIgnoreCase));
+```
+
+**Why This Keeps Happening**: helper methods look too small to deserve real boundary hardening, so they get treated like internal pure-domain code. They are not. They sit directly on parser and transport seams, and tiny shape assumptions there fan out into null-heavy behavior everywhere else.
+
 ### 0xC9. Batch And Query Controllers Must Canonicalize Identifier Collections Before Dispatch
 
 **The Bug**: retrieval/export/hash controllers validated that IDs were present but still forwarded raw route/query/body values and identifier collections like `ContentIds`, `domain`, `type`, `filename`, `byteHash`, and `flacKey`. That let padded identifiers miss lookups, duplicated the same logical ID inside batch calls, and produced non-canonical hash keys from transport whitespace.
