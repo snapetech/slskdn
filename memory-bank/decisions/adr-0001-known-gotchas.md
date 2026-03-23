@@ -16000,3 +16000,46 @@ catch
 ```
 
 **Why This Keeps Happening**: additive schema changes feel harmless, so validation logic gets updated to expect the new table before the migration path exists. On SQLite repositories with handwritten DDL, that turns a normal upgrade into a false corruption signal. Whenever you add a new owned table or index, add the non-destructive migration in the same change as the validator update.
+
+### 0k138. Repository Dispose Paths Must Release Owned Timers, Not Just Primary Connections
+
+**The Bug**: `SqliteShareRepository` owns both a long-lived keepalive `SqliteConnection` and a `System.Timers.Timer`, but `Dispose(bool)` only released the connection. The keepalive timer could stay alive after repository disposal and continue holding event subscriptions or accepting `Enabled` changes against an otherwise disposed repository.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs`
+
+**Wrong**:
+```csharp
+protected virtual void Dispose(bool disposing)
+{
+    if (!Disposed)
+    {
+        if (disposing)
+        {
+            KeepaliveConnection.Dispose();
+        }
+
+        Disposed = true;
+    }
+}
+```
+
+**Correct**:
+```csharp
+protected virtual void Dispose(bool disposing)
+{
+    if (!Disposed)
+    {
+        if (disposing)
+        {
+            KeepaliveTimer.Stop();
+            KeepaliveTimer.Dispose();
+            KeepaliveConnection.Dispose();
+        }
+
+        Disposed = true;
+    }
+}
+```
+
+**Why This Keeps Happening**: ownership bugs tend to focus on the obvious heavy resource, like a database connection, while lightweight timers and registrations get forgotten because they are "just callbacks." If a type constructs a timer, semaphore, or registration in its constructor and keeps it for the object lifetime, disposal must release all of them as part of the same ownership contract.
