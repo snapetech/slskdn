@@ -1110,7 +1110,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (!downloadResult.Success)
             {
-                testResult.Error = downloadResult.Error;
+                testResult.Error = "Multi-source test download failed";
             }
 
             Log.Information(

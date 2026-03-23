@@ -36,34 +36,42 @@ public class ContentLinkService : IContentLinkService
             return new ContentValidationResult(false, contentId, "Content ID cannot be empty");
         }
 
+        var normalizedContentId = contentId.Trim();
+
         // Parse the content ID
-        var parsed = ContentIdParser.Parse(contentId);
+        var parsed = ContentIdParser.Parse(normalizedContentId);
         if (parsed == null)
         {
-            return new ContentValidationResult(false, contentId, "Invalid content ID format. Expected: content:<domain>:<type>:<id>");
+            return new ContentValidationResult(false, normalizedContentId, "Invalid content ID format. Expected: content:<domain>:<type>:<id>");
         }
 
         try
         {
             // Validate based on domain and type
-            var metadata = await GetContentMetadataAsync(contentId, ct);
+            var metadata = await GetContentMetadataAsync(normalizedContentId, ct);
             if (metadata == null)
             {
-                return new ContentValidationResult(false, contentId, "Content not found or inaccessible");
+                return new ContentValidationResult(false, normalizedContentId, "Content not found or inaccessible");
             }
 
-            return new ContentValidationResult(true, contentId, Metadata: metadata);
+            return new ContentValidationResult(true, normalizedContentId, Metadata: metadata);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error validating content ID {ContentId}", contentId);
-            return new ContentValidationResult(false, contentId, "Validation failed");
+            _logger.LogWarning(ex, "Error validating content ID {ContentId}", normalizedContentId);
+            return new ContentValidationResult(false, normalizedContentId, "Validation failed");
         }
     }
 
     public async Task<ContentMetadata?> GetContentMetadataAsync(string contentId, CancellationToken ct = default)
     {
-        var parsed = ContentIdParser.Parse(contentId);
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return null;
+        }
+
+        var normalizedContentId = contentId.Trim();
+        var parsed = ContentIdParser.Parse(normalizedContentId);
         if (parsed == null)
         {
             return null;
@@ -82,7 +90,7 @@ public class ContentLinkService : IContentLinkService
                 default:
                     // For other domains, return basic metadata without external validation
                     return new ContentMetadata(
-                        ContentId: contentId,
+                        ContentId: parsed.FullId,
                         Title: $"{parsed.Type}: {parsed.Id}",
                         Artist: "Unknown",
                         Type: parsed.Type,
@@ -97,27 +105,58 @@ public class ContentLinkService : IContentLinkService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error fetching metadata for content ID {ContentId}", contentId);
+            _logger.LogWarning(ex, "Error fetching metadata for content ID {ContentId}", normalizedContentId);
             return null;
         }
     }
 
-    public Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
+            return Array.Empty<ContentSearchResult>();
+        }
+
+        if (limit <= 0)
+        {
+            return Array.Empty<ContentSearchResult>();
         }
 
         try
         {
-            _logger.LogWarning("Content search requested for query '{Query}' (domain: {Domain}), but search integration is not implemented", query, domain ?? "all");
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
+            var normalizedQuery = query.Trim();
+            var normalizedDomain = domain?.Trim();
+            var effectiveLimit = Math.Min(limit, 100);
+
+            if (!string.IsNullOrWhiteSpace(normalizedDomain) &&
+                !string.Equals(normalizedDomain, ContentDomains.Audio, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Content search requested for unsupported domain '{Domain}'", normalizedDomain);
+                return Array.Empty<ContentSearchResult>();
+            }
+
+            var hits = await _musicBrainzClient.SearchRecordingsAsync(normalizedQuery, effectiveLimit, ct);
+            return hits
+                .Where(hit => !string.IsNullOrWhiteSpace(hit.RecordingId))
+                .Select(hit => new ContentSearchResult(
+                    ContentId: $"content:{ContentDomains.Audio}:{ContentDomains.AudioTrack}:{hit.RecordingId.Trim()}",
+                    Title: hit.Title,
+                    Subtitle: hit.Artist,
+                    Type: ContentDomains.AudioTrack,
+                    Domain: ContentDomains.Audio,
+                    Metadata: new Dictionary<string, string>
+                    {
+                        ["musicbrainz_recording_id"] = hit.RecordingId.Trim(),
+                        ["artist"] = hit.Artist,
+                        ["title"] = hit.Title,
+                        ["musicbrainz_artist_id"] = hit.MusicBrainzArtistId ?? string.Empty,
+                    }))
+                .ToList();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching content with query '{Query}'", query);
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
+            return Array.Empty<ContentSearchResult>();
         }
     }
 

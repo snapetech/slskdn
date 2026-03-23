@@ -234,7 +234,7 @@ namespace slskd.Tests.Unit.Mesh
                 .Returns(new PeerCapabilities
                 {
                     ClientVersion = "1.0.0",
-                    CanMeshSync = true,
+                    Flags = PeerCapabilityFlags.SupportsMeshSync,
                 });
 
             var result = await meshSyncService.TrySyncWithPeerAsync("mesh-peer", CancellationToken.None);
