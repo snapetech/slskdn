@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD0. Mesh Service Replies Must Not Echo Caller-Controlled Methods Or Downstream Validator Text
+
+**The Bug**: several service-fabric mesh endpoints were still copying caller-controlled method names or downstream validator errors into `ServiceReply.ErrorMessage`. That leaked transport details like custom method strings, invalid MBIDs, and DNS-policy reasons back over the mesh boundary.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/PodsMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshContentMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/VirtualSoulfindMeshService.cs`
+
+**Wrong**:
+```csharp
+ErrorMessage = $"Unknown method: {call.Method}";
+ErrorMessage = dnsResult.ErrorMessage;
+ErrorMessage = $"Invalid MBIDs: {string.Join(", ", invalidMbids.Take(3))}";
+```
+
+**Correct**:
+```csharp
+ErrorMessage = "Unknown method";
+ErrorMessage = "DNS validation failed";
+ErrorMessage = "Invalid MBID list";
+```
+
+**Why This Keeps Happening**: `ServiceReply` looks like an internal transport DTO, so it is tempting to stuff it with the most specific failure text available. It is still a public boundary. Anything copied there may be attacker-controlled input or sensitive policy/validator detail. Log specifics server-side and keep the wire contract stable and generic.
+
 ### 0xCF. Bidirectional Identity Maps Must Normalize Both Directions Or Bridge Routing Splits A Single User Into Multiple Keys
 
 **The Bug**: bridge code normalized one side of an identity flow but still stored and looked up the reverse map with raw usernames and peer IDs. A padded or case-drifted Soulseek username could create one entry in the forward map and a different entry in the reverse map, so Pod-to-Soulseek forwarding later failed even though the mapping had already been learned.
