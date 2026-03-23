@@ -114,6 +114,28 @@ var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
 
 **Why This Keeps Happening**: MusicBrainz IDs feel like the “real” identity, so it is tempting to make them mandatory everywhere. But SongID is a probabilistic pipeline. Artist/title evidence, filename-derived metadata, and search hits without MBIDs are still useful priors and should continue flowing through the ranking/planning pipeline with conservative synthetic IDs instead of being discarded.
 
+### 0xC3. Helper Locator Inputs And Persisted Relative Paths Must Be Trimmed Before Resolution
+
+**The Bug**: SongID helper discovery and corpus-path resolution were treating whitespace-padded environment variables and persisted relative paths as distinct filesystem values. That made valid Panako/Audfprint paths appear missing, and valid corpus fingerprint paths resolve to false negatives just because of accidental padding.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+var configuredJar = Environment.GetEnvironmentVariable("PANAKO_JAR");
+var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, entry.FingerprintPath));
+```
+
+**Correct**:
+```csharp
+var configuredJar = Environment.GetEnvironmentVariable("PANAKO_JAR")?.Trim();
+var fingerprintPath = entry.FingerprintPath.Trim();
+var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, fingerprintPath));
+```
+
+**Why This Keeps Happening**: environment variables and persisted JSON fields look “already normalized,” so path-resolution code often uses them directly. But helper paths and stored relative filenames come from humans, scripts, and migrations, and they drift. Trim filesystem inputs before existence checks or path joins, or you will create fake “not found” behavior from harmless whitespace.
+
 ### 0xC1. Small Utility Controllers Still Need Input Normalization Before Dispatch
 
 **The Bug**: low-traffic helper controllers were still forwarding raw route, query, and body strings straight into services. That let whitespace-only values slip through validation, turned padded identifiers into different storage keys, and in some cases converted simple bad input into service-level exceptions and `500`s.
