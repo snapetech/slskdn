@@ -27,6 +27,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened `ManagedState<T>.SetValue(...)` so change listeners are invoked outside the state lock and no longer abort on the first failing subscriber
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ManagedStateTests.cs`
+  - Confirmed the focused slice passed (`1/1`) and the runtime build remains green
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened more shared infrastructure emitters:
     - `Program.LogEmitted`, `DisasterModeCoordinator`, and `SoulseekHealthMonitor` no longer use raw multicast fanout
     - `SoulseekClientWrapper` room-message forwarding now isolates listener faults too

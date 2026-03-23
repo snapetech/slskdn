@@ -6742,3 +6742,9 @@ Code quality improvements were completed as part of Option A:
 - Replaced raw multicast invocation in `Program.LogEmitted`, `DisasterModeCoordinator.DisasterModeLevelChanged`, `SoulseekHealthMonitor.HealthChanged`, and the `SoulseekClientWrapper` room-message forwarder with isolated dispatch helpers.
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/SharedEventEmitterTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused unit slice for `SharedEventEmitterTests` and `LogsControllerTests` passed `4/4`.
+## 2026-03-23 10:49 CST
+
+- Hardened `ManagedState<T>` change notifications so listener fanout no longer runs under the state lock or aborts on the first subscriber failure.
+- `ManagedState<T>.SetValue(...)` now snapshots the delegate list and updated state under lock, fans out outside the lock, and rethrows subscriber faults as an `AggregateException` after all listeners run.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ManagedStateTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `ManagedStateTests` slice passed `1/1`.

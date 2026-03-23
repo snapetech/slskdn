@@ -185,14 +185,43 @@ namespace slskd
         /// <returns>The updated state.</returns>
         public T SetValue(Func<T, T> setter)
         {
+            Action<(T? Previous, T Current)>? changed;
+            (T? Previous, T Current) args;
+
             lock (Lock)
             {
                 var previous = CurrentValue!.ToJson().FromJson<T>();
                 CurrentValue = setter(CurrentValue);
+                args = (previous, CurrentValue);
+                changed = Changed;
+            }
 
-                Changed?.Invoke((previous, CurrentValue));
+            if (changed is null)
+            {
                 return CurrentValue;
             }
+
+            List<Exception>? exceptions = null;
+
+            foreach (Action<(T? Previous, T Current)> handler in changed.GetInvocationList())
+            {
+                try
+                {
+                    handler.Invoke(args);
+                }
+                catch (Exception ex)
+                {
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(ex);
+                }
+            }
+
+            if (exceptions is not null)
+            {
+                throw new AggregateException(exceptions);
+            }
+
+            return CurrentValue;
         }
 
 #pragma warning disable CS0693 // Type parameter has the same name as the type parameter from outer type

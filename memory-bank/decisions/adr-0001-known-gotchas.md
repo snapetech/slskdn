@@ -52,6 +52,50 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDD. Shared State Change Fanout Must Happen Outside The State Lock
+
+**The Bug**: `ManagedState<T>.SetValue(...)` cloned and updated the state under its lock and then invoked the whole `Changed` multicast delegate while still holding that lock. One listener exception aborted all later listeners, and any listener reentry or lock-taking path could deadlock the state publisher.
+
+**Files Affected**:
+- `src/slskd/Common/ManagedState.cs`
+
+**Wrong**:
+```csharp
+lock (Lock)
+{
+    var previous = CurrentValue!.ToJson().FromJson<T>();
+    CurrentValue = setter(CurrentValue);
+
+    Changed?.Invoke((previous, CurrentValue));
+    return CurrentValue;
+}
+```
+
+**Correct**:
+```csharp
+lock (Lock)
+{
+    var previous = CurrentValue!.ToJson().FromJson<T>();
+    CurrentValue = setter(CurrentValue);
+    args = (previous, CurrentValue);
+    changed = Changed;
+}
+
+foreach (Action<(T? Previous, T Current)> handler in changed.GetInvocationList())
+{
+    try
+    {
+        handler.Invoke(args);
+    }
+    catch (Exception ex)
+    {
+        exceptions.Add(ex);
+    }
+}
+```
+
+**Why This Keeps Happening**: state publishers often treat change notifications as part of the update transaction, but event fanout is arbitrary external code. Holding the state lock across listener execution makes the publisher fragile and deadlock-prone. Snapshot the updated state and delegate list under the lock, release it, then notify listeners. If you need to preserve failures, aggregate and rethrow after fanout instead of aborting on the first listener.
+
 ### 0xDE. Shared Infrastructure Emitters Must Not Use Raw Multicast Fanout
 
 **The Bug**: older shared emitters (`Program.LogEmitted`, `DisasterModeCoordinator.DisasterModeLevelChanged`, `SoulseekHealthMonitor.HealthChanged`, and the `SoulseekClientWrapper` room-message forwarder) still used raw multicast invocation. One bad subscriber could therefore break unrelated listeners or leak out through global logging / health-notification paths.
