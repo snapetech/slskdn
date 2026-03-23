@@ -15825,3 +15825,65 @@ _ = handler.StartReceivingAsync(OnSignalReceivedAsync, CancellationToken.None);
 ```
 
 **Why This Keeps Happening**: dictionaries make replacement look harmless, but registration APIs for long-lived receivers are not just storage updates. Once a handler has subscribed to an external source, replacing the dictionary entry does nothing to stop the original subscription. If replacement is not fully supported, registration must be idempotent and refuse duplicates instead of pretending a dictionary overwrite updated the live runtime wiring.
+
+### 0k134. Lazy FTS Initialization Must Guard Every FTS-Dependent Path And Must Not Mark Success After Failure
+
+**The Bug**: `SqlitePodMessageStorage` treated FTS setup as lazy one-time initialization, but only some methods actually ensured it and the init path swallowed setup exceptions before setting `initialized = true`. That meant the first failed FTS setup could permanently mark the storage initialized even though the FTS tables/triggers were still missing, and methods like search/rebuild could run against the FTS table without ever initializing it first.
+
+**Files Affected**:
+- `src/slskd/PodCore/SqlitePodMessageStorage.cs`
+
+**Wrong**:
+```csharp
+private async Task EnsureInitializedAsync(CancellationToken ct = default)
+{
+    if (initialized)
+    {
+        return;
+    }
+
+    await InitializeFtsTables();
+    initialized = true;
+}
+
+private async Task InitializeFtsTables()
+{
+    try
+    {
+        ...
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error initializing FTS tables and triggers");
+    }
+}
+```
+
+**Correct**:
+```csharp
+private async Task EnsureInitializedAsync(CancellationToken ct = default)
+{
+    if (initialized)
+    {
+        return;
+    }
+
+    await initializationLock.WaitAsync(ct);
+    try
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        await InitializeFtsTablesAsync(ct);
+        initialized = true;
+    }
+    finally
+    {
+        initializationLock.Release();
+    }
+}
+```
+
+**Why This Keeps Happening**: lazy initialization is easy to wire into the first write path and forget everywhere else, especially when the helper "helpfully" logs and swallows setup failures. But one-time init flags are part of the runtime contract. If the flag can flip after a failed setup, the object is now lying about its readiness and future retries are disabled. Every feature path that depends on the initialized resource must call the guard, and the guard must only mark success after setup truly succeeds.
