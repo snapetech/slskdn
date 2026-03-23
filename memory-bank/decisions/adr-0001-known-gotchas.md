@@ -16143,3 +16143,36 @@ OptionsMonitorRegistration?.Dispose();
 ```
 
 **Why This Keeps Happening**: `OnChange(...)` registrations look lightweight, so they get treated like passive callbacks instead of owned resources. But the returned `IDisposable` is the actual unsubscribe handle. Any type with a real shutdown boundary must store those registrations and dispose them with its other owned runtime hooks, or post-dispose option/state changes can still hit dead instances.
+
+### 0k142. Reconfigured Upload Governors Must Dispose Replaced Token Buckets And Their Parent Helpers
+
+**The Bug**: `UploadGovernor` rebuilds timer-backed `TokenBucket` instances whenever upload options change, but it used to replace the dictionary without disposing the previous buckets. `UploadQueue` also kept an options-monitor registration with no teardown path, and `UploadService` constructed both helpers directly without disposing them. Reconfiguration and shutdown could therefore leave old bucket timers and option subscriptions alive after the helpers were logically replaced.
+
+**Files Affected**:
+- `src/slskd/Transfers/Uploads/UploadGovernor.cs`
+- `src/slskd/Transfers/Uploads/UploadQueue.cs`
+- `src/slskd/Transfers/Uploads/UploadService.cs`
+
+**Wrong**:
+```csharp
+OptionsMonitor.OnChange(Configure);
+...
+var tokenBuckets = new Dictionary<string, ITokenBucket> { ... };
+TokenBuckets = tokenBuckets;
+```
+
+**Correct**:
+```csharp
+OptionsMonitorRegistration = OptionsMonitor.OnChange(Configure);
+...
+var previousBuckets = TokenBuckets;
+TokenBuckets = tokenBuckets;
+DisposeBuckets(previousBuckets);
+...
+if (Governor is IDisposable disposableGovernor)
+{
+    disposableGovernor.Dispose();
+}
+```
+
+**Why This Keeps Happening**: helper objects that look "owned by a service" are easy to forget when they are constructed inline instead of being DI-managed singletons. If a helper allocates timers, semaphores, or change registrations, then both replacement and parent-service disposal must release those internals explicitly. Otherwise old helper instances keep their background timers and subscriptions even after the live service has moved on.
