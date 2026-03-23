@@ -52,6 +52,44 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xCE. Init-Only Records Must Be Normalized Via Copies, Not In-Place Mutation
+
+**The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+- `src/slskd/Integrations/MusicBrainz/Models/AlbumTarget.cs`
+
+**Wrong**:
+```csharp
+target.MusicBrainzReleaseId = target.MusicBrainzReleaseId?.Trim() ?? string.Empty;
+target.Metadata.Country = string.IsNullOrWhiteSpace(target.Metadata.Country) ? null : target.Metadata.Country.Trim();
+track.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(track.MusicBrainzRecordingId) ? null : track.MusicBrainzRecordingId.Trim();
+```
+
+**Correct**:
+```csharp
+var normalizedMetadata = target.Metadata with
+{
+    Country = string.IsNullOrWhiteSpace(target.Metadata.Country) ? null : target.Metadata.Country.Trim(),
+};
+
+var normalizedTarget = target with
+{
+    MusicBrainzReleaseId = target.MusicBrainzReleaseId?.Trim() ?? string.Empty,
+    Metadata = normalizedMetadata,
+};
+
+var normalizedTrack = sourceTrack with
+{
+    MusicBrainzRecordingId = string.IsNullOrWhiteSpace(sourceTrack.MusicBrainzRecordingId)
+        ? string.Empty
+        : sourceTrack.MusicBrainzRecordingId.Trim(),
+};
+```
+
+**Why This Keeps Happening**: a lot of persistence code in this repo normalizes mutable models in place, so it is easy to cargo-cult that pattern onto newer `record` models with `init` accessors. When the input type is immutable, normalize into local copies and preserve database `NULL` handling at the SQL parameter boundary instead of smuggling `null` through non-nullable properties.
+
 ### 0xCD. DHT-Fed Metadata Must Be Canonicalized On Read Or Valid Peers And Pods Look Missing
 
 **The Bug**: Pod and peer discovery code was trimming the lookup key but then trusting DHT payload fields exactly as stored. If the returned `PodId`, tags, focus content IDs, usernames, or endpoints carried padding or hostname endpoints, discovery/resolution treated them as mismatches or invalid even though the metadata was otherwise usable.
