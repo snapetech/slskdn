@@ -228,6 +228,45 @@ foreach (EventHandler<SceneMessageReceivedEventArgs> handler in MessageReceived.
 
 **Why This Keeps Happening**: chat/pubsub delivery looks like ordinary in-process eventing, so multicast delegates feel like “free fanout.” They are still one synchronous call chain. If a scene service is responsible for notifying multiple listeners, subscriber exceptions must be isolated just like timer, bus, or infrastructure fanout failures.
 
+### 0xDD. Connection Registry Events Must Not Fire Under The Registration Lock
+
+**The Bug**: `MeshNeighborRegistry` raised `NeighborAdded`, `FirstNeighborConnected`, and `NeighborRemoved` while still holding `_registrationLock`. A throwing or slow subscriber could abort later listeners, delay registration teardown, or re-enter registry operations from inside the lock.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshNeighborRegistry.cs`
+
+**Wrong**:
+```csharp
+await _registrationLock.WaitAsync();
+try
+{
+    _connectionsByUsername[connection.Username] = connection;
+    NeighborAdded?.Invoke(this, new MeshNeighborEventArgs(connection));
+}
+finally
+{
+    _registrationLock.Release();
+}
+```
+
+**Correct**:
+```csharp
+await _registrationLock.WaitAsync();
+try
+{
+    _connectionsByUsername[connection.Username] = connection;
+    eventArgs = new MeshNeighborEventArgs(connection);
+}
+finally
+{
+    _registrationLock.Release();
+}
+
+RaiseNeighborEvent(NeighborAdded, eventArgs, nameof(NeighborAdded));
+```
+
+**Why This Keeps Happening**: registry code often treats events as part of the bookkeeping transaction because the state change and notification happen together conceptually. In practice, event handlers are arbitrary external code. Snapshot the event payload under the lock, release the lock, then notify each subscriber behind its own exception boundary.
+
 ### 0xDD. Shared State Change Fanout Must Happen Outside The State Lock
 
 **The Bug**: `ManagedState<T>.SetValue(...)` cloned and updated the state under its lock and then invoked the whole `Changed` multicast delegate while still holding that lock. One listener exception aborted all later listeners, and any listener reentry or lock-taking path could deadlock the state publisher.

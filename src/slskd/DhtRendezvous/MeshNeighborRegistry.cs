@@ -85,6 +85,10 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             return false;
         }
 
+        var registered = false;
+        var firstNeighborConnected = false;
+        MeshNeighborEventArgs? eventArgs = null;
+
         await _registrationLock.WaitAsync();
         try
         {
@@ -122,21 +126,32 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                 Count,
                 isFirstNeighbor ? " 🎉 First neighbor connected!" : string.Empty);
 
-            NeighborAdded?.Invoke(this, new MeshNeighborEventArgs(connection));
+            registered = true;
+            firstNeighborConnected = isFirstNeighbor;
+            eventArgs = new MeshNeighborEventArgs(connection);
 
             // Fire first neighbor event only once per session
             if (isFirstNeighbor)
             {
                 _firstNeighborEventFired = true;
-                FirstNeighborConnected?.Invoke(this, new MeshNeighborEventArgs(connection));
             }
-
-            return true;
         }
         finally
         {
             _registrationLock.Release();
         }
+
+        if (registered && eventArgs is not null)
+        {
+            RaiseNeighborEvent(NeighborAdded, eventArgs, nameof(NeighborAdded));
+
+            if (firstNeighborConnected)
+            {
+                RaiseNeighborEvent(FirstNeighborConnected, eventArgs, nameof(FirstNeighborConnected));
+            }
+        }
+
+        return registered;
     }
 
     /// <summary>
@@ -144,11 +159,12 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public async Task UnregisterAsync(MeshOverlayConnection connection)
     {
+        var removed = false;
+        MeshNeighborEventArgs? eventArgs = null;
+
         await _registrationLock.WaitAsync();
         try
         {
-            var removed = false;
-
             if (connection.Username is not null)
             {
                 removed |= _connectionsByUsername.TryRemove(connection.Username, out _);
@@ -163,12 +179,17 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                     connection.Username ?? connection.RemoteEndPoint.ToString(),
                     Count);
 
-                NeighborRemoved?.Invoke(this, new MeshNeighborEventArgs(connection));
+                eventArgs = new MeshNeighborEventArgs(connection);
             }
         }
         finally
         {
             _registrationLock.Release();
+        }
+
+        if (removed && eventArgs is not null)
+        {
+            RaiseNeighborEvent(NeighborRemoved, eventArgs, nameof(NeighborRemoved));
         }
     }
 
@@ -291,6 +312,29 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         _connectionsByUsername.Clear();
         _connectionsByEndpoint.Clear();
         _registrationLock.Dispose();
+    }
+
+    private void RaiseNeighborEvent(
+        EventHandler<MeshNeighborEventArgs>? handlers,
+        MeshNeighborEventArgs args,
+        string eventName)
+    {
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<MeshNeighborEventArgs> handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Mesh neighbor subscriber failed for {EventName}", eventName);
+            }
+        }
     }
 }
 

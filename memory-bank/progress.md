@@ -6793,6 +6793,13 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/VirtualSoulfind/SceneServicesTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `SceneServicesTests` slice passed `6/6`.
 
+## 2026-03-23 11:21 CST
+
+- Hardened `MeshNeighborRegistry` so neighbor lifecycle events no longer fire under `_registrationLock`.
+- `NeighborAdded`, `FirstNeighborConnected`, and `NeighborRemoved` now snapshot their payload inside the critical section and fan out after the lock with per-subscriber isolation.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/DhtRendezvous/MeshNeighborRegistryTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `MeshNeighborRegistryTests` slice passed `3/3`.
+
 - 2026-03-23: Hardened PeerResolutionService alias caching so DHT-resolved mappings are reusable by peer ID and username alias; fixed ChannelReader test type collisions by fully qualifying the slskd wrapper type; folded in dirty LAN discovery updates and revalidated build/test/lint.
 
 - 2026-03-23: Replaced MeshContentMeshService stream close-only behavior with a real single-request content stream that reuses the existing GetByContentId contract; added stream coverage, fixed a lingering SceneServicesTests logger-type compile drift, and revalidated build/test/lint.
