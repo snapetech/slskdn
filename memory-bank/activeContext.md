@@ -45,6 +45,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - the fire-and-forget upload/download workers could still fault off-thread when failure-reporting or retry-exhaustion paths threw
     - added explicit top-level observation and guarded failure reporting so relay failures no longer disappear as unobserved task faults
   - Added the corresponding detached relay-task gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
+  - Found a real relay reconnect race in `RelayClient`:
+    - `HubConnection_Reconnected()` reset the login waiter after reconnection even though the auth challenge can complete before that event fires
+    - removed the extra reset so successful reconnect/login signals are not discarded before share resync
+  - Added the corresponding reconnect waiter-race gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
   - Investigated the failed `.95` main release and confirmed all build/publish jobs succeeded except `Publish to Snap (Main/Stable)`.
   - The Snap artifact built correctly; the only failing external response was the Snap Store processing error `binary_sha3_384: Error checking upload uniqueness.`
   - Hardened `.github/workflows/build-on-tag.yml` so both Snap publish paths retry this known store-side processing failure for longer with capped backoff instead of aborting after a short fixed retry window.

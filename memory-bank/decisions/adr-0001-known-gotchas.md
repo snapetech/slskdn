@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE2. Do Not Reset Reconnection Waiters After The Reconnected Event Fires
+
+**The Bug**: `RelayClient.HubConnection_Reconnected()` reset `LoggedInTaskCompletionSource` and then waited for authentication to complete. But the relay controller can send the auth challenge before the `Reconnected` event fires, so the login handler may already have completed the old waiter. Resetting it inside `Reconnected` discards that success signal and leaves the client waiting on a brand-new task that will never complete.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+
+**Wrong**:
+```csharp
+private async Task HubConnection_Reconnected(string? arg)
+{
+    ResetLoggedInState();
+    await LoggedInTaskCompletionSource.Task;
+    await UploadSharesAsync();
+}
+```
+
+**Correct**:
+```csharp
+private async Task HubConnection_Reconnected(string? arg)
+{
+    await LoggedInTaskCompletionSource.Task;
+    await UploadSharesAsync();
+}
+```
+
+**Why This Keeps Happening**: reconnect handlers often feel like a fresh start, but event ordering matters. The reconnect/auth handshake is split across transport callbacks and message handlers, so resetting shared waiters in both places creates a race. Reset once when entering the disconnected/reconnecting state, not again after the reconnect event fires.
+
 ### 0xE1. Fire-And-Forget Relay Tasks Need Their Own Top-Level Catch, Including Failure-Reporting Code
 
 **The Bug**: `RelayClient` handled upload requests and download notifications inside fire-and-forget `Task.Run(...)` callbacks. The main body had local catches, but the “report failure back to the hub” callback and the download retry loop could still throw after the handler had already detached. That produced unobserved task faults and turned real relay failures into silent background errors.

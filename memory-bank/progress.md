@@ -6599,6 +6599,12 @@ Code quality improvements were completed as part of Option A:
 - Added explicit guarding around the failure-report callback and a top-level catch around the download-notification worker so relay failures no longer disappear as unobserved task faults.
 - Documented the detached relay-task gotcha in `adr-0001-known-gotchas.md` before validation.
 
+## 2026-03-23 13:55 - Relay reconnect waiter race fix
+
+- Found a real reconnect race in `RelayClient`: `HubConnection_Reconnected()` reset `LoggedInTaskCompletionSource` after the transport had already reconnected, even though the authentication challenge can arrive before that event fires.
+- Removed the extra reset so a successful reconnection/login signal is no longer discarded before the share-resync path awaits it.
+- Documented the reconnect waiter race in `adr-0001-known-gotchas.md` before validation.
+
 ## 2026-03-23 09:26 CST
 - Investigated first-run Docker startup crash from latest image logs: host startup failed resolving `slskd.Shares.IShareRepository` for `slskd.VirtualSoulfind.v2.Backends.LocalLibraryBackend`.
 - Fixed root DI wiring in `Program.cs` by mapping `IShareRepository` to `IShareService.GetLocalRepository()` before VSF v2 backend registration.

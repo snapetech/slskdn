@@ -578,11 +578,6 @@ namespace slskd.Relay
 
         private async Task HubConnection_Reconnected(string? arg)
         {
-            // upon reconnection, the authentication flow is started again. this may happen before the client
-            // realizes the connection has been closed, so reset everything as though we're just learning that
-            // there has been a disconnect
-            ResetLoggedInState();
-
             Log.Warning("Relay controller connection reconnected");
 
             try
