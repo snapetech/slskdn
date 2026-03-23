@@ -919,3 +919,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining shared queue, background-lifecycle, and event-fanout helpers
   - prioritize infrastructure APIs whose public bulk-operation contracts may not match their per-key internals
+
+## 2026-03-23 12:18 CST
+- Continued the lifecycle sweep into restartable hosted services.
+- Fixed `UnderperformanceDetectorHostedService.StartAsync()` so it cancels the previous loop CTS before disposal/replacement; repeated starts no longer leave the prior detector loop alive with an uncanceled token.
+- Extended `HostedServiceLifecycleTests` to cover the restart path and confirmed the focused slice passed (`5/5`) while the release build stayed green (`0 warnings / 0 errors`).
+- Extended the existing ADR-0001 startup-CTS gotcha entry and will commit it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+- Next steps:
+  - continue bughunting restartable hosted/background services that replace long-lived CTS fields
+  - then return to the remaining low-level callback and event-fanout helpers

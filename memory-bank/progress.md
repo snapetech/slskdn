@@ -6865,3 +6865,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/WaiterTests.cs` for duplicate-key and multi-key cancellation.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `WaiterTests` slice passed `2/2`.
 - Added ADR-0001 gotcha `0k121` for `CancelAll()` contract drift and committed it immediately per repo policy.
+
+## 2026-03-23 12:18 CST
+
+- Fixed another startup/restart CTS replacement bug in `UnderperformanceDetectorHostedService`.
+- `StartAsync()` now cancels the previous loop CTS before disposing/replacing it, so repeated starts do not orphan the previous detector loop with a live uncanceled token.
+- Extended focused lifecycle coverage in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `HostedServiceLifecycleTests` slice passed `5/5`.
+- Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
