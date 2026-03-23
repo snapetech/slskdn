@@ -180,6 +180,33 @@ var entity = new PodEntity
 
 **Why This Keeps Happening**: once a feature has the right services injected, it is easy to stop at “shape complete” and leave placeholder values in place. That creates a worse failure mode than a hard TODO because the feature appears implemented while silently weighting, caching, or persisting the wrong state. If a service already has the dependencies needed to compute a value, use them before inventing default placeholders.
 
+### 0xD1. Thin Controllers And Introspection Endpoints Must Not Return Placeholder Success When Local State Can Answer Honestly
+
+**The Bug**: controller and service endpoints were returning empty-success payloads or hardcoded service lists even though the repo already had enough local state to answer the request. That makes the API look healthy while hiding incomplete behavior from callers and from release smoke tests.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/PodMessageBackfillController.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServiceRouter.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshIntrospectionService.cs`
+
+**Wrong**:
+```csharp
+var results = new List<PodBackfillResult>();
+return Ok(results);
+
+var serviceNames = new[] { "pods", "mesh-introspect" };
+```
+
+**Correct**:
+```csharp
+var profile = await _profileService.GetMyProfileAsync(cancellationToken);
+var memberPods = allPods.Where(pod => members.Any(m => string.Equals(m.PeerId, profile.PeerId, StringComparison.OrdinalIgnoreCase)));
+
+var serviceNames = _router.GetRegisteredServiceNames();
+```
+
+**Why This Keeps Happening**: once an endpoint compiles and returns a typed payload, it is easy to leave a “temporary” empty response in place. For admin/status/controller surfaces, that is effectively a lie. If the dependencies are already injected or can be exposed cheaply, wire the real local answer instead of shipping a placeholder success contract.
+
 ### 0xCE. Init-Only Records Must Be Normalized Via Copies, Not In-Place Mutation
 
 **The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence.
