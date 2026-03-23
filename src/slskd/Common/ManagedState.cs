@@ -254,7 +254,27 @@ namespace slskd
                     return;
                 }
 
-                Listener.Invoke((args.Previous!, args.Current));
+                List<Exception>? exceptions = null;
+
+                try
+                {
+                    Listener.Invoke((args.Previous!, args.Current));
+                }
+                catch (Exception ex)
+                {
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(ex);
+                }
+
+                if (exceptions is not null)
+                {
+                    if (exceptions.Count == 1)
+                    {
+                        throw exceptions[0];
+                    }
+
+                    throw new AggregateException(exceptions);
+                }
             }
 
             protected virtual void Dispose(bool disposing)
