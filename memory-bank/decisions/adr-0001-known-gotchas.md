@@ -256,6 +256,28 @@ return connection;
 
 **Why This Keeps Happening**: cleanup patterns from failure paths get copied into success paths without reevaluating ownership. If the method is transferring a live object to its caller or registry, do not clear the reference before returning unless you are intentionally changing the public result contract. Otherwise you create “successful failure” behavior that is hard to spot from logs alone.
 
+### 0xC6. HashDb Read And Write Paths Must Normalize The Same Keys
+
+**The Bug**: HashDb persisted job IDs, recording IDs, and artist IDs exactly as provided, while read-side methods often compared trimmed values or vice versa. That turned harmless whitespace drift into false “not found” lookups and duplicate logical records.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+cmd.Parameters.AddWithValue("@job_id", job.JobId);
+var matches = await LookupHashesByRecordingIdAsync("  mb:rec1  ");
+```
+
+**Correct**:
+```csharp
+job.JobId = job.JobId.Trim();
+recordingId = recordingId?.Trim() ?? string.Empty;
+cmd.Parameters.AddWithValue("@job_id", job.JobId);
+```
+
+**Why This Keeps Happening**: service code treats DB keys as already canonical once they are persisted, but those values still originate at API boundaries, imports, and scripts. If write paths and read paths normalize differently, the database quietly accumulates drift and the runtime starts manufacturing “missing” state. Normalize the same identifiers on both write and lookup.
+
 ### 0xC1. Small Utility Controllers Still Need Input Normalization Before Dispatch
 
 **The Bug**: low-traffic helper controllers were still forwarding raw route, query, and body strings straight into services. That let whitespace-only values slip through validation, turned padded identifiers into different storage keys, and in some cases converted simple bad input into service-level exceptions and `500`s.
