@@ -16484,3 +16484,51 @@ public interface IMeshSyncService : IDisposable
 ```
 
 **Why This Keeps Happening**: container-managed singletons feel “owned by DI”, so it is tempting to leave disposal as an implementation detail. But once a singleton interface is the public handle used across the app, hiding disposal makes resource ownership invisible right where callers, tests, and future refactors make lifecycle decisions. This drift tends to recur in batches across adjacent subsystems: mesh, signals, uploads, moderation, discovery, and security helpers all accumulate the same hidden ownership problem independently. If the implementation owns subscriptions, semaphores, timers, clients, transports, or other disposable state for process lifetime, the interface should expose disposal too.
+
+### 0k14B. Operation Tracking Dictionaries Must Retire Stored Tokens and Publishers on Every Terminal Path
+
+**The Bug**: several long-lived services tracked in-flight operations in dictionaries keyed by search or transfer id, but terminal paths only removed the entry or left the associated publisher behind. That leaked `CancellationTokenSource` instances after normal completion/cancel, and left `Subject<T>` progress channels alive forever after transfers reached a terminal state.
+
+**Files Affected**:
+- `src/slskd/Search/SearchService.cs`
+- `src/slskd/Search/SearchService.BridgedSearch.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/MeshTransferService.cs`
+
+**Wrong**:
+```csharp
+CancellationTokens.TryAdd(id, cancellationTokenSource);
+
+// ...
+finally
+{
+    CancellationTokens.TryRemove(id, out _);
+}
+```
+
+```csharp
+progressSubjects[transferId] = new Subject<TransferProgressUpdate>();
+
+status.State = MeshTransferState.Completed;
+PublishProgress(transferId, status);
+```
+
+**Correct**:
+```csharp
+CancellationTokens.TryAdd(id, cancellationTokenSource);
+
+// ...
+finally
+{
+    ReleaseCancellationToken(id);
+}
+```
+
+```csharp
+progressSubjects[transferId] = new Subject<TransferProgressUpdate>();
+
+status.State = MeshTransferState.Completed;
+PublishProgress(transferId, status);
+CompleteProgressSubject(transferId);
+```
+
+**Why This Keeps Happening**: tracking dictionaries make ownership feel centralized, but that only holds if every completion/cancel/failure path flows through a shared retire helper. Once cleanup is open-coded inline, one path will inevitably remember to remove the entry but forget to dispose the stored token or complete the stored publisher.
