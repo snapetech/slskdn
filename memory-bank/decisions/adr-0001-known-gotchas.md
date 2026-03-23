@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC6. Older CRUD Controllers Still Need Explicit Null-Body And Field Canonicalization
+
+**The Bug**: older CRUD-style controllers relied on `[Required]` or model-binding assumptions and then copied request fields straight into persisted entities. That left null request bodies able to trip null dereferences and allowed padded search/filter/path values to be stored in non-canonical form.
+
+**Files Affected**:
+- `src/slskd/Wishlist/API/Controllers/WishlistController.cs`
+- `src/slskd/Destinations/API/Controllers/DestinationsController.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(request.SearchText))
+{
+    return BadRequest("SearchText is required");
+}
+
+var normalizedPath = PathGuard.NormalizeAbsolutePathWithinRoots(request.Path, GetAllowedDestinationRoots());
+```
+
+**Correct**:
+```csharp
+if (request == null)
+{
+    return BadRequest("SearchText is required");
+}
+
+request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+request.Filter = string.IsNullOrWhiteSpace(request.Filter) ? string.Empty : request.Filter.Trim();
+request.Path = request.Path?.Trim() ?? string.Empty;
+```
+
+**Why This Keeps Happening**: older controllers often predate the newer boundary-hardening passes and assume MVC validation will reject null bodies for them. That assumption is brittle, and it also misses canonicalization of persisted string fields. Even in classic CRUD endpoints, treat the request as raw transport input: null-check it first, then trim and normalize every persisted string field.
+
 ### 0xC5. Parallel Controller Families Drift Apart On The Same Boundary Rules
 
 **The Bug**: one controller family was already normalizing and trimming request payloads, but sibling endpoints for the same domain were not. The native jobs API handled some normalization, while the dedicated discography and label-crate job controllers still accepted raw `jobId`, `artistId`, `labelId`, `labelName`, and `releaseIds`.
