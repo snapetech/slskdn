@@ -52,6 +52,40 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDC. Timer-Backed Callback Infrastructure Must Clear Shared State Before Invoking User Code
+
+**The Bug**: small callback helpers looked harmless, but they still held mutable shared state in exactly the wrong order. `TimedCounter` updated its count from arbitrary caller threads and the timer thread with plain reads/writes, which can lose increments. `RateLimiter` cleared `Staged` only after invoking the callback, so a throwing staged action remained queued forever and retried on every tick or flush.
+
+**Files Affected**:
+- `src/slskd/Common/TimedCounter.cs`
+- `src/slskd/Common/RateLimiter.cs`
+
+**Wrong**:
+```csharp
+Count += count;
+
+var count = Count;
+Count = 0;
+OnElapsed?.Invoke(count);
+
+Staged?.Invoke();
+Staged = null;
+```
+
+**Correct**:
+```csharp
+Interlocked.Add(ref this.count, count);
+
+var count = Interlocked.Exchange(ref this.count, 0);
+OnElapsed?.Invoke(count);
+
+var staged = Staged;
+Staged = null;
+staged?.Invoke();
+```
+
+**Why This Keeps Happening**: utility classes often assume they are “single-threaded enough,” but timer callbacks are already concurrent with callers. If shared state is modified on both paths, use atomic operations. If a queued callback slot is supposed to represent “run at most once,” clear the slot before invoking user code or a failing delegate will be retried forever.
+
 ### 0xDD. Shared State Change Fanout Must Happen Outside The State Lock
 
 **The Bug**: `ManagedState<T>.SetValue(...)` cloned and updated the state under its lock and then invoked the whole `Changed` multicast delegate while still holding that lock. One listener exception aborted all later listeners, and any listener reentry or lock-taking path could deadlock the state publisher.
@@ -14893,3 +14927,26 @@ if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId)) { 
 ```
 
 **Why This Keeps Happening**: there are multiple historical channel identity shapes in the codebase (`podId:channelId` strings and separate `PodId`/`ChannelId` fields). It is easy to copy the legacy split logic into newer runtime paths even though the current message contract no longer encodes both values in `ChannelId`.
+
+### 0k115. Mesh Service Stream Hooks Must Not Stay Reachable No-Ops
+
+**The Bug**: `PodsMeshService.HandleStreamAsync(...)` was exposed on the mesh service surface but always logged a warning and closed the stream. That leaves a reachable API shape that advertises streaming support while guaranteeing failure even though the service already has the dependencies needed to serve a conservative read-only message stream.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PodsMeshService.cs`
+
+**Wrong**:
+```csharp
+_logger.LogWarning("... streaming is not implemented ...");
+return stream.CloseAsync(cancellationToken);
+```
+
+**Correct**:
+```csharp
+var requestBytes = await stream.ReceiveAsync(cancellationToken);
+var messages = await _podMessaging.GetMessagesAsync(...);
+await stream.SendAsync(JsonSerializer.SerializeToUtf8Bytes(messages), cancellationToken);
+await stream.CloseAsync(cancellationToken);
+```
+
+**Why This Keeps Happening**: service interfaces often add optional stream hooks early, and it is easy to leave a placeholder close in place because the request/response RPC path already works. If the surface is reachable in production, either implement a conservative real behavior or explicitly remove the route.
