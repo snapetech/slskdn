@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using slskd.HashDb;
 using slskd.HashDb.Models;
 using slskd.Integrations.MusicBrainz.Models;
+using slskd.Jobs;
 using Xunit;
 
 public class HashDbServiceTests : IDisposable
@@ -395,6 +396,25 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateFlacHashAsync_TrimsFileIdAndHashValue()
+    {
+        var entry = new FlacInventoryEntry
+        {
+            PeerId = "testuser",
+            Path = "/music/test.flac",
+            Size = 50000000,
+            HashStatusStr = "none",
+        };
+        await service.UpsertFlacEntryAsync(entry);
+
+        await service.UpdateFlacHashAsync($" {entry.FileId} ", " trimmedhash ", HashSource.LocalScan);
+
+        var updated = await service.GetFlacEntryAsync(entry.FileId);
+        Assert.Equal("known", updated.HashStatusStr);
+        Assert.Equal("trimmedhash", updated.HashValue);
+    }
+
+    [Fact]
     public async Task MarkFlacHashFailedAsync_SetsFailedStatus()
     {
         // Arrange
@@ -413,6 +433,83 @@ public class HashDbServiceTests : IDisposable
         // Assert
         var updated = await service.GetFlacEntryAsync(entry.FileId);
         Assert.Equal("failed", updated.HashStatusStr);
+    }
+
+    [Fact]
+    public async Task GetRecordingIdsWithVariantsAsync_TrimsAndDeduplicatesIds()
+    {
+        var entry1 = new HashDbEntry
+        {
+            FlacKey = "flac-key-1",
+            ByteHash = "hash-1",
+            Size = 123,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+        };
+
+        var entry2 = new HashDbEntry
+        {
+            FlacKey = "flac-key-2",
+            ByteHash = "hash-2",
+            Size = 456,
+            FirstSeenAt = 2,
+            LastUpdatedAt = 2,
+            SeqId = 2,
+            UseCount = 1,
+        };
+
+        await service.StoreHashAsync(entry1);
+        await service.StoreHashAsync(entry2);
+        await service.UpdateHashRecordingIdAsync(entry1.FlacKey, " mb:rec1 ");
+        await service.UpdateHashRecordingIdAsync(entry2.FlacKey, "mb:rec1");
+
+        var ids = await service.GetRecordingIdsWithVariantsAsync();
+
+        var id = Assert.Single(ids);
+        Assert.Equal("mb:rec1", id);
+    }
+
+    [Fact]
+    public async Task GetCodecProfilesForRecordingAsync_TrimsRecordingId()
+    {
+        var entry = new HashDbEntry
+        {
+            FlacKey = "flac-key-codec",
+            ByteHash = "hash-codec",
+            Size = 321,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+            Codec = "flac",
+            SampleRateHz = 44100,
+            BitDepth = 16,
+            Channels = 2,
+        };
+
+        await service.StoreHashAsync(entry);
+        await service.UpdateHashRecordingIdAsync(entry.FlacKey, "mb:codec1");
+
+        var profiles = await service.GetCodecProfilesForRecordingAsync(" mb:codec1 ");
+
+        Assert.Single(profiles);
+    }
+
+    [Fact]
+    public async Task GetLabelCrateReleaseJobsAsync_SkipsBlankReleaseIds()
+    {
+        await service.UpsertLabelCrateReleaseJobsAsync("job-1", new[]
+        {
+            new DiscographyReleaseJobStatus { ReleaseId = " rel-1 ", Status = JobStatus.Pending },
+            new DiscographyReleaseJobStatus { ReleaseId = "   ", Status = JobStatus.Failed },
+        });
+
+        var jobs = await service.GetLabelCrateReleaseJobsAsync(" job-1 ");
+
+        var job = Assert.Single(jobs);
+        Assert.Equal("rel-1", job.ReleaseId);
     }
 
     // ========== Hash Database Tests ==========

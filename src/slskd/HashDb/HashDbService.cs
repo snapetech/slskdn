@@ -947,6 +947,13 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdatePeerCapabilitiesAsync(string username, PeerCapabilityFlags caps, string? clientVersion = null, CancellationToken cancellationToken = default)
         {
+            username = username?.Trim() ?? string.Empty;
+            clientVersion = clientVersion?.Trim();
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return;
+            }
+
             await GetOrCreatePeerAsync(username, cancellationToken);
 
             using var conn = GetConnection();
@@ -1116,6 +1123,13 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdateFlacHashAsync(string fileId, string hashValue, HashSource source, CancellationToken cancellationToken = default)
         {
+            fileId = fileId?.Trim() ?? string.Empty;
+            hashValue = hashValue?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(fileId) || string.IsNullOrWhiteSpace(hashValue))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -1131,6 +1145,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task MarkFlacHashFailedAsync(string fileId, CancellationToken cancellationToken = default)
         {
+            fileId = fileId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(fileId))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "UPDATE FlacInventory SET hash_status = 'failed' WHERE file_id = @file_id";
@@ -1887,6 +1907,7 @@ namespace slskd.HashDb
         public async Task<List<string>> GetRecordingIdsWithVariantsAsync(CancellationToken cancellationToken = default)
         {
             var list = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -1898,7 +1919,11 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                list.Add(reader.GetString(0));
+                var recordingId = reader.GetString(0).Trim();
+                if (!string.IsNullOrWhiteSpace(recordingId) && seen.Add(recordingId))
+                {
+                    list.Add(recordingId);
+                }
             }
 
             return list;
@@ -1909,6 +1934,7 @@ namespace slskd.HashDb
         {
             var list = new List<string>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            recordingId = recordingId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(recordingId))
             {
                 return list;
@@ -1922,7 +1948,7 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                var codec = reader.IsDBNull(0) ? "Unknown" : reader.GetString(0);
+                var codec = reader.IsDBNull(0) ? "Unknown" : reader.GetString(0).Trim();
                 var sampleRate = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
                 var bitDepth = reader.IsDBNull(2) ? (int?)null : reader.GetInt32(2);
                 var channels = reader.IsDBNull(3) ? 2 : reader.GetInt32(3);
@@ -2084,7 +2110,12 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                var releaseId = reader.GetString(0);
+                var releaseId = reader.GetString(0).Trim();
+                if (string.IsNullOrWhiteSpace(releaseId))
+                {
+                    continue;
+                }
+
                 var statusText = reader.GetString(1);
                 var status = Enum.TryParse<JobStatus>(statusText, ignoreCase: true, out var s) ? s : JobStatus.Pending;
                 list.Add(new DiscographyReleaseJobStatus
@@ -2660,7 +2691,14 @@ namespace slskd.HashDb
 
             try
             {
-                return JsonSerializer.Deserialize<ArtistReleaseGraph>(json, CaseInsensitiveJson);
+                var graph = JsonSerializer.Deserialize<ArtistReleaseGraph>(json, CaseInsensitiveJson);
+                if (graph == null || string.IsNullOrWhiteSpace(graph.ArtistId))
+                {
+                    return null;
+                }
+
+                graph.ArtistId = graph.ArtistId.Trim();
+                return graph;
             }
             catch (Exception ex)
             {

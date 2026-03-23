@@ -38,6 +38,7 @@ namespace slskd.Transfers.MultiSource.API
         [HttpGet("{jobId}/summary")]
         public async Task<IActionResult> GetSummary(string jobId, CancellationToken ct)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(jobId))
             {
                 return BadRequest("jobId is required");

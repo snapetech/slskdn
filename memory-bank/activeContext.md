@@ -310,6 +310,11 @@ dotnet test
 - Backfill request/response processing now trims pod/channel/peer/message identifiers, deduplicates target peers more safely, and stores normalized messages instead of dropping them on harmless whitespace drift.
 - Next: continue through the remaining larger transport-response gaps, especially actual backfill response transport handling and the next Mesh/PodCore placeholder cluster.
 
+## 2026-03-22 20:14
+- The actual overlay receive seam for backfill responses is still a larger transport feature, so I pivoted to the next dense local-completion batch in `HashDbService`.
+- Tightened the smaller HashDb helper/update/list methods so they use the same identifier normalization rules as the main lookup APIs, closing more whitespace-drift misses at the storage edge.
+- Next: commit the current tree including dirty spillover, then continue deeper into the next HashDb/SongID/Mesh completion cluster.
+
 ## 2026-03-22 19:47
 - Normalized older helper/controller boundaries in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController`, and trimmed decoded relative paths in `FilesController`.
 - Added focused regressions for those controller/path cases and cleared the adjacent unit-project compile blockers in `HttpSignatureKeyFetcher`, `PathGuardTests`, and several stale test files so focused test slices run cleanly again.

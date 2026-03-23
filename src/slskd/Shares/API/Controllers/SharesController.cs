@@ -79,6 +79,12 @@ namespace slskd.Shares.API
         [ProducesResponseType(404)]
         public IActionResult Get(string id)
         {
+            id = id?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest("id is required");
+            }
+
             var share = Shares.Hosts.SelectMany(host => host.Shares).FirstOrDefault(share => share.Id == id);
 
             if (share == default)
@@ -115,6 +121,12 @@ namespace slskd.Shares.API
         [ProducesResponseType(404)]
         public async Task<IActionResult> BrowseShare(string id)
         {
+            id = id?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest("id is required");
+            }
+
             var share = Shares.Hosts.SelectMany(host => host.Shares).FirstOrDefault(share => share.Id == id);
 
             if (share == default)

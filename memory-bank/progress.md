@@ -6092,6 +6092,12 @@ Code quality improvements were completed as part of Option A:
 - `ProcessBackfillResponseAsync(...)` now accepts harmlessly padded backfill payloads, rewrites stored messages to canonical pod/channel values, and still rejects real pod/channel mismatches.
 - Added focused regressions covering total peer-request failure and normalized response storage.
 
+## 2026-03-22 20:14 - HashDb helper normalization follow-up
+
+- Extended HashDb normalization to the smaller helper/update/list methods so capability updates, FLAC hash updates, codec-profile reads, and label-crate release-job reads stop missing the same logical rows on harmless whitespace drift.
+- Recording ID list reads now trim and deduplicate identifiers before returning them, keeping the read-side consistent with the normalized write paths.
+- Added focused HashDb regressions covering trimmed FLAC hash updates, trimmed/deduplicated recording ID lists, trimmed codec-profile lookup, and blank release-job filtering.
+
 ## 2026-03-22 19:47 - Older helper-controller normalization and test drift cleanup
 
 - Normalized helper-style controller input in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController` so padded IDs, compare-node fields, and request strings are canonicalized before dispatch.
