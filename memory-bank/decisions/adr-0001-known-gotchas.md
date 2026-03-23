@@ -16302,3 +16302,32 @@ Client.DownloadDenied -= DownloadDeniedHandler;
 ```
 
 **Why This Keeps Happening**: static events and process-wide clocks feel “always on”, so constructor subscriptions look harmless. The trap is anonymous lambdas: they hide the fact that teardown later needs the exact same delegate instance. If a long-lived service subscribes to a static or client event, it must retain the delegate and unsubscribe it in `Dispose()`, along with any other owned synchronization primitives it created for that callback path.
+
+### 0k147. Long-Lived Service-To-Service Event Chains Need Teardown At Both Publisher And Subscriber Ends
+
+**The Bug**: several singleton VirtualSoulfind services formed a long-lived event chain without any teardown contract. `SoulseekClientWrapper` subscribed to the real Soulseek client's room-message event with an anonymous lambda it could never remove. `DisasterModeCoordinator`, `DisasterModeRecovery`, and `SceneChatService` then subscribed to health/pubsub publishers without exposing disposal or detaching those handlers. That keeps stale services reachable through publisher invocation lists and allows old instances to keep reacting after replacement or shutdown.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/DisasterModeCoordinator.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/DisasterModeRecovery.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneChatService.cs`
+
+**Wrong**:
+```csharp
+this.client.RoomMessageReceived += (sender, e) => RaiseRoomMessageReceived(sender, e);
+healthMonitor.HealthChanged += OnHealthChanged;
+pubsub.MessageReceived += OnPubSubMessageReceived;
+```
+
+**Correct**:
+```csharp
+roomMessageReceivedHandler = (sender, e) => RaiseRoomMessageReceived(sender, e);
+this.client.RoomMessageReceived += roomMessageReceivedHandler;
+...
+healthMonitor.HealthChanged -= OnHealthChanged;
+pubsub.MessageReceived -= OnPubSubMessageReceived;
+this.client.RoomMessageReceived -= roomMessageReceivedHandler;
+```
+
+**Why This Keeps Happening**: service-to-service events look internal, so they get treated like harmless in-process wiring instead of owned resources. But these publishers are often singletons too, which makes every subscription effectively global for process lifetime unless it is explicitly removed. If either side of the chain can outlive the other, both the publisher wrapper and the consumer service need a visible teardown contract.
