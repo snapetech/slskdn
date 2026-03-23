@@ -94,7 +94,8 @@ public sealed class MeshContentMeshService : IMeshService
     {
         var (req, err) = ServicePayloadParser.TryParseJson<GetByContentIdRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (req == null || string.IsNullOrWhiteSpace(req.ContentId))
+        var normalizedContentId = req?.ContentId?.Trim();
+        if (req == null || string.IsNullOrWhiteSpace(normalizedContentId))
         {
             return new ServiceReply
             {
@@ -106,7 +107,7 @@ public sealed class MeshContentMeshService : IMeshService
         }
 
         var repo = _shareService.GetLocalRepository();
-        var ci = repo.FindContentItem(req.ContentId);
+        var ci = repo.FindContentItem(normalizedContentId);
         if (ci == null || !ci.Value.IsAdvertisable)
         {
             return new ServiceReply
@@ -145,7 +146,29 @@ public sealed class MeshContentMeshService : IMeshService
         int length = (int)Math.Min(finfo.Size, int.MaxValue);
         if (req.Range != null)
         {
-            offset = Math.Max(0, req.Range.Offset);
+            if (req.Range.Offset < 0 || req.Range.Length < 0)
+            {
+                return new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Invalid range request",
+                    Payload = Array.Empty<byte>(),
+                };
+            }
+
+            offset = req.Range.Offset;
+            if (offset >= finfo.Size)
+            {
+                return new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Invalid range request",
+                    Payload = Array.Empty<byte>(),
+                };
+            }
+
             length = req.Range.Length > 0
                 ? (int)Math.Min(req.Range.Length, finfo.Size - offset)
                 : (int)Math.Max(0, finfo.Size - offset);

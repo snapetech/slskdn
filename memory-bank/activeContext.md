@@ -27,6 +27,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed another controller-boundary leak cluster:
+    - `MultiSourceController` no longer reflects usernames or exact source-count thresholds in user-miss / insufficient-source replies
+    - `RelayController` no longer echoes missing relay agent names in stream lookup failures
+    - `EventsController` no longer enumerates allowed values or echoes raw event-type strings in invalid event replies
+    - `ReportsController` no longer exposes enum-name lists in invalid direction/sort validation failures
+  - Added focused regression coverage for those release-facing controller contracts
+  - Confirmed the runtime project still builds cleanly (`0 warnings / 0 errors`)
+  - Confirmed the remaining unit-project compile errors are pre-existing drift in unrelated tests (`SearchActionsControllerTests`, `MeshContentMeshServiceTests`, `PodMessageBackfillControllerTests`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Fixed another identity/runtime drift cluster:
     - `SoulseekChatBridge` now normalizes bidirectional Soulseek username <-> Pod peer mappings before storing and looking them up
     - `MeshSyncService` now normalizes inbound response correlation IDs before completing pending waiters
@@ -146,9 +155,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the PodCore/Mesh completion batches from the placeholder inventory, prioritizing remaining runtime seams over controller polish.
-2. Finish the remaining Mesh and Pod backfill/runtime gaps that still bottom out early instead of using available local state.
-3. Keep folding in adjacent dirty files so the repo stays committed and clean between passes.
+1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially Relay, Telemetry, MultiSource, and remaining PodCore controllers.
+2. Fix or work around the standing unrelated unit-test compile drift in `SearchActionsControllerTests`, `MeshContentMeshServiceTests`, and `PodMessageBackfillControllerTests` so focused regression slices can run cleanly again.
+3. Keep folding in adjacent dirty files so the runtime build stays green between secure-release passes.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
@@ -494,6 +503,24 @@ dotnet test
   - `vstest` slice for `DhtMeshServiceTests`, `HolePunchMeshServiceTests`, and `RateLimitTimeoutTests` (`16/16`)
 - Next: continue the release-facing audit through the next layer of externally visible DTOs and controller/problem responses that still reflect raw identifiers, indexes, or object-not-found specifics.
 
+## 2026-03-22 20:59
+- Continued into the search action-routing surface.
+- `SearchActionsController` no longer echoes raw search IDs, response/file indexes, item IDs, or content IDs inside `ProblemDetails.Detail` for action-routing failures.
+- Focused validation passed:
+  - `dotnet build src/slskd/slskd.csproj -v q`
+  - `vstest` slice for `SearchActionsControllerTests` (`11/11`)
+- Next: keep pushing through the next controller/result boundary layer, especially older NotFound/Problem payloads that still include raw route IDs or lookup specifics in otherwise public contracts.
+
 - Replaced placeholder-success controller/introspection responses with real local-state answers in PodCore and Mesh Service Fabric.
 
 - Hardened active mesh service adapters so embedded Pod/DHT IDs are canonicalized before crossing into pod or routing-table logic.
+
+## 2026-03-22 22:05
+- Continued the fastest-path Pod/Mesh runtime completion batch instead of widening back out to unrelated surfaces.
+- Hardened DHT-backed discovery and peer-resolution behavior:
+  - `DhtMeshServiceDirectory` now normalizes both lookup keys and returned descriptor payloads before validation/dedupe.
+  - `PodDiscovery` now falls back to indexed pod IDs when direct metadata lookup misses on harmless ID drift.
+  - `PeerResolutionService` now reuses cached username aliases and canonical metadata peer IDs more consistently.
+  - `MeshContentMeshService` now trims content IDs and rejects invalid ranges at the adapter boundary.
+- Dirty repo spillover is being committed together with this batch per user instruction.
+- Next: finish the remaining Pod/Mesh runtime seams from the placeholder inventory, then rerun full validation and the release gate.

@@ -94,7 +94,7 @@ public class ReportsController : ControllerBase
         {
             if (!Enum.TryParse<TransferDirection>(direction, ignoreCase: true, out var parsedDirection))
             {
-                return BadRequest($"Invalid direction; expected one of: {string.Join(", ", Enum.GetNames(typeof(TransferDirection)))}");
+                return BadRequest("Invalid direction");
             }
 
             transferDirection = parsedDirection;
@@ -173,7 +173,7 @@ public class ReportsController : ControllerBase
         {
             if (!Enum.TryParse<TransferDirection>(direction, ignoreCase: true, out var parsedDirection))
             {
-                return BadRequest($"Invalid direction; expected one of: {string.Join(", ", Enum.GetNames(typeof(TransferDirection)))}");
+                return BadRequest("Invalid direction");
             }
 
             transferDirection = parsedDirection;
@@ -234,7 +234,7 @@ public class ReportsController : ControllerBase
 
         if (!Enum.TryParse<TransferDirection>(direction, ignoreCase: true, out var parsedDirection))
         {
-            return BadRequest($"Invalid direction; expected one of: {string.Join(", ", Enum.GetNames(typeof(TransferDirection)))}");
+            return BadRequest("Invalid direction");
         }
 
         start ??= Program.GenesisDateTime;
@@ -247,12 +247,12 @@ public class ReportsController : ControllerBase
 
         if (!Enum.TryParse<LeaderboardSortBy>(sortBy, out var parsedSortBy))
         {
-            return BadRequest($"Invalid sortBy; expected one of: {string.Join(", ", Enum.GetNames(typeof(LeaderboardSortBy)))}");
+            return BadRequest("Invalid sort field");
         }
 
         if (!Enum.TryParse<SortOrder>(sortOrder, out var parsedSortOrder))
         {
-            return BadRequest($"Invalid sortOrder; expected one of: {string.Join(", ", Enum.GetNames(typeof(SortOrder)))}");
+            return BadRequest("Invalid sort order");
         }
 
         if (limit <= 0)
@@ -401,7 +401,7 @@ public class ReportsController : ControllerBase
 
         if (!Enum.TryParse<TransferDirection>(direction, ignoreCase: true, out var parsedDirection))
         {
-            return BadRequest($"Invalid direction; expected one of: {string.Join(", ", Enum.GetNames(typeof(TransferDirection)))}");
+            return BadRequest("Invalid direction");
         }
 
         start ??= DateTime.MinValue;
@@ -414,7 +414,7 @@ public class ReportsController : ControllerBase
 
         if (!Enum.TryParse<SortOrder>(sortOrder, out var parsedSortOrder))
         {
-            return BadRequest($"Invalid sortOrder; expected one of: {string.Join(", ", Enum.GetNames(typeof(SortOrder)))}");
+            return BadRequest("Invalid sort order");
         }
 
         if (limit <= 0)
@@ -481,7 +481,7 @@ public class ReportsController : ControllerBase
 
         if (!Enum.TryParse<TransferDirection>(direction, ignoreCase: true, out var parsedDirection))
         {
-            return BadRequest($"Invalid direction; expected one of: {string.Join(", ", Enum.GetNames(typeof(TransferDirection)))}");
+            return BadRequest("Invalid direction");
         }
 
         start ??= DateTime.MinValue;

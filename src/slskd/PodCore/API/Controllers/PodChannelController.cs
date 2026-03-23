@@ -88,7 +88,7 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             var createdChannel = await _podService.CreateChannelAsync(podId, channel, cancellationToken);
@@ -140,7 +140,7 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             var channels = await _podService.GetChannelsAsync(podId, cancellationToken);
@@ -190,13 +190,13 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             var channel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
             if (channel == null)
             {
-                return NotFound($"Channel {channelId} does not exist in pod {podId}");
+                return NotFound("Channel not found");
             }
 
             return Ok(channel);
@@ -269,14 +269,14 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             // Verify channel exists
             var existingChannel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
             if (existingChannel == null)
             {
-                return NotFound($"Channel {channelId} does not exist in pod {podId}");
+                return NotFound("Channel not found");
             }
 
             var success = await _podService.UpdateChannelAsync(podId, channel, cancellationToken);
@@ -343,14 +343,14 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             // Verify channel exists
             var channel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
             if (channel == null)
             {
-                return NotFound($"Channel {channelId} does not exist in pod {podId}");
+                return NotFound("Channel not found");
             }
 
             var success = await _podService.DeleteChannelAsync(podId, channelId, cancellationToken);

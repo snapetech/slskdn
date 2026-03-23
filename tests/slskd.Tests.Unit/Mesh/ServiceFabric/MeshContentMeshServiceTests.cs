@@ -112,4 +112,77 @@ public class MeshContentMeshServiceTests
         Assert.Equal("File too large; use range request", reply.ErrorMessage);
         Assert.DoesNotContain("41943040", reply.ErrorMessage);
     }
+
+    [Fact]
+    public async Task HandleCallAsync_GetByContentId_TrimsContentIdBeforeLookup()
+    {
+        var repo = new Mock<IShareServiceLocalRepository>();
+        repo.Setup(repository => repository.FindContentItem("content:audio:track:mb-12345"))
+            .Returns(new ContentItem
+            {
+                ContentId = "content:audio:track:mb-12345",
+                MaskedFilename = "masked-file.flac",
+                IsAdvertisable = false
+            });
+
+        var shareService = new Mock<IShareService>();
+        shareService.Setup(service => service.GetLocalRepository()).Returns(repo.Object);
+
+        var service = new MeshContentMeshService(
+            Mock.Of<ILogger<MeshContentMeshService>>(),
+            shareService.Object);
+
+        await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "MeshContent",
+                Method = "GetByContentId",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new { contentId = " content:audio:track:mb-12345 " })
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        repo.Verify(repository => repository.FindContentItem("content:audio:track:mb-12345"), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCallAsync_GetByContentId_WithInvalidRange_ReturnsInvalidPayload()
+    {
+        var repo = new Mock<IShareServiceLocalRepository>();
+        repo.Setup(repository => repository.FindContentItem("content:audio:track:mb-12345"))
+            .Returns(new ContentItem
+            {
+                ContentId = "content:audio:track:mb-12345",
+                MaskedFilename = "masked-file.flac",
+                IsAdvertisable = true
+            });
+        repo.Setup(repository => repository.FindFileInfo("masked-file.flac"))
+            .Returns((Filename: Path.GetTempFileName(), Size: 1024L, LastWriteTimeUtc: DateTime.UtcNow));
+
+        var shareService = new Mock<IShareService>();
+        shareService.Setup(service => service.GetLocalRepository()).Returns(repo.Object);
+
+        var service = new MeshContentMeshService(
+            Mock.Of<ILogger<MeshContentMeshService>>(),
+            shareService.Object);
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "MeshContent",
+                Method = "GetByContentId",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    contentId = "content:audio:track:mb-12345",
+                    range = new { offset = -1, length = 10 }
+                })
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.InvalidPayload, reply.StatusCode);
+        Assert.Equal("Invalid range request", reply.ErrorMessage);
+    }
 }

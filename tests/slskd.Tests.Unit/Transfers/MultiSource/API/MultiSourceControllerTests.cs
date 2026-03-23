@@ -160,7 +160,7 @@ public class MultiSourceControllerTests
                     request.Sources[0].FullPath == "Music/song.flac" &&
                     request.Sources[0].ContentHash == "hash" &&
                     request.Sources[1].FullPath == "song.flac" &&
-                    request.Sources[1].ContentHash == null),
+                    request.Sources[1].ContentHash == string.Empty),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -228,6 +228,101 @@ public class MultiSourceControllerTests
     }
 
     [Fact]
+    public async Task GetUserFiles_WhenUsernameIsMissingFromLastSearchResults_ReturnsSanitizedNotFound()
+    {
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .Setup(client => client.SearchAsync(
+                It.IsAny<SearchQuery>(),
+                It.IsAny<Action<SearchResponse>>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<int?>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<CancellationToken?>()))
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken?>((_, handler, _, _, _, _) =>
+            {
+                handler(new SearchResponse(
+                    "alice",
+                    1000,
+                    true,
+                    0,
+                    0,
+                    new[]
+                    {
+                        new File(1, "Music/song.flac", 1234, string.Empty, Array.Empty<FileAttribute>()),
+                    },
+                    Array.Empty<File>()));
+            })
+            .ReturnsAsync((Search)null);
+
+        var controller = new MultiSourceController(
+            Mock.Of<IMultiSourceDownloadService>(),
+            soulseekClient.Object,
+            Mock.Of<ITransferService>(),
+            Mock.Of<ISourceDiscoveryService>(),
+            Mock.Of<IContentVerificationService>());
+
+        var seedResult = await controller.GetTopUsers("song");
+        Assert.IsType<OkObjectResult>(seedResult);
+
+        var result = controller.GetUserFiles(" bob ");
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("User not found in last search results", notFound.Value);
+    }
+
+    [Fact]
+    public async Task DownloadFile_WhenTooFewSources_ReturnsSanitizedBadRequest()
+    {
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .Setup(client => client.SearchAsync(
+                It.IsAny<SearchQuery>(),
+                It.IsAny<Action<SearchResponse>>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<int?>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken>((_, handler, _, _, _, _) =>
+            {
+                handler(new SearchResponse(
+                    "alice",
+                    1000,
+                    true,
+                    0,
+                    0,
+                    new[]
+                    {
+                        new File(1, "Music/song.flac", 1234, string.Empty, Array.Empty<FileAttribute>()),
+                    },
+                    Array.Empty<File>()));
+            })
+            .ReturnsAsync((Search)null);
+
+        var controller = new MultiSourceController(
+            Mock.Of<IMultiSourceDownloadService>(),
+            soulseekClient.Object,
+            Mock.Of<ITransferService>(),
+            Mock.Of<ISourceDiscoveryService>(),
+            Mock.Of<IContentVerificationService>())
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        var result = await controller.DownloadFile(new FileSourceRequest
+        {
+            Filename = "song.flac",
+            Size = 1234,
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Not enough sources for multi-source download", badRequest.Value);
+    }
+
+    [Fact]
     public async Task SwarmDownload_WhenDownloadFails_DoesNotLeakUnderlyingError()
     {
         var multiSource = new Mock<IMultiSourceDownloadService>();
@@ -272,5 +367,35 @@ public class MultiSourceControllerTests
         var payload = ok.Value?.ToString() ?? string.Empty;
         Assert.DoesNotContain("sensitive detail", payload);
         Assert.Contains("Swarm download failed", payload);
+    }
+
+    [Fact]
+    public async Task SwarmDownload_WhenTooFewSources_ReturnsSanitizedBadRequest()
+    {
+        var discovery = new Mock<ISourceDiscoveryService>();
+        discovery
+            .Setup(service => service.GetSourcesBySize(1234, 100))
+            .Returns(new List<DiscoveredSource>
+            {
+                new() { Username = "alice", Filename = "Music/song.flac", UploadSpeed = 1000, Size = 1234 },
+            });
+
+        var controller = new MultiSourceController(
+            Mock.Of<IMultiSourceDownloadService>(),
+            Mock.Of<ISoulseekClient>(),
+            Mock.Of<ITransferService>(),
+            discovery.Object,
+            Mock.Of<IContentVerificationService>());
+
+        var result = await controller.SwarmDownload(new SwarmDownloadRequest
+        {
+            Filename = "song.flac",
+            Size = 1234,
+            UseDiscoveryDb = true,
+            SkipVerification = true,
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Not enough sources for swarm download", badRequest.Value);
     }
 }

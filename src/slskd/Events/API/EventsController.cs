@@ -124,15 +124,12 @@ public class EventsController : ControllerBase
 
         if (!Enum.TryParse<EventType>(type, ignoreCase: true, out var eventType))
         {
-            var names = Enum.GetNames(typeof(EventType))
-                .Where(n => n != EventType.Any.ToString() && n != EventType.None.ToString());
-
-            return BadRequest($"Unknown event type '{type}'; must be one of {string.Join(", ", names)}");
+            return BadRequest("Unknown event type");
         }
 
         if (eventType is EventType.None || eventType is EventType.Any)
         {
-            return BadRequest($"Event type '{type}' can not be raised");
+            return BadRequest("Event type cannot be raised");
         }
 
         try

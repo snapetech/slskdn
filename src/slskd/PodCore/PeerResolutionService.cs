@@ -81,16 +81,20 @@ public class PeerResolutionService : IPeerResolutionService
             if (metadata != null && !string.IsNullOrWhiteSpace(metadata.Username))
             {
                 var normalizedUsername = metadata.Username.Trim();
+                var metadataPeerId = string.IsNullOrWhiteSpace(metadata.PeerId) ? normalizedPeerId : metadata.PeerId.Trim();
+                var parsedEndpoint = metadata.Endpoint != null ? ParseEndpoint(metadata.Endpoint) : null;
 
                 // Cache the mapping
                 lock (mappingsLock)
                 {
-                    peerMappings[normalizedPeerId] = new PeerMapping
+                    var mapping = new PeerMapping
                     {
-                        PeerId = normalizedPeerId,
+                        PeerId = metadataPeerId,
                         Username = normalizedUsername,
-                        Endpoint = metadata.Endpoint != null ? ParseEndpoint(metadata.Endpoint) : null
+                        Endpoint = parsedEndpoint
                     };
+                    peerMappings[normalizedPeerId] = mapping;
+                    peerMappings[metadataPeerId] = mapping;
                 }
 
                 logger.LogDebug("[PeerResolution] Resolved peer {PeerId} to username {Username} via DHT", normalizedPeerId, normalizedUsername);
@@ -129,6 +133,16 @@ public class PeerResolutionService : IPeerResolutionService
                     logger.LogDebug("[PeerResolution] Found endpoint mapping for peer {PeerId}: {Endpoint}", normalizedPeerId, mapping.Endpoint);
                     return mapping.Endpoint;
                 }
+
+                var aliasMapping = peerMappings.Values.FirstOrDefault(m =>
+                    !string.IsNullOrWhiteSpace(m.Username) &&
+                    string.Equals(m.Username, normalizedPeerId, StringComparison.OrdinalIgnoreCase) &&
+                    m.Endpoint != null);
+                if (aliasMapping?.Endpoint != null)
+                {
+                    logger.LogDebug("[PeerResolution] Resolved endpoint for alias {PeerId}: {Endpoint}", normalizedPeerId, aliasMapping.Endpoint);
+                    return aliasMapping.Endpoint;
+                }
             }
 
             // Query DHT for peer metadata
@@ -140,22 +154,22 @@ public class PeerResolutionService : IPeerResolutionService
                 var endpoint = ParseEndpoint(metadata.Endpoint);
                 if (endpoint != null)
                 {
+                    var metadataPeerId = string.IsNullOrWhiteSpace(metadata.PeerId) ? normalizedPeerId : metadata.PeerId.Trim();
+                    var normalizedUsername = metadata.Username?.Trim();
+
                     // Cache the mapping
                     lock (mappingsLock)
                     {
-                        if (peerMappings.TryGetValue(normalizedPeerId, out var existing))
+                        if (!peerMappings.TryGetValue(normalizedPeerId, out var existing))
                         {
-                            existing.Endpoint = endpoint;
+                            existing = new PeerMapping { PeerId = metadataPeerId };
                         }
-                        else
-                        {
-                            peerMappings[normalizedPeerId] = new PeerMapping
-                            {
-                                PeerId = normalizedPeerId,
-                                Username = metadata.Username?.Trim(),
-                                Endpoint = endpoint
-                            };
-                        }
+
+                        existing.PeerId = metadataPeerId;
+                        existing.Username = normalizedUsername;
+                        existing.Endpoint = endpoint;
+                        peerMappings[normalizedPeerId] = existing;
+                        peerMappings[metadataPeerId] = existing;
                     }
 
                     logger.LogDebug("[PeerResolution] Resolved peer {PeerId} to endpoint {Endpoint} via DHT", normalizedPeerId, endpoint);

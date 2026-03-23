@@ -92,4 +92,19 @@ public class PeerResolutionServiceTests
 
         Assert.Equal("peer-1", username);
     }
+
+    [Fact]
+    public async Task ResolvePeerIdToEndpointAsync_ReusesCachedUsernameAliasEndpoint()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        var service = new PeerResolutionService(dht.Object, NullLogger<PeerResolutionService>.Instance);
+        service.RegisterPeerMapping("peer-1", "alice", new IPEndPoint(IPAddress.Loopback, 2238));
+
+        var endpoint = await service.ResolvePeerIdToEndpointAsync(" alice ");
+
+        Assert.NotNull(endpoint);
+        Assert.Equal(IPAddress.Loopback, endpoint!.Address);
+        Assert.Equal(2238, endpoint.Port);
+        dht.Verify(x => x.GetAsync<PeerMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

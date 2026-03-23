@@ -150,4 +150,34 @@ public class PodDiscoveryTests
         Assert.Empty(pods);
         dht.Verify(x => x.GetAsync<PodIndex>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task DiscoverPodAsync_FallsBackToIndexedPodIdMatch()
+    {
+        var store = new ConcurrentDictionary<string, object?>();
+        store["pod:index:listed"] = new PodIndex
+        {
+            PodIds = new List<string> { " Pod-1 " },
+        };
+        store["pod:metadata:Pod-1"] = new PodMetadata
+        {
+            PodId = " Pod-1 ",
+            Name = " Alpha Pod ",
+            PublishedAt = 10,
+        };
+
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PodMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>((key, _) => Task.FromResult(store.TryGetValue(key, out var value) ? value as PodMetadata : null));
+        dht.Setup(x => x.GetAsync<PodIndex>("pod:index:listed", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(store["pod:index:listed"] as PodIndex);
+
+        var service = new PodDiscovery(dht.Object, NullLogger<PodDiscovery>.Instance);
+
+        var pod = await service.DiscoverPodAsync(" pod-1 ");
+
+        Assert.NotNull(pod);
+        Assert.Equal("Pod-1", pod!.PodId);
+        Assert.Equal("Alpha Pod", pod.Name);
+    }
 }

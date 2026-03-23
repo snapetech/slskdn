@@ -70,7 +70,7 @@ public class JobsController : ControllerBase
         var release = await musicBrainzClient.GetReleaseAsync(releaseId, cancellationToken);
         if (release == null || string.IsNullOrWhiteSpace(release.MusicBrainzArtistId))
         {
-            return NotFound($"Unable to resolve release {releaseId} into a SongID-ready MusicBrainz target.");
+            return NotFound("Unable to resolve release into a SongID-ready MusicBrainz target.");
         }
 
         var jobId = await discographyJobService.CreateJobAsync(

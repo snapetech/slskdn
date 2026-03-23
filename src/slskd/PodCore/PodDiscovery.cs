@@ -96,7 +96,7 @@ public class PodDiscovery : IPodDiscovery
             var uniquePodIds = index.PodIds
                 .Where(podId => !string.IsNullOrWhiteSpace(podId))
                 .Select(podId => podId.Trim())
-                .Distinct(StringComparer.Ordinal)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             if (uniquePodIds.Count == 0)
@@ -144,11 +144,11 @@ public class PodDiscovery : IPodDiscovery
 
             if (!string.IsNullOrWhiteSpace(normalizedFocusContentId))
             {
-                filtered = filtered.Where(p => string.Equals(p.FocusContentId, normalizedFocusContentId, StringComparison.Ordinal));
+                filtered = filtered.Where(p => string.Equals(p.FocusContentId, normalizedFocusContentId, StringComparison.OrdinalIgnoreCase));
             }
 
             results = filtered
-                .GroupBy(p => p.PodId, StringComparer.Ordinal)
+                .GroupBy(p => p.PodId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group
                     .OrderByDescending(p => p.PublishedAt)
                     .First())
@@ -178,8 +178,16 @@ public class PodDiscovery : IPodDiscovery
 
         try
         {
-            var dhtKey = DeriveDhtKey(normalizedPodId);
-            var metadata = NormalizeMetadata(await dht.GetAsync<PodMetadata>(dhtKey, ct), normalizedPodId);
+            var metadata = NormalizeMetadata(await dht.GetAsync<PodMetadata>(DeriveDhtKey(normalizedPodId), ct), normalizedPodId);
+            if (metadata == null)
+            {
+                var indexedPodId = await ResolveIndexedPodIdAsync(normalizedPodId, ct);
+                if (!string.IsNullOrWhiteSpace(indexedPodId) &&
+                    !string.Equals(indexedPodId, normalizedPodId, StringComparison.Ordinal))
+                {
+                    metadata = NormalizeMetadata(await dht.GetAsync<PodMetadata>(DeriveDhtKey(indexedPodId), ct), indexedPodId);
+                }
+            }
 
             if (metadata != null)
             {
@@ -218,7 +226,7 @@ public class PodDiscovery : IPodDiscovery
             // In a real implementation, we'd query a content->pod index in DHT
             var allPods = await DiscoverPodsAsync(limit: 1000, ct: ct);
             var matchingPods = allPods
-                .Where(p => string.Equals(p.FocusContentId, normalizedContentId, StringComparison.Ordinal))
+                .Where(p => string.Equals(p.FocusContentId, normalizedContentId, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             logger.LogInformation("[PodDiscovery] Found {Count} pods for content {ContentId}", matchingPods.Count, normalizedContentId);
@@ -234,6 +242,15 @@ public class PodDiscovery : IPodDiscovery
     private static string DeriveDhtKey(string podId)
     {
         return $"{PodKeyPrefix}{podId}";
+    }
+
+    private async Task<string?> ResolveIndexedPodIdAsync(string podId, CancellationToken ct)
+    {
+        var index = await dht.GetAsync<PodIndex>("pod:index:listed", ct);
+        return index?.PodIds?
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+            .Select(candidate => candidate.Trim())
+            .FirstOrDefault(candidate => string.Equals(candidate, podId, StringComparison.OrdinalIgnoreCase));
     }
 
     private static PodMetadata? NormalizeMetadata(PodMetadata? metadata, string requestedPodId)

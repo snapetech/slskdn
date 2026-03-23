@@ -189,7 +189,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (userResponses.Count == 0)
             {
-                return NotFound($"User '{username}' not found in last search results");
+                return NotFound("User not found in last search results");
             }
 
             var files = userResponses
@@ -403,7 +403,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (sources.Count < 2)
             {
-                return BadRequest($"Not enough sources ({sources.Count}). Need at least 2 for multi-source download.");
+                return BadRequest("Not enough sources for multi-source download");
             }
 
             // Verify sources
@@ -420,7 +420,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (chosenSources.Count < 2)
             {
-                return BadRequest($"Not enough verified sources ({chosenSources.Count}). Verification may have failed.");
+                return BadRequest("Not enough verified sources for multi-source download");
             }
 
             // Download
@@ -538,7 +538,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (allSources.Count < 2)
             {
-                return BadRequest($"Not enough sources ({allSources.Count}). Need at least 2.");
+                return BadRequest("Not enough sources for swarm download");
             }
 
             var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
@@ -579,7 +579,7 @@ namespace slskd.Transfers.MultiSource.API
                 {
                     return BadRequest(new
                     {
-                        error = $"Not enough verified sources ({verificationResult.BestSources.Count}). Need at least 2 with matching FLAC hash.",
+                        error = "Not enough verified sources for swarm download",
                         hashGroups = verificationResult.SourcesByHash.Count,
                         failedSources = verificationResult.FailedSources.Count,
                     });
@@ -682,7 +682,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (allSources.Count < 2)
             {
-                return BadRequest($"Not enough sources ({allSources.Count}). Need at least 2.");
+                return BadRequest("Not enough sources for swarm download");
             }
 
             List<VerifiedSource> verifiedSources;
@@ -717,7 +717,7 @@ namespace slskd.Transfers.MultiSource.API
                 {
                     return BadRequest(new
                     {
-                        error = $"Not enough verified sources ({verificationResult.BestSources.Count}). Need at least 2 with matching FLAC hash.",
+                        error = "Not enough verified sources for swarm download",
                         hashGroups = verificationResult.SourcesByHash.Count,
                         failedSources = verificationResult.FailedSources.Count,
                     });
@@ -1130,7 +1130,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (verificationResult.BestSources.Count < 2)
             {
-                testResult.Error = $"Not enough verified sources (got {verificationResult.BestSources.Count})";
+                testResult.Error = "Not enough verified sources for multi-source test";
                 return Ok(testResult);
             }
 

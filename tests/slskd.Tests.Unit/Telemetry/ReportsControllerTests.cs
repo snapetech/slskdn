@@ -47,6 +47,39 @@ public class ReportsControllerTests
         Assert.Equal("Limit must be greater than zero", badRequest.Value);
     }
 
+    [Fact]
+    public void GetTransferSummary_WithInvalidDirection_ReturnsSanitizedBadRequest()
+    {
+        var controller = CreateController();
+
+        var result = controller.GetTransferSummary(direction: "sideways");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Invalid direction", badRequest.Value);
+    }
+
+    [Fact]
+    public void GetTransferLeaderboard_WithInvalidSortField_ReturnsSanitizedBadRequest()
+    {
+        var controller = CreateController();
+
+        var result = controller.GetTransferLeaderboard(direction: "upload", sortBy: "nope");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Invalid sort field", badRequest.Value);
+    }
+
+    [Fact]
+    public void GetTransferExceptions_WithInvalidSortOrder_ReturnsSanitizedBadRequest()
+    {
+        var controller = CreateController();
+
+        var result = controller.GetTransferExceptions(direction: "download", sortOrder: "sideways");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Invalid sort order", badRequest.Value);
+    }
+
     private static ReportsController CreateController()
     {
         return new ReportsController(

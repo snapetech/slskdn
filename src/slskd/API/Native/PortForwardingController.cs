@@ -135,7 +135,7 @@ public class PortForwardingController : ControllerBase
             var status = _portForwarder.GetForwardingStatus(localPort);
             if (status == null)
             {
-                return NotFound(new { Error = $"No forwarding configured on port {localPort}" });
+                return NotFound(new { Error = "No forwarding configured for this port" });
             }
 
             return Ok(status);

@@ -40,4 +40,28 @@ public class EventsControllerTests
         var created = Assert.IsType<ObjectResult>(result);
         Assert.Equal(201, created.StatusCode);
     }
+
+    [Fact]
+    public void RaiseEvent_WithUnknownType_ReturnsSanitizedBadRequest()
+    {
+        var eventService = new Mock<EventService>(Mock.Of<IDbContextFactory<EventsDbContext>>());
+        var controller = new EventsController(eventService.Object, new EventBus(eventService.Object));
+
+        var result = controller.RaiseEvent(" totally-not-real ", "x");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Unknown event type", badRequest.Value);
+    }
+
+    [Fact]
+    public void RaiseEvent_WithReservedType_ReturnsSanitizedBadRequest()
+    {
+        var eventService = new Mock<EventService>(Mock.Of<IDbContextFactory<EventsDbContext>>());
+        var controller = new EventsController(eventService.Object, new EventBus(eventService.Object));
+
+        var result = controller.RaiseEvent(" Any ", "x");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("Event type cannot be raised", badRequest.Value);
+    }
 }

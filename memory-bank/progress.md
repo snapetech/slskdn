@@ -6327,3 +6327,31 @@ Code quality improvements were completed as part of Option A:
 
 ## 2026-03-22 18:43
 - Hardened active mesh service adapters: PodsMeshService now canonicalizes embedded pod/channel IDs and includes PodId in routed messages; DhtMeshService now rejects malformed requester IDs before touching the routing table.
+
+## 2026-03-22 21:18
+- Hardened another release-facing controller boundary batch.
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+  - multi-source user-miss and insufficient-source replies no longer echo usernames or exact source counts
+  - swarm and test flows now use stable category-level validation errors for insufficient verified sources
+- `src/slskd/Relay/API/Controllers/RelayController.cs`
+  - relay stream lookup no longer exposes the requested agent name when the agent is missing
+- `src/slskd/Events/API/EventsController.cs`
+  - invalid or reserved event-type replies no longer enumerate allowed values or echo raw type strings
+- `src/slskd/Telemetry/API/ReportsController.cs`
+  - invalid direction/sort-field/sort-order responses now use stable generic validation messages instead of enum listings
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/MultiSourceControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Relay/API/RelayControllerModerationTests.cs`
+  - `tests/slskd.Tests.Unit/Events/EventsControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Telemetry/ReportsControllerTests.cs`
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q 2>&1 | rg 'error CS|error :'` confirmed the remaining unit-project compile errors are pre-existing drift outside this batch
+- Documented the controller validation/detail leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `8b87886a` (`docs: Add gotcha for controller validation detail leakage`).
+
+## 2026-03-22 22:05
+- Tightened the next Pod/Mesh runtime completion batch around DHT-backed discovery and local service boundaries.
+- `DhtMeshServiceDirectory` now normalizes lookup keys and returned descriptors together, dedupes normalized service IDs, and stops trusting raw payload drift after deserialization.
+- `PodDiscovery` now falls back through the listed pod index when a direct DHT key misses due to pod ID casing/whitespace drift, and `PeerResolutionService` now reuses cached username aliases and canonical metadata IDs more consistently.
+- `MeshContentMeshService` now trims `contentId` before repository lookup and rejects invalid range requests instead of silently clamping malformed offsets.
+- Next: continue through the remaining Pod/Mesh runtime seams from the placeholder inventory, then run the full validation and release gate sweep again.

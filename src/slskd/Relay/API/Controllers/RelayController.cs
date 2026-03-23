@@ -503,7 +503,7 @@ namespace slskd.Relay
 
             if (!Relay.RegisteredAgents.Any(a => a.Name == agentName))
             {
-                return NotFound($"Agent {agentName} is not registered");
+                return NotFound("Agent is not registered");
             }
 
             var id = Guid.NewGuid();
