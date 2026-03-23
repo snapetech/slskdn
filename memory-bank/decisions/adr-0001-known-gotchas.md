@@ -13931,3 +13931,22 @@ Detail = "Failed to enqueue scene download";
 ```
 
 **Why This Keeps Happening**: teams often focus leak-prevention on exception handlers and forget that “normal” API payloads are still public contracts. Treat success messages, not-found replies, and aggregated failure details with the same sanitization rules as catch paths: category-level messages only, no echoed identifiers or raw helper output.
+
+### 0k98. Success Payloads Should Not Echo Route Or Port Values When The Operation Result Is Already Clear
+
+**The Bug**: `PortForwardingController` still echoed the exact local port in success responses for start/stop operations. The port was already known to the caller from the request or route, so the response added no functional value while still reflecting a concrete local configuration detail.
+
+**Files Affected**:
+- `src/slskd/API/Native/PortForwardingController.cs`
+
+**Wrong**:
+```csharp
+return Ok(new { Message = $"Port forwarding started on local port {request.LocalPort}" });
+```
+
+**Correct**:
+```csharp
+return Ok(new { Message = "Port forwarding started" });
+```
+
+**Why This Keeps Happening**: success payloads feel harmless because they are not errors, but they are still part of the public release surface. If the caller already supplied the identifier or can correlate the operation from context, prefer a stable category-level success message instead of echoing the exact route or configuration value back.

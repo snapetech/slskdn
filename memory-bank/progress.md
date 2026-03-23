@@ -6425,6 +6425,15 @@ Code quality improvements were completed as part of Option A:
 - `SearchActionsController` scene-download enqueue failures now collapse per-item failure strings to the stable `Failed to enqueue scene download` detail.
 - Validation state:
   - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
-  - focused unit slice for `HashDbControllerTests`, `DhtRendezvousControllerTests`, `ApiLibraryHealthControllerTests`, `IpldControllerTests`, and `SearchActionsControllerTests` passed (`38/38`)
+- focused unit slice for `HashDbControllerTests`, `DhtRendezvousControllerTests`, `ApiLibraryHealthControllerTests`, `IpldControllerTests`, and `SearchActionsControllerTests` passed (`38/38`)
 - Documented the success/not-found/batch-failure identifier leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: keep pushing through the remaining public response contracts, especially low-traffic APIs that still embed route IDs or user-supplied identifiers in plain JSON messages.
+
+## 2026-03-22 22:55
+- Finished a small release-polish follow-up in `PortForwardingController`.
+- Start/stop success payloads no longer echo the exact local port; they now return stable success messages only.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused `PortForwardingControllerTests` slice passed (`8/8`)
+- Documented the success-payload identifier echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: continue through any remaining low-traffic success/not-found payloads that still repeat caller-supplied identifiers, then rerun broader release validation.
