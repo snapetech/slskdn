@@ -5,6 +5,7 @@ using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using Soulseek;
 using slskd.VirtualSoulfind.DisasterMode;
 using Xunit;
 
@@ -62,6 +63,36 @@ public class SharedEventEmitterTests
         await coordinator.SetDisasterModeLevelAsync(DisasterModeLevel.SoulseekDegraded, "test");
 
         Assert.True(invokedHealthySubscriber);
+    }
+
+    [Fact]
+    public void SoulseekClientWrapper_WhenOneSubscriberThrows_ContinuesInvokingRemainingSubscribers()
+    {
+        var soulseekClient = new Mock<Soulseek.ISoulseekClient>();
+        using var wrapper = new SoulseekClientWrapper(soulseekClient.Object);
+
+        var invokedHealthySubscriber = false;
+        EventHandler<RoomMessageReceivedEventArgs> throwingHandler = (_, _) => throw new InvalidOperationException("boom");
+        EventHandler<RoomMessageReceivedEventArgs> healthyHandler = (_, _) => invokedHealthySubscriber = true;
+        wrapper.RoomMessageReceived += throwingHandler;
+        wrapper.RoomMessageReceived += healthyHandler;
+
+        try
+        {
+            var raiseMethod = typeof(SoulseekClientWrapper).GetMethod(
+                "RaiseRoomMessageReceived",
+                BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("SoulseekClientWrapper.RaiseRoomMessageReceived method was not found.");
+
+            raiseMethod.Invoke(wrapper, [null, null]);
+
+            Assert.True(invokedHealthySubscriber);
+        }
+        finally
+        {
+            wrapper.RoomMessageReceived -= throwingHandler;
+            wrapper.RoomMessageReceived -= healthyHandler;
+        }
     }
 
     [Fact]

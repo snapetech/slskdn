@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Soulseek;
 using slskd;
+using Serilog;
 
 public enum SoulseekHealth
 {
@@ -61,8 +62,9 @@ public sealed class SoulseekClientWrapper : ISoulseekClient
             {
                 handler.Invoke(sender, args);
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Warning(ex, "[VSF-DISCO] RoomMessageReceived subscriber failed");
             }
         }
     }
