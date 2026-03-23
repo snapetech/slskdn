@@ -88,19 +88,7 @@ public class ContentLinkService : IContentLinkService
                     return await GetVideoMetadataAsync(parsed, ct);
 
                 default:
-                    // For other domains, return basic metadata without external validation
-                    return new ContentMetadata(
-                        ContentId: parsed.FullId,
-                        Title: $"{parsed.Type}: {parsed.Id}",
-                        Artist: "Unknown",
-                        Type: parsed.Type,
-                        Domain: parsed.Domain,
-                        AdditionalInfo: new Dictionary<string, string>
-                        {
-                            ["id"] = parsed.Id,
-                            ["domain"] = parsed.Domain,
-                            ["type"] = parsed.Type
-                        });
+                    return CreateBasicMetadata(parsed);
             }
         }
         catch (Exception ex)
@@ -165,17 +153,21 @@ public class ContentLinkService : IContentLinkService
         switch (parsed.Type.ToLowerInvariant())
         {
             case ContentDomains.AudioArtist:
-                // MusicBrainz artist lookup would go here
-                return new ContentMetadata(
-                    ContentId: parsed.FullId,
-                    Title: parsed.Id, // Would be actual artist name
-                    Artist: parsed.Id,
-                    Type: ContentDomains.AudioArtist,
-                    Domain: ContentDomains.Audio,
-                    AdditionalInfo: new Dictionary<string, string>
+                var artistHits = await _musicBrainzClient.SearchRecordingsAsync(parsed.Id, 10, ct);
+                var matchingArtist = artistHits.FirstOrDefault(hit =>
+                    string.Equals(hit.MusicBrainzArtistId?.Trim(), parsed.Id, StringComparison.OrdinalIgnoreCase))
+                    ?? artistHits.FirstOrDefault(hit =>
+                        string.Equals(hit.Artist?.Trim(), parsed.Id, StringComparison.OrdinalIgnoreCase));
+
+                return CreateBasicMetadata(
+                    parsed,
+                    titleOverride: matchingArtist?.Artist ?? parsed.Id,
+                    artistOverride: matchingArtist?.Artist ?? parsed.Id,
+                    new Dictionary<string, string>
                     {
                         ["musicbrainz_id"] = parsed.Id,
-                        ["type"] = "artist"
+                        ["type"] = "artist",
+                        ["musicbrainz_artist_id"] = matchingArtist?.MusicBrainzArtistId?.Trim() ?? parsed.Id,
                     });
 
             case ContentDomains.AudioAlbum:
@@ -215,19 +207,39 @@ public class ContentLinkService : IContentLinkService
                         {
                             ["musicbrainz_id"] = parsed.Id,
                             ["duration_ms"] = ((int)recording.Duration.TotalMilliseconds).ToString(),
-                            ["album"] = "Unknown" // TrackTarget doesn't have album info
+                            ["album"] = "Unknown",
+                            ["position"] = recording.Position.ToString()
                         });
                 }
 
                 break;
         }
 
-        return null;
+        return CreateBasicMetadata(parsed);
     }
 
     private Task<ContentMetadata?> GetVideoMetadataAsync(ContentId parsed, CancellationToken ct)
     {
-        _logger.LogWarning("Video metadata requested for {ContentId}, but video metadata integration is not implemented", parsed.FullId);
-        return Task.FromResult<ContentMetadata?>(null);
+        return Task.FromResult<ContentMetadata?>(CreateBasicMetadata(parsed, titleOverride: parsed.Id));
+    }
+
+    private static ContentMetadata CreateBasicMetadata(
+        ContentId parsed,
+        string? titleOverride = null,
+        string? artistOverride = null,
+        Dictionary<string, string>? additionalInfo = null)
+    {
+        var metadata = additionalInfo ?? new Dictionary<string, string>();
+        metadata["id"] = parsed.Id;
+        metadata["domain"] = parsed.Domain;
+        metadata["type"] = parsed.Type;
+
+        return new ContentMetadata(
+            ContentId: parsed.FullId,
+            Title: titleOverride ?? $"{parsed.Type}: {parsed.Id}",
+            Artist: artistOverride ?? "Unknown",
+            Type: parsed.Type,
+            Domain: parsed.Domain,
+            AdditionalInfo: metadata);
     }
 }

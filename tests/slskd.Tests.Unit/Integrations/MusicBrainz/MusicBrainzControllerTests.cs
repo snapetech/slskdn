@@ -49,6 +49,35 @@ public class MusicBrainzControllerTests
     }
 
     [Fact]
+    public async Task ResolveTarget_TrimsIdentifiersBeforeLookup()
+    {
+        var release = new AlbumTarget
+        {
+            MusicBrainzReleaseId = "mb:release",
+            Title = "Release",
+            Artist = "Test Artist",
+        };
+
+        client.Setup(x => x.GetReleaseAsync("mb:release", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(release);
+
+        var result = await controller.ResolveTarget(
+            new MusicBrainzTargetRequest { ReleaseId = " mb:release " },
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        client.Verify(x => x.GetReleaseAsync("mb:release", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetReleaseGraph_WithBlankArtistId_ReturnsBadRequest()
+    {
+        var result = await controller.GetReleaseGraph("   ", cancellationToken: CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
     public async Task GetAlbumCompletion_ReturnsCompletionSummaries()
     {
         var release = new AlbumTargetEntry
@@ -102,4 +131,3 @@ public class MusicBrainzControllerTests
         Assert.Equal("flackey", match.FlacKey);
     }
 }
-

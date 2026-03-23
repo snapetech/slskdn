@@ -61,6 +61,10 @@ namespace slskd.Integrations.MusicBrainz.API
                 return BadRequest("Provide at least one identifier (release, recording, or discogs).");
             }
 
+            request.ReleaseId = string.IsNullOrWhiteSpace(request.ReleaseId) ? null : request.ReleaseId.Trim();
+            request.RecordingId = string.IsNullOrWhiteSpace(request.RecordingId) ? null : request.RecordingId.Trim();
+            request.DiscogsReleaseId = string.IsNullOrWhiteSpace(request.DiscogsReleaseId) ? null : request.DiscogsReleaseId.Trim();
+
             AlbumTarget? album = null;
             if (!string.IsNullOrWhiteSpace(request.ReleaseId))
             {
@@ -187,6 +191,12 @@ namespace slskd.Integrations.MusicBrainz.API
             [FromQuery] bool forceRefresh = false,
             CancellationToken cancellationToken = default)
         {
+            artistId = artistId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(artistId))
+            {
+                return BadRequest("artistId is required");
+            }
+
             var graph = await releaseGraphService.GetArtistReleaseGraphAsync(artistId, forceRefresh, cancellationToken).ConfigureAwait(false);
             if (graph == null)
             {

@@ -70,4 +70,39 @@ public class ContentLinkServiceTests
         Assert.Empty(results);
         musicBrainz.Verify(client => client.SearchRecordingsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task GetContentMetadataAsync_VideoContent_ReturnsConservativeMetadata()
+    {
+        var service = new ContentLinkService(Mock.Of<IMusicBrainzClient>(), NullLogger<ContentLinkService>.Instance);
+
+        var metadata = await service.GetContentMetadataAsync("content:video:movie:movie-1");
+
+        Assert.NotNull(metadata);
+        Assert.Equal("content:video:movie:movie-1", metadata!.ContentId);
+        Assert.Equal("movie-1", metadata.Title);
+        Assert.Equal("video", metadata.Domain);
+        Assert.Equal("movie", metadata.Type);
+    }
+
+    [Fact]
+    public async Task GetContentMetadataAsync_AudioArtist_UsesMatchingArtistHitWhenAvailable()
+    {
+        var musicBrainz = new Mock<IMusicBrainzClient>();
+        musicBrainz
+            .Setup(client => client.SearchRecordingsAsync("artist-1", 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new RecordingSearchHit("recording-1", "Song", "Resolved Artist", "artist-1"),
+            });
+
+        var service = new ContentLinkService(musicBrainz.Object, NullLogger<ContentLinkService>.Instance);
+
+        var metadata = await service.GetContentMetadataAsync("content:audio:artist:artist-1");
+
+        Assert.NotNull(metadata);
+        Assert.Equal("Resolved Artist", metadata!.Title);
+        Assert.Equal("Resolved Artist", metadata.Artist);
+        Assert.Equal("artist-1", metadata.AdditionalInfo["musicbrainz_artist_id"]);
+    }
 }

@@ -289,3 +289,8 @@ dotnet test
 - Expanded `HttpSignatureKeyFetcher` so it trims `keyId`, rejects oversized responses earlier, and can extract PEM keys from either top-level key documents or actor `publicKey` arrays.
 - Folded in adjacent dirty controller work for destinations/wishlist boundary validation and prepared focused regressions for the new pathguard/key-fetch behaviors.
 - Next: commit the current tree including all dirty files, then continue through the next placeholder/null-heavy Mesh/PodCore runtime cluster.
+
+## 2026-03-22 19:33
+- Continued into the PodCore completion batch and replaced another enrichment-coupling bottom-out in `ContentLinkService`.
+- Supported domains now return conservative metadata when enrichment is missing, and audio-artist lookups opportunistically upgrade that metadata from existing MusicBrainz search hits.
+- Next: keep pushing through the remaining PodCore/Mesh placeholder and read-side under-report paths, especially backfill/opinion/runtime helpers that still return less than available local state.

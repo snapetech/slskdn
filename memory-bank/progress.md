@@ -6065,3 +6065,9 @@ Code quality improvements were completed as part of Option A:
 - `HttpSignatureKeyFetcher` now trims inbound `keyId` values, rejects oversized responses before streaming, and accepts both top-level key documents and actor `publicKey` arrays when extracting `publicKeyPem`.
 - Tightened adjacent controller boundaries so destination validation rejects blank paths and wishlist create/update rejects non-positive `MaxResults`.
 - Added focused regressions for encoded traversal in the DHT `PathGuard`, top-level and array-shaped ActivityPub key documents, forbidden final redirect hosts, and the new destination/wishlist boundary rules.
+
+## 2026-03-22 19:33 - PodCore conservative metadata fallback
+
+- `ContentLinkService` no longer invalidates supported content domains just because external enrichment is missing; it now returns conservative structured metadata for fallback cases, including video content and unresolved audio variants.
+- Audio-artist metadata now opportunistically upgrades from existing MusicBrainz recording search hits when the returned artist identifier matches the requested content ID.
+- Added focused PodCore regressions covering conservative video metadata fallback and upgraded artist metadata resolution from matching MusicBrainz hits.

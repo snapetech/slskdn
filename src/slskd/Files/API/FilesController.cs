@@ -316,7 +316,8 @@ namespace slskd.Files.API
             try
             {
                 decodedPath = encodedPath.FromBase64();
-                return decodedPath != null;
+                decodedPath = decodedPath?.Trim() ?? string.Empty;
+                return true;
             }
             catch (FormatException)
             {

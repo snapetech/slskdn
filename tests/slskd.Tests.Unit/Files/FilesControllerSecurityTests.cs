@@ -115,6 +115,24 @@ namespace slskd.Tests.Unit.Files
             Assert.IsType<NoContentResult>(result);
         }
 
+        [Fact]
+        public async Task GetDownloadSubdirectoryContentsAsync_ShouldTrimDecodedBase64Path()
+        {
+            var encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(" subdir "));
+            var expectedPath = Path.GetFullPath(Path.Combine("/test/downloads", "subdir"));
+
+            mockFileService.Setup(s => s.ListContentsAsync(
+                    It.Is<string>(path => path == expectedPath),
+                    It.IsAny<EnumerationOptions>()))
+                .ReturnsAsync(new FilesystemDirectory())
+                .Verifiable();
+
+            var result = await controller.GetDownloadSubdirectoryContentsAsync(encodedPath);
+
+            Assert.IsType<OkObjectResult>(result);
+            mockFileService.Verify();
+        }
+
         [Theory]
         [InlineData("Li4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vc2VjcmV0LnR4dA==")] // Deep traversal
         [InlineData("Li4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vc2VjcmV0LnR4dA==")] // Very deep traversal
