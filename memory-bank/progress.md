@@ -6858,3 +6858,10 @@ Code quality improvements were completed as part of Option A:
 - 2026-03-23: Replaced MeshContentMeshService stream close-only behavior with a real single-request content stream that reuses the existing GetByContentId contract; added stream coverage, fixed a lingering SceneServicesTests logger-type compile drift, and revalidated build/test/lint.
 
 - 2026-03-23: Implemented VirtualSoulfindMeshService stream handling by reusing the existing QueryByMbid contract, normalized MBID inputs at the service boundary for both single and batch shadow-index queries, fixed dirty DhtPeerGreetingServiceTests Moq optional-argument drift, and revalidated build/test/lint.
+
+## 2026-03-23 12:10 CST
+
+- Fixed `Waiter.CancelAll()` so it now drains every queued waiter per key instead of canceling only the first wait for each key.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/WaiterTests.cs` for duplicate-key and multi-key cancellation.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `WaiterTests` slice passed `2/2`.
+- Added ADR-0001 gotcha `0k121` for `CancelAll()` contract drift and committed it immediately per repo policy.

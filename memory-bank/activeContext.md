@@ -910,3 +910,12 @@ dotnet test
 - 2026-03-23: Completed MeshContent stream handling and repaired SceneServicesTests compile drift; full validation is green again. Next Steps: continue the remaining Mesh/PodCore runtime placeholder inventory.
 
 - 2026-03-23: Completed shadow-index stream handling and MBID boundary normalization; repo is green again. Next Steps: continue the remaining Mesh/PodCore runtime placeholder inventory.
+
+## 2026-03-23 12:10 CST
+- Continued the infrastructure bughunt into shared wait queues.
+- Fixed `Waiter.CancelAll()` so duplicate waits on the same `WaitKey` are all canceled instead of leaving trailing queued waits behind.
+- Added focused `WaiterTests` coverage for duplicate-key and multi-key cancellation, and confirmed the focused slice passed (`2/2`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k121` and will commit it immediately per repo policy (`docs: Add gotcha for waiter cancel-all contract drift`).
+- Next steps:
+  - continue bughunting the remaining shared queue, background-lifecycle, and event-fanout helpers
+  - prioritize infrastructure APIs whose public bulk-operation contracts may not match their per-key internals

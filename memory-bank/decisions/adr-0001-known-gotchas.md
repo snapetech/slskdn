@@ -15402,3 +15402,31 @@ streamMappingCts.Dispose();
 ```
 
 **Why This Keeps Happening**: long-lived stream/tunnel helpers often assume explicit close paths are the only lifecycle edge that matters. But bidirectional mapping frequently ends naturally when one side closes first. If the natural-completion path does not own CTS cleanup too, the object keeps stale state after the “successful” path and the next reuse/remap inherits a dirty lifecycle handle.
+
+### 0k121. `CancelAll()` Contracts Must Drain Every Waiter Per Key, Not Just The First One
+
+**The Bug**: `Waiter.CancelAll()` claimed to cancel all pending waits, but it iterated unique keys and called `Cancel(key)` only once per key. Because `Waiter` stores a queue of waits per key, duplicate waits sharing the same key left older/newer entries behind and violated the public "cancel all" contract.
+
+**Files Affected**:
+- `src/slskd/Common/Waiter.cs`
+
+**Wrong**:
+```csharp
+foreach (var key in keys)
+{
+    Cancel(key);
+}
+```
+
+**Correct**:
+```csharp
+foreach (var key in keys)
+{
+    while (IsWaitingFor(key))
+    {
+        Cancel(key);
+    }
+}
+```
+
+**Why This Keeps Happening**: queue-backed waiter helpers often expose key-level helpers like `Cancel(key)` and then accidentally reuse them for bulk operations without accounting for multiple entries per key. If the public API says "all", bulk cleanup must drain each per-key queue completely, and tests need at least one duplicate-key case to lock that behavior down.
