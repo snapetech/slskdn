@@ -128,7 +128,7 @@ public class SearchActionsControllerTests
         var meshDirectory = new Mock<IMeshDirectory>();
         meshDirectory
             .Setup(directory => directory.FindPeersByContentAsync("sha256:test", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<PeerContentHint>());
+            .ReturnsAsync(Array.Empty<MeshPeerDescriptor>());
 
         var controller = CreateController(meshDirectory: meshDirectory);
         var method = typeof(SearchActionsController).GetMethod("HandlePodDownloadAsync", BindingFlags.NonPublic | BindingFlags.Instance);

@@ -6349,9 +6349,37 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q 2>&1 | rg 'error CS|error :'` confirmed the remaining unit-project compile errors are pre-existing drift outside this batch
 - Documented the controller validation/detail leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `8b87886a` (`docs: Add gotcha for controller validation detail leakage`).
 
+## 2026-03-22 21:33
+- Folded in a follow-up secure-release batch while restoring a broken runtime build.
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+  - blocklist unblock failures no longer echo raw `type` / `target` values or tutorial-style type hints
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/DhtRendezvous/DhtRendezvousControllerTests.cs`
+  - `tests/slskd.Tests.Unit/API/Native/PortForwardingControllerTests.cs`
+  - `tests/slskd.Tests.Unit/PodCore/PodChannelControllerTests.cs`
+- Repaired a runtime build regression in:
+  - `src/slskd/Mesh/ServiceFabric/DhtMeshServiceDirectory.cs`
+    - descriptor normalization now uses `with` copies instead of mutating init-only record properties in place
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/DhtMeshServiceDirectoryTests.cs`
+    - test data setup now matches the immutable descriptor shape
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed again with `0 warnings / 0 errors`
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q 2>&1 | rg 'error CS|error :'` shows the remaining unit blockers are now down to pre-existing drift in:
+    - `SearchActionsControllerTests`
+    - `MeshContentMeshServiceTests`
+    - `PodMessageBackfillControllerTests`
+- Updated the existing init-only record gotcha in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `c4006a0d` (`docs: Add gotcha for init-only record normalization copies`).
+
 ## 2026-03-22 22:05
 - Tightened the next Pod/Mesh runtime completion batch around DHT-backed discovery and local service boundaries.
 - `DhtMeshServiceDirectory` now normalizes lookup keys and returned descriptors together, dedupes normalized service IDs, and stops trusting raw payload drift after deserialization.
 - `PodDiscovery` now falls back through the listed pod index when a direct DHT key misses due to pod ID casing/whitespace drift, and `PeerResolutionService` now reuses cached username aliases and canonical metadata IDs more consistently.
 - `MeshContentMeshService` now trims `contentId` before repository lookup and rejects invalid range requests instead of silently clamping malformed offsets.
 - Next: continue through the remaining Pod/Mesh runtime seams from the placeholder inventory, then run the full validation and release gate sweep again.
+
+## 2026-03-22 22:18
+- Finished another grouped Pod/Mesh runtime completion batch instead of widening back out to unrelated areas.
+- `PodAffinityScorer` now uses real membership-history stability and churn signals rather than placeholder trust comments.
+- `MeshStatsCollector` now resolves the concrete in-memory DHT through the real runtime service shapes, so DHT session stats no longer depend on a single alias registration.
+- `MeshServiceClient` now normalizes service-call boundaries and picks a deterministic valid provider instead of just taking the first arbitrary descriptor.
+- Next: commit the whole dirty tree, then run the full validation and release gate sweep before calling the secure release candidate ready.

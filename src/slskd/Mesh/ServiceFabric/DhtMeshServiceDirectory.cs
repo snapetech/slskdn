@@ -276,25 +276,30 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             return null;
         }
 
-        descriptor.ServiceId = normalizedServiceId;
-        descriptor.ServiceName = normalizedServiceName;
-        descriptor.OwnerPeerId = normalizedOwnerPeerId;
-        descriptor.Version = NormalizeKey(descriptor.Version);
-        descriptor.Endpoint.Protocol = NormalizeKey(descriptor.Endpoint.Protocol);
-        descriptor.Endpoint.Host = NormalizeKey(descriptor.Endpoint.Host);
-
-        if (descriptor.Metadata != null && descriptor.Metadata.Count > 0)
-        {
-            descriptor.Metadata = descriptor.Metadata
+        var normalizedMetadata = descriptor.Metadata != null && descriptor.Metadata.Count > 0
+            ? descriptor.Metadata
                 .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Key))
                 .GroupBy(kvp => NormalizeKey(kvp.Key), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     group => group.Key,
                     group => NormalizeKey(group.Last().Value),
-                    StringComparer.OrdinalIgnoreCase);
-        }
+                    StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>();
 
-        return descriptor;
+        return descriptor with
+        {
+            ServiceId = normalizedServiceId,
+            ServiceName = normalizedServiceName,
+            OwnerPeerId = normalizedOwnerPeerId,
+            Version = NormalizeKey(descriptor.Version),
+            Endpoint = descriptor.Endpoint with
+            {
+                Protocol = NormalizeKey(descriptor.Endpoint.Protocol),
+                Host = NormalizeKey(descriptor.Endpoint.Host),
+                Path = NormalizeKey(descriptor.Endpoint.Path),
+            },
+            Metadata = normalizedMetadata,
+        };
     }
 
     /// <summary>

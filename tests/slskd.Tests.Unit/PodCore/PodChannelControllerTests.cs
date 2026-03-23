@@ -118,4 +118,43 @@ public class PodChannelControllerTests
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid channel request", badRequest.Value);
     }
+
+    [Fact]
+    public async Task GetChannels_WhenPodIsMissing_ReturnsSanitizedNotFound()
+    {
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.GetPodAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Pod?)null);
+
+        var controller = new PodChannelController(
+            podService.Object,
+            NullLogger<PodChannelController>.Instance);
+
+        var result = await controller.GetChannels(" pod-secret ", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("Pod not found", notFound.Value);
+    }
+
+    [Fact]
+    public async Task GetChannel_WhenChannelIsMissing_ReturnsSanitizedNotFound()
+    {
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.GetPodAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Pod { PodId = "pod-1" });
+        podService
+            .Setup(service => service.GetChannelAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PodChannel?)null);
+
+        var controller = new PodChannelController(
+            podService.Object,
+            NullLogger<PodChannelController>.Instance);
+
+        var result = await controller.GetChannel("pod-1", " channel-secret ", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("Channel not found", notFound.Value);
+    }
 }

@@ -41,6 +41,31 @@ public class DhtRendezvousControllerTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public void Unblock_With_Unsupported_Type_Returns_Sanitized_BadRequest()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var controller = CreateController(blocklist);
+
+        var result = controller.Unblock(" peer ", "alice");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Invalid blocklist entry type", badRequest.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public void Unblock_With_Missing_Entry_Returns_Sanitized_NotFound()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var controller = CreateController(blocklist);
+
+        var result = controller.Unblock(" username ", " alice ");
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Contains("Blocklist entry not found", notFound.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("alice", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static DhtRendezvousController CreateController(OverlayBlocklist blocklist)
     {
         return new DhtRendezvousController(

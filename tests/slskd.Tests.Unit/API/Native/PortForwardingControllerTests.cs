@@ -62,6 +62,18 @@ public class PortForwardingControllerTests
     }
 
     [Fact]
+    public void GetForwardingStatus_WhenPortIsNotForwarded_ReturnsSanitizedNotFound()
+    {
+        var controller = CreateController();
+
+        var result = controller.GetForwardingStatus(54321);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Contains("No forwarding configured for this port", notFound.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("54321", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task StartForwarding_WhenForwarderThrows_DoesNotLeakExceptionMessage()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);

@@ -119,17 +119,26 @@ public class DhtMeshServiceDirectoryTests
     [Fact]
     public async Task FindByNameAsync_TrimsLookupAndDeduplicatesNormalizedDescriptors()
     {
-        var descriptor = CreateTestDescriptor("test-service", "peer1");
-        descriptor.ServiceId = $" {descriptor.ServiceId} ";
-        descriptor.ServiceName = " test-service ";
-        descriptor.OwnerPeerId = " peer1 ";
-        descriptor.Endpoint.Host = " peer1 ";
-        descriptor.Endpoint.Protocol = " quic ";
+        var baseDescriptor = CreateTestDescriptor("test-service", "peer1");
+        var descriptor = baseDescriptor with
+        {
+            ServiceId = $" {baseDescriptor.ServiceId} ",
+            ServiceName = " test-service ",
+            OwnerPeerId = " peer1 ",
+            Endpoint = baseDescriptor.Endpoint with
+            {
+                Host = " peer1 ",
+                Protocol = " quic ",
+            },
+        };
 
-        var duplicate = CreateTestDescriptor("test-service", "peer2");
-        duplicate.ServiceId = descriptor.ServiceId;
-        duplicate.ServiceName = "test-service";
-        duplicate.OwnerPeerId = "peer2";
+        var peerTwoDescriptor = CreateTestDescriptor("test-service", "peer2");
+        var duplicate = peerTwoDescriptor with
+        {
+            ServiceId = descriptor.ServiceId,
+            ServiceName = "test-service",
+            OwnerPeerId = "peer2",
+        };
 
         var serialized = MessagePackSerializer.Serialize(new List<MeshServiceDescriptor> { descriptor, duplicate });
         _dhtClientMock

@@ -51,7 +51,7 @@ public class MeshStatsCollector : IMeshStatsCollector
         this.natDetector = new Lazy<INatDetector?>(() =>
             serviceProvider.GetService(typeof(INatDetector)) as INatDetector);
         this.dhtClient = new Lazy<Dht.InMemoryDhtClient?>(() =>
-            serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as Dht.InMemoryDhtClient);
+            ResolveInMemoryDhtClient(serviceProvider));
 #pragma warning disable CA1416 // Runtime OS guards already gate QUIC-only service resolution.
         this.overlayServer = new Lazy<Overlay.QuicOverlayServer?>(() =>
             IsQuicSupportedPlatform()
@@ -194,5 +194,12 @@ public class MeshStatsCollector : IMeshStatsCollector
         }
 
         return serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.QuicOverlayServer;
+    }
+
+    private static Dht.InMemoryDhtClient? ResolveInMemoryDhtClient(IServiceProvider serviceProvider)
+    {
+        return serviceProvider.GetService(typeof(Dht.InMemoryDhtClient)) as Dht.InMemoryDhtClient
+            ?? serviceProvider.GetService(typeof(VirtualSoulfind.ShadowIndex.IDhtClient)) as Dht.InMemoryDhtClient
+            ?? serviceProvider.GetService(typeof(Dht.IMeshDhtClient)) as Dht.InMemoryDhtClient;
     }
 }

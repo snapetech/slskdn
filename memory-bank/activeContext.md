@@ -27,6 +27,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened another release-facing boundary cluster:
+    - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
+    - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses
+  - Repaired a runtime build regression in `DhtMeshServiceDirectory` by converting init-only descriptor normalization back to immutable `with` copies
+  - Updated `DhtMeshServiceDirectoryTests` to match the immutable descriptor model shape
+  - Confirmed the runtime project is green again (`0 warnings / 0 errors`)
+  - Narrowed the remaining unit-project compile blockers to:
+    - `SearchActionsControllerTests`
+    - `MeshContentMeshServiceTests`
+    - `PodMessageBackfillControllerTests`
+  - Updated the existing init-only record gotcha in `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Fixed another controller-boundary leak cluster:
     - `MultiSourceController` no longer reflects usernames or exact source-count thresholds in user-miss / insufficient-source replies
     - `RelayController` no longer echoes missing relay agent names in stream lookup failures
@@ -155,9 +166,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially Relay, Telemetry, MultiSource, and remaining PodCore controllers.
-2. Fix or work around the standing unrelated unit-test compile drift in `SearchActionsControllerTests`, `MeshContentMeshServiceTests`, and `PodMessageBackfillControllerTests` so focused regression slices can run cleanly again.
-3. Keep folding in adjacent dirty files so the runtime build stays green between secure-release passes.
+1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially the remaining DHT/Jobs/compatibility endpoints and result DTOs.
+2. Fix the standing unit-test compile drift in `SearchActionsControllerTests`, `MeshContentMeshServiceTests`, and `PodMessageBackfillControllerTests` so focused regression slices are runnable again.
+3. Keep folding in adjacent dirty files carefully so the runtime build stays green between secure-release passes.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
@@ -524,3 +535,10 @@ dotnet test
   - `MeshContentMeshService` now trims content IDs and rejects invalid ranges at the adapter boundary.
 - Dirty repo spillover is being committed together with this batch per user instruction.
 - Next: finish the remaining Pod/Mesh runtime seams from the placeholder inventory, then rerun full validation and the release gate.
+
+## 2026-03-22 22:18
+- Finished another grouped Pod/Mesh runtime completion batch.
+- `PodAffinityScorer` now consumes real membership-history signals for trust/stability instead of placeholder trust heuristics.
+- `MeshStatsCollector` now resolves live in-memory DHT state through the concrete runtime service shape or its aliases.
+- `MeshServiceClient` now normalizes service/method/correlation inputs and selects the freshest valid provider deterministically.
+- Next: commit all dirty files in the repo, then run full validation and the release gate.

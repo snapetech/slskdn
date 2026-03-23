@@ -55,11 +55,22 @@ public class MeshServiceClient : IMeshServiceClient
         ServiceCall call,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(targetPeerId))
+        var normalizedTargetPeerId = targetPeerId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedTargetPeerId))
             throw new ArgumentException("Target peer ID cannot be empty", nameof(targetPeerId));
 
         if (call == null)
             throw new ArgumentNullException(nameof(call));
+
+        call.ServiceName = call.ServiceName?.Trim() ?? string.Empty;
+        call.Method = call.Method?.Trim() ?? string.Empty;
+        call.CorrelationId = call.CorrelationId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(call.ServiceName) ||
+            string.IsNullOrWhiteSpace(call.Method) ||
+            string.IsNullOrWhiteSpace(call.CorrelationId))
+        {
+            throw new ArgumentException("Service name, method, and correlation ID are required", nameof(call));
+        }
 
         // MEDIUM-3 FIX 1: Check global pending call limit
         if (_pendingCalls.Count >= _maxTotalPendingCalls)
@@ -77,12 +88,12 @@ public class MeshServiceClient : IMeshServiceClient
         }
 
         // MEDIUM-3 FIX 2: Check per-peer concurrent call limit
-        var currentPeerCalls = _perPeerCallCounts.GetOrAdd(targetPeerId, 0);
+        var currentPeerCalls = _perPeerCallCounts.GetOrAdd(normalizedTargetPeerId, 0);
         if (currentPeerCalls >= _maxConcurrentCallsPerPeer)
         {
             _logger.LogWarning(
                 "[ServiceClient] Max concurrent calls to peer reached: {PeerId}, count: {Count}",
-                targetPeerId, currentPeerCalls);
+                normalizedTargetPeerId, currentPeerCalls);
 
             return Task.FromResult(new ServiceReply
             {
@@ -93,7 +104,7 @@ public class MeshServiceClient : IMeshServiceClient
         }
 
         // Increment per-peer counter
-        _perPeerCallCounts.AddOrUpdate(targetPeerId, 1, (_, count) => count + 1);
+        _perPeerCallCounts.AddOrUpdate(normalizedTargetPeerId, 1, (_, count) => count + 1);
 
         try
         {
@@ -135,7 +146,7 @@ public class MeshServiceClient : IMeshServiceClient
 
             _logger.LogWarning(
                 "[ServiceClient] Mesh service transport is not implemented for {Service}.{Method} to {PeerId}",
-                call.ServiceName, call.Method, targetPeerId);
+                call.ServiceName, call.Method, normalizedTargetPeerId);
             return Task.FromResult(new ServiceReply
             {
                 CorrelationId = call.CorrelationId,
@@ -146,11 +157,11 @@ public class MeshServiceClient : IMeshServiceClient
         finally
         {
             _pendingCalls.TryRemove(call.CorrelationId, out _);
-            _perPeerCallCounts.AddOrUpdate(targetPeerId, 0, (_, count) => Math.Max(0, count - 1));
+            _perPeerCallCounts.AddOrUpdate(normalizedTargetPeerId, 0, (_, count) => Math.Max(0, count - 1));
 
-            if (_perPeerCallCounts.TryGetValue(targetPeerId, out var remainingCalls) && remainingCalls == 0)
+            if (_perPeerCallCounts.TryGetValue(normalizedTargetPeerId, out var remainingCalls) && remainingCalls == 0)
             {
-                _perPeerCallCounts.TryRemove(targetPeerId, out _);
+                _perPeerCallCounts.TryRemove(normalizedTargetPeerId, out _);
             }
         }
     }
@@ -161,14 +172,26 @@ public class MeshServiceClient : IMeshServiceClient
         ReadOnlyMemory<byte> payload,
         CancellationToken cancellationToken = default)
     {
+        var normalizedServiceName = serviceName?.Trim() ?? string.Empty;
+        var normalizedMethod = method?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedServiceName) || string.IsNullOrWhiteSpace(normalizedMethod))
+        {
+            return new ServiceReply
+            {
+                CorrelationId = Guid.NewGuid().ToString(),
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "Service name and method are required"
+            };
+        }
+
         // 1. Discover service
-        var descriptors = await _serviceDirectory.FindByNameAsync(serviceName, cancellationToken);
+        var descriptors = await _serviceDirectory.FindByNameAsync(normalizedServiceName, cancellationToken);
 
         if (descriptors.Count == 0)
         {
             _logger.LogWarning(
                 "[ServiceClient] No providers found for service: {ServiceName}",
-                serviceName);
+                normalizedServiceName);
 
             return new ServiceReply
             {
@@ -178,18 +201,32 @@ public class MeshServiceClient : IMeshServiceClient
             };
         }
 
-        // 2. Pick first descriptor (TODO: Reputation-based selection)
-        var descriptor = descriptors.First();
+        // 2. Pick the freshest valid descriptor deterministically.
+        var descriptor = descriptors
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate.OwnerPeerId))
+            .OrderByDescending(candidate => candidate.ExpiresAt)
+            .ThenBy(candidate => candidate.OwnerPeerId, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (descriptor == null)
+        {
+            return new ServiceReply
+            {
+                CorrelationId = Guid.NewGuid().ToString(),
+                StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                ErrorMessage = "No valid providers available for requested service"
+            };
+        }
 
         _logger.LogDebug(
             "[ServiceClient] Selected provider for {ServiceName}: {PeerId}",
-            serviceName, descriptor.OwnerPeerId);
+            normalizedServiceName, descriptor.OwnerPeerId);
 
         // 3. Create call
         var call = new ServiceCall
         {
-            ServiceName = serviceName,
-            Method = method,
+            ServiceName = normalizedServiceName,
+            Method = normalizedMethod,
             CorrelationId = Guid.NewGuid().ToString(),
             Payload = payload.ToArray()
         };

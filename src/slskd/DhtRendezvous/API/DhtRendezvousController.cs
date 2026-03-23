@@ -313,12 +313,12 @@ public class DhtRendezvousController : ControllerBase
         }
         else
         {
-            return BadRequest(new { error = "Type must be 'ip' or 'username'" });
+            return BadRequest(new { error = "Invalid blocklist entry type" });
         }
 
         if (!removed)
         {
-            return NotFound(new { error = $"{type} {target} not found in blocklist" });
+            return NotFound(new { error = "Blocklist entry not found" });
         }
 
         return Ok(new { message = $"Unblocked {type} {target}" });
