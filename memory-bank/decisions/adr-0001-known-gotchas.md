@@ -52,6 +52,39 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC7. Low-Traffic Controllers Still Need The Same ID Canonicalization As The Busy APIs
+
+**The Bug**: older or lower-traffic controllers were validating that route/body IDs were present, but they still forwarded padded values like `" job-1 "` or `" share-1 "` straight into lookups and storage-facing services. That made lookups miss existing records and let logically identical IDs behave like different keys.
+
+**Files Affected**:
+- `src/slskd/Shares/API/Controllers/SharesController.cs`
+- `src/slskd/Transfers/MultiSource/API/PlaybackController.cs`
+- `src/slskd/Transfers/MultiSource/API/TracingController.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(jobId))
+{
+    return BadRequest("jobId is required");
+}
+
+var summary = await summarizer.SummarizeAsync(jobId, ct).ConfigureAwait(false);
+```
+
+**Correct**:
+```csharp
+jobId = jobId?.Trim() ?? string.Empty;
+if (string.IsNullOrWhiteSpace(jobId))
+{
+    return BadRequest("jobId is required");
+}
+
+payload.TrackId = string.IsNullOrWhiteSpace(payload.TrackId) ? null : payload.TrackId.Trim();
+var summary = await summarizer.SummarizeAsync(jobId, ct).ConfigureAwait(false);
+```
+
+**Why This Keeps Happening**: once the main controller families are hardened, it is easy to assume the smaller experimental or upstream-carried endpoints already follow the same pattern. They often only validate presence. Treat every route/query/body string as raw transport input, even on low-traffic endpoints, and canonicalize it before any lookup, queue key, or persisted DTO dispatch.
+
 ### 0xC6. Older CRUD Controllers Still Need Explicit Null-Body And Field Canonicalization
 
 **The Bug**: older CRUD-style controllers relied on `[Required]` or model-binding assumptions and then copied request fields straight into persisted entities. That left null request bodies able to trip null dereferences and allowed padded search/filter/path values to be stored in non-canonical form.
