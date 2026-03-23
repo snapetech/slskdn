@@ -6784,3 +6784,5 @@ Code quality improvements were completed as part of Option A:
 - Fixed `ChannelReader<T>` so detached read-loop failures now surface through `Completed` without a second background rethrow, and a throwing `ExceptionHandler` no longer masks the original fault unless explicitly aggregated.
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ChannelReaderTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `ChannelReaderTests` slice passed. The only warning was a transient `MSB3026` copy-retry from running build and test against the same output tree in parallel.
+
+- 2026-03-23: Hardened PeerResolutionService alias caching so DHT-resolved mappings are reusable by peer ID and username alias; fixed ChannelReader test type collisions by fully qualifying the slskd wrapper type; folded in dirty LAN discovery updates and revalidated build/test/lint.

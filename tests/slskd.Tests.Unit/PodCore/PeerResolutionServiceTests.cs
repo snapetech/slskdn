@@ -107,4 +107,40 @@ public class PeerResolutionServiceTests
         Assert.Equal(2238, endpoint.Port);
         dht.Verify(x => x.GetAsync<PeerMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task ResolvePeerIdToUsernameAsync_ReusesCachedUsernameAliasWithoutDht()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        var service = new PeerResolutionService(dht.Object, NullLogger<PeerResolutionService>.Instance);
+        service.RegisterPeerMapping("peer-1", "alice", new IPEndPoint(IPAddress.Loopback, 2238));
+
+        var username = await service.ResolvePeerIdToUsernameAsync(" alice ");
+
+        Assert.Equal("alice", username);
+        dht.Verify(x => x.GetAsync<PeerMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResolvePeerIdToEndpointAsync_DhtResolutionCachesUsernameAlias()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PeerMetadata>("peer:metadata:peer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerMetadata
+            {
+                PeerId = "peer-1",
+                Username = "alice",
+                Endpoint = "127.0.0.1:2239",
+            });
+
+        var service = new PeerResolutionService(dht.Object, NullLogger<PeerResolutionService>.Instance);
+
+        var initialEndpoint = await service.ResolvePeerIdToEndpointAsync("peer-1");
+        var aliasEndpoint = await service.ResolvePeerIdToEndpointAsync(" alice ");
+
+        Assert.NotNull(initialEndpoint);
+        Assert.NotNull(aliasEndpoint);
+        Assert.Equal(2239, aliasEndpoint!.Port);
+        dht.Verify(x => x.GetAsync<PeerMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

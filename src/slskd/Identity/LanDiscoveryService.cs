@@ -136,7 +136,7 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
                         }
 
                         peers.Add(peer);
-                        PeerDiscovered?.Invoke(this, peer);
+                        RaisePeerDiscovered(peer);
                     }
                 }
                 catch (Exception ex)
@@ -162,5 +162,25 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
         _cts.Dispose();
         _advertiser?.Dispose();
         _advertiser = null;
+    }
+
+    private void RaisePeerDiscovered(DiscoveredPeer peer)
+    {
+        if (PeerDiscovered is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<DiscoveredPeer> handler in PeerDiscovered.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, peer);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "[LanDiscovery] PeerDiscovered subscriber failed");
+            }
+        }
     }
 }

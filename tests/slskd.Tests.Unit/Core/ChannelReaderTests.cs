@@ -13,7 +13,7 @@ public class ChannelReaderTests
     public async Task Completed_WhenHandlerThrows_FaultsWithOriginalException()
     {
         var channel = Channel.CreateUnbounded<int>();
-        var reader = new ChannelReader<int>(
+        var reader = new slskd.Shares.ChannelReader<int>(
             channel,
             _ => throw new InvalidOperationException("handler failed"));
 
@@ -28,7 +28,7 @@ public class ChannelReaderTests
     public async Task Completed_WhenExceptionHandlerThrows_FaultsWithAggregateContainingOriginalException()
     {
         var channel = Channel.CreateUnbounded<int>();
-        var reader = new ChannelReader<int>(
+        var reader = new slskd.Shares.ChannelReader<int>(
             channel,
             _ => throw new InvalidOperationException("handler failed"),
             _ => throw new ApplicationException("exception handler failed"));

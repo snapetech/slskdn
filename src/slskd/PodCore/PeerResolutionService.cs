@@ -95,6 +95,7 @@ public class PeerResolutionService : IPeerResolutionService
                     };
                     peerMappings[normalizedPeerId] = mapping;
                     peerMappings[metadataPeerId] = mapping;
+                    peerMappings[normalizedUsername] = mapping;
                 }
 
                 logger.LogDebug("[PeerResolution] Resolved peer {PeerId} to username {Username} via DHT", normalizedPeerId, normalizedUsername);
@@ -170,6 +171,10 @@ public class PeerResolutionService : IPeerResolutionService
                         existing.Endpoint = endpoint;
                         peerMappings[normalizedPeerId] = existing;
                         peerMappings[metadataPeerId] = existing;
+                        if (!string.IsNullOrWhiteSpace(normalizedUsername))
+                        {
+                            peerMappings[normalizedUsername] = existing;
+                        }
                     }
 
                     logger.LogDebug("[PeerResolution] Resolved peer {PeerId} to endpoint {Endpoint} via DHT", normalizedPeerId, endpoint);
@@ -199,12 +204,14 @@ public class PeerResolutionService : IPeerResolutionService
 
         lock (mappingsLock)
         {
-            peerMappings[normalizedPeerId] = new PeerMapping
+            var mapping = new PeerMapping
             {
                 PeerId = normalizedPeerId,
                 Username = normalizedUsername,
                 Endpoint = endpoint
             };
+            peerMappings[normalizedPeerId] = mapping;
+            peerMappings[normalizedUsername] = mapping;
         }
 
         logger.LogDebug("[PeerResolution] Registered mapping: peer {PeerId} -> username {Username}, endpoint {Endpoint}",

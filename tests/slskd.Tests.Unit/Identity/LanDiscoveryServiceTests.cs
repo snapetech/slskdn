@@ -131,13 +131,12 @@ public class LanDiscoveryServiceTests : IDisposable
     {
         var svc = CreateService();
         DiscoveredPeer? discovered = null;
+        svc.PeerDiscovered += (s, e) => throw new InvalidOperationException("boom");
         svc.PeerDiscovered += (s, e) => discovered = e;
 
-        var eventField = typeof(LanDiscoveryService).GetField(
-            "PeerDiscovered",
+        var raiseMethod = typeof(LanDiscoveryService).GetMethod(
+            "RaisePeerDiscovered",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-
-        var handler = Assert.IsAssignableFrom<EventHandler<DiscoveredPeer>>(eventField?.GetValue(svc));
         var peer = new DiscoveredPeer
         {
             PeerCode = "ABCD-EFGH",
@@ -147,7 +146,8 @@ public class LanDiscoveryServiceTests : IDisposable
             Capabilities = 1,
         };
 
-        handler.Invoke(svc, peer);
+        Assert.NotNull(raiseMethod);
+        raiseMethod!.Invoke(svc, [peer]);
 
         Assert.Same(peer, discovered);
     }
