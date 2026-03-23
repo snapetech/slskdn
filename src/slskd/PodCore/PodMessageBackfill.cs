@@ -524,7 +524,7 @@ public class PodMessageBackfill : IPodMessageBackfill
                 0,
                 0,
                 TimeSpan.Zero,
-                "Backfill request sent; response handling is not yet available.");
+                "Backfill request sent; waiting for peer response.");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

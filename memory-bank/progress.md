@@ -6112,3 +6112,50 @@ Code quality improvements were completed as part of Option A:
 - That fixes padded capability tags/version strings, padded perceptual-hash algorithm names, and padded generic now-playing webhook event values that previously took the wrong branch.
 - Added focused regressions in `CapabilitiesControllerTests`, new `PerceptualHashControllerTests`, and `NowPlayingControllerTests`, and aligned the new capabilities test to the current `PeerCapabilities` model.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for parser discriminator normalization.
+## 2026-03-22 18:47
+- Hardened another older-controller boundary cluster:
+  - `src/slskd/Shares/API/Controllers/SharesController.cs` now trims share IDs and rejects blank route IDs before lookup/browse.
+  - `src/slskd/Transfers/MultiSource/API/PlaybackController.cs` now trims `JobId` and optional `TrackId` before dispatch and diagnostics lookup.
+  - `src/slskd/Transfers/MultiSource/API/TracingController.cs` now trims `jobId` before summary dispatch.
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Shares/API/Controllers/SharesControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/PlaybackControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/TracingControllerTests.cs`
+- Documented the recurring pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `7e61bb61` (`docs: Add gotcha for low-traffic controller id normalization`).
+- Folded in adjacent test-project compile drift so the focused slice could build again:
+  - restored `using slskd.Jobs;` in `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`.
+- Validation:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` passed with pre-existing analyzer warning noise (`526 warnings / 0 errors`)
+  - `dotnet vstest tests/slskd.Tests.Unit/bin/Debug/net8.0/slskd.Tests.Unit.dll /Tests:...` passed `5/5`
+
+## 2026-03-22 19:03
+- Hardened a grouped MediaCore/HashDb controller-normalization batch:
+  - `src/slskd/MediaCore/API/Controllers/DescriptorRetrieverController.cs` now trims single `contentId`, trims/null-normalizes `domain` and `type`, and trims/deduplicates batch `ContentIds` before dispatch.
+  - `src/slskd/MediaCore/API/Controllers/MetadataPortabilityController.cs` now trims/deduplicates export `ContentIds` before calling `IMetadataPortability`.
+  - `src/slskd/HashDb/API/HashDbController.cs` now trims `flacKey`, `filename`, and `byteHash` before lookup, key generation, and hash-store dispatch.
+- Added focused regression coverage in:
+  - `tests/slskd.Tests.Unit/MediaCore/DescriptorRetrieverControllerTests.cs`
+  - `tests/slskd.Tests.Unit/MediaCore/MetadataPortabilityControllerTests.cs`
+  - `tests/slskd.Tests.Unit/HashDb/API/HashDbControllerTests.cs`
+- Folded in adjacent unit-project drift so the slice kept building:
+  - existing stale `slskd.Jobs` import fix in `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs` remains part of the current working set.
+- Documented the recurring pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `8af03b5e` (`docs: Add gotcha for batch and query identifier normalization`).
+- Validation:
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` passed with pre-existing analyzer warning noise (`526 warnings / 0 errors`)
+  - direct `vstest` slice for the new controller tests passed `8/8`
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 errors`; current warnings are outside this batch:
+    - pre-existing `SA1515` in `src/slskd/PodCore/PodMessageBackfill.cs`
+    - transient `MSB3026` copy-retry because `slskd.dll` was in use during build
+
+## 2026-03-22 19:22
+- Continued the three-way placeholder/null-heavy pass across SongID, HashDb, and PodCore.
+- `src/slskd/SongID/SongIdService.cs`
+  - recognizer parsing now keeps conservative textual findings when SongRec/Panako/Audfprint do not provide full path/title payloads
+  - corpus matching no longer bottoms out just because the current run or stored corpus entry lacks a usable fingerprint file; it now falls back to conservative recording/title/artist metadata similarity
+- `src/slskd/HashDb/HashDbService.cs`
+  - older helper/update methods now normalize issue IDs, file paths, MusicBrainz IDs, and variant keys before persistence/update
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+  - success-path request messaging now reflects the actual runtime state (`waiting for peer response`) instead of the older placeholder wording
+- Documented the recurring SongID pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `35c4fe52` (`docs: Add gotcha for songid corpus metadata fallback`).
+- Folded in adjacent dirty controller/test files already in the repo so the tree can be recommitted cleanly.

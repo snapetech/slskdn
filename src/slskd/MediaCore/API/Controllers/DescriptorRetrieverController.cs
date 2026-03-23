@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,7 @@ public class DescriptorRetrieverController : ControllerBase
         [FromQuery] bool bypassCache = false,
         CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("ContentID is required");
@@ -84,14 +86,20 @@ public class DescriptorRetrieverController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> RetrieveBatch([FromBody] BatchRetrievalRequest request, CancellationToken cancellationToken = default)
     {
-        if (request?.ContentIds == null || !request.ContentIds.Any(contentId => !string.IsNullOrWhiteSpace(contentId)))
+        var contentIds = request?.ContentIds?
+            .Select(contentId => contentId?.Trim() ?? string.Empty)
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Distinct(System.StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (contentIds == null || contentIds.Length == 0)
         {
             return BadRequest("At least one ContentID is required");
         }
 
         try
         {
-            var result = await _retriever.RetrieveBatchAsync(request.ContentIds, cancellationToken);
+            var result = await _retriever.RetrieveBatchAsync(contentIds, cancellationToken);
 
             _logger.LogInformation(
                 "[DescriptorRetriever] Batch retrieval: {Requested} requested, {Found} found, {Failed} failed",
@@ -122,6 +130,9 @@ public class DescriptorRetrieverController : ControllerBase
         [FromQuery] int maxResults = 50,
         CancellationToken cancellationToken = default)
     {
+        domain = domain?.Trim() ?? string.Empty;
+        type = string.IsNullOrWhiteSpace(type) ? null : type.Trim();
+
         if (string.IsNullOrWhiteSpace(domain))
         {
             return BadRequest("Domain is required");

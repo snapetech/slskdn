@@ -218,8 +218,65 @@ dotnet test
 - Next: continue bughunt from the next clean head after recommitting the remaining dirty files.
 
 ## 2026-03-22 17:53
+
+## 2026-03-22 18:47
+- Fixed another older-controller normalization cluster:
+  - `src/slskd/Shares/API/Controllers/SharesController.cs`
+  - `src/slskd/Transfers/MultiSource/API/PlaybackController.cs`
+  - `src/slskd/Transfers/MultiSource/API/TracingController.cs`
+- These endpoints now trim route/body IDs before lookup/dispatch and reject blank IDs up front, which closes the older low-traffic controller path where padded IDs could miss existing records or split queue/state keys.
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Shares/API/Controllers/SharesControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/PlaybackControllerTests.cs`
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/TracingControllerTests.cs`
+- Folded in adjacent unit-project compile drift by restoring `using slskd.Jobs;` in `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`.
+- Gotcha commit made immediately per repo policy:
+  - `7e61bb61` `docs: Add gotcha for low-traffic controller id normalization`
+- Validation:
+  - `dotnet build src/slskd/slskd.csproj -v q` -> `0 warnings / 0 errors`
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` -> `526 warnings / 0 errors`
+  - direct `vstest` slice for the 5 new controller tests -> `Passed: 5, Failed: 0`
+- Next:
+  1. Continue the broad controller-edge sweep through older/secondary API surfaces that still validate presence but do not canonicalize route/body strings.
+  2. Prefer grouped passes where a controller family has parallel “busy” and “low-traffic” endpoints with inconsistent normalization rules.
+
+## 2026-03-22 19:03
+- Fixed a grouped MediaCore/HashDb normalization cluster:
+  - `src/slskd/MediaCore/API/Controllers/DescriptorRetrieverController.cs`
+  - `src/slskd/MediaCore/API/Controllers/MetadataPortabilityController.cs`
+  - `src/slskd/HashDb/API/HashDbController.cs`
+- These endpoints now canonicalize transport identifiers before crossing into service logic:
+  - batch `ContentIds` are trimmed, blank-filtered, and deduplicated
+  - `contentId`, `domain`, `type`, `flacKey`, `filename`, and `byteHash` are trimmed before lookup or hash generation
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/MediaCore/DescriptorRetrieverControllerTests.cs`
+  - `tests/slskd.Tests.Unit/MediaCore/MetadataPortabilityControllerTests.cs`
+  - `tests/slskd.Tests.Unit/HashDb/API/HashDbControllerTests.cs`
+- Gotcha commit made immediately per repo policy:
+  - `8af03b5e` `docs: Add gotcha for batch and query identifier normalization`
+- Validation:
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` -> `526 warnings / 0 errors`
+  - direct `vstest` slice for the 8 new controller tests -> `Passed: 8, Failed: 0`
+  - `dotnet build src/slskd/slskd.csproj -v q` -> `0 errors`, with the standing `PodMessageBackfill` style warning and a transient copy-retry warning because the DLL was in use
+- Next:
+  1. Continue grouped controller-edge passes where batch/query endpoints still pass raw identifier collections into services.
+  2. Either clear the unrelated `PodMessageBackfill.cs` style warning or work around the in-use runtime DLL when taking the runtime build back to `0/0`.
 - Sanitized certificate validation and mesh-sync fallback messages that were still exposing internal parser/runtime state.
 - Next: continue the broader bughunt from the next clean head, focusing on remaining placeholder/null-heavy runtime paths rather than message leakage.
+
+## 2026-03-22 19:22
+- Continued the placeholder/null-heavy completion pass instead of another pure sanitization pass.
+- `SongIdService` now keeps conservative recognizer/corpus evidence alive when exact fingerprint/path payloads are missing:
+  - SongRec can fall back to textual external IDs
+  - Panako/Audfprint can emit conservative findings from textual labels
+  - corpus reuse can now fall back to recording/title/artist metadata similarity when exact fingerprint files are unavailable
+- `HashDbService` helper/update paths now normalize issue IDs, MusicBrainz IDs, and variant metadata before writes so older helper methods stop drifting from the hardened main lookup paths.
+- `PodMessageBackfill` success-path wording now matches reality better while the transport receive seam remains a larger feature gap.
+- Gotcha commit made immediately per repo policy:
+  - `35c4fe52` `docs: Add gotcha for songid corpus metadata fallback`
+- Next:
+  1. recommit the full dirty tree, including adjacent controller/test files from parallel work
+  2. continue the same three-way pass with the next dense `SongIdService` and `HashDbService` bottom-out cluster
 
 ## 2026-03-22 18:01
 - Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.

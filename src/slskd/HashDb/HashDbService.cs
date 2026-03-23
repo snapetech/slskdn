@@ -1489,6 +1489,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdateLibraryIssueStatusAsync(string issueId, LibraryHealth.LibraryIssueStatus status, CancellationToken cancellationToken = default)
         {
+            issueId = issueId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(issueId))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -1504,6 +1510,22 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task InsertLibraryIssueAsync(LibraryHealth.LibraryIssue issue, CancellationToken cancellationToken = default)
         {
+            issue.IssueId = issue.IssueId?.Trim() ?? string.Empty;
+            issue.FilePath = string.IsNullOrWhiteSpace(issue.FilePath) ? null : issue.FilePath.Trim();
+            issue.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(issue.MusicBrainzRecordingId) ? null : issue.MusicBrainzRecordingId.Trim();
+            issue.MusicBrainzReleaseId = string.IsNullOrWhiteSpace(issue.MusicBrainzReleaseId) ? null : issue.MusicBrainzReleaseId.Trim();
+            issue.Artist = string.IsNullOrWhiteSpace(issue.Artist) ? null : issue.Artist.Trim();
+            issue.Album = string.IsNullOrWhiteSpace(issue.Album) ? null : issue.Album.Trim();
+            issue.Title = string.IsNullOrWhiteSpace(issue.Title) ? null : issue.Title.Trim();
+            issue.Reason = string.IsNullOrWhiteSpace(issue.Reason) ? null : issue.Reason.Trim();
+            issue.SuggestedAction = string.IsNullOrWhiteSpace(issue.SuggestedAction) ? null : issue.SuggestedAction.Trim();
+            issue.RemediationJobId = string.IsNullOrWhiteSpace(issue.RemediationJobId) ? null : issue.RemediationJobId.Trim();
+            issue.ResolvedBy = string.IsNullOrWhiteSpace(issue.ResolvedBy) ? null : issue.ResolvedBy.Trim();
+            if (string.IsNullOrWhiteSpace(issue.IssueId))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -1611,6 +1633,13 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdateHashFingerprintAsync(string flacKey, string fingerprint, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            fingerprint = fingerprint?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(fingerprint))
             {
                 return;
@@ -1638,10 +1667,25 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdateVariantMetadataAsync(string flacKey, AudioVariant variant, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
             if (variant == null)
             {
                 return;
             }
+
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return;
+            }
+
+            variant.VariantId = string.IsNullOrWhiteSpace(variant.VariantId) ? flacKey : variant.VariantId.Trim();
+            variant.Codec = string.IsNullOrWhiteSpace(variant.Codec) ? null : variant.Codec.Trim();
+            variant.Container = string.IsNullOrWhiteSpace(variant.Container) ? null : variant.Container.Trim();
+            variant.FileSha256 = string.IsNullOrWhiteSpace(variant.FileSha256) ? null : variant.FileSha256.Trim();
+            variant.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(variant.MusicBrainzRecordingId) ? null : variant.MusicBrainzRecordingId.Trim();
+            variant.TranscodeReason = string.IsNullOrWhiteSpace(variant.TranscodeReason) ? null : variant.TranscodeReason.Trim();
+            variant.EncoderSignature = string.IsNullOrWhiteSpace(variant.EncoderSignature) ? null : variant.EncoderSignature.Trim();
+            variant.AnalyzerVersion = string.IsNullOrWhiteSpace(variant.AnalyzerVersion) ? null : variant.AnalyzerVersion.Trim();
 
             // Invalidate cache when updating metadata
             if (hashCache != null)

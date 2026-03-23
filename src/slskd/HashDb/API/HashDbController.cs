@@ -97,6 +97,12 @@ namespace slskd.HashDb.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> LookupHash(string flacKey)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return BadRequest(new { error = "flacKey is required" });
+            }
+
             var entry = await HashDb.LookupHashAsync(flacKey);
             if (entry == null)
             {
@@ -129,7 +135,8 @@ namespace slskd.HashDb.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GenerateKey([FromQuery] string filename, [FromQuery] long size)
         {
-            if (string.IsNullOrEmpty(filename) || size <= 0)
+            filename = filename?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(filename) || size <= 0)
             {
                 return BadRequest(new { error = "filename and size are required" });
             }
@@ -256,7 +263,15 @@ namespace slskd.HashDb.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> StoreHash([FromBody] StoreHashRequest request)
         {
-            if (string.IsNullOrEmpty(request?.Filename) || request.Size <= 0 || string.IsNullOrEmpty(request.ByteHash))
+            if (request == null)
+            {
+                return BadRequest(new { error = "filename, size, and byteHash are required" });
+            }
+
+            request.Filename = request.Filename?.Trim() ?? string.Empty;
+            request.ByteHash = request.ByteHash?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(request.Filename) || request.Size <= 0 || string.IsNullOrWhiteSpace(request.ByteHash))
             {
                 return BadRequest(new { error = "filename, size, and byteHash are required" });
             }

@@ -2140,23 +2140,24 @@ public sealed class SongIdService : ISongIdService
                 return null;
             }
 
+            var matchCount = root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array
+                ? matches.GetArrayLength()
+                : 1;
             var title = TryGetString(track.Value, "title") ?? TryGetString(track.Value, "name");
             var artist = TryGetString(track.Value, "subtitle") ??
                 TryGetString(track.Value, "artist") ??
                 TryGetSongRecArtist(track.Value);
+            var externalId = TryGetString(track.Value, "key") ?? TryGetString(track.Value, "id");
             if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(artist))
             {
-                return null;
+                return TryCreateRecognizerFindingFromText(externalId, matchCount, "SongRec recognition hit", externalId);
             }
 
-            var matchCount = root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array
-                ? matches.GetArrayLength()
-                : 1;
             return new SongIdRecognizerFinding
             {
                 Title = title ?? string.Empty,
                 Artist = artist ?? string.Empty,
-                ExternalId = TryGetString(track.Value, "key") ?? TryGetString(track.Value, "id"),
+                ExternalId = externalId,
                 MatchCount = matchCount,
                 Score = matchCount > 0 ? Math.Min(0.98, 0.78 + (matchCount * 0.03)) : 0.85,
                 Summary = "SongRec recognition hit",
@@ -2191,11 +2192,6 @@ public sealed class SongIdService : ISongIdService
                 path = pathMatch.Success ? pathMatch.Groups["path"].Value : null;
             }
 
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                continue;
-            }
-
             var score = 0.75;
             for (var i = parts.Length - 1; i >= 0; i--)
             {
@@ -2215,6 +2211,18 @@ public sealed class SongIdService : ISongIdService
                 !Regex.IsMatch(part, @"^\d+(\.\d+)?$", RegexOptions.CultureInvariant) &&
                 !part.Contains(Path.DirectorySeparatorChar) &&
                 !part.Contains(Path.AltDirectorySeparatorChar));
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                var fallback = TryCreateRecognizerFindingFromText(externalId ?? line, 1, $"Panako score {(score * 100.0).ToString("F2", CultureInfo.InvariantCulture)}", externalId);
+                if (fallback != null)
+                {
+                    fallback.Score = score;
+                    return fallback;
+                }
+
+                continue;
+            }
 
             return new SongIdRecognizerFinding
             {
@@ -2249,9 +2257,15 @@ public sealed class SongIdService : ISongIdService
             : 0.55;
         var pathMatch = Regex.Match(bestLine, @"(?<path>[^\s,;]+\.(wav|flac|mp3|m4a|aac|ogg|opus))", RegexOptions.IgnoreCase);
         var sourcePath = pathMatch.Success ? pathMatch.Groups["path"].Value : null;
+        var fallback = string.IsNullOrWhiteSpace(sourcePath)
+            ? TryCreateRecognizerFindingFromText(bestLine, 1, "Audfprint fingerprint match")
+            : null;
         return new SongIdRecognizerFinding
         {
-            Title = !string.IsNullOrWhiteSpace(sourcePath) ? Path.GetFileNameWithoutExtension(sourcePath) : bestLine,
+            Title = !string.IsNullOrWhiteSpace(sourcePath)
+                ? Path.GetFileNameWithoutExtension(sourcePath)
+                : fallback?.Title ?? bestLine,
+            Artist = fallback?.Artist ?? string.Empty,
             SourcePath = sourcePath,
             Score = score,
             Summary = "Audfprint fingerprint match",
@@ -2320,6 +2334,62 @@ public sealed class SongIdService : ISongIdService
         }
 
         return null;
+    }
+
+    private static SongIdRecognizerFinding? TryCreateRecognizerFindingFromText(string? rawText, int matchCount, string summary, string? externalId = null)
+    {
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            return null;
+        }
+
+        var text = rawText.Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var fileLikeText = Path.GetFileNameWithoutExtension(text);
+        var label = string.IsNullOrWhiteSpace(fileLikeText) ? text : fileLikeText;
+        label = Regex.Replace(label, @"[_\.]+", " ").Trim();
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return null;
+        }
+
+        var artist = string.Empty;
+        var title = label;
+        foreach (var separator in new[] { " - ", " – ", " — " })
+        {
+            if (!label.Contains(separator, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var parts = label.Split(new[] { separator }, 2, StringSplitOptions.TrimEntries);
+            if (parts.Length == 2)
+            {
+                artist = parts[0];
+                title = parts[1];
+            }
+
+            break;
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        return new SongIdRecognizerFinding
+        {
+            Title = title,
+            Artist = artist,
+            ExternalId = externalId,
+            MatchCount = Math.Max(1, matchCount),
+            Score = Math.Min(0.9, 0.52 + (Math.Max(1, matchCount) * 0.03)),
+            Summary = summary,
+        };
     }
 
     private static List<(int ClipLength, int Step)> ParseProfiles(string spec)
@@ -2454,25 +2524,13 @@ public sealed class SongIdService : ISongIdService
 
     private async Task<List<SongIdCorpusMatch>> FindCorpusMatchesAsync(SongIdRun run, CancellationToken cancellationToken)
     {
-        if (run.FullSourceFingerprint == null ||
-            string.IsNullOrWhiteSpace(run.FullSourceFingerprint.Path) ||
-            !File.Exists(run.FullSourceFingerprint.Path))
-        {
-            return new List<SongIdCorpusMatch>();
-        }
-
-        var currentFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(run.FullSourceFingerprint.Path, cancellationToken).ConfigureAwait(false));
-        if (string.IsNullOrWhiteSpace(currentFingerprint))
-        {
-            return new List<SongIdCorpusMatch>();
-        }
-
         var corpusDir = GetCorpusDirectory();
         if (!Directory.Exists(corpusDir))
         {
             return new List<SongIdCorpusMatch>();
         }
 
+        var currentFingerprint = await TryLoadCurrentFingerprintAsync(run, cancellationToken).ConfigureAwait(false);
         var matches = new List<SongIdCorpusMatch>();
         foreach (var metadataPath in Directory.EnumerateFiles(corpusDir, "*.json"))
         {
@@ -2480,14 +2538,12 @@ public sealed class SongIdService : ISongIdService
             var fingerprintPath = ResolveCorpusFingerprintPath(metadataPath, entry);
 
             if (entry == null ||
-                string.Equals(entry.RunId, run.Id.ToString("D"), StringComparison.OrdinalIgnoreCase) ||
-                string.IsNullOrWhiteSpace(fingerprintPath))
+                string.Equals(entry.RunId, run.Id.ToString("D"), StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            var otherFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(fingerprintPath, cancellationToken).ConfigureAwait(false));
-            var similarity = CompareFingerprints(currentFingerprint, otherFingerprint);
+            var similarity = await ComputeCorpusSimilarityAsync(currentFingerprint, fingerprintPath, entry, run, cancellationToken).ConfigureAwait(false);
             if (similarity < 0.18)
             {
                 continue;
@@ -2512,6 +2568,80 @@ public sealed class SongIdService : ISongIdService
             .OrderByDescending(match => match.SimilarityScore)
             .Take(5)
             .ToList();
+    }
+
+    private static async Task<string?> TryLoadCurrentFingerprintAsync(SongIdRun run, CancellationToken cancellationToken)
+    {
+        if (run.FullSourceFingerprint == null ||
+            string.IsNullOrWhiteSpace(run.FullSourceFingerprint.Path) ||
+            !File.Exists(run.FullSourceFingerprint.Path))
+        {
+            return null;
+        }
+
+        var currentFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(run.FullSourceFingerprint.Path, cancellationToken).ConfigureAwait(false));
+        return string.IsNullOrWhiteSpace(currentFingerprint) ? null : currentFingerprint;
+    }
+
+    private static async Task<double> ComputeCorpusSimilarityAsync(
+        string? currentFingerprint,
+        string? fingerprintPath,
+        SongIdCorpusEntry entry,
+        SongIdRun run,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(currentFingerprint) && !string.IsNullOrWhiteSpace(fingerprintPath))
+        {
+            var otherFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(fingerprintPath, cancellationToken).ConfigureAwait(false));
+            return CompareFingerprints(currentFingerprint, otherFingerprint);
+        }
+
+        return ComputeCorpusMetadataSimilarity(entry, run);
+    }
+
+    private static double ComputeCorpusMetadataSimilarity(SongIdCorpusEntry entry, SongIdRun run)
+    {
+        var realRecordingIds = run.Tracks
+            .Select(track => track.RecordingId?.Trim())
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !id.StartsWith("metadata:", StringComparison.OrdinalIgnoreCase))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(entry.RecordingId) && realRecordingIds.Contains(entry.RecordingId.Trim()))
+        {
+            return 0.93;
+        }
+
+        var runArtist = NormalizeSegmentQuery(run.Metadata.Artist);
+        var runTitle = NormalizeSegmentQuery(run.Metadata.Title);
+        var entryArtist = NormalizeSegmentQuery(entry.Artist);
+        var entryTitle = NormalizeSegmentQuery(entry.Title);
+        if (!string.IsNullOrWhiteSpace(runArtist) &&
+            !string.IsNullOrWhiteSpace(runTitle) &&
+            string.Equals(runArtist, entryArtist, StringComparison.Ordinal) &&
+            string.Equals(runTitle, entryTitle, StringComparison.Ordinal))
+        {
+            return 0.72;
+        }
+
+        var trackMetadataMatch = run.Tracks.Any(track =>
+            string.Equals(NormalizeSegmentQuery(track.Artist), entryArtist, StringComparison.Ordinal) &&
+            string.Equals(NormalizeSegmentQuery(track.Title), entryTitle, StringComparison.Ordinal));
+        if (trackMetadataMatch)
+        {
+            return 0.64;
+        }
+
+        var runLabel = NormalizeSegmentQuery(BuildBestQuery(run.Metadata.Artist, run.Metadata.Title));
+        var entryLabel = NormalizeSegmentQuery(entry.Label ?? entry.Source);
+        if (!string.IsNullOrWhiteSpace(runLabel) &&
+            !string.IsNullOrWhiteSpace(entryLabel) &&
+            string.Equals(runLabel, entryLabel, StringComparison.Ordinal))
+        {
+            return 0.41;
+        }
+
+        return 0.0;
     }
 
     private static async Task<SongIdCorpusEntry?> LoadCorpusEntryAsync(string metadataPath, CancellationToken cancellationToken)
