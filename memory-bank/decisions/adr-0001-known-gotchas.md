@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDB. Public Event Contracts Must Not Use No-Op Accessors
+
+**The Bug**: `LanDiscoveryService` implemented `ILanDiscoveryService.PeerDiscovered` with empty add/remove accessors. That means subscriptions appear to succeed, but the service drops every handler and can never deliver discovery notifications. The interface contract existed, but the implementation was effectively dead.
+
+**Files Affected**:
+- `src/slskd/Identity/LanDiscoveryService.cs`
+
+**Wrong**:
+```csharp
+public event EventHandler<DiscoveredPeer>? PeerDiscovered
+{
+    add { }
+    remove { }
+}
+```
+
+**Correct**:
+```csharp
+public event EventHandler<DiscoveredPeer>? PeerDiscovered;
+...
+peers.Add(peer);
+PeerDiscovered?.Invoke(this, peer);
+```
+
+**Why This Keeps Happening**: empty event accessors are an easy way to silence analyzers or satisfy an interface quickly, but they create a false contract: callers believe they are subscribed when nothing is retained. If an interface exposes an event, either implement real backing storage and raise it at the logical emission point, or remove the event from the contract entirely.
+
 ### 0xDC. Timer-Backed Callback Infrastructure Must Clear Shared State Before Invoking User Code
 
 **The Bug**: small callback helpers looked harmless, but they still held mutable shared state in exactly the wrong order. `TimedCounter` updated its count from arbitrary caller threads and the timer thread with plain reads/writes, which can lose increments. `RateLimiter` cleared `Staged` only after invoking the callback, so a throwing staged action remained queued forever and retried on every tick or flush.

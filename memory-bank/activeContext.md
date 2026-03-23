@@ -27,6 +27,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed `LanDiscoveryService.PeerDiscovered` so the event is no longer a no-op contract
+  - Tightened `LanDiscoveryServiceTests` to prove subscribers are retained and invoked
+  - Confirmed the focused identity slice passed (`7/7`) and the runtime build remains green
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened `TimedCounter` and `RateLimiter` callback/timer state handling
   - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`
   - Confirmed the focused slice passed (`2/2`) and the runtime build remains green
