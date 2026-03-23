@@ -165,6 +165,36 @@ public class ShareRepositoryModerationTests : IDisposable
     }
 
     [Fact]
+    public void Create_WithDiscardExisting_ClearsContentItems()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        _repository.InsertFile(
+            maskedFilename: "allowed.mp3",
+            originalFilename: "/tmp/allowed.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(1, "allowed.mp3", 1000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: false);
+
+        _repository.UpsertContentItem(
+            contentId: "cid:1",
+            domain: "audio",
+            workId: "work:1",
+            maskedFilename: "allowed.mp3",
+            isAdvertisable: true,
+            moderationReason: null,
+            checkedAt: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        Assert.Equal(1, _repository.CountAdvertisableItems());
+
+        _repository.Create(discardExisting: true);
+
+        Assert.Equal(0, _repository.CountAdvertisableItems());
+    }
+
+    [Fact]
     public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
     {
         using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");

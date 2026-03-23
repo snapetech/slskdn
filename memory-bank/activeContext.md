@@ -1060,3 +1060,11 @@ dotnet test
 - Next steps:
   - continue bughunting SQLite repositories that mix creation, validation, and liveness checks, especially where keepalive/corruption logic depends on a narrow hard-coded schema assumption
   - prioritize follow-on sweeps where repository-created indexes or auxiliary tables are validated differently than they are created
+
+## 2026-03-23 14:05 CST
+- Continued the same `SqliteShareRepository` schema lifecycle sweep into the reset path.
+- Fixed `Create(discardExisting: true)` so it now drops `content_items` before recreating the database instead of leaving stale content mappings behind across a supposed clean rebuild.
+- Extended `ShareScannerModerationTests` with a focused reset regression; confirmed the focused share-repository slice passed (`7/7`) and the release build stayed green (`0 warnings / 0 errors`).
+- Next steps:
+  - continue bughunting share-repository lifecycle seams where keepalive, validation, backup, or migration logic may still assume only the original core schema exists
+  - then widen back out to other repository/store types that own hand-written SQLite DDL plus separate health-check or reset code

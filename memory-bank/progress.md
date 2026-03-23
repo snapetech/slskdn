@@ -7041,3 +7041,11 @@ Code quality improvements were completed as part of Option A:
 - A freshly created share repository no longer reports itself invalid purely because the validator drifted behind the repository-owned schema.
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` to prove a clean newly created repository validates successfully.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`6/6`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 14:05 CST
+
+- Continued the same share-repository schema ownership sweep into the reset path.
+- Fixed `SqliteShareRepository.Create(discardExisting: true)` so it now drops `content_items` along with the original core tables before recreating the database.
+- A repository rebuild now actually starts from a clean slate instead of retaining stale advertisable content mappings from the previous schema instance.
+- Extended `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` with a focused reset regression proving `discardExisting: true` clears persisted content-item rows.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`7/7`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.

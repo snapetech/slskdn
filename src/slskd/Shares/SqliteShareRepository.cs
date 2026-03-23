@@ -167,7 +167,7 @@ namespace slskd.Shares
 
             if (discardExisting)
             {
-                conn.ExecuteNonQuery("DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS scans; DROP TABLE IF EXISTS directories; DROP TABLE IF EXISTS filenames; DROP TABLE IF EXISTS files;");
+                conn.ExecuteNonQuery("DROP TABLE IF EXISTS content_items; DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS scans; DROP TABLE IF EXISTS directories; DROP TABLE IF EXISTS filenames; DROP TABLE IF EXISTS files;");
             }
 
             conn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS version (a INTEGER PRIMARY KEY)");
