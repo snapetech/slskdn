@@ -16715,3 +16715,27 @@ sed -i "s/SHA256_SYSUSERS_PLACEHOLDER/${SYS_SUM}/g" PKGBUILD
 ```
 
 **Why This Keeps Happening**: placeholders for package artifacts look like “template-time only” values, so it is easy to treat them like version metadata and forget to replace them before publish. AUR metadata generation uses the whole PKGBUILD, so an unreplaced placeholder is enough to break packaging output.
+
+### 0k14I. AUR Checksum Verification Must Ignore Known Template Placeholders
+
+**The Bug**: the CI AUR checksum consistency check treated `PKGBUILD-dev`'s `SHA256_*_PLACEHOLDER` values as hard failures, making validation fail on PR/mainline work even though those placeholders are intentionally replaced only during the release publish path.
+
+**Files Affected**:
+- `.github/workflows/ci.yml`
+- `packaging/aur/PKGBUILD-dev`
+
+**Wrong**:
+```sh
+if [[ "${sums[$idx]:-}" != "SKIP" && "${sums[$idx]:-}" != "PLACEHOLDER" ]]; then
+    fail_validation
+fi
+```
+
+**Correct**:
+```sh
+if [[ "$expected" == *"PLACEHOLDER"* ]]; then
+    continue
+fi
+```
+
+**Why This Keeps Happening**: CI often validates a strict static contract for packaging metadata, but template PKGBUILDs are intentionally incomplete until release-time replacement. Validation should enforce real hash stability where the value is expected to be immutable, while explicitly tolerating placeholder tokens where those are part of the release pipeline contract.
