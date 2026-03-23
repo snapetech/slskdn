@@ -71,6 +71,14 @@ namespace slskd
         private readonly List<IDisposable> _changeRegistrations = new();
         private CancellationTokenSource? _startupInitializationCts;
         private Task? _startupInitializationTask;
+        private ConsoleCancelEventHandler? _cancelKeyPressHandler;
+        private EventHandler<LogRecord>? _programLogEmittedHandler;
+        private EventHandler<string>? _privateRoomMembershipAddedHandler;
+        private EventHandler<string>? _privateRoomMembershipRemovedHandler;
+        private EventHandler<string>? _privateRoomModerationAddedHandler;
+        private EventHandler<string>? _privateRoomModerationRemovedHandler;
+        private EventHandler<DownloadDeniedEventArgs>? _downloadDeniedHandler;
+        private EventHandler<DownloadFailedEventArgs>? _downloadFailedHandler;
 
         /// <summary>
         ///     The name of the default user group.
@@ -127,12 +135,13 @@ namespace slskd
         {
             Log.Information("[Application] Constructor called");
             Log.Information("[Application] Setting up event handlers...");
-            Console.CancelKeyPress += (_, args) =>
+            _cancelKeyPressHandler = (_, args) =>
             {
                 ShuttingDown = true;
                 Program.MasterCancellationTokenSource.Cancel();
                 Log.Warning("Received SIGINT");
             };
+            Console.CancelKeyPress += _cancelKeyPressHandler;
 
             foreach (var signal in new[] { PosixSignal.SIGINT, PosixSignal.SIGQUIT, PosixSignal.SIGTERM })
             {
@@ -194,7 +203,8 @@ namespace slskd
 
             LogHub = logHub;
             TransfersHub = transfersHub;
-            Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
+            _programLogEmittedHandler = (_, log) => LogHub.EmitLogAsync(log);
+            Program.LogEmitted += _programLogEmittedHandler;
 
             EventBus = eventBus;
             EventService = eventService;
@@ -213,10 +223,14 @@ namespace slskd
             Client.UserStatusChanged += Client_UserStatusChanged;
             Client.PrivateMessageReceived += Client_PrivateMessageReceived;
 
-            Client.PrivateRoomMembershipAdded += (e, room) => Log.Information("Added to private room {Room}", room);
-            Client.PrivateRoomMembershipRemoved += (e, room) => Log.Information("Removed from private room {Room}", room);
-            Client.PrivateRoomModerationAdded += (e, room) => Log.Information("Promoted to moderator in private room {Room}", room);
-            Client.PrivateRoomModerationRemoved += (e, room) => Log.Information("Demoted from moderator in private room {Room}", room);
+            _privateRoomMembershipAddedHandler = (e, room) => Log.Information("Added to private room {Room}", room);
+            _privateRoomMembershipRemovedHandler = (e, room) => Log.Information("Removed from private room {Room}", room);
+            _privateRoomModerationAddedHandler = (e, room) => Log.Information("Promoted to moderator in private room {Room}", room);
+            _privateRoomModerationRemovedHandler = (e, room) => Log.Information("Demoted from moderator in private room {Room}", room);
+            Client.PrivateRoomMembershipAdded += _privateRoomMembershipAddedHandler;
+            Client.PrivateRoomMembershipRemoved += _privateRoomMembershipRemovedHandler;
+            Client.PrivateRoomModerationAdded += _privateRoomModerationAddedHandler;
+            Client.PrivateRoomModerationRemoved += _privateRoomModerationRemovedHandler;
 
             Client.RoomMessageReceived += Client_RoomMessageReceived;
             Client.Disconnected += Client_Disconnected;
@@ -224,8 +238,10 @@ namespace slskd
             Client.LoggedIn += Client_LoggedIn;
             Client.StateChanged += Client_StateChanged;
             Client.DistributedNetworkStateChanged += Client_DistributedNetworkStateChanged;
-            Client.DownloadDenied += (e, args) => Log.Error("Download of {Filename} from {Username} was denied by the remote user: {Message}", args.Filename, args.Username, args.Message);
-            Client.DownloadFailed += (e, args) => Log.Error("Download of {Filename} from {Username} reported as failed by the remote user", args.Filename, args.Username);
+            _downloadDeniedHandler = (e, args) => Log.Error("Download of {Filename} from {Username} was denied by the remote user: {Message}", args.Filename, args.Username, args.Message);
+            _downloadFailedHandler = (e, args) => Log.Error("Download of {Filename} from {Username} reported as failed by the remote user", args.Filename, args.Username);
+            Client.DownloadDenied += _downloadDeniedHandler;
+            Client.DownloadFailed += _downloadFailedHandler;
 
             Client.ExcludedSearchPhrasesReceived += Client_ExcludedSearchPhrasesReceived;
 
@@ -2351,6 +2367,76 @@ namespace slskd
 
         public void Dispose()
         {
+            if (_cancelKeyPressHandler != null)
+            {
+                Console.CancelKeyPress -= _cancelKeyPressHandler;
+                _cancelKeyPressHandler = null;
+            }
+
+            if (_programLogEmittedHandler != null)
+            {
+                Program.LogEmitted -= _programLogEmittedHandler;
+                _programLogEmittedHandler = null;
+            }
+
+            Clock.EveryMinute -= Clock_EveryMinute;
+            Clock.EveryThirtySeconds -= Clock_EveryThirtySeconds;
+            Clock.EveryFiveMinutes -= Clock_EveryFiveMinutes;
+            Clock.EveryThirtyMinutes -= Clock_EveryThirtyMinutes;
+            Clock.EveryHour -= Clock_EveryHour;
+
+            Client.DiagnosticGenerated -= Client_DiagnosticGenerated;
+            Client.TransferStateChanged -= Client_TransferStateChanged;
+            Client.TransferProgressUpdated -= Client_TransferProgressUpdated;
+            Client.BrowseProgressUpdated -= Client_BrowseProgressUpdated;
+            Client.UserStatusChanged -= Client_UserStatusChanged;
+            Client.PrivateMessageReceived -= Client_PrivateMessageReceived;
+
+            if (_privateRoomMembershipAddedHandler != null)
+            {
+                Client.PrivateRoomMembershipAdded -= _privateRoomMembershipAddedHandler;
+                _privateRoomMembershipAddedHandler = null;
+            }
+
+            if (_privateRoomMembershipRemovedHandler != null)
+            {
+                Client.PrivateRoomMembershipRemoved -= _privateRoomMembershipRemovedHandler;
+                _privateRoomMembershipRemovedHandler = null;
+            }
+
+            if (_privateRoomModerationAddedHandler != null)
+            {
+                Client.PrivateRoomModerationAdded -= _privateRoomModerationAddedHandler;
+                _privateRoomModerationAddedHandler = null;
+            }
+
+            if (_privateRoomModerationRemovedHandler != null)
+            {
+                Client.PrivateRoomModerationRemoved -= _privateRoomModerationRemovedHandler;
+                _privateRoomModerationRemovedHandler = null;
+            }
+
+            Client.RoomMessageReceived -= Client_RoomMessageReceived;
+            Client.Disconnected -= Client_Disconnected;
+            Client.Connected -= Client_Connected;
+            Client.LoggedIn -= Client_LoggedIn;
+            Client.StateChanged -= Client_StateChanged;
+            Client.DistributedNetworkStateChanged -= Client_DistributedNetworkStateChanged;
+
+            if (_downloadDeniedHandler != null)
+            {
+                Client.DownloadDenied -= _downloadDeniedHandler;
+                _downloadDeniedHandler = null;
+            }
+
+            if (_downloadFailedHandler != null)
+            {
+                Client.DownloadFailed -= _downloadFailedHandler;
+                _downloadFailedHandler = null;
+            }
+
+            Client.ExcludedSearchPhrasesReceived -= Client_ExcludedSearchPhrasesReceived;
+
             foreach (var registration in _changeRegistrations)
             {
                 registration.Dispose();

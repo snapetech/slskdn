@@ -39,7 +39,7 @@ namespace slskd.Transfers.Downloads
     /// <summary>
     ///     Manages downloads.
     /// </summary>
-    public interface IDownloadService
+    public interface IDownloadService : IDisposable
     {
         /// <summary>
         ///     Adds the specified <paramref name="transfer"/>. Supersedes any existing record for the same file and username.
@@ -135,6 +135,9 @@ namespace slskd.Transfers.Downloads
     /// </summary>
     public class DownloadService : IDownloadService
     {
+        private readonly EventHandler<ClockEventArgs> _cleanupEnqueueSemaphoresHandler;
+        private bool _disposed;
+
         public DownloadService(
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
@@ -154,9 +157,10 @@ namespace slskd.Transfers.Downloads
             EventBus = eventBus;
             PeerMetrics = peerMetricsService;
 
-            Clock.EveryMinute += (_, _) => _ = ObserveBackgroundTaskAsync(
+            _cleanupEnqueueSemaphoresHandler = (_, _) => _ = ObserveBackgroundTaskAsync(
                 Task.Run(() => CleanupEnqueueSemaphoresAsync(), CancellationToken.None),
                 "Failed to clean up download enqueue semaphores");
+            Clock.EveryMinute += _cleanupEnqueueSemaphoresHandler;
         }
 
         /// <summary>
@@ -212,6 +216,46 @@ namespace slskd.Transfers.Downloads
         ///     removed from the dictionary and discarded.
         /// </summary>
         private SemaphoreSlim EnqueueSemaphoreSyncRoot { get; } = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed || !disposing)
+            {
+                return;
+            }
+
+            Clock.EveryMinute -= _cleanupEnqueueSemaphoresHandler;
+
+            foreach (var cancellationTokenSource in CancellationTokens.Values)
+            {
+                cancellationTokenSource.Cancel();
+                cancellationTokenSource.Dispose();
+            }
+
+            CancellationTokens.Clear();
+
+            foreach (var enqueueSemaphore in EnqueueSemaphores.Values)
+            {
+                enqueueSemaphore.Dispose();
+            }
+
+            EnqueueSemaphores.Clear();
+            EnqueueSemaphoreSyncRoot.Dispose();
+            _disposed = true;
+        }
 
         /// <summary>
         ///     Adds the specified <paramref name="transfer"/>. Supersedes any existing record for the same file and username.

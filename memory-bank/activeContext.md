@@ -27,6 +27,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the ownership sweep into global/static event owners:
+    - `Application` now retains removable log/client lambdas and unsubscribes all clock + Soulseek event hooks during disposal
+    - `DownloadService` now exposes disposal, detaches its `Clock.EveryMinute` cleanup callback, and releases owned cancellation token sources / semaphores on teardown
+  - Extended `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs` and added `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs` for static-event listener-count and client-unsubscription coverage
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~DownloadServiceTests"` passed (`4/4`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`)
   - Continued the singleton event-ownership sweep across direct `ISoulseekClient` subscribers:
     - `RoomService` now exposes disposal and unsubscribes its login/room handlers on teardown
     - `ShareGrantAnnouncementService` now detaches its private-message subscription on disposal

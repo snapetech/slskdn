@@ -7120,3 +7120,11 @@ Code quality improvements were completed as part of Option A:
 - `ShareGrantAnnouncementService` now unsubscribes its private-message listener when disposed, and `SoulseekChatBridge` now exposes disposal and detaches its room-message bridge subscription with a proper sealed disposal pattern.
 - Added focused regressions in `tests/slskd.Tests.Unit/Messaging/RoomServiceTests.cs`, `tests/slskd.Tests.Unit/Sharing/ShareGrantAnnouncementServiceTests.cs`, and `tests/slskd.Tests.Unit/PodCore/SoulseekChatBridgeTests.cs`.
 - Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~RoomServiceTests|FullyQualifiedName~ShareGrantAnnouncementServiceTests|FullyQualifiedName~SoulseekChatBridgeTests"` passed (`5/5`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+## 2026-03-23 18:02 CST
+
+- Continued from singleton client subscribers into global event owners instead of treating the static clock/log hooks as separate one-offs.
+- `Application` now retains removable global/client delegates for `Program.LogEmitted`, the private-room/download-denied lambdas, and unsubscribes all clock and Soulseek client handlers during `Dispose()`.
+- `DownloadService` now exposes disposal through `IDownloadService : IDisposable`, detaches its `Clock.EveryMinute` cleanup handler, and releases owned cancellation-token sources and semaphores on teardown using the standard dispose pattern.
+- Added focused regressions in `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs` and new `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs` covering static-event listener counts and Soulseek event unsubscription.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~DownloadServiceTests"` passed (`4/4`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
