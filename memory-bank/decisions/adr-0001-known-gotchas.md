@@ -236,6 +236,26 @@ var agreed = groups.FirstOrDefault(g => g.Count() >= requiredAgreements);
 
 **Why This Keeps Happening**: distributed code often starts from the single-caller ideal case, so duplicate requests are treated as programmer error and quorum thresholds are treated as absolute policy. In practice, callers race and peer sets are sparse. Reuse existing in-flight waiters and calculate quorum from the peers you actually queried, or the runtime will invent failures on small healthy meshes.
 
+### 0xC5. Do Not Null Out Transferred Ownership Objects On The Success Path
+
+**The Bug**: a successful mesh connection was registered, logged, and then set to `null` immediately before returning. The function therefore reported failure to its caller even though the connection had actually succeeded and been handed off elsewhere.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+
+**Wrong**:
+```csharp
+connection = null;
+return connection;
+```
+
+**Correct**:
+```csharp
+return connection;
+```
+
+**Why This Keeps Happening**: cleanup patterns from failure paths get copied into success paths without reevaluating ownership. If the method is transferring a live object to its caller or registry, do not clear the reference before returning unless you are intentionally changing the public result contract. Otherwise you create “successful failure” behavior that is hard to spot from logs alone.
+
 ### 0xC1. Small Utility Controllers Still Need Input Normalization Before Dispatch
 
 **The Bug**: low-traffic helper controllers were still forwarding raw route, query, and body strings straight into services. That let whitespace-only values slip through validation, turned padded identifiers into different storage keys, and in some cases converted simple bad input into service-level exceptions and `500`s.
