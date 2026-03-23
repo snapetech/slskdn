@@ -85,13 +85,13 @@ jobs:
         run: |
           aur_dir="packaging/aur"
           fail=0
-          for pkgbuild in PKGBUILD PKGBUILD-bin; do
+          for pkgbuild in PKGBUILD PKGBUILD-bin PKGBUILD-dev; do
             pb="$aur_dir/$pkgbuild"
             [[ -f "$pb" ]] || continue
             sums_line=$(grep '^sha256sums=' "$pb" | head -1)
             sums=( $(echo "$sums_line" | grep -oP "(?<=')[^']+(?=')" ) )
-            if [[ "$pkgbuild" == "PKGBUILD-bin" && "${sums[0]:-}" != "SKIP" ]]; then
-              echo "::error::PKGBUILD-bin should keep the archive checksum on SKIP"
+            if [[ "${sums[0]:-}" != "SKIP" ]]; then
+              echo "::error::${pkgbuild} should keep the archive checksum on SKIP"
               fail=1
             fi
             declare -A files=( [1]="slskd.service" [2]="slskd.yml" [3]="slskd.sysusers" )

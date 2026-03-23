@@ -10,10 +10,24 @@ fail() {
     exit 1
 }
 
+fail_if_empty() {
+    local value="$1"
+    local label="$2"
+    if [[ -z "$value" ]]; then
+        fail "${label} is missing"
+    fi
+}
+
 expect_line() {
     local file="$1"
     local pattern="$2"
     grep -Eq -- "$pattern" "$file" || fail "$file is missing pattern: $pattern"
+}
+
+expect_literal() {
+    local file="$1"
+    local pattern="$2"
+    grep -Fq -- "$pattern" "$file" || fail "$file is missing literal: $pattern"
 }
 
 reject_line() {
@@ -48,13 +62,55 @@ expect_line packaging/winget/snapetech.slskdn-dev.installer.yaml 'PortableComman
 expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^PackageIdentifier: snapetech\.slskdn-dev$'
 expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^Moniker: slskdn-dev$'
 
+expect_line packaging/homebrew/Formula/slskdn.rb '^class Slskdn < Formula$'
+expect_line packaging/snap/snapcraft.yaml '^name: slskdn$'
+
 reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
 expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-x64\.zip'
 expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
 
 bash packaging/scripts/validate-release-copy.sh
 
-expect_line packaging/chocolatey/slskdn.nuspec '<version>0\.24\.5-slskdn\.52</version>'
-expect_line packaging/chocolatey/tools/chocolateyinstall\.ps1 'releases/download/0\.24\.5-slskdn\.52/slskdn-main-win-x64\.zip'
+CHOC_VERSION=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n 1)
+if [[ -z "${CHOC_VERSION}" ]]; then
+  fail "Could not extract Chocolatey version from packaging/chocolatey/slskdn.nuspec"
+fi
+
+HOMEBREW_VERSION=$(sed -n 's#^  version "\([^"]*\)"#\1#p' packaging/homebrew/Formula/slskdn.rb | head -n 1)
+fail_if_empty "$HOMEBREW_VERSION" "Homebrew version"
+
+HOME_URL_VERSIONS_COUNT=0
+while IFS= read -r homebrew_release; do
+  ((HOME_URL_VERSIONS_COUNT += 1))
+  if [[ "$homebrew_release" != "$HOMEBREW_VERSION" ]]; then
+    fail "Homebrew formula URL release (${homebrew_release}) does not match version ${HOMEBREW_VERSION}"
+  fi
+done < <(sed -n "s#.*releases/download/\([^/]*\)/.*#\1#p" packaging/homebrew/Formula/slskdn.rb | grep -v '^$')
+
+if [[ "$HOME_URL_VERSIONS_COUNT" -ne 3 ]]; then
+  fail "Homebrew formula should have exactly 3 release URLs, found $HOME_URL_VERSIONS_COUNT"
+fi
+
+SNAP_VERSION=$(sed -n "s#^version: '\([^']*\)'#\1#p" packaging/snap/snapcraft.yaml | head -n 1)
+fail_if_empty "$SNAP_VERSION" "Snap version"
+if ! grep -q "releases/download/${SNAP_VERSION}/" packaging/snap/snapcraft.yaml; then
+  fail "Snapcraft source URL should contain version ${SNAP_VERSION}"
+fi
+
+expect_literal packaging/chocolatey/slskdn.nuspec "<version>${CHOC_VERSION}</version>"
+expect_literal packaging/chocolatey/tools/chocolateyinstall.ps1 "releases/download/${CHOC_VERSION}/slskdn-main-win-x64.zip"
+
+CHOC_CHECKSUM=$(sed -n 's#^\$checksum\s*=\s*\"\([^\"]*\)\"#\1#p' packaging/chocolatey/tools/chocolateyinstall.ps1 | head -n 1)
+if [[ -z "${CHOC_CHECKSUM}" ]]; then
+  fail "Could not extract checksum from packaging/chocolatey/tools/chocolateyinstall.ps1"
+fi
+
+if [[ "${#CHOC_CHECKSUM}" -ne 64 ]]; then
+  fail "Chocolatey checksum in packaging/chocolatey/tools/chocolateyinstall.ps1 must be a 64-char SHA-256"
+fi
+
+if [[ ! "$CHOC_CHECKSUM" =~ ^[a-fA-F0-9]{64}$ ]]; then
+  fail "Chocolatey checksum in packaging/chocolatey/tools/chocolateyinstall.ps1 must be hex"
+fi
 
 echo "Packaging metadata validation passed."
