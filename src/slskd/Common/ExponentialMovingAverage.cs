@@ -19,6 +19,7 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 using System;
+using Serilog;
 
 namespace slskd
 {
@@ -68,7 +69,15 @@ namespace slskd
         {
             Value = !Initialized ? value : ((value - Value) * SmoothingFactor) + Value;
             Initialized = true;
-            OnUpdate?.Invoke(Value);
+
+            try
+            {
+                OnUpdate?.Invoke(Value);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "ExponentialMovingAverage update callback failed");
+            }
         }
     }
 }

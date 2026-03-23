@@ -2,6 +2,7 @@ namespace slskd.Tests.Unit.Core;
 
 using System;
 using System.Reflection;
+using Serilog.Events;
 using Xunit;
 
 public class CallbackInfrastructureTests
@@ -119,5 +120,55 @@ public class CallbackInfrastructureTests
 
         Assert.Equal(2, attempts);
         Assert.Equal(0, counter.Count);
+    }
+
+    [Fact]
+    public void ExponentialMovingAverage_WhenOnUpdateThrows_StillUpdatesValueAndAllowsLaterUpdates()
+    {
+        var attempts = 0;
+        var average = new ExponentialMovingAverage(0.5, _ =>
+        {
+            attempts++;
+            if (attempts == 1)
+            {
+                throw new InvalidOperationException("boom");
+            }
+        });
+
+        average.Update(10);
+
+        Assert.True(average.Initialized);
+        Assert.Equal(10, average.Value);
+
+        average.Update(20);
+
+        Assert.Equal(2, attempts);
+        Assert.Equal(15, average.Value);
+    }
+
+    [Fact]
+    public void DelegatingSink_WhenObserverThrows_SwallowsFailureAndAllowsLaterEmit()
+    {
+        var attempts = 0;
+        var sink = new DelegatingSink(_ =>
+        {
+            attempts++;
+            if (attempts == 1)
+            {
+                throw new InvalidOperationException("boom");
+            }
+        });
+
+        var logEvent = new LogEvent(
+            DateTimeOffset.UtcNow,
+            LogEventLevel.Information,
+            exception: null,
+            MessageTemplate.Empty,
+            []);
+
+        sink.Emit(logEvent);
+        sink.Emit(logEvent);
+
+        Assert.Equal(2, attempts);
     }
 }

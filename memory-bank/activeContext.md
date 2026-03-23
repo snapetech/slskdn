@@ -23,10 +23,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Fix Arch/AUR release brittleness caused by mutable GitHub asset checksums, then resume the broader helper/control-path bughunt
+- **Current Task**: Continue bughunting broader helper/control-path patterns where ancillary callbacks can still poison primary runtime behavior
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Completed the in-progress metrics/logging helper isolation batch:
+    - `ExponentialMovingAverage.Update(...)` now isolates `onUpdate` observer failures after updating internal state
+    - `DelegatingSink.Emit(...)` now swallows observer delegate failures so log observers cannot break the sink pipeline
+  - Extended `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs` with focused regressions for EMA observer failures and delegating sink observer failures
+  - Confirmed the focused callback-infrastructure slice passed (`7/7`) and the runtime release build remained green (`0 warnings / 0 errors`)
   - Investigated the reported Arch `makepkg` failure for `slskdn-bin` `0.24.5.slskdn.97`:
     - cloned the live AUR `slskdn-bin` package and verified it currently pins SHA256 `ada54ed76a8e32cdbf35cbed422a62eba079c4766677ec63d384554d36da241e`
     - downloaded the live GitHub asset `slskdn-main-linux-x64.zip` for release `0.24.5-slskdn.97` and confirmed it currently hashes to the same value

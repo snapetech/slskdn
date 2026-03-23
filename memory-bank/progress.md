@@ -23,6 +23,21 @@
 - Publish the workflow fix in the next stable release so future `slskdn-bin` AUR updates stop pinning mutable GitHub asset hashes.
 - For the already-published `.97` package, users with stale cached source zips may still need to clear their AUR cache and redownload.
 
+## 2026-03-23 13:51 - Metrics and logging observer isolation pass
+
+### Completed
+- Documented a new gotcha for metrics/logging helper callbacks that were allowed to throw back into the helper plumbing.
+- Hardened `ExponentialMovingAverage` so `onUpdate` observer failures are logged and isolated after the value update instead of making successful metric updates throw.
+- Hardened `DelegatingSink` so a throwing observer delegate cannot break the Serilog sink pipeline.
+- Extended `CallbackInfrastructureTests` with focused regressions for both helper types.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~CallbackInfrastructureTests"` passed (`7/7`).
+- `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+### Remaining
+- Continue the broader helper/control-path sweep for other observer or callback adapters that still let ancillary delegates poison the primary path.
+
 ## 2026-03-23 13:20 - Broader helper callback-failure isolation pass
 
 ### Completed

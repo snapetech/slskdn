@@ -35,7 +35,14 @@ namespace slskd
 
         public void Emit(LogEvent logEvent)
         {
-            Action(logEvent);
+            try
+            {
+                Action(logEvent);
+            }
+            catch
+            {
+                // sink observers must not break the logging pipeline
+            }
         }
     }
 }
