@@ -5963,3 +5963,11 @@ Code quality improvements were completed as part of Option A:
 - Fixed `MeshSyncService` so the not-implemented failure path no longer exposes the local sequence number in `result.Error`.
 - Added focused unit coverage for invalid certificate validation and sanitized mesh-sync transport failure text.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for validation/runtime state leakage.
+
+## 2026-03-22 18:01 - PodCore and VSF read-side normalization pass
+
+- Fixed `PeerResolutionService` so peer IDs and usernames are normalized before lookup, caching, and fallback, which stops whitespace-drifted peer IDs from missing DHT/cache hits or returning padded usernames.
+- Fixed `PodDiscovery` so discovery ignores blank pod IDs, trims query/tag/content filters, and short-circuits non-positive limits instead of doing useless DHT work.
+- Fixed `SqliteSourceRegistry` so rows with blank backend refs are deleted during reads instead of being served as valid source candidates.
+- Added focused unit coverage for the normalized peer-resolution fallback, trimmed pod discovery filters, non-positive pod-discovery limits, and invalid source-candidate cleanup.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for read-side key normalization drift.

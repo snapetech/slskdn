@@ -12626,3 +12626,29 @@ result.Error = "Mesh sync transport is not implemented";
 ```
 
 **Why This Keeps Happening**: “helpful” validation and fallback messages tend to accumulate internal context over time. But these are still public contracts. Never include certificate parser details, local counters, sequence numbers, or similar runtime state in user-visible error text.
+
+### 0k88. Read-Side Registries Must Normalize Keys Before Lookup And Before Serving Cached Rows
+
+**The Bug**: peer resolution, pod discovery, and source-registry reads were still trusting raw stored/requested keys. That caused trimmed identifiers to miss cache/DHT hits, blank pod IDs in indexes to trigger useless lookups, and source candidates with blank backend refs to survive as apparently valid read-side records.
+
+**Files Affected**:
+- `src/slskd/PodCore/PeerResolutionService.cs`
+- `src/slskd/PodCore/PodDiscovery.cs`
+- `src/slskd/VirtualSoulfind/v2/Sources/SqliteSourceRegistry.cs`
+
+**Wrong**:
+```csharp
+var dhtKey = $"{PeerMetadataPrefix}{peerId}";
+var tasks = index.PodIds.Select(...);
+BackendRef = reader.GetString(3),
+```
+
+**Correct**:
+```csharp
+var normalizedPeerId = peerId.Trim();
+var uniquePodIds = index.PodIds.Where(...).Select(p => p.Trim()).Distinct(...);
+var backendRef = reader.GetString(3).Trim();
+if (string.IsNullOrWhiteSpace(backendRef)) { ... delete row ... }
+```
+
+**Why This Keeps Happening**: read-side code looks low-risk because it is “just fetching data,” but once malformed or whitespace-drifted keys enter storage, every lookup path starts silently under-reporting. Normalize request keys and persisted identifiers on the read boundary before treating data as valid.

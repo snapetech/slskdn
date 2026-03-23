@@ -220,3 +220,7 @@ dotnet test
 ## 2026-03-22 17:53
 - Sanitized certificate validation and mesh-sync fallback messages that were still exposing internal parser/runtime state.
 - Next: continue the broader bughunt from the next clean head, focusing on remaining placeholder/null-heavy runtime paths rather than message leakage.
+
+## 2026-03-22 18:01
+- Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.
+- Next: keep widening through remaining placeholder/null-heavy runtime paths in PodCore, VirtualSoulfind, and Mesh.
