@@ -6022,3 +6022,10 @@ Code quality improvements were completed as part of Option A:
 - `SongIdScoring.NormalizeLooseText(...)` now normalizes `feat/ft/featuring` and `&` variants so corpus and loose-text scoring stop undercounting obvious equivalent artist strings.
 - Added focused SongID tests covering trimmed corpus fingerprint paths, deterministic excerpt selection, trimmed tool-locator env vars, and loose-text equivalence normalization.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for trimmed helper locator paths.
+
+## 2026-03-22 18:42 - MeshSync waiter reuse and adaptive quorum
+
+- `MeshSyncService` now reuses existing in-flight REQKEY and REQCHUNK waiters instead of failing duplicate callers while the first request is still pending.
+- Mesh hash lookup consensus now adapts the required agreement count to the number of peers actually queried, so small healthy meshes no longer fail impossible quorums.
+- Added focused regression coverage for duplicate pending key/chunk requests and for adaptive consensus on a two-peer mesh with a stricter configured quorum.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for waiter reuse and adaptive quorum.

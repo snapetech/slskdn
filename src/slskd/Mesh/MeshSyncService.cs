@@ -303,8 +303,11 @@ namespace slskd.Mesh
             var tcs = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (!pendingChunkRequests.TryAdd(key, tcs))
             {
-                log.Warning("[MESH] Duplicate chunk request for {Key} from {Peer}", key, peer);
-                return (null, false);
+                log.Debug("[MESH] Reusing pending chunk request for {Key} from {Peer}", key, peer);
+                if (!pendingChunkRequests.TryGetValue(key, out tcs))
+                {
+                    return (null, false);
+                }
             }
 
             try
@@ -640,7 +643,8 @@ namespace slskd.Mesh
                 return null;
             }
 
-            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key} (consensus: minAgreements={Min})", meshPeers.Count, flacKey, minAgreements);
+            var requiredAgreements = Math.Max(1, Math.Min(minAgreements, meshPeers.Count));
+            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key} (consensus: requiredAgreements={Min})", meshPeers.Count, flacKey, requiredAgreements);
 
             // Query peers in parallel
             var queryTasks = meshPeers.Select(async peer =>
@@ -664,7 +668,7 @@ namespace slskd.Mesh
                 .Select(r => r!)
                 .GroupBy(r => (r.FlacKey ?? string.Empty, r.ByteHash ?? string.Empty, r.Size))
                 .ToList();
-            var agreed = groups.FirstOrDefault(g => g.Count() >= minAgreements);
+            var agreed = groups.FirstOrDefault(g => g.Count() >= requiredAgreements);
             var foundEntry = agreed?.FirstOrDefault();
 
             if (foundEntry != null)
@@ -731,8 +735,11 @@ namespace slskd.Mesh
             // Register pending request
             if (!pendingRequests.TryAdd(requestId, tcs))
             {
-                log.Warning("[MESH] Duplicate request for key {Key} to peer {Peer}", flacKey, username);
-                return null;
+                log.Debug("[MESH] Reusing pending request for key {Key} to peer {Peer}", flacKey, username);
+                if (!pendingRequests.TryGetValue(requestId, out tcs))
+                {
+                    return null;
+                }
             }
 
             try

@@ -681,6 +681,93 @@ namespace slskd.Tests.Unit.Mesh
             }
         }
 
+        [Fact]
+        public async Task LookupHashAsync_UsesAvailablePeerCountForConsensusThreshold()
+        {
+            var flacKey = "0123456789abcdef";
+            var entry = new MeshHashEntry { FlacKey = flacKey, ByteHash = "ab".PadRight(64, '0'), Size = 100, SeqId = 1 };
+            ConsensusQueryResponses["p1"] = entry;
+            ConsensusQueryResponses["p2"] = entry;
+
+            try
+            {
+                var opts = Options.Create(new MeshSyncSecurityOptions { ConsensusMinPeers = 5, ConsensusMinAgreements = 3 });
+                var svc = CreateTestableMeshSyncService(opts);
+                SeedPeers(svc, "p1", "p2");
+
+                var result = await svc.LookupHashAsync(flacKey);
+
+                Assert.NotNull(result);
+                Assert.Equal(flacKey, result.FlacKey);
+            }
+            finally
+            {
+                ConsensusQueryResponses.Clear();
+            }
+        }
+
+        [Fact]
+        public async Task QueryPeerForHashAsync_DuplicatePendingRequestReusesExistingWaiter()
+        {
+            mockCapabilities
+                .Setup(c => c.GetPeerCapabilities("mesh-peer"))
+                .Returns(new PeerCapabilities
+                {
+                    ClientVersion = "1.0.0",
+                    Flags = PeerCapabilityFlags.SupportsMeshSync,
+                });
+
+            var pendingRequestsField = typeof(MeshSyncService).GetField("pendingRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(pendingRequestsField);
+            var pendingRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>>)pendingRequestsField!.GetValue(meshSyncService)!;
+
+            var requestId = "mesh-peer:0123456789abcdef";
+            var existing = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            pendingRequests[requestId] = existing;
+
+            var method = typeof(MeshSyncService).GetMethod("QueryPeerForHashAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(method);
+
+            var task = (Task<MeshHashEntry?>)method!.Invoke(meshSyncService, new object[] { "mesh-peer", "0123456789abcdef", CancellationToken.None })!;
+            existing.SetResult(new MeshRespKeyMessage
+            {
+                FlacKey = "0123456789abcdef",
+                Found = true,
+                Entry = new MeshHashEntry { FlacKey = "0123456789abcdef", ByteHash = "ab".PadRight(64, '0'), Size = 123, SeqId = 1 },
+            });
+
+            var result = await task;
+
+            Assert.NotNull(result);
+            Assert.Equal(123, result.Size);
+        }
+
+        [Fact]
+        public async Task RequestChunkAsync_DuplicatePendingRequestReusesExistingWaiter()
+        {
+            var pendingChunkRequestsField = typeof(MeshSyncService).GetField("pendingChunkRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(pendingChunkRequestsField);
+            var pendingChunkRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>>)pendingChunkRequestsField!.GetValue(meshSyncService)!;
+
+            var requestId = "mesh-peer:0123456789abcdef:0";
+            var existing = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            pendingChunkRequests[requestId] = existing;
+
+            var task = meshSyncService.RequestChunkAsync("mesh-peer", "0123456789abcdef", 0, 1024, CancellationToken.None);
+            existing.SetResult(new MeshRespChunkMessage
+            {
+                FlacKey = "0123456789abcdef",
+                Offset = 0,
+                DataBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3 }),
+                Success = true,
+            });
+
+            var result = await task;
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.DataBase64);
+        }
+
         #endregion
 
         private MeshSyncService CreateMeshSyncService(
