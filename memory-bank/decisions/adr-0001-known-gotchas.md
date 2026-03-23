@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD4. Controller Validation And NotFound Replies Should Not Teach Callers About Usernames, Enum Sets, Or Source Counts
+
+**The Bug**: several controller actions were still turning exact lookup misses or validation details into public response text. That leaked usernames from cached search drill-down, relay agent names, enum option sets, and exact source-count thresholds in multi-source download flows.
+
+**Files Affected**:
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+- `src/slskd/Relay/API/Controllers/RelayController.cs`
+- `src/slskd/Events/API/EventsController.cs`
+- `src/slskd/Telemetry/API/ReportsController.cs`
+
+**Wrong**:
+```csharp
+return NotFound($"User '{username}' not found in last search results");
+return NotFound($"Agent {agentName} is not registered");
+return BadRequest($"Unknown event type '{type}'; must be one of {string.Join(", ", names)}");
+return BadRequest($"Not enough sources ({sources.Count}). Need at least 2.");
+```
+
+**Correct**:
+```csharp
+return NotFound("User not found in last search results");
+return NotFound("Agent is not registered");
+return BadRequest("Unknown event type");
+return BadRequest("Not enough sources for swarm download");
+```
+
+**Why This Keeps Happening**: controller code sits close to parsed route/query values and validation branches, so it is tempting to return the exact failed input or threshold to be “helpful.” On release-facing boundaries that turns attacker-controlled or operational detail into part of the public contract. Keep the reply at the category level and log specifics internally.
+
 ### 0xD3. ProblemDetails At Search/Action Boundaries Should Not Echo Raw IDs, Indexes, Or Content Keys
 
 **The Bug**: action-routing endpoints were returning helpful but over-specific `ProblemDetails.Detail` strings that embedded search IDs, response indexes, file indexes, item IDs, and content IDs. That turns user-controlled or internal locator data into part of the public error contract.
