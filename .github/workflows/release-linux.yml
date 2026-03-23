@@ -103,7 +103,7 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT
 
-      - name: Download and Calculate SHA256 from Release
+      - name: Wait for Linux Release Asset
         id: sha
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -154,7 +154,8 @@ jobs:
           # Update binary package PKGBUILD
           # source=() order: zip slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD-bin
-          sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
+          # keep binary archive hash on SKIP since release assets are mutable and can be replaced in-place
+          sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
 
           # Update source package PKGBUILD (tarball is SKIP, static file hashes are the same)
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD

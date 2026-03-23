@@ -16586,3 +16586,22 @@ while (true)
 ```
 
 **Why This Keeps Happening**: atomic dictionary operations do not make a composite check-update sequence safe by themselves. Burst traffic reproduces these races rarely in development and frequently in production, so they get missed unless there is explicit concurrent regression coverage.
+
+### 0k14E. AUR Binary Package Hash Should Remain SKIP After Mutable Release Assets
+
+**The Bug**: `release-linux.yml` was pinning `PKGBUILD-bin`'s zip checksum to the SHA256 of a GitHub release asset even though that asset can be replaced and is not immutable.
+
+**Files Affected**:
+- `.github/workflows/release-linux.yml`
+
+**Wrong**:
+```sh
+sed -i "s/^sha256sums=.*/sha256sums=('${SHA}' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
+```
+
+**Correct**:
+```sh
+sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
+```
+
+**Why This Keeps Happening**: release automation assumes asset hashes are stable across retries and reruns, but GitHub release artifacts are effectively mutable in practice for the workflows in this repo. Pinning the binary archive makes reinstall/rebuild flows brittle while users still hit hash validation failures when the cached bytes differ from the latest uploaded bytes for the same version tag.
