@@ -6458,8 +6458,20 @@ Code quality improvements were completed as part of Option A:
 - `PodMessageRoutingController` seen/registration success payloads no longer repeat `messageId` or `podId`.
 - Validation state:
   - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
-  - focused unit slice for `LibraryItemsControllerTests`, `PodsControllerTests`, `PodDhtControllerTests`, and `PodMessageRoutingControllerTests` passed (`56/56`)
+- focused unit slice for `LibraryItemsControllerTests`, `PodsControllerTests`, `PodDhtControllerTests`, and `PodMessageRoutingControllerTests` passed (`56/56`)
 - Documented the route-identifier echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: continue through the remaining low-traffic controllers that still return plain JSON success/not-found payloads with route identifiers or newly repeated request fields.
+
+## 2026-03-22 23:22
+- Finished another acknowledgement-payload cleanup batch.
+- `RoomsCompatibilityController` join/leave success payloads no longer echo the room name.
+- `PodJoinLeaveController` pending-request payloads no longer repeat `podId`.
+- `PodsController` bind-room success payloads no longer repeat `podId`, `channelId`, `roomName`, or `mode`.
+- `PodMessageSigningController` verify-message success payloads no longer echo `messageId`.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `RoomsCompatibilityControllerTests`, `PodJoinLeaveControllerTests`, `PodsControllerTests`, and `PodMessageSigningControllerTests` passed (`40/40`)
+- Documented the acknowledgement-DTO route echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: keep sweeping for the last public response DTOs that still behave like debug echoes instead of minimal release-safe contracts.
 
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.

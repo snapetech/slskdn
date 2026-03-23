@@ -14027,3 +14027,29 @@ return Ok(new { isSeen });
 ```
 
 **Why This Keeps Happening**: route-shaped controllers naturally have those identifiers in local scope, so it feels harmless to reflect them back in the result. For public APIs, prefer outcome-only DTOs unless the identifier is newly created by the operation and genuinely needed by the client.
+
+### 0k101. Acknowledgement DTOs Should Not Repeat Route Values When No New State Is Being Returned
+
+**The Bug**: several compatibility and Pod acknowledgement endpoints returned route values like `room`, `podId`, `channelId`, or `messageId` alongside a simple `joined`, `bound`, or `isValid` flag. Those fields were already supplied by the caller and did not add new state, so they unnecessarily widened the public response surface.
+
+**Files Affected**:
+- `src/slskd/API/Compatibility/RoomsCompatibilityController.cs`
+- `src/slskd/PodCore/API/Controllers/PodJoinLeaveController.cs`
+- `src/slskd/API/Native/PodsController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageSigningController.cs`
+
+**Wrong**:
+```csharp
+return Ok(new { room = roomName, joined = true });
+return Ok(new { podId, pendingJoinRequests = requests });
+return Ok(new { messageId = normalizedMessage.MessageId, isValid });
+```
+
+**Correct**:
+```csharp
+return Ok(new { joined = true });
+return Ok(new { pendingJoinRequests = requests });
+return Ok(new { isValid });
+```
+
+**Why This Keeps Happening**: acknowledgement endpoints often start as debugging-friendly payloads and then stick around unchanged. If the response is only confirming success or returning a collection/result that stands on its own, drop echoed route values unless the client genuinely needs them to continue the workflow.
