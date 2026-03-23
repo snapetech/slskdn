@@ -102,10 +102,11 @@ namespace slskd
                     // if an action is staged, invoke it to 'flush'
                     if (FlushOnDispose)
                     {
-                        Staged?.Invoke();
+                        var staged = Staged;
+                        Staged = null;
+                        staged?.Invoke();
                     }
 
-                    Staged = null;
                     Timer.Dispose();
                 }
 
@@ -119,8 +120,9 @@ namespace slskd
             {
                 try
                 {
-                    Staged?.Invoke();
+                    var staged = Staged;
                     Staged = null;
+                    staged?.Invoke();
                 }
                 finally
                 {

@@ -6757,3 +6757,10 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+## 2026-03-23 10:54 CST
+
+- Hardened small timer-backed callback infrastructure:
+  - `TimedCounter` now uses atomic add/exchange so elapsed snapshots do not lose concurrent increments
+  - `RateLimiter` now clears staged callbacks before invoking them, so a throwing staged action is not retried forever on every timer tick or flush
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `CallbackInfrastructureTests` slice passed `2/2`.

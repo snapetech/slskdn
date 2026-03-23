@@ -27,6 +27,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened `TimedCounter` and `RateLimiter` callback/timer state handling
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`
+  - Confirmed the focused slice passed (`2/2`) and the runtime build remains green
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened `ManagedState<T>.SetValue(...)` so change listeners are invoked outside the state lock and no longer abort on the first failing subscriber
   - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ManagedStateTests.cs`
   - Confirmed the focused slice passed (`1/1`) and the runtime build remains green
