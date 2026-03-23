@@ -16273,3 +16273,32 @@ public void Dispose()
 ```
 
 **Why This Keeps Happening**: event-driven integration services feel passive because they mostly react to client callbacks instead of owning explicit loops. But singleton lifetime does not make event hooks self-cleaning. Any service that subscribes to `ISoulseekClient` needs an explicit teardown path, and interface-based services should expose disposal so the ownership contract is visible instead of being hidden in the DI container.
+
+### 0k146. Global Event Owners Must Retain Removable Delegates And Unsubscribe On Dispose
+
+**The Bug**: `Application` and `DownloadService` subscribed to long-lived global events but did not fully tear those hooks down. `Application.Dispose()` released state-monitor registrations yet left `Clock` handlers, `Program.LogEmitted`, and several `ISoulseekClient` callbacks attached. `DownloadService` subscribed to `Clock.EveryMinute` with an anonymous lambda and had no way to unsubscribe it at all. That lets disposed services keep receiving timer/log/client callbacks and keeps them reachable through static event roots.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
+Clock.EveryMinute += (_, _) => _ = ObserveBackgroundTaskAsync(...);
+Client.DownloadDenied += (e, args) => Log.Error(...);
+```
+
+**Correct**:
+```csharp
+ProgramLogEmittedHandler = (_, log) => LogHub.EmitLogAsync(log);
+Program.LogEmitted += ProgramLogEmittedHandler;
+DownloadCleanupHandler = (_, _) => _ = ObserveBackgroundTaskAsync(...);
+Clock.EveryMinute += DownloadCleanupHandler;
+...
+Program.LogEmitted -= ProgramLogEmittedHandler;
+Clock.EveryMinute -= DownloadCleanupHandler;
+Client.DownloadDenied -= DownloadDeniedHandler;
+```
+
+**Why This Keeps Happening**: static events and process-wide clocks feel “always on”, so constructor subscriptions look harmless. The trap is anonymous lambdas: they hide the fact that teardown later needs the exact same delegate instance. If a long-lived service subscribes to a static or client event, it must retain the delegate and unsubscribe it in `Dispose()`, along with any other owned synchronization primitives it created for that callback path.
