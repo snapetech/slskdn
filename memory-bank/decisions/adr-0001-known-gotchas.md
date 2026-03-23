@@ -13068,6 +13068,31 @@ var nestedPkix = ExtractPublicKeyPkix(item, keyId);
 
 **Why This Keeps Happening**: small helper refactors encourage copy-paste of short names like `id`, `key`, or `pkix`, and `switch`/pattern scopes are broader than they look. After extracting or inlining a branch, scan for repeated local names in sibling branches before assuming the compiler will keep them isolated.
 
+### 0k93. Parser-Style Endpoints Must Normalize Discriminator Strings Before Branching
+
+**The Bug**: several helper endpoints were branching on raw discriminator strings from requests or webhook payloads. That made harmless padded values like `" Chromaprint "`, `" slskdn/1.2.3 "`, or `" stop "` fall into unsupported-algorithm / non-slskdn / wrong-event paths even though the semantic input was valid.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/PerceptualHashController.cs`
+- `src/slskd/Capabilities/API/CapabilitiesController.cs`
+- `src/slskd/NowPlaying/API/NowPlayingController.cs`
+
+**Wrong**:
+```csharp
+var algorithmValue = request.Algorithm ?? "PHash";
+caps = Capabilities.ParseCapabilityTag(request.Description);
+var evt = root.TryGetProperty("event", out var e) ? e.GetString() : "play";
+```
+
+**Correct**:
+```csharp
+var algorithmValue = string.IsNullOrWhiteSpace(request.Algorithm) ? "PHash" : request.Algorithm.Trim();
+var description = request?.Description?.Trim();
+var evt = root.TryGetProperty("event", out var e) ? e.GetString()?.Trim() : "play";
+```
+
+**Why This Keeps Happening**: parse/classifier endpoints often feel “already normalized” because they are only inspecting strings, not storing them. But if the branch key itself is not canonicalized first, the endpoint becomes arbitrarily whitespace-sensitive and users get behavior that looks nondeterministic. Normalize discriminator fields before `Enum.TryParse`, parser dispatch, or event-type comparisons.
+
 ### 0k91. Supported Domains Should Fall Back To Conservative Metadata Instead Of Becoming Invalid When Enrichment Is Missing
 
 **The Bug**: `ContentLinkService` treated some supported domains and types as invalid whenever an external metadata lookup was unavailable. That meant video content IDs and partially resolvable artist IDs failed validation outright even though the parsed content ID already carried enough information to return structured conservative metadata.
