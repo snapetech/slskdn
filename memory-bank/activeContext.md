@@ -1092,3 +1092,12 @@ dotnet test
 - Next steps:
   - continue the broader timer/resource sweep on the remaining long-lived helpers surfaced by the scan, especially service-level timers where disposal may be less directly exercised in existing tests
   - keep preferring cluster passes like this over isolated one-off fixes
+
+## 2026-03-23 14:44 CST
+- Continued the same ownership sweep from timers into long-lived change registrations.
+- Fixed `RelayService` so replacing the live relay client now disposes the previous `StateMonitor.OnChange(...)` subscription before the new client becomes authoritative.
+- Extended `RelayServiceTests` with a focused stale-client-state regression and confirmed the relay slice passed (`3/3`) after a clean unit-project rebuild; the release build stayed green (`0 warnings / 0 errors`).
+- Also fixed an incidental compile issue in `ShareScannerModerationTests` (`System.IO.File.Delete(...)`) uncovered while rebuilding the unit project.
+- Next steps:
+  - continue scanning other long-lived `OnChange(...)` subscribers that currently discard their returned `IDisposable`, especially `Application`, `ShareService`, and upload/relay/user services
+  - prioritize subscribers that replace dependencies or aggregate state from multiple live sources, because those are the ones most likely to suffer real stale-callback behavior

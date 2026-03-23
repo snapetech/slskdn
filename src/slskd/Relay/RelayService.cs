@@ -365,6 +365,7 @@ namespace slskd.Relay
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayService>();
         private MemoryCache MemoryCache { get; } = new MemoryCache(new MemoryCacheOptions());
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? ClientStateMonitorRegistration { get; set; }
         private ConcurrentDictionary<Guid, TaskCompletionSource<(bool Exists, long Length)>> PendingFileInquiryDictionary { get; } = new();
         private ConcurrentDictionary<string, (string ConnectionId, Agent Agent)> RegisteredAgentDictionary { get; } = new();
         private IHubContext<RelayHub, IRelayHub> RelayHub { get; set; }
@@ -901,10 +902,8 @@ namespace slskd.Relay
                             optionsMonitor: OptionsMonitor,
                             httpClientFactory: HttpClientFactory);
 
-                        client.StateMonitor.OnChange(clientState
-                            => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
-
                         ReplaceClient(client);
+                        AttachClientStateMonitor(client);
 
                         State.SetValue(state => state with
                         {
@@ -940,12 +939,21 @@ namespace slskd.Relay
         private void ReplaceClient(IRelayClient nextClient)
         {
             var previousClient = Client;
+            ClientStateMonitorRegistration?.Dispose();
+            ClientStateMonitorRegistration = null;
             Client = nextClient;
 
             if (!ReferenceEquals(previousClient, nextClient) && previousClient is IDisposable disposableClient)
             {
                 disposableClient.Dispose();
             }
+        }
+
+        private void AttachClientStateMonitor(IRelayClient client)
+        {
+            ClientStateMonitorRegistration?.Dispose();
+            ClientStateMonitorRegistration = client.StateMonitor.OnChange(clientState
+                => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
         }
 
         private string GetAuthTokenCacheKey(string connectionId) => $"{connectionId}.auth";

@@ -226,7 +226,7 @@ public class ShareRepositoryModerationTests : IDisposable
         }
         finally
         {
-            File.Delete(path);
+            System.IO.File.Delete(path);
         }
     }
 

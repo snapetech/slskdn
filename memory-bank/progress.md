@@ -7072,3 +7072,12 @@ Code quality improvements were completed as part of Option A:
 - That pass found no new runtime leak in the touched types: `NetworkGuard` and `EntropyMonitor` already had disposal, and `FingerprintDetection` / `SecurityEventAggregator` already matched the ownership contract too.
 - Added focused regression coverage proving timer-backed disposal is observable and stays intact for `NetworkGuard` and `EntropyMonitor`, rather than leaving the contract implicit.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~NetworkGuardTests|FullyQualifiedName~SecurityEventEmitterTests"` passed (`20/20`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 14:44 CST
+
+- Continued the broader long-lived registration ownership sweep into `RelayService`.
+- Fixed relay-client replacement so the previous client `StateMonitor.OnChange(...)` subscription is disposed before a new client becomes the live source of controller state.
+- Old relay clients can no longer keep mutating `RelayService` state after replacement through stale state-monitor callbacks.
+- Extended `tests/slskd.Tests.Unit/Relay/RelayServiceTests.cs` with a focused regression proving stale client state no longer overwrites current controller state after replacement.
+- Also corrected an incidental unit-project compile break in `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` by qualifying `System.IO.File.Delete(...)` after the earlier keepalive disposal test addition.
+- Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~RelayServiceTests"` passed (`3/3`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
