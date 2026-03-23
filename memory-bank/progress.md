@@ -6800,6 +6800,13 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/DhtRendezvous/MeshNeighborRegistryTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `MeshNeighborRegistryTests` slice passed `3/3`.
 
+## 2026-03-23 11:30 CST
+
+- Fixed duplicate incoming-signal delivery in the signal channel handlers.
+- `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` now subscribe to their underlying sender events only once, even if `StartReceivingAsync(...)` is called multiple times on the same instance.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Signals/SignalChannelHandlerTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `SignalChannelHandlerTests` slice passed `2/2`.
+
 - 2026-03-23: Hardened PeerResolutionService alias caching so DHT-resolved mappings are reusable by peer ID and username alias; fixed ChannelReader test type collisions by fully qualifying the slskd wrapper type; folded in dirty LAN discovery updates and revalidated build/test/lint.
 
 - 2026-03-23: Replaced MeshContentMeshService stream close-only behavior with a real single-request content stream that reuses the existing GetByContentId contract; added stream coverage, fixed a lingering SceneServicesTests logger-type compile drift, and revalidated build/test/lint.

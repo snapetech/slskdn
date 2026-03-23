@@ -48,6 +48,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused regression coverage in `tests/slskd.Tests.Unit/DhtRendezvous/MeshNeighborRegistryTests.cs`
   - Confirmed the focused registry slice passed (`3/3`) and the runtime build remains green (`0 warnings / 0 errors`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
+  - Fixed duplicate signal delivery in long-lived signal handlers:
+    - `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` no longer re-subscribe their inbound handlers on repeated `StartReceivingAsync(...)` calls
+    - repeated startup/reconfiguration on the same instance no longer doubles inbound signal delivery
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Signals/SignalChannelHandlerTests.cs`
+  - Confirmed the focused signal slice passed (`2/2`) and the runtime build remains green (`0 warnings / 0 errors`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened `TimedCounter` and `RateLimiter` callback/timer state handling
   - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`
   - Confirmed the focused slice passed (`2/2`) and the runtime build remains green

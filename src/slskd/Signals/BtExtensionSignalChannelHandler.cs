@@ -18,6 +18,7 @@ public class BtExtensionSignalChannelHandler : ISignalChannelHandler
     private readonly IBtExtensionSender btExtensionSender;
     private readonly string localPeerId;
     private Func<Signal, CancellationToken, Task>? onSignalReceived;
+    private bool receivingStarted;
 
     public BtExtensionSignalChannelHandler(
         ILogger<BtExtensionSignalChannelHandler> logger,
@@ -90,8 +91,12 @@ public class BtExtensionSignalChannelHandler : ISignalChannelHandler
     {
         this.onSignalReceived = onSignalReceived ?? throw new ArgumentNullException(nameof(onSignalReceived));
 
-        // Subscribe to slskdn extension messages
-        btExtensionSender.OnSlskdnExtensionMessageReceived += HandleIncomingMessage;
+        if (!receivingStarted)
+        {
+            // Subscribe to slskdn extension messages only once.
+            btExtensionSender.OnSlskdnExtensionMessageReceived += HandleIncomingMessage;
+            receivingStarted = true;
+        }
 
         logger.LogInformation("BT extension signal channel handler started receiving");
         return Task.CompletedTask;

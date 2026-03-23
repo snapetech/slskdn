@@ -267,6 +267,33 @@ RaiseNeighborEvent(NeighborAdded, eventArgs, nameof(NeighborAdded));
 
 **Why This Keeps Happening**: registry code often treats events as part of the bookkeeping transaction because the state change and notification happen together conceptually. In practice, event handlers are arbitrary external code. Snapshot the event payload under the lock, release the lock, then notify each subscriber behind its own exception boundary.
 
+### 0xDE. Start-Receiving Hooks Must Not Re-Subscribe The Same Handler On Every Call
+
+**The Bug**: `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` subscribed their incoming-message handlers every time `StartReceivingAsync(...)` was called. If startup, reconfiguration, or tests invoked `StartReceivingAsync(...)` twice on the same instance, one inbound signal would be delivered multiple times to the same callback.
+
+**Files Affected**:
+- `src/slskd/Signals/MeshSignalChannelHandler.cs`
+- `src/slskd/Signals/BtExtensionSignalChannelHandler.cs`
+
+**Wrong**:
+```csharp
+this.onSignalReceived = onSignalReceived;
+meshSender.OnSlskdnSignalReceived += HandleIncomingSignal;
+```
+
+**Correct**:
+```csharp
+this.onSignalReceived = onSignalReceived;
+
+if (!receivingStarted)
+{
+    meshSender.OnSlskdnSignalReceived += HandleIncomingSignal;
+    receivingStarted = true;
+}
+```
+
+**Why This Keeps Happening**: "start receiving" methods look idempotent at the API level, but event subscription is not idempotent unless the implementation makes it so. Any long-lived channel handler that stores the latest callback and subscribes to an underlying sender needs a one-time subscription guard or explicit unsubscribe/re-subscribe logic.
+
 ### 0xDD. Shared State Change Fanout Must Happen Outside The State Lock
 
 **The Bug**: `ManagedState<T>.SetValue(...)` cloned and updated the state under its lock and then invoked the whole `Changed` multicast delegate while still holding that lock. One listener exception aborted all later listeners, and any listener reentry or lock-taking path could deadlock the state publisher.
