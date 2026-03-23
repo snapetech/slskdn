@@ -20,7 +20,7 @@ public class SecurityEventEmitterTests
 
         aggregator.Report(new SecurityEvent
         {
-            Type = SecurityEventType.AuthenticationFailure,
+            Type = SecurityEventType.Authentication,
             Severity = SecuritySeverity.High,
             Message = "test",
         });
@@ -46,6 +46,14 @@ public class SecurityEventEmitterTests
         {
             Timestamp = DateTimeOffset.UtcNow,
             Entropy = 7.25,
+            SampleSize = 256,
+            ByteDistribution = new ByteDistribution
+            {
+                Frequencies = new int[256],
+                ExpectedFrequency = 1,
+                MaxFrequency = 1,
+                MinFrequency = 0,
+            },
             Status = EntropyStatus.Warning,
         }]);
 
@@ -59,9 +67,9 @@ public class SecurityEventEmitterTests
         var invokedHealthySubscriber = false;
 
         honeypot.HoneypotTriggered += (_, _) => throw new InvalidOperationException("boom");
-        honeypot.HoneypotTriggered += (_, args) => invokedHealthySubscriber = args.Event.Interaction.Action == HoneypotAction.FileRead;
+        honeypot.HoneypotTriggered += (_, args) => invokedHealthySubscriber = args.Event.Interaction.Action == HoneypotAction.Download;
 
-        honeypot.RecordInteraction(IPAddress.Parse("203.0.113.10"), "scanner", HoneypotAction.FileRead, "admin_credentials.txt");
+        honeypot.RecordInteraction(IPAddress.Parse("203.0.113.10"), "scanner", HoneypotAction.Download, "admin_credentials.txt");
 
         Assert.True(invokedHealthySubscriber);
     }

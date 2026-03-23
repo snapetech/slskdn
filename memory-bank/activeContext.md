@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened the remaining shared security/event emitters:
+    - `SecurityEventAggregator`, `EntropyMonitor`, `Honeypot`, and `FingerprintDetection` no longer use raw `?.Invoke(...)` multicast fanout
+    - one subscriber fault is now isolated and logged instead of aborting other listeners or escaping the emitter path
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Common/Security/SecurityEventEmitterTests.cs`
+  - Confirmed the focused security/event slice passed (`16/16`) and the runtime build remains green (`0 warnings / 0 errors`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Investigated CodeQL alerts `#2547` and `#2548` in `RelayService.cs` and confirmed they were caused by raw cached relay connection ids being written to debug logs during validation failures.
   - Hardened `RelayService` logging so relay connection ids are logged through a hashed `GetConnectionLogId(...)` helper, and direct credential/token value logging was removed from adjacent validation paths.
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.

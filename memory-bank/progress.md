@@ -6721,3 +6721,9 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+## 2026-03-23 10:43 CST
+
+- Hardened shared security/event emitters so one subscriber fault no longer aborts other listeners or escapes the publisher path.
+- Replaced raw multicast `?.Invoke(...)` fanout in `SecurityEventAggregator`, `EntropyMonitor`, `Honeypot`, and `FingerprintDetection` with per-subscriber isolation and warning logs.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Common/Security/SecurityEventEmitterTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused unit slice for `SecurityEventEmitterTests`, `ClockTests`, and `SignalBusTests` passed `16/16`.

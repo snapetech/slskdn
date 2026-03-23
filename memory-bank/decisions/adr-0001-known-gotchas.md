@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDF. Shared Security Event Emitters Must Isolate Per-Subscriber Failures
+
+**The Bug**: several security emitters (`SecurityEventAggregator`, `EntropyMonitor`, `Honeypot`, `FingerprintDetection`) raised .NET events with raw `?.Invoke(...)` multicast fanout. One throwing subscriber could therefore abort the rest of the listeners and escape the emitter path during high-severity alerts, entropy warnings, honeypot triggers, or reconnaissance detection.
+
+**Files Affected**:
+- `src/slskd/Common/Security/SecurityEventSink.cs`
+- `src/slskd/Common/Security/EntropyMonitor.cs`
+- `src/slskd/Common/Security/Honeypot.cs`
+- `src/slskd/Common/Security/FingerprintDetection.cs`
+
+**Wrong**:
+```csharp
+HighSeverityEvent?.Invoke(this, new SecurityEventArgs(evt));
+EntropyAlert?.Invoke(this, new EntropyAlertEventArgs(check));
+HoneypotTriggered?.Invoke(this, new HoneypotEventArgs(evt));
+ReconnaissanceDetected?.Invoke(this, new ReconnaissanceEventArgs(evt));
+```
+
+**Correct**:
+```csharp
+foreach (EventHandler<SecurityEventArgs> handler in HighSeverityEvent.GetInvocationList())
+{
+    try
+    {
+        handler.Invoke(this, new SecurityEventArgs(evt));
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "High severity security event subscriber failed");
+    }
+}
+```
+
+**Why This Keeps Happening**: event emitters look harmless because multicast delegates feel like “fanout for free,” but the invocation is still one synchronous call chain. In shared infrastructure, one subscriber fault must never block unrelated listeners or escape the emitter path. If the publisher is framework-level fanout, isolate each subscriber explicitly and log the fault locally.
+
 ### 0xE6. Multi-Hash Reconfiguration Guards Must Return Only When All Relevant Hashes Match
 
 **The Bug**: `RelayService.Configure()` kept both a full relay hash and a controller-only hash, but returned early when either one matched. That means legitimate changes like `Relay.Enabled` or `Relay.Mode` were skipped whenever the controller subsection stayed the same.
