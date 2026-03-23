@@ -15697,3 +15697,52 @@ catch (Exception ex)
 ```
 
 **Why This Keeps Happening**: retry hooks, exception handlers, and staged timer delegates feel "secondary", so they often get invoked raw inside catch blocks or timer callbacks. But these helpers own the real failure and scheduling contract. If a secondary hook throws unchecked, it can mask the original operation error, abort later work, or poison the detached infrastructure itself. Preserve the primary failure as the authoritative outcome, and isolate or explicitly aggregate auxiliary callback failures instead of letting them take over the control path.
+
+### 0k130. Metrics And Logging Helper Callbacks Must Not Break Their Own Plumbing
+
+**The Bug**: small helper utilities in the metrics/logging path treated consumer delegates as trusted. `ExponentialMovingAverage.Update(...)` invoked `onUpdate` raw after updating its value, so a bad gauge callback could make a successful metric update throw. `DelegatingSink.Emit(...)` invoked its delegate raw inside the Serilog sink pipeline, so one observer failure could break log emission itself.
+
+**Files Affected**:
+- `src/slskd/Common/ExponentialMovingAverage.cs`
+- `src/slskd/Common/Logging/DelegatingSink.cs`
+
+**Wrong**:
+```csharp
+Value = !Initialized ? value : ((value - Value) * SmoothingFactor) + Value;
+Initialized = true;
+OnUpdate?.Invoke(Value);
+
+public void Emit(LogEvent logEvent)
+{
+    Action(logEvent);
+}
+```
+
+**Correct**:
+```csharp
+Value = !Initialized ? value : ((value - Value) * SmoothingFactor) + Value;
+Initialized = true;
+
+try
+{
+    OnUpdate?.Invoke(Value);
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "ExponentialMovingAverage update callback failed");
+}
+
+public void Emit(LogEvent logEvent)
+{
+    try
+    {
+        Action(logEvent);
+    }
+    catch
+    {
+        // sink observers must not break the logging pipeline
+    }
+}
+```
+
+**Why This Keeps Happening**: metrics and logging helpers look like side-channel infrastructure, so delegate hooks are easy to treat as "part of the work" instead of untrusted observers. But these helpers usually exist specifically to make the primary path more observable. If an observer can throw back into the helper, observability code starts breaking production behavior. Update internal state first, then isolate observer failures so logging/metrics plumbing stays best-effort.
