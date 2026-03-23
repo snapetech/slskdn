@@ -97,6 +97,41 @@ if ! grep -q "releases/download/${SNAP_VERSION}/" packaging/snap/snapcraft.yaml;
   fail "Snapcraft source URL should contain version ${SNAP_VERSION}"
 fi
 
+validate_winget() {
+    local installer_file="$1"
+    local locale_file="$2"
+
+    local manifest_version
+    manifest_version=$(sed -n 's/^PackageVersion: \(.*\)/\1/p' "$installer_file" | head -n1)
+    fail_if_empty "$manifest_version" "Winget PackageVersion in ${installer_file}"
+
+    local installer_url
+    installer_url=$(sed -n 's/^ *InstallerUrl: \(.*\)/\1/p' "$installer_file" | head -n1)
+    fail_if_empty "$installer_url" "Winget InstallerUrl in ${installer_file}"
+
+    local expected_release_tag
+    if [[ "$installer_url" == *"build-dev-"* ]]; then
+        expected_release_tag="build-dev-${manifest_version}"
+    else
+        expected_release_tag="${manifest_version/.slskdn./-slskdn.}"
+    fi
+
+    if [[ "$installer_url" != *"${expected_release_tag}"* ]]; then
+        fail "Winget manifest ${installer_file} url does not match release tag ${expected_release_tag}"
+    fi
+
+    if [[ -f "$locale_file" ]]; then
+        local release_notes_url
+        release_notes_url=$(sed -n 's/^ReleaseNotesUrl: \(.*\)/\1/p' "$locale_file" | head -n1)
+        if [[ -n "$release_notes_url" && "$release_notes_url" != *"${expected_release_tag}"* ]]; then
+            fail "Winget manifest ${locale_file} release notes url does not match release tag ${expected_release_tag}"
+        fi
+    fi
+}
+
+validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
+validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
+
 expect_literal packaging/chocolatey/slskdn.nuspec "<version>${CHOC_VERSION}</version>"
 expect_literal packaging/chocolatey/tools/chocolateyinstall.ps1 "releases/download/${CHOC_VERSION}/slskdn-main-win-x64.zip"
 
