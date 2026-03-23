@@ -16043,3 +16043,48 @@ protected virtual void Dispose(bool disposing)
 ```
 
 **Why This Keeps Happening**: ownership bugs tend to focus on the obvious heavy resource, like a database connection, while lightweight timers and registrations get forgotten because they are "just callbacks." If a type constructs a timer, semaphore, or registration in its constructor and keeps it for the object lifetime, disposal must release all of them as part of the same ownership contract.
+
+### 0k139. Timer-Backed Security Helpers Must Dispose Their Background Timers
+
+**The Bug**: several security helpers (`NetworkGuard`, `Honeypot`, `TemporalConsistency`, `EntropyMonitor`, `FingerprintDetection`, `SecurityEventAggregator`) constructed long-lived `System.Threading.Timer` instances for cleanup or health checks but did not implement the matching disposal path. That leaves background callbacks alive after the helper is logically dead and leaks timer resources for singleton/test lifetimes.
+
+**Files Affected**:
+- `src/slskd/Common/Security/NetworkGuard.cs`
+- `src/slskd/Common/Security/Honeypot.cs`
+- `src/slskd/Common/Security/TemporalConsistency.cs`
+- `src/slskd/Common/Security/EntropyMonitor.cs`
+- `src/slskd/Common/Security/FingerprintDetection.cs`
+- `src/slskd/Common/Security/SecurityEventSink.cs`
+
+**Wrong**:
+```csharp
+public sealed class EntropyMonitor : IDisposable
+{
+    private readonly Timer _checkTimer;
+
+    public EntropyMonitor(...)
+    {
+        _checkTimer = new Timer(PerformCheck, null, TimeSpan.Zero, interval);
+    }
+}
+```
+
+**Correct**:
+```csharp
+public sealed class EntropyMonitor : IDisposable
+{
+    private readonly Timer _checkTimer;
+
+    public EntropyMonitor(...)
+    {
+        _checkTimer = new Timer(PerformCheck, null, TimeSpan.Zero, interval);
+    }
+
+    public void Dispose()
+    {
+        _checkTimer.Dispose();
+    }
+}
+```
+
+**Why This Keeps Happening**: cleanup timers often feel like invisible implementation details, so they get added during feature work without revisiting the type’s ownership contract. But a repeating timer is a live background resource just like a socket or connection. If a class stores a `Timer` field, disposal must be implemented or updated in the same change.
