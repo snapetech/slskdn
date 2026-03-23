@@ -15625,3 +15625,75 @@ finally
 ```
 
 **Why This Keeps Happening**: dispose-time "flush" hooks look like just another callback, but they run inside the one path responsible for releasing owned resources. If the flush is allowed to throw before cleanup, the object leaks exactly when shutdown/error handling is already in progress. Capture the exception, finish cleanup in `finally`, then rethrow if needed.
+
+### 0k129. Auxiliary Retry And Timer Callbacks Must Not Replace The Primary Failure Path
+
+**The Bug**: shared helper code treated observability hooks as if they were safe parts of the main control flow. `Retry` let `onFailure` and `isRetryable` throw from inside the failure handler, which replaced the original task exception with a retry-layer exception and hid the real failure. `RateLimiter` invoked staged callbacks raw on the timer thread, so one callback exception could escape shared scheduling infrastructure even though the helper had no explicit failure surface.
+
+**Files Affected**:
+- `src/slskd/Common/Retry.cs`
+- `src/slskd/Common/RateLimiter.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    exceptions.Add(ex);
+
+    try
+    {
+        onFailure(attempts + 1, ex);
+
+        if (!isRetryable(attempts + 1, ex))
+        {
+            break;
+        }
+    }
+    catch (Exception retryEx)
+    {
+        throw new RetryException($"Failed to retry operation: {retryEx.Message}", ex);
+    }
+}
+
+var staged = Staged;
+Staged = null;
+staged?.Invoke();
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    exceptions.Add(ex);
+
+    try
+    {
+        onFailure(attempts + 1, ex);
+
+        if (!isRetryable(attempts + 1, ex))
+        {
+            break;
+        }
+    }
+    catch (Exception retryCallbackException)
+    {
+        throw new RetryException(
+            "Retry callback failed while handling an operation failure.",
+            new AggregateException(ex, retryCallbackException));
+    }
+}
+
+var staged = Staged;
+Staged = null;
+
+try
+{
+    staged?.Invoke();
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "RateLimiter staged callback failed");
+}
+```
+
+**Why This Keeps Happening**: retry hooks, exception handlers, and staged timer delegates feel "secondary", so they often get invoked raw inside catch blocks or timer callbacks. But these helpers own the real failure and scheduling contract. If a secondary hook throws unchecked, it can mask the original operation error, abort later work, or poison the detached infrastructure itself. Preserve the primary failure as the authoritative outcome, and isolate or explicitly aggregate auxiliary callback failures instead of letting them take over the control path.
