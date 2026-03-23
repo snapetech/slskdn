@@ -27,6 +27,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the ownership sweep into DI-owned singletons with external hooks:
+    - `IUserService` / `UserService` now support disposal, unsubscribe retained Soulseek client handlers, and release the options registration
+    - `RelayService` now supports disposal, releases its options/client-state registrations, owned `MemoryCache`, current client, and sync semaphore
+  - Extended `tests/slskd.Tests.Unit/Users/UserServiceTests.cs` and `tests/slskd.Tests.Unit/Relay/RelayServiceTests.cs` with focused disposal regressions
+  - Confirmed `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~UserServiceTests|FullyQualifiedName~RelayServiceTests"` passed (`10/10`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`)
   - Continued the ownership sweep into `ShareService` and fixed the broader repository lifecycle seam:
     - `IShareService` now exposes disposal
     - `ShareService` now retains/disposes scanner/options registrations, disposes removed host repositories in `TryRemoveHost(...)`, and tears down all owned repositories/semaphores on disposal

@@ -43,7 +43,7 @@ namespace slskd.Relay
     /// <summary>
     ///     Handles relay (controller/agent) interactions.
     /// </summary>
-    public interface IRelayService
+    public interface IRelayService : IDisposable
     {
         /// <summary>
         ///     Gets the relay client (agent).
@@ -339,7 +339,7 @@ namespace slskd.Relay
             StateMonitor = State;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(options => Configure(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
             Configure(OptionsMonitor.CurrentValue);
         }
 
@@ -365,7 +365,9 @@ namespace slskd.Relay
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayService>();
         private MemoryCache MemoryCache { get; } = new MemoryCache(new MemoryCacheOptions());
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private IDisposable? ClientStateMonitorRegistration { get; set; }
+        private bool Disposed { get; set; }
         private ConcurrentDictionary<Guid, TaskCompletionSource<(bool Exists, long Length)>> PendingFileInquiryDictionary { get; } = new();
         private ConcurrentDictionary<string, (string ConnectionId, Agent Agent)> RegisteredAgentDictionary { get; } = new();
         private IHubContext<RelayHub, IRelayHub> RelayHub { get; set; }
@@ -375,6 +377,15 @@ namespace slskd.Relay
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
         private IWaiter Waiter { get; }
         private ConcurrentDictionary<WaitKey, Guid> WaitIdDictionary { get; } = new();
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Generates a random authentication challenge token for the specified <paramref name="connectionId"/>.
@@ -1064,6 +1075,34 @@ namespace slskd.Relay
 
             var digest = SHA256.HashData(Encoding.UTF8.GetBytes(agentName));
             return $"agent:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    ClientStateMonitorRegistration?.Dispose();
+                    ClientStateMonitorRegistration = null;
+                    MemoryCache.Dispose();
+
+                    if (Client is IDisposable disposableClient)
+                    {
+                        disposableClient.Dispose();
+                    }
+
+                    SyncRoot.Dispose();
+                }
+
+                Disposed = true;
+            }
         }
     }
 }

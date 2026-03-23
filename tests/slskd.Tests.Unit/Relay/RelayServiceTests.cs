@@ -72,6 +72,21 @@ public class RelayServiceTests
         Assert.Equal(RelayClientState.Reconnecting, service.StateMonitor.CurrentValue.Controller.State);
     }
 
+    [Fact]
+    public void Dispose_UnsubscribesOptionsMonitor_AndDisposesCurrentClient()
+    {
+        var optionsMonitor = new TestOptionsMonitor<Options>(CreateOptions(enabled: false, RelayMode.Controller));
+        var client = new TestRelayClient();
+        var service = CreateService(optionsMonitor, client);
+
+        Assert.Equal(1, optionsMonitor.ListenerCount);
+
+        service.Dispose();
+
+        Assert.Equal(0, optionsMonitor.ListenerCount);
+        Assert.True(client.Disposed);
+    }
+
     private static RelayService CreateService(IOptionsMonitor<Options> optionsMonitor, IRelayClient relayClient)
     {
         return new RelayService(

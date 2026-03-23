@@ -9,6 +9,23 @@ namespace slskd.Tests.Unit.Users
 
     public class UserServiceTests
     {
+        [Fact]
+        public void Dispose_UnsubscribesOptionsMonitor_AndSoulseekEvents()
+        {
+            var (service, mocks) = GetFixture();
+
+            Assert.Equal(1, mocks.OptionsMonitor.ListenerCount);
+
+            service.Dispose();
+
+            Assert.Equal(0, mocks.OptionsMonitor.ListenerCount);
+            mocks.SoulseekClient.VerifyRemove(x => x.UserStatisticsChanged -= It.IsAny<EventHandler<UserStatistics>>(), Times.Once);
+            mocks.SoulseekClient.VerifyRemove(x => x.UserStatusChanged -= It.IsAny<EventHandler<UserStatus>>(), Times.Once);
+            mocks.SoulseekClient.VerifyRemove(x => x.LoggedIn -= It.IsAny<EventHandler>(), Times.Once);
+            mocks.SoulseekClient.VerifyRemove(x => x.Connected -= It.IsAny<EventHandler>(), Times.Once);
+            mocks.SoulseekClient.VerifyRemove(x => x.PrivilegedUserListReceived -= It.IsAny<EventHandler<IReadOnlyCollection<string>>>(), Times.Once);
+        }
+
         public class GetGroup
         {
             [Theory, AutoData]

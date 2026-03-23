@@ -7104,3 +7104,11 @@ Code quality improvements were completed as part of Option A:
 - `ShareService` now has a real disposal contract through `IShareService : IDisposable`, retains/disposes its scanner/options registrations, disposes removed remote-host repositories in `TryRemoveHost(...)`, and releases all owned repositories/semaphores during service teardown.
 - Added focused regressions in new `tests/slskd.Tests.Unit/Shares/ShareServiceLifecycleTests.cs` covering both removed-host disposal and full service teardown.
 - Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ShareServiceLifecycleTests"` passed (`2/2`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+## 2026-03-23 16:33 CST
+
+- Continued the same ownership pattern into DI-owned singleton services with external hooks instead of stopping at repository-heavy services.
+- `UserService` now exposes disposal through `IUserService : IDisposable`, retains the concrete Soulseek client event delegates it subscribes with, unsubscribes them during teardown, and releases its options-monitor registration.
+- `RelayService` now has a disposal contract too: it releases its options registration, current client-state registration, owned `MemoryCache`, current relay client, and sync semaphore.
+- Added focused disposal coverage in `tests/slskd.Tests.Unit/Users/UserServiceTests.cs` and `tests/slskd.Tests.Unit/Relay/RelayServiceTests.cs`.
+- Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~UserServiceTests|FullyQualifiedName~RelayServiceTests"` passed (`10/10`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).

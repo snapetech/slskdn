@@ -77,31 +77,37 @@ namespace slskd.Users
             Client = soulseekClient;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(options => Configure(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
 
-            // updates may be sent unsolicited from the server, so update when we get them. binding these events will cause
-            // multiple redundant round trips when initially watching a user or when explicitly requesting via
-            // GetStatus/GetStatistics. this is wasteful, but there's no functional side effect.
-            Client.UserStatisticsChanged += (_, userStatistics) => UpdateStatistics(userStatistics.Username, userStatistics.ToStatistics());
-            Client.UserStatusChanged += (sender, userStatus) =>
+            UserStatisticsChangedHandler = (_, userStatistics) => UpdateStatistics(userStatistics.Username, userStatistics.ToStatistics());
+            UserStatusChangedHandler = (_, userStatus) =>
             {
                 UpdateStatus(userStatus.Username, userStatus.ToStatus());
 
                 // the server doesn't send statistics events by itself, so when a user status changes, fetch stats at the same time.
                 _ = ObserveBackgroundTaskAsync(GetStatisticsAsync(userStatus.Username), userStatus.Username);
             };
+            LoggedInHandler = (_, _) => Configure(OptionsMonitor.CurrentValue, force: true);
+            ConnectedHandler = (_, _) => Reset();
+            PrivilegedUserListReceivedHandler = (_, list) => Client_PrivilegedUserListReceived(list);
+
+            // updates may be sent unsolicited from the server, so update when we get them. binding these events will cause
+            // multiple redundant round trips when initially watching a user or when explicitly requesting via
+            // GetStatus/GetStatistics. this is wasteful, but there's no functional side effect.
+            Client.UserStatisticsChanged += UserStatisticsChangedHandler;
+            Client.UserStatusChanged += UserStatusChangedHandler;
 
             // it's important for us to force a reconfig at login to discard any users that were previously tracked
             // specific scenario being; up and running for some time, offline for some time (days?), reconnect, are users still online? have stats changed?
             // to avoid needing to go through and exhaustively check each user in the tracking dictionary, just delete it and let it be built back up
             // any user we are downloading from will be tracked again when pending downloads are re-requested
-            Client.LoggedIn += (_, _) => Configure(OptionsMonitor.CurrentValue, force: true);
+            Client.LoggedIn += LoggedInHandler;
 
             // working hand-in-hand with the forced reconfig on login, reset clears everything upon connect; clearing the way
             // for the reconfig at login to rebuild it. i think. yeah, that sounds right. we don't ever want Configure() to reset anything
             // so the connect is distinctly different from reconfig at login.
-            Client.Connected += (_, _) => Reset();
-            Client.PrivilegedUserListReceived += (_, list) => Client_PrivilegedUserListReceived(list);
+            Client.Connected += ConnectedHandler;
+            Client.PrivilegedUserListReceived += PrivilegedUserListReceivedHandler;
 
             Configure(OptionsMonitor.CurrentValue);
         }
@@ -117,10 +123,17 @@ namespace slskd.Users
         public IReadOnlyList<string> WatchedUsernames => WatchedUsernamesDictionary.Keys.ToList().AsReadOnly();
 
         private ISoulseekClient Client { get; }
+        private EventHandler<global::Soulseek.UserStatistics>? UserStatisticsChangedHandler { get; }
+        private EventHandler<global::Soulseek.UserStatus>? UserStatusChangedHandler { get; }
+        private EventHandler? LoggedInHandler { get; }
+        private EventHandler? ConnectedHandler { get; }
+        private EventHandler<IReadOnlyCollection<string>>? PrivilegedUserListReceivedHandler { get; }
+        private bool Disposed { get; set; }
         private string LastOptionsHash { get; set; } = string.Empty;
         private string LastBlacklistOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; set; } = Serilog.Log.ForContext<UserService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private Blacklist Blacklist { get; } = new Blacklist();
 
         /// <summary>
@@ -145,6 +158,15 @@ namespace slskd.Users
         /// </remarks>
         private ConcurrentDictionary<string, User> UserDictionary { get; set; } = new ConcurrentDictionary<string, User>();
         private ConcurrentDictionary<string, bool> WatchedUsernamesDictionary { get; set; } = new ConcurrentDictionary<string, bool>();
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Gets the name of the group for the specified <paramref name="username"/>.
@@ -481,6 +503,49 @@ namespace slskd.Users
             catch (Exception ex)
             {
                 Log.Warning(ex, "Failed to refresh statistics for user {Username} after status change", username);
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+
+                    if (UserStatisticsChangedHandler != null)
+                    {
+                        Client.UserStatisticsChanged -= UserStatisticsChangedHandler;
+                    }
+
+                    if (UserStatusChangedHandler != null)
+                    {
+                        Client.UserStatusChanged -= UserStatusChangedHandler;
+                    }
+
+                    if (LoggedInHandler != null)
+                    {
+                        Client.LoggedIn -= LoggedInHandler;
+                    }
+
+                    if (ConnectedHandler != null)
+                    {
+                        Client.Connected -= ConnectedHandler;
+                    }
+
+                    if (PrivilegedUserListReceivedHandler != null)
+                    {
+                        Client.PrivilegedUserListReceived -= PrivilegedUserListReceivedHandler;
+                    }
+                }
+
+                Disposed = true;
             }
         }
     }
