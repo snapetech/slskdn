@@ -15963,3 +15963,40 @@ if (discardExisting)
 ```
 
 **Why This Keeps Happening**: repository reset code often gets written once, then forgotten while new auxiliary tables are added elsewhere in the same class. The result is a false "fresh database" contract where old feature data survives reset and poisons later behavior. Whenever a repository adds a new owned table, audit the create, validate, reset, backup, and corruption-check paths together instead of treating the DDL addition as isolated.
+
+### 0k137. SQLite Schema Validation Must Migrate Additive Tables Before Declaring The Database Invalid
+
+**The Bug**: after `content_items` was added to `SqliteShareRepository`, older share databases that legitimately predated that table would fail validation and be treated like invalid caches instead of being upgraded in place. The repository already had a migration pattern for added columns, but not for newly added owned tables and indexes.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs`
+
+**Wrong**:
+```csharp
+var schema = new Dictionary<string, string>()
+{
+    ...
+    { "content_items", "CREATE TABLE content_items (...)" },
+};
+
+if (validatedTables != schema.Count)
+{
+    list.Add($"Expected {schema.Count} tables, found {validatedTables}");
+}
+```
+
+**Correct**:
+```csharp
+try
+{
+    migrationConn.ExecuteNonQuery("SELECT 1 FROM content_items LIMIT 1");
+}
+catch
+{
+    migrationConn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS content_items (...)");
+    migrationConn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_filename ON content_items(maskedFilename);");
+    migrationConn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_advertisable ON content_items(isAdvertisable);");
+}
+```
+
+**Why This Keeps Happening**: additive schema changes feel harmless, so validation logic gets updated to expect the new table before the migration path exists. On SQLite repositories with handwritten DDL, that turns a normal upgrade into a false corruption signal. Whenever you add a new owned table or index, add the non-destructive migration in the same change as the validator update.
