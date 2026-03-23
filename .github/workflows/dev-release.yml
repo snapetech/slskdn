@@ -401,6 +401,8 @@ jobs:
           
           # Update release URL to use timestamped release tag instead of 'dev'
           sed -i "s|RELEASE_TAG_PLACEHOLDER|${{ github.ref_name }}|g" PKGBUILD
+
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "

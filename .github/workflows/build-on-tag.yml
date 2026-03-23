@@ -1240,6 +1240,7 @@ jobs:
           # source=() order: tarball slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
@@ -1314,6 +1315,7 @@ jobs:
           # source=() order: zip slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "

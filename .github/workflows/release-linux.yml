@@ -159,6 +159,8 @@ jobs:
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD
 
+          bash ../scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD PKGBUILD-bin
+
       - name: Setup and Push to AUR
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}

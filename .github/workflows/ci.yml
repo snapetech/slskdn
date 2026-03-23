@@ -88,42 +88,10 @@ jobs:
 
       - name: AUR sha256sum Consistency Check
         run: |
-          aur_dir="packaging/aur"
-          fail=0
-          for pkgbuild in PKGBUILD PKGBUILD-bin PKGBUILD-dev; do
-            pb="$aur_dir/$pkgbuild"
-            [[ -f "$pb" ]] || continue
-            sums_line=$(grep '^sha256sums=' "$pb" | head -1)
-            sums=( $(echo "$sums_line" | grep -oP "(?<=')[^']+(?=')" ) )
-            if [[ "${sums[0]:-}" != "SKIP" ]]; then
-              echo "::error::${pkgbuild} should keep the archive checksum on SKIP"
-              fail=1
-            fi
-            declare -A files=( [1]="slskd.service" [2]="slskd.yml" [3]="slskd.sysusers" )
-            for idx in "${!files[@]}"; do
-              fname="${files[$idx]}"
-              fpath="$aur_dir/$fname"
-              expected="${sums[$idx]:-}"
-              [[ "$expected" == "SKIP" || -z "$expected" ]] && continue
-              if [[ "$expected" == *"PLACEHOLDER" ]]; then
-                echo "⚠️ $pkgbuild placeholder hash for ${fname}; workflow will substitute before publish."
-                continue
-              fi
-              [[ -f "$fpath" ]] || continue
-              actual=$(sha256sum "$fpath" | awk '{print $1}')
-              if [[ "$actual" != "$expected" ]]; then
-                echo "::error::AUR hash mismatch in $pkgbuild for $fname"
-                echo "  $pkgbuild has: $expected"
-                echo "  Actual is:     $actual"
-                fail=1
-              fi
-            done
-          done
-          if [[ "$fail" -eq 1 ]]; then
-            echo "::error::packaging/aur sha256sums are out of sync. Update before merging."
-            exit 1
-          fi
-          echo "AUR sha256sums OK"
+          bash packaging/scripts/validate-aur-pkgbuild-hashes.sh \
+            packaging/aur/PKGBUILD \
+            packaging/aur/PKGBUILD-bin \
+            packaging/aur/PKGBUILD-dev
 
       - name: Release Gate
         run: bash packaging/scripts/run-release-gate.sh

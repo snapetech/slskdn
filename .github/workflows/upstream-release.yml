@@ -141,6 +141,10 @@ jobs:
           sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packaging/aur/PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" packaging/aur/PKGBUILD
+
+          bash packaging/scripts/validate-aur-pkgbuild-hashes.sh \
+            packaging/aur/PKGBUILD \
+            packaging/aur/PKGBUILD-bin
           
           git add packaging/aur/
           git commit -m "chore: Update PKGBUILDs to ${NEW_VERSION}" || true
