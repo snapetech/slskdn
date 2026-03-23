@@ -55,14 +55,17 @@ public class PodService : IPodService
     private readonly Dictionary<string, List<SignedMembershipRecord>> membershipHistory = new(); // podId -> history
     private readonly IPodPublisher? podPublisher;
     private readonly IPodMembershipSigner? membershipSigner;
+    private readonly ILogger<PodService>? logger;
 
     public PodService(
         IPodPublisher? podPublisher = null,
         IPodMembershipSigner? membershipSigner = null,
-        IContentLinkService? contentLinkService = null)
+        IContentLinkService? contentLinkService = null,
+        ILogger<PodService>? logger = null)
     {
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
+        this.logger = logger;
         ContentLinkService = contentLinkService;
     }
 
@@ -213,7 +216,11 @@ public class PodService : IPodService
             if (newMemberCount > maxMembers)
             {
                 // Log the rejection for audit purposes
-                System.Diagnostics.Debug.WriteLine($"[PodService] Rejected join for peer {member.PeerId}: would exceed max members ({maxMembers}) for VPN pod {podId}");
+                logger?.LogInformation(
+                    "Rejected pod join for peer {PeerId}: would exceed max members ({MaxMembers}) for VPN pod {PodId}",
+                    member.PeerId,
+                    maxMembers,
+                    podId);
                 return false;
             }
         }
@@ -248,7 +255,11 @@ public class PodService : IPodService
             catch (Exception ex)
             {
                 // Log but don't fail join if signing fails
-                System.Diagnostics.Debug.WriteLine($"[PodService] Failed to sign membership record: {ex.Message}");
+                logger?.LogWarning(
+                    ex,
+                    "Failed to sign membership record for peer {PeerId} while joining pod {PodId}",
+                    member.PeerId,
+                    podId);
             }
         }
 
@@ -302,7 +313,11 @@ public class PodService : IPodService
                     catch (Exception ex)
                     {
                         // Log but don't fail ban if signing fails
-                        System.Diagnostics.Debug.WriteLine($"[PodService] Failed to sign ban record: {ex.Message}");
+                        logger?.LogWarning(
+                            ex,
+                            "Failed to sign ban record for peer {PeerId} in pod {PodId}",
+                            peerId,
+                            podId);
                     }
                 }
 
@@ -475,7 +490,7 @@ public class PodService : IPodService
         return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
     }
 
-    private static async Task PublishPodInBackgroundAsync(Func<Task> publishAsync, string operation)
+    private async Task PublishPodInBackgroundAsync(Func<Task> publishAsync, string operation)
     {
         try
         {
@@ -483,7 +498,7 @@ public class PodService : IPodService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PodService] Failed to {operation}: {ex.Message}");
+            logger?.LogWarning(ex, "Failed to {Operation}", operation);
         }
     }
 

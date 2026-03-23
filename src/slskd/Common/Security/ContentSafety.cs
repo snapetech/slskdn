@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Provides content safety verification for downloaded files.
@@ -95,10 +96,12 @@ public static class ContentSafety
     /// </summary>
     /// <param name="filePath">Path to the file to verify.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="logger">Optional logger for failure diagnostics.</param>
     /// <returns>Verification result.</returns>
     public static async Task<ContentVerificationResult> VerifyFileAsync(
         string filePath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ILogger? logger = null)
     {
         if (!File.Exists(filePath))
         {
@@ -121,7 +124,10 @@ public static class ContentSafety
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(ex);
+            logger?.LogWarning(
+                ex,
+                "Failed to read file for content verification: {FilePath}",
+                filePath);
             return ContentVerificationResult.Fail("Could not read file", ContentThreatLevel.Unknown);
         }
 

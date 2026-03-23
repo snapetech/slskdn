@@ -193,7 +193,7 @@ public sealed class TransferSecurity
         string username,
         CancellationToken cancellationToken = default)
     {
-        var result = await ContentSafety.VerifyFileAsync(filePath, cancellationToken);
+        var result = await ContentSafety.VerifyFileAsync(filePath, cancellationToken, _logger);
 
         if (result.ThreatLevel == ContentThreatLevel.Dangerous)
         {
