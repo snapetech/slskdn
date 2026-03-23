@@ -75,6 +75,43 @@ var (parsedArtist, parsedTitle, parsedAlbum) = ParseSoulseekFilename(...);
 
 **Why This Keeps Happening**: fallback code often mirrors the same domain names as the first extraction path. After refactors, those names may still be in scope even if they look visually separated by `try`/`catch` blocks. Use distinct fallback names like `parsedArtist` or `resolvedTitle` whenever you add a second extraction path in the same method.
 
+### 0xC4. Nested Request Fields Need Controller-Edge Normalization Too
+
+**The Bug**: controllers trimmed top-level route/body IDs but still passed nested request fields and collection items through raw. That let whitespace-only nicknames, avatar URLs, and peer endpoints reach the service layer or get stored as inconsistent values.
+
+**Files Affected**:
+- `src/slskd/Identity/API/ProfileController.cs`
+- `src/slskd/Identity/API/ContactsController.cs`
+
+**Wrong**:
+```csharp
+var p = await _profile.UpdateMyProfileAsync(
+    req.DisplayName.Trim(),
+    req.Avatar?.Trim(),
+    req.Capabilities ?? 0,
+    req.Endpoints ?? new List<PeerEndpoint>(),
+    ct);
+
+if (req.Nickname != null) c.Nickname = req.Nickname.Trim();
+```
+
+**Correct**:
+```csharp
+req.DisplayName = req.DisplayName?.Trim();
+req.Avatar = string.IsNullOrWhiteSpace(req.Avatar) ? null : req.Avatar.Trim();
+req.Endpoints = (req.Endpoints ?? new List<PeerEndpoint>())
+    .Select(endpoint => new PeerEndpoint
+    {
+        Type = endpoint.Type?.Trim() ?? string.Empty,
+        Address = endpoint.Address?.Trim() ?? string.Empty,
+        Priority = endpoint.Priority,
+    })
+    .Where(endpoint => !string.IsNullOrWhiteSpace(endpoint.Type) && !string.IsNullOrWhiteSpace(endpoint.Address))
+    .ToList();
+```
+
+**Why This Keeps Happening**: once the obvious route/query strings are normalized, nested request members are easy to forget because they look like “already parsed” domain objects. They are still raw transport input. Normalize and validate collection members and optional fields before calling the service layer or persisting them.
+
 ### 0xC2. Metadata Search Hits Without MBIDs Are Still Useful And Must Not Be Dropped Prematurely
 
 **The Bug**: metadata and SongID flows were treating “no MusicBrainz recording ID” as equivalent to “no usable hit.” That caused file-analysis fallback, metadata search, and candidate-building paths to drop perfectly good artist/title evidence, which in turn made SongID bottom out early even when it had enough information to keep ranking and planning.
