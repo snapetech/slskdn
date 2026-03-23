@@ -6437,3 +6437,5 @@ Code quality improvements were completed as part of Option A:
   - focused `PortForwardingControllerTests` slice passed (`8/8`)
 - Documented the success-payload identifier echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: continue through any remaining low-traffic success/not-found payloads that still repeat caller-supplied identifiers, then rerun broader release validation.
+
+- 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.

@@ -106,7 +106,7 @@ namespace slskd.HashDb.API
             var entry = await HashDb.LookupHashAsync(flacKey);
             if (entry == null)
             {
-                return NotFound(new { error = "No hash found for key " + flacKey });
+                return NotFound(new { error = "No hash found for key" });
             }
 
             return Ok(entry);

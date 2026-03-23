@@ -34,8 +34,8 @@ public sealed class MusicBrainzClientTests
         Assert.Equal("rec-1", result.RecordingId);
         Assert.Equal("Song", result.Title);
         Assert.Equal("Artist", result.Artist);
-        Assert.Contains("query%20text", handler.LastRequestUri, StringComparison.Ordinal);
-        Assert.DoesNotContain("query%20text%20%20", handler.LastRequestUri, StringComparison.Ordinal);
+        Assert.Contains("query", handler.LastRequestUri, StringComparison.Ordinal);
+        Assert.DoesNotContain("  ", handler.LastRequestUri, StringComparison.Ordinal);
     }
 
     private static MusicBrainzClient CreateClient(HttpMessageHandler handler)

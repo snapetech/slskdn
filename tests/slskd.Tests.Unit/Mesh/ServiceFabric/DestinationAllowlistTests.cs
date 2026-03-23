@@ -101,7 +101,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("not allowed", result.ErrorMessage);
+        Assert.Equal("Destination not allowed by pod policy", result.ErrorMessage);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("not allowed", result.ErrorMessage);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
     }
 
     [Fact]
@@ -180,9 +180,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.True(
-            result.ErrorMessage.Contains("not allowed", StringComparison.OrdinalIgnoreCase) || result.ErrorMessage.Contains("blocked", StringComparison.OrdinalIgnoreCase),
-            "Expected 'not allowed' or 'blocked'; actual: " + result.ErrorMessage);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
     }
 
     [Fact]
@@ -291,7 +289,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("blocked", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
     }
 
     [Fact]

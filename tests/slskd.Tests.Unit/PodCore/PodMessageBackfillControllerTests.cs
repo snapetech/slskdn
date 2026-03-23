@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.PodCore;
 
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -127,8 +128,7 @@ public class PodMessageBackfillControllerTests
         var result = await controller.SyncAllPods(CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var payload = Assert.IsAssignableFrom<IEnumerable<PodBackfillResult>>(ok.Value);
-        var results = payload.ToList();
+        var results = Assert.IsType<List<PodBackfillResult>>(ok.Value);
 
         Assert.Single(results);
         Assert.Equal("pod-1", results[0].PodId);

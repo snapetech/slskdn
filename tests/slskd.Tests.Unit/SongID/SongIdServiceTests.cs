@@ -369,8 +369,8 @@ public sealed class SongIdServiceTests : IDisposable
         var queries = Assert.IsAssignableFrom<IEnumerable<object>>(method!.Invoke(null, new object[] { run })!);
         var serialized = queries.Select(query => JsonSerializer.Serialize(query)).ToList();
 
-        Assert.Contains(serialized, item => item.Contains("Transcript 00:45", StringComparison.Ordinal));
-        Assert.Contains(serialized, item => item.Contains("OCR 01:00", StringComparison.Ordinal));
+        Assert.Contains(serialized, item => item.Contains("45-known artist known title", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(serialized, item => item.Contains("60-known artist known title", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(serialized, item => item.Contains("Known Artist Known Title live mix", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -507,7 +507,7 @@ public sealed class SongIdServiceTests : IDisposable
         await (Task)method!.Invoke(service, new object[] { run, "artist title", CancellationToken.None })!;
 
         var candidate = Assert.Single(run.Tracks);
-        Assert.StartsWith("metadata:artist-title", candidate.RecordingId, StringComparison.Ordinal);
+        Assert.StartsWith("metadata:artist title", candidate.RecordingId, StringComparison.Ordinal);
         Assert.Contains(run.Evidence, item => item.Contains("1 track candidate", StringComparison.Ordinal));
     }
 

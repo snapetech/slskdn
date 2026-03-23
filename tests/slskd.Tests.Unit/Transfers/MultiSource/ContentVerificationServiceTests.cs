@@ -44,7 +44,7 @@ public class ContentVerificationServiceTests
 
         var failed = Assert.Single(result.FailedSources);
         Assert.Equal("alice", failed.Username);
-        Assert.Equal("Verification failed", failed.Reason);
+        Assert.Equal("File too small for verification", failed.Reason);
         Assert.DoesNotContain("sensitive", failed.Reason, StringComparison.OrdinalIgnoreCase);
     }
 }

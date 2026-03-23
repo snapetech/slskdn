@@ -42,8 +42,7 @@ public class DnsLeakPreventionVerifier
 
             if (!connectionResult.Success)
             {
-                return DnsLeakVerificationResult.Failure(
-                    $"SOCKS proxy connection failed: {connectionResult.ErrorMessage}");
+                return DnsLeakVerificationResult.Failure("SOCKS proxy connection failed");
             }
 
             // Test 2: Verify no local DNS resolution occurred
@@ -52,8 +51,7 @@ public class DnsLeakPreventionVerifier
 
             if (expectedLeakPrevention && !dnsLeakResult.LeakPrevented)
             {
-                return DnsLeakVerificationResult.Failure(
-                    $"DNS leak prevention verification failed: {dnsLeakResult.ErrorMessage}");
+                return DnsLeakVerificationResult.Failure("DNS leak verification failed");
             }
 
             // Test 3: Verify hostname validation

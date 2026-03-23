@@ -73,7 +73,7 @@ public class PortForwardingController : ControllerBase
                 request.DestinationPort,
                 serviceName);
 
-            return Ok(new { Message = $"Port forwarding started on local port {request.LocalPort}" });
+            return Ok(new { Message = "Port forwarding started" });
         }
         catch (InvalidOperationException)
         {
@@ -96,7 +96,7 @@ public class PortForwardingController : ControllerBase
         try
         {
             await _portForwarder.StopForwardingAsync(localPort);
-            return Ok(new { Message = $"Port forwarding stopped on local port {localPort}" });
+            return Ok(new { Message = "Port forwarding stopped" });
         }
         catch (Exception)
         {

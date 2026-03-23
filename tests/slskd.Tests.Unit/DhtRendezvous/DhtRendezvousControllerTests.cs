@@ -31,6 +31,38 @@ public class DhtRendezvousControllerTests
     }
 
     [Fact]
+    public void BlockIp_ReturnsSanitizedSuccessMessage()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var controller = CreateController(blocklist);
+
+        var result = controller.BlockIp(new BlockIpRequest
+        {
+            Ip = " 127.0.0.1 ",
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("IP address blocked", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("127.0.0.1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BlockUsername_ReturnsSanitizedSuccessMessage()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var controller = CreateController(blocklist);
+
+        var result = controller.BlockUsername(new BlockUsernameRequest
+        {
+            Username = " user-1 ",
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("Username blocked", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("user-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Unblock_With_Blank_Target_Returns_BadRequest()
     {
         using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
@@ -64,6 +96,20 @@ public class DhtRendezvousControllerTests
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
         Assert.Contains("Blocklist entry not found", notFound.Value?.ToString() ?? string.Empty);
         Assert.DoesNotContain("alice", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Unblock_WhenEntryExists_ReturnsSanitizedSuccessMessage()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        blocklist.BlockUsername("alice", "test");
+        var controller = CreateController(blocklist);
+
+        var result = controller.Unblock(" username ", " alice ");
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("Blocklist entry removed", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("alice", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     private static DhtRendezvousController CreateController(OverlayBlocklist blocklist)

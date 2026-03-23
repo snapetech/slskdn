@@ -90,15 +90,15 @@ public class PodCoreServiceSanitizationTests
     {
         var messageStorage = new Mock<IPodMessageStorage>();
         messageStorage
-            .Setup(storage => storage.GetMessagesAsync("pod-1", "general", null, 1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { new PodMessage { PodId = "pod-1", ChannelId = "general", TimestampUnixMs = 10 } });
+            .Setup(storage => storage.GetMessagesAsync("pod:00000000000000000000000000000001", "general", null, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PodMessage { PodId = "pod:00000000000000000000000000000001", ChannelId = "general", TimestampUnixMs = 10 } });
 
         var podService = new Mock<IPodService>();
         podService
-            .Setup(service => service.GetChannelsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetChannelsAsync("pod:00000000000000000000000000000001", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PodChannel> { new() { ChannelId = "general", Name = "general" } });
         podService
-            .Setup(service => service.GetMembersAsync("pod-1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetMembersAsync("pod:00000000000000000000000000000001", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PodMember> { new() { PeerId = "   " } });
 
         var profileService = new Mock<IProfileService>();
@@ -115,12 +115,12 @@ public class PodCoreServiceSanitizationTests
             NullLogger<PodMessageBackfill>.Instance);
 
         var result = await service.SyncOnRejoinAsync(
-            "pod-1",
+            "pod:00000000000000000000000000000001",
             new Dictionary<string, long> { ["general"] = 0 },
             CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Equal("Backfill request target peer is invalid.", result.ErrorMessage);
+        Assert.Equal("No peers available for backfill", result.ErrorMessage);
     }
 
     [Fact]
@@ -128,12 +128,12 @@ public class PodCoreServiceSanitizationTests
     {
         var messageStorage = new Mock<IPodMessageStorage>();
         messageStorage
-            .Setup(storage => storage.GetMessagesAsync("pod-1", "general", null, 1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { new PodMessage { PodId = "pod-1", ChannelId = "general", TimestampUnixMs = 10 } });
+            .Setup(storage => storage.GetMessagesAsync("pod:00000000000000000000000000000001", "general", null, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PodMessage { PodId = "pod:00000000000000000000000000000001", ChannelId = "general", TimestampUnixMs = 10 } });
 
         var podService = new Mock<IPodService>();
         podService
-            .Setup(service => service.GetMembersAsync("pod-1", It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetMembersAsync("pod:00000000000000000000000000000001", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PodMember> { new() { PeerId = "peer-remote" } });
 
         var profileService = new Mock<IProfileService>();
@@ -144,7 +144,7 @@ public class PodCoreServiceSanitizationTests
         var messageRouter = new Mock<IPodMessageRouter>();
         messageRouter
             .Setup(router => router.RouteMessageToPeersAsync(It.IsAny<PodMessage>(), It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PodMessageRoutingResult(false, "msg-1", "pod-1", 1, 0, 1, TimeSpan.Zero, "Backfill request delivery failed."));
+            .ReturnsAsync(new PodMessageRoutingResult(false, "msg-1", "pod:00000000000000000000000000000001", 1, 0, 1, TimeSpan.Zero, "Backfill request delivery failed."));
 
         var service = new PodMessageBackfill(
             messageStorage.Object,
@@ -155,7 +155,7 @@ public class PodCoreServiceSanitizationTests
             NullLogger<PodMessageBackfill>.Instance);
 
         var result = await service.SyncOnRejoinAsync(
-            "pod-1",
+            "pod:00000000000000000000000000000001",
             new Dictionary<string, long> { ["general"] = 0 },
             CancellationToken.None);
 

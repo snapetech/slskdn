@@ -27,7 +27,7 @@ namespace slskd.Jobs.Manifests
 
             if (manifest.ManifestVersion != "1.0")
             {
-                errors.Add($"Unsupported manifest version: {manifest.ManifestVersion}");
+                errors.Add("Unsupported manifest version");
             }
 
             if (string.IsNullOrWhiteSpace(manifest.JobId) || !Guid.TryParse(manifest.JobId, out _))
@@ -60,7 +60,7 @@ namespace slskd.Jobs.Manifests
 
                     break;
                 default:
-                    errors.Add($"Unknown job_type: {manifest.JobType}");
+                    errors.Add("Unknown job type");
                     break;
             }
 
@@ -80,7 +80,7 @@ namespace slskd.Jobs.Manifests
             var validStates = new[] { "pending", "running", "completed", "failed", "cancelled" };
             if (string.IsNullOrWhiteSpace(status.State) || !validStates.Contains(status.State, StringComparer.OrdinalIgnoreCase))
             {
-                errors.Add("status.state must be one of: pending, running, completed, failed, cancelled");
+                errors.Add("Invalid status state");
             }
 
             if (status.BytesTotal < 0 || status.BytesDone < 0)

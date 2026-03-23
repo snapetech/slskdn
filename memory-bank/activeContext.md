@@ -23,10 +23,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Broad runtime/read-side secure-release bughunt from the stronger green release gate, focused on helper/result contracts that still leak internal error text or caller-controlled details across runtime subsystems
+- **Current Task**: Secure-release boundary sweep completed; repository is on a validated green head
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Closed the secure-release validation loop:
+    - fixed the remaining release-only unit-test drift in `LibraryHealthControllerTests` and `SearchActionsControllerTests`
+    - confirmed serial validation passes:
+      - `dotnet build --no-restore`
+      - `dotnet test --no-restore`
+      - `bash ./bin/lint`
+      - `bash packaging/scripts/run-release-gate.sh`
+    - documented ADR-0001 gotcha `0xD9` for release-mode test compile drift
   - Restored the remaining unit compile path:
     - `SearchActionsControllerTests`, `MeshContentMeshServiceTests`, and `PodMessageBackfillControllerTests` now match current runtime contracts again
     - `MeshServiceClient` now normalizes immutable `ServiceCall` DTOs via copied instances instead of mutating init-only properties
@@ -196,9 +204,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially any remaining plain JSON success/not-found payloads surfaced by HTTP or mesh APIs.
-2. Start using the restored unit-project compile path to run broader focused slices instead of build-only validation where practical.
-3. Keep folding in adjacent dirty files carefully so the runtime and unit build stay green between secure-release passes.
+1. If a release is desired, create an explicit build tag and let the tag-only pipeline run.
+2. Keep future secure-release work behind the real release gate, not just focused Debug slices.
+3. Continue broad bughunt work only from this validated green head.
+
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

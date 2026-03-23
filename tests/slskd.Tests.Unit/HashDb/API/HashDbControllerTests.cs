@@ -98,6 +98,26 @@ public class HashDbControllerTests
     }
 
     [Fact]
+    public async Task LookupHash_WhenEntryMissing_DoesNotLeakFlacKey()
+    {
+        var hashDb = new Mock<IHashDbService>();
+        hashDb
+            .Setup(service => service.LookupHashAsync("flac-key-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((HashDbEntry?)null);
+
+        var controller = new HashDbController(
+            hashDb.Object,
+            Mock.Of<IDbContextFactory<SearchDbContext>>(),
+            Mock.Of<IHashDbOptimizationService>());
+
+        var result = await controller.LookupHash(" flac-key-1 ");
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Contains("No hash found for key", notFound.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("flac-key-1", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void GenerateKey_TrimsFilenameBeforeGeneratingKey()
     {
         var controller = new HashDbController(

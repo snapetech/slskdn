@@ -266,7 +266,7 @@ namespace slskd.Integrations.MetadataFacade
                     h.Artist,
                     h.Title,
                     Album: null,
-                    h.RecordingId,
+                    string.IsNullOrWhiteSpace(h.RecordingId) ? null : h.RecordingId,
                     MusicBrainzReleaseId: null,
                     h.MusicBrainzArtistId,
                     Isrc: null,

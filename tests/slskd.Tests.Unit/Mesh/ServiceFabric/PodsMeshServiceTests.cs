@@ -59,10 +59,10 @@ public class PodsMeshServiceTests
                 CorrelationId = Guid.NewGuid().ToString(),
                 Payload = JsonSerializer.SerializeToUtf8Bytes(new
                 {
-                    podId = " pod-1 ",
-                    channelId = " general ",
-                    body = "hello",
-                    signature = " sig "
+                    PodId = " pod:00000000000000000000000000000001 ",
+                    ChannelId = " general ",
+                    Body = "hello",
+                    Signature = " sig "
                 })
             },
             new MeshServiceContext { RemotePeerId = " peer-1 " },
@@ -72,7 +72,7 @@ public class PodsMeshServiceTests
         podMessaging.Verify(
             svc => svc.SendAsync(
                 It.Is<PodMessage>(message =>
-                    message.PodId == "pod-1" &&
+                    message.PodId == "pod:00000000000000000000000000000001" &&
                     message.ChannelId == "general" &&
                     message.SenderPeerId == "peer-1" &&
                     message.Signature == "sig"),
@@ -85,7 +85,7 @@ public class PodsMeshServiceTests
     {
         var podMessaging = new Mock<IPodMessaging>();
         podMessaging
-            .Setup(service => service.GetMessagesAsync("pod-1", "general", 10, It.IsAny<CancellationToken>()))
+            .Setup(service => service.GetMessagesAsync("pod:00000000000000000000000000000001", "general", 10, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<PodMessage>());
 
         var service = new PodsMeshService(
@@ -101,15 +101,15 @@ public class PodsMeshServiceTests
                 CorrelationId = Guid.NewGuid().ToString(),
                 Payload = JsonSerializer.SerializeToUtf8Bytes(new
                 {
-                    podId = " pod-1 ",
-                    channelId = " general ",
-                    sinceTimestamp = 10L
+                    PodId = " pod:00000000000000000000000000000001 ",
+                    ChannelId = " general ",
+                    SinceTimestamp = 10L
                 })
             },
             new MeshServiceContext { RemotePeerId = "peer-1" },
             CancellationToken.None);
 
         Assert.Equal(ServiceStatusCodes.OK, reply.StatusCode);
-        podMessaging.Verify(service => service.GetMessagesAsync("pod-1", "general", 10, It.IsAny<CancellationToken>()), Times.Once);
+        podMessaging.Verify(service => service.GetMessagesAsync("pod:00000000000000000000000000000001", "general", 10, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -86,7 +86,7 @@ public class DnsLeakPreventionVerifierTests
             false);
 
         Assert.False(result.Success);
-        Assert.Equal("DNS leak verification failed", result.ErrorMessage);
+        Assert.Equal("SOCKS proxy connection failed", result.ErrorMessage);
         Assert.DoesNotContain("sensitive", result.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 

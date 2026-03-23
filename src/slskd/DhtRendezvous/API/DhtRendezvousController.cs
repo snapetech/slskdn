@@ -257,7 +257,7 @@ public class DhtRendezvousController : ControllerBase
 
         _blocklist.BlockIp(ip, reason ?? "Manual block", duration, request.Permanent);
 
-        return Ok(new { message = $"Blocked IP {ipText}" });
+        return Ok(new { message = "IP address blocked" });
     }
 
     /// <summary>
@@ -280,7 +280,7 @@ public class DhtRendezvousController : ControllerBase
 
         _blocklist.BlockUsername(username, reason ?? "Manual block", duration, request.Permanent);
 
-        return Ok(new { message = $"Blocked username {username}" });
+        return Ok(new { message = "Username blocked" });
     }
 
     /// <summary>
@@ -321,7 +321,7 @@ public class DhtRendezvousController : ControllerBase
             return NotFound(new { error = "Blocklist entry not found" });
         }
 
-        return Ok(new { message = $"Unblocked {type} {target}" });
+        return Ok(new { message = "Blocklist entry removed" });
     }
 }
 

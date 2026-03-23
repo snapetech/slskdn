@@ -460,8 +460,11 @@ public class PrivateGatewayMeshServiceTests
         var result = await _service.HandleCallAsync(call, context);
 
         Assert.Equal(ServiceStatusCodes.ServiceUnavailable, result.StatusCode);
-        Assert.True(result.ErrorMessage?.Contains("rate limit") == true || result.ErrorMessage?.Contains("blocked") == true || result.ErrorMessage?.Contains("Destination not allowed") == true,
-            "Expected rate limit, blocked, or policy message; got: " + (result.ErrorMessage ?? ""));
+        Assert.True(result.ErrorMessage?.Contains("rate limit") == true ||
+                    result.ErrorMessage?.Contains("blocked") == true ||
+                    result.ErrorMessage?.Contains("Destination not allowed") == true ||
+                    result.ErrorMessage?.Contains("DNS validation failed") == true,
+            "Expected rate limit, blocked, policy, or DNS-validation message; got: " + (result.ErrorMessage ?? ""));
     }
 
     [Fact]

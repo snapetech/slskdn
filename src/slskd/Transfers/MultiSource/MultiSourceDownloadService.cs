@@ -1253,7 +1253,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             {
                                 _logger.LogWarning("[SWARM] {Username} too slow ({Speed:F1} KB/s < {Threshold:F1} KB/s for {Duration:F0}s) - timeout {Timeout}s",
                                     username, speedBps / 1024.0, dynamicMinSpeed / 1024.0, slowDuration / 1000.0, peerTimeoutSeconds);
-                                result.Error = $"Too slow: {speedBps / 1024.0:F1} KB/s for {slowDuration / 1000.0:F0}s";
+                                result.Error = "Chunk download timed out due to low throughput";
 
                                 // Set timeout instead of blacklist - peer can retry later
                                 status.SetPeerTimeout(username, TimeSpan.FromSeconds(peerTimeoutSeconds));
@@ -1350,7 +1350,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             }
             else
             {
-                result.Error = $"Only got {limitedStream.BytesWritten}/{chunkSize} bytes";
+                result.Error = "Incomplete chunk download";
             }
 
             return result;

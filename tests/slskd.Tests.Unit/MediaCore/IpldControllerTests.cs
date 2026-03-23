@@ -53,4 +53,20 @@ public class IpldControllerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task AddLinks_ReturnsSanitizedSuccessMessage()
+    {
+        var mapper = new Mock<IIpldMapper>();
+        var controller = new IpldController(NullLogger<IpldController>.Instance, mapper.Object);
+
+        var result = await controller.AddLinks(
+            "content:audio:track:1",
+            new AddLinksRequest(new[] { new IpldLinkRequest("album", "content:audio:album:1") }),
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("Links added successfully", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("content:audio:track:1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }

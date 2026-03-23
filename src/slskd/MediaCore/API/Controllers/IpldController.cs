@@ -203,7 +203,7 @@ public class IpldController : ControllerBase
                 "[IPLD] Added {LinkCount} links to {ContentId}",
                 links.Count, contentId);
 
-            return Ok(new { message = $"Added {links.Count} links to {contentId}" });
+            return Ok(new { message = "Links added successfully" });
         }
         catch (Exception ex)
         {

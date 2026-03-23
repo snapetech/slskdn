@@ -177,8 +177,8 @@ public class PathGuardTests
         var result = PathGuard.Validate("bad\0path", TestRoot);
 
         Assert.False(result.IsValid);
-        Assert.Equal(PathViolationType.InvalidComponent, result.ViolationType);
-        Assert.Equal("Invalid path", result.Error);
+        Assert.Equal(PathViolationType.ControlCharacters, result.ViolationType);
+        Assert.Equal("Path contains control characters", result.Error);
         Assert.DoesNotContain("null", result.Error ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
     }
 

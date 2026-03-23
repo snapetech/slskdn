@@ -625,6 +625,14 @@ public class HashDbServiceTests : IDisposable
     [Fact]
     public async Task GetLabelCrateReleaseJobsAsync_SkipsBlankReleaseIds()
     {
+        await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob
+        {
+            JobId = "job-1",
+            LabelId = "label-1",
+            LabelName = "Label",
+            Status = JobStatus.Pending
+        });
+
         await service.UpsertLabelCrateReleaseJobsAsync("job-1", new[]
         {
             new DiscographyReleaseJobStatus { ReleaseId = " rel-1 ", Status = JobStatus.Pending },

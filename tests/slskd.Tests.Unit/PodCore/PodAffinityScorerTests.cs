@@ -272,8 +272,8 @@ public class PodAffinityScorerTests
             }).ToList());
         mockPodMessaging.Setup(s => s.GetMessagesAsync("pod:churn", "general", null, It.IsAny<CancellationToken>())).ReturnsAsync(messages);
 
-        var stableAffinity = await scorer.ComputeAffinityAsync("pod:stable", "user1");
-        var churnAffinity = await scorer.ComputeAffinityAsync("pod:churn", "user1");
+        var stableAffinity = await scorer.ComputeAffinityAsync("pod:stable", "outsider");
+        var churnAffinity = await scorer.ComputeAffinityAsync("pod:churn", "outsider");
 
         Assert.True(stableAffinity > churnAffinity, $"Stable membership ({stableAffinity:F3}) should beat churn ({churnAffinity:F3})");
     }

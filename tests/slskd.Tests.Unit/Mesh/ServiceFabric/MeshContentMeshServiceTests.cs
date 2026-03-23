@@ -74,16 +74,11 @@ public class MeshContentMeshServiceTests
     [Fact]
     public async Task HandleCallAsync_GetByContentId_WhenFileTooLarge_ReturnsSanitizedError()
     {
-        var repo = new Mock<IShareServiceLocalRepository>();
+        var repo = new Mock<IShareRepository>();
         repo.Setup(repository => repository.FindContentItem("content:audio:track:mb-12345"))
-            .Returns(new ContentItem
-            {
-                ContentId = "content:audio:track:mb-12345",
-                MaskedFilename = "masked-file.flac",
-                IsAdvertisable = true
-            });
+            .Returns((Domain: "audio", WorkId: "work-1", MaskedFilename: "masked-file.flac", IsAdvertisable: true, ModerationReason: string.Empty, CheckedAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         repo.Setup(repository => repository.FindFileInfo("masked-file.flac"))
-            .Returns((Filename: Path.GetTempFileName(), Size: 40L * 1024 * 1024, LastWriteTimeUtc: DateTime.UtcNow));
+            .Returns((Filename: Path.GetTempFileName(), Size: 40L * 1024 * 1024));
 
         var shareService = new Mock<IShareService>();
         shareService.Setup(service => service.GetLocalRepository()).Returns(repo.Object);
@@ -116,14 +111,9 @@ public class MeshContentMeshServiceTests
     [Fact]
     public async Task HandleCallAsync_GetByContentId_TrimsContentIdBeforeLookup()
     {
-        var repo = new Mock<IShareServiceLocalRepository>();
+        var repo = new Mock<IShareRepository>();
         repo.Setup(repository => repository.FindContentItem("content:audio:track:mb-12345"))
-            .Returns(new ContentItem
-            {
-                ContentId = "content:audio:track:mb-12345",
-                MaskedFilename = "masked-file.flac",
-                IsAdvertisable = false
-            });
+            .Returns((Domain: "audio", WorkId: "work-1", MaskedFilename: "masked-file.flac", IsAdvertisable: false, ModerationReason: string.Empty, CheckedAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
 
         var shareService = new Mock<IShareService>();
         shareService.Setup(service => service.GetLocalRepository()).Returns(repo.Object);
@@ -149,16 +139,11 @@ public class MeshContentMeshServiceTests
     [Fact]
     public async Task HandleCallAsync_GetByContentId_WithInvalidRange_ReturnsInvalidPayload()
     {
-        var repo = new Mock<IShareServiceLocalRepository>();
+        var repo = new Mock<IShareRepository>();
         repo.Setup(repository => repository.FindContentItem("content:audio:track:mb-12345"))
-            .Returns(new ContentItem
-            {
-                ContentId = "content:audio:track:mb-12345",
-                MaskedFilename = "masked-file.flac",
-                IsAdvertisable = true
-            });
+            .Returns((Domain: "audio", WorkId: "work-1", MaskedFilename: "masked-file.flac", IsAdvertisable: true, ModerationReason: string.Empty, CheckedAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
         repo.Setup(repository => repository.FindFileInfo("masked-file.flac"))
-            .Returns((Filename: Path.GetTempFileName(), Size: 1024L, LastWriteTimeUtc: DateTime.UtcNow));
+            .Returns((Filename: Path.GetTempFileName(), Size: 1024L));
 
         var shareService = new Mock<IShareService>();
         shareService.Setup(service => service.GetLocalRepository()).Returns(repo.Object);

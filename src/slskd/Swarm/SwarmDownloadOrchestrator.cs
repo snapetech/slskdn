@@ -372,7 +372,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Source not found for peer {peerId}",
+                    Error = "Chunk source not found",
                 };
             }
 
@@ -451,7 +451,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                     {
                         ChunkIndex = chunk.Index,
                         Success = false,
-                        Error = $"Incomplete chunk: got {bytesDownloaded}/{chunkSize} bytes",
+                        Error = "Incomplete chunk download",
                     };
                 }
             }
@@ -464,7 +464,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Mesh transport chunk download not yet implemented",
+                    Error = "Mesh transport chunk download is unavailable",
                 };
             }
             else
@@ -473,7 +473,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Unsupported transport: {source.Transport}",
+                    Error = "Unsupported chunk transport",
                 };
             }
         }

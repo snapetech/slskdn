@@ -377,7 +377,7 @@ public class SearchActionsController : ControllerBase
                 {
                     Type = "download_failed",
                     Title = "Download failed",
-                    Detail = string.Join("; ", failed)
+                    Detail = "Failed to enqueue scene download"
                 });
             }
             else

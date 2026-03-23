@@ -77,7 +77,7 @@ namespace slskd.LibraryHealth.API
 
             if (scan == null)
             {
-                return NotFound(new { message = $"Scan {scanId} not found" });
+                return NotFound(new { message = "Scan not found" });
             }
 
             return Ok(scan);

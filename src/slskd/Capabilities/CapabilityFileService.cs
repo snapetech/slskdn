@@ -423,7 +423,7 @@ public sealed class CapabilityFileService
 
     private static string NormalizeCapabilityPath(string path)
     {
-        return path.Trim().Replace('/', '\\');
+        return path.Trim().Replace('\\', '/');
     }
 
     private static (string Client, string Version) ParseClientIdentity(string? clientVersion)

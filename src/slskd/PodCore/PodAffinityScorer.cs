@@ -153,7 +153,7 @@ public class PodAffinityScorer : IPodAffinityScorer
             return 1.0;
         }
 
-        var membershipHistory = await podService.GetMembershipHistoryAsync(podId, ct);
+        var membershipHistory = await podService.GetMembershipHistoryAsync(podId, ct) ?? Array.Empty<SignedMembershipRecord>();
         var historyByPeer = membershipHistory
             .Where(record => !string.IsNullOrWhiteSpace(record.PeerId))
             .GroupBy(record => record.PeerId.Trim(), StringComparer.OrdinalIgnoreCase)

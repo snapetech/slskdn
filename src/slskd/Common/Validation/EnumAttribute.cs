@@ -45,19 +45,19 @@ namespace slskd.Validation
             {
                 if (array.Any(x => string.IsNullOrEmpty(x)))
                 {
-                    return new ValidationResult($"The {validationContext.DisplayName} field contains one or more null or empty values");
+                    return new ValidationResult($"The {validationContext.DisplayName} field contains invalid values");
                 }
 
                 if (array.Any(x => !Enum.TryParse(TargetType, x, IgnoreCase, out _)))
                 {
-                    return new ValidationResult($"The elements in the {validationContext.DisplayName} field must all be one of: {string.Join(", ", Enum.GetNames(TargetType))}. Case {(IgnoreCase ? "insensitive" : "sensitive")}.");
+                    return new ValidationResult($"The {validationContext.DisplayName} field contains invalid values");
                 }
             }
             else
             {
                 if (value != null && !Enum.TryParse(TargetType, value.ToString(), IgnoreCase, out _))
                 {
-                    return new ValidationResult($"The {validationContext.DisplayName} field must be one of: {string.Join(", ", Enum.GetNames(TargetType))}. Case {(IgnoreCase ? "insensitive" : "sensitive")}.");
+                    return new ValidationResult($"The {validationContext.DisplayName} field is invalid");
                 }
             }
 

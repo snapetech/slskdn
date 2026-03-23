@@ -55,7 +55,7 @@ public class SimpleResolverTests
 
         Assert.Equal(PlanExecutionStatus.Failed, result.Status);
         Assert.DoesNotContain("sensitive detail", result.ErrorMessage ?? string.Empty);
-        Assert.Equal("Http fetch failed", result.ErrorMessage);
+        Assert.Equal("All candidates in step failed", result.ErrorMessage);
     }
 
     private static IOptionsMonitor<ResolverOptions> CreateOptionsMonitor()

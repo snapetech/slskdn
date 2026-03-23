@@ -284,6 +284,38 @@ public class SearchActionsControllerTests
         Assert.Equal("Scene download failed", details.Detail);
     }
 
+    [Fact]
+    public async Task HandleSceneDownloadAsync_WhenEnqueueReturnsFailedReasons_DoesNotLeakFailureDetails()
+    {
+        var downloadService = new Mock<IDownloadService>();
+        downloadService
+            .Setup(service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<slskd.Transfers.Transfer>(), new List<string> { "alice: sensitive detail" }));
+
+        var controller = CreateController(downloadService: downloadService);
+        var method = typeof(SearchActionsController).GetMethod("HandleSceneDownloadAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        var task = (Task<IActionResult>)method!.Invoke(
+            controller,
+            new object[]
+            {
+                new SceneContentRef { Username = "alice", Filename = "Music/song.flac", Size = 1234 },
+                new slskd.Search.File { Filename = "song.flac", Size = 1234 },
+                CancellationToken.None
+            })!;
+
+        var result = await task;
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal("Failed to enqueue scene download", details.Detail);
+        Assert.DoesNotContain("sensitive detail", details.Detail ?? string.Empty);
+        Assert.DoesNotContain("alice", details.Detail ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static SearchActionsController CreateController(
         Mock<ISearchService>? searchService = null,
         Mock<IMeshContentFetcher>? meshFetcher = null,

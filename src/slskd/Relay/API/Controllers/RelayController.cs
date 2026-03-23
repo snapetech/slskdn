@@ -501,7 +501,7 @@ namespace slskd.Relay
                 return BadRequest("agentName query parameter is required");
             }
 
-            if (!Relay.RegisteredAgents.Any(a => a.Name == agentName))
+            if (Relay.RegisteredAgents == null || !Relay.RegisteredAgents.Any(a => a.Name == agentName))
             {
                 return NotFound("Agent is not registered");
             }

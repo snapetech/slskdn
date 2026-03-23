@@ -138,7 +138,7 @@ public class HolePunchMeshServiceTests
             CancellationToken.None);
 
         Assert.Equal(ServiceStatusCodes.InvalidPayload, reply.StatusCode);
-        Assert.Equal("Invalid request payload", reply.ErrorMessage);
+        Assert.Equal("Invalid JSON", reply.ErrorMessage);
         Assert.DoesNotContain("targetPeerId", reply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -283,7 +283,7 @@ public class MultiSourceControllerTests
                 It.IsAny<int?>(),
                 It.IsAny<SearchOptions>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken>((_, handler, _, _, _, _) =>
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken?>((_, handler, _, _, _, _) =>
             {
                 handler(new SearchResponse(
                     "alice",
