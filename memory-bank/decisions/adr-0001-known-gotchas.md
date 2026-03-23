@@ -173,6 +173,36 @@ var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, fingerprint
 
 **Why This Keeps Happening**: environment variables and persisted JSON fields look “already normalized,” so path-resolution code often uses them directly. But helper paths and stored relative filenames come from humans, scripts, and migrations, and they drift. Trim filesystem inputs before existence checks or path joins, or you will create fake “not found” behavior from harmless whitespace.
 
+### 0xC4. Distributed Request Registries Must Reuse In-Flight Waiters, And Consensus Must Adapt To Available Peers
+
+**The Bug**: mesh lookup/chunk requests treated duplicate in-flight requests as hard failures instead of sharing the existing waiter, and hash consensus required the configured agreement count even when fewer peers were actually available. That made small meshes under-report reachable data and caused callers to fail even though an identical request was already running.
+
+**Files Affected**:
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+if (!pendingRequests.TryAdd(requestId, tcs))
+{
+    return null;
+}
+
+var agreed = groups.FirstOrDefault(g => g.Count() >= minAgreements);
+```
+
+**Correct**:
+```csharp
+if (!pendingRequests.TryAdd(requestId, tcs))
+{
+    pendingRequests.TryGetValue(requestId, out tcs);
+}
+
+var requiredAgreements = Math.Max(1, Math.Min(minAgreements, meshPeers.Count));
+var agreed = groups.FirstOrDefault(g => g.Count() >= requiredAgreements);
+```
+
+**Why This Keeps Happening**: distributed code often starts from the single-caller ideal case, so duplicate requests are treated as programmer error and quorum thresholds are treated as absolute policy. In practice, callers race and peer sets are sparse. Reuse existing in-flight waiters and calculate quorum from the peers you actually queried, or the runtime will invent failures on small healthy meshes.
+
 ### 0xC1. Small Utility Controllers Still Need Input Normalization Before Dispatch
 
 **The Bug**: low-traffic helper controllers were still forwarding raw route, query, and body strings straight into services. That let whitespace-only values slip through validation, turned padded identifiers into different storage keys, and in some cases converted simple bad input into service-level exceptions and `500`s.
