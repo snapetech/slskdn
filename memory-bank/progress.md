@@ -7057,3 +7057,11 @@ Code quality improvements were completed as part of Option A:
 - This keeps pre-`content_items` share caches on the normal upgrade path instead of forcing a destructive rebuild for a routine additive schema change.
 - Extended `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` with a focused migration regression proving `TryValidate()` recreates a dropped/missing `content_items` table and still returns valid.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`8/8`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 14:20 CST
+
+- Continued the same `SqliteShareRepository` ownership sweep into disposal.
+- Fixed `Dispose()` so it now stops and disposes the keepalive timer before releasing the keepalive SQLite connection.
+- The repository no longer leaks the timer or leaves the keepalive callback surface alive after disposal.
+- Extended `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` with focused disposal coverage around the public keepalive toggle surface.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`8/8`) after the updated test assembly was built; `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.

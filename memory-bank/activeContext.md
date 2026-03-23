@@ -1076,3 +1076,11 @@ dotnet test
 - Next steps:
   - continue bughunting remaining share-repository health/keepalive assumptions that may still only verify the original FTS core and ignore newer owned schema
   - then widen back out to other hand-written SQLite stores where additive tables or indexes may still lack non-destructive migration paths
+
+## 2026-03-23 14:20 CST
+- Continued the same share-repository lifecycle sweep into disposal/resource ownership.
+- Fixed `SqliteShareRepository.Dispose()` so it now stops and disposes the keepalive timer before disposing the keepalive connection.
+- Extended `ShareScannerModerationTests` with focused disposal coverage around the keepalive toggle surface; confirmed the focused share-repository slice remains green (`8/8`) and the release build stayed green (`0 warnings / 0 errors`).
+- Next steps:
+  - decide whether one more share-repository pass is warranted around keepalive corruption assumptions, or whether the higher-yield move is to widen back out to other owned timer/resource types surfaced by the new timer scan
+  - if widening, prioritize timer-backed services that still own timers but do not obviously dispose them

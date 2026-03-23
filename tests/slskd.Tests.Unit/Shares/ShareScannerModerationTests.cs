@@ -213,6 +213,24 @@ public class ShareRepositoryModerationTests : IDisposable
     }
 
     [Fact]
+    public void Dispose_DisposesKeepaliveTimer()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ShareRepositoryDisposeTest_{Guid.NewGuid()}.db");
+        var repository = new SqliteShareRepository($"Data Source={path}");
+
+        repository.Dispose();
+
+        try
+        {
+            Assert.Throws<ObjectDisposedException>(() => repository.EnableKeepalive(true));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
     {
         using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");

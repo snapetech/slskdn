@@ -902,6 +902,8 @@ namespace slskd.Shares
             {
                 if (disposing)
                 {
+                    KeepaliveTimer.Stop();
+                    KeepaliveTimer.Dispose();
                     KeepaliveConnection.Dispose();
                 }
 
