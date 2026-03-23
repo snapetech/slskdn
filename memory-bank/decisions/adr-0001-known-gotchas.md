@@ -12990,3 +12990,26 @@ return hits.Select(...).ToList();
 ```
 
 **Why This Keeps Happening**: feature code often gets written before nearby integrations are complete, and the placeholder path survives long after the dependency exists. Before leaving a public method as “not implemented,” check whether the repo already has enough integration surface to provide a conservative real result.
+
+### 0k90. Duplicate Security Helpers Must Reuse The Hardened Implementation Instead Of Drifting Apart
+
+**The Bug**: the DHT rendezvous `PathGuard` copy had drifted away from the hardened shared `Common.Security.PathGuard`. It still used a naive `StartsWith(root)` containment check, which can accept sibling-prefix escapes like `root2/evil`, and it missed the stronger traversal and normalization handling already present in the shared implementation.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/PathGuard.cs`
+- `src/slskd/Common/Security/PathGuard.cs`
+
+**Wrong**:
+```csharp
+if (!fullPath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
+{
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+return slskd.Common.Security.PathGuard.NormalizeAndValidate(peerPath, rootDirectory);
+```
+
+**Why This Keeps Happening**: copied security helpers look harmless at first, but the duplicate version quietly misses later hardening work. For traversal, path containment, SSRF, auth, and similar security primitives, do not maintain a second “almost the same” implementation. Route through the hardened shared helper or keep the logic in one place.
