@@ -387,7 +387,7 @@ namespace slskd.Relay
 
             // this token is only valid for this connection id for a short time this is important to prevent replay-type attacks.
             MemoryCache.Set(GetAuthTokenCacheKey(connectionId), token, TimeSpan.FromSeconds(10));
-            Log.Debug("Cached auth token {Token} for ID {Id}", token, connectionId);
+            Log.Debug("Cached auth challenge for relay connection {ConnectionId}", GetConnectionLogId(connectionId));
             return token;
         }
 
@@ -785,7 +785,7 @@ namespace slskd.Relay
         {
             if (!MemoryCache.TryGetValue(GetAuthTokenCacheKey(connectionId), out var challengeToken))
             {
-                Log.Debug("Auth challenge for {Id} failed: no challenge token cached for ID", connectionId);
+                Log.Debug("Auth challenge for {ConnectionId} failed: no challenge token cached", GetConnectionLogId(connectionId));
                 return false;
             }
 
@@ -793,7 +793,7 @@ namespace slskd.Relay
 
             if (agentOptions == default)
             {
-                Log.Debug("Auth challenge for {Id} failed: no configuration for agent '{Agent}'", connectionId, agentName);
+                Log.Debug("Auth challenge for {ConnectionId} failed: no configuration for agent {Agent}", GetConnectionLogId(connectionId), GetAgentLogId(agentName));
                 return false;
             }
 
@@ -803,7 +803,7 @@ namespace slskd.Relay
 
             if (expectedCredential != credential)
             {
-                Log.Debug("Validation failed: Supplied credential {Credential} does not match expected credential {Expected}", credential, expectedCredential);
+                Log.Debug("Validation failed: Supplied authentication credential does not match expected credential for agent {Agent}", GetAgentLogId(agentName));
                 return false;
             }
 
@@ -958,7 +958,7 @@ namespace slskd.Relay
 
                 if (!TryGetAgentRegistration(trustedConnectionId, out var trustedRecord))
                 {
-                    Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+                    Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", GetConnectionLogId(trustedConnectionId));
                     return false;
                 }
 
@@ -974,7 +974,7 @@ namespace slskd.Relay
 
                 if (expectedCredential != credential)
                 {
-                    Log.Debug("Validation failed: Supplied credential {Credential} does not match expected credential {Expected}", credential, expectedCredential);
+                    Log.Debug("Validation failed: Supplied response credential does not match expected credential for agent {Agent}", GetAgentLogId(agentName));
                     return false;
                 }
 
@@ -1003,11 +1003,22 @@ namespace slskd.Relay
 
             if (!TryGetAgentRegistration(trustedConnectionId, out var trustedRecord))
             {
-                Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+                Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", GetConnectionLogId(trustedConnectionId));
                 return false;
             }
 
             return TryValidateCredential(token, trustedRecord.Agent.Name, credential, cacheKey, out validatedAgentName, suppressRemoval);
+        }
+
+        private static string GetConnectionLogId(string connectionId)
+        {
+            if (string.IsNullOrWhiteSpace(connectionId))
+            {
+                return "connection:unknown";
+            }
+
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(connectionId));
+            return $"connection:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
         }
 
         private static string GetAgentLogId(string agentName)

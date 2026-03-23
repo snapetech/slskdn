@@ -6567,3 +6567,9 @@ Code quality improvements were completed as part of Option A:
 - The failing external error was `binary_sha3_384: Error checking upload uniqueness.`, returned by the Snap Store during upload processing after the snap had already built successfully.
 - Hardened both dev and main Snap publish steps in `.github/workflows/build-on-tag.yml` to retry known store-side processing failures for longer, with capped linear backoff and explicit matching for the uniqueness-check error.
 - Documented the Snap Store processing gotcha in `adr-0001-known-gotchas.md`.
+
+## 2026-03-23 13:08 - RelayService CodeQL secret-log fix
+
+- Investigated CodeQL alerts `#2547` and `#2548` in `RelayService.cs` and confirmed the underlying issue was raw cached relay connection ids being written to debug logs during credential validation failures.
+- Replaced raw relay connection id logging with a hashed `GetConnectionLogId(...)` helper and removed direct credential/token value logging from the same validation path.
+- Documented the relay secret-log gotcha in `adr-0001-known-gotchas.md` before validation.

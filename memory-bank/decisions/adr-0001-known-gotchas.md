@@ -135,6 +135,29 @@ done
 
 **Why This Keeps Happening**: store-backed publishing fails differently from local packaging. The artifact can be valid while the remote dedupe or processing service is unhealthy. Fixed short retries are enough for packet loss, but not for multi-minute store-side incidents. Treat known Snap Store processing messages as transient and use a longer backoff window.
 
+### 0xDD. Relay Validation Logs Must Not Persist Raw Connection IDs, Tokens, Or Credentials
+
+**The Bug**: `RelayService` validation failures were writing raw cached relay connection ids and direct credential/token values into debug logs. CodeQL flags this as cleartext storage of sensitive information because those values become durable in log sinks even when the underlying validation fails quickly.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayService.cs`
+
+**Wrong**:
+```csharp
+Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+Log.Debug("Validation failed: Supplied credential {Credential} does not match expected credential {Expected}", credential, expectedCredential);
+Log.Debug("Cached auth token {Token} for ID {Id}", token, connectionId);
+```
+
+**Correct**:
+```csharp
+Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", GetConnectionLogId(trustedConnectionId));
+Log.Debug("Validation failed: Supplied response credential does not match expected credential for agent {Agent}", GetAgentLogId(agentName));
+Log.Debug("Cached auth challenge for relay connection {ConnectionId}", GetConnectionLogId(connectionId));
+```
+
+**Why This Keeps Happening**: validation-path logging is often written during debugging, where dumping the exact value feels helpful. In security-sensitive relay code that turns transient secrets and session identifiers into long-lived log data. Use stable hashed log ids for connection identifiers and category-level messages for credentials/tokens instead of logging raw values.
+
 ### 0xD9. Release Gates Must Exercise Release-Build Test Compiles, Not Just Debug `dotnet test`
 
 **The Bug**: several stale unit tests kept passing targeted Debug runs but still broke the release gate because Release-mode test compilation exercises a different path. In this case, tests were still referencing removed controller methods and old type names like `slskd.Downloads.Download`, so local focused validation looked green while `run-release-gate.sh` failed compiling the Release unit project.
