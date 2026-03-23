@@ -16907,3 +16907,35 @@ bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD PKGBUILD-bin
 ```
 
 **Why This Keeps Happening**: release automation is often touched across workflows, and small packaging contract changes (filenames, paths, URLs) drift unless validated as a cluster. Keeping those references canonical prevents silent installer breakage, especially when release assets are mutable and cached workflows are rerun.
+
+### 0k14M. ManagedState Listener Wrappers Must Isolate Callback Failures
+
+**The Bug**: `ManagedStateDisposable.OnChange(...)` invoked the registered listener directly and allowed one consumer exception to bubble out of the callback path, which could turn one bad listener into a broad state update failure.
+
+**Files Affected**:
+- `src/slskd/Common/ManagedState.cs`
+
+**Wrong**:
+```csharp
+Listener.Invoke((args.Previous!, args.Current));
+```
+
+**Correct**:
+```csharp
+try
+{
+    Listener.Invoke((args.Previous!, args.Current));
+}
+catch (Exception ex)
+{
+    exceptions ??= new List<Exception>();
+    exceptions.Add(ex);
+}
+
+if (exceptions is not null)
+{
+    throw new AggregateException(exceptions);
+}
+```
+
+**Why This Keeps Happening**: callback fanout is caller-owned and often treated as trusted control flow, so one downstream bug can abort a whole state mutation path. Wrapping per-listener failures keeps state propagation resilient.
