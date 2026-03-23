@@ -6702,6 +6702,15 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
 
+## 2026-03-23 12:18 CST
+- Continued the same startup-token lifecycle sweep into the remaining timer/background helper.
+- `CoverTrafficGenerator.StartAsync()` now cancels the previous generation CTS before disposing/replacing it, so restart-after-completion/reinitialization paths do not leave an older generation token source in a disposed-but-uncanceled state.
+- Added a focused regression in `tests/slskd.Tests.Unit/Common/Security/CoverTrafficGeneratorTests.cs` proving replacement startup cancels the previous generation token source.
+- Extended the existing ADR-0001 startup-CTS gotcha entry to include the cover-traffic generator surface.
+- Validation passed:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter CoverTrafficGeneratorTests`
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal`
+
 ## 2026-03-23 12:08 CST
 - Continued the startup/restart lifecycle bughunt into the remaining background initialization paths.
 - `Application` and `DhtRendezvousService` now cancel previous startup/background initialization CTS instances before disposing/replacing them, so restart/startup replacement no longer leaves prior initialization work running against a disposed token source.

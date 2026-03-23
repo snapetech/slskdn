@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -54,5 +55,37 @@ public class CoverTrafficGeneratorTests
         await generator.StartAsync();
 
         Assert.True(generator.GetStats().IsActive);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenReplacingPreviousGenerationToken_CancelsOldTokenSource()
+    {
+        var logger = Mock.Of<ILogger<CoverTrafficGenerator>>();
+        using var generator = new CoverTrafficGenerator(
+            new CoverTrafficOptions
+            {
+                Enabled = true,
+                IntervalSeconds = 60,
+                OnlyWhenIdle = true,
+            },
+            () => new byte[] { 0x01 },
+            () => Task.CompletedTask,
+            logger);
+
+        var previousGenerationCts = new CancellationTokenSource();
+        SetPrivateField(generator, "_generationCts", previousGenerationCts);
+        SetPrivateField(generator, "_generationTask", Task.CompletedTask);
+
+        await generator.StartAsync();
+
+        Assert.True(previousGenerationCts.IsCancellationRequested);
+    }
+
+    private static void SetPrivateField(object instance, string fieldName, object? value)
+    {
+        var field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Field '{fieldName}' was not found on {instance.GetType().Name}.");
+
+        field.SetValue(instance, value);
     }
 }

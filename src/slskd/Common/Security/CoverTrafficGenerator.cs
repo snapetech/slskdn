@@ -54,9 +54,11 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
             return Task.CompletedTask;
         }
 
+        _generationCts?.Cancel();
         _generationCts?.Dispose();
-        _generationCts = new CancellationTokenSource();
-        _generationTask = GenerateCoverTrafficAsync(_generationCts.Token);
+        var generationCts = new CancellationTokenSource();
+        _generationCts = generationCts;
+        _generationTask = GenerateCoverTrafficAsync(generationCts.Token);
 
         _logger.LogInformation("Cover traffic generation started with interval {Interval}s", _options.IntervalSeconds);
         return Task.CompletedTask;

@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the startup-token lifecycle sweep into cover traffic:
+    - `CoverTrafficGenerator.StartAsync()` now cancels the previous generation CTS before disposing/replacing it
+    - restart/reinitialization no longer leaves an older generation token source in the disposed-but-uncanceled state
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Common/Security/CoverTrafficGeneratorTests.cs`
+  - Confirmed the focused cover-traffic slice passed (`24/24`) and the runtime release build remained green (`0 warnings / 0 errors`)
+  - Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`)
   - Continued the same startup/restart lifecycle sweep into the remaining initializer surfaces:
     - `Application` and `DhtRendezvousService` now cancel prior startup/background initialization CTS instances before disposing/replacing them
     - repeated startup/restart paths no longer risk leaving previous initialization work attached to a disposed CTS
