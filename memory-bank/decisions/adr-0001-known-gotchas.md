@@ -16381,3 +16381,53 @@ public override void Dispose()
 ```
 
 **Why This Keeps Happening**: hosted services feel self-cleaning because the host usually calls `StartAsync()`, `StopAsync()`, and disposal in order. That assumption breaks as soon as a service is restarted, replaced, or directly disposed in tests and recovery paths. Any hosted service that attaches to external publishers or owns listeners/engines must make those subscriptions and listener fields explicit lifecycle resources: attach once, detach on both stop and dispose, and tear them down through stable local captures before replacing or nulling the live fields.
+
+### 0k149. Signal Channel Handlers Need A Disposal Contract If They Subscribe To External Senders
+
+**The Bug**: the signal-system channel handlers guarded against duplicate `StartReceivingAsync(...)` calls, but they still subscribed to external senders with no teardown contract. `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` attached to `IMeshMessageSender` / `IBtExtensionSender`, yet `ISignalChannelHandler` did not expose disposal and `SignalBus.Dispose()` never released registered handlers. Disposing the bus therefore left stale handler delegates attached to the underlying sender, keeping dead handlers reachable and allowing orphaned signal delivery after shutdown or replacement.
+
+**Files Affected**:
+- `src/slskd/Signals/ISignalChannelHandler.cs`
+- `src/slskd/Signals/MeshSignalChannelHandler.cs`
+- `src/slskd/Signals/BtExtensionSignalChannelHandler.cs`
+- `src/slskd/Signals/SignalBus.cs`
+
+**Wrong**:
+```csharp
+public interface ISignalChannelHandler
+{
+    Task StartReceivingAsync(...);
+}
+
+meshSender.OnSlskdnSignalReceived += HandleIncomingSignal;
+btExtensionSender.OnSlskdnExtensionMessageReceived += HandleIncomingMessage;
+
+protected virtual void Dispose(bool disposing)
+{
+    cleanupCancellationTokenSource.Dispose();
+}
+```
+
+**Correct**:
+```csharp
+public interface ISignalChannelHandler : IDisposable
+{
+    Task StartReceivingAsync(...);
+}
+
+public void Dispose()
+{
+    meshSender.OnSlskdnSignalReceived -= HandleIncomingSignal;
+}
+
+protected virtual void Dispose(bool disposing)
+{
+    foreach (var handler in channelHandlers.Values)
+    {
+        handler.Dispose();
+    }
+    cleanupCancellationTokenSource.Dispose();
+}
+```
+
+**Why This Keeps Happening**: duplicate-start guards solve only one half of the ownership problem. Once a handler subscribes to a long-lived sender, that subscription becomes a resource the handler owns for the rest of its lifetime. If the handler interface hides disposal, the parent bus cannot tear that resource down, and stale delegates survive process-internal replacement just like any other event leak. One-time subscription helpers still need a visible unsubscribe/dispose path.
