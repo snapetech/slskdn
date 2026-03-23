@@ -15327,7 +15327,9 @@ var reader = new slskd.Shares.ChannelReader<int>(channel, handler);
 **The Bug**: several hosted/background startup helpers launched detached work that read a mutable `CancellationTokenSource` field directly. On shutdown or restart, the field could be disposed, replaced, or nulled while the worker still used it, and some `Dispose()` paths disposed the CTS without canceling it first. That turns normal shutdown into a timing-dependent race where startup work can keep running past disposal or trip `ObjectDisposedException`/null access in cancellation paths.
 
 **Files Affected**:
+- `src/slskd/Application.cs`
 - `src/slskd/HashDb/Optimization/HashDbOptimizationHostedService.cs`
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
 - `src/slskd/Mesh/Realm/RealmHostedService.cs`
 - `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
 - `src/slskd/Identity/MdnsAdvertiser.cs`
