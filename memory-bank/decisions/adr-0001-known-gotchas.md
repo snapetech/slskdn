@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD3. ProblemDetails At Search/Action Boundaries Should Not Echo Raw IDs, Indexes, Or Content Keys
+
+**The Bug**: action-routing endpoints were returning helpful but over-specific `ProblemDetails.Detail` strings that embedded search IDs, response indexes, file indexes, item IDs, and content IDs. That turns user-controlled or internal locator data into part of the public error contract.
+
+**Files Affected**:
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+
+**Wrong**:
+```csharp
+Detail = $"Search {searchId} not found";
+Detail = $"Response index {responseIndex} not found in search {searchId}";
+Detail = $"No pod peers found hosting content {contentId}";
+```
+
+**Correct**:
+```csharp
+Detail = "Search not found";
+Detail = "Search result item not found";
+Detail = "No pod peers found hosting content";
+```
+
+**Why This Keeps Happening**: `ProblemDetails` is easy to treat like a debug string because it is already a structured error object. It is still a public boundary. Use stable, category-level detail text and keep raw identifiers in logs if operators need them.
+
 ### 0xD2. Mesh Validation And Quota Replies Should Be Stable Categories, Not Schema Or Policy Tutorials
 
 **The Bug**: mesh service replies were still spelling out exact request-shape expectations and policy thresholds in public error text. That exposed field names like `targetPeerId` and internal limits like maximum tunnel counts or byte-length requirements even though the caller only needs to know the category of failure.
