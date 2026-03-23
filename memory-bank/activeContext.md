@@ -991,3 +991,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - prioritize helper types that own optional semaphores, locks, or registrations in addition to their primary timer/task
+
+## 2026-03-23 13:39 CST
+- Continued the same timer-helper sweep into `TimedCounter`.
+- Fixed elapsed callback handling so timer-thread exceptions are isolated and logged instead of escaping the helper directly.
+- Extended `CallbackInfrastructureTests` with a focused thrown-callback regression and confirmed the focused slice passed (`5/5`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k127` and will commit it immediately per repo policy (`docs: Add gotcha for timed counter callback isolation`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - prioritize detached callback helpers that still invoke user code without an explicit failure surface

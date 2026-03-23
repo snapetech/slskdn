@@ -6929,3 +6929,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter CallbackInfrastructureTests` passed (`3/3`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k126` for timer-helper concurrency-gate cleanup and committed it immediately per repo policy (`docs: Add gotcha for rate limiter semaphore cleanup`).
+
+## 2026-03-23 13:39 CST
+
+- Continued the timer-helper sweep into `TimedCounter`.
+- `TimedCounter` now isolates elapsed-callback failures instead of letting them escape directly from the timer event.
+- Extended focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter CallbackInfrastructureTests` passed (`5/5`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k127` for timer-thread callback isolation and committed it immediately per repo policy (`docs: Add gotcha for timed counter callback isolation`).

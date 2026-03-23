@@ -15557,3 +15557,32 @@ ConcurrentExecutionPreventionSemaphore?.Dispose();
 ```
 
 **Why This Keeps Happening**: timer-backed helpers often get audited for timer cleanup first, and it is easy to forget the secondary gate or registration objects that only exist in some configurations. If a helper owns optional semaphores, locks, or registrations, dispose all owned resources together in the main disposal path.
+
+### 0k127. Timer-Thread Callback Helpers Must Isolate Subscriber Failures
+
+**The Bug**: `TimedCounter.Elapsed(...)` reset the counter and then invoked the configured callback directly on the timer thread. If the callback threw, the exception escaped the timer-backed helper even though the helper had no explicit failure surface and was meant to keep ticking.
+
+**Files Affected**:
+- `src/slskd/Common/TimedCounter.cs`
+
+**Wrong**:
+```csharp
+var count = Interlocked.Exchange(ref this.count, 0);
+OnElapsed?.Invoke(count);
+```
+
+**Correct**:
+```csharp
+var count = Interlocked.Exchange(ref this.count, 0);
+
+try
+{
+    OnElapsed?.Invoke(count);
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "TimedCounter elapsed callback failed");
+}
+```
+
+**Why This Keeps Happening**: small timer helpers look synchronous and harmless, so callback invocation often gets written as a direct delegate call. But timer events are detached background entry points. If the helper does not expose a completion/error channel, it must isolate callback failures itself so one bad consumer cannot poison the timer path.
