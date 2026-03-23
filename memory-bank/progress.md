@@ -6921,3 +6921,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/WaiterTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter WaiterTests` passed (`3/3`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k125` for false-indefinite wait timers and committed it immediately per repo policy (`docs: Add gotcha for waiter indefinite timeout allocation`).
+
+## 2026-03-23 13:29 CST
+
+- Fixed a cleanup leak in `RateLimiter`.
+- Disposing a rate limiter with a configured concurrency limit now disposes the owned `SemaphoreSlim` in addition to the timer.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter CallbackInfrastructureTests` passed (`3/3`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k126` for timer-helper concurrency-gate cleanup and committed it immediately per repo policy (`docs: Add gotcha for rate limiter semaphore cleanup`).

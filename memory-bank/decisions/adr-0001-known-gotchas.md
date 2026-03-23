@@ -15537,3 +15537,23 @@ var wait = new PendingWait(
 ```
 
 **Why This Keeps Happening**: "indefinite" helper APIs are often implemented as "very large timeout" shortcuts because they reuse the same code path, but that still creates timeout machinery and registrations. If the semantic contract is "no timeout", model that explicitly and skip timeout allocation entirely.
+
+### 0k126. Timer-Backed Helpers Must Dispose Their Concurrency Gates, Not Only The Timer
+
+**The Bug**: `RateLimiter` disposes its `System.Timers.Timer` but forgot to dispose the optional `SemaphoreSlim` used for concurrency limiting. Instances configured with a concurrency limit therefore leaked a synchronization primitive even after the rate limiter itself was disposed.
+
+**Files Affected**:
+- `src/slskd/Common/RateLimiter.cs`
+
+**Wrong**:
+```csharp
+Timer.Dispose();
+```
+
+**Correct**:
+```csharp
+Timer.Dispose();
+ConcurrentExecutionPreventionSemaphore?.Dispose();
+```
+
+**Why This Keeps Happening**: timer-backed helpers often get audited for timer cleanup first, and it is easy to forget the secondary gate or registration objects that only exist in some configurations. If a helper owns optional semaphores, locks, or registrations, dispose all owned resources together in the main disposal path.

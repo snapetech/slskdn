@@ -982,3 +982,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - prioritize primitives that claim indefinite or disposal-safe behavior but still allocate hidden timers or registrations
+
+## 2026-03-23 13:29 CST
+- Continued the low-level helper sweep into `RateLimiter`.
+- Fixed disposal so concurrency-limited instances now dispose their owned semaphore instead of leaking it after timer cleanup.
+- Extended `CallbackInfrastructureTests` with a focused semaphore-disposal regression and confirmed the focused slice passed (`3/3`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k126` and will commit it immediately per repo policy (`docs: Add gotcha for rate limiter semaphore cleanup`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - prioritize helper types that own optional semaphores, locks, or registrations in addition to their primary timer/task
