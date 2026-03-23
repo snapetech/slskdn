@@ -15746,3 +15746,25 @@ public void Emit(LogEvent logEvent)
 ```
 
 **Why This Keeps Happening**: metrics and logging helpers look like side-channel infrastructure, so delegate hooks are easy to treat as "part of the work" instead of untrusted observers. But these helpers usually exist specifically to make the primary path more observable. If an observer can throw back into the helper, observability code starts breaking production behavior. Update internal state first, then isolate observer failures so logging/metrics plumbing stays best-effort.
+
+### 0k131. AUR Binary Packages Must Not Pin Checksums To Mutable GitHub Release Assets
+
+**The Bug**: the stable `slskdn-bin` release workflow rewrote the AUR `PKGBUILD` with a hard SHA256 for `slskdn-main-linux-x64.zip`. That made Arch installs brittle across reruns and asset replacement: if the GitHub release asset changed after the checksum was published, or if clients held an older cached copy under the same version, `makepkg` failed during source validation even though the package definition itself was otherwise correct.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `packaging/aur/PKGBUILD-bin`
+
+**Wrong**:
+```bash
+ZIP_SUM=$(sha256sum slskdn-main-linux-x64.zip | awk '{print $1}')
+sed -i "s/^sha256sums=.*/sha256sums=('${ZIP_SUM}' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+```
+
+**Correct**:
+```bash
+# Binary release zip can drift on reruns / replaced assets; keep AUR tolerant here.
+sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+```
+
+**Why This Keeps Happening**: AUR source validation assumes the upstream artifact at a given URL is immutable. GitHub release assets are not a safe fit for that assumption when the workflow can rerun, replace, or republish the same asset name under the same tag. If the package points at a mutable binary asset, either publish through an immutable channel or use `SKIP` for the binary and checksum only the repo-owned static packaging files.
