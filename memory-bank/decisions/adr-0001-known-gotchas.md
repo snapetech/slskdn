@@ -62,6 +62,9 @@ This is not optional. This is the highest priority action after fixing a bug.
 - `src/slskd/Audio/API/CanonicalController.cs`
 - `src/slskd/Audio/API/AnalyzerMigrationController.cs`
 - `src/slskd/Users/Notes/API/UserNotesController.cs`
+- `src/slskd/SongID/API/SongIdController.cs`
+- `src/slskd/Streaming/StreamsController.cs`
+- `src/slskd/Solid/API/SolidController.cs`
 
 **Wrong**:
 ```csharp
@@ -75,6 +78,8 @@ await userNoteService.DeleteNoteAsync(username, cancellationToken);
 recordingId = recordingId?.Trim() ?? string.Empty;
 targetVersion = targetVersion?.Trim() ?? string.Empty;
 username = username?.Trim() ?? string.Empty;
+contentId = contentId?.Trim() ?? string.Empty;
+request.Source = request.Source?.Trim() ?? string.Empty;
 
 if (string.IsNullOrWhiteSpace(recordingId))
 {
