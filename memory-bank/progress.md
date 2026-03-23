@@ -6674,6 +6674,14 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release -v minimal --filter "FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~VPNServiceTests"`
   - `dotnet build src/slskd/slskd.csproj -c Release -v minimal` (one transient `MSB3026` copy-retry warning while the test build was using the same output tree)
 
+## 2026-03-23 11:27 CST
+- Continued into shared timer fanout after the callback-observer fixes.
+- Fixed `Clock.Fire(...)` so one throwing subscriber no longer aborts the rest of the scheduled handlers for that tick.
+- Added focused `ClockTests` coverage and kept the watchdog/VPN lifecycle regressions green in the same slice.
+- Validation passed:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release -v minimal --filter "FullyQualifiedName~ClockTests|FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~VPNServiceTests"`
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal` (one transient `MSB3026` copy-retry warning while the test build was using the same output tree)
+
 ## 2026-03-23 11:11 CST
 - Continued the dense runtime bughunt across `SongIdService`, `HashDbService`, and `MeshSyncService`, and folded in the already-dirty `ConnectionWatchdog` spillover.
 - `SongIdService` fallback acquisition planning now keeps raw transcript/OCR/comment phrases alongside artist-shaped queries for manual-review and uncataloged cases.

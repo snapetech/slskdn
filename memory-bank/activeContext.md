@@ -750,6 +750,14 @@ dotnet test
   - continue bughunting detached callbacks and long-lived lifecycle paths outside relay/watchdog/vpn
   - prioritize remaining timer/event entry points that can still fault silently or outlive shutdown
 
+## 2026-03-23 11:27 CST
+- Continued into the shared scheduler fanout path.
+- Fixed `Clock.Fire(...)` so one bad subscriber no longer aborts later subscribers on the same tick.
+- Added focused `ClockTests` coverage and kept the earlier watchdog/VPN timer regressions green in the same targeted slice.
+- Next steps:
+  - continue bughunting shared event/timer fanout and other detached callback entry points
+  - prioritize more low-level infrastructure paths where one component failure can suppress unrelated background work
+
 ## 2026-03-23 11:11 CST
 - Finished another green runtime-hardening batch across SongID, HashDb, mesh waiters, and adjacent lifecycle spillover.
 - Current fixes in this batch:

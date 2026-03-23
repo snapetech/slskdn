@@ -14659,3 +14659,32 @@ WatchdogTimer.Elapsed += (sender, args) => _ = ObserveAttemptConnectionAsync(nam
 ```
 
 **Why This Keeps Happening**: timer events look like ordinary callbacks, so it is easy to treat them like safe places for raw `async` lambdas or fire-and-forget tasks. They are really detached background entry points and need the same top-level observation wrapper as any other fire-and-forget work.
+
+### 0k111. Shared Timer Fanout Must Isolate Subscriber Failures
+
+**The Bug**: `Clock.Fire(...)` invoked the entire event multicast in one call. If any subscriber threw, the whole timer tick faulted and later subscribers on that same tick were skipped. That can silently disable unrelated scheduled maintenance work whenever one clock listener is buggy.
+
+**Files Affected**:
+- `src/slskd/Core/Clock.cs`
+
+**Wrong**:
+```csharp
+e?.Invoke(null, args ?? new ClockEventArgs());
+```
+
+**Correct**:
+```csharp
+foreach (EventHandler<ClockEventArgs> handler in e.GetInvocationList())
+{
+    try
+    {
+        handler.Invoke(null, args ?? new ClockEventArgs());
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Clock subscriber failed");
+    }
+}
+```
+
+**Why This Keeps Happening**: multicast events look like a convenient fanout primitive, but they have all-or-nothing exception behavior by default. For shared scheduler buses, each subscriber needs its own exception boundary or one handler can starve every other periodic task on that tick.
