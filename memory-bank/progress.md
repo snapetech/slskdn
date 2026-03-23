@@ -6079,6 +6079,12 @@ Code quality improvements were completed as part of Option A:
 - `PodMessageBackfill` now rejects blank target peers up front and reports a clearer post-send “awaiting response handling” state instead of the older placeholder string.
 - Added focused regressions covering trimmed opinion inputs, case-insensitive variant matching, and the new blank-peer backfill failure contract.
 
+## 2026-03-22 19:51 - MeshSync request key normalization
+
+- `MeshSyncService` now trims peer usernames and FLAC keys before local DB lookup, pending-request correlation, outbound sends, publish, and peer-state indexing.
+- That keeps local lookups and in-flight waiters stable when transport/runtime strings arrive padded instead of silently treating the same logical mesh request as different keys.
+- Added focused mesh regressions covering trimmed local lookup, trimmed REQKEY waiter reuse, and trimmed REQCHUNK waiter reuse.
+
 ## 2026-03-22 19:47 - Older helper-controller normalization and test drift cleanup
 
 - Normalized helper-style controller input in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController` so padded IDs, compare-node fields, and request strings are canonicalized before dispatch.
@@ -6086,3 +6092,10 @@ Code quality improvements were completed as part of Option A:
 - Added focused regressions for music metadata targets, discovery-graph request normalization, files path decoding, wishlist updates, and destination validation.
 - Fixed adjacent compile drifts in `HttpSignatureKeyFetcher`, `PathGuardTests`, `JobsControllerBoundaryTests`, `MetadataFacadeTests`, `JobApiControllerTests`, `MusicBrainzClientTests`, and the new destination/wishlist tests so the unit-project build is runnable again.
 - Added and immediately committed the matching gotchas in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for thin helper-controller normalization and sibling-scope local-name collisions.
+
+## 2026-03-22 20:01 - Parser discriminator normalization
+
+- `CapabilitiesController`, `PerceptualHashController`, and `NowPlayingController` now trim discriminator strings before parser dispatch, enum parsing, and webhook event classification.
+- That fixes padded capability tags/version strings, padded perceptual-hash algorithm names, and padded generic now-playing webhook event values that previously took the wrong branch.
+- Added focused regressions in `CapabilitiesControllerTests`, new `PerceptualHashControllerTests`, and `NowPlayingControllerTests`, and aligned the new capabilities test to the current `PeerCapabilities` model.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for parser discriminator normalization.

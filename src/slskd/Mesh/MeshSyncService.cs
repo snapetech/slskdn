@@ -253,6 +253,13 @@ namespace slskd.Mesh
 
         private async Task SendMeshMessageAsync(string username, MeshMessage message)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                log.Debug("[MESH] Cannot send mesh message - peer username is invalid");
+                return;
+            }
+
             if (soulseekClient == null)
             {
                 log.Warning("[MESH] Cannot send mesh message - Soulseek client not available");
@@ -292,6 +299,14 @@ namespace slskd.Mesh
         /// <inheritdoc cref="IChunkRequestSender.RequestChunkAsync"/>
         public async Task<(string? DataBase64, bool Success)> RequestChunkAsync(string peer, string flacKey, long offset, int length, CancellationToken cancellationToken = default)
         {
+            peer = peer?.Trim() ?? string.Empty;
+            flacKey = flacKey?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(peer) || string.IsNullOrWhiteSpace(flacKey))
+            {
+                return (null, false);
+            }
+
             if (soulseekClient == null)
             {
                 log.Debug("[MESH] Cannot request chunk - Soulseek client not available");
@@ -613,6 +628,12 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<MeshHashEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return null;
+            }
+
             // First check local DB
             var local = await hashDb.LookupHashAsync(flacKey, cancellationToken);
             if (local != null)
@@ -708,6 +729,13 @@ namespace slskd.Mesh
         /// </summary>
         protected virtual async Task<MeshHashEntry?> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
         {
+            username = username?.Trim() ?? string.Empty;
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(flacKey))
+            {
+                return null;
+            }
+
             // Check if peer supports mesh sync
             var peerCaps = capabilities.GetPeerCapabilities(username);
             if (peerCaps == null || !peerCaps.CanMeshSync)
@@ -792,6 +820,13 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task PublishHashAsync(string flacKey, string byteHash, long size, int? metaFlags = null, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            byteHash = byteHash?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey) || string.IsNullOrWhiteSpace(byteHash))
+            {
+                return;
+            }
+
             // Store locally (will get new seq_id)
             await hashDb.StoreHashAsync(new HashDbEntry
             {
@@ -1151,6 +1186,7 @@ namespace slskd.Mesh
 
         private MeshPeerState GetOrCreatePeerState(string username)
         {
+            username = username?.Trim() ?? string.Empty;
             return peerStates.GetOrAdd(username, u => new MeshPeerState
             {
                 Username = u,

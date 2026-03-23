@@ -300,6 +300,11 @@ dotnet test
 - Backfill now fails cleanly on blank target peers instead of pretending to route, and successful sends report an honest “awaiting response handling” status instead of the older placeholder sentence.
 - Next: continue through the remaining PodCore/Mesh placeholder paths, especially the larger backfill-response/runtime completion gaps and any adjacent dirty repo spillover.
 
+## 2026-03-22 19:51
+- Shifted into the next MeshSync completion slice and normalized peer/key inputs at lookup, request, publish, and peer-state boundaries.
+- Mesh hash lookups and chunk requests now reuse the same in-flight waiters even when transport strings arrive padded, instead of splitting one logical request into separate pending keys.
+- Next: keep pushing through the remaining Mesh/PodCore placeholder paths, especially larger transport-response completion gaps and any new dirty spillover in the tree.
+
 ## 2026-03-22 19:47
 - Normalized older helper/controller boundaries in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController`, and trimmed decoded relative paths in `FilesController`.
 - Added focused regressions for those controller/path cases and cleared the adjacent unit-project compile blockers in `HttpSignatureKeyFetcher`, `PathGuardTests`, and several stale test files so focused test slices run cleanly again.
@@ -308,3 +313,11 @@ dotnet test
   - focused unit slices for wishlist/destinations and files/discovery-graph/musicbrainz passed (`4/4` and `15/15`)
   - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` passed with pre-existing analyzer warning noise (`521 warnings / 0 errors`)
 - Next: continue the broad bughunt through remaining low-traffic controller/helper endpoints and stale unit-test drift that still hides behind the unit-project warning wall.
+
+## 2026-03-22 20:01
+- Normalized parser discriminator strings in `CapabilitiesController`, `PerceptualHashController`, and `NowPlayingController` before parser dispatch, enum parsing, and webhook event classification.
+- Added focused regressions for trimmed capability tags, trimmed perceptual-hash algorithms, and trimmed generic now-playing webhook events.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused parser/controller slice passed (`8/8`)
+- Next: continue through the next low-traffic helper/controller batch, especially older utility endpoints that still branch on raw strings or carry adjacent test drift.

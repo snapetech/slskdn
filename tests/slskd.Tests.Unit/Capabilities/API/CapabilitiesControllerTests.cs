@@ -43,7 +43,14 @@ public class CapabilitiesControllerTests
         var capabilityService = new Mock<ICapabilityService>();
         capabilityService
             .Setup(service => service.ParseCapabilityTag("slskdn/1.2.3"))
-            .Returns(new PeerCapabilities("alice", CapabilityFlags.Swarm, "1.2.3", 1, DateTime.UtcNow, 0));
+            .Returns(new PeerCapabilities
+            {
+                Username = "alice",
+                Flags = PeerCapabilityFlags.SupportsSwarm,
+                ClientVersion = "1.2.3",
+                ProtocolVersion = 1,
+                LastSeen = DateTime.UtcNow,
+            });
 
         var controller = new CapabilitiesController(capabilityService.Object);
 

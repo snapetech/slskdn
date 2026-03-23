@@ -632,6 +632,18 @@ namespace slskd.Tests.Unit.Mesh
         }
 
         [Fact]
+        public async Task LookupHashAsync_TrimsFlacKeyBeforeLocalLookup()
+        {
+            var local = new HashDbEntry { FlacKey = "0123456789abcdef", ByteHash = "ab", Size = 1024, SeqId = 1 };
+            mockHashDb.Setup(h => h.LookupHashAsync("0123456789abcdef", It.IsAny<CancellationToken>())).ReturnsAsync(local);
+
+            var result = await meshSyncService.LookupHashAsync(" 0123456789abcdef ");
+
+            Assert.NotNull(result);
+            Assert.Equal("0123456789abcdef", result.FlacKey);
+        }
+
+        [Fact]
         public async Task LookupHashAsync_ConsensusOptions_WhenMinAgreementsMet_ReturnsEntry()
         {
             var flacKey = "0123456789abcdef";
@@ -743,6 +755,41 @@ namespace slskd.Tests.Unit.Mesh
         }
 
         [Fact]
+        public async Task QueryPeerForHashAsync_TrimsPeerAndKeyBeforePendingReuse()
+        {
+            mockCapabilities
+                .Setup(c => c.GetPeerCapabilities("mesh-peer"))
+                .Returns(new PeerCapabilities
+                {
+                    ClientVersion = "1.0.0",
+                    Flags = PeerCapabilityFlags.SupportsMeshSync,
+                });
+
+            var pendingRequestsField = typeof(MeshSyncService).GetField("pendingRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(pendingRequestsField);
+            var pendingRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>>)pendingRequestsField!.GetValue(meshSyncService)!;
+
+            var existing = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            pendingRequests["mesh-peer:0123456789abcdef"] = existing;
+
+            var method = typeof(MeshSyncService).GetMethod("QueryPeerForHashAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(method);
+
+            var task = (Task<MeshHashEntry?>)method!.Invoke(meshSyncService, new object[] { " mesh-peer ", " 0123456789abcdef ", CancellationToken.None })!;
+            existing.SetResult(new MeshRespKeyMessage
+            {
+                FlacKey = "0123456789abcdef",
+                Found = true,
+                Entry = new MeshHashEntry { FlacKey = "0123456789abcdef", ByteHash = "ab".PadRight(64, '0'), Size = 123, SeqId = 1 },
+            });
+
+            var result = await task;
+
+            Assert.NotNull(result);
+            Assert.Equal(123, result.Size);
+        }
+
+        [Fact]
         public async Task RequestChunkAsync_DuplicatePendingRequestReusesExistingWaiter()
         {
             var pendingChunkRequestsField = typeof(MeshSyncService).GetField("pendingChunkRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -754,6 +801,31 @@ namespace slskd.Tests.Unit.Mesh
             pendingChunkRequests[requestId] = existing;
 
             var task = meshSyncService.RequestChunkAsync("mesh-peer", "0123456789abcdef", 0, 1024, CancellationToken.None);
+            existing.SetResult(new MeshRespChunkMessage
+            {
+                FlacKey = "0123456789abcdef",
+                Offset = 0,
+                DataBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3 }),
+                Success = true,
+            });
+
+            var result = await task;
+
+            Assert.True(result.Success);
+            Assert.NotNull(result.DataBase64);
+        }
+
+        [Fact]
+        public async Task RequestChunkAsync_TrimsPeerAndKeyBeforePendingReuse()
+        {
+            var pendingChunkRequestsField = typeof(MeshSyncService).GetField("pendingChunkRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(pendingChunkRequestsField);
+            var pendingChunkRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>>)pendingChunkRequestsField!.GetValue(meshSyncService)!;
+
+            var existing = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            pendingChunkRequests["mesh-peer:0123456789abcdef:0"] = existing;
+
+            var task = meshSyncService.RequestChunkAsync(" mesh-peer ", " 0123456789abcdef ", 0, 1024, CancellationToken.None);
             existing.SetResult(new MeshRespChunkMessage
             {
                 FlacKey = "0123456789abcdef",
