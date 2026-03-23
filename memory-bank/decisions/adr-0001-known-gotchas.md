@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xCF. Bidirectional Identity Maps Must Normalize Both Directions Or Bridge Routing Splits A Single User Into Multiple Keys
+
+**The Bug**: bridge code normalized one side of an identity flow but still stored and looked up the reverse map with raw usernames and peer IDs. A padded or case-drifted Soulseek username could create one entry in the forward map and a different entry in the reverse map, so Pod-to-Soulseek forwarding later failed even though the mapping had already been learned.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodServices.cs`
+- `src/slskd/Mesh/MeshSyncService.cs`
+
+**Wrong**:
+```csharp
+soulseekToPodMapping[soulseekUsername] = podPeerId;
+podToSoulseekMapping[podPeerId] = soulseekUsername;
+
+var requestId = $"{e.Username}:{response.FlacKey}";
+```
+
+**Correct**:
+```csharp
+var normalizedUsername = soulseekUsername.Trim();
+var normalizedPeerId = podPeerId.Trim();
+
+soulseekToPodMapping[normalizedUsername] = normalizedPeerId;
+podToSoulseekMapping[normalizedPeerId] = normalizedUsername;
+
+var requestId = $"{(e.Username ?? string.Empty).Trim()}:{(response.FlacKey ?? string.Empty).Trim()}";
+```
+
+**Why This Keeps Happening**: identity bridges and response waiters look like small in-memory helpers, so it is easy to treat them as internal trusted state. They are not. They sit directly on chat, transport, and protocol seams. If both directions do not share the same canonical key format, you get split identities and “missing” responses with no real network failure.
+
 ### 0xCE. Init-Only Records Must Be Normalized Via Copies, Not In-Place Mutation
 
 **The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence.
