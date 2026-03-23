@@ -6446,8 +6446,20 @@ Code quality improvements were completed as part of Option A:
 - `MeshGatewayController` no longer echoes service names, payload-size thresholds, or timeout seconds in public gateway error messages.
 - Validation state:
   - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
-  - focused unit slice for `CanonicalControllerTests`, `ShadowIndexControllerTests`, `UsersCompatibilityControllerTests`, `PodMembershipControllerTests`, and `MeshGatewayControllerTests` passed (`18/18`)
+- focused unit slice for `CanonicalControllerTests`, `ShadowIndexControllerTests`, `UsersCompatibilityControllerTests`, `PodMembershipControllerTests`, and `MeshGatewayControllerTests` passed (`18/18`)
 - Documented the sibling-field identifier leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: keep sweeping for any remaining public JSON/problem payloads that still carry identifiers or numeric thresholds in sibling fields even when the primary error text is already generic.
+
+## 2026-03-22 23:14
+- Finished another Pod/library response-contract batch.
+- `LibraryItemsController` no longer echoes `contentId` in item-not-found responses.
+- `PodsController` join/leave/ban/unbind success payloads no longer repeat `podId`, `peerId`, or `channelId`.
+- `PodDhtController` metadata misses no longer echo `podId` in the not-found payload.
+- `PodMessageRoutingController` seen/registration success payloads no longer repeat `messageId` or `podId`.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `LibraryItemsControllerTests`, `PodsControllerTests`, `PodDhtControllerTests`, and `PodMessageRoutingControllerTests` passed (`56/56`)
+- Documented the route-identifier echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: continue through the remaining low-traffic controllers that still return plain JSON success/not-found payloads with route identifiers or newly repeated request fields.
 
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.

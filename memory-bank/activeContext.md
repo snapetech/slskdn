@@ -73,6 +73,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused coverage in `CanonicalControllerTests`, `ShadowIndexControllerTests`, `UsersCompatibilityControllerTests`, `PodMembershipControllerTests`, and `MeshGatewayControllerTests`
   - Confirmed the focused error-contract slice passed (`18/18`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Hardened another Pod/library response-contract batch:
+    - `LibraryItemsController` no longer echoes `contentId` in item-not-found responses
+    - `PodsController` join/leave/ban/unbind success payloads no longer repeat `podId`, `peerId`, or `channelId`
+    - `PodDhtController` metadata misses no longer echo `podId` in the not-found payload
+    - `PodMessageRoutingController` seen/registration success payloads no longer repeat `messageId` or `podId`
+  - Added focused coverage in `LibraryItemsControllerTests`, `PodsControllerTests`, `PodDhtControllerTests`, and `PodMessageRoutingControllerTests`
+  - Confirmed the focused Pod/library response-contract slice passed (`56/56`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses

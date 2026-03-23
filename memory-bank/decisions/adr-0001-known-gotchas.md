@@ -14001,3 +14001,29 @@ message = "No providers found for the requested service";
 ```
 
 **Why This Keeps Happening**: once the main error string is generic, it is easy to miss that adjacent JSON fields and interpolated `message` values still leak the same sensitive context. Audit the whole response object, not just the primary `error` property.
+
+### 0k100. Success And NotFound DTOs Should Not Repeat Route Identifiers When The Outcome Flag Is Enough
+
+**The Bug**: several Pod and library controllers returned tiny success or not-found DTOs that repeated `podId`, `peerId`, `channelId`, `messageId`, or `contentId` right back to the caller. Those identifiers were already present in the route/request, so the response leaked more context without adding real value.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `src/slskd/API/Native/PodsController.cs`
+- `src/slskd/PodCore/API/Controllers/PodDhtController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMessageRoutingController.cs`
+
+**Wrong**:
+```csharp
+return NotFound(new { error = "Item not found", contentId });
+return Ok(new { podId, peerId, joined = true });
+return Ok(new { messageId, podId, isSeen });
+```
+
+**Correct**:
+```csharp
+return NotFound(new { error = "Item not found" });
+return Ok(new { joined = true });
+return Ok(new { isSeen });
+```
+
+**Why This Keeps Happening**: route-shaped controllers naturally have those identifiers in local scope, so it feels harmless to reflect them back in the result. For public APIs, prefer outcome-only DTOs unless the identifier is newly created by the operation and genuinely needed by the client.
