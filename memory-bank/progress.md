@@ -6415,3 +6415,16 @@ Code quality improvements were completed as part of Option A:
   - focused unit slice for `JobManifestValidatorTests`, `EnumAttributeTests`, and `DhtRendezvousControllerTests` passed (`10/10`)
 - Documented the validation-detail leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: continue the secure-release sweep through remaining API/result contracts that still embed caller-controlled identifiers or detailed lookup/tutorial text.
+
+## 2026-03-22 22:46
+- Finished another release-facing response-contract batch.
+- `HashDbController` no longer echoes FLAC keys in hash-miss responses.
+- `DhtRendezvousController` block-success responses no longer echo blocked IPs or usernames.
+- `LibraryHealth` scan-status misses now return the stable `Scan not found` message.
+- `IpldController` link-add success responses no longer echo content IDs.
+- `SearchActionsController` scene-download enqueue failures now collapse per-item failure strings to the stable `Failed to enqueue scene download` detail.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `HashDbControllerTests`, `DhtRendezvousControllerTests`, `ApiLibraryHealthControllerTests`, `IpldControllerTests`, and `SearchActionsControllerTests` passed (`38/38`)
+- Documented the success/not-found/batch-failure identifier leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: keep pushing through the remaining public response contracts, especially low-traffic APIs that still embed route IDs or user-supplied identifiers in plain JSON messages.

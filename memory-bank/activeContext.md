@@ -44,6 +44,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused `JobManifestValidatorTests` and `EnumAttributeTests`, and extended `DhtRendezvousControllerTests`
   - Confirmed the focused helper/controller validation slice passed (`10/10`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Hardened another response-contract cluster:
+    - `HashDbController` no longer echoes FLAC keys in hash-miss replies
+    - `DhtRendezvousController` block-success replies no longer echo blocked IPs or usernames
+    - `LibraryHealth` scan-status misses now return the stable `Scan not found` contract
+    - `IpldController` link-add success replies no longer echo content IDs
+    - `SearchActionsController` scene-download enqueue failures now collapse per-item failure strings to a stable generic detail
+  - Added focused coverage in `HashDbControllerTests`, `DhtRendezvousControllerTests`, `ApiLibraryHealthControllerTests`, `IpldControllerTests`, and `SearchActionsControllerTests`
+  - Confirmed the focused response-contract slice passed (`38/38`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses
@@ -183,7 +192,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially remaining controller/problem responses and service/result DTOs surfaced by HTTP or mesh APIs.
+1. Continue the secure-release boundary sweep through remaining public result/validation surfaces that still echo caller-controlled details, especially remaining controller/problem responses and plain JSON success/not-found payloads surfaced by HTTP or mesh APIs.
 2. Start using the restored unit-project compile path to run broader focused slices instead of build-only validation where practical.
 3. Keep folding in adjacent dirty files carefully so the runtime and unit build stay green between secure-release passes.
 

@@ -13904,3 +13904,30 @@ return Ok(new { success = true, message = "Blocklist entry removed" });
 ```
 
 **Why This Keeps Happening**: validation code often feels “safe” because it is not a catch block, but it still sits on a public boundary. Treat helper-generated validation text like any other external contract: stable category-level messages only, with detailed enum/tutorial/parser context kept in logs or internal diagnostics.
+
+### 0k97. Success, NotFound, And Batch-Failure Payloads Must Not Echo Caller-Controlled Identifiers
+
+**The Bug**: several public API contracts still echoed raw lookup keys, blocked targets, scan IDs, content IDs, or per-item failure strings in ordinary success and not-found payloads. Those were not exception paths, but they still leaked caller-controlled identifiers and internal helper output back to clients.
+
+**Files Affected**:
+- `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+- `src/slskd/LibraryHealth/API/LibraryHealthController.cs`
+- `src/slskd/MediaCore/API/Controllers/IpldController.cs`
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+
+**Wrong**:
+```csharp
+return NotFound(new { error = "No hash found for key " + flacKey });
+return Ok(new { message = $"Blocked username {username}" });
+Detail = string.Join("; ", failed);
+```
+
+**Correct**:
+```csharp
+return NotFound(new { error = "No hash found for key" });
+return Ok(new { message = "Username blocked" });
+Detail = "Failed to enqueue scene download";
+```
+
+**Why This Keeps Happening**: teams often focus leak-prevention on exception handlers and forget that “normal” API payloads are still public contracts. Treat success messages, not-found replies, and aggregated failure details with the same sanitization rules as catch paths: category-level messages only, no echoed identifiers or raw helper output.
