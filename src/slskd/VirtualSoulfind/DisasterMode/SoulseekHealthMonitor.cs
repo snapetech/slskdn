@@ -149,6 +149,7 @@ public sealed class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedServi
             return monitoringTask;
         }
 
+        monitoringCts?.Cancel();
         monitoringCts?.Dispose();
         monitoringCts = new CancellationTokenSource();
         monitoringTask = Task.Run(() => MonitorLoopAsync(monitoringCts.Token), CancellationToken.None);

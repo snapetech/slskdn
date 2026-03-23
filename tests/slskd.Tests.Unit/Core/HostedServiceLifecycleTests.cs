@@ -10,6 +10,7 @@ using Moq;
 using slskd.DhtRendezvous;
 using slskd.HashDb.Optimization;
 using slskd.Mesh.Realm;
+using slskd.VirtualSoulfind.DisasterMode;
 using slskd.Transfers.Downloads;
 using slskd.Transfers.Rescue;
 using Xunit;
@@ -123,6 +124,24 @@ public class HostedServiceLifecycleTests
         await service.StartAsync(CancellationToken.None);
 
         Assert.True(previousLoopCts.IsCancellationRequested);
+
+        await service.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task SoulseekHealthMonitor_StartAsync_CancelsPreviousMonitoringTokenSource()
+    {
+        var service = new SoulseekHealthMonitor(
+            Mock.Of<ILogger<SoulseekHealthMonitor>>(),
+            Mock.Of<Soulseek.ISoulseekClient>(),
+            new TestOptionsMonitor<slskd.Options>(new slskd.Options()));
+
+        var previousMonitoringCts = new CancellationTokenSource();
+        SetPrivateField(service, "monitoringCts", previousMonitoringCts);
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.True(previousMonitoringCts.IsCancellationRequested);
 
         await service.StopAsync(CancellationToken.None);
     }
