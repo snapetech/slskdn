@@ -134,16 +134,18 @@ namespace slskd.Capabilities.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult ParseCapabilities([FromBody] ParseRequest request)
         {
+            var description = request?.Description?.Trim();
+            var versionString = request?.VersionString?.Trim();
             PeerCapabilities? caps = null;
 
-            if (!string.IsNullOrWhiteSpace(request?.Description))
+            if (!string.IsNullOrWhiteSpace(description))
             {
-                caps = Capabilities.ParseCapabilityTag(request.Description);
+                caps = Capabilities.ParseCapabilityTag(description);
             }
 
-            if (caps == null && !string.IsNullOrWhiteSpace(request?.VersionString))
+            if (caps == null && !string.IsNullOrWhiteSpace(versionString))
             {
-                caps = Capabilities.ParseVersionString(request.VersionString);
+                caps = Capabilities.ParseVersionString(versionString);
             }
 
             if (caps == null)

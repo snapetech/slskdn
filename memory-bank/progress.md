@@ -6071,3 +6071,18 @@ Code quality improvements were completed as part of Option A:
 - `ContentLinkService` no longer invalidates supported content domains just because external enrichment is missing; it now returns conservative structured metadata for fallback cases, including video content and unresolved audio variants.
 - Audio-artist metadata now opportunistically upgrades from existing MusicBrainz recording search hits when the returned artist identifier matches the requested content ID.
 - Added focused PodCore regressions covering conservative video metadata fallback and upgraded artist metadata resolution from matching MusicBrainz hits.
+
+## 2026-03-22 19:42 - PodCore opinion and backfill key normalization
+
+- `PodOpinionService` now trims pod/content/variant/peer/signature/public-key inputs before membership checks, cache tracking, and base64/signature parsing, so harmless whitespace drift no longer breaks otherwise valid opinions.
+- Variant filtering now matches trimmed hashes case-insensitively, and known-content tracking now ignores blanks and returns a stable ordered snapshot.
+- `PodMessageBackfill` now rejects blank target peers up front and reports a clearer post-send “awaiting response handling” state instead of the older placeholder string.
+- Added focused regressions covering trimmed opinion inputs, case-insensitive variant matching, and the new blank-peer backfill failure contract.
+
+## 2026-03-22 19:47 - Older helper-controller normalization and test drift cleanup
+
+- Normalized helper-style controller input in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController` so padded IDs, compare-node fields, and request strings are canonicalized before dispatch.
+- Trimmed Base64-decoded relative paths in `FilesController`, which prevents padded encoded paths from turning into distinct file-system targets.
+- Added focused regressions for music metadata targets, discovery-graph request normalization, files path decoding, wishlist updates, and destination validation.
+- Fixed adjacent compile drifts in `HttpSignatureKeyFetcher`, `PathGuardTests`, `JobsControllerBoundaryTests`, `MetadataFacadeTests`, `JobApiControllerTests`, `MusicBrainzClientTests`, and the new destination/wishlist tests so the unit-project build is runnable again.
+- Added and immediately committed the matching gotchas in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for thin helper-controller normalization and sibling-scope local-name collisions.

@@ -36,4 +36,23 @@ public class CapabilitiesControllerTests
         Assert.DoesNotContain("alice", notFound.Value?.ToString() ?? string.Empty);
         Assert.Contains("No capabilities known for peer", notFound.Value?.ToString() ?? string.Empty);
     }
+
+    [Fact]
+    public void ParseCapabilities_TrimsDescriptionBeforeParsing()
+    {
+        var capabilityService = new Mock<ICapabilityService>();
+        capabilityService
+            .Setup(service => service.ParseCapabilityTag("slskdn/1.2.3"))
+            .Returns(new PeerCapabilities("alice", CapabilityFlags.Swarm, "1.2.3", 1, DateTime.UtcNow, 0));
+
+        var controller = new CapabilitiesController(capabilityService.Object);
+
+        var result = controller.ParseCapabilities(new ParseRequest
+        {
+            Description = " slskdn/1.2.3 ",
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        capabilityService.Verify(service => service.ParseCapabilityTag("slskdn/1.2.3"), Times.Once);
+    }
 }

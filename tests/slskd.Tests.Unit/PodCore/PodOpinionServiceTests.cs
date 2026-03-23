@@ -93,6 +93,72 @@ public class PodOpinionServiceTests
     }
 
     [Fact]
+    public async Task PublishOpinionAsync_TrimsOpinionFieldsBeforeValidationAndCaching()
+    {
+        using var ed25519 = new Ed25519Signer();
+        var keyPair = ed25519.GenerateKeyPair();
+        var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+        var opinion = CreateSignedOpinion(ed25519, keyPair.PrivateKey, "pod-1", "peer-1");
+        opinion.ContentId = $" {opinion.ContentId} ";
+        opinion.VariantHash = $" {opinion.VariantHash} ";
+        opinion.SenderPeerId = $" {opinion.SenderPeerId} ";
+        opinion.Signature = $" {opinion.Signature} ";
+
+        var podService = CreatePodServiceMock($" {publicKeyBase64} ");
+        var dhtClient = new Mock<IMeshDhtClient>();
+        object? storedValue = null;
+        var expectedKey = "pod:pod-1:opinions:content:audio:track:track-1";
+
+        dhtClient.Setup(x => x.GetAsync<List<PodVariantOpinion>>(expectedKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodVariantOpinion>());
+        dhtClient.Setup(x => x.PutAsync(expectedKey, It.IsAny<object?>(), 3600, It.IsAny<CancellationToken>()))
+            .Callback<string, object?, int, CancellationToken>((_, value, _, _) => storedValue = value)
+            .Returns(Task.CompletedTask);
+
+        var service = new PodOpinionService(
+            podService.Object,
+            dhtClient.Object,
+            ed25519,
+            NullLogger<PodOpinionService>.Instance);
+
+        var result = await service.PublishOpinionAsync(" pod-1 ", opinion);
+
+        Assert.True(result.Success);
+        var storedOpinions = Assert.IsType<List<PodVariantOpinion>>(storedValue);
+        var storedOpinion = Assert.Single(storedOpinions);
+        Assert.Equal("content:audio:track:track-1", storedOpinion.ContentId);
+        Assert.Equal("variant-1", storedOpinion.VariantHash);
+        Assert.Equal("peer-1", storedOpinion.SenderPeerId);
+        Assert.Equal(opinion.Signature.Trim(), storedOpinion.Signature);
+    }
+
+    [Fact]
+    public async Task GetVariantOpinionsAsync_TrimsAndMatchesVariantHashCaseInsensitively()
+    {
+        using var ed25519 = new Ed25519Signer();
+        var keyPair = ed25519.GenerateKeyPair();
+        var publicKeyBase64 = Convert.ToBase64String(keyPair.PublicKey);
+        var opinion = CreateSignedOpinion(ed25519, keyPair.PrivateKey, "pod-1", "peer-1", variantHash: "Variant-A");
+        var expectedKey = "pod:pod-1:opinions:content:audio:track:track-1";
+
+        var podService = CreatePodServiceMock(publicKeyBase64);
+        var dhtClient = new Mock<IMeshDhtClient>();
+        dhtClient.Setup(x => x.GetAsync<List<PodVariantOpinion>>(expectedKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodVariantOpinion> { opinion });
+
+        var service = new PodOpinionService(
+            podService.Object,
+            dhtClient.Object,
+            ed25519,
+            NullLogger<PodOpinionService>.Instance);
+
+        var results = await service.GetVariantOpinionsAsync("pod-1", "content:audio:track:track-1", " variant-a ");
+
+        Assert.Single(results);
+        Assert.Equal("Variant-A", results[0].VariantHash);
+    }
+
+    [Fact]
     public async Task GetAggregatedOpinionsAsync_NormalizesWeightedAverageByTotalWeight()
     {
         var podService = new Mock<IPodService>();

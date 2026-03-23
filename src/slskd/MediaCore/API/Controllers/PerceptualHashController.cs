@@ -56,7 +56,7 @@ public class PerceptualHashController : ControllerBase
 
         try
         {
-            var algorithmValue = request.Algorithm ?? "ChromaPrint";
+            var algorithmValue = string.IsNullOrWhiteSpace(request.Algorithm) ? "ChromaPrint" : request.Algorithm.Trim();
             if (!Enum.TryParse(algorithmValue, ignoreCase: true, out PerceptualHashAlgorithm algorithm))
             {
                 return Task.FromResult<IActionResult>(BadRequest("Unsupported algorithm"));
@@ -98,7 +98,7 @@ public class PerceptualHashController : ControllerBase
 
         try
         {
-            var algorithmValue = request.Algorithm ?? "PHash";
+            var algorithmValue = string.IsNullOrWhiteSpace(request.Algorithm) ? "PHash" : request.Algorithm.Trim();
             if (!Enum.TryParse(algorithmValue, ignoreCase: true, out PerceptualHashAlgorithm algorithm))
             {
                 return Task.FromResult<IActionResult>(BadRequest("Unsupported algorithm"));

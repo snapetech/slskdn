@@ -54,6 +54,9 @@ public class PodOpinionService : IPodOpinionService
 
     public async Task<OpinionPublishResult> PublishOpinionAsync(string podId, PodVariantOpinion opinion, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        opinion = NormalizeOpinion(opinion);
+
         try
         {
             // Validate the opinion first
@@ -102,6 +105,9 @@ public class PodOpinionService : IPodOpinionService
 
     public async Task<IReadOnlyList<PodVariantOpinion>> GetOpinionsAsync(string podId, string contentId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
+
         // Check cache first
         if (_opinionCache.TryGetValue(podId, out var podCache) &&
             podCache.TryGetValue(contentId, out var cachedOpinions))
@@ -127,12 +133,16 @@ public class PodOpinionService : IPodOpinionService
 
     public async Task<IReadOnlyList<PodVariantOpinion>> GetVariantOpinionsAsync(string podId, string contentId, string variantHash, CancellationToken ct = default)
     {
+        variantHash = variantHash?.Trim() ?? string.Empty;
         var allOpinions = await GetOpinionsAsync(podId, contentId, ct);
-        return allOpinions.Where(o => o.VariantHash == variantHash).ToList();
+        return allOpinions.Where(o => string.Equals(o.VariantHash, variantHash, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     public async Task<OpinionValidationResult> ValidateOpinionAsync(string podId, PodVariantOpinion opinion, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        opinion = NormalizeOpinion(opinion);
+
         // Validate pod exists
         var pod = await _podService.GetPodAsync(podId, ct);
         if (pod == null)
@@ -142,7 +152,9 @@ public class PodOpinionService : IPodOpinionService
 
         // Validate sender is pod member
         var members = await _podService.GetMembersAsync(podId, ct);
-        var sender = members.FirstOrDefault(m => m.PeerId == opinion.SenderPeerId && !m.IsBanned);
+        var sender = members.FirstOrDefault(m =>
+            string.Equals(m.PeerId?.Trim(), opinion.SenderPeerId, StringComparison.OrdinalIgnoreCase) &&
+            !m.IsBanned);
         if (sender == null)
         {
             return new OpinionValidationResult(false, $"Sender {opinion.SenderPeerId} is not a member of pod {podId}");
@@ -365,6 +377,7 @@ public class PodOpinionService : IPodOpinionService
     {
         signatureBytes = null;
         errorMessage = null;
+        signature = signature?.Trim() ?? string.Empty;
 
         if (!signature.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
         {
@@ -396,6 +409,7 @@ public class PodOpinionService : IPodOpinionService
     {
         publicKeyBytes = null;
         errorMessage = null;
+        publicKey = publicKey?.Trim() ?? string.Empty;
 
         try
         {
@@ -420,23 +434,44 @@ public class PodOpinionService : IPodOpinionService
     private string ExtractPodIdFromKey(string dhtKey)
     {
         // Key format: pod:<PodId>:opinions:<ContentId>
-        var parts = dhtKey.Split(':');
+        var parts = (dhtKey ?? string.Empty).Trim().Split(':');
         return parts.Length >= 2 ? parts[1] : string.Empty;
     }
 
     private void TrackKnownContentId(string podId, string contentId)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        contentId = contentId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(contentId))
+        {
+            return;
+        }
+
         var contentIds = _knownContentIdsByPod.GetOrAdd(podId, _ => new ConcurrentDictionary<string, byte>());
         contentIds[contentId] = 0;
     }
 
     private IReadOnlyList<string> GetKnownContentIds(string podId)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (_knownContentIdsByPod.TryGetValue(podId, out var contentIds))
         {
-            return contentIds.Keys.ToList();
+            return contentIds.Keys
+                .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+                .OrderBy(contentId => contentId, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         return Array.Empty<string>();
+    }
+
+    private static PodVariantOpinion NormalizeOpinion(PodVariantOpinion opinion)
+    {
+        opinion.ContentId = opinion.ContentId?.Trim() ?? string.Empty;
+        opinion.VariantHash = opinion.VariantHash?.Trim() ?? string.Empty;
+        opinion.Note = opinion.Note?.Trim() ?? string.Empty;
+        opinion.SenderPeerId = opinion.SenderPeerId?.Trim() ?? string.Empty;
+        opinion.Signature = opinion.Signature?.Trim() ?? string.Empty;
+        return opinion;
     }
 }

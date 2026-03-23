@@ -204,10 +204,10 @@ namespace slskd.SocialFederation
                 case JsonValueKind.Array:
                     foreach (var item in element.EnumerateArray())
                     {
-                        var pkix = ExtractPublicKeyPkix(item, keyId);
-                        if (pkix != null)
+                        var nestedPkix = ExtractPublicKeyPkix(item, keyId);
+                        if (nestedPkix != null)
                         {
-                            return pkix;
+                            return nestedPkix;
                         }
                     }
 

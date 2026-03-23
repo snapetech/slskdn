@@ -112,7 +112,7 @@ public class NowPlayingController : ControllerBase
             if (root.TryGetProperty("event", out var plexEvent) &&
                 root.TryGetProperty("Metadata", out var meta))
             {
-                var ev = plexEvent.GetString();
+                var ev = plexEvent.GetString()?.Trim();
 
                 // Only handle play/resume events; clear on stop/pause
                 if (ev is "media.play" or "media.resume" or "media.scrobble")
@@ -137,7 +137,7 @@ public class NowPlayingController : ControllerBase
             // Detect Jellyfin/Emby: has "NotificationType" or "ItemType"
             if (root.TryGetProperty("NotificationType", out var jellyType))
             {
-                var type = jellyType.GetString();
+                var type = jellyType.GetString()?.Trim();
                 if (type is "PlaybackStart" or "PlaybackProgress")
                 {
                     var title = root.TryGetProperty("Name", out var n) ? n.GetString()?.Trim() : null;
@@ -157,7 +157,7 @@ public class NowPlayingController : ControllerBase
 
             // Generic fallback: { "artist": "...", "title": "...", "album": "...", "event": "play|stop" }
             {
-                var evt = root.TryGetProperty("event", out var e) ? e.GetString() : "play";
+                var evt = root.TryGetProperty("event", out var e) ? e.GetString()?.Trim() : "play";
                 var title = root.TryGetProperty("title", out var t) ? t.GetString()?.Trim() : null;
                 var artist = root.TryGetProperty("artist", out var a) ? a.GetString()?.Trim() : null;
                 var album = root.TryGetProperty("album", out var alb) ? alb.GetString()?.Trim() : null;

@@ -29,6 +29,6 @@ public class PathGuardTests
         var result = DhtPathGuard.ValidatePeerPath(peerPath, TestRoot);
 
         Assert.False(result.IsValid);
-        Assert.Equal(slskd.DhtRendezvous.Security.PathViolationType.DirectoryTraversal, result.ViolationType);
+        Assert.Equal(slskd.DhtRendezvous.Security.PathGuard.PathViolationType.DirectoryTraversal, result.ViolationType);
     }
 }

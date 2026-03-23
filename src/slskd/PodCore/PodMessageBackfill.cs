@@ -404,6 +404,23 @@ public class PodMessageBackfill : IPodMessageBackfill
         string localPeerId,
         CancellationToken ct)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
+        localPeerId = localPeerId?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(peerId))
+        {
+            return new PodBackfillProcessingResult(
+                false,
+                podId,
+                string.Empty,
+                0,
+                0,
+                0,
+                TimeSpan.Zero,
+                "Backfill request target peer is invalid.");
+        }
+
         try
         {
             _logger.LogDebug("Requesting backfill from peer {PeerId} for pod {PodId}", peerId, podId);
@@ -427,6 +444,19 @@ public class PodMessageBackfill : IPodMessageBackfill
                     "Backfill request delivery failed.");
             }
 
+            if (routing.TargetPeerCount <= 0 || routing.SuccessfullyRoutedCount <= 0)
+            {
+                return new PodBackfillProcessingResult(
+                    false,
+                    podId,
+                    peerId,
+                    0,
+                    0,
+                    0,
+                    TimeSpan.Zero,
+                    "Backfill request was not routed to any peer.");
+            }
+
             return new PodBackfillProcessingResult(
                 false,
                 podId,
@@ -435,7 +465,7 @@ public class PodMessageBackfill : IPodMessageBackfill
                 0,
                 0,
                 TimeSpan.Zero,
-                "Backfill request delivery succeeded, but response handling is not implemented.");
+                "Backfill request sent; response handling is not yet available.");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

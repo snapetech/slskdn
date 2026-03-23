@@ -4,6 +4,8 @@
 
 namespace slskd.Tests.Unit.NowPlaying;
 
+using System.Text;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using slskd.NowPlaying;
 using slskd.NowPlaying.API;
@@ -42,5 +44,29 @@ public class NowPlayingControllerTests
         });
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Webhook_Trims_Generic_Event_Before_Routing()
+    {
+        var service = new NowPlayingService();
+        var controller = new NowPlayingController(service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("""
+            { "event": " stop ", "artist": "Artist", "title": "Title" }
+            """));
+
+        service.SetTrack("Artist", "Title", null);
+
+        var result = await controller.Webhook();
+
+        Assert.IsType<OkResult>(result);
+        Assert.Null(service.CurrentTrack);
     }
 }

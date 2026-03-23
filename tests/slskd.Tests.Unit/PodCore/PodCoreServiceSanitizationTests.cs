@@ -86,6 +86,44 @@ public class PodCoreServiceSanitizationTests
     }
 
     [Fact]
+    public async Task PodMessageBackfill_WithBlankPeerId_ReturnsStableFailure()
+    {
+        var messageStorage = new Mock<IPodMessageStorage>();
+        messageStorage
+            .Setup(storage => storage.GetMessagesAsync("pod-1", "general", null, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PodMessage { PodId = "pod-1", ChannelId = "general", TimestampUnixMs = 10 } });
+
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.GetChannelsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodChannel> { new() { ChannelId = "general", Name = "general" } });
+        podService
+            .Setup(service => service.GetMembersAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember> { new() { PeerId = "   " } });
+
+        var profileService = new Mock<IProfileService>();
+        profileService
+            .Setup(service => service.GetMyProfileAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerProfile { PeerId = "peer-self" });
+
+        var service = new PodMessageBackfill(
+            messageStorage.Object,
+            Mock.Of<IPodMessageRouter>(),
+            Mock.Of<IOverlayClient>(),
+            podService.Object,
+            profileService.Object,
+            NullLogger<PodMessageBackfill>.Instance);
+
+        var result = await service.SyncOnRejoinAsync(
+            "pod-1",
+            new Dictionary<string, long> { ["general"] = 0 },
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("Backfill request target peer is invalid.", result.ErrorMessage);
+    }
+
+    [Fact]
     public async Task PodDhtPublisher_WhenPublishThrows_ReturnsSanitizedErrorMessage()
     {
         var dhtClient = new Mock<IMeshDhtClient>();
