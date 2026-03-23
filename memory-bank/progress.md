@@ -7112,3 +7112,11 @@ Code quality improvements were completed as part of Option A:
 - `RelayService` now has a disposal contract too: it releases its options registration, current client-state registration, owned `MemoryCache`, current relay client, and sync semaphore.
 - Added focused disposal coverage in `tests/slskd.Tests.Unit/Users/UserServiceTests.cs` and `tests/slskd.Tests.Unit/Relay/RelayServiceTests.cs`.
 - Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~UserServiceTests|FullyQualifiedName~RelayServiceTests"` passed (`10/10`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+
+## 2026-03-23 17:08 CST
+
+- Continued the ownership sweep across singleton `ISoulseekClient` subscribers instead of stopping after the first service leak.
+- `RoomService` now exposes disposal and unsubscribes its login/room event handlers during teardown.
+- `ShareGrantAnnouncementService` now unsubscribes its private-message listener when disposed, and `SoulseekChatBridge` now exposes disposal and detaches its room-message bridge subscription with a proper sealed disposal pattern.
+- Added focused regressions in `tests/slskd.Tests.Unit/Messaging/RoomServiceTests.cs`, `tests/slskd.Tests.Unit/Sharing/ShareGrantAnnouncementServiceTests.cs`, and `tests/slskd.Tests.Unit/PodCore/SoulseekChatBridgeTests.cs`.
+- Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~RoomServiceTests|FullyQualifiedName~ShareGrantAnnouncementServiceTests|FullyQualifiedName~SoulseekChatBridgeTests"` passed (`5/5`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).

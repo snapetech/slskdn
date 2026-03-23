@@ -878,7 +878,7 @@ public class PodMessaging : IPodMessaging
 /// <summary>
 /// Soulseek chat bridge for bound channels (readonly and mirror modes).
 /// </summary>
-public interface ISoulseekChatBridge
+public interface ISoulseekChatBridge : IDisposable
 {
     Task<bool> BindRoomAsync(string podId, string channelId, string roomName, string mode, CancellationToken ct = default);
     Task<bool> UnbindRoomAsync(string podId, string channelId, CancellationToken ct = default);
@@ -889,7 +889,7 @@ public interface ISoulseekChatBridge
 /// <summary>
 /// Implements bidirectional chat bridge between Soulseek rooms and Pod channels.
 /// </summary>
-public class SoulseekChatBridge : ISoulseekChatBridge
+public sealed class SoulseekChatBridge : ISoulseekChatBridge
 {
     private readonly IServiceScopeFactory scopeFactory;
     private readonly IRoomService roomService;
@@ -903,6 +903,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     private readonly Dictionary<string, string> soulseekToPodMapping = new(StringComparer.OrdinalIgnoreCase); // username -> peerId
     private readonly Dictionary<string, string> podToSoulseekMapping = new(StringComparer.OrdinalIgnoreCase); // peerId -> username
     private readonly object mappingLock = new();
+    private bool disposed;
 
     public SoulseekChatBridge(
         IServiceScopeFactory scopeFactory,
@@ -917,6 +918,23 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
         // Subscribe to Soulseek room messages
         soulseekClient.RoomMessageReceived += SoulseekClient_RoomMessageReceived;
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (disposed || !disposing)
+        {
+            return;
+        }
+
+        soulseekClient.RoomMessageReceived -= SoulseekClient_RoomMessageReceived;
+        disposed = true;
     }
 
     private void SoulseekClient_RoomMessageReceived(object? sender, RoomMessageReceivedEventArgs e)

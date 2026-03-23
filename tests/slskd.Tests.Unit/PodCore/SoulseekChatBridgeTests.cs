@@ -16,9 +16,19 @@ using Xunit;
 public class SoulseekChatBridgeTests
 {
     [Fact]
+    public void Dispose_UnsubscribesSoulseekRoomMessageEvent()
+    {
+        var (bridge, soulseekClient) = CreateFixture();
+
+        bridge.Dispose();
+
+        soulseekClient.VerifyRemove(x => x.RoomMessageReceived -= It.IsAny<EventHandler<RoomMessageReceivedEventArgs>>(), Times.Once);
+    }
+
+    [Fact]
     public void RegisterIdentityMapping_NormalizesBidirectionalKeys()
     {
-        var bridge = CreateBridge();
+        var (bridge, _) = CreateFixture();
 
         bridge.RegisterIdentityMapping(" Alice ", " peer:mesh:remote ");
 
@@ -29,7 +39,7 @@ public class SoulseekChatBridgeTests
     [Fact]
     public void MapPodToSoulseekUsername_BackCompatBridgePrefixTrimsAndCachesMapping()
     {
-        var bridge = CreateBridge();
+        var (bridge, _) = CreateFixture();
 
         var username = InvokePrivateString(bridge, "MapPodToSoulseekUsername", " bridge:Alice ");
 
@@ -37,13 +47,16 @@ public class SoulseekChatBridgeTests
         Assert.Equal("bridge:Alice", InvokePrivateString(bridge, "MapSoulseekToPodPeerId", " alice "));
     }
 
-    private static SoulseekChatBridge CreateBridge()
+    private static (SoulseekChatBridge Bridge, Mock<ISoulseekClient> SoulseekClient) CreateFixture()
     {
-        return new SoulseekChatBridge(
+        var soulseekClient = new Mock<ISoulseekClient>();
+        var bridge = new SoulseekChatBridge(
             Mock.Of<IServiceScopeFactory>(),
             Mock.Of<IRoomService>(),
-            new Mock<ISoulseekClient>().Object,
+            soulseekClient.Object,
             NullLogger<SoulseekChatBridge>.Instance);
+
+        return (bridge, soulseekClient);
     }
 
     private static string? InvokePrivateString(SoulseekChatBridge bridge, string methodName, string argument)

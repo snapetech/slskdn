@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the singleton event-ownership sweep across direct `ISoulseekClient` subscribers:
+    - `RoomService` now exposes disposal and unsubscribes its login/room handlers on teardown
+    - `ShareGrantAnnouncementService` now detaches its private-message subscription on disposal
+    - `SoulseekChatBridge` now exposes disposal and detaches its room-message bridge subscription using the standard sealed dispose pattern
+  - Added focused disposal regressions in `tests/slskd.Tests.Unit/Messaging/RoomServiceTests.cs`, `tests/slskd.Tests.Unit/Sharing/ShareGrantAnnouncementServiceTests.cs`, and `tests/slskd.Tests.Unit/PodCore/SoulseekChatBridgeTests.cs`
+  - Confirmed `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~RoomServiceTests|FullyQualifiedName~ShareGrantAnnouncementServiceTests|FullyQualifiedName~SoulseekChatBridgeTests"` passed (`5/5`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`)
   - Continued the ownership sweep into DI-owned singletons with external hooks:
     - `IUserService` / `UserService` now support disposal, unsubscribe retained Soulseek client handlers, and release the options registration
     - `RelayService` now supports disposal, releases its options/client-state registrations, owned `MemoryCache`, current client, and sync semaphore
