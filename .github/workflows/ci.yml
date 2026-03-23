@@ -105,6 +105,10 @@ jobs:
               fpath="$aur_dir/$fname"
               expected="${sums[$idx]:-}"
               [[ "$expected" == "SKIP" || -z "$expected" ]] && continue
+              if [[ "$expected" == *"PLACEHOLDER" ]]; then
+                echo "⚠️ $pkgbuild placeholder hash for ${fname}; workflow will substitute before publish."
+                continue
+              fi
               [[ -f "$fpath" ]] || continue
               actual=$(sha256sum "$fpath" | awk '{print $1}')
               if [[ "$actual" != "$expected" ]]; then
