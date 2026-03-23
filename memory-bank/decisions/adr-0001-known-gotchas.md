@@ -16456,6 +16456,10 @@ protected virtual void Dispose(bool disposing)
 - `src/slskd/Common/Moderation/ModerationSubProviders.cs`
 - `src/slskd/Common/Moderation/ILlmModerationProvider.cs`
 - `src/slskd/Transfers/MultiSource/Discovery/ISourceDiscoveryService.cs`
+- `src/slskd/Common/Security/IPrivacyLayer.cs`
+- `src/slskd/Mesh/Privacy/IPrivacyLayer.cs`
+- `src/slskd/Common/Security/PrivacyLayer.cs`
+- `src/slskd/Mesh/Privacy/PrivacyLayer.cs`
 
 **Wrong**:
 ```csharp
