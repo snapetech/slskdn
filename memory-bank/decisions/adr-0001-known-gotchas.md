@@ -52,6 +52,42 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE3. Normalized Lookup Keys Must Not Replace The Original Wire Identifier
+
+**The Bug**: capability-file discovery normalized remote browse paths for matching and then reused the normalized string for the actual transfer call. The normalized path is fine for comparison, but it is not guaranteed to be the same path shape the remote peer exposed on the wire. That can turn a successful browse hit into a failed download.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+var remoteFile = browseResult.Directories
+    .SelectMany(directory => directory.Files.Select(file => new
+    {
+        RemoteFilename = NormalizeCapabilityPath($"{directory.Name}\\{file.Filename}"),
+        file.Size,
+    }))
+    .FirstOrDefault(...);
+
+await _soulseekClient.DownloadAsync(username, remoteFile.RemoteFilename, ...);
+```
+
+**Correct**:
+```csharp
+var remoteFile = browseResult.Directories
+    .SelectMany(directory => directory.Files.Select(file => new
+    {
+        RemoteFilename = $"{directory.Name}\\{file.Filename}",
+        NormalizedRemoteFilename = NormalizeCapabilityPath($"{directory.Name}\\{file.Filename}"),
+        file.Size,
+    }))
+    .FirstOrDefault(...);
+
+await _soulseekClient.DownloadAsync(username, remoteFile.RemoteFilename, ...);
+```
+
+**Why This Keeps Happening**: normalization is useful for equality and dedupe, so it is tempting to keep only the normalized value. That loses the exact identifier the remote protocol expects. Keep both: normalized for matching, original for transport.
+
 ### 0xE2. Do Not Reset Reconnection Waiters After The Reconnected Event Fires
 
 **The Bug**: `RelayClient.HubConnection_Reconnected()` reset `LoggedInTaskCompletionSource` and then waited for authentication to complete. But the relay controller can send the auth challenge before the `Reconnected` event fires, so the login handler may already have completed the old waiter. Resetting it inside `Reconnected` discards that success signal and leaves the client waiting on a brand-new task that will never complete.
