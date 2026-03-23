@@ -126,6 +126,7 @@ namespace slskd.Relay
                     throw new InvalidOperationException($"Relay client can only be started when operation mode is {RelayMode.Agent}");
                 }
 
+                StartCancellationTokenSource?.Cancel();
                 StartCancellationTokenSource?.Dispose();
                 StartCancellationTokenSource = new CancellationTokenSource();
                 StartRequested = true;
