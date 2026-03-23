@@ -16331,3 +16331,53 @@ this.client.RoomMessageReceived -= roomMessageReceivedHandler;
 ```
 
 **Why This Keeps Happening**: service-to-service events look internal, so they get treated like harmless in-process wiring instead of owned resources. But these publishers are often singletons too, which makes every subscription effectively global for process lifetime unless it is explicitly removed. If either side of the chain can outlive the other, both the publisher wrapper and the consumer service need a visible teardown contract.
+
+### 0k148. Hosted DHT Services Must Treat External Publishers And Listeners As Owned Lifecycle Resources
+
+**The Bug**: DHT-hosted services subscribed to external publishers but only partially tore those hooks down. `DhtRendezvousService` attached `PeersFound` and `StateChanged` handlers to a `DhtEngine` instance, then stopped/disposed the engine without first detaching those handlers or explicitly clearing the owned listener field. `DhtPeerGreetingService` attached to `MeshNeighborRegistry` from `ExecuteAsync(...)`, so repeated starts could double-subscribe and direct disposal could leave stale registry handlers attached if `StopAsync()` never ran first.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `src/slskd/DhtRendezvous/DhtPeerGreetingService.cs`
+
+**Wrong**:
+```csharp
+_dhtEngine = new DhtEngine();
+_dhtEngine.PeersFound += OnPeersFound;
+_dhtEngine.StateChanged += OnDhtStateChanged;
+...
+await _dhtEngine.StopAsync();
+_dhtEngine.Dispose();
+_dhtEngine = null;
+
+protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+{
+    await Task.Yield();
+    _neighborRegistry.NeighborAdded += OnNeighborAdded;
+    _neighborRegistry.FirstNeighborConnected += OnFirstNeighborConnected;
+}
+```
+
+**Correct**:
+```csharp
+var dhtEngine = DetachDhtEngine();
+var dhtListener = DetachDhtListener();
+...
+await dhtEngine.StopAsync();
+dhtEngine.Dispose();
+dhtListener?.Stop();
+
+public override Task StartAsync(CancellationToken cancellationToken)
+{
+    AttachNeighborSubscriptions();
+    return base.StartAsync(cancellationToken);
+}
+
+public override void Dispose()
+{
+    DetachNeighborSubscriptions();
+    base.Dispose();
+}
+```
+
+**Why This Keeps Happening**: hosted services feel self-cleaning because the host usually calls `StartAsync()`, `StopAsync()`, and disposal in order. That assumption breaks as soon as a service is restarted, replaced, or directly disposed in tests and recovery paths. Any hosted service that attaches to external publishers or owns listeners/engines must make those subscriptions and listener fields explicit lifecycle resources: attach once, detach on both stop and dispose, and tear them down through stable local captures before replacing or nulling the live fields.
