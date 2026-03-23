@@ -16689,6 +16689,31 @@ sha256sums=('SKIP' '<service hash>' '<yml hash>' '<sysusers hash>')
 
 **Why This Keeps Happening**: release artifacts in GitHub are mutable across retries and reruns. Any pinned binary zip checksum on mutable assets turns a transient packaging detail into a hard install failure until the package metadata is manually repaired.
 
+### 0k14H. slskdn-bin Package Must Be Continuously Repaired Across All Historical AUR Releases
+
+**The Bug**: the published `slskdn-bin` package can carry a concrete `sha256sums[0]` from an earlier publish cycle while the version string has already advanced, causing installer-time failures on every attempt for that version (`Validating source files with sha256sums ... FAILED`).
+
+**Files Affected**:
+- `.github/workflows/ci.yml`
+- `.github/workflows/release-linux.yml`
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/upstream-release.yml`
+- `.github/workflows/dev-release.yml`
+- `packaging/scripts/validate-aur-pkgbuild-hashes.sh`
+
+**Wrong**:
+```sh
+sed -i "s/^sha256sums=.*/sha256sums=('<asset hash>' ...)/" PKGBUILD
+```
+
+**Correct**:
+```sh
+sed -i "s/^sha256sums=.*/sha256sums=('SKIP' ...)/" PKGBUILD
+bash packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD...
+```
+
+**Why This Keeps Happening**: `makepkg` is strict on checksums and release assets can be replaced under the same tag during retries. Without a centralized validator, any one-off update job can leave a bad package version behind and that bad state becomes the package's user-facing behavior until another release repushes the AUR metadata.
+
 ### 0k14H. AUR Dev PKGBUILD Must Replace SHA256 Placeholders Before Publishing
 
 **The Bug**: `dev-release.yml` updated `PKGBUILD-dev` version/commit fields but did not replace `SHA256_*_PLACEHOLDER` tokens before generating `.SRCINFO`, so AUR updates could emit placeholder hashes instead of real values for static files.
