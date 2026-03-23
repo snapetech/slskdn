@@ -5992,3 +5992,18 @@ Code quality improvements were completed as part of Option A:
 - Sanitized the `SecurityMiddleware` catch-path event message to the stable text `Request processing error` so the security event sink does not capture raw exception strings from request processing.
 - Added focused unit coverage for the sanitized X509 helper result and restored unit-project compile drift in `MeshSyncSecurityTests` and `ContentLinkServiceTests`.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for helper validation and ad-hoc test endpoint leakage.
+
+## 2026-03-22 18:14 - Controller input normalization pass
+
+- Hardened `BackfillController`, `DedupeController`, `CanonicalController`, `AnalyzerMigrationController`, and `UserNotesController` so they trim route/query/body identifiers before dispatch and reject whitespace-only values at the HTTP boundary.
+- Fixed the concrete failure modes where padded IDs became wrong storage/service keys and blank values could flow into services as `ArgumentException` or silent mismatches instead of a clean `400`.
+- Added focused unit coverage in `BackfillControllerTests`, `AudioBoundaryControllerTests`, and `UserNotesControllerTests`, and verified the targeted slice passed `14/14`.
+- Documented the recurring pattern in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and immediately committed the docs-only note.
+
+## 2026-03-22 18:22 - SongID and metadata completion batch A
+
+- `MetadataFacade` now trims cache/query keys, caches AcoustID-only fallback hits, yields artist/title-only search hits even without a MusicBrainz recording ID, and falls back to filename-derived metadata for local files when tag parsing bottoms out.
+- `MusicBrainzClient` now trims request identifiers/queries, picks the first non-blank credited artist, and deduplicates recording search results instead of returning duplicate/whitespace-drifted hits.
+- `SongIdService` now uses filename metadata fallback for local files, stops duplicating the Spotify title in query generation, and accepts metadata search hits without MBIDs by assigning conservative synthetic recording IDs instead of discarding them.
+- Added focused unit coverage in new `MetadataFacadeTests` and `MusicBrainzClientTests`, plus new SongID tests covering synthetic metadata candidates and local-file filename fallback.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for dropping metadata hits without MBIDs.

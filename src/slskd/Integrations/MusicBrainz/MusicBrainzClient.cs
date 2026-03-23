@@ -65,6 +65,7 @@ namespace slskd.Integrations.MusicBrainz
                 throw new ArgumentException("Release ID must be supplied", nameof(releaseId));
             }
 
+            releaseId = releaseId.Trim();
             var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/release/{releaseId}?fmt=json&inc=recordings+artists+labels+discids+isrcs";
             var response = await GetAsync<ReleaseResponse>(requestUrl, cancellationToken).ConfigureAwait(false);
             return response is null ? null : MapToAlbumTarget(response);
@@ -78,6 +79,7 @@ namespace slskd.Integrations.MusicBrainz
                 throw new ArgumentException("Recording ID must be supplied", nameof(recordingId));
             }
 
+            recordingId = recordingId.Trim();
             var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/recording/{recordingId}?fmt=json&inc=artists+isrcs";
             var response = await GetAsync<RecordingResponse>(requestUrl, cancellationToken).ConfigureAwait(false);
             return response is null ? null : MapToTrackTarget(response);
@@ -91,6 +93,7 @@ namespace slskd.Integrations.MusicBrainz
                 throw new ArgumentException("Discogs release ID must be supplied", nameof(discogsReleaseId));
             }
 
+            discogsReleaseId = discogsReleaseId.Trim();
             var query = WebUtility.UrlEncode(discogsReleaseId);
             var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/release/?query=discogsrelease:{query}&fmt=json&limit=1";
             var response = await GetAsync<ReleaseSearchResponse>(requestUrl, cancellationToken).ConfigureAwait(false);
@@ -107,6 +110,7 @@ namespace slskd.Integrations.MusicBrainz
                 return Array.Empty<RecordingSearchHit>();
             }
 
+            query = query.Trim();
             var encoded = WebUtility.UrlEncode(query);
             var requestUrl = $"{MusicBrainzOptions.BaseUrl.TrimEnd('/')}/recording?query={encoded}&fmt=json&limit={Math.Max(1, Math.Min(limit, 100))}";
             var response = await GetAsync<RecordingSearchResponse>(requestUrl, cancellationToken).ConfigureAwait(false);
@@ -119,13 +123,21 @@ namespace slskd.Integrations.MusicBrainz
             return recordings
                 .Select(r =>
                 {
-                    var ac = r.ArtistCredit?.FirstOrDefault();
+                    var ac = r.ArtistCredit?.FirstOrDefault(credit => !string.IsNullOrWhiteSpace(credit.Name)) ??
+                        r.ArtistCredit?.FirstOrDefault();
                     return new RecordingSearchHit(
-                        r.Id,
-                        r.Title ?? string.Empty,
-                        ac?.Name ?? string.Empty,
+                        r.Id?.Trim() ?? string.Empty,
+                        r.Title?.Trim() ?? string.Empty,
+                        ac?.Name?.Trim() ?? string.Empty,
                         ac?.Artist?.Id);
                 })
+                .Where(hit => !string.IsNullOrWhiteSpace(hit.RecordingId) ||
+                    !string.IsNullOrWhiteSpace(hit.Title) ||
+                    !string.IsNullOrWhiteSpace(hit.Artist))
+                .GroupBy(hit => !string.IsNullOrWhiteSpace(hit.RecordingId)
+                    ? hit.RecordingId
+                    : $"{hit.Artist}\u001f{hit.Title}", StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
                 .ToList();
         }
 

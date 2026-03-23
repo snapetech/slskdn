@@ -35,7 +35,13 @@ public sealed class SongIdController : ControllerBase
             return Forbid();
         }
 
-        if (request == null || string.IsNullOrWhiteSpace(request.Source))
+        if (request == null)
+        {
+            return BadRequest("SongID source is required.");
+        }
+
+        request.Source = request.Source?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(request.Source))
         {
             return BadRequest("SongID source is required.");
         }
@@ -52,6 +58,7 @@ public sealed class SongIdController : ControllerBase
             return Forbid();
         }
 
+        limit = limit <= 0 ? 10 : limit;
         return Ok(_songIdService.List(limit));
     }
 

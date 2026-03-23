@@ -433,6 +433,11 @@ public sealed class SongIdService : ISongIdService
         var metadata = await _metadataFacade.GetByFileAsync(source, cancellationToken).ConfigureAwait(false);
         if (metadata == null)
         {
+            metadata = await _metadataFacade.GetBySoulseekFilenameAsync(string.Empty, fileName, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (metadata == null)
+        {
             analysis.Query = Path.GetFileNameWithoutExtension(source);
             analysis.Evidence.Add("No tags or fingerprint match were resolved. Falling back to filename-based SongID query.");
             return analysis;
@@ -550,7 +555,7 @@ public sealed class SongIdService : ISongIdService
 
             var artist = parts.Length > 0 ? parts[0] : null;
             var album = parts.Length > 1 ? parts[1] : null;
-            analysis.Query = BuildBestQuery(title, artist, title, album);
+            analysis.Query = BuildBestQuery(artist, title, album);
             analysis.Evidence.Add($"Spotify page metadata extracted query: {analysis.Query}");
             if (!string.IsNullOrWhiteSpace(album))
             {
@@ -615,18 +620,27 @@ public sealed class SongIdService : ISongIdService
 
     private async Task AddSearchCandidatesAsync(SongIdRun run, string query, CancellationToken cancellationToken)
     {
+        var addedCount = 0;
+        var seenRecordingIds = new HashSet<string>(
+            run.Tracks
+                .Select(candidate => candidate.RecordingId)
+                .Where(value => !string.IsNullOrWhiteSpace(value)),
+            StringComparer.OrdinalIgnoreCase);
+
         await foreach (var hit in _metadataFacade.SearchAsync(query, 8, cancellationToken).ConfigureAwait(false))
         {
-            if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId) ||
-                run.Tracks.Any(candidate => string.Equals(candidate.RecordingId, hit.MusicBrainzRecordingId, StringComparison.OrdinalIgnoreCase)))
+            var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
+                ? hit.MusicBrainzRecordingId
+                : BuildSyntheticMetadataRecordingId(hit);
+            if (string.IsNullOrWhiteSpace(recordingId) || !seenRecordingIds.Add(recordingId))
             {
                 continue;
             }
 
             run.Tracks.Add(new SongIdTrackCandidate
             {
-                CandidateId = hit.MusicBrainzRecordingId,
-                RecordingId = hit.MusicBrainzRecordingId,
+                CandidateId = recordingId,
+                RecordingId = recordingId,
                 Title = hit.Title ?? string.Empty,
                 Artist = hit.Artist ?? string.Empty,
                 MusicBrainzArtistId = hit.MusicBrainzArtistId,
@@ -635,12 +649,19 @@ public sealed class SongIdService : ISongIdService
                 ByzantineScore = 0.58,
                 ActionScore = 0.67,
             });
+            addedCount++;
         }
 
-        if (run.Tracks.Count > 0)
+        if (addedCount > 0)
         {
-            run.Evidence.Add($"MusicBrainz search produced {run.Tracks.Count} track candidate(s) for query `{query}`.");
+            run.Evidence.Add($"MusicBrainz search produced {addedCount} track candidate(s) for query `{query}`.");
         }
+    }
+
+    private static string? BuildSyntheticMetadataRecordingId(MetadataResult hit)
+    {
+        var normalized = NormalizeSegmentQuery(BuildBestQuery(hit.Artist, hit.Title));
+        return string.IsNullOrWhiteSpace(normalized) ? null : $"metadata:{normalized}";
     }
 
     private async Task AddArtistCandidatesAsync(SongIdRun run, CancellationToken cancellationToken)

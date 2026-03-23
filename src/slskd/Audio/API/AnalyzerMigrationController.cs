@@ -29,6 +29,12 @@ namespace slskd.Audio.API
         [HttpPost]
         public async Task<ActionResult<object>> Migrate([FromQuery] string targetVersion = "audioqa-1", [FromQuery] bool force = false, CancellationToken ct = default)
         {
+            targetVersion = targetVersion?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(targetVersion))
+            {
+                return BadRequest("TargetVersion is required.");
+            }
+
             var updated = await migrationService.MigrateAsync(targetVersion, force, ct).ConfigureAwait(false);
             return Ok(new { updated, targetVersion, force });
         }

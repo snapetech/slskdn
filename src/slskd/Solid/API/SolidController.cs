@@ -80,6 +80,12 @@ public sealed class SolidController : ControllerBase
     {
         if (!Enabled) return NotFound();
 
+        if (req == null)
+        {
+            return Problem(title: "Invalid WebID", detail: "WebId must be an absolute URI.", statusCode: 400);
+        }
+
+        req.WebId = req.WebId?.Trim() ?? string.Empty;
         if (!Uri.TryCreate(req.WebId, UriKind.Absolute, out var webId))
         {
             return Problem(title: "Invalid WebID", detail: "WebId must be an absolute URI.", statusCode: 400);

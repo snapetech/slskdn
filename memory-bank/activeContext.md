@@ -237,3 +237,14 @@ dotnet test
 - Sanitized `X509.TryValidate(...)`, the multi-source `RunTest(...)` endpoint error field, and the `SecurityMiddleware` catch-path event message so those helper/diagnostic surfaces no longer relay raw nested exception text.
 - Folded in adjacent unit drift fixes in `MeshSyncSecurityTests` and `ContentLinkServiceTests`, and documented the recurring pattern in `adr-0001-known-gotchas.md` with an immediate docs-only commit.
 - Next: continue the broad bughunt from the current head, prioritizing other helper/result contracts that still look diagnostic but cross an observable boundary.
+
+## 2026-03-22 18:14
+- Normalized controller-edge strings in `BackfillController`, the small audio controllers, and `UserNotesController` so whitespace-only or padded IDs no longer reach the service layer as distinct keys or bad arguments.
+- Added focused regression coverage for the normalized/blank-input paths and revalidated the batch with a clean runtime build, targeted unit slice, and lint.
+- Next: keep widening the bughunt through other low-traffic controllers and helper endpoints that still look like thin pass-throughs and may be skipping controller-edge normalization.
+
+## 2026-03-22 18:22
+- Executed Batch A against `SongIdService`, `MetadataFacade`, and `MusicBrainzClient`.
+- Replaced one major early-bottom-out pattern: metadata hits without MBIDs now continue through SongID with conservative synthetic IDs instead of being discarded.
+- Added new focused unit coverage for metadata search fallback, filename-derived local-file metadata, and trimmed/deduplicated MusicBrainz search results.
+- Next: continue Batch A deeper into the remaining `SongIdService` / `SongIdScoring` helper paths, then take Batch B (`MeshSync` + transport/runtime fallback completion).

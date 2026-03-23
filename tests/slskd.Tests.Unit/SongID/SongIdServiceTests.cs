@@ -365,6 +365,80 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Equal(Path.GetFileNameWithoutExtension(audioPath), query);
     }
 
+    [Fact]
+    public async Task AddSearchCandidatesAsync_AddsSyntheticCandidateForMetadataHitWithoutRecordingId()
+    {
+        var store = new SongIdRunStore();
+        var metadataFacade = new Mock<IMetadataFacade>();
+        metadataFacade
+            .Setup(facade => facade.SearchAsync("artist title", 8, default))
+            .Returns(CreateAsyncEnumerable(new[]
+            {
+                new MetadataResult(
+                    "Artist",
+                    "Title",
+                    Album: null,
+                    MusicBrainzRecordingId: null,
+                    MusicBrainzReleaseId: null,
+                    MusicBrainzArtistId: "artist-1",
+                    Isrc: null,
+                    Year: null,
+                    Genre: null,
+                    MetadataResult.SourceMusicBrainz),
+            }));
+        var service = CreateService(store, metadataFacade.Object);
+        var run = new SongIdRun();
+
+        var method = typeof(SongIdService).GetMethod("AddSearchCandidatesAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        await (Task)method!.Invoke(service, new object[] { run, "artist title", CancellationToken.None })!;
+
+        var candidate = Assert.Single(run.Tracks);
+        Assert.StartsWith("metadata:artist-title", candidate.RecordingId, StringComparison.Ordinal);
+        Assert.Contains(run.Evidence, item => item.Contains("1 track candidate", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AnalyzeLocalFileAsync_UsesFilenameFallbackWhenMetadataFacadeReturnsNull()
+    {
+        var tempDir = Path.Combine(_tempDir, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "Known Artist - Known Title.mp3");
+        await File.WriteAllBytesAsync(filePath, Array.Empty<byte>());
+
+        var metadataFacade = new Mock<IMetadataFacade>();
+        metadataFacade
+            .Setup(facade => facade.GetByFileAsync(filePath, default))
+            .ReturnsAsync((MetadataResult?)null);
+        metadataFacade
+            .Setup(facade => facade.GetBySoulseekFilenameAsync(string.Empty, "Known Artist - Known Title.mp3", default))
+            .ReturnsAsync(new MetadataResult(
+                "Known Artist",
+                "Known Title",
+                Album: null,
+                MusicBrainzRecordingId: null,
+                MusicBrainzReleaseId: null,
+                MusicBrainzArtistId: null,
+                Isrc: null,
+                Year: null,
+                Genre: null,
+                MetadataResult.SourceSoulseek));
+
+        var service = CreateService(new SongIdRunStore(), metadataFacade.Object);
+        var method = typeof(SongIdService).GetMethod("AnalyzeLocalFileAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        var task = (Task)method!.Invoke(service, new object[] { filePath, CancellationToken.None })!;
+        await task.ConfigureAwait(false);
+        var analysis = task.GetType().GetProperty("Result", BindingFlags.Public | BindingFlags.Instance)!.GetValue(task)!;
+
+        Assert.Equal("Known Artist Known Title", analysis.GetType().GetProperty("Query")!.GetValue(analysis));
+        var metadata = analysis.GetType().GetProperty("Metadata")!.GetValue(analysis)!;
+        Assert.Equal("Known Artist", metadata.GetType().GetProperty("Artist")!.GetValue(metadata));
+        Assert.Equal("Known Title", metadata.GetType().GetProperty("Title")!.GetValue(metadata));
+    }
+
     public void Dispose()
     {
         var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
@@ -418,5 +492,14 @@ public sealed class SongIdServiceTests : IDisposable
         var hubContext = new Mock<IHubContext<SongIdHub>>();
         hubContext.Setup(context => context.Clients).Returns(hubClients.Object);
         return hubContext.Object;
+    }
+
+    private static async IAsyncEnumerable<MetadataResult> CreateAsyncEnumerable(IEnumerable<MetadataResult> results)
+    {
+        foreach (var result in results)
+        {
+            yield return result;
+            await Task.Yield();
+        }
     }
 }

@@ -19,12 +19,14 @@ public class ContentLinkServiceTests
         var musicBrainz = new Mock<IMusicBrainzClient>();
         musicBrainz
             .Setup(client => client.GetRecordingAsync("recording-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TrackTarget(
-                "recording-1",
-                "Song",
-                "Artist",
-                TimeSpan.FromSeconds(180),
-                1.0));
+            .ReturnsAsync(new TrackTarget
+            {
+                MusicBrainzRecordingId = "recording-1",
+                Position = 1,
+                Title = "Song",
+                Artist = "Artist",
+                Duration = TimeSpan.FromSeconds(180),
+            });
 
         var service = new ContentLinkService(musicBrainz.Object, NullLogger<ContentLinkService>.Instance);
 
