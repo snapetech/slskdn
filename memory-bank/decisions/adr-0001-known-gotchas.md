@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE0. `Context.Abort()` Is Not A Control-Flow Return
+
+**The Bug**: `RelayHub.OnConnectedAsync()` aborted disallowed relay connections but then kept running and still generated/sent an authentication challenge. The hub looked guarded, but the abort path did not stop execution, so disabled or wrong-mode relay connections still exercised the normal connect logic.
+
+**Files Affected**:
+- `src/slskd/Relay/API/Hubs/RelayHub.cs`
+
+**Wrong**:
+```csharp
+if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
+{
+    Log.Debug("Relay connection {ConnectionId} from {IP} aborted; relay is not enabled or not in controller mode", GetConnectionLogId(Context.ConnectionId), RemoteIpAddress);
+    Context.Abort();
+}
+
+var token = Relay.GenerateAuthenticationChallengeToken(Context.ConnectionId);
+await Clients.Caller.Challenge(token);
+```
+
+**Correct**:
+```csharp
+if (!OptionsAtStartup.Relay.Enabled || !new[] { RelayMode.Controller, RelayMode.Debug }.Contains(OperationMode))
+{
+    Log.Debug("Relay connection {ConnectionId} from {IP} aborted; relay is not enabled or not in controller mode", GetConnectionLogId(Context.ConnectionId), RemoteIpAddress);
+    Context.Abort();
+    return;
+}
+```
+
+**Why This Keeps Happening**: APIs like `Abort()`, `Cancel()`, or `TrySetCanceled()` feel terminal, but they usually only signal state. They do not end the current method unless you return or throw explicitly. Treat abort/cancel calls as side effects, not flow control.
+
 ### 0xDF. SignalR Failure Paths Must Keep Method Signatures In Sync With The Hub Contract
 
 **The Bug**: `RelayClient` caught file-upload failures and tried to notify the controller through `RelayHub.NotifyFileUploadFailed`, but it only sent the request ID. The hub method requires both the ID and the exception, so the failure-report path silently invoked the wrong method shape and the controller side fell back to timeout behavior.

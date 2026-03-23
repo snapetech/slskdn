@@ -133,6 +133,7 @@ namespace slskd.Relay
             {
                 Log.Debug("Relay connection {ConnectionId} from {IP} aborted; relay is not enabled or not in controller mode", GetConnectionLogId(Context.ConnectionId), RemoteIpAddress);
                 Context.Abort();
+                return;
             }
 
             var token = Relay.GenerateAuthenticationChallengeToken(Context.ConnectionId);

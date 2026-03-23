@@ -37,6 +37,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `RelayClient` was invoking `RelayHub.NotifyFileUploadFailed` with only the request ID instead of `(id, exception)`
     - failed relay uploads can now notify the controller immediately instead of silently degrading into timeout behavior
   - Added the corresponding hub-signature drift gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
+  - Found another relay control-flow bug in `RelayHub.OnConnectedAsync()`:
+    - the disabled/wrong-mode branch called `Context.Abort()` but still fell through into auth-challenge generation
+    - added the missing `return` so rejected relay connections stop immediately
+  - Added the corresponding abort-control-flow gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
   - Investigated the failed `.95` main release and confirmed all build/publish jobs succeeded except `Publish to Snap (Main/Stable)`.
   - The Snap artifact built correctly; the only failing external response was the Snap Store processing error `binary_sha3_384: Error checking upload uniqueness.`
   - Hardened `.github/workflows/build-on-tag.yml` so both Snap publish paths retry this known store-side processing failure for longer with capped backoff instead of aborting after a short fixed retry window.

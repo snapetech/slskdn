@@ -6586,3 +6586,9 @@ Code quality improvements were completed as part of Option A:
 - Found a real relay runtime bug while widening the security sweep: `RelayClient` was calling `RelayHub.NotifyFileUploadFailed` with only the request ID, even though the hub contract requires both the ID and the exception.
 - Fixed the SignalR invocation so upload failures now reach the controller immediately instead of degrading into timeout behavior.
 - Documented the hub-signature drift gotcha in `adr-0001-known-gotchas.md` before validation.
+
+## 2026-03-23 13:40 - RelayHub abort control-flow fix
+
+- Found another real relay behavior bug in `RelayHub.OnConnectedAsync()`: the disallowed-connection branch called `Context.Abort()` but then continued into normal authentication-challenge generation.
+- Added the missing `return` so disabled or wrong-mode relay connections stop immediately instead of still exercising the connect workflow after abort.
+- Documented the abort-without-return gotcha in `adr-0001-known-gotchas.md` before validation.
