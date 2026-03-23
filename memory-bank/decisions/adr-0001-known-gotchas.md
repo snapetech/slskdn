@@ -16240,3 +16240,36 @@ MemoryCache.Dispose();
 ```
 
 **Why This Keeps Happening**: DI ownership makes singletons feel "application scoped", so it is easy to assume explicit teardown is unnecessary. But if a singleton attaches to external events or allocates disposable infrastructure like caches, the container can only clean it up if the service itself exposes and honors a disposal contract. Anonymous lambdas are especially dangerous here because you cannot unsubscribe them later unless you first keep the delegate.
+
+### 0k145. Singleton Soulseek Event Subscribers Must Unsubscribe On Teardown
+
+**The Bug**: several singleton services subscribed directly to `ISoulseekClient` events and never released those subscriptions. `RoomService` kept room/login handlers attached forever, `ShareGrantAnnouncementService` kept its private-message listener alive after disposal, and `SoulseekChatBridge` kept receiving room traffic even after the bridge instance should have been dead. That leaves stale service instances reachable and allows old observers to keep mutating state or handling inbound messages after replacement/shutdown.
+
+**Files Affected**:
+- `src/slskd/Messaging/RoomService.cs`
+- `src/slskd/Sharing/ShareGrantAnnouncementService.cs`
+- `src/slskd/PodCore/PodServices.cs`
+
+**Wrong**:
+```csharp
+Client.LoggedIn += Client_LoggedIn;
+Client.RoomJoined += Client_RoomJoined;
+...
+soulseekClient.PrivateMessageReceived += OnPrivateMessageReceived;
+...
+soulseekClient.RoomMessageReceived += SoulseekClient_RoomMessageReceived;
+```
+
+**Correct**:
+```csharp
+Client.LoggedIn += Client_LoggedIn;
+...
+public void Dispose()
+{
+    Client.LoggedIn -= Client_LoggedIn;
+    Client.RoomJoined -= Client_RoomJoined;
+    ...
+}
+```
+
+**Why This Keeps Happening**: event-driven integration services feel passive because they mostly react to client callbacks instead of owning explicit loops. But singleton lifetime does not make event hooks self-cleaning. Any service that subscribes to `ISoulseekClient` needs an explicit teardown path, and interface-based services should expose disposal so the ownership contract is visible instead of being hidden in the DI container.
