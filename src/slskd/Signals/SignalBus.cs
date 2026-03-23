@@ -174,8 +174,23 @@ public class SignalBus : ISignalBus, IDisposable
         logger.LogDebug("Forwarding signal {SignalId} ({Type}) to {Count} subscribers",
             signal.SignalId, signal.Type, currentSubscribers.Count);
 
-        var tasks = currentSubscribers.Select(sub => sub(signal, cancellationToken));
+        var tasks = currentSubscribers.Select(subscriber => InvokeSubscriberAsync(subscriber, signal, cancellationToken));
         await Task.WhenAll(tasks);
+    }
+
+    private async Task InvokeSubscriberAsync(
+        Func<Signal, CancellationToken, Task> subscriber,
+        Signal signal,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await subscriber(signal, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Signal subscriber failed for {SignalId}: {Message}", signal.SignalId, ex.Message);
+        }
     }
 
     /// <summary>

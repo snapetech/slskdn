@@ -6682,6 +6682,14 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release -v minimal --filter "FullyQualifiedName~ClockTests|FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~VPNServiceTests"`
   - `dotnet build src/slskd/slskd.csproj -c Release -v minimal` (one transient `MSB3026` copy-retry warning while the test build was using the same output tree)
 
+## 2026-03-23 11:37 CST
+- Continued the same infrastructure pass into async bus fanout.
+- Fixed `SignalBus` so one subscriber exception no longer escapes `OnSignalReceivedAsync(...)` and poison the rest of signal delivery.
+- Added focused `SignalBusTests` coverage and kept the clock/watchdog/VPN infrastructure regressions green in the same targeted slice.
+- Validation passed:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release -v minimal --filter "FullyQualifiedName~SignalBusTests|FullyQualifiedName~ClockTests|FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~VPNServiceTests"`
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal`
+
 ## 2026-03-23 11:11 CST
 - Continued the dense runtime bughunt across `SongIdService`, `HashDbService`, and `MeshSyncService`, and folded in the already-dirty `ConnectionWatchdog` spillover.
 - `SongIdService` fallback acquisition planning now keeps raw transcript/OCR/comment phrases alongside artist-shaped queries for manual-review and uncataloged cases.

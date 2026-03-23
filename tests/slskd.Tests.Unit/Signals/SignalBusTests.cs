@@ -238,6 +238,27 @@ public class SignalBusTests
     }
 
     [Fact]
+    public async Task OnSignalReceived_WhenOneSubscriberThrows_StillInvokesRemainingSubscribers()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+        var receivedSignals = new List<Signal>();
+
+        await signalBus.SubscribeAsync((signal, ct) => throw new InvalidOperationException("boom"));
+        await signalBus.SubscribeAsync((signal, ct) =>
+        {
+            receivedSignals.Add(signal);
+            return Task.CompletedTask;
+        });
+
+        var testSignal = CreateTestSignal(SignalChannel.Mesh);
+
+        await signalBus.OnSignalReceivedAsync(testSignal, CancellationToken.None);
+
+        Assert.Single(receivedSignals);
+        Assert.Equal(testSignal.SignalId, receivedSignals[0].SignalId);
+    }
+
+    [Fact]
     public void RegisterChannelHandler_ShouldStartReceiving()
     {
         // Arrange

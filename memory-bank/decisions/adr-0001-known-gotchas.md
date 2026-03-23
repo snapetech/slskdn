@@ -14688,3 +14688,24 @@ foreach (EventHandler<ClockEventArgs> handler in e.GetInvocationList())
 ```
 
 **Why This Keeps Happening**: multicast events look like a convenient fanout primitive, but they have all-or-nothing exception behavior by default. For shared scheduler buses, each subscriber needs its own exception boundary or one handler can starve every other periodic task on that tick.
+
+### 0k112. Async Subscriber Buses Must Isolate Per-Subscriber Faults
+
+**The Bug**: `SignalBus.OnSignalReceivedAsync(...)` forwarded signals with a raw `Task.WhenAll(currentSubscribers.Select(...))`. One subscriber exception escaped the bus even though the other subscribers had already started, which can poison the channel receive path and make healthy subscribers look broken.
+
+**Files Affected**:
+- `src/slskd/Signals/SignalBus.cs`
+
+**Wrong**:
+```csharp
+var tasks = currentSubscribers.Select(sub => sub(signal, cancellationToken));
+await Task.WhenAll(tasks);
+```
+
+**Correct**:
+```csharp
+var tasks = currentSubscribers.Select(subscriber => InvokeSubscriberAsync(subscriber, signal, cancellationToken));
+await Task.WhenAll(tasks);
+```
+
+**Why This Keeps Happening**: `Task.WhenAll` is easy to reach for when faning out async work, but it still aggregates faults back to the caller. For shared bus infrastructure, each subscriber needs its own top-level catch so one bad integration cannot fail the whole delivery path.

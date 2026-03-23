@@ -758,6 +758,14 @@ dotnet test
   - continue bughunting shared event/timer fanout and other detached callback entry points
   - prioritize more low-level infrastructure paths where one component failure can suppress unrelated background work
 
+## 2026-03-23 11:37 CST
+- Continued into async bus fanout after the clock fix.
+- Fixed `SignalBus` so one subscriber failure no longer escapes the signal-delivery path and suppresses healthy subscribers.
+- Added focused `SignalBusTests` coverage and kept the surrounding infrastructure regressions green in the same slice.
+- Next steps:
+  - continue bughunting the remaining shared event emitters and detached callbacks
+  - prioritize `SecurityEventSink`, `EntropyMonitor`, `Honeypot`, and related infrastructure fanout paths
+
 ## 2026-03-23 11:11 CST
 - Finished another green runtime-hardening batch across SongID, HashDb, mesh waiters, and adjacent lifecycle spillover.
 - Current fixes in this batch:
