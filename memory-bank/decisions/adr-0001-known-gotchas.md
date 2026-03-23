@@ -15366,3 +15366,39 @@ public void Dispose()
 ```
 
 **Why This Keeps Happening**: it is easy to treat a CTS field as both the lifecycle handle and the worker's runtime dependency, but detached tasks need a stable local token source once they start. If background startup work can outlive the calling method, capture the CTS locally, cancel it before any disposal/replacement, and only then clear the shared field.
+
+### 0k120. Natural Stream-Mapping Completion Must Clear And Dispose The Active CTS, Not Leave Stale Mapping State Behind
+
+**The Bug**: `ForwarderConnection.MapToStream(...)` launched its background mapping workers using `_streamMappingCts.Token` directly and only cleaned `_streamMappingCts` up from `CloseAsync()`. If the mapped stream completed naturally first, the connection would flip `_isStreamMapped` back to false but keep the old CTS field alive. A later remap reused the same connection with stale lifecycle state, and the original detached workers still depended on a mutable field rather than a stable local CTS.
+
+**Files Affected**:
+- `src/slskd/Common/Security/LocalPortForwarder.cs`
+
+**Wrong**:
+```csharp
+_streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+_ = Task.Run(() => MapStreamsAsync(localStream, _streamMappingCts.Token), CancellationToken.None);
+...
+await Task.WhenAny(localToRemote, remoteToLocal);
+_streamMappingCts?.Cancel();
+...
+_isStreamMapped = false;
+```
+
+**Correct**:
+```csharp
+var streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+_streamMappingCts = streamMappingCts;
+_ = Task.Run(() => MapStreamsAsync(localStream, streamMappingCts), CancellationToken.None);
+...
+await Task.WhenAny(localToRemote, remoteToLocal);
+streamMappingCts.Cancel();
+...
+if (ReferenceEquals(_streamMappingCts, streamMappingCts))
+{
+    _streamMappingCts = null;
+}
+streamMappingCts.Dispose();
+```
+
+**Why This Keeps Happening**: long-lived stream/tunnel helpers often assume explicit close paths are the only lifecycle edge that matters. But bidirectional mapping frequently ends naturally when one side closes first. If the natural-completion path does not own CTS cleanup too, the object keeps stale state after the “successful” path and the next reuse/remap inherits a dirty lifecycle handle.
