@@ -5978,3 +5978,17 @@ Code quality improvements were completed as part of Option A:
 - Added focused unit coverage for normalized content-ID validation, audio search result mapping, and unsupported-domain short-circuiting.
 - Folded in the dirty X509/security/multi-source sanitization spillover that was already in the tree.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for reachable placeholder service methods.
+
+## 2026-03-22 18:14 - Placeholder/null-heavy inventory created
+
+- Added [placeholder-null-heavy-inventory.md](/home/keith/Documents/code/slskdn/docs/dev/placeholder-null-heavy-inventory.md) as a tracked inventory of the remaining placeholder-heavy and null-heavy runtime areas in `src/slskd/`.
+- Grouped the remaining work into completion batches instead of leaving it as an unstructured grep dump.
+- Identified the current highest-density clusters as `SongIdService`, `HashDbService`, `PathGuard`, `MeshSyncService`, `MusicContentDomainProvider`, and `HttpSignatureKeyFetcher`.
+
+## 2026-03-22 18:12 - Helper validation and test-endpoint sanitization pass
+
+- Fixed `X509.TryValidate(...)` so it no longer returns raw certificate/parser exception text through its public helper result string.
+- Fixed `MultiSourceController.RunTest(...)` so failed nested download attempts now return the stable message `Multi-source test download failed` instead of relaying `downloadResult.Error`.
+- Sanitized the `SecurityMiddleware` catch-path event message to the stable text `Request processing error` so the security event sink does not capture raw exception strings from request processing.
+- Added focused unit coverage for the sanitized X509 helper result and restored unit-project compile drift in `MeshSyncSecurityTests` and `ContentLinkServiceTests`.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for helper validation and ad-hoc test endpoint leakage.

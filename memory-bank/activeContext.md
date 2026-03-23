@@ -228,3 +228,12 @@ dotnet test
 ## 2026-03-22 18:08
 - Replaced the reachable empty-result placeholder in `ContentLinkService` with the existing MusicBrainz audio search integration and folded in the current dirty spillover batch.
 - Next: continue through the remaining placeholder/null-heavy runtime paths from a clean head.
+
+## 2026-03-22 18:14
+- Created a tracked placeholder/null-heavy inventory and grouped the remaining work into batches.
+- Next: execute Batch A (`SongID` + `MetadataFacade`) or Batch B (`MeshSync` + transport/runtime fallback completion).
+
+## 2026-03-22 18:12
+- Sanitized `X509.TryValidate(...)`, the multi-source `RunTest(...)` endpoint error field, and the `SecurityMiddleware` catch-path event message so those helper/diagnostic surfaces no longer relay raw nested exception text.
+- Folded in adjacent unit drift fixes in `MeshSyncSecurityTests` and `ContentLinkServiceTests`, and documented the recurring pattern in `adr-0001-known-gotchas.md` with an immediate docs-only commit.
+- Next: continue the broad bughunt from the current head, prioritizing other helper/result contracts that still look diagnostic but cross an observable boundary.
