@@ -13086,3 +13086,23 @@ return Task.FromResult<ContentMetadata?>(CreateBasicMetadata(parsed, titleOverri
 ```
 
 **Why This Keeps Happening**: once a feature grows around an external metadata provider, it is easy to accidentally couple basic validation to enrichment. Keep those concerns separate. If the content ID parses and the repo has enough local/domain information to describe it safely, return conservative metadata first and treat enrichment as optional.
+
+### 0k92. Normalize Crypto And Cache Keys Before Signature Parsing Or Membership Lookups
+
+**The Bug**: Pod opinion validation and related cache lookups were still consuming raw peer IDs, content IDs, signatures, and public keys. Harmless whitespace drift caused otherwise valid opinions to fail signature parsing, cache entries to fragment, and membership checks to miss matching peers.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodOpinionService.cs`
+
+**Wrong**:
+```csharp
+if (!signature.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
+```
+
+**Correct**:
+```csharp
+signature = signature?.Trim() ?? string.Empty;
+publicKey = publicKey?.Trim() ?? string.Empty;
+```
+
+**Why This Keeps Happening**: cryptographic code feels “exact,” so it is easy to forget that request and storage boundaries can still introduce whitespace drift before the bytes are parsed. Canonicalize strings before cache lookup, membership matching, and base64/signature parsing, then verify the actual payload.
