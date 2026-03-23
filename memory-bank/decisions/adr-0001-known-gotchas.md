@@ -232,6 +232,35 @@ var serviceNames = _router.GetRegisteredServiceNames();
 
 **Why This Keeps Happening**: once an endpoint compiles and returns a typed payload, it is easy to leave a “temporary” empty response in place. For admin/status/controller surfaces, that is effectively a lie. If the dependencies are already injected or can be exposed cheaply, wire the real local answer instead of shipping a placeholder success contract.
 
+### 0xD2. Service-Fabric Request DTOs Must Canonicalize Embedded IDs Before They Cross Into Pod Or DHT Logic
+
+**The Bug**: mesh service adapters were validating that request bodies existed, but they still passed raw embedded IDs like `PodId`, `ChannelId`, `Role`, and DHT requester IDs directly into Pod and routing services. That let whitespace drift, missing pod IDs, and malformed requester IDs turn into false not-founds or background routing-table updates with invalid keys.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/PodsMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+
+**Wrong**:
+```csharp
+var pod = await _podService.GetPodAsync(request.PodId, cancellationToken);
+var success = await _podMessaging.SendAsync(new PodMessage { ChannelId = request.ChannelId, ... }, cancellationToken);
+await _routingTable.TouchAsync(request.RequesterId, context.RemotePeerId);
+```
+
+**Correct**:
+```csharp
+var podId = request.PodId?.Trim() ?? string.Empty;
+var channelId = request.ChannelId?.Trim() ?? string.Empty;
+var role = string.IsNullOrWhiteSpace(request.Role) ? "member" : request.Role.Trim();
+
+if (request.RequesterId == null || request.RequesterId.Length != 20)
+{
+    return InvalidPayload(...);
+}
+```
+
+**Why This Keeps Happening**: service adapters look like thin glue, so it is tempting to assume model binding and JSON parsing already gave you canonical values. They did not. These DTOs are still transport inputs. Normalize and validate embedded identifiers before they become pod lookup keys or DHT routing-table inputs.
+
 ### 0xCE. Init-Only Records Must Be Normalized Via Copies, Not In-Place Mutation
 
 **The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence.
