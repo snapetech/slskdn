@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xCC. Parallel Endpoint Families Drift On Raw Transport Strings Unless You Normalize The Whole Surface
+
+**The Bug**: one controller in a feature family gets hardened, but sibling endpoints in the same family still pass raw route/query/body strings into search, queue, or catalogue services. That left multi-source search/verify/download endpoints and VirtualSoulfind v2 intent/catalogue endpoints using padded `searchText`, `filename`, `username`, `intentId`, `artistId`, `releaseId`, and note fields as if they were canonical values.
+
+**Files Affected**:
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+- `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(request?.Filename))
+{
+    return BadRequest("Filename is required");
+}
+
+var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
+await Client.SearchAsync(SearchQuery.FromText(searchText), ...);
+```
+
+**Correct**:
+```csharp
+request.Filename = request.Filename.Trim();
+request.Usernames = request.Usernames?
+    .Select(username => username?.Trim() ?? string.Empty)
+    .Where(username => !string.IsNullOrWhiteSpace(username))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToList();
+
+intentId = intentId?.Trim() ?? string.Empty;
+query = query?.Trim() ?? string.Empty;
+request.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+```
+
+**Why This Keeps Happening**: once one endpoint in a feature area is fixed, the rest look “close enough” and get skipped. Search/download flows and intent/catalogue flows usually have several thin endpoints that all feed the same underlying IDs. Harden them as a family or you will keep reintroducing split-key behavior at the edges.
+
 ### 0xCB. Collected Evidence Must Feed Back Into Query Planning Or The Pipeline Still Bottoms Out
 
 **The Bug**: the pipeline was successfully collecting transcript phrases, OCR text, and other derived hints, but the later segment-query planner only looked at a narrower subset like chapters and timestamped comments. That made SongID look “data rich” in the run object while still generating too few actionable search candidates.
