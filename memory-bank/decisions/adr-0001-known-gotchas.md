@@ -78,6 +78,30 @@ Log.Debug("Received share upload token {Token}", GetRelayTokenLogId(token));
 
 **Why This Keeps Happening**: once one logging site gets sanitized, nearby “helpful” diagnostics still look harmless because they are only in debug/info logs. In relay code, request tokens, challenge tokens, and live connection ids should be treated as secrets by default. Hash or suppress them consistently across service, hub, controller, and client code, and keep exception detail in debug logs rather than interpolating raw values into durable structured logs.
 
+### 0xDF. Root DI Must Map The Local Share Repository Before Registering VSF v2 Local-Library Backends
+
+**The Bug**: VirtualSoulfind v2 registered `LocalLibraryBackend` as a singleton `IContentBackend`, but the root container never registered `IShareRepository`. Fresh startup then failed during host activation with `Unable to resolve service for type 'slskd.Shares.IShareRepository' while attempting to activate 'slskd.VirtualSoulfind.v2.Backends.LocalLibraryBackend'`.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/VirtualSoulfind/v2/Backends/LocalLibraryBackend.cs`
+
+**Wrong**:
+```csharp
+services.AddSingleton<IShareService>(sp => new ShareService(...));
+services.AddSingleton<IContentBackend, LocalLibraryBackend>();
+```
+
+**Correct**:
+```csharp
+services.AddSingleton<IShareService>(sp => new ShareService(...));
+services.AddSingleton<IShareRepository>(sp =>
+    sp.GetRequiredService<IShareService>().GetLocalRepository());
+services.AddSingleton<IContentBackend, LocalLibraryBackend>();
+```
+
+**Why This Keeps Happening**: the share subsystem exposes the local repository through `IShareService`, so later code assumes `IShareRepository` is already in DI. It is not unless startup maps that local repository explicitly. Any singleton backend or controller that directly depends on `IShareRepository` will crash the whole host on first activation if the registration is missing.
+
 ### 0xDA. Named-Argument Calls To Third-Party Sinks Break Easily Across Dependency Upgrades
 
 **The Bug**: the Loki logger setup used the old `outputTemplate:` named argument on `GrafanaLoki(...)`. After `Serilog.Sinks.Grafana.Loki` moved to the formatter-based overload, Dependabot PRs started failing CI with `CS1739` even though the main branch still built against the older package.
