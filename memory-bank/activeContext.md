@@ -1000,3 +1000,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - prioritize detached callback helpers that still invoke user code without an explicit failure surface
+
+## 2026-03-23 13:45 CST
+- Closed the outstanding `RateLimiter` follow-up from the same callback/helper sweep.
+- Fixed `Dispose()` so a throwing flush action no longer skips timer/semaphore cleanup; owned resources are released first, then the flush exception is rethrown.
+- The focused `CallbackInfrastructureTests` slice already covers this path and remains green (`5/5`) while the release build stays green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k128` and will commit it immediately per repo policy (`docs: Add gotcha for rate limiter dispose flush cleanup`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - prioritize disposal/shutdown paths that invoke user work before releasing owned infrastructure resources

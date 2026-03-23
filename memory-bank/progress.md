@@ -6937,3 +6937,10 @@ Code quality improvements were completed as part of Option A:
 - Extended focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter CallbackInfrastructureTests` passed (`5/5`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k127` for timer-thread callback isolation and committed it immediately per repo policy (`docs: Add gotcha for timed counter callback isolation`).
+
+## 2026-03-23 13:45 CST
+
+- Closed the remaining `RateLimiter` follow-up from the broader helper sweep.
+- `Dispose()` now completes timer/semaphore cleanup even when `flushOnDispose` invokes a staged action that throws, and only rethrows after owned resources are released.
+- The focused `CallbackInfrastructureTests` slice already covers this path and remains green (`5/5`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` also remains green with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k128` for dispose-time flush cleanup ordering and committed it immediately per repo policy (`docs: Add gotcha for rate limiter dispose flush cleanup`).

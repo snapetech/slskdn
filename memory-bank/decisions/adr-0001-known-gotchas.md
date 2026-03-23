@@ -15586,3 +15586,42 @@ catch (Exception ex)
 ```
 
 **Why This Keeps Happening**: small timer helpers look synchronous and harmless, so callback invocation often gets written as a direct delegate call. But timer events are detached background entry points. If the helper does not expose a completion/error channel, it must isolate callback failures itself so one bad consumer cannot poison the timer path.
+
+### 0k128. Dispose-Time Flush Hooks Must Not Skip Owned Resource Cleanup When They Throw
+
+**The Bug**: `RateLimiter.Dispose()` optionally flushes the staged action during disposal. That flush ran before timer and semaphore cleanup, so a throwing staged action aborted disposal early and leaked the owned timer/semaphore resources.
+
+**Files Affected**:
+- `src/slskd/Common/RateLimiter.cs`
+
+**Wrong**:
+```csharp
+if (FlushOnDispose)
+{
+    var staged = Staged;
+    Staged = null;
+    staged?.Invoke();
+}
+
+Timer.Dispose();
+ConcurrentExecutionPreventionSemaphore?.Dispose();
+```
+
+**Correct**:
+```csharp
+try
+{
+    staged?.Invoke();
+}
+catch (Exception ex)
+{
+    flushException = ex;
+}
+finally
+{
+    Timer.Dispose();
+    ConcurrentExecutionPreventionSemaphore?.Dispose();
+}
+```
+
+**Why This Keeps Happening**: dispose-time "flush" hooks look like just another callback, but they run inside the one path responsible for releasing owned resources. If the flush is allowed to throw before cleanup, the object leaks exactly when shutdown/error handling is already in progress. Capture the exception, finish cleanup in `finally`, then rethrow if needed.
