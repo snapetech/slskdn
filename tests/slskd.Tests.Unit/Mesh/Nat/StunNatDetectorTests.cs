@@ -49,4 +49,36 @@ public sealed class StunNatDetectorTests
         Assert.Equal(IPAddress.Parse("2001:db8::1"), endpoint!.Address);
         Assert.Equal(5000, endpoint.Port);
     }
+
+    [Fact]
+    public void ParseMappedAddress_SkipsPaddedAttributes()
+    {
+        var method = typeof(StunNatDetector).GetMethod("ParseMappedAddress", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var txn = new byte[12];
+        var packet = new byte[40];
+
+        packet[20] = 0x80;
+        packet[21] = 0x22;
+        packet[23] = 0x01;
+        packet[24] = 0x01;
+
+        packet[28] = 0x00;
+        packet[29] = 0x01;
+        packet[31] = 0x08;
+        packet[33] = 0x01;
+        packet[34] = 0x13;
+        packet[35] = 0x88;
+        packet[36] = 192;
+        packet[37] = 0;
+        packet[38] = 2;
+        packet[39] = 10;
+
+        var endpoint = method!.Invoke(null, new object[] { packet, txn }) as IPEndPoint;
+
+        Assert.NotNull(endpoint);
+        Assert.Equal(IPAddress.Parse("192.0.2.10"), endpoint!.Address);
+        Assert.Equal(5000, endpoint.Port);
+    }
 }

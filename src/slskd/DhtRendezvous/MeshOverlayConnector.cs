@@ -39,7 +39,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     /// </summary>
     public const int MaxConcurrentAttempts = 3;
 
-    private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
+    private string LocalUsername => (_optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown").Trim();
 
     public MeshOverlayConnector(
         ILogger<MeshOverlayConnector> logger,

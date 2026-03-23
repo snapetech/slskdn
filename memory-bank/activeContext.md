@@ -704,3 +704,14 @@ dotnet test
 - Next steps:
   - commit the validated tree
   - if desired, rebuild/publish a new image tag from this green head
+
+## 2026-03-23 10:02 CST
+- Finished another bughunt batch in the remaining Batch B transport/runtime cluster.
+- Current fixes in this batch:
+  - capability discovery preserves original remote paths on transfer
+  - mesh sync waiter reuse no longer duplicates outbound requests
+  - STUN parsing handles padded attributes correctly
+  - mesh overlay handshake trims local usernames
+- Next steps:
+  - commit this validated batch
+  - continue into the next placeholder/null-heavy cluster from the inventory

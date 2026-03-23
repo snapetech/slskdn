@@ -244,6 +244,51 @@ namespace slskd.Tests.Unit.Mesh
             Assert.DoesNotContain("seq", result.Error, StringComparison.OrdinalIgnoreCase);
         }
 
+        [Fact]
+        public async Task RequestChunkAsync_WhenWaiterAlreadyExists_DoesNotSendDuplicateRequest()
+        {
+            var pendingChunkRequestsField = typeof(MeshSyncService).GetField("pendingChunkRequests", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.NotNull(pendingChunkRequestsField);
+
+            var pendingChunkRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>>)pendingChunkRequestsField!.GetValue(meshSyncService)!;
+            var existing = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            existing.SetResult(new MeshRespChunkMessage
+            {
+                FlacKey = "key",
+                Offset = 0,
+                Success = true,
+                DataBase64 = "ZGF0YQ==",
+            });
+            pendingChunkRequests["peer:key:0"] = existing;
+
+            var result = await meshSyncService.RequestChunkAsync(" peer ", " key ", 0, 4, CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Equal("ZGF0YQ==", result.DataBase64);
+            mockSoulseekClient.Verify(
+                soulseekClient => soulseekClient.SendPrivateMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task HandleMessageAsync_TrimsSenderUsernameBeforeValidation()
+        {
+            var message = new MeshHelloMessage
+            {
+                ClientId = "test-peer",
+                ClientVersion = "1.0.0",
+                LatestSeqId = 50,
+                HashCount = 1000,
+            };
+
+            mockMessageSigner.Setup(s => s.VerifyMessage(It.IsAny<MeshMessage>())).Returns(true);
+            mockMessageSigner.Setup(s => s.SignMessage(It.IsAny<MeshMessage>())).Returns(message);
+
+            var result = await meshSyncService.HandleMessageAsync(" test-peer ", message);
+
+            Assert.NotNull(result);
+        }
+
         #endregion
 
         #region Reputation Checks Tests (T-1431)

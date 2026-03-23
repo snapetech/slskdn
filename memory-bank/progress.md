@@ -6617,3 +6617,19 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
   - `bash packaging/scripts/run-release-gate.sh`
+
+## 2026-03-23 10:02 CST
+- Completed a transport/runtime bughunt batch across MeshSync, capability discovery, STUN parsing, and mesh overlay startup paths.
+- Fixed `CapabilityFileService` so it preserves the peer's original browsed remote filename for `DownloadAsync(...)` instead of reusing a normalized comparison key.
+- Fixed `MeshSyncService` so duplicate in-flight `REQKEY`/`REQCHUNK` lookups reuse existing waiters without sending a second private-message request, and sender usernames are trimmed before validation/peer-state handling.
+- Fixed `StunNatDetector` to short-circuit literal IP hosts and to advance over padded STUN attributes correctly when parsing mapped-address replies.
+- Trimmed the mesh overlay connector's local username before handshake dispatch.
+- Added focused regressions for:
+  - capability-file original-wire-path download behavior
+  - STUN padded-attribute parsing
+  - mesh chunk waiter reuse
+  - trimmed sender usernames in mesh handling
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`

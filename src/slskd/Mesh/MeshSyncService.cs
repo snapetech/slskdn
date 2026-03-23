@@ -318,7 +318,8 @@ namespace slskd.Mesh
             var req = new MeshReqChunkMessage { FlacKey = flacKey, Offset = offset, Length = length };
             var key = $"{peer}:{flacKey}:{offset}";
             var tcs = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-            if (!pendingChunkRequests.TryAdd(key, tcs))
+            var createdRequest = pendingChunkRequests.TryAdd(key, tcs);
+            if (!createdRequest)
             {
                 log.Debug("[MESH] Reusing pending chunk request for {Key} from {Peer}", key, peer);
                 if (!pendingChunkRequests.TryGetValue(key, out tcs))
@@ -329,7 +330,11 @@ namespace slskd.Mesh
 
             try
             {
-                await SendMeshMessageAsync(peer, req);
+                if (createdRequest)
+                {
+                    await SendMeshMessageAsync(peer, req);
+                }
+
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
                 var resp = await tcs.Task.WaitAsync(timeoutCts.Token);
@@ -448,6 +453,8 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<MeshMessage?> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default)
         {
+            fromUser = fromUser?.Trim() ?? string.Empty;
+
             // SECURITY: Validate username before any processing
             var usernameValidation = MessageValidator.ValidateUsername(fromUser);
             if (!usernameValidation.IsValid)
@@ -763,7 +770,8 @@ namespace slskd.Mesh
             var requestId = $"{username}:{flacKey}";
 
             // Register pending request
-            if (!pendingRequests.TryAdd(requestId, tcs))
+            var createdRequest = pendingRequests.TryAdd(requestId, tcs);
+            if (!createdRequest)
             {
                 log.Debug("[MESH] Reusing pending request for key {Key} to peer {Peer}", flacKey, username);
                 if (!pendingRequests.TryGetValue(requestId, out tcs))
@@ -775,7 +783,10 @@ namespace slskd.Mesh
             try
             {
                 // Send request message
-                await SendMeshMessageAsync(username, request);
+                if (createdRequest)
+                {
+                    await SendMeshMessageAsync(username, request);
+                }
 
                 log.Debug("[MESH] Sent REQKEY message to {Peer} for key {Key}", username, flacKey);
 
@@ -787,6 +798,8 @@ namespace slskd.Mesh
 
                 if (response.Found && response.Entry != null)
                 {
+                    response.Entry.FlacKey = response.Entry.FlacKey?.Trim() ?? flacKey;
+                    response.Entry.ByteHash = response.Entry.ByteHash?.Trim() ?? string.Empty;
                     log.Debug("[MESH] Peer {Peer} found key {Key}", username, flacKey);
                     return response.Entry;
                 }

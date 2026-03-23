@@ -232,6 +232,11 @@ public class StunNatDetector : INatDetector
 
     private async Task<IPAddress?> ResolveHostAsync(string host, CancellationToken ct)
     {
+        if (IPAddress.TryParse(host, out var parsedAddress))
+        {
+            return parsedAddress;
+        }
+
         try
         {
             using var resolveTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -326,7 +331,7 @@ public class StunNatDetector : INatDetector
                 }
             }
 
-            offset += attrLen;
+            offset += (attrLen + 3) & ~3;
         }
 
         return null;

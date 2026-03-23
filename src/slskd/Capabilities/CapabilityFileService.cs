@@ -332,14 +332,17 @@ public sealed class CapabilityFileService
             var remoteFile = browseResult.Directories
                 .SelectMany(directory => directory.Files.Select(file => new
                 {
-                    RemoteFilename = NormalizeCapabilityPath(string.IsNullOrWhiteSpace(directory.Name)
+                    RemoteFilename = string.IsNullOrWhiteSpace(directory.Name)
+                        ? file.Filename
+                        : $"{directory.Name}\\{file.Filename}",
+                    NormalizedRemoteFilename = NormalizeCapabilityPath(string.IsNullOrWhiteSpace(directory.Name)
                         ? file.Filename
                         : $"{directory.Name}\\{file.Filename}"),
                     file.Size,
                 }))
                 .FirstOrDefault(file =>
-                    string.Equals(file.RemoteFilename, normalizedFilename, StringComparison.OrdinalIgnoreCase) ||
-                    file.RemoteFilename.EndsWith(normalizedFilename, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(file.NormalizedRemoteFilename, normalizedFilename, StringComparison.OrdinalIgnoreCase) ||
+                    file.NormalizedRemoteFilename.EndsWith(normalizedFilename, StringComparison.OrdinalIgnoreCase));
             if (remoteFile == null)
             {
                 _logger.LogDebug("Capability file {Path} not exposed by {Username} browse result", filename, username);
