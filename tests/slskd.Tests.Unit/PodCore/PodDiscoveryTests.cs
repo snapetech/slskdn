@@ -48,4 +48,59 @@ public class PodDiscoveryTests
         Assert.Equal(2, pods.Count);
         Assert.Equal(new[] { "pod-2", "pod-1" }, pods.Select(x => x.PodId).ToArray());
     }
+
+    [Fact]
+    public async Task DiscoverPodsAsync_IgnoresBlankPodIdsAndTrimsFilters()
+    {
+        var store = new ConcurrentDictionary<string, object?>();
+        store["pod:index:listed"] = new PodIndex
+        {
+            PodIds = new List<string> { " ", " pod-1 ", "pod-2" },
+        };
+        store["pod:metadata:pod-1"] = new PodMetadata
+        {
+            PodId = "pod-1",
+            Name = "Alpha Pod",
+            FocusContentId = "content:audio:track:1",
+            Tags = new List<string> { "rock" },
+            PublishedAt = 10,
+        };
+        store["pod:metadata:pod-2"] = new PodMetadata
+        {
+            PodId = "pod-2",
+            Name = "Beta Pod",
+            FocusContentId = "content:audio:track:2",
+            Tags = new List<string> { "jazz" },
+            PublishedAt = 20,
+        };
+
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PodIndex>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>((key, _) => Task.FromResult(store[key] as PodIndex));
+        dht.Setup(x => x.GetAsync<PodMetadata>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>((key, _) => Task.FromResult(store.TryGetValue(key, out var value) ? value as PodMetadata : null));
+
+        var service = new PodDiscovery(dht.Object, NullLogger<PodDiscovery>.Instance);
+
+        var pods = await service.DiscoverPodsAsync(
+            searchQuery: "  alpha  ",
+            tags: new List<string> { " ", " rock " },
+            focusContentId: " content:audio:track:1 ",
+            limit: 50);
+
+        var pod = Assert.Single(pods);
+        Assert.Equal("pod-1", pod.PodId);
+    }
+
+    [Fact]
+    public async Task DiscoverPodsAsync_WithNonPositiveLimit_ReturnsEmpty()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        var service = new PodDiscovery(dht.Object, NullLogger<PodDiscovery>.Instance);
+
+        var pods = await service.DiscoverPodsAsync(limit: 0);
+
+        Assert.Empty(pods);
+        dht.Verify(x => x.GetAsync<PodIndex>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

@@ -40,4 +40,36 @@ public class PeerResolutionServiceTests
         Assert.Equal(IPAddress.Parse(expectedAddress), endpoint!.Address);
         Assert.Equal(expectedPort, endpoint.Port);
     }
+
+    [Fact]
+    public async Task ResolvePeerIdToUsernameAsync_TrimsPeerIdAndUsername()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PeerMetadata>("peer:metadata:peer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerMetadata
+            {
+                PeerId = "peer-1",
+                Username = " alice ",
+            });
+
+        var service = new PeerResolutionService(dht.Object, NullLogger<PeerResolutionService>.Instance);
+
+        var username = await service.ResolvePeerIdToUsernameAsync(" peer-1 ");
+
+        Assert.Equal("alice", username);
+    }
+
+    [Fact]
+    public async Task ResolvePeerIdToUsernameAsync_FallbackUsesTrimmedPeerId()
+    {
+        var dht = new Mock<IMeshDhtClient>();
+        dht.Setup(x => x.GetAsync<PeerMetadata>("peer:metadata:peer-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PeerMetadata?)null);
+
+        var service = new PeerResolutionService(dht.Object, NullLogger<PeerResolutionService>.Instance);
+
+        var username = await service.ResolvePeerIdToUsernameAsync(" peer-1 ");
+
+        Assert.Equal("peer-1", username);
+    }
 }

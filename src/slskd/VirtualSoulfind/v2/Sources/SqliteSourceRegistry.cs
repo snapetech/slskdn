@@ -269,6 +269,13 @@ namespace slskd.VirtualSoulfind.v2.Sources
                 return null;
             }
 
+            var backendRef = reader.GetString(3).Trim();
+            if (string.IsNullOrWhiteSpace(backendRef))
+            {
+                await DeleteCandidateAsync(conn, candidateId, cancellationToken);
+                return null;
+            }
+
             var expectedQuality = Math.Clamp(reader.GetFloat(4), 0.0f, 1.0f);
             var trustScore = Math.Clamp(reader.GetFloat(5), 0.0f, 1.0f);
 
@@ -277,7 +284,7 @@ namespace slskd.VirtualSoulfind.v2.Sources
                 Id = candidateId,
                 ItemId = itemId,
                 Backend = (ContentBackendType)backendValue,
-                BackendRef = reader.GetString(3),
+                BackendRef = backendRef,
                 ExpectedQuality = expectedQuality,
                 TrustScore = trustScore,
                 LastValidatedAt = reader.IsDBNull(6)

@@ -20,6 +20,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Sources
     using System;
     using System.Linq;
     using System.Threading.Tasks;
+    using Microsoft.Data.Sqlite;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
     using slskd.VirtualSoulfind.v2.Sources;
@@ -312,6 +313,36 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Sources
 
             // Assert
             Assert.Equal(5, count);
+        }
+
+        [Fact]
+        public async Task FindCandidatesForItemAsync_RemovesRowsWithBlankBackendRef()
+        {
+            var itemId = ContentItemId.NewId();
+
+            await using (var conn = new SqliteConnection($"Data Source={_dbPath}"))
+            {
+                await conn.OpenAsync();
+                await using var cmd = new SqliteCommand(
+                    @"INSERT INTO source_candidates
+                      (id, itemId, backend, backendRef, expectedQuality, trustScore, isPreferred)
+                      VALUES
+                      (@id, @itemId, @backend, @backendRef, @expectedQuality, @trustScore, @isPreferred)",
+                    conn);
+
+                cmd.Parameters.AddWithValue("@id", "blank-backend-ref");
+                cmd.Parameters.AddWithValue("@itemId", itemId.ToString());
+                cmd.Parameters.AddWithValue("@backend", (int)ContentBackendType.LocalLibrary);
+                cmd.Parameters.AddWithValue("@backendRef", "   ");
+                cmd.Parameters.AddWithValue("@expectedQuality", 0.5f);
+                cmd.Parameters.AddWithValue("@trustScore", 0.5f);
+                cmd.Parameters.AddWithValue("@isPreferred", 0);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            var results = await _registry.FindCandidatesForItemAsync(itemId);
+
+            Assert.Empty(results);
         }
     }
 }
