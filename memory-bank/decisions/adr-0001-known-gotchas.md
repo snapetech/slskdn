@@ -13014,6 +13014,31 @@ return slskd.Common.Security.PathGuard.NormalizeAndValidate(peerPath, rootDirect
 
 **Why This Keeps Happening**: copied security helpers look harmless at first, but the duplicate version quietly misses later hardening work. For traversal, path containment, SSRF, auth, and similar security primitives, do not maintain a second “almost the same” implementation. Route through the hardened shared helper or keep the logic in one place.
 
+### 0k91. Thin Controller DTOs Must Normalize Nested Strings Before Passing Them To Helper Services
+
+**The Bug**: older helper-style controllers were accepting padded route/body strings and forwarding them unchanged into service/helper code. That left MusicBrainz lookups using raw `" mbid "` identifiers, discovery-graph requests storing padded compare/title keys in the request echo, and Base64-decoded file paths preserving leading/trailing whitespace instead of canonicalizing the relative path first.
+
+**Files Affected**:
+- `src/slskd/Integrations/MusicBrainz/API/MusicBrainzController.cs`
+- `src/slskd/DiscoveryGraph/API/DiscoveryGraphController.cs`
+- `src/slskd/Files/API/FilesController.cs`
+
+**Wrong**:
+```csharp
+album = await client.GetReleaseAsync(request.ReleaseId!, cancellationToken);
+var graph = await _discoveryGraphService.BuildAsync(request, cancellationToken);
+decodedPath = encodedPath.FromBase64();
+```
+
+**Correct**:
+```csharp
+request.ReleaseId = string.IsNullOrWhiteSpace(request.ReleaseId) ? null : request.ReleaseId.Trim();
+request.CompareNodeId = string.IsNullOrWhiteSpace(request.CompareNodeId) ? null : request.CompareNodeId.Trim();
+decodedPath = (encodedPath.FromBase64() ?? string.Empty).Trim();
+```
+
+**Why This Keeps Happening**: “thin controller” code often looks like glue and gets exempted from normalization discipline, especially when the downstream helper already appears tolerant. But those helpers then see multiple spellings of the same identifier or path, and tests only catch it later when equality or path-join behavior changes. Normalize at the HTTP/base64 boundary, even for controller methods that do little more than delegate.
+
 ### 0k91. Supported Domains Should Fall Back To Conservative Metadata Instead Of Becoming Invalid When Enrichment Is Missing
 
 **The Bug**: `ContentLinkService` treated some supported domains and types as invalid whenever an external metadata lookup was unavailable. That meant video content IDs and partially resolvable artist IDs failed validation outright even though the parsed content ID already carried enough information to return structured conservative metadata.
