@@ -6289,9 +6289,41 @@ Code quality improvements were completed as part of Option A:
   - focused `vstest` slice for mesh introspection, DHT mesh, mesh content, and realm migration passed (`17/17`)
 - Documented the result-detail leak pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `71fdd0a4` (`docs: Add gotcha for infrastructure result detail leaks`).
 
+## 2026-03-22 20:51
+- Tightened the next mesh reply category batch for secure-release boundaries.
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+  - concurrent-tunnel and tunnel-rate-limit replies no longer expose exact configured thresholds
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+  - invalid request-shape replies now use a stable generic payload message instead of spelling out byte-count/schema expectations
+- `src/slskd/Mesh/ServiceFabric/Services/HolePunchMeshService.cs`
+  - invalid request-shape replies no longer expose internal field names in the public error contract
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/DhtMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/HolePunchMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/RateLimitTimeoutTests.cs`
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused `vstest` slice for DHT mesh, hole punch, and service-fabric rate-limit tests passed (`16/16`)
+- Documented the reply-category pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `fa86d4dc` (`docs: Add gotcha for mesh validation reply categories`).
+
+## 2026-03-22 20:59
+- Continued into the next externally visible controller-detail pass.
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+  - `ProblemDetails.Detail` values for missing search/search-result/file/source/pod-peer cases no longer echo raw search IDs, indexes, item IDs, or content IDs
+  - those action-routing failures now use stable category-level detail strings instead
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Search/API/SearchActionsControllerTests.cs`
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused `vstest` slice for `SearchActionsControllerTests` passed (`11/11`)
+- Documented the `ProblemDetails` leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `4d05c178` (`docs: Add gotcha for search action problem detail leakage`).
+
 ## 2026-03-22 18:18
 - Replaced Pod affinity placeholder inputs with real local message/opinion/membership-derived activity and repaired sqlite pod persistence/readback for full pod state.
 - Next: keep pushing through remaining Pod/Mesh runtime completion seams from the placeholder inventory.
 
 ## 2026-03-22 18:29
 - Replaced placeholder-success backfill and mesh introspection endpoints with real local-state answers: SyncAllPods now enumerates actual local pod memberships, and MeshIntrospection now reports registered services from the router instead of hardcoded names.
+
+## 2026-03-22 18:43
+- Hardened active mesh service adapters: PodsMeshService now canonicalizes embedded pod/channel IDs and includes PodId in routed messages; DhtMeshService now rejects malformed requester IDs before touching the routing table.

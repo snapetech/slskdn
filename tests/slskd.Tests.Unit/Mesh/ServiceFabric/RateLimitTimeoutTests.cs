@@ -98,7 +98,7 @@ public class RateLimitTimeoutTests
         var result = await _service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = peerId });
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("per peer", result.ErrorMessage!.ToLowerInvariant());
+        Assert.Equal("Too many active tunnels per peer", result.ErrorMessage);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class RateLimitTimeoutTests
         var result = await _service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = "peer3" });
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("for pod", result.ErrorMessage!.ToLowerInvariant());
+        Assert.Equal("Too many active tunnels for pod", result.ErrorMessage);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class RateLimitTimeoutTests
         var result = await _service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = peerId });
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("rate limit", result.ErrorMessage!.ToLowerInvariant());
+        Assert.Equal("Tunnel creation rate limit exceeded", result.ErrorMessage);
     }
 
     [Fact]

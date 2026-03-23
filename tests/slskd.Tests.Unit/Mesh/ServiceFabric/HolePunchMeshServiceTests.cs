@@ -113,4 +113,32 @@ public class HolePunchMeshServiceTests
         Assert.Equal("Failed to contact target peer", reply.ErrorMessage);
         Assert.DoesNotContain("sensitive detail", reply.ErrorMessage);
     }
+
+    [Fact]
+    public async Task HandleCallAsync_RequestPunch_WithInvalidPayload_ReturnsSanitizedError()
+    {
+        var service = new HolePunchMeshService(
+            Mock.Of<ILogger<HolePunchMeshService>>(),
+            Mock.Of<IUdpHolePuncher>(),
+            Mock.Of<IMeshServiceClient>());
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "hole-punch",
+                Method = "RequestPunch",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    targetPeerId = "",
+                    localEndpoints = Array.Empty<string>()
+                })
+            },
+            new MeshServiceContext { RemotePeerId = "peer-origin" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.InvalidPayload, reply.StatusCode);
+        Assert.Equal("Invalid request payload", reply.ErrorMessage);
+        Assert.DoesNotContain("targetPeerId", reply.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
 }

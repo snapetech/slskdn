@@ -20,6 +20,137 @@ using Xunit;
 
 public class SearchActionsControllerTests
 {
+    [Fact]
+    public async Task DownloadItem_WhenSearchMissing_ReturnsSanitizedNotFound()
+    {
+        var searchId = Guid.NewGuid();
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Search.Search, bool>>>(), true))
+            .ReturnsAsync((slskd.Search.Search?)null);
+
+        var controller = CreateController(searchService: searchService);
+
+        var result = await controller.DownloadItem(searchId, "0", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        var details = Assert.IsType<ProblemDetails>(notFound.Value);
+        Assert.Equal("Search not found", details.Detail);
+        Assert.DoesNotContain(searchId.ToString(), details.Detail ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DownloadItem_WhenResponseMissing_ReturnsSanitizedNotFound()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Search.Search, bool>>>(), true))
+            .ReturnsAsync(new slskd.Search.Search
+            {
+                Id = Guid.NewGuid(),
+                Responses = Array.Empty<slskd.Search.Response>()
+            });
+
+        var controller = CreateController(searchService: searchService);
+
+        var result = await controller.DownloadItem(Guid.NewGuid(), "3", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        var details = Assert.IsType<ProblemDetails>(notFound.Value);
+        Assert.Equal("Search result item not found", details.Detail);
+        Assert.DoesNotContain("3", details.Detail ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task DownloadItem_WhenFileMissing_ReturnsSanitizedNotFound()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Search.Search, bool>>>(), true))
+            .ReturnsAsync(new slskd.Search.Search
+            {
+                Id = Guid.NewGuid(),
+                Responses = new[]
+                {
+                    new slskd.Search.Response
+                    {
+                        Username = "alice",
+                        Files = new[] { new slskd.Search.File { Filename = "song.flac", Size = 123 } },
+                        PrimarySource = "scene",
+                        SceneContentRef = new SceneContentRef { Username = "alice", Filename = "song.flac", Size = 123 }
+                    }
+                }
+            });
+
+        var controller = CreateController(searchService: searchService);
+
+        var result = await controller.DownloadItem(Guid.NewGuid(), "0:9", CancellationToken.None);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        var details = Assert.IsType<ProblemDetails>(notFound.Value);
+        Assert.Equal("Search result file not found", details.Detail);
+        Assert.DoesNotContain("9", details.Detail ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task DownloadItem_WhenSourceCannotBeDetermined_ReturnsSanitizedBadRequest()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.FindAsync(It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Search.Search, bool>>>(), true))
+            .ReturnsAsync(new slskd.Search.Search
+            {
+                Id = Guid.NewGuid(),
+                Responses = new[]
+                {
+                    new slskd.Search.Response
+                    {
+                        Username = "alice",
+                        Files = new[] { new slskd.Search.File { Filename = "song.flac", Size = 123 } },
+                        PrimarySource = string.Empty
+                    }
+                }
+            });
+
+        var controller = CreateController(searchService: searchService);
+
+        var result = await controller.DownloadItem(Guid.NewGuid(), "0", CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal("Cannot determine download source", details.Detail);
+        Assert.DoesNotContain("0", details.Detail ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task HandlePodDownloadAsync_WhenNoFallbackPeerExists_ReturnsSanitizedNotFound()
+    {
+        var meshDirectory = new Mock<IMeshDirectory>();
+        meshDirectory
+            .Setup(directory => directory.FindPeersByContentAsync("sha256:test", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<PeerContentHint>());
+
+        var controller = CreateController(meshDirectory: meshDirectory);
+        var method = typeof(SearchActionsController).GetMethod("HandlePodDownloadAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        var task = (Task<IActionResult>)method!.Invoke(
+            controller,
+            new object[]
+            {
+                "sha256:test",
+                new slskd.Search.File { Filename = "song.flac", Size = 1234 },
+                string.Empty,
+                CancellationToken.None
+            })!;
+
+        var result = await task;
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        var details = Assert.IsType<ProblemDetails>(notFound.Value);
+        Assert.Equal("No pod peers found hosting content", details.Detail);
+        Assert.DoesNotContain("sha256:test", details.Detail ?? string.Empty);
+    }
+
     [Theory]
     [InlineData("0", true, 0, 0)]
     [InlineData("2:3", true, 2, 3)]
@@ -154,8 +285,10 @@ public class SearchActionsControllerTests
     }
 
     private static SearchActionsController CreateController(
+        Mock<ISearchService>? searchService = null,
         Mock<IMeshContentFetcher>? meshFetcher = null,
-        Mock<IDownloadService>? downloadService = null)
+        Mock<IDownloadService>? downloadService = null,
+        Mock<IMeshDirectory>? meshDirectory = null)
     {
         var options = new Mock<IOptionsMonitor<slskd.Options>>();
         options.SetupGet(x => x.CurrentValue).Returns(new slskd.Options
@@ -164,11 +297,11 @@ public class SearchActionsControllerTests
         });
 
         return new SearchActionsController(
-            Mock.Of<ISearchService>(),
+            (searchService ?? new Mock<ISearchService>()).Object,
             (downloadService ?? new Mock<IDownloadService>()).Object,
             Mock.Of<IContentLocator>(),
             (meshFetcher ?? new Mock<IMeshContentFetcher>()).Object,
-            Mock.Of<IMeshDirectory>(),
+            (meshDirectory ?? new Mock<IMeshDirectory>()).Object,
             options.Object,
             NullLogger<SearchActionsController>.Instance);
     }

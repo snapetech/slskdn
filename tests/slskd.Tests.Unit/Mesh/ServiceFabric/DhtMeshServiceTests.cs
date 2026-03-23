@@ -123,6 +123,64 @@ public class DhtMeshServiceTests
         Assert.DoesNotContain("sensitive detail", reply.ErrorMessage);
     }
 
+    [Fact]
+    public async Task HandleCallAsync_FindNode_WithInvalidPayload_ReturnsSanitizedError()
+    {
+        var service = new DhtMeshService(
+            Mock.Of<ILogger<DhtMeshService>>(),
+            new KademliaRoutingTable(CreateNodeId(0x01)),
+            Mock.Of<IDhtClient>(),
+            Mock.Of<IMeshMessageSigner>());
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "dht",
+                Method = "FindNode",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    TargetId = new byte[] { 0x01, 0x02 },
+                    RequesterId = CreateNodeId(0x02)
+                }),
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.InvalidPayload, reply.StatusCode);
+        Assert.Equal("Invalid request payload", reply.ErrorMessage);
+        Assert.DoesNotContain("20 bytes", reply.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task HandleCallAsync_Ping_WithInvalidRequesterId_ReturnsInvalidPayload()
+    {
+        var routingTable = new KademliaRoutingTable(CreateNodeId(0x01));
+        var service = new DhtMeshService(
+            Mock.Of<ILogger<DhtMeshService>>(),
+            routingTable,
+            Mock.Of<IDhtClient>(),
+            Mock.Of<IMeshMessageSigner>());
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "dht",
+                Method = "Ping",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new PingRequest
+                {
+                    RequesterId = new byte[] { 0x01, 0x02 }
+                }),
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.InvalidPayload, reply.StatusCode);
+        Assert.Equal("Invalid request payload", reply.ErrorMessage);
+        Assert.Empty(routingTable.GetAllNodes());
+    }
+
     private static byte[] CreateNodeId(byte value)
     {
         var nodeId = new byte[20];

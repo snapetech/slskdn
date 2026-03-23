@@ -486,4 +486,14 @@ dotnet test
   - `vstest` slice for `MeshIntrospectionServiceTests`, `DhtMeshServiceTests`, `MeshContentMeshServiceTests`, and `RealmMigrationToolTests` (`17/17`)
 - Next: keep pushing toward a fixed secure release by auditing the next layer of externally visible result DTOs and mesh/service error objects before spending time on purely internal analyzer noise.
 
+## 2026-03-22 20:51
+- Continued into the next mesh reply-category pass.
+- Private-gateway quota errors no longer disclose configured numeric thresholds, and DHT / hole-punch invalid-payload replies no longer teach callers the exact field names or byte-count expectations.
+- Focused validation passed:
+  - `dotnet build src/slskd/slskd.csproj -v q`
+  - `vstest` slice for `DhtMeshServiceTests`, `HolePunchMeshServiceTests`, and `RateLimitTimeoutTests` (`16/16`)
+- Next: continue the release-facing audit through the next layer of externally visible DTOs and controller/problem responses that still reflect raw identifiers, indexes, or object-not-found specifics.
+
 - Replaced placeholder-success controller/introspection responses with real local-state answers in PodCore and Mesh Service Fabric.
+
+- Hardened active mesh service adapters so embedded Pod/DHT IDs are canonicalized before crossing into pod or routing-table logic.

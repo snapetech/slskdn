@@ -88,7 +88,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "search_not_found",
                 Title = "Search not found",
-                Detail = $"Search {searchId} not found"
+                Detail = "Search not found"
             });
         }
 
@@ -109,7 +109,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "item_not_found",
                 Title = "Item not found",
-                Detail = $"Response index {responseIndex} not found in search {searchId}"
+                Detail = "Search result item not found"
             });
         }
 
@@ -126,7 +126,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "file_not_found",
                 Title = "File not found",
-                Detail = $"File index {fileIndex} not found in response {responseIndex}"
+                Detail = "Search result file not found"
             });
         }
 
@@ -149,7 +149,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "invalid_source",
                 Title = "Invalid source",
-                Detail = $"Cannot determine download source for item {itemId}"
+                Detail = "Cannot determine download source"
             });
         }
     }
@@ -182,7 +182,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "search_not_found",
                 Title = "Search not found",
-                Detail = $"Search {searchId} not found"
+                Detail = "Search not found"
             });
         }
 
@@ -203,7 +203,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "item_not_found",
                 Title = "Item not found",
-                Detail = $"Response index {responseIndex} not found in search {searchId}"
+                Detail = "Search result item not found"
             });
         }
 
@@ -271,7 +271,7 @@ public class SearchActionsController : ControllerBase
                     {
                         Type = "pod_peer_not_found",
                         Title = "Pod peer not found",
-                        Detail = $"No pod peers found hosting content {contentId}"
+                        Detail = "No pod peers found hosting content"
                     });
                 }
 

@@ -106,7 +106,8 @@ public class DhtMeshService : IMeshService
         {
             var (request, err) = ServicePayloadParser.TryParseJson<FindNodeRequest>(call, _maxPayload);
             if (err != null) return err;
-            if (request?.TargetId == null || request.TargetId.Length != 20)
+            if (request?.TargetId == null || request.TargetId.Length != 20 ||
+                request.RequesterId == null || request.RequesterId.Length != 20)
             {
                 return new ServiceReply
                 {
@@ -172,7 +173,8 @@ public class DhtMeshService : IMeshService
         {
             var (request, err) = ServicePayloadParser.TryParseJson<FindValueRequest>(call, _maxPayload);
             if (err != null) return err;
-            if (request?.Key == null)
+            if (request?.Key == null || request.Key.Length != 20 ||
+                request.RequesterId == null || request.RequesterId.Length != 20)
             {
                 return new ServiceReply
                 {
@@ -265,7 +267,9 @@ public class DhtMeshService : IMeshService
         {
             var (request, err) = ServicePayloadParser.TryParseJson<StoreRequest>(call, _maxPayload);
             if (err != null) return err;
-            if (request?.Key == null || request.Value == null || request.PublicKeyBase64 == null || request.SignatureBase64 == null)
+            if (request?.Key == null || request.Key.Length != 20 ||
+                request.RequesterId == null || request.RequesterId.Length != 20 ||
+                request.Value == null || request.PublicKeyBase64 == null || request.SignatureBase64 == null)
             {
                 return new ServiceReply
                 {
@@ -379,12 +383,22 @@ public class DhtMeshService : IMeshService
         var (pingReq, pingErr) = ServicePayloadParser.TryParseJson<PingRequest>(call, _maxPayload);
         if (pingErr != null)
             return Task.FromResult(pingErr);
+        if (pingReq?.RequesterId == null || pingReq.RequesterId.Length != 20)
+        {
+            return Task.FromResult(new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "Invalid request payload",
+                Payload = Array.Empty<byte>()
+            });
+        }
 
         // Update routing table with the pinging peer
         _ = ObserveBackgroundTaskAsync(
             Task.Run(
                 () => _routingTable.TouchAsync(
-                    pingReq?.RequesterId ?? Array.Empty<byte>(),
+                    pingReq.RequesterId,
                     context.RemotePeerId),
                 CancellationToken.None),
             "[DHT] Failed to update routing table for ping from {PeerId}",

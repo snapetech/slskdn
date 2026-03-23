@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.ServiceFabric;
@@ -35,5 +36,80 @@ public class PodsMeshServiceTests
         Assert.Equal(ServiceStatusCodes.MethodNotFound, reply.StatusCode);
         Assert.Equal("Unknown method", reply.ErrorMessage);
         Assert.DoesNotContain("SensitiveCustomPodsMethod", reply.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task HandleCallAsync_PostMessage_TrimsIdsAndIncludesPodIdInMessage()
+    {
+        var podMessaging = new Mock<IPodMessaging>();
+        podMessaging
+            .Setup(service => service.SendAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = new PodsMeshService(
+            Mock.Of<ILogger<PodsMeshService>>(),
+            Mock.Of<IPodService>(),
+            podMessaging.Object);
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "pods",
+                Method = "PostMessage",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    podId = " pod-1 ",
+                    channelId = " general ",
+                    body = "hello",
+                    signature = " sig "
+                })
+            },
+            new MeshServiceContext { RemotePeerId = " peer-1 " },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.OK, reply.StatusCode);
+        podMessaging.Verify(
+            svc => svc.SendAsync(
+                It.Is<PodMessage>(message =>
+                    message.PodId == "pod-1" &&
+                    message.ChannelId == "general" &&
+                    message.SenderPeerId == "peer-1" &&
+                    message.Signature == "sig"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCallAsync_GetMessages_TrimsIdsBeforeDispatch()
+    {
+        var podMessaging = new Mock<IPodMessaging>();
+        podMessaging
+            .Setup(service => service.GetMessagesAsync("pod-1", "general", 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<PodMessage>());
+
+        var service = new PodsMeshService(
+            Mock.Of<ILogger<PodsMeshService>>(),
+            Mock.Of<IPodService>(),
+            podMessaging.Object);
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "pods",
+                Method = "GetMessages",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    podId = " pod-1 ",
+                    channelId = " general ",
+                    sinceTimestamp = 10L
+                })
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.OK, reply.StatusCode);
+        podMessaging.Verify(service => service.GetMessagesAsync("pod-1", "general", 10, It.IsAny<CancellationToken>()), Times.Once);
     }
 }
