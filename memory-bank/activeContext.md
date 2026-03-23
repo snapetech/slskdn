@@ -776,3 +776,14 @@ dotnet test
 - Next steps:
   - continue the placeholder/null-heavy bughunt from the inventory
   - prioritize remaining `HashDbService`, `SongIdService`, and Mesh/PodCore read-side/runtime bottom-out paths
+
+## 2026-03-23 11:29 CST
+- Finished another green HashDb helper normalization batch.
+- Current fixes in this batch:
+  - label presence/release queries now trim and deduplicate consistently
+  - peer seq/backfill helpers now trim keys and fail closed on blanks
+  - peer metrics now normalize peer IDs on write/readback
+  - HashDb read helpers now trim more persisted string fields before returning models
+- Next steps:
+  - continue into the next `SongIdService` fallback/query-generation cluster
+  - then take the next Mesh/PodCore runtime slice from the placeholder inventory

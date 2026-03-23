@@ -2271,22 +2271,29 @@ namespace slskd.HashDb
         public async Task<IReadOnlyList<LabelPresence>> GetLabelPresenceAsync(CancellationToken cancellationToken = default)
         {
             var results = new List<LabelPresence>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT metadata_label, COUNT(*) AS cnt
+                SELECT TRIM(metadata_label) AS metadata_label, COUNT(*) AS cnt
                 FROM AlbumTargets
-                WHERE metadata_label IS NOT NULL AND metadata_label <> ''
-                GROUP BY metadata_label
+                WHERE metadata_label IS NOT NULL AND TRIM(metadata_label) <> ''
+                GROUP BY TRIM(metadata_label)
                 ORDER BY cnt DESC, metadata_label";
 
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
+                var label = reader.GetString(0).Trim();
+                if (!seen.Add(label))
+                {
+                    continue;
+                }
+
                 results.Add(new LabelPresence
                 {
-                    Label = reader.GetString(0),
+                    Label = label,
                     ReleaseCount = reader.GetInt32(1),
                 });
             }
@@ -2298,6 +2305,8 @@ namespace slskd.HashDb
         public async Task<IReadOnlyList<string>> GetReleaseIdsByLabelAsync(string labelNameOrId, int limit, CancellationToken cancellationToken = default)
         {
             var results = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            labelNameOrId = labelNameOrId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(labelNameOrId) || limit <= 0)
             {
                 return results;
@@ -2306,9 +2315,9 @@ namespace slskd.HashDb
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT release_id
+                SELECT TRIM(release_id)
                 FROM AlbumTargets
-                WHERE (metadata_label = @label OR discogs_release_id = @label)
+                WHERE (TRIM(metadata_label) = @label COLLATE NOCASE OR TRIM(discogs_release_id) = @label COLLATE NOCASE)
                 ORDER BY created_at DESC
                 LIMIT @limit";
             cmd.Parameters.AddWithValue("@label", labelNameOrId);
@@ -2317,7 +2326,11 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                results.Add(reader.GetString(0));
+                var releaseId = reader.GetString(0).Trim();
+                if (!string.IsNullOrWhiteSpace(releaseId) && seen.Add(releaseId))
+                {
+                    results.Add(releaseId);
+                }
             }
 
             return results;
@@ -2849,6 +2862,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task IncrementHashUseCountAsync(string flacKey, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "UPDATE HashDb SET use_count = use_count + 1, last_updated_at = @now WHERE flac_key = @flac_key";
@@ -2873,6 +2892,13 @@ namespace slskd.HashDb
         public async Task<IEnumerable<HashDbEntry>> GetEntriesSinceSeqAsync(long sinceSeq, int limit = 1000, CancellationToken cancellationToken = default)
         {
             var entries = new List<HashDbEntry>();
+            if (limit <= 0)
+            {
+                return entries;
+            }
+
+            sinceSeq = Math.Max(0, sinceSeq);
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM HashDb WHERE seq_id > @since_seq ORDER BY seq_id LIMIT @limit";
@@ -2934,6 +2960,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<long> GetPeerLastSeqSeenAsync(string peerId, CancellationToken cancellationToken = default)
         {
+            peerId = peerId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(peerId))
+            {
+                return 0;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT COALESCE(last_seq_seen, 0) FROM MeshPeerState WHERE peer_id = @peer_id";
@@ -2945,6 +2977,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdatePeerLastSeqSeenAsync(string peerId, long seqId, CancellationToken cancellationToken = default)
         {
+            peerId = peerId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(peerId))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -2963,6 +3001,12 @@ namespace slskd.HashDb
         public async Task<IEnumerable<FlacInventoryEntry>> GetBackfillCandidatesAsync(int limit = 10, CancellationToken cancellationToken = default)
         {
             var entries = new List<FlacInventoryEntry>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (limit <= 0)
+            {
+                return entries;
+            }
+
             var today = DateTimeOffset.UtcNow.Date;
             var todayUnix = new DateTimeOffset(today).ToUnixTimeSeconds();
 
@@ -2983,7 +3027,11 @@ namespace slskd.HashDb
             using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                entries.Add(ReadFlacEntry(reader));
+                var entry = ReadFlacEntry(reader);
+                if (!string.IsNullOrWhiteSpace(entry.FileId) && seen.Add(entry.FileId))
+                {
+                    entries.Add(entry);
+                }
             }
 
             return entries;
@@ -2992,6 +3040,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task IncrementPeerBackfillCountAsync(string peerId, CancellationToken cancellationToken = default)
         {
+            peerId = peerId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(peerId))
+            {
+                return;
+            }
+
             var today = new DateTimeOffset(DateTimeOffset.UtcNow.Date).ToUnixTimeSeconds();
 
             using var conn = GetConnection();
@@ -3009,6 +3063,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<int> GetPeerBackfillCountTodayAsync(string peerId, CancellationToken cancellationToken = default)
         {
+            peerId = peerId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(peerId))
+            {
+                return 0;
+            }
+
             var today = new DateTimeOffset(DateTimeOffset.UtcNow.Date).ToUnixTimeSeconds();
 
             using var conn = GetConnection();
@@ -3142,9 +3202,9 @@ namespace slskd.HashDb
         {
             return new Peer
             {
-                PeerId = reader.GetString(reader.GetOrdinal("peer_id")),
+                PeerId = reader.GetString(reader.GetOrdinal("peer_id")).Trim(),
                 Caps = reader.GetInt32(reader.GetOrdinal("caps")),
-                ClientVersion = reader.IsDBNull(reader.GetOrdinal("client_version")) ? null : reader.GetString(reader.GetOrdinal("client_version")),
+                ClientVersion = reader.IsDBNull(reader.GetOrdinal("client_version")) ? null : reader.GetString(reader.GetOrdinal("client_version")).Trim(),
                 LastSeen = reader.GetInt64(reader.GetOrdinal("last_seen")),
                 LastCapCheck = reader.IsDBNull(reader.GetOrdinal("last_cap_check")) ? null : reader.GetInt64(reader.GetOrdinal("last_cap_check")),
                 BackfillsToday = reader.GetInt32(reader.GetOrdinal("backfills_today")),
@@ -3156,15 +3216,15 @@ namespace slskd.HashDb
         {
             var entry = new FlacInventoryEntry
             {
-                FileId = reader.GetString(reader.GetOrdinal("file_id")),
-                PeerId = reader.GetString(reader.GetOrdinal("peer_id")),
-                Path = reader.GetString(reader.GetOrdinal("path")),
+                FileId = reader.GetString(reader.GetOrdinal("file_id")).Trim(),
+                PeerId = reader.GetString(reader.GetOrdinal("peer_id")).Trim(),
+                Path = reader.GetString(reader.GetOrdinal("path")).Trim(),
                 Size = reader.GetInt64(reader.GetOrdinal("size")),
                 DiscoveredAt = reader.GetInt64(reader.GetOrdinal("discovered_at")),
-                HashStatusStr = reader.IsDBNull(reader.GetOrdinal("hash_status")) ? "none" : reader.GetString(reader.GetOrdinal("hash_status")),
-                HashValue = reader.IsDBNull(reader.GetOrdinal("hash_value")) ? null : reader.GetString(reader.GetOrdinal("hash_value")),
-                HashSourceStr = reader.IsDBNull(reader.GetOrdinal("hash_source")) ? null : reader.GetString(reader.GetOrdinal("hash_source")),
-                FlacAudioMd5 = reader.IsDBNull(reader.GetOrdinal("flac_audio_md5")) ? null : reader.GetString(reader.GetOrdinal("flac_audio_md5")),
+                HashStatusStr = reader.IsDBNull(reader.GetOrdinal("hash_status")) ? "none" : reader.GetString(reader.GetOrdinal("hash_status")).Trim(),
+                HashValue = reader.IsDBNull(reader.GetOrdinal("hash_value")) ? null : reader.GetString(reader.GetOrdinal("hash_value")).Trim(),
+                HashSourceStr = reader.IsDBNull(reader.GetOrdinal("hash_source")) ? null : reader.GetString(reader.GetOrdinal("hash_source")).Trim(),
+                FlacAudioMd5 = reader.IsDBNull(reader.GetOrdinal("flac_audio_md5")) ? null : reader.GetString(reader.GetOrdinal("flac_audio_md5")).Trim(),
                 SampleRate = reader.IsDBNull(reader.GetOrdinal("sample_rate")) ? null : reader.GetInt32(reader.GetOrdinal("sample_rate")),
                 Channels = reader.IsDBNull(reader.GetOrdinal("channels")) ? null : reader.GetInt32(reader.GetOrdinal("channels")),
                 BitDepth = reader.IsDBNull(reader.GetOrdinal("bit_depth")) ? null : reader.GetInt32(reader.GetOrdinal("bit_depth")),
@@ -3191,7 +3251,7 @@ namespace slskd.HashDb
                 var ordinal = reader.GetOrdinal(column);
                 if (!reader.IsDBNull(ordinal))
                 {
-                    setter(reader.GetString(ordinal));
+                    setter(reader.GetString(ordinal).Trim());
                 }
             }
             catch (ArgumentOutOfRangeException)
@@ -3467,6 +3527,7 @@ namespace slskd.HashDb
         public Task<List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>> GetAllPeerMetricsAsync(CancellationToken cancellationToken = default)
         {
             var list = new List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM PeerMetrics";
@@ -3474,7 +3535,11 @@ namespace slskd.HashDb
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                list.Add(ReadPeerMetrics(reader));
+                var metrics = ReadPeerMetrics(reader);
+                if (!string.IsNullOrWhiteSpace(metrics.PeerId) && seen.Add(metrics.PeerId))
+                {
+                    list.Add(metrics);
+                }
             }
 
             return Task.FromResult(list);
@@ -3483,6 +3548,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default)
         {
+            peerId = peerId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(peerId))
+            {
+                return Task.FromResult<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?>(null);
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT * FROM PeerMetrics WHERE peer_id = @peer_id";
@@ -3501,6 +3572,12 @@ namespace slskd.HashDb
         public Task UpsertPeerMetricsAsync(Transfers.MultiSource.Metrics.PeerPerformanceMetrics metrics, CancellationToken cancellationToken = default)
         {
             if (metrics == null || string.IsNullOrWhiteSpace(metrics.PeerId))
+            {
+                return Task.CompletedTask;
+            }
+
+            metrics.PeerId = metrics.PeerId.Trim();
+            if (string.IsNullOrWhiteSpace(metrics.PeerId))
             {
                 return Task.CompletedTask;
             }
@@ -3598,7 +3675,7 @@ namespace slskd.HashDb
         {
             var metrics = new Transfers.MultiSource.Metrics.PeerPerformanceMetrics
             {
-                PeerId = reader.GetString(reader.GetOrdinal("peer_id")),
+                PeerId = reader.GetString(reader.GetOrdinal("peer_id")).Trim(),
                 Source = Enum.TryParse<Transfers.MultiSource.Metrics.PeerSource>(reader.GetString(reader.GetOrdinal("source")), true, out var src) ? src : Transfers.MultiSource.Metrics.PeerSource.Soulseek,
                 RttAvgMs = reader.IsDBNull(reader.GetOrdinal("rtt_avg_ms")) ? 0 : reader.GetDouble(reader.GetOrdinal("rtt_avg_ms")),
                 RttStdDevMs = reader.IsDBNull(reader.GetOrdinal("rtt_stddev_ms")) ? 0 : reader.GetDouble(reader.GetOrdinal("rtt_stddev_ms")),

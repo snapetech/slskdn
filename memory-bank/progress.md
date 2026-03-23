@@ -6701,3 +6701,13 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+
+## 2026-03-23 11:29 CST
+- Continued the HashDb read/write helper bughunt and normalized several remaining boundary-sensitive helpers.
+- `HashDbService` now trims and deduplicates label presence and label-based release queries, trims hash-use and mesh peer keys, guards non-positive sequence/backfill limits, and normalizes peer metrics on write/readback.
+- `HashDbService` readers now trim peer, FLAC inventory, and optional string fields so the read side matches the already-hardened write side.
+- Added focused regressions for label query normalization, trimmed peer/backfill counters, non-positive mesh/backfill limits, trimmed hash-use keys, and peer-metrics normalization.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`

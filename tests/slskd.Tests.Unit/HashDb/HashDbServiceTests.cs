@@ -820,6 +820,23 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal(3, found.UseCount); // Initial 1 + 2 increments
     }
 
+    [Fact]
+    public async Task IncrementHashUseCountAsync_TrimsKeyAndIgnoresBlank()
+    {
+        await service.StoreHashAsync(new HashDbEntry
+        {
+            FlacKey = "trim-key",
+            ByteHash = "trim-hash",
+            Size = 123,
+        });
+
+        await service.IncrementHashUseCountAsync(" trim-key ");
+        await service.IncrementHashUseCountAsync("   ");
+
+        var found = await service.LookupHashAsync("trim-key");
+        Assert.Equal(2, found!.UseCount);
+    }
+
     // ========== Mesh Sync Tests ==========
 
     [Fact]
@@ -890,6 +907,15 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal(200, await service.GetPeerLastSeqSeenAsync("peer2"));
     }
 
+    [Fact]
+    public async Task UpdatePeerLastSeqSeenAsync_TrimsPeerIdAndBlankLookupsReturnZero()
+    {
+        await service.UpdatePeerLastSeqSeenAsync(" peer-trim ", 321);
+
+        Assert.Equal(321, await service.GetPeerLastSeqSeenAsync(" peer-trim "));
+        Assert.Equal(0, await service.GetPeerLastSeqSeenAsync("   "));
+    }
+
     // ========== Backfill Tests ==========
 
     [Fact]
@@ -913,6 +939,14 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetBackfillCandidatesAsync_NonPositiveLimitReturnsEmpty()
+    {
+        var candidates = await service.GetBackfillCandidatesAsync(0);
+
+        Assert.Empty(candidates);
+    }
+
+    [Fact]
     public async Task IncrementPeerBackfillCountAsync_IncrementsCount()
     {
         // Arrange
@@ -925,6 +959,83 @@ public class HashDbServiceTests : IDisposable
         // Assert
         var count = await service.GetPeerBackfillCountTodayAsync("testuser");
         Assert.Equal(2, count);
+    }
+
+    [Fact]
+    public async Task IncrementPeerBackfillCountAsync_TrimsPeerId()
+    {
+        await service.GetOrCreatePeerAsync("testuser");
+
+        await service.IncrementPeerBackfillCountAsync(" testuser ");
+
+        var count = await service.GetPeerBackfillCountTodayAsync(" testuser ");
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public async Task GetLabelPresenceAndReleaseIds_NormalizeTrimAndDeduplicate()
+    {
+        await service.UpsertAlbumTargetAsync(new AlbumTarget
+        {
+            MusicBrainzReleaseId = " release-1 ",
+            DiscogsReleaseId = " discogs-1 ",
+            Title = "Album 1",
+            Artist = "Artist 1",
+            Metadata = new ReleaseMetadata
+            {
+                Label = " Label One ",
+            },
+        });
+
+        await service.UpsertAlbumTargetAsync(new AlbumTarget
+        {
+            MusicBrainzReleaseId = "release-1",
+            DiscogsReleaseId = "discogs-1",
+            Title = "Album 1 Dup",
+            Artist = "Artist 1",
+            Metadata = new ReleaseMetadata
+            {
+                Label = "label one",
+            },
+        });
+
+        var labels = await service.GetLabelPresenceAsync();
+        var releasesByLabel = await service.GetReleaseIdsByLabelAsync("  LABEL ONE  ", 10);
+
+        Assert.Single(labels);
+        Assert.Equal("label one", labels[0].Label, ignoreCase: true);
+        Assert.Single(releasesByLabel);
+        Assert.Equal("release-1", releasesByLabel[0]);
+    }
+
+    [Fact]
+    public async Task GetEntriesSinceSeqAsync_NonPositiveLimitReturnsEmpty()
+    {
+        await service.StoreHashAsync(new HashDbEntry { FlacKey = "seq-key", ByteHash = "seq-hash", Size = 1 });
+
+        var entries = await service.GetEntriesSinceSeqAsync(0, 0);
+
+        Assert.Empty(entries);
+    }
+
+    [Fact]
+    public async Task PeerMetrics_NormalizePeerIdOnWriteAndRead()
+    {
+        await service.UpsertPeerMetricsAsync(new slskd.Transfers.MultiSource.Metrics.PeerPerformanceMetrics
+        {
+            PeerId = " peer-metrics ",
+            Source = slskd.Transfers.MultiSource.Metrics.PeerSource.Soulseek,
+            FirstSeen = DateTimeOffset.UtcNow,
+            LastUpdated = DateTimeOffset.UtcNow,
+        });
+
+        var metric = await service.GetPeerMetricsAsync(" peer-metrics ");
+        var all = await service.GetAllPeerMetricsAsync();
+
+        Assert.NotNull(metric);
+        Assert.Equal("peer-metrics", metric!.PeerId);
+        var single = Assert.Single(all);
+        Assert.Equal("peer-metrics", single.PeerId);
     }
 
     // ========== FlacInventoryEntry Tests ==========
