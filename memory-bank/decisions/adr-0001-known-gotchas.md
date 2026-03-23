@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD4. DHT-Backed Discovery Must Normalize Lookup Keys And Returned Records Together
+
+**The Bug**: discovery paths were trimming the lookup key at the boundary but then trusting raw DHT payloads after deserialization. That let padded or case-drifted service IDs, pod IDs, owner peer IDs, and endpoint aliases split one logical record into multiple cache or grouping entries. The result was “missing” services or pods even though the DHT already had the data.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/DhtMeshServiceDirectory.cs`
+- `src/slskd/PodCore/PodDiscovery.cs`
+- `src/slskd/PodCore/PeerResolutionService.cs`
+
+**Wrong**:
+```csharp
+var rawValue = await _dhtClient.GetRawAsync($"svc:{serviceName}", cancellationToken);
+validated.Add(descriptor);
+
+var dhtKey = DeriveDhtKey(normalizedPodId);
+var metadata = await dht.GetAsync<PodMetadata>(dhtKey, ct);
+```
+
+**Correct**:
+```csharp
+var normalizedServiceName = serviceName.Trim();
+var rawValue = await _dhtClient.GetRawAsync($"svc:{normalizedServiceName}", cancellationToken);
+var normalizedDescriptor = NormalizeDescriptor(descriptor);
+
+var metadata = NormalizeMetadata(await dht.GetAsync<PodMetadata>(DeriveDhtKey(normalizedPodId), ct), normalizedPodId)
+    ?? NormalizeMetadata(await dht.GetAsync<PodMetadata>(DeriveDhtKey(indexedPodId), ct), indexedPodId);
+```
+
+**Why This Keeps Happening**: DHT payloads feel like canonical data because they are already serialized records, but they are just another trust boundary. Normalize both the lookup key and the returned record before validation, dedupe, or grouping, or equivalent records split into separate runtime identities.
+
 ### 0xD4. Controller Validation And NotFound Replies Should Not Teach Callers About Usernames, Enum Sets, Or Source Counts
 
 **The Bug**: several controller actions were still turning exact lookup misses or validation details into public response text. That leaked usernames from cached search drill-down, relay agent names, enum option sets, and exact source-count thresholds in multi-source download flows.
