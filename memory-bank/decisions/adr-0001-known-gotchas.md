@@ -16838,3 +16838,44 @@ try { _onDispose(); } catch { }
 ```
 
 **Why This Keeps Happening**: timer callbacks and cleanup callbacks are easy to treat as “best effort,” but teardown happens on hot paths and races with background work; without explicit isolation, one late callback can take down an otherwise valid dispose flow.
+
+### 0k14K. Long-Running Delegate Fanout Must Isolate Callback Failures
+
+**The Bug**: search option callbacks and download transfer callbacks could execute user-supplied delegates directly from shared paths without per-callback isolation. One callback throwing in `Search.WithActions` prevented later callbacks from executing and could rethrow from transfer state fanout in `DownloadService`, aborting update flow.
+
+**Files Affected**:
+- `src/slskd/Search/Extensions.cs`
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+stateChanged: (args) =>
+{
+    originalStateChanged(args);
+    stateChanged(args);
+};
+```
+
+```csharp
+finally
+{
+    stateChanged?.Invoke(transfer);
+}
+```
+
+**Correct**:
+```csharp
+foreach (var callback in new[] { originalStateChanged, stateChanged })
+{
+    try
+    {
+        callback?.Invoke(args);
+    }
+    catch (Exception exception)
+    {
+        exceptions.Add(exception);
+    }
+}
+```
+
+**Why This Keeps Happening**: callback fanout is often added as a convenience path for extension points, and it is easy to forget that each delegate is caller-owned. A single subscriber throwing is now treated as a per-callback failure, not a shared control-flow break, and fatal paths (downloads/search updates) stay resilient.
