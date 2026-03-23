@@ -52,6 +52,45 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC2. Metadata Search Hits Without MBIDs Are Still Useful And Must Not Be Dropped Prematurely
+
+**The Bug**: metadata and SongID flows were treating “no MusicBrainz recording ID” as equivalent to “no usable hit.” That caused file-analysis fallback, metadata search, and candidate-building paths to drop perfectly good artist/title evidence, which in turn made SongID bottom out early even when it had enough information to keep ranking and planning.
+
+**Files Affected**:
+- `src/slskd/Integrations/MetadataFacade/MetadataFacade.cs`
+- `src/slskd/Integrations/MusicBrainz/MusicBrainzClient.cs`
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId))
+{
+    continue;
+}
+
+if (metadata == null)
+{
+    analysis.Query = Path.GetFileNameWithoutExtension(source);
+    return analysis;
+}
+```
+
+**Correct**:
+```csharp
+if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId) &&
+    string.IsNullOrWhiteSpace(hit.Title) &&
+    string.IsNullOrWhiteSpace(hit.Artist))
+{
+    continue;
+}
+
+var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
+    ? hit.MusicBrainzRecordingId
+    : BuildSyntheticMetadataRecordingId(hit);
+```
+
+**Why This Keeps Happening**: MusicBrainz IDs feel like the “real” identity, so it is tempting to make them mandatory everywhere. But SongID is a probabilistic pipeline. Artist/title evidence, filename-derived metadata, and search hits without MBIDs are still useful priors and should continue flowing through the ranking/planning pipeline with conservative synthetic IDs instead of being discarded.
+
 ### 0xC1. Small Utility Controllers Still Need Input Normalization Before Dispatch
 
 **The Bug**: low-traffic helper controllers were still forwarding raw route, query, and body strings straight into services. That let whitespace-only values slip through validation, turned padded identifiers into different storage keys, and in some cases converted simple bad input into service-level exceptions and `500`s.
