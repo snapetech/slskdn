@@ -97,6 +97,44 @@ _generationTask = GenerateCoverTrafficAsync(_generationCts.Token);
 
 **Why This Keeps Happening**: `Task.Run` feels like the default way to make work “background,” but async methods already become asynchronous at their first await. Adding an extra scheduler hop makes startup dependent on thread-pool availability and introduces CI-only cancellation races. If the async loop immediately awaits a timer or I/O, start it directly and keep the returned task.
 
+### 0xDC. Snap Store Upload Retries Need To Match Store-Side Processing Outages, Not Just Network Drops
+
+**The Bug**: main-channel releases could build the snap successfully and still fail only at the publish step because the Snap Store kept returning `binary_sha3_384: Error checking upload uniqueness.` The workflow already retried generic processing failures, but only six times with a fixed 30-second delay, which was not enough for a store-side uniqueness-check outage.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```yaml
+for attempt in $(seq 1 6); do
+  ...
+  if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out"; then
+    echo "Retrying in 30s (transient Snap Store error)..."
+    sleep 30
+    continue
+  fi
+done
+```
+
+**Correct**:
+```yaml
+MAX_ATTEMPTS=12
+for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+  SLEEP_SECONDS=$((attempt * 30))
+  if [ "$SLEEP_SECONDS" -gt 300 ]; then
+    SLEEP_SECONDS=300
+  fi
+
+  if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|...|binary_sha3_384: Error checking upload uniqueness"; then
+    echo "Retrying in ${SLEEP_SECONDS}s (transient Snap Store error)..."
+    sleep "$SLEEP_SECONDS"
+    continue
+  fi
+done
+```
+
+**Why This Keeps Happening**: store-backed publishing fails differently from local packaging. The artifact can be valid while the remote dedupe or processing service is unhealthy. Fixed short retries are enough for packet loss, but not for multi-minute store-side incidents. Treat known Snap Store processing messages as transient and use a longer backoff window.
+
 ### 0xD9. Release Gates Must Exercise Release-Build Test Compiles, Not Just Debug `dotnet test`
 
 **The Bug**: several stale unit tests kept passing targeted Debug runs but still broke the release gate because Release-mode test compilation exercises a different path. In this case, tests were still referencing removed controller methods and old type names like `slskd.Downloads.Download`, so local focused validation looked green while `run-release-gate.sh` failed compiling the Release unit project.

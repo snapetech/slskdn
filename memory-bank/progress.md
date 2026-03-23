@@ -6560,3 +6560,10 @@ Code quality improvements were completed as part of Option A:
 - Investigated the failed `.94` tag build and isolated the blocker to `CoverTrafficGeneratorTests.StopAsync_AfterStart_CancelsGenerationPromptly` timing out in CI.
 - Fixed `CoverTrafficGenerator.StartAsync()` to start the async delay loop directly instead of wrapping it in `Task.Run`, removing the thread-pool scheduling race that could delay cancellation observation on busy CI runners.
 - Documented the lifecycle gotcha in `adr-0001-known-gotchas.md` before rerunning the release validation path.
+
+## 2026-03-23 12:56 - Snap Store transient publish hardening
+
+- Investigated the failed `.95` main release and confirmed the build itself was green; only `Publish to Snap (Main/Stable)` failed.
+- The failing external error was `binary_sha3_384: Error checking upload uniqueness.`, returned by the Snap Store during upload processing after the snap had already built successfully.
+- Hardened both dev and main Snap publish steps in `.github/workflows/build-on-tag.yml` to retry known store-side processing failures for longer, with capped linear backoff and explicit matching for the uniqueness-check error.
+- Documented the Snap Store processing gotcha in `adr-0001-known-gotchas.md`.
