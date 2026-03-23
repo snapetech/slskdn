@@ -201,7 +201,7 @@ namespace slskd
                         new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously))
                         .TrySetException(new ObjectDisposedException(nameof(TokenBucket)));
 
-                    Clock.Dispose();
+                    Common.TimerDisposer.DisposeWithWait(Clock);
                     SyncRoot.Dispose();
                 }
 

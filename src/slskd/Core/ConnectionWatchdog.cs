@@ -191,7 +191,7 @@ namespace slskd
                 {
                     OptionsMonitorRegistration?.Dispose();
                     OptionsMonitorRegistration = null;
-                    WatchdogTimer?.Dispose();
+                    Common.TimerDisposer.DisposeWithWait(WatchdogTimer);
                     CancellationTokenSource?.Dispose();
                 }
 

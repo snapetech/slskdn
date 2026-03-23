@@ -306,7 +306,15 @@ public class RelayOnlyTransport : IAnonymityTransport
             }
             finally
             {
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
+
                 base.Dispose(disposing);
             }
         }
@@ -325,7 +333,15 @@ public class RelayOnlyTransport : IAnonymityTransport
             }
             finally
             {
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
+
                 await base.DisposeAsync();
             }
         }

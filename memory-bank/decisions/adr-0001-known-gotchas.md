@@ -319,6 +319,45 @@ foreach (EventHandler<SceneMessageReceivedEventArgs> handler in MessageReceived.
 }
 ```
 
+### 0xDE. Timer Disposal Must Wait For Callback Drain
+
+**The Bug**: Timer-based services disposed with `Timer.Dispose()` returned before callback callbacks were fully stopped, so immediate post-dispose timer operations could intermittently appear to succeed and lifecycle tests expecting disposal semantics failed.
+
+**Files Affected**:
+- `src/slskd/Common/Security/EntropyMonitor.cs`
+- `src/slskd/Common/Security/NetworkGuard.cs`
+- `src/slskd/Common/Security/ProbabilisticVerification.cs`
+- `src/slskd/Common/Security/FingerprintDetection.cs`
+- `src/slskd/Common/Security/Honeypot.cs`
+- `src/slskd/Common/Security/DnsSecurityService.cs`
+- `src/slskd/Common/Security/CryptographicCommitment.cs`
+- `src/slskd/Common/Security/ByzantineConsensus.cs`
+- `src/slskd/Common/Security/TemporalConsistency.cs`
+- `src/slskd/Common/Security/ProofOfStorage.cs`
+- `src/slskd/Common/Security/ViolationTracker.cs`
+- `src/slskd/Common/Security/SecurityEventSink.cs`
+- `src/slskd/DhtRendezvous/Security/OverlayRateLimiter.cs`
+- `src/slskd/DhtRendezvous/Security/OverlayBlocklist.cs`
+- `src/slskd/Shares/SqliteShareRepository.cs`
+
+**Wrong**:
+```csharp
+public void Dispose()
+{
+    _timer.Dispose();
+}
+```
+
+**Correct**:
+```csharp
+public void Dispose()
+{
+    Common.TimerDisposer.DisposeWithWait(_timer);
+}
+```
+
+**Why This Keeps Happening**: timer callbacks run on separate worker threads, so `Dispose()` alone can return before callbacks are fully quiesced. If call sites verify disposal immediately, they can observe a non-deterministic window where timer operations still appear valid and cleanup assumptions fail.
+
 **Why This Keeps Happening**: chat/pubsub delivery looks like ordinary in-process eventing, so multicast delegates feel like “free fanout.” They are still one synchronous call chain. If a scene service is responsible for notifying multiple listeners, subscriber exceptions must be isolated just like timer, bus, or infrastructure fanout failures.
 
 ### 0xDD. Connection Registry Events Must Not Fire Under The Registration Lock
@@ -16764,3 +16803,38 @@ fi
 ```
 
 **Why This Keeps Happening**: CI often validates a strict static contract for packaging metadata, but template PKGBUILDs are intentionally incomplete until release-time replacement. Validation should enforce real hash stability where the value is expected to be immutable, while explicitly tolerating placeholder tokens where those are part of the release pipeline contract.
+
+### 0k14J. Timer Disposal and Stream-Cleanup Callbacks Must Be Isolated
+
+**The Bug**: several live services and transports disposed timers with `Timer.Dispose()` directly and invoked transport cleanup callbacks without exception isolation. In both cases this allowed in-flight callback execution to race with teardown or throw into callers, producing nondeterministic shutdown behavior and masking the original shutdown reason.
+
+**Files Affected**:
+- `src/slskd/Common/TokenBucket.cs`
+- `src/slskd/Common/TimedCounter.cs`
+- `src/slskd/Common/RateLimiter.cs`
+- `src/slskd/Core/ConnectionWatchdog.cs`
+- `src/slskd/Integrations/VPN/VPNService.cs`
+- `src/slskd/Common/Security/WebSocketTransport.cs`
+- `src/slskd/Common/Security/TorSocksTransport.cs`
+- `src/slskd/Common/Security/RelayOnlyTransport.cs`
+- `src/slskd/Common/Security/Obfs4Transport.cs`
+- `src/slskd/Common/Security/MeekTransport.cs`
+- `src/slskd/Common/Security/I2PTransport.cs`
+- `src/slskd/Common/Security/HttpTunnelTransport.cs`
+- `src/slskd/Mesh/Transport/TorSocksDialer.cs`
+- `src/slskd/Mesh/Transport/I2pSocksDialer.cs`
+- `src/slskd/Mesh/Transport/DirectQuicDialer.cs`
+
+**Wrong**:
+```csharp
+timer.Dispose();
+_onDispose();
+```
+
+**Correct**:
+```csharp
+Common.TimerDisposer.DisposeWithWait(timer);
+try { _onDispose(); } catch { }
+```
+
+**Why This Keeps Happening**: timer callbacks and cleanup callbacks are easy to treat as “best effort,” but teardown happens on hot paths and races with background work; without explicit isolation, one late callback can take down an otherwise valid dispose flow.

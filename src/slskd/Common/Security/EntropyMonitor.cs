@@ -366,7 +366,7 @@ public sealed class EntropyMonitor : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _checkTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_checkTimer);
     }
 }
 

@@ -117,7 +117,7 @@ namespace slskd
                     finally
                     {
                         Timer.Elapsed -= Timer_Elapsed;
-                        Timer.Dispose();
+                        Common.TimerDisposer.DisposeWithWait(Timer);
                         ConcurrentExecutionPreventionSemaphore?.Dispose();
                     }
 

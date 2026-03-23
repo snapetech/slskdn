@@ -442,7 +442,14 @@ public class Obfs4Transport : IAnonymityTransport
                     // Ignore process cleanup errors
                 }
 
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

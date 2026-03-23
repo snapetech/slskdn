@@ -152,7 +152,7 @@ public sealed class ProofOfStorage : IDisposable
 
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
     }
 
     /// <summary>

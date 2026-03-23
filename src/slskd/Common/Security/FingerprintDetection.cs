@@ -424,7 +424,7 @@ public sealed class FingerprintDetection : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
     }
 }
 

@@ -75,7 +75,7 @@ namespace slskd
             {
                 if (disposing)
                 {
-                    Timer.Dispose();
+                    Common.TimerDisposer.DisposeWithWait(Timer);
                 }
 
                 Disposed = true;

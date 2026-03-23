@@ -372,7 +372,14 @@ public class I2pSocksDialer : ITransportDialer
                 if (disposing)
                 {
                     _stream.Dispose();
-                    _onDispose?.Invoke();
+                    try
+                    {
+                        _onDispose?.Invoke();
+                    }
+                    catch
+                    {
+                        // noop
+                    }
                 }
             }
 

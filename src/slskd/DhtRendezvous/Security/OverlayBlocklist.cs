@@ -249,7 +249,7 @@ public sealed class OverlayBlocklist : IDisposable
 
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
     }
 }
 

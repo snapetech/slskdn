@@ -242,6 +242,6 @@ public class NetworkGuardTests : IDisposable
 
         guard.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan));
+        Assert.False(timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan));
     }
 }

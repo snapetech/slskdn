@@ -460,7 +460,14 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
 
             if (disposing)
             {
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

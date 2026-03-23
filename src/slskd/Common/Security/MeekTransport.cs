@@ -354,7 +354,14 @@ public class MeekTransport : IAnonymityTransport, IDisposable
             {
                 _responseStream?.Dispose();
                 _initialResponse.Dispose();
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

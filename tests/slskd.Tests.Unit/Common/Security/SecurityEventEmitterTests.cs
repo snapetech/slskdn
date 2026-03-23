@@ -18,7 +18,7 @@ public class SecurityEventEmitterTests
 
         monitor.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan));
+        Assert.False(timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan));
     }
 
     [Fact]

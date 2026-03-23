@@ -40,7 +40,7 @@ public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
 
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
         GC.SuppressFinalize(this);
     }
 

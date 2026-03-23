@@ -717,7 +717,15 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             if (!_disposed)
             {
                 _disposed = true;
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
+
                 _innerStream.Dispose();
             }
 

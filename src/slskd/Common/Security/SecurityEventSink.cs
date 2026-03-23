@@ -233,7 +233,7 @@ public sealed class SecurityEventAggregator : ISecurityEventSink, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _statsTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_statsTimer);
     }
 }
 

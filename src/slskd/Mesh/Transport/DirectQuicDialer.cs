@@ -300,7 +300,14 @@ public class DirectQuicDialer : ITransportDialer
                         _onDisposeError(ex);
                     }
 
-                    _onDispose?.Invoke();
+                    try
+                    {
+                        _onDispose?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        _onDisposeError(ex);
+                    }
                 }
             }
 

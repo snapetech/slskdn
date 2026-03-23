@@ -312,7 +312,7 @@ public sealed class TemporalConsistency : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
     }
 }
 
