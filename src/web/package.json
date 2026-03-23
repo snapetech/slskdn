@@ -40,8 +40,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.5.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.27.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "esbuild": "^0.27.0",
     "eslint": "^8.56.0",
     "eslint-config-canonical": "^47.4.2",
     "jsdom": "^25.0.0",
@@ -54,7 +54,8 @@
   "overrides": {
     "css-select": "^3.1.0",
     "css-what": "^5.0.1",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "flatted": "^3.4.2"
   },
   "private": true,
   "scripts": {
