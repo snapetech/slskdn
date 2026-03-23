@@ -373,6 +373,50 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetWarmCacheEntryAndJobFallbacks_ReturnTrimmedValues()
+    {
+        await service.UpsertWarmCacheEntryAsync(new slskd.HashDb.Models.WarmCacheEntry
+        {
+            ContentId = "  content:mb:recording:1  ",
+            Path = "  /tmp/media.flac  ",
+            SizeBytes = 123,
+            Pinned = true,
+            LastAccessed = 456,
+        });
+
+        var warmEntry = await service.GetWarmCacheEntryAsync(" content:mb:recording:1 ");
+        Assert.NotNull(warmEntry);
+        Assert.Equal("content:mb:recording:1", warmEntry!.ContentId);
+        Assert.Equal("/tmp/media.flac", warmEntry.Path);
+
+        await service.UpsertDiscographyJobAsync(new slskd.Jobs.DiscographyJob
+        {
+            JobId = "  job-row  ",
+            ArtistId = " artist-row ",
+            ArtistName = " Artist Row ",
+            TargetDirectory = " /tmp/row ",
+        });
+        var discographyJob = await service.GetDiscographyJobAsync(" job-row ");
+        Assert.NotNull(discographyJob);
+        Assert.Equal("job-row", discographyJob!.JobId);
+        Assert.Equal("artist-row", discographyJob.ArtistId);
+        Assert.Equal("Artist Row", discographyJob.ArtistName);
+        Assert.Equal("/tmp/row", discographyJob.TargetDirectory);
+
+        await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob
+        {
+            JobId = "  label-row  ",
+            LabelId = " label-row-id ",
+            LabelName = " Label Row ",
+        });
+        var labelJob = await service.GetLabelCrateJobAsync(" label-row ");
+        Assert.NotNull(labelJob);
+        Assert.Equal("label-row", labelJob!.JobId);
+        Assert.Equal("label-row-id", labelJob.LabelId);
+        Assert.Equal("Label Row", labelJob.LabelName);
+    }
+
+    [Fact]
     public async Task GetLabelCrateJobAsync_TrimsStoredAndLookupJobId()
     {
         await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob

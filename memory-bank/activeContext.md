@@ -324,6 +324,15 @@ dotnet test
   1. recommit the full tree
   2. continue the next `SongIdService` + `HashDbService` batch after this clean head
 
+## 2026-03-22 19:49
+- Continued the same `SongIdService` + `HashDbService` batch again:
+  - SongID fallback search now uses transcript/OCR/comment evidence, not just top-level metadata
+  - HashDb job/warm-cache row-fallback readers now trim returned values so readback matches the hardened write-side behavior
+- Added focused coverage for those fallback/read-side paths.
+- Next:
+  1. recommit the full tree
+  2. continue the remaining `SongIdService`/`HashDbService` cluster, then move back into Mesh/PodCore runtime gaps
+
 ## 2026-03-22 18:01
 - Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.
 - Next: keep widening through remaining placeholder/null-heavy runtime paths in PodCore, VirtualSoulfind, and Mesh.

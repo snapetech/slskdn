@@ -1110,6 +1110,25 @@ public sealed class SongIdService : ISongIdService
         AddFallbackQuery(fallbackQueries, run.Query);
         AddFallbackQuery(fallbackQueries, BuildBestQuery(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Title));
         AddFallbackQuery(fallbackQueries, BuildBestQuery(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Album, run.Metadata.Title));
+        foreach (var transcript in run.Transcripts)
+        {
+            foreach (var phrase in transcript.MusicBrainzQueries.Take(3))
+            {
+                AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, phrase));
+            }
+        }
+
+        foreach (var ocr in run.Ocr.Take(3))
+        {
+            var cleaned = CleanSegmentTitle(ocr.Text);
+            AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, cleaned));
+        }
+
+        foreach (var comment in run.Comments.Take(5))
+        {
+            var cleaned = CleanSegmentTitle(RemoveTimestampText(comment.Text));
+            AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, cleaned));
+        }
 
         if (fallbackQueries.Count == 0)
         {

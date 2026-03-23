@@ -2091,13 +2091,13 @@ namespace slskd.HashDb
             var statusText = reader.IsDBNull(8) ? null : reader.GetString(8);
             return new Jobs.DiscographyJob
             {
-                JobId = reader.GetString(0),
-                ArtistId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                ArtistName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                JobId = reader.GetString(0).Trim(),
+                ArtistId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
+                ArtistName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2).Trim(),
                 Profile = Enum.TryParse<Integrations.MusicBrainz.DiscographyProfile>(profileText, ignoreCase: true, out var profile)
                     ? profile
                     : Integrations.MusicBrainz.DiscographyProfile.CoreDiscography,
-                TargetDirectory = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                TargetDirectory = reader.IsDBNull(4) ? string.Empty : reader.GetString(4).Trim(),
                 TotalReleases = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
                 CompletedReleases = reader.IsDBNull(6) ? 0 : reader.GetInt32(6),
                 FailedReleases = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
@@ -2535,8 +2535,8 @@ namespace slskd.HashDb
         {
             return new Models.WarmCacheEntry
             {
-                ContentId = reader.GetString(0),
-                Path = reader.GetString(1),
+                ContentId = reader.GetString(0).Trim(),
+                Path = reader.GetString(1).Trim(),
                 SizeBytes = reader.GetInt64(2),
                 Pinned = !reader.IsDBNull(3) && reader.GetInt32(3) == 1,
                 LastAccessed = reader.GetInt64(4),
@@ -2589,9 +2589,9 @@ namespace slskd.HashDb
             var statusText = reader.IsDBNull(7) ? null : reader.GetString(7);
             return new LabelCrateJob
             {
-                JobId = reader.GetString(0),
-                LabelId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                LabelName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                JobId = reader.GetString(0).Trim(),
+                LabelId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
+                LabelName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2).Trim(),
                 Limit = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
                 TotalReleases = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
                 CompletedReleases = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),

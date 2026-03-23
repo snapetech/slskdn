@@ -6201,3 +6201,13 @@ Code quality improvements were completed as part of Option A:
   - `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
   - `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`
 - Documented the recurring SongID planning gap in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `8ebb6a04` (`docs: Add gotcha for unused songid evidence`).
+
+## 2026-03-22 19:49
+- Continued the same two-cluster pass with another fallback/read-side batch.
+- `src/slskd/SongID/SongIdService.cs`
+  - fallback search options now also consume transcript phrases, OCR text, and interesting comment text instead of relying only on top-level metadata/query fields
+- `src/slskd/HashDb/HashDbService.cs`
+  - row-fallback readback for discography jobs, label-crate jobs, and warm-cache entries now returns trimmed values
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+  - `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`

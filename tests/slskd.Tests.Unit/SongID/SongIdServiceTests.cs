@@ -375,6 +375,63 @@ public sealed class SongIdServiceTests : IDisposable
     }
 
     [Fact]
+    public void AddFallbackOptions_UsesTranscriptOcrAndCommentEvidence()
+    {
+        var method = typeof(SongIdService).GetMethod("AddFallbackOptions", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var run = new SongIdRun
+        {
+            Query = "raw query",
+            Metadata = new SongIdMetadata
+            {
+                Artist = "Known Artist",
+                Title = "Known Title",
+            },
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "needs_manual_review",
+            },
+            ForensicMatrix = new SongIdForensicMatrix
+            {
+                KnownFamilyScore = 35,
+            },
+            Transcripts = new List<SongIdTranscriptFinding>
+            {
+                new()
+                {
+                    TranscriptId = "tx-1",
+                    MusicBrainzQueries = new List<string> { "Deep cut alt mix" },
+                },
+            },
+            Ocr = new List<SongIdOcrFinding>
+            {
+                new()
+                {
+                    OcrId = "ocr-1",
+                    TimestampSeconds = 10,
+                    Text = "Title Card [Live]",
+                },
+            },
+            Comments = new List<SongIdCommentFinding>
+            {
+                new()
+                {
+                    CommentId = "c-1",
+                    Text = "what is this unreleased version",
+                },
+            },
+        };
+
+        method!.Invoke(null, new object[] { run });
+
+        var option = Assert.Single(run.Options);
+        Assert.Contains(option.SearchTexts, query => query.Contains("Deep cut alt mix", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(option.SearchTexts, query => query.Contains("Title Card", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(option.SearchTexts, query => query.Contains("unreleased version", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void TryGetString_ParsesStringifiedNumericAndBooleanValues()
     {
         var method = typeof(SongIdService).GetMethod("TryGetString", BindingFlags.NonPublic | BindingFlags.Static);
