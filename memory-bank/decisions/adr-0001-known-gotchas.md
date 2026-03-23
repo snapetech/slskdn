@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE5. Reconfiguring A SignalR Client Must Dispose The Previous `HubConnection`
+
+**The Bug**: `RelayClient.Configure()` canceled the existing start loop and replaced `HubConnection` with a freshly built instance, but it never disposed the previous connection object. Repeated relay option changes could therefore leave orphaned SignalR connections and duplicate event handlers behind.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayClient.cs`
+
+**Wrong**:
+```csharp
+StartCancellationTokenSource?.Cancel();
+StartCancellationTokenSource?.Dispose();
+StartCancellationTokenSource = null;
+
+HubConnection = new HubConnectionBuilder()
+    .WithUrl(...)
+    .Build();
+```
+
+**Correct**:
+```csharp
+var previousHubConnection = HubConnection;
+HubConnection = null;
+
+StartCancellationTokenSource?.Cancel();
+StartCancellationTokenSource?.Dispose();
+StartCancellationTokenSource = null;
+DisposeHubConnection(previousHubConnection, "[RelayClient] Failed to dispose previous HubConnection during reconfiguration");
+```
+
+**Why This Keeps Happening**: canceling a connection/start token feels like it “replaces” the old client, but SignalR connections own transports, callbacks, and reconnect state independently of the retry token. When rebuilding a client object on config change, dispose the old connection explicitly before publishing the new one or old handlers can keep running in the background.
+
 ### 0xE4. Security Boundary Helpers Must Trim Inputs Before Validation, But Preserve Canonical Values For The Actual Check
 
 **The Bug**: security helper methods were validating raw user-supplied strings without trimming obvious boundary whitespace first. That made harmless padded paths, filenames, and key URLs fail validation or extension checks even though the canonical value was valid. The reverse problem is also possible: comparison helpers trim for matching but then accidentally reuse the trimmed value for the transport call.

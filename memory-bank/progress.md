@@ -6605,6 +6605,12 @@ Code quality improvements were completed as part of Option A:
 - Removed the extra reset so a successful reconnection/login signal is no longer discarded before the share-resync path awaits it.
 - Documented the reconnect waiter race in `adr-0001-known-gotchas.md` before validation.
 
+## 2026-03-23 14:02 - Relay reconfiguration connection leak fix
+
+- Found another real relay lifecycle bug in `RelayClient.Configure()`: relay option changes rebuilt `HubConnection` without disposing the previous SignalR connection instance.
+- Reconfiguration now disposes the previous hub connection explicitly before publishing the replacement, preventing orphaned connections and duplicate event handlers after option churn.
+- Documented the reconfiguration/disposal gotcha in `adr-0001-known-gotchas.md` before validation.
+
 ## 2026-03-23 09:26 CST
 - Investigated first-run Docker startup crash from latest image logs: host startup failed resolving `slskd.Shares.IShareRepository` for `slskd.VirtualSoulfind.v2.Backends.LocalLibraryBackend`.
 - Fixed root DI wiring in `Program.cs` by mapping `IShareRepository` to `IShareService.GetLocalRepository()` before VSF v2 backend registration.

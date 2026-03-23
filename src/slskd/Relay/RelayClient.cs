@@ -233,22 +233,13 @@ namespace slskd.Relay
             {
                 if (disposing)
                 {
+                    var hubConnection = HubConnection;
+                    HubConnection = null;
+
                     StartCancellationTokenSource?.Cancel();
                     StartCancellationTokenSource?.Dispose();
 
-                    try
-                    {
-                        using var disposeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                        HubConnection?.DisposeAsync().AsTask().WaitAsync(disposeTimeout.Token).GetAwaiter().GetResult();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Log.Warning("[RelayClient] Timed out while disposing HubConnection");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Warning(ex, "[RelayClient] Failed to dispose HubConnection");
-                    }
+                    DisposeHubConnection(hubConnection, "[RelayClient] Failed to dispose HubConnection");
                 }
 
                 Disposed = true;
@@ -291,9 +282,12 @@ namespace slskd.Relay
 
                 // if the client is attempting a connection, cancel it it's going to be dropped when we create a new instance, but
                 // we need the retry loop around connection to stop.
+                var previousHubConnection = HubConnection;
+                HubConnection = null;
                 StartCancellationTokenSource?.Cancel();
                 StartCancellationTokenSource?.Dispose();
                 StartCancellationTokenSource = null;
+                DisposeHubConnection(previousHubConnection, "[RelayClient] Failed to dispose previous HubConnection during reconfiguration");
 
                 if (options.Relay.Controller.IgnoreCertificateErrors)
                 {
@@ -344,6 +338,23 @@ namespace slskd.Relay
             finally
             {
                 ConfigurationSyncRoot.Release();
+            }
+        }
+
+        private void DisposeHubConnection(HubConnection? hubConnection, string failureMessage)
+        {
+            try
+            {
+                using var disposeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                hubConnection?.DisposeAsync().AsTask().WaitAsync(disposeTimeout.Token).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("[RelayClient] Timed out while disposing HubConnection");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, failureMessage);
             }
         }
 
