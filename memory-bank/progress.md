@@ -6889,3 +6889,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused restart coverage in `tests/slskd.Tests.Unit/Relay/RelayClientTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter RelayClientTests` passed (`2/2`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+
+## 2026-03-23 12:50 CST
+
+- Fixed timer-source cleanup drift in `TimedBatcher`.
+- Batch-full, `GetNextBatchAsync()`, `FlushAsync()`, startup reset, and dispose now all route through one helper that cancels and disposes the active batch timer CTS before clearing it.
+- Added focused cleanup regressions in `tests/slskd.Tests.Unit/Common/Security/TimedBatcherTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter TimedBatcherTests` passed (`25/25`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k122` for timer-backed batch CTS cleanup and committed it immediately per repo policy (`docs: Add gotcha for timer-backed batch CTS cleanup`).

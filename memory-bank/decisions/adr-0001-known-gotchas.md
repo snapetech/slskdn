@@ -15433,3 +15433,27 @@ foreach (var key in keys)
 ```
 
 **Why This Keeps Happening**: queue-backed waiter helpers often expose key-level helpers like `Cancel(key)` and then accidentally reuse them for bulk operations without accounting for multiple entries per key. If the public API says "all", bulk cleanup must drain each per-key queue completely, and tests need at least one duplicate-key case to lock that behavior down.
+
+### 0k122. Timer-Backed Batch Helpers Must Dispose Replaced Cancellation Sources On Every Completion Path
+
+**The Bug**: `TimedBatcher` canceled `_currentBatchTimer` when a batch filled, flushed, or was read, but several of those paths just nulled the field afterward instead of disposing the `CancellationTokenSource`. Under repeated batch churn, the helper leaked token sources and registrations even though the logical batch state looked clean.
+
+**Files Affected**:
+- `src/slskd/Common/Security/TimedBatcher.cs`
+
+**Wrong**:
+```csharp
+_currentBatchTimer?.Cancel();
+_currentBatchTimer = null;
+```
+
+**Correct**:
+```csharp
+var currentBatchTimer = _currentBatchTimer;
+_currentBatchTimer = null;
+
+currentBatchTimer?.Cancel();
+currentBatchTimer?.Dispose();
+```
+
+**Why This Keeps Happening**: timer-backed helpers often treat "timer no longer active" as equivalent to "timer fully cleaned up". It is not. If a `CancellationTokenSource` owns timer state or registrations, every path that replaces or clears it must both cancel and dispose it, not just the startup/reset path.

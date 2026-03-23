@@ -946,3 +946,12 @@ dotnet test
 - Next steps:
   - continue bughunting restartable hosted/background services that replace long-lived CTS fields
   - then return to the remaining low-level callback and event-fanout helpers
+
+## 2026-03-23 12:50 CST
+- Switched back to low-level timer/callback helpers after the lifecycle sweep.
+- Fixed `TimedBatcher` so every path that clears/replaces `_currentBatchTimer` now cancels and disposes the old CTS instead of sometimes dropping it without disposal.
+- Extended `TimedBatcherTests` with focused cleanup checks and confirmed the focused slice passed (`25/25`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k122` and will commit it immediately per repo policy (`docs: Add gotcha for timer-backed batch CTS cleanup`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - then return to any restartable services that still replace long-lived synchronization primitives unsafely
