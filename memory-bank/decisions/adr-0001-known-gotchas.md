@@ -16209,3 +16209,34 @@ if (HostDictionary.TryRemove(name, out var removedHost))
 ```
 
 **Why This Keeps Happening**: repository collections make ownership look like simple dictionary bookkeeping, but each entry is a live disposable resource with timers, connections, and registrations behind it. If a service creates repositories and subscribes to monitor callbacks, it needs an explicit disposal contract for both removal-time cleanup and final service teardown.
+
+### 0k144. DI-Owned Singleton Services Must Unsubscribe From External Events And Release Owned Caches
+
+**The Bug**: `UserService` and `RelayService` are long-lived DI singletons that subscribe to options and other external event sources, but they had no disposal contract. `UserService` left anonymous Soulseek client handlers attached forever, and `RelayService` left both its options monitor registration and owned `MemoryCache` alive for process lifetime. That keeps dead service instances reachable and can leak callbacks or cached tokens across teardown/replacement scenarios.
+
+**Files Affected**:
+- `src/slskd/Users/IUserService.cs`
+- `src/slskd/Users/UserService.cs`
+- `src/slskd/Relay/RelayService.cs`
+
+**Wrong**:
+```csharp
+OptionsMonitor.OnChange(options => Configure(options));
+Client.UserStatusChanged += (sender, userStatus) => { ... };
+Client.LoggedIn += (_, _) => Configure(OptionsMonitor.CurrentValue, force: true);
+...
+private MemoryCache MemoryCache { get; } = new MemoryCache(new MemoryCacheOptions());
+```
+
+**Correct**:
+```csharp
+OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
+UserStatusChangedHandler = (_, userStatus) => { ... };
+Client.UserStatusChanged += UserStatusChangedHandler;
+...
+Client.UserStatusChanged -= UserStatusChangedHandler;
+OptionsMonitorRegistration?.Dispose();
+MemoryCache.Dispose();
+```
+
+**Why This Keeps Happening**: DI ownership makes singletons feel "application scoped", so it is easy to assume explicit teardown is unnecessary. But if a singleton attaches to external events or allocates disposable infrastructure like caches, the container can only clean it up if the service itself exposes and honors a disposal contract. Anonymous lambdas are especially dangerous here because you cannot unsubscribe them later unless you first keep the delegate.
