@@ -16431,3 +16431,36 @@ protected virtual void Dispose(bool disposing)
 ```
 
 **Why This Keeps Happening**: duplicate-start guards solve only one half of the ownership problem. Once a handler subscribes to a long-lived sender, that subscription becomes a resource the handler owns for the rest of its lifetime. If the handler interface hides disposal, the parent bus cannot tear that resource down, and stale delegates survive process-internal replacement just like any other event leak. One-time subscription helpers still need a visible unsubscribe/dispose path.
+
+### 0k14A. DI-Facing Mesh Service Interfaces Must Expose Disposal When Their Singletons Own Live Resources
+
+**The Bug**: several mesh services were registered as long-lived DI singletons behind non-disposable interfaces even though their concrete implementations own disposable state. `MeshSyncService` holds a live `ISoulseekClient.PrivateMessageReceived` subscription, `MeshCircuitBuilder` owns active circuits and selected transports, and `ContentPeerPublisher` owns a semaphore guarding DHT reverse-index updates. The implementations disposed those resources, but the interface contract hid that ownership from callers and tests, making the lifecycle requirement easy to miss and easy to regress.
+
+**Files Affected**:
+- `src/slskd/Mesh/IMeshSyncService.cs`
+- `src/slskd/Mesh/IMeshCircuitBuilder.cs`
+- `src/slskd/Mesh/Dht/ContentPeerPublisher.cs`
+
+**Wrong**:
+```csharp
+public interface IMeshSyncService
+{
+    Task<MeshSyncResult> TrySyncWithPeerAsync(...);
+}
+
+public class MeshSyncService : IMeshSyncService, IDisposable
+{
+    soulseekClient.PrivateMessageReceived += SoulseekClient_PrivateMessageReceived;
+    ...
+}
+```
+
+**Correct**:
+```csharp
+public interface IMeshSyncService : IDisposable
+{
+    Task<MeshSyncResult> TrySyncWithPeerAsync(...);
+}
+```
+
+**Why This Keeps Happening**: container-managed singletons feel “owned by DI”, so it is tempting to leave disposal as an implementation detail. But once a singleton interface is the public handle used across the app, hiding disposal makes resource ownership invisible right where callers, tests, and future refactors make lifecycle decisions. If the implementation owns subscriptions, semaphores, timers, or other disposable state for process lifetime, the interface should expose disposal too.
