@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the lifecycle bughunt into `LocalPortForwarder` stream mapping:
+    - `ForwarderConnection` now launches mapping workers with a stable local CTS, not a mutable field lookup
+    - natural stream-mapping completion now clears and disposes `_streamMappingCts` instead of leaving stale mapping state behind until `CloseAsync()`
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Common/Security/LocalPortForwarderTests.cs`
+  - Confirmed the focused local-port-forwarder slice passed (`20/20`) and the runtime release build remained green (`0 warnings / 0 errors`)
+  - Added ADR-0001 gotcha `0k120` and committed it immediately per repo policy (`docs: Add gotcha for stale stream-mapping CTS state`)
   - Continued the startup-token lifecycle sweep into cover traffic:
     - `CoverTrafficGenerator.StartAsync()` now cancels the previous generation CTS before disposing/replacing it
     - restart/reinitialization no longer leaves an older generation token source in the disposed-but-uncanceled state

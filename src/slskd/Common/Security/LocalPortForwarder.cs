@@ -653,11 +653,14 @@ internal class ForwarderConnection : IDisposable
             }
 
             _isStreamMapped = true;
-            _streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _streamMappingCts?.Cancel();
+            _streamMappingCts?.Dispose();
+            var streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _streamMappingCts = streamMappingCts;
 
             // Start background stream mapping tasks
-            _ = Task.Run(() => MapStreamsAsync(localStream, _streamMappingCts.Token), CancellationToken.None);
-            _ = Task.Run(() => ProcessSendQueueAsync(_streamMappingCts.Token), CancellationToken.None);
+            _ = Task.Run(() => MapStreamsAsync(localStream, streamMappingCts), CancellationToken.None);
+            _ = Task.Run(() => ProcessSendQueueAsync(streamMappingCts.Token), CancellationToken.None);
         }
     }
 
@@ -761,11 +764,12 @@ internal class ForwarderConnection : IDisposable
     /// <summary>
     /// Efficiently maps local and remote streams for bidirectional data transfer.
     /// </summary>
-    private async Task MapStreamsAsync(NetworkStream localStream, CancellationToken cancellationToken)
+    private async Task MapStreamsAsync(NetworkStream localStream, CancellationTokenSource streamMappingCts)
     {
         try
         {
             _logger.LogDebug("[PortForward] Starting stream mapping for tunnel {TunnelId}", _tunnelId);
+            var cancellationToken = streamMappingCts.Token;
 
             // Create tasks for bidirectional data transfer
             var localToRemote = MapLocalToRemoteAsync(localStream, cancellationToken);
@@ -773,7 +777,7 @@ internal class ForwarderConnection : IDisposable
 
             // Wait for either direction to complete (indicating connection closure)
             await Task.WhenAny(localToRemote, remoteToLocal);
-            _streamMappingCts?.Cancel();
+            streamMappingCts.Cancel();
 
             try
             {
@@ -795,8 +799,14 @@ internal class ForwarderConnection : IDisposable
             lock (_streamLock)
             {
                 _isStreamMapped = false;
+
+                if (ReferenceEquals(_streamMappingCts, streamMappingCts))
+                {
+                    _streamMappingCts = null;
+                }
             }
 
+            streamMappingCts.Dispose();
             _streamMappingCompletion.TrySetResult();
         }
     }

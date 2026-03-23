@@ -6702,6 +6702,15 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
 
+## 2026-03-23 12:29 CST
+- Continued the lifecycle bughunt into the port-forwarder stream-mapping path.
+- `ForwarderConnection` in `LocalPortForwarder` now captures a stable local stream-mapping CTS for detached mapping workers, cancels the local CTS instead of reaching back through the mutable field, and clears/disposes the active mapping CTS when the stream-mapping session ends naturally.
+- Added a focused regression in `tests/slskd.Tests.Unit/Common/Security/LocalPortForwarderTests.cs` proving natural stream closure clears the stored stream-mapping CTS instead of leaving stale mapping state behind.
+- Added ADR-0001 gotcha `0k120` for stale stream-mapping CTS state and committed it immediately per repo policy (`docs: Add gotcha for stale stream-mapping CTS state`).
+- Validation passed:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter LocalPortForwarderTests`
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal`
+
 ## 2026-03-23 12:18 CST
 - Continued the same startup-token lifecycle sweep into the remaining timer/background helper.
 - `CoverTrafficGenerator.StartAsync()` now cancels the previous generation CTS before disposing/replacing it, so restart-after-completion/reinitialization paths do not leave an older generation token source in a disposed-but-uncanceled state.

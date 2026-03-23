@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -402,6 +403,39 @@ public class LocalPortForwarderTests : IDisposable
         using var waitTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         await connection.WaitForStreamMappingAsync(waitTimeout.Token).ConfigureAwait(true);
 
+        Assert.False(connection.GetStats().IsStreamMapped);
+    }
+
+    [Fact]
+    public async Task ForwarderConnection_MapToStream_WhenStreamCloses_ClearsStreamMappingTokenSource()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+
+        using var client = new TcpClient();
+        var connectTask = client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+        using var acceptedClient = await listener.AcceptTcpClientAsync().ConfigureAwait(true);
+        await connectTask.ConfigureAwait(true);
+
+        using var forwarder = new LocalPortForwarder(_loggerMock.Object, _meshClientMock.Object);
+        using var connection = new ForwarderConnection(
+            "tunnel-123",
+            "pod-123",
+            "example.com",
+            80,
+            forwarder,
+            Mock.Of<ILogger>());
+
+        connection.MapToStream(acceptedClient.GetStream(), CancellationToken.None);
+        client.Dispose();
+
+        using var waitTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await connection.WaitForStreamMappingAsync(waitTimeout.Token).ConfigureAwait(true);
+
+        var streamMappingCtsField = typeof(ForwarderConnection).GetField("_streamMappingCts", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ForwarderConnection._streamMappingCts field was not found.");
+
+        Assert.Null(streamMappingCtsField.GetValue(connection));
         Assert.False(connection.GetStats().IsStreamMapped);
     }
 
