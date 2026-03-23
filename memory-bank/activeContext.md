@@ -27,6 +27,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the ownership-contract sweep across mesh singleton interfaces:
+    - `IMeshSyncService`, `IMeshCircuitBuilder`, and `IContentPeerPublisher` now expose disposal so their DI-facing contracts match the concrete implementations that already own event subscriptions, circuit state, semaphores, and other disposable resources
+  - Confirmed the mesh-focused validation slice passed: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~MeshSyncSecurityTests|FullyQualifiedName~MeshControllerTests|FullyQualifiedName~MeshCircuitMaintenanceServiceTests|FullyQualifiedName~Phase8MeshTests"` (`59/59`), plus unit-project build (`0 errors`) and release build (`0 warnings / 0 errors`)
+  - Next likely cluster is the remaining DI-facing singleton interfaces outside the mesh layer that still hide disposal despite owning timers or event hooks, with `IRealmAwareGossipService` / `IRealmAwareGovernanceClient` lower-priority candidates after this mesh-specific contract pass
   - Continued the same ownership sweep into the signal-system channel layer:
     - `ISignalChannelHandler` now exposes disposal, `MeshSignalChannelHandler` and `BtExtensionSignalChannelHandler` now detach from their sender event sources on dispose, and `SignalBus.Dispose()` now tears down owned channel handlers
     - duplicate channel registrations now dispose the ignored handler immediately instead of leaking a sender subscription behind the rejected registration path

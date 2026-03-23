@@ -10,7 +10,7 @@ namespace slskd.Mesh.Dht;
 /// <summary>
 /// Publishes content->peer hints for this node.
 /// </summary>
-public interface IContentPeerPublisher
+public interface IContentPeerPublisher : IDisposable
 {
     Task PublishAsync(string contentId, CancellationToken ct = default);
 }

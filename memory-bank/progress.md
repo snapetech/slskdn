@@ -7152,3 +7152,10 @@ Code quality improvements were completed as part of Option A:
 - Also hardened duplicate channel registration cleanup so an ignored duplicate handler is disposed immediately instead of leaking its sender subscription, and documented the `SignalBus` ownership transfer at the manual registration call sites in `SignalServiceExtensions`.
 - Extended `tests/slskd.Tests.Unit/Signals/SignalChannelHandlerTests.cs` and `tests/slskd.Tests.Unit/Signals/SignalBusTests.cs` with focused lifecycle coverage around sender unsubscription and bus-owned handler disposal.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~SignalChannelHandlerTests|FullyQualifiedName~SignalBusTests"` passed (`16/16`), `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed.
+
+## 2026-03-23 15:25 CST
+
+- Continued the ownership-contract sweep across mesh singletons that are registered behind interfaces but own live resources for process lifetime.
+- `IMeshSyncService`, `IMeshCircuitBuilder`, and `IContentPeerPublisher` now expose disposal so their DI-facing contracts match the concrete implementations that already own event subscriptions, active circuit state, locks, and other disposable resources.
+- Kept the change scoped to the actual singleton-facing mesh service interfaces rather than broadening it into unrelated helper abstractions.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~MeshSyncSecurityTests|FullyQualifiedName~MeshControllerTests|FullyQualifiedName~MeshCircuitMaintenanceServiceTests|FullyQualifiedName~Phase8MeshTests"` passed (`59/59`), `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
