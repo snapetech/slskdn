@@ -21,6 +21,7 @@
 namespace slskd
 {
     using System;
+    using System.Threading;
     using System.Text.Json;
     using Microsoft.Extensions.DependencyInjection;
 
@@ -236,7 +237,7 @@ namespace slskd
                 Listener = listener;
             }
 
-            private bool Disposed { get; set; }
+            private int disposed;
             private Action<(T Previous, T Current)> Listener { get; }
             private ManagedState<T> StateMonitor { get; }
 
@@ -246,18 +247,24 @@ namespace slskd
                 GC.SuppressFinalize(this);
             }
 
-            public void OnChange((T? Previous, T Current) args) => Listener.Invoke((args.Previous!, args.Current));
+            public void OnChange((T? Previous, T Current) args)
+            {
+                if (Volatile.Read(ref disposed) != 0)
+                {
+                    return;
+                }
+
+                Listener.Invoke((args.Previous!, args.Current));
+            }
 
             protected virtual void Dispose(bool disposing)
             {
-                if (!Disposed)
+                if (Interlocked.Exchange(ref disposed, 1) == 0)
                 {
                     if (disposing)
                     {
                         StateMonitor.Changed -= OnChange;
                     }
-
-                    Disposed = true;
                 }
             }
         }

@@ -1,6 +1,7 @@
 namespace slskd.Tests.Unit.Core;
 
 using System;
+using System.Reflection;
 using Xunit;
 
 public class ManagedStateTests
@@ -24,6 +25,32 @@ public class ManagedStateTests
         Assert.Single(exception.InnerExceptions);
         Assert.IsType<InvalidOperationException>(exception.InnerExceptions[0]);
         Assert.Equal(1, state.CurrentValue.Value);
+    }
+
+    [Fact]
+    public void SetValue_WhenSubscriptionIsDisposedAfterSnapshot_DoesNotInvokeDisposedListener()
+    {
+        var state = new ManagedState<State>();
+        var invokedDisposedListener = false;
+        var registration = state.OnChange(_ => invokedDisposedListener = true);
+        var changedDelegate = GetChangedDelegate(state);
+
+        registration.Dispose();
+
+        foreach (Action<(State? Previous, State Current)> handler in changedDelegate.GetInvocationList())
+        {
+            handler.Invoke((new State(), new State { Value = 1 }));
+        }
+
+        Assert.False(invokedDisposedListener);
+    }
+
+    private static Action<(State? Previous, State Current)> GetChangedDelegate(ManagedState<State> state)
+    {
+        var field = typeof(ManagedState<State>).GetField("Changed", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Changed event field was not found.");
+
+        return (Action<(State? Previous, State Current)>)field.GetValue(state)!;
     }
 
     public class State
