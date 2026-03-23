@@ -15887,3 +15887,54 @@ private async Task EnsureInitializedAsync(CancellationToken ct = default)
 ```
 
 **Why This Keeps Happening**: lazy initialization is easy to wire into the first write path and forget everywhere else, especially when the helper "helpfully" logs and swallows setup failures. But one-time init flags are part of the runtime contract. If the flag can flip after a failed setup, the object is now lying about its readiness and future retries are disabled. Every feature path that depends on the initialized resource must call the guard, and the guard must only mark success after setup truly succeeds.
+
+### 0k135. Manual SQLite Validators Must Evolve With The Schema They Create
+
+**The Bug**: `SqliteShareRepository.Create()` now creates the `content_items` table and related indexes, but `TryValidate()` still checked the old hard-coded table set and exact table count. A repository could therefore create a healthy database and then immediately report that same database invalid because the validator no longer matched the schema it owned.
+
+**Files Affected**:
+- `src/slskd/Shares/SqliteShareRepository.cs`
+
+**Wrong**:
+```csharp
+conn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS content_items (...)");
+
+var schema = new Dictionary<string, string>()
+{
+    { "version", "CREATE TABLE version (a INTEGER PRIMARY KEY)" },
+    ...
+    { "files", "CREATE TABLE files (...)" },
+};
+
+if (rows != schema.Count)
+{
+    list.Add($"Expected {schema.Count} tables, found {rows}");
+}
+```
+
+**Correct**:
+```csharp
+conn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS content_items (...)");
+
+var schema = new Dictionary<string, string>()
+{
+    { "version", "CREATE TABLE version (a INTEGER PRIMARY KEY)" },
+    ...
+    { "files", "CREATE TABLE files (...)" },
+    { "content_items", "CREATE TABLE content_items (...)" },
+};
+
+if (!schema.ContainsKey(table))
+{
+    continue;
+}
+
+validatedTables++;
+...
+if (validatedTables != schema.Count)
+{
+    list.Add($"Expected {schema.Count} tables, found {validatedTables}");
+}
+```
+
+**Why This Keeps Happening**: hand-rolled SQLite repositories often have two separate sources of truth: the DDL in `Create()` and the expected schema snapshot in `TryValidate()`. Features add tables or indexes in one place and forget the validator, especially when the validator also compares raw counts from `sqlite_master`. If a repository owns both creation and validation, update both together and count only the tables the validator explicitly owns instead of every row SQLite exposes.
