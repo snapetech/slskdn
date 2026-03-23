@@ -15486,3 +15486,27 @@ Interlocked.Exchange(
 ```
 
 **Why This Keeps Happening**: helper classes often clean up owned resources during disposal and forget that callers may already be blocked on an internal `TaskCompletionSource` or waiter task. If dispose invalidates the primitive, it must also complete or fault any pending waiters so they can observe shutdown instead of hanging forever.
+
+### 0k124. Disposed Event Subscriptions Must Fail Closed Even If Delivery Snapshots Them First
+
+**The Bug**: `ManagedState<T>.SetValue(...)` snapshots the current listener multicast before fanout. `ManagedStateDisposable.Dispose()` unsubscribed from `Changed`, but `OnChange(...)` still invoked the listener unconditionally. If a subscription was disposed after the snapshot but before invocation, the disposed listener still received one more callback.
+
+**Files Affected**:
+- `src/slskd/Common/ManagedState.cs`
+
+**Wrong**:
+```csharp
+public void OnChange((T? Previous, T Current) args) => Listener.Invoke((args.Previous!, args.Current));
+```
+
+**Correct**:
+```csharp
+if (Volatile.Read(ref disposed) != 0)
+{
+    return;
+}
+
+Listener.Invoke((args.Previous!, args.Current));
+```
+
+**Why This Keeps Happening**: event-like helpers often assume unsubscription alone is enough, but many delivery paths snapshot delegates before iterating. If a disposable listener wrapper can be invoked from a previously captured snapshot, it needs its own disposed guard so post-dispose delivery fails closed.

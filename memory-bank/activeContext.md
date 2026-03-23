@@ -964,3 +964,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - prioritize helper types that expose internal wait tasks or callback hooks without explicit shutdown behavior
+
+## 2026-03-23 13:10 CST
+- Continued the low-level helper sweep into `ManagedState<T>`.
+- Fixed disposed listener wrappers so they no-op if invoked from an already-snapped callback list; post-dispose delivery no longer reaches stale listeners during `SetValue(...)` fanout.
+- Extended `ManagedStateTests` with a focused snapshot-after-dispose regression and confirmed the focused slice passed (`2/2`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k124` and will commit it immediately per repo policy (`docs: Add gotcha for managed-state disposed listeners`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - prioritize primitives where disposal/unsubscription can race with already-snapped background delivery

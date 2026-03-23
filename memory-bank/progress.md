@@ -6905,3 +6905,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Common/TokenBucketTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter TokenBucketTests` passed (`16/16`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k123` for disposal-unblocks-waiters semantics and committed it immediately per repo policy (`docs: Add gotcha for token bucket disposal waiters`).
+
+## 2026-03-23 13:10 CST
+
+- Fixed a listener-disposal race in `ManagedState<T>`.
+- Disposed subscriptions now fail closed even if `SetValue(...)` already snapped the listener delegate before fanout, so post-dispose delivery no longer reaches stale listeners.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ManagedStateTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter ManagedStateTests` passed (`2/2`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k124` for disposed subscription snapshot races and committed it immediately per repo policy (`docs: Add gotcha for managed-state disposed listeners`).
