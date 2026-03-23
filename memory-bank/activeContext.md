@@ -1168,3 +1168,11 @@ dotnet test
 - Next steps:
   - continue the same clustered ownership scan on DI-facing services whose interfaces still hide disposal or whose reconfiguration paths replace owned helpers without disposing the old instance
   - prioritize other replaceable helper families beneath singleton services, especially caches, schedulers, and transport selectors that rebuild internal strategy objects on options changes
+
+## 2026-03-23 19:43 CST
+- Continued the ownership scan into per-operation tracking maps that hold `CancellationTokenSource` and `Subject<T>` resources.
+- `SearchService` now tears down tracked CTS instances through a shared retire helper on every terminal path and exposes disposal through `ISearchService`; `MeshTransferService` now completes/removes progress subjects and disposes tracked CTS instances on terminal and dispose paths, with `IMeshTransferService` updated to match.
+- Added focused lifecycle coverage for both services proving CTS disposal and progress-publisher retirement.
+- Next steps:
+  - continue scanning other operation-tracking services that retain pending requests, semaphores, or publishers across async boundaries
+  - prioritize `MeshServiceClient`, `MeshSyncService`, and relay/pod request correlators where completion/cancel cleanup is currently open-coded per path instead of centralized

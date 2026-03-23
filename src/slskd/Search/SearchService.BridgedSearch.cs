@@ -24,7 +24,7 @@ using SearchStates = Soulseek.SearchStates;
 /// <summary>
 ///     Scene ↔ Pod Bridging search implementation.
 /// </summary>
-public partial class SearchService
+public sealed partial class SearchService
 {
     /// <summary>
     ///     Starts a bridged search using Scene ↔ Pod Bridging providers.
@@ -108,8 +108,7 @@ public partial class SearchService
         }
         finally
         {
-            CancellationTokens.TryRemove(id, out _);
-            cancellationTokenSource.Dispose();
+            ReleaseCancellationToken(id);
         }
     }
 }

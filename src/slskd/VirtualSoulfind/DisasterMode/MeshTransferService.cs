@@ -20,7 +20,7 @@ namespace slskd.VirtualSoulfind.DisasterMode;
 /// <summary>
 /// Interface for mesh-only (overlay multi-swarm) transfers.
 /// </summary>
-public interface IMeshTransferService
+public interface IMeshTransferService : IDisposable
 {
     /// <summary>
     /// Start a mesh-only transfer.
@@ -102,7 +102,7 @@ public class TransferProgressUpdate
 /// <summary>
 /// Mesh-only transfer service (overlay multi-swarm).
 /// </summary>
-public class MeshTransferService : IMeshTransferService
+public sealed class MeshTransferService : IMeshTransferService
 {
     private readonly ILogger<MeshTransferService> logger;
     private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
@@ -111,6 +111,7 @@ public class MeshTransferService : IMeshTransferService
     private readonly ConcurrentDictionary<string, MeshTransferStatus> activeTransfers = new();
     private readonly ConcurrentDictionary<string, Subject<TransferProgressUpdate>> progressSubjects = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> transferCancellationSources = new();
+    private bool disposed;
 
     public MeshTransferService(
         ILogger<MeshTransferService> logger,
@@ -131,6 +132,8 @@ public class MeshTransferService : IMeshTransferService
         string targetPath,
         CancellationToken ct)
     {
+        ThrowIfDisposed();
+
         if (ct.IsCancellationRequested)
         {
             return Task.FromCanceled<string>(ct);
@@ -171,12 +174,15 @@ public class MeshTransferService : IMeshTransferService
 
     public Task<MeshTransferStatus?> GetTransferStatusAsync(string transferId, CancellationToken ct)
     {
+        ThrowIfDisposed();
         activeTransfers.TryGetValue(transferId, out var status);
         return Task.FromResult(status);
     }
 
     public Task CancelTransferAsync(string transferId, CancellationToken ct)
     {
+        ThrowIfDisposed();
+
         if (activeTransfers.TryGetValue(transferId, out var status))
         {
             logger.LogInformation("[VSF-MESH-TRANSFER] Cancelling transfer {TransferId}", transferId);
@@ -184,17 +190,16 @@ public class MeshTransferService : IMeshTransferService
             PublishProgress(transferId, status);
         }
 
-        if (transferCancellationSources.TryRemove(transferId, out var cancellationSource))
-        {
-            cancellationSource.Cancel();
-            cancellationSource.Dispose();
-        }
+        ReleaseTransferCancellationSource(transferId);
+        CompleteProgressSubject(transferId);
 
         return Task.CompletedTask;
     }
 
     public Task<List<MeshTransferStatus>> GetActiveTransfersAsync(CancellationToken ct)
     {
+        ThrowIfDisposed();
+
         var transfers = activeTransfers.Values
             .Where(t => t.State != MeshTransferState.Completed &&
                        t.State != MeshTransferState.Failed &&
@@ -206,6 +211,8 @@ public class MeshTransferService : IMeshTransferService
 
     public IObservable<TransferProgressUpdate> SubscribeToProgress(string transferId)
     {
+        ThrowIfDisposed();
+
         if (!progressSubjects.TryGetValue(transferId, out var subject))
         {
             subject = new Subject<TransferProgressUpdate>();
@@ -213,6 +220,28 @@ public class MeshTransferService : IMeshTransferService
         }
 
         return subject;
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+
+        foreach (var transferId in transferCancellationSources.Keys.ToList())
+        {
+            ReleaseTransferCancellationSource(transferId);
+        }
+
+        foreach (var transferId in progressSubjects.Keys.ToList())
+        {
+            CompleteProgressSubject(transferId);
+        }
+
+        GC.SuppressFinalize(this);
     }
 
     private string? ResolveTargetPath(string targetPath)
@@ -285,10 +314,8 @@ public class MeshTransferService : IMeshTransferService
         }
         finally
         {
-            if (transferCancellationSources.TryRemove(transferId, out var cancellationSource))
-            {
-                cancellationSource.Dispose();
-            }
+            ReleaseTransferCancellationSource(transferId);
+            CompleteProgressSubject(transferId);
         }
     }
 
@@ -445,5 +472,28 @@ public class MeshTransferService : IMeshTransferService
                 State = status.State
             });
         }
+    }
+
+    private void CompleteProgressSubject(string transferId)
+    {
+        if (progressSubjects.TryRemove(transferId, out var subject))
+        {
+            subject.OnCompleted();
+            subject.Dispose();
+        }
+    }
+
+    private void ReleaseTransferCancellationSource(string transferId)
+    {
+        if (transferCancellationSources.TryRemove(transferId, out var cancellationSource))
+        {
+            cancellationSource.Cancel();
+            cancellationSource.Dispose();
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
     }
 }

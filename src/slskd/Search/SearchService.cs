@@ -42,7 +42,7 @@ namespace slskd.Search
     /// <summary>
     ///     Handles the lifecycle and persistence of searches.
     /// </summary>
-    public interface ISearchService
+    public interface ISearchService : IDisposable
     {
         /// <summary>
         ///     Deletes the specified search.
@@ -113,7 +113,7 @@ namespace slskd.Search
     /// <summary>
     ///     Handles the lifecycle and persistence of searches.
     /// </summary>
-    public partial class SearchService : ISearchService
+    public sealed partial class SearchService : ISearchService
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="SearchService"/> class.
@@ -170,6 +170,16 @@ namespace slskd.Search
         private slskd.DhtRendezvous.Search.IMeshOverlaySearchService? MeshOverlaySearchService { get; }
         private slskd.VirtualSoulfind.Capture.ITrafficObserver? TrafficObserver { get; }
         private List<ISearchProvider> SearchProviders { get; }
+
+        public void Dispose()
+        {
+            foreach (var id in CancellationTokens.Keys.ToList())
+            {
+                ReleaseCancellationToken(id);
+            }
+
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Deletes the specified search.
@@ -504,7 +514,7 @@ namespace slskd.Search
                     finally
                     {
                         rateLimiter.Dispose();
-                        CancellationTokens.TryRemove(id, out _);
+                        ReleaseCancellationToken(id);
                     }
                 }, cancellationToken: CancellationToken.None);
 
@@ -542,9 +552,9 @@ namespace slskd.Search
         /// <returns>A value indicating whether the search was successfully cancelled.</returns>
         public bool TryCancel(Guid id)
         {
-            if (CancellationTokens.TryGetValue(id, out var cts))
+            if (CancellationTokens.TryGetValue(id, out _))
             {
-                cts.Cancel();
+                ReleaseCancellationToken(id);
                 return true;
             }
 
@@ -785,6 +795,15 @@ namespace slskd.Search
             // MusicBrainz API integration deferred: requires IMusicBrainzClient integration
             // For now, return empty to indicate no MBIDs found (mesh search will proceed with text query)
             return Task.FromResult(mbids);
+        }
+
+        private void ReleaseCancellationToken(Guid id)
+        {
+            if (CancellationTokens.TryRemove(id, out var cts))
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
         }
 
         /// <summary>
