@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xD1. Infrastructure Result Objects Must Not Reflect Local Paths, File Sizes, Or Raw Method Labels
+
+**The Bug**: infrastructure-facing result objects were still returning local-only details because they felt “operational” instead of public. That leaked absolute import paths from realm migration failures, local file sizes from mesh content fetch errors, and raw method labels from mesh introspection and DHT service replies.
+
+**Files Affected**:
+- `src/slskd/Mesh/Realm/Migration/RealmMigrationTool.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshIntrospectionService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+- `src/slskd/Mesh/ServiceFabric/Services/MeshContentMeshService.cs`
+
+**Wrong**:
+```csharp
+result.Errors.Add($"Import path does not exist: {importPath}");
+ErrorMessage = $"Unknown DHT method: {call.Method}";
+ErrorMessage = $"File too large ({finfo.Size} bytes); use range request (max {MaxFullResponseBytes} without range)";
+```
+
+**Correct**:
+```csharp
+result.Errors.Add("Import path does not exist");
+ErrorMessage = "Unknown method";
+ErrorMessage = "File too large; use range request";
+```
+
+**Why This Keeps Happening**: these are not classic controller actions, so they are easy to misclassify as internal tooling surfaces. They still cross trust boundaries. If a result object or reply may leave the process, keep the public contract generic and move host-specific detail into logs.
+
 ### 0xD0. Mesh Service Replies Must Not Echo Caller-Controlled Methods Or Downstream Validator Text
 
 **The Bug**: several service-fabric mesh endpoints were still copying caller-controlled method names or downstream validator errors into `ServiceReply.ErrorMessage`. That leaked transport details like custom method strings, invalid MBIDs, and DNS-policy reasons back over the mesh boundary.
