@@ -102,6 +102,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused coverage in `ContentIdControllerTests`, `HashDbControllerTests`, and `MeshControllerTests`
   - Confirmed the focused response-contract slice passed (`30/30`) and the runtime build remains green (`0 warnings / 0 errors`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
+  - Hardened another lookup/list response batch:
+    - `HashDbController` list envelopes no longer mirror `size` / `sinceSeq` when the returned data already carries the real result
+    - `IpldController` inbound-link lookups no longer mirror `targetContentId` / `linkName`
+  - Added focused coverage in `HashDbControllerTests` and `IpldControllerTests`
+  - Confirmed the touched runtime build remains green (`0 warnings / 0 errors`) and the focused controller slices pass individually
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses
@@ -241,7 +247,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public JSON/problem payloads that still leak identifiers or mix canonical results with redundant request echoes.
+1. Continue the secure-release boundary sweep through remaining public JSON/problem payloads and controller envelopes that still leak identifiers or mix canonical results with redundant request/query echoes.
 2. Keep future secure-release work behind the real release gate, not just focused Debug slices.
 3. Continue broad bughunt work only from this validated green head.
 

@@ -14100,3 +14100,27 @@ return Ok(new { found = true, entry });
 ```
 
 **Why This Keeps Happening**: once a controller is already returning a useful result object, it is tempting to tack the original request fields onto the anonymous object for debugging symmetry. For release-facing contracts, only keep echoed request fields when they are newly created outputs or when the canonical result would otherwise be ambiguous to the caller.
+
+### 0k104. List And Lookup Responses Should Not Echo Query Parameters Beside The Returned Data
+
+**The Bug**: several lookup/list endpoints returned the requested `size`, `sinceSeq`, `targetContentId`, or `linkName` beside the actual result set. Those values were already present in the request and did not add state once the response already contained the collection or latest cursor.
+
+**Files Affected**:
+- `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/MediaCore/API/Controllers/IpldController.cs`
+
+**Wrong**:
+```csharp
+return Ok(new { size, count = entries.Count(), entries });
+return Ok(new { sinceSeq, latestSeq, count = entries.Count(), entries });
+return Ok(new { targetContentId, linkName, inboundLinks });
+```
+
+**Correct**:
+```csharp
+return Ok(new { count = entries.Count(), entries });
+return Ok(new { latestSeq, count = entries.Count(), entries });
+return Ok(new { inboundLinks });
+```
+
+**Why This Keeps Happening**: collection endpoints are often designed as ad hoc debugging envelopes, so the original query values get mirrored into the response “for convenience.” For public release contracts, keep the response focused on returned data and any new cursor/state the client cannot already infer from its own request.

@@ -6497,4 +6497,19 @@ Code quality improvements were completed as part of Option A:
 - Documented the success-payload request-echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and will commit it immediately as required.
 - Next: keep sweeping for remaining public success/problem payloads that still mix canonical result data with redundant request echoes.
 
+## 2026-03-22 23:56
+- Finished another release-facing lookup/list response batch.
+- `HashDbController` no longer echoes requested query values in list envelopes where the returned data already stands on its own:
+  - lookup-by-size no longer repeats `size`
+  - inventory-by-size no longer repeats `size`
+  - sync-since no longer repeats `sinceSeq`
+  - key-generation success no longer repeats `size`
+- `IpldController` inbound-link lookups no longer echo `targetContentId` or `linkName`; they now return `inboundLinks` only.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused `IpldControllerTests` slice passed
+  - focused `HashDbControllerTests` slice passed
+- Documented the query-echo list-envelope pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and will commit it immediately as required.
+- Next: continue the secure-release sweep through the last controller envelopes that still mirror request/query values into otherwise self-contained results.
+
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.
