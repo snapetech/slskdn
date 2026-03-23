@@ -937,3 +937,12 @@ dotnet test
 - Next steps:
   - continue bughunting restartable hosted/background services that replace long-lived CTS fields
   - then return to the remaining low-level callback and event-fanout helpers
+
+## 2026-03-23 12:41 CST
+- Continued the same restart-token sweep into `RelayClient`.
+- Fixed `StartAsync()` so it cancels the previous start/retry CTS before disposal/replacement; repeated starts no longer leave the prior reconnect loop running against a disposed-but-uncanceled token source.
+- Extended `RelayClientTests` to cover the restart path and confirmed the focused slice passed (`2/2`) while the release build stayed green (`0 warnings / 0 errors`).
+- Extended the existing ADR-0001 startup-CTS gotcha entry and will commit it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+- Next steps:
+  - continue bughunting restartable hosted/background services that replace long-lived CTS fields
+  - then return to the remaining low-level callback and event-fanout helpers

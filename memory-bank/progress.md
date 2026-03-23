@@ -6881,3 +6881,11 @@ Code quality improvements were completed as part of Option A:
 - Extended focused lifecycle coverage in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter HostedServiceLifecycleTests` passed (`6/6`); `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
+
+## 2026-03-23 12:41 CST
+
+- Fixed the same replacement-token bug in `RelayClient.StartAsync()`.
+- Relay startup now cancels the previous retry CTS before disposal/replacement, so repeated starts do not leave the old reconnect loop running against a disposed-but-uncanceled token source.
+- Added focused restart coverage in `tests/slskd.Tests.Unit/Relay/RelayClientTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter RelayClientTests` passed (`2/2`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`).
