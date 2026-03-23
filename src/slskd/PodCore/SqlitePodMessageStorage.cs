@@ -17,11 +17,12 @@ using Microsoft.Extensions.Logging;
 /// <summary>
 ///     SQLite-backed pod message storage with full-text search and retention policies.
 /// </summary>
-public class SqlitePodMessageStorage : IPodMessageStorage
+public sealed class SqlitePodMessageStorage : IPodMessageStorage, IDisposable
 {
     private readonly PodDbContext dbContext;
     private readonly ILogger<SqlitePodMessageStorage> logger;
     private readonly string connectionString;
+    private readonly SemaphoreSlim initializationLock = new(1, 1);
     private bool initialized;
 
     private const int DefaultMessageLimit = 100;
@@ -40,15 +41,29 @@ public class SqlitePodMessageStorage : IPodMessageStorage
         // FTS tables will be initialized lazily on first use
     }
 
-    private async Task EnsureInitializedAsync(CancellationToken ct = default)
+    private async Task<bool> EnsureInitializedAsync(CancellationToken ct = default)
     {
         if (initialized)
         {
-            return;
+            return false;
         }
 
-        await InitializeFtsTables();
-        initialized = true;
+        await initializationLock.WaitAsync(ct);
+        try
+        {
+            if (initialized)
+            {
+                return false;
+            }
+
+            await InitializeStorageAsync(ct);
+            initialized = true;
+            return true;
+        }
+        finally
+        {
+            initializationLock.Release();
+        }
     }
 
     public async Task<bool> StoreMessageAsync(string podId, string channelId, PodMessage message, CancellationToken ct = default)
@@ -188,6 +203,8 @@ public class SqlitePodMessageStorage : IPodMessageStorage
 
         try
         {
+            await EnsureInitializedAsync(ct);
+
             // Build FTS query
             var sql = @"
                 SELECT m.PodId, m.ChannelId, m.TimestampUnixMs, m.SenderPeerId, m.Body, m.Signature
@@ -389,16 +406,18 @@ public class SqlitePodMessageStorage : IPodMessageStorage
     {
         try
         {
+            var initializedNow = await EnsureInitializedAsync(ct);
+
+            if (initializedNow)
+            {
+                logger.LogInformation("Successfully rebuilt message search index");
+                return true;
+            }
+
             // Rebuild FTS table from scratch
             await using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync(ct);
-
-            await using var command = new SqliteCommand(@"
-                INSERT INTO Messages_fts (PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body)
-                SELECT PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body
-                FROM Messages;", connection);
-
-            await command.ExecuteNonQueryAsync(ct);
+            await RebuildSearchIndexAsync(connection, ct);
 
             logger.LogInformation("Successfully rebuilt message search index");
             return true;
@@ -425,57 +444,91 @@ public class SqlitePodMessageStorage : IPodMessageStorage
         }
     }
 
-    private async Task InitializeFtsTables()
+    private async Task InitializeStorageAsync(CancellationToken ct)
     {
-        try
-        {
-            await using var connection = new SqliteConnection(connectionString);
-            await connection.OpenAsync();
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync(ct);
 
-            // Create FTS virtual table if it doesn't exist
-            var createFtsTableSql = @"
-                CREATE VIRTUAL TABLE IF NOT EXISTS Messages_fts USING fts5(
-                    PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body,
-                    content='',
-                    contentless_delete=1
-                );";
+        var createMessagesTableSql = @"
+            CREATE TABLE IF NOT EXISTS Messages (
+                PodId TEXT NOT NULL,
+                ChannelId TEXT NOT NULL,
+                TimestampUnixMs INTEGER NOT NULL,
+                SenderPeerId TEXT NOT NULL,
+                Body TEXT NOT NULL,
+                Signature TEXT NOT NULL,
+                SigVersion INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (PodId, ChannelId, TimestampUnixMs, SenderPeerId)
+            );
 
-            await using var createCommand = new SqliteCommand(createFtsTableSql, connection);
-            await createCommand.ExecuteNonQueryAsync();
+            CREATE INDEX IF NOT EXISTS IX_Messages_PodId_ChannelId
+                ON Messages (PodId, ChannelId);";
 
-            // Create triggers to keep FTS table in sync
-            var createTriggersSql = @"
-                CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON Messages
-                BEGIN
-                    INSERT INTO Messages_fts (PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body)
-                    VALUES (new.PodId, new.ChannelId, new.TimestampUnixMs, new.SenderPeerId, new.Body);
-                END;
+        await using var createMessagesCommand = new SqliteCommand(createMessagesTableSql, connection);
+        await createMessagesCommand.ExecuteNonQueryAsync(ct);
 
-                CREATE TRIGGER IF NOT EXISTS messages_fts_delete AFTER DELETE ON Messages
-                BEGIN
-                    DELETE FROM Messages_fts WHERE PodId = old.PodId
-                                                   AND ChannelId = old.ChannelId
-                                                   AND TimestampUnixMs = old.TimestampUnixMs
-                                                   AND SenderPeerId = old.SenderPeerId;
-                END;
+        // Create FTS virtual table if it doesn't exist
+        var createFtsTableSql = @"
+            CREATE VIRTUAL TABLE IF NOT EXISTS Messages_fts USING fts5(
+                PodId,
+                ChannelId,
+                TimestampUnixMs UNINDEXED,
+                SenderPeerId,
+                Body
+            );";
 
-                CREATE TRIGGER IF NOT EXISTS messages_fts_update AFTER UPDATE ON Messages
-                BEGIN
-                    UPDATE Messages_fts SET Body = new.Body
-                    WHERE PodId = new.PodId
-                          AND ChannelId = new.ChannelId
-                          AND TimestampUnixMs = new.TimestampUnixMs
-                          AND SenderPeerId = new.SenderPeerId;
-                END;";
+        await using var createCommand = new SqliteCommand(createFtsTableSql, connection);
+        await createCommand.ExecuteNonQueryAsync(ct);
 
-            await using var triggerCommand = new SqliteCommand(createTriggersSql, connection);
-            await triggerCommand.ExecuteNonQueryAsync();
+        // Create triggers to keep FTS table in sync
+        var createTriggersSql = @"
+            CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON Messages
+            BEGIN
+                INSERT INTO Messages_fts (PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body)
+                VALUES (new.PodId, new.ChannelId, new.TimestampUnixMs, new.SenderPeerId, new.Body);
+            END;
 
-            logger.LogDebug("FTS tables and triggers initialized successfully");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error initializing FTS tables and triggers");
-        }
+            CREATE TRIGGER IF NOT EXISTS messages_fts_delete AFTER DELETE ON Messages
+            BEGIN
+                DELETE FROM Messages_fts WHERE PodId = old.PodId
+                                               AND ChannelId = old.ChannelId
+                                               AND TimestampUnixMs = old.TimestampUnixMs
+                                               AND SenderPeerId = old.SenderPeerId;
+            END;
+
+            CREATE TRIGGER IF NOT EXISTS messages_fts_update AFTER UPDATE ON Messages
+            BEGIN
+                UPDATE Messages_fts SET Body = new.Body
+                WHERE PodId = new.PodId
+                      AND ChannelId = new.ChannelId
+                      AND TimestampUnixMs = new.TimestampUnixMs
+                      AND SenderPeerId = new.SenderPeerId;
+            END;";
+
+        await using var triggerCommand = new SqliteCommand(createTriggersSql, connection);
+        await triggerCommand.ExecuteNonQueryAsync(ct);
+
+        await RebuildSearchIndexAsync(connection, ct);
+
+        logger.LogDebug("Message storage schema, FTS tables, and triggers initialized successfully");
+    }
+
+    private static async Task RebuildSearchIndexAsync(SqliteConnection connection, CancellationToken ct)
+    {
+        var rebuildSql = @"
+            DELETE FROM Messages_fts;
+
+            INSERT INTO Messages_fts (PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body)
+            SELECT PodId, ChannelId, TimestampUnixMs, SenderPeerId, Body
+            FROM Messages;";
+
+        await using var rebuildCommand = new SqliteCommand(rebuildSql, connection);
+        await rebuildCommand.ExecuteNonQueryAsync(ct);
+    }
+
+    public void Dispose()
+    {
+        initializationLock.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

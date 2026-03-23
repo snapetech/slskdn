@@ -1041,3 +1041,13 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - prioritize disposal/shutdown paths that invoke user work before releasing owned infrastructure resources
+
+## 2026-03-23 13:48 CST
+- Continued the broader bughunt into manual SQLite schema ownership in `PodCore`.
+- Fixed `SqlitePodMessageStorage` so first-use initialization now creates the `Messages` table/index, FTS table, and triggers idempotently instead of depending on external `EnsureCreated()` ordering.
+- Initialization now rebuilds the FTS index from `Messages`, which repairs first-use startup on an empty file, recovers from an existing FTS-only partial artifact, and backfills search rows when FTS is introduced after messages already exist.
+- Fixed `RebuildSearchIndexAsync()` so repeated rebuilds clear existing FTS rows before repopulating, preventing duplicate search results.
+- Added focused `SqlitePodMessageStorageTests` coverage for first-use schema creation, FTS-only artifact recovery, and idempotent rebuild/backfill; confirmed the focused slice passed (`3/3`) and the release build stayed green (`0 warnings / 0 errors`).
+- Next steps:
+  - continue bughunting adjacent manual SQLite initialization and validation seams that mix EF-managed tables with hand-created virtual tables or triggers
+  - prioritize other repository/storage types where partial schema creation can leave the database in a state that later startup code no longer repairs

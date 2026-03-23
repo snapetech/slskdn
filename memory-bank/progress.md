@@ -7024,3 +7024,12 @@ Code quality improvements were completed as part of Option A:
 - `Dispose()` now completes timer/semaphore cleanup even when `flushOnDispose` invokes a staged action that throws, and only rethrows after owned resources are released.
 - The focused `CallbackInfrastructureTests` slice already covers this path and remains green (`5/5`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` also remains green with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k128` for dispose-time flush cleanup ordering and committed it immediately per repo policy (`docs: Add gotcha for rate limiter dispose flush cleanup`).
+
+## 2026-03-23 13:48 CST
+
+- Hardened `SqlitePodMessageStorage` as a broader SQLite/manual-schema repair, not just a single failing path.
+- The storage now owns idempotent creation of the `Messages` table, its index, the FTS table, and sync triggers on first use instead of assuming EF `EnsureCreated()` already ran before any search/store/rebuild call.
+- Initialization now rebuilds the FTS index from canonical `Messages` rows, so first-use startup, FTS-only partial artifacts, and late FTS creation over existing messages all converge to the same healthy state.
+- `RebuildSearchIndexAsync()` now clears stale FTS rows before repopulating, so repeated rebuilds do not accumulate duplicate search hits.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/PodCore/SqlitePodMessageStorageTests.cs` for first-use schema creation, recovery from an existing FTS-only artifact, and idempotent rebuild/backfill behavior.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SqlitePodMessageStorageTests"` passed (`3/3`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
