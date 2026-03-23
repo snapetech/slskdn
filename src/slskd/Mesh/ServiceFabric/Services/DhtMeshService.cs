@@ -76,7 +76,7 @@ public class DhtMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown DHT method: {call.Method}",
+                    ErrorMessage = "Unknown method",
                     Payload = Array.Empty<byte>()
                 }
             };

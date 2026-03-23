@@ -146,8 +146,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the broad runtime/read-side bughunt from the stronger green release gate and packaging-smoke baseline.
-2. Prioritize remaining places where result DTOs, background-state records, or lightweight service helpers still expose raw internal error text.
+1. Continue the PodCore/Mesh completion batches from the placeholder inventory, prioritizing remaining runtime seams over controller polish.
+2. Finish the remaining Mesh and Pod backfill/runtime gaps that still bottom out early instead of using available local state.
 3. Keep folding in adjacent dirty files so the repo stays committed and clean between passes.
 
 4. **Recent completions** (2026-01-27):
@@ -459,3 +459,21 @@ dotnet test
   - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
   - focused parser/controller slice passed (`8/8`)
 - Next: continue through the next low-traffic helper/controller batch, especially older utility endpoints that still branch on raw strings or carry adjacent test drift.
+
+## 2026-03-22 20:26
+- Recovered the runtime release gate after an immutable-model regression in `HashDbService`.
+- Album target and canonical-stats normalization now respect `init`-only records by normalizing through local `with` copies, and the adjacent SongID / MultiSource nullable DTO warnings are cleaned up too.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+- Next: continue the secure-release bughunt from externally visible mesh/result contracts rather than local compile hygiene.
+
+## 2026-03-22 20:34
+- Hardened the next release-facing mesh reply cluster:
+  - service-fabric mesh services no longer echo caller-controlled method names
+  - private-gateway DNS failures no longer relay downstream validator text
+  - VirtualSoulfind mesh batch validation no longer echoes rejected MBID values
+- Focused validation passed:
+  - `dotnet build src/slskd/slskd.csproj -v q`
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` with existing analyzer warning noise only
+  - `vstest` slice for `PrivateGatewayMeshServiceTests`, `PodsMeshServiceTests`, `MeshContentMeshServiceTests`, and `VirtualSoulfindMeshServiceTests` passed (`20/20`)
+- Next: continue through the next secure-release surfaces, prioritizing remaining externally visible mesh/service replies and helper result DTOs over internal-only logging cleanup.

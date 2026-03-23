@@ -6230,3 +6230,45 @@ Code quality improvements were completed as part of Option A:
   - `SoulseekChatBridge` now normalizes both directions of the username <-> pod peer mapping, so padded/case-drifted bridge identities no longer split into separate keys.
   - `MeshSyncService` now normalizes incoming RESPKEY/RESPCHUNK correlation IDs before completing pending waiters, so trimmed outbound requests match trimmed inbound responses.
   - Added focused `SoulseekChatBridgeTests` coverage for normalized bridge-map storage and backward-compatible `bridge:` extraction.
+
+## 2026-03-22 20:26
+- Recovered the release runtime build after an immutable-model regression in `HashDbService`.
+- `src/slskd/HashDb/HashDbService.cs`
+  - album target normalization now uses `with` copies for `AlbumTarget`, `TrackTarget`, and nested `ReleaseMetadata` instead of illegal in-place mutation on `init` properties
+  - canonical stats and album-track persistence now keep non-nullable IDs as trimmed `string.Empty` values and only translate them to `DBNull` at the SQL boundary
+- `src/slskd/SongID/SongIdService.cs`
+  - corpus matches now normalize a missing fingerprint path to `string.Empty` instead of flowing a nullable value into a non-nullable DTO property
+- `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+  - trimmed request normalization no longer assigns `null` into non-nullable DTO properties during swarm/verify/download flows
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+- Documented the immutable-record normalization pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `34df6b5e` (`docs: Add gotcha for init-only record normalization copies`).
+
+## 2026-03-22 20:34
+- Hardened a broader service-fabric reply batch for release-facing mesh boundaries.
+- `src/slskd/Mesh/ServiceFabric/Services/PrivateGatewayMeshService.cs`
+  - unknown methods no longer echo the requested method name
+  - DNS validation failures no longer relay downstream validator text to the caller
+- `src/slskd/Mesh/ServiceFabric/Services/PodsMeshService.cs`
+  - unknown methods now return a stable generic method-not-found message
+- `src/slskd/Mesh/ServiceFabric/Services/MeshContentMeshService.cs`
+  - unknown methods no longer reflect caller-controlled method names
+- `src/slskd/Mesh/ServiceFabric/Services/VirtualSoulfindMeshService.cs`
+  - invalid batch MBID errors no longer echo the rejected MBID values back over the mesh
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/PodCore/PrivateGatewayMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/PodsMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/MeshContentMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/VirtualSoulfindMeshServiceTests.cs`
+- Folded in adjacent stale unit-test compile drift:
+  - `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`
+  - `tests/slskd.Tests.Unit/PodCore/SoulseekChatBridgeTests.cs`
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` passed with existing analyzer warning noise only (`533 warnings / 0 errors`)
+  - focused `vstest` slice for private-gateway, pods mesh, mesh-content, and VirtualSoulfind mesh services passed (`20/20`)
+- Documented the reply-contract sanitization pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `4495486e` (`docs: Add gotcha for mesh service reply sanitization`).
+
+## 2026-03-22 18:18
+- Replaced Pod affinity placeholder inputs with real local message/opinion/membership-derived activity and repaired sqlite pod persistence/readback for full pod state.
+- Next: keep pushing through remaining Pod/Mesh runtime completion seams from the placeholder inventory.

@@ -138,7 +138,7 @@ namespace slskd.Mesh.Realm.Migration
                 // Validate import path
                 if (!Directory.Exists(importPath))
                 {
-                    result.Errors.Add($"Import path does not exist: {importPath}");
+                    result.Errors.Add("Import path does not exist");
                     return result;
                 }
 

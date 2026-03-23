@@ -310,6 +310,11 @@ public class PodOpinionService : IPodOpinionService
         }
     }
 
+    public Task<IReadOnlyList<string>> GetKnownContentIdsAsync(string podId, CancellationToken ct = default)
+    {
+        return Task.FromResult(GetKnownContentIds(podId));
+    }
+
     private async Task<List<PodVariantOpinion>> GetOpinionsFromDhtAsync(string dhtKey, CancellationToken ct)
     {
         try

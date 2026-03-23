@@ -111,7 +111,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.False(result.Success);
-            Assert.True(result.Errors.Any(e => e.Contains("does not exist", StringComparison.Ordinal)));
+            var error = Assert.Single(result.Errors);
+            Assert.Equal("Import path does not exist", error);
+            Assert.DoesNotContain(nonexistentPath, error, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -250,4 +252,3 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
         }
     }
 }
-

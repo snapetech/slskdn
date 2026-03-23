@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public class PodOpinionAggregator : IPodOpinionAggregator
 {
+    private const int ActivityWindowDays = 30;
+    private const int MaxMessagesPerChannelForAffinity = 5000;
     private readonly IPodService _podService;
     private readonly IPodOpinionService _opinionService;
     private readonly IPodMessageStorage _messageStorage;
@@ -172,6 +174,8 @@ public class PodOpinionAggregator : IPodOpinionAggregator
 
     public async Task<IReadOnlyDictionary<string, MemberAffinity>> GetMemberAffinitiesAsync(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         // Check cache first (with 10-minute expiry)
         if (_affinityCache.TryGetValue(podId, out var cachedAffinities))
         {
@@ -189,58 +193,71 @@ public class PodOpinionAggregator : IPodOpinionAggregator
             var members = await _podService.GetMembersAsync(podId, ct);
             var affinities = new ConcurrentDictionary<string, MemberAffinity>();
 
-            // Get message counts and activity data
+            // Get pod/message/opinion activity data once per pod and fan it into member affinities.
             var pod = await _podService.GetPodAsync(podId, ct);
             var channelIds = pod?.Channels.Select(c => c.ChannelId).ToList() ?? new List<string>();
+            var membershipHistory = await _podService.GetMembershipHistoryAsync(podId, ct);
+            var knownContentIds = await _opinionService.GetKnownContentIdsAsync(podId, ct);
 
             var now = DateTimeOffset.UtcNow;
+            var activityWindowStart = now.AddDays(-ActivityWindowDays);
+            var messageActivityByPeer = await LoadMessageActivityByPeerAsync(podId, channelIds, activityWindowStart, ct);
+            var opinionCountsByPeer = await LoadOpinionCountsByPeerAsync(podId, knownContentIds, ct);
+            var membershipHistoryByPeer = membershipHistory
+                .Where(record => !string.IsNullOrWhiteSpace(record.PeerId))
+                .GroupBy(record => record.PeerId.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
             foreach (var member in members)
             {
                 try
                 {
-                    // Count messages from this member in the last 30 days
-                    var thirtyDaysAgo = now.AddDays(-30);
-                    var messageCount = 0;
-
-                    foreach (var channelId in channelIds)
+                    var normalizedPeerId = member.PeerId?.Trim() ?? string.Empty;
+                    var messageActivity = messageActivityByPeer.GetValueOrDefault(normalizedPeerId);
+                    var messageCount = messageActivity?.MessageCount ?? 0;
+                    var memberOpinions = opinionCountsByPeer.GetValueOrDefault(normalizedPeerId);
+                    var membershipRecords = membershipHistoryByPeer.GetValueOrDefault(normalizedPeerId);
+                    var joinedAt = member.JoinedAt ?? TryGetJoinedAt(membershipRecords);
+                    var membershipDuration = joinedAt.HasValue ? now - joinedAt.Value : TimeSpan.Zero;
+                    var lastMembershipActivity = TryGetLastMembershipActivity(membershipRecords);
+                    var lastActivity = new[]
                     {
-                        var channelMessageCount = await _messageStorage.GetMessageCountAsync(podId, channelId, ct);
-
-                        // Note: This is simplified - in a real implementation, we'd need to filter by sender and date
-                        messageCount += (int)channelMessageCount;
+                        member.LastSeen,
+                        messageActivity?.LastMessageAt,
+                        lastMembershipActivity
                     }
+                    .Where(timestamp => timestamp.HasValue)
+                    .Select(timestamp => timestamp!.Value)
+                    .DefaultIfEmpty(DateTimeOffset.MinValue)
+                    .Max();
 
-                    // Count opinions from this member (simplified for now)
-                    var memberOpinions = 0; // TODO: Implement opinion count per member
-
-                    // Calculate affinity score based on multiple factors
-                    // Since we don't have JoinedAt/LastSeen, use simplified calculation
+                    var recentActivity = BuildRecentActivity(messageCount, memberOpinions, membershipRecords);
                     var affinityScore = CalculateAffinityScore(
                         messageCount: messageCount,
                         opinionCount: memberOpinions,
-                        membershipDuration: TimeSpan.FromDays(30), // Default assumption
-                        isActive: true); // Default assumption
+                        membershipDuration: membershipDuration,
+                        isActive: lastActivity >= activityWindowStart);
 
                     var affinity = new MemberAffinity(
-                        PeerId: member.PeerId,
+                        PeerId: normalizedPeerId,
                         AffinityScore: affinityScore,
                         MessageCount: messageCount,
                         OpinionCount: memberOpinions,
-                        MembershipDuration: TimeSpan.FromDays(30), // Default assumption
-                        LastActivity: now, // Default assumption
+                        MembershipDuration: membershipDuration,
+                        LastActivity: lastActivity,
                         TrustScore: CalculateTrustScore(member),
-                        RecentActivity: new[] { "messages", "opinions" }); // TODO: Get actual recent activity
+                        RecentActivity: recentActivity);
 
-                    affinities[member.PeerId] = affinity;
+                    affinities[normalizedPeerId] = affinity;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Error calculating affinity for member {MemberId} in pod {PodId}", member.PeerId, podId);
 
                     // Fallback affinity
-                    affinities[member.PeerId] = new MemberAffinity(
-                        PeerId: member.PeerId,
+                    var normalizedPeerId = member.PeerId?.Trim() ?? string.Empty;
+                    affinities[normalizedPeerId] = new MemberAffinity(
+                        PeerId: normalizedPeerId,
                         AffinityScore: 0.5,
                         MessageCount: 0,
                         OpinionCount: 0,
@@ -262,6 +279,107 @@ public class PodOpinionAggregator : IPodOpinionAggregator
             _logger.LogError(ex, "Error getting member affinities for pod {PodId}", podId);
             return new Dictionary<string, MemberAffinity>();
         }
+    }
+
+    private async Task<Dictionary<string, MemberMessageActivity>> LoadMessageActivityByPeerAsync(
+        string podId,
+        IReadOnlyList<string> channelIds,
+        DateTimeOffset activityWindowStart,
+        CancellationToken ct)
+    {
+        var activityByPeer = new Dictionary<string, MemberMessageActivity>(StringComparer.OrdinalIgnoreCase);
+        var sinceTimestamp = activityWindowStart.ToUnixTimeMilliseconds();
+
+        foreach (var channelId in channelIds.Where(channelId => !string.IsNullOrWhiteSpace(channelId)))
+        {
+            var messages = await _messageStorage.GetMessagesAsync(podId, channelId, sinceTimestamp, MaxMessagesPerChannelForAffinity, ct);
+            foreach (var message in messages)
+            {
+                var normalizedPeerId = message.SenderPeerId?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(normalizedPeerId))
+                {
+                    continue;
+                }
+
+                var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(message.TimestampUnixMs);
+                if (!activityByPeer.TryGetValue(normalizedPeerId, out var activity))
+                {
+                    activityByPeer[normalizedPeerId] = new MemberMessageActivity(1, timestamp);
+                    continue;
+                }
+
+                activityByPeer[normalizedPeerId] = new MemberMessageActivity(
+                    activity.MessageCount + 1,
+                    timestamp > activity.LastMessageAt ? timestamp : activity.LastMessageAt);
+            }
+        }
+
+        return activityByPeer;
+    }
+
+    private async Task<Dictionary<string, int>> LoadOpinionCountsByPeerAsync(
+        string podId,
+        IReadOnlyList<string> knownContentIds,
+        CancellationToken ct)
+    {
+        var opinionCountsByPeer = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var contentId in knownContentIds
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var opinions = await _opinionService.GetOpinionsAsync(podId, contentId, ct);
+            foreach (var opinion in opinions)
+            {
+                var normalizedPeerId = opinion.SenderPeerId?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(normalizedPeerId))
+                {
+                    continue;
+                }
+
+                opinionCountsByPeer[normalizedPeerId] = opinionCountsByPeer.GetValueOrDefault(normalizedPeerId) + 1;
+            }
+        }
+
+        return opinionCountsByPeer;
+    }
+
+    private static DateTimeOffset? TryGetJoinedAt(IReadOnlyList<SignedMembershipRecord>? membershipRecords)
+    {
+        return membershipRecords?
+            .Where(record => string.Equals(record.Action, "join", StringComparison.OrdinalIgnoreCase))
+            .Select(record => DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampUnixMs))
+            .OrderBy(timestamp => timestamp)
+            .FirstOrDefault();
+    }
+
+    private static DateTimeOffset? TryGetLastMembershipActivity(IReadOnlyList<SignedMembershipRecord>? membershipRecords)
+    {
+        return membershipRecords?
+            .Select(record => DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampUnixMs))
+            .OrderByDescending(timestamp => timestamp)
+            .FirstOrDefault();
+    }
+
+    private static string[] BuildRecentActivity(int messageCount, int opinionCount, IReadOnlyList<SignedMembershipRecord>? membershipRecords)
+    {
+        var activity = new List<string>();
+        if (messageCount > 0)
+        {
+            activity.Add("messages");
+        }
+
+        if (opinionCount > 0)
+        {
+            activity.Add("opinions");
+        }
+
+        if (membershipRecords != null && membershipRecords.Count > 0)
+        {
+            activity.Add("membership");
+        }
+
+        return activity.ToArray();
     }
 
     public async Task<MemberAffinity> GetMemberAffinityAsync(string podId, string memberPeerId, CancellationToken ct = default)
@@ -450,4 +568,6 @@ public class PodOpinionAggregator : IPodOpinionAggregator
             Reasoning: reasoning,
             SupportingFactors: factors);
     }
+
+    private sealed record MemberMessageActivity(int MessageCount, DateTimeOffset LastMessageAt);
 }

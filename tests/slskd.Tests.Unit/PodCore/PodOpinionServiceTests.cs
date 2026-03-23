@@ -222,6 +222,73 @@ public class PodOpinionServiceTests
         Assert.DoesNotContain("Object reference", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task GetMemberAffinitiesAsync_UsesRealMessageOpinionAndMembershipData()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var podService = new Mock<IPodService>();
+        var opinionService = new Mock<IPodOpinionService>();
+        var messageStorage = new Mock<IPodMessageStorage>();
+
+        podService.Setup(x => x.GetMembersAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember>
+            {
+                new() { PeerId = "peer-1", Role = "owner" },
+                new() { PeerId = "peer-2", Role = "member" },
+            });
+        podService.Setup(x => x.GetPodAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Pod
+            {
+                PodId = "pod-1",
+                Channels = new List<PodChannel>
+                {
+                    new() { ChannelId = "general", Name = "general" }
+                }
+            });
+        podService.Setup(x => x.GetMembershipHistoryAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SignedMembershipRecord>
+            {
+                new() { PodId = "pod-1", PeerId = "peer-1", Action = "join", TimestampUnixMs = now.AddDays(-20).ToUnixTimeMilliseconds(), Signature = string.Empty },
+                new() { PodId = "pod-1", PeerId = "peer-1", Action = "role-change", TimestampUnixMs = now.AddDays(-1).ToUnixTimeMilliseconds(), Signature = string.Empty },
+                new() { PodId = "pod-1", PeerId = "peer-2", Action = "join", TimestampUnixMs = now.AddDays(-10).ToUnixTimeMilliseconds(), Signature = string.Empty },
+            });
+
+        opinionService.Setup(x => x.GetKnownContentIdsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { "content:audio:track:track-1" });
+        opinionService.Setup(x => x.GetOpinionsAsync("pod-1", "content:audio:track:track-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodVariantOpinion>
+            {
+                new() { ContentId = "content:audio:track:track-1", VariantHash = "variant-a", Score = 8, SenderPeerId = "peer-1", Signature = "sig" },
+                new() { ContentId = "content:audio:track:track-1", VariantHash = "variant-b", Score = 7, SenderPeerId = "peer-1", Signature = "sig" },
+            });
+
+        messageStorage.Setup(x => x.GetMessagesAsync("pod-1", "general", It.IsAny<long?>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMessage>
+            {
+                new() { PodId = "pod-1", ChannelId = "general", SenderPeerId = "peer-1", TimestampUnixMs = now.AddHours(-2).ToUnixTimeMilliseconds(), Body = "hello" },
+                new() { PodId = "pod-1", ChannelId = "general", SenderPeerId = "peer-1", TimestampUnixMs = now.AddHours(-1).ToUnixTimeMilliseconds(), Body = "again" },
+            });
+
+        var aggregator = new PodOpinionAggregator(
+            podService.Object,
+            opinionService.Object,
+            messageStorage.Object,
+            NullLogger<PodOpinionAggregator>.Instance);
+
+        var affinities = await aggregator.GetMemberAffinitiesAsync("pod-1");
+
+        Assert.Equal(2, affinities.Count);
+        Assert.Equal(2, affinities["peer-1"].MessageCount);
+        Assert.Equal(2, affinities["peer-1"].OpinionCount);
+        Assert.Contains("messages", affinities["peer-1"].RecentActivity);
+        Assert.Contains("opinions", affinities["peer-1"].RecentActivity);
+        Assert.Contains("membership", affinities["peer-1"].RecentActivity);
+        Assert.True(affinities["peer-1"].MembershipDuration > TimeSpan.FromDays(15));
+        Assert.Equal(0, affinities["peer-2"].MessageCount);
+        Assert.Equal(0, affinities["peer-2"].OpinionCount);
+        Assert.Contains("membership", affinities["peer-2"].RecentActivity);
+    }
+
     private static Mock<IPodService> CreatePodServiceMock(string publicKeyBase64)
     {
         var podService = new Mock<IPodService>();

@@ -21,6 +21,31 @@ using Xunit;
 public class DhtMeshServiceTests
 {
     [Fact]
+    public async Task HandleCallAsync_UnknownMethod_ReturnsSanitizedMethodNotFound()
+    {
+        var service = new DhtMeshService(
+            Mock.Of<ILogger<DhtMeshService>>(),
+            new KademliaRoutingTable(CreateNodeId(0x01)),
+            Mock.Of<IDhtClient>(),
+            Mock.Of<IMeshMessageSigner>());
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "dht",
+                Method = "SensitiveDhtMethod",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = Array.Empty<byte>(),
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.MethodNotFound, reply.StatusCode);
+        Assert.Equal("Unknown method", reply.ErrorMessage);
+        Assert.DoesNotContain("SensitiveDhtMethod", reply.ErrorMessage);
+    }
+
+    [Fact]
     public async Task HandleCallAsync_Ping_WithPreCancelledToken_StillTouchesRoutingTable()
     {
         var routingTable = new KademliaRoutingTable(CreateNodeId(0x01));

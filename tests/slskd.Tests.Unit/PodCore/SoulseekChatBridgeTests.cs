@@ -8,6 +8,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using slskd.Messaging;
 using slskd.PodCore;
 using Soulseek;
 using Xunit;

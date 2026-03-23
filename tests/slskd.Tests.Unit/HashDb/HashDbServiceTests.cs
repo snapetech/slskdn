@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using slskd.Audio;
 using slskd.HashDb;
 using slskd.HashDb.Models;
 using slskd.Integrations.MusicBrainz.Models;

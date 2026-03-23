@@ -89,7 +89,8 @@ public class PrivateGatewayMeshServiceTests
 
         // Assert
         Assert.Equal(ServiceStatusCodes.MethodNotFound, result.StatusCode);
-        Assert.Contains("Unknown method", result.ErrorMessage);
+        Assert.Equal("Unknown method", result.ErrorMessage);
+        Assert.DoesNotContain("UnknownMethod", result.ErrorMessage);
     }
 
     [Fact]
@@ -379,7 +380,8 @@ public class PrivateGatewayMeshServiceTests
 
         // ResolveAndValidate rejects private IP when AllowPrivateRanges=false -> ServiceUnavailable
         Assert.Equal(ServiceStatusCodes.ServiceUnavailable, result.StatusCode);
-        Assert.Contains("not allowed", result.ErrorMessage);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
+        Assert.DoesNotContain("192.168.1.100", result.ErrorMessage);
     }
 
     [Fact]

@@ -156,7 +156,7 @@ public sealed class MeshContentMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.PayloadTooLarge,
-                ErrorMessage = $"File too large ({finfo.Size} bytes); use range request (max {MaxFullResponseBytes} without range)",
+                ErrorMessage = "File too large; use range request",
                 Payload = Array.Empty<byte>(),
             };
         }
