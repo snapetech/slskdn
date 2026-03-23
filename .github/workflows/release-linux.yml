@@ -104,7 +104,7 @@ jobs:
           echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT
 
       - name: Wait for Linux Release Asset
-        id: sha
+        id: wait_for_linux_asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -124,9 +124,7 @@ jobs:
               echo "Attempt $attempt: checking ${ASSET_NAME}..."
 
               if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o release-linux-x64.zip; then
-                SHA=$(sha256sum release-linux-x64.zip | cut -d' ' -f1)
-                echo "sha256=${SHA}" >> $GITHUB_OUTPUT
-                echo "SHA256 (${ASSET_NAME}): ${SHA}"
+                echo "Found Linux asset: ${ASSET_NAME}"
                 exit 0
               fi
             done
