@@ -16532,3 +16532,57 @@ CompleteProgressSubject(transferId);
 ```
 
 **Why This Keeps Happening**: tracking dictionaries make ownership feel centralized, but that only holds if every completion/cancel/failure path flows through a shared retire helper. Once cleanup is open-coded inline, one path will inevitably remember to remove the entry but forget to dispose the stored token or complete the stored publisher.
+
+### 0k14C. Release Packaging Must Not Encode Non-Canonical Artifact Names in AUR Binary URLs
+
+**The Bug**: `packaging/aur/PKGBUILD-bin` and release automation can drift on the binary zip filename contract. If the source URL uses a different filename than the release actually publishes, makepkg can download the wrong artifact and hit SHA mismatch on every install attempt.
+
+**Files Affected**:
+- `.github/workflows/release-linux.yml`
+- `packaging/aur/PKGBUILD-bin`
+
+**Wrong**:
+```sh
+source=(
+    "slskdn-${pkgver}-linux-x64.zip::https://github.com/.../releases/download/${pkgver//.slskdn/-slskdn}/slskdn-${pkgver}-linux-x64.zip"
+)
+```
+
+**Correct**:
+```sh
+source=(
+    "slskdn-${pkgver}-linux-x64.zip::https://github.com/.../releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"
+)
+```
+
+**Why This Keeps Happening**: release naming is changed in one place for consistency with another packager, and AUR templates inherit stale assumptions. File naming is part of the public install contract, so the template and release artifacts must stay synchronized.
+
+### 0k14D. Concurrent Rate-Limit Counters Must Reserve Before Incrementing
+
+**The Bug**: `MeshServiceRouter` and `MeshServiceClient` performed separate read-and-write operations on rate-limit counters. Under parallel traffic, multiple callers could pass the check simultaneously and all increment, bypassing limits.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshServiceRouter.cs`
+- `src/slskd/Mesh/ServiceFabric/MeshServiceClient.cs`
+
+**Wrong**:
+```csharp
+var (count, windowStart) = counters.GetOrAdd(key, _ => (0, DateTimeOffset.UtcNow));
+if (count >= maxCallsPerWindow) return false;
+counters[key] = (count + 1, windowStart);
+```
+
+**Correct**:
+```csharp
+while (true)
+{
+    if (counters.TryGetValue(key, out var state))
+    {
+        if (state.Count >= maxCallsPerWindow) return false;
+        if (counters.TryUpdate(key, (state.Count + 1, state.WindowStart), state)) return true;
+    }
+    else if (counters.TryAdd(key, (1, DateTimeOffset.UtcNow))) return true;
+}
+```
+
+**Why This Keeps Happening**: atomic dictionary operations do not make a composite check-update sequence safe by themselves. Burst traffic reproduces these races rarely in development and frequently in production, so they get missed unless there is explicit concurrent regression coverage.

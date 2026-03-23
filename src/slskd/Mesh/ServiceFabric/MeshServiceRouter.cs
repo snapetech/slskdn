@@ -309,28 +309,7 @@ public class MeshServiceRouter
     /// </summary>
     private bool CheckGlobalRateLimit(string peerId)
     {
-        var now = DateTimeOffset.UtcNow;
-        var windowDuration = TimeSpan.FromMinutes(1);
-        var maxCallsPerWindow = _options.GlobalMaxCallsPerPeer;
-
-        var (count, windowStart) = _globalPeerCallCounts.GetOrAdd(peerId, _ => (0, now));
-
-        // Reset window if expired
-        if (now - windowStart > windowDuration)
-        {
-            _globalPeerCallCounts[peerId] = (1, now);
-            return true;
-        }
-
-        // Check limit
-        if (count >= maxCallsPerWindow)
-        {
-            return false;
-        }
-
-        // Increment count
-        _globalPeerCallCounts[peerId] = (count + 1, windowStart);
-        return true;
+        return TryIncrementRateLimitCounter(_globalPeerCallCounts, peerId, _options.GlobalMaxCallsPerPeer);
     }
 
     /// <summary>
@@ -339,34 +318,54 @@ public class MeshServiceRouter
     /// </summary>
     private bool CheckServiceRateLimit(string peerId, string serviceName)
     {
-        var now = DateTimeOffset.UtcNow;
-        var windowDuration = TimeSpan.FromMinutes(1);
-
-        // Get per-service limit or fall back to default
+        var key = $"{peerId}:{serviceName}";
         var maxCallsPerWindow = _options.PerServiceRateLimits.GetValueOrDefault(
             serviceName,
             _options.DefaultMaxCallsPerMinute);
 
-        // Use composite key for per-service tracking
-        var key = $"{peerId}:{serviceName}";
-        var (count, windowStart) = _perPeerCallCounts.GetOrAdd(key, _ => (0, now));
+        return TryIncrementRateLimitCounter(_perPeerCallCounts, key, maxCallsPerWindow);
+    }
 
-        // Reset window if expired
-        if (now - windowStart > windowDuration)
+    private static bool TryIncrementRateLimitCounter(
+        ConcurrentDictionary<string, (int Count, DateTimeOffset WindowStart)> counters,
+        string key,
+        int maxCallsPerWindow)
+    {
+        while (true)
         {
-            _perPeerCallCounts[key] = (1, now);
-            return true;
-        }
+            var now = DateTimeOffset.UtcNow;
+            var windowDuration = TimeSpan.FromMinutes(1);
 
-        // Check limit
-        if (count >= maxCallsPerWindow)
-        {
-            return false;
-        }
+            if (counters.TryGetValue(key, out var state))
+            {
+                if (now - state.WindowStart > windowDuration)
+                {
+                    if (counters.TryUpdate(key, (1, now), state))
+                    {
+                        return true;
+                    }
 
-        // Increment count
-        _perPeerCallCounts[key] = (count + 1, windowStart);
-        return true;
+                    continue;
+                }
+
+                if (state.Count >= maxCallsPerWindow)
+                {
+                    return false;
+                }
+
+                if (counters.TryUpdate(key, (state.Count + 1, state.WindowStart), state))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (counters.TryAdd(key, (1, now)))
+            {
+                return true;
+            }
+        }
     }
 
     /// <summary>

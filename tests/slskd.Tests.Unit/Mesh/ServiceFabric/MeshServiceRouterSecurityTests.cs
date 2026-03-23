@@ -4,6 +4,8 @@ using Moq;
 using slskd.Common.Security;
 using slskd.Mesh.ServiceFabric;
 using System;
+using System.Reflection;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -298,6 +300,89 @@ public class MeshServiceRouterSecurityTests
 
         // Assert: Peer B is not affected by Peer A's rate limit
         Assert.Equal(ServiceStatusCodes.OK, peerBReply.StatusCode);
+    }
+
+    [Fact]
+    public void CheckGlobalRateLimit_IsAtomicUnderParallelInvocations()
+    {
+        // Arrange
+        var router = CreateRouter(new MeshServiceFabricOptions
+        {
+            GlobalMaxCallsPerPeer = 1,
+            DefaultMaxCallsPerMinute = 100
+        });
+        var peerId = "peer-race-global";
+        var checkGlobalRateLimit = typeof(MeshServiceRouter).GetMethod(
+            "CheckGlobalRateLimit",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        const int attempts = 64;
+        const int waves = 50;
+        var maxAllowed = RunRateLimitCheckRace(
+            () => (bool)checkGlobalRateLimit.Invoke(router, new object[] { peerId })!,
+            attempts,
+            waves);
+
+        // Assert: one and only one call should be allowed when limit is 1
+        Assert.Equal(1, maxAllowed);
+    }
+
+    [Fact]
+    public void CheckServiceRateLimit_IsAtomicUnderParallelInvocations()
+    {
+        // Arrange
+        var router = CreateRouter(new MeshServiceFabricOptions
+        {
+            GlobalMaxCallsPerPeer = 1000,
+            PerServiceRateLimits = new()
+            {
+                ["test-service"] = 1
+            }
+        });
+        var peerId = "peer-race-service";
+        var serviceName = "test-service";
+        var checkServiceRateLimit = typeof(MeshServiceRouter).GetMethod(
+            "CheckServiceRateLimit",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        const int attempts = 64;
+        const int waves = 50;
+        var maxAllowed = RunRateLimitCheckRace(
+            () => (bool)checkServiceRateLimit.Invoke(router, new object[] { peerId, serviceName })!,
+            attempts,
+            waves);
+
+        // Assert: one and only one call should be allowed when limit is 1
+        Assert.Equal(1, maxAllowed);
+    }
+
+    private static int RunRateLimitCheckRace(
+        Func<bool> rateLimitCheck,
+        int attempts,
+        int waves)
+    {
+        var maxAllowed = 0;
+        for (var wave = 0; wave < waves; wave++)
+        {
+            using var ready = new CountdownEvent(attempts);
+            using var start = new ManualResetEventSlim(false);
+            var tasks = Enumerable.Range(0, attempts)
+                .Select(_ => Task.Run(() =>
+                {
+                    ready.Signal();
+                    start.Wait();
+                    return rateLimitCheck();
+                }))
+                .ToArray();
+
+            ready.Wait();
+            start.Set();
+
+            Task.WaitAll(tasks);
+
+            var allowedThisWave = tasks.Count(task => task.Result);
+            maxAllowed = Math.Max(maxAllowed, allowedThisWave);
+        }
+
+        return maxAllowed;
     }
 
     // Test service implementations

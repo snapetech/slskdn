@@ -93,12 +93,12 @@ public class MeshServiceClient : IMeshServiceClient
         }
 
         // MEDIUM-3 FIX 2: Check per-peer concurrent call limit
-        var currentPeerCalls = _perPeerCallCounts.GetOrAdd(normalizedTargetPeerId, 0);
-        if (currentPeerCalls >= _maxConcurrentCallsPerPeer)
+        if (!TryIncrementPeerCallCount(normalizedTargetPeerId))
         {
             _logger.LogWarning(
                 "[ServiceClient] Max concurrent calls to peer reached: {PeerId}, count: {Count}",
-                normalizedTargetPeerId, currentPeerCalls);
+                normalizedTargetPeerId,
+                _perPeerCallCounts.GetValueOrDefault(normalizedTargetPeerId));
 
             return Task.FromResult(new ServiceReply
             {
@@ -108,8 +108,7 @@ public class MeshServiceClient : IMeshServiceClient
             });
         }
 
-        // Increment per-peer counter
-        _perPeerCallCounts.AddOrUpdate(normalizedTargetPeerId, 1, (_, count) => count + 1);
+        var peerCallReserved = true;
 
         try
         {
@@ -162,11 +161,57 @@ public class MeshServiceClient : IMeshServiceClient
         finally
         {
             _pendingCalls.TryRemove(normalizedCall.CorrelationId, out _);
-            _perPeerCallCounts.AddOrUpdate(normalizedTargetPeerId, 0, (_, count) => Math.Max(0, count - 1));
-
-            if (_perPeerCallCounts.TryGetValue(normalizedTargetPeerId, out var remainingCalls) && remainingCalls == 0)
+            if (peerCallReserved)
             {
-                _perPeerCallCounts.TryRemove(normalizedTargetPeerId, out _);
+                ReleasePeerCallCount(normalizedTargetPeerId);
+            }
+        }
+    }
+
+    private bool TryIncrementPeerCallCount(string targetPeerId)
+    {
+        while (true)
+        {
+            if (_perPeerCallCounts.TryGetValue(targetPeerId, out var currentCount))
+            {
+                if (currentCount >= _maxConcurrentCallsPerPeer)
+                {
+                    return false;
+                }
+
+                if (_perPeerCallCounts.TryUpdate(targetPeerId, currentCount + 1, currentCount))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (_perPeerCallCounts.TryAdd(targetPeerId, 1))
+            {
+                return true;
+            }
+        }
+    }
+
+    private void ReleasePeerCallCount(string targetPeerId)
+    {
+        while (true)
+        {
+            if (!_perPeerCallCounts.TryGetValue(targetPeerId, out var currentCount))
+            {
+                return;
+            }
+
+            var nextCount = Math.Max(0, currentCount - 1);
+            if (_perPeerCallCounts.TryUpdate(targetPeerId, nextCount, currentCount))
+            {
+                if (nextCount == 0)
+                {
+                    _perPeerCallCounts.TryRemove(targetPeerId, out _);
+                }
+
+                return;
             }
         }
     }
