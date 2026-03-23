@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,7 +75,7 @@ public class RelayServiceTests
             {
                 Enabled = enabled,
                 Mode = mode.ToString(),
-                Controller = new Options.RelayOptions.RelayControllerOptions
+                Controller = new Options.RelayOptions.RelayControllerConfigurationOptions
                 {
                     Address = "https://relay.example",
                     ApiKey = "api-key",

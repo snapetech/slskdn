@@ -2093,7 +2093,7 @@ namespace slskd.HashDb
                     var deserialized = JsonSerializer.Deserialize<Jobs.DiscographyJob>(json, CaseInsensitiveJson);
                     if (deserialized != null)
                     {
-                        return deserialized;
+                        return NormalizeDiscographyJob(deserialized);
                     }
                 }
             }
@@ -2104,7 +2104,7 @@ namespace slskd.HashDb
 
             var profileText = reader.IsDBNull(3) ? null : reader.GetString(3);
             var statusText = reader.IsDBNull(8) ? null : reader.GetString(8);
-            return new Jobs.DiscographyJob
+            return NormalizeDiscographyJob(new Jobs.DiscographyJob
             {
                 JobId = reader.GetString(0).Trim(),
                 ArtistId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
@@ -2120,7 +2120,7 @@ namespace slskd.HashDb
                     ? status
                     : Jobs.JobStatus.Pending,
                 CreatedAt = reader.IsDBNull(9) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(9)),
-            };
+            });
         }
 
         /// <inheritdoc/>
@@ -2592,7 +2592,7 @@ namespace slskd.HashDb
                     var deserialized = JsonSerializer.Deserialize<LabelCrateJob>(json, CaseInsensitiveJson);
                     if (deserialized != null)
                     {
-                        return deserialized;
+                        return NormalizeLabelCrateJob(deserialized);
                     }
                 }
             }
@@ -2602,7 +2602,7 @@ namespace slskd.HashDb
             }
 
             var statusText = reader.IsDBNull(7) ? null : reader.GetString(7);
-            return new LabelCrateJob
+            return NormalizeLabelCrateJob(new LabelCrateJob
             {
                 JobId = reader.GetString(0).Trim(),
                 LabelId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
@@ -2615,7 +2615,7 @@ namespace slskd.HashDb
                     ? status
                     : Jobs.JobStatus.Pending,
                 CreatedAt = reader.IsDBNull(8) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(8)),
-            };
+            });
         }
 
         /// <inheritdoc/>
@@ -2827,6 +2827,23 @@ namespace slskd.HashDb
             cmd.Parameters.AddWithValue("@json_data", json);
 
             await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        private static Jobs.DiscographyJob NormalizeDiscographyJob(Jobs.DiscographyJob job)
+        {
+            job.JobId = job.JobId?.Trim() ?? string.Empty;
+            job.ArtistId = job.ArtistId?.Trim() ?? string.Empty;
+            job.ArtistName = job.ArtistName?.Trim() ?? string.Empty;
+            job.TargetDirectory = job.TargetDirectory?.Trim() ?? string.Empty;
+            return job;
+        }
+
+        private static LabelCrateJob NormalizeLabelCrateJob(LabelCrateJob job)
+        {
+            job.JobId = job.JobId?.Trim() ?? string.Empty;
+            job.LabelId = job.LabelId?.Trim() ?? string.Empty;
+            job.LabelName = job.LabelName?.Trim() ?? string.Empty;
+            return job;
         }
 
         /// <inheritdoc/>

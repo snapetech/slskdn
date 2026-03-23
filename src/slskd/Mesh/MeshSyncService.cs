@@ -649,8 +649,8 @@ namespace slskd.Mesh
             {
                 return new MeshHashEntry
                 {
-                    FlacKey = local.FlacKey,
-                    ByteHash = local.ByteHash,
+                    FlacKey = local.FlacKey?.Trim() ?? flacKey,
+                    ByteHash = local.ByteHash?.Trim() ?? string.Empty,
                     Size = local.Size,
                     MetaFlags = local.MetaFlags,
                     SeqId = local.SeqId,
@@ -812,13 +812,21 @@ namespace slskd.Mesh
             catch (OperationCanceledException)
             {
                 log.Debug("[MESH] Request timeout for key {Key} from peer {Peer}", flacKey, username);
-                pendingRequests.TryRemove(requestId, out _);
+                if (createdRequest)
+                {
+                    pendingRequests.TryRemove(requestId, out _);
+                }
+
                 return null;
             }
             catch (Exception ex)
             {
                 log.Warning(ex, "[MESH] Error querying peer {Peer} for key {Key}", username, flacKey);
-                pendingRequests.TryRemove(requestId, out _);
+                if (createdRequest)
+                {
+                    pendingRequests.TryRemove(requestId, out _);
+                }
+
                 return null;
             }
         }

@@ -6657,3 +6657,23 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+
+## 2026-03-23 11:03 CST
+- Continued the lifecycle bughunt into `ConnectionWatchdog`.
+- Fixed a reconnect retry-loop leak where each failed attempt replaced the watchdog `CancellationTokenSource` without disposing the previous instance.
+- Added focused regression coverage in `ConnectionWatchdogTests` to prove a superseded reconnect CTS is disposed once the next retry starts.
+- Validation passed:
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release -v minimal --filter "FullyQualifiedName~ConnectionWatchdogTests"`
+
+## 2026-03-23 11:11 CST
+- Continued the dense runtime bughunt across `SongIdService`, `HashDbService`, and `MeshSyncService`, and folded in the already-dirty `ConnectionWatchdog` spillover.
+- `SongIdService` fallback acquisition planning now keeps raw transcript/OCR/comment phrases alongside artist-shaped queries for manual-review and uncataloged cases.
+- `SongIdService` Audfprint parsing now preserves fallback external IDs when the tool only yields textual evidence.
+- `HashDbService` now normalizes deserialized discography and label-crate jobs the same way row-fallback reads already were, preventing whitespace drift from JSON payloads.
+- `MeshSyncService` now trims local lookup hits before reuse and only lets the request creator remove a shared `REQKEY` waiter on timeout/failure.
+- Folded in the existing `ConnectionWatchdog` retry CTS disposal fix and relay test drift cleanup already present in the tree.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`

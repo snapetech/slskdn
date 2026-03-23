@@ -1115,6 +1115,7 @@ public sealed class SongIdService : ISongIdService
             foreach (var phrase in transcript.MusicBrainzQueries.Take(3))
             {
                 AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, phrase));
+                AddFallbackQuery(fallbackQueries, phrase);
             }
         }
 
@@ -1122,12 +1123,14 @@ public sealed class SongIdService : ISongIdService
         {
             var cleaned = CleanSegmentTitle(ocr.Text);
             AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, cleaned));
+            AddFallbackQuery(fallbackQueries, cleaned);
         }
 
         foreach (var comment in run.Comments.Take(5))
         {
             var cleaned = CleanSegmentTitle(RemoveTimestampText(comment.Text));
             AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, cleaned));
+            AddFallbackQuery(fallbackQueries, cleaned);
         }
 
         if (fallbackQueries.Count == 0)
@@ -2327,6 +2330,7 @@ public sealed class SongIdService : ISongIdService
                 ? Path.GetFileNameWithoutExtension(sourcePath)
                 : fallback?.Title ?? bestLine,
             Artist = fallback?.Artist ?? string.Empty,
+            ExternalId = fallback?.ExternalId,
             SourcePath = sourcePath,
             Score = score,
             Summary = "Audfprint fingerprint match",

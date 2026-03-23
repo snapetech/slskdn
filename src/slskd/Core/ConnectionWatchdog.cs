@@ -261,7 +261,9 @@ namespace slskd
 
                         IsAwaitingVpn = false;
 
+                        var previousCancellationTokenSource = CancellationTokenSource;
                         CancellationTokenSource = new CancellationTokenSource();
+                        previousCancellationTokenSource?.Dispose();
 
                         if (attempts > 0)
                         {

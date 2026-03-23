@@ -14616,3 +14616,24 @@ catch (OperationCanceledException)
 ```
 
 **Why This Keeps Happening**: once a deduplicated async request path starts sharing a `TaskCompletionSource`, it is easy to keep the old cleanup logic that assumed one caller owned one waiter. Any timeout/error cleanup on a shared waiter must be ownership-aware, or follower calls will accidentally delete the creator's in-flight state.
+
+### 0k109. Retry Loops Must Dispose Superseded CancellationTokenSources Immediately
+
+**The Bug**: `ConnectionWatchdog.AttemptConnection(...)` created a fresh reconnect `CancellationTokenSource` on every retry iteration and overwrote the previous instance without disposing it. A long sequence of failed reconnect attempts leaked token sources and their registrations until the watchdog finally stopped.
+
+**Files Affected**:
+- `src/slskd/Core/ConnectionWatchdog.cs`
+
+**Wrong**:
+```csharp
+CancellationTokenSource = new CancellationTokenSource();
+```
+
+**Correct**:
+```csharp
+var previousCancellationTokenSource = CancellationTokenSource;
+CancellationTokenSource = new CancellationTokenSource();
+previousCancellationTokenSource?.Dispose();
+```
+
+**Why This Keeps Happening**: retry loops often treat the current CTS as just another mutable field and only dispose whatever happens to be stored at shutdown. If the loop swaps ownership on each attempt, the old owner must be disposed at the replacement point, not only in the outer `finally`.

@@ -6,6 +6,7 @@
 
 namespace slskd.Tests.Unit.SongID;
 
+using System;
 using System.Net.Http;
 using System.Reflection;
 using System.Collections.Generic;
@@ -230,6 +231,57 @@ public sealed class SongIdServiceTests : IDisposable
 
         Assert.Contains(run.Plans, plan => plan.Kind == "mix" && plan.Title.StartsWith("Mix cluster"));
         Assert.Contains(run.Evidence, entry => entry.Contains("mix cluster"));
+    }
+
+    [Fact]
+    public void AddFallbackOptions_IncludesRawTranscriptOcrAndCommentQueries()
+    {
+        var run = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Query = "seed query",
+            Metadata = new SongIdMetadata
+            {
+                Artist = "Known Artist",
+                Title = "Known Title",
+            },
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "needs_manual_review",
+            },
+            Transcripts = new List<SongIdTranscriptFinding>
+            {
+                new()
+                {
+                    MusicBrainzQueries = new List<string> { "Loose Transcript Phrase" },
+                },
+            },
+            Ocr = new List<SongIdOcrFinding>
+            {
+                new()
+                {
+                    Text = "OCR Candidate Title",
+                },
+            },
+            Comments = new List<SongIdCommentFinding>
+            {
+                new()
+                {
+                    Text = "00:12 Comment Candidate Title",
+                },
+            },
+        };
+
+        var method = typeof(SongIdService).GetMethod("AddFallbackOptions", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        method!.Invoke(null, new object[] { run });
+
+        var option = Assert.Single(run.Options);
+        Assert.NotNull(option.SearchTexts);
+        Assert.Contains("Loose Transcript Phrase", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("OCR Candidate Title", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("Comment Candidate Title", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]

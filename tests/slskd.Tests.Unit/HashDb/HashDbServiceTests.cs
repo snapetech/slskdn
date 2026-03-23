@@ -374,6 +374,37 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetDiscographyJobAsync_NormalizesDeserializedJsonPayload()
+    {
+        await using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={Path.Combine(testDir, "hashdb.db")}");
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO DiscographyJobs (job_id, artist_id, artist_name, profile, target_directory, total_releases, completed_releases, failed_releases, status, created_at, json_data)
+            VALUES (@job_id, @artist_id, @artist_name, @profile, @target_directory, @total_releases, @completed_releases, @failed_releases, @status, @created_at, @json_data)";
+        cmd.Parameters.AddWithValue("@job_id", "job-json");
+        cmd.Parameters.AddWithValue("@artist_id", "artist-json");
+        cmd.Parameters.AddWithValue("@artist_name", "Artist Json");
+        cmd.Parameters.AddWithValue("@profile", "CoreDiscography");
+        cmd.Parameters.AddWithValue("@target_directory", "/tmp/json");
+        cmd.Parameters.AddWithValue("@total_releases", 0);
+        cmd.Parameters.AddWithValue("@completed_releases", 0);
+        cmd.Parameters.AddWithValue("@failed_releases", 0);
+        cmd.Parameters.AddWithValue("@status", "Pending");
+        cmd.Parameters.AddWithValue("@created_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("@json_data", "{\"JobId\":\" job-json \",\"ArtistId\":\" artist-json \",\"ArtistName\":\" Artist Json \",\"TargetDirectory\":\" /tmp/json \",\"Status\":\"Pending\"}");
+        await cmd.ExecuteNonQueryAsync();
+
+        var job = await service.GetDiscographyJobAsync("job-json");
+
+        Assert.NotNull(job);
+        Assert.Equal("job-json", job!.JobId);
+        Assert.Equal("artist-json", job.ArtistId);
+        Assert.Equal("Artist Json", job.ArtistName);
+        Assert.Equal("/tmp/json", job.TargetDirectory);
+    }
+
+    [Fact]
     public async Task GetWarmCacheEntryAndJobFallbacks_ReturnTrimmedValues()
     {
         await service.UpsertWarmCacheEntryAsync(new slskd.HashDb.Models.WarmCacheEntry
@@ -415,6 +446,35 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal("label-row", labelJob!.JobId);
         Assert.Equal("label-row-id", labelJob.LabelId);
         Assert.Equal("Label Row", labelJob.LabelName);
+    }
+
+    [Fact]
+    public async Task GetLabelCrateJobAsync_NormalizesDeserializedJsonPayload()
+    {
+        await using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={Path.Combine(testDir, "hashdb.db")}");
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO LabelCrateJobs (job_id, label_id, label_name, limit_count, total_releases, completed_releases, failed_releases, status, created_at, json_data)
+            VALUES (@job_id, @label_id, @label_name, @limit_count, @total_releases, @completed_releases, @failed_releases, @status, @created_at, @json_data)";
+        cmd.Parameters.AddWithValue("@job_id", "label-json");
+        cmd.Parameters.AddWithValue("@label_id", "label-id");
+        cmd.Parameters.AddWithValue("@label_name", "Label Json");
+        cmd.Parameters.AddWithValue("@limit_count", 0);
+        cmd.Parameters.AddWithValue("@total_releases", 0);
+        cmd.Parameters.AddWithValue("@completed_releases", 0);
+        cmd.Parameters.AddWithValue("@failed_releases", 0);
+        cmd.Parameters.AddWithValue("@status", "Pending");
+        cmd.Parameters.AddWithValue("@created_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("@json_data", "{\"JobId\":\" label-json \",\"LabelId\":\" label-id \",\"LabelName\":\" Label Json \",\"Status\":\"Pending\"}");
+        await cmd.ExecuteNonQueryAsync();
+
+        var job = await service.GetLabelCrateJobAsync("label-json");
+
+        Assert.NotNull(job);
+        Assert.Equal("label-json", job!.JobId);
+        Assert.Equal("label-id", job.LabelId);
+        Assert.Equal("Label Json", job.LabelName);
     }
 
     [Fact]

@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue relay/security bughunt and remove adjacent cleartext token / connection-id logging across relay surfaces
+- **Current Task**: Continue bughunting long-lived client and retry lifecycle paths after the relay sweep
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -733,3 +733,22 @@ dotnet test
 - Next steps:
   - continue the bughunt from the placeholder/null-heavy inventory
   - focus next on remaining `SongIdService`, `HashDbService`, and Mesh/PodCore read-side/runtime bottom-out paths
+
+## 2026-03-23 11:03 CST
+- Continued the post-relay lifecycle bughunt into retry infrastructure.
+- Fixed `ConnectionWatchdog` so failed reconnect retries dispose the superseded `CancellationTokenSource` immediately instead of leaking one CTS per attempt until shutdown.
+- Added focused `ConnectionWatchdogTests` coverage that waits for the second retry CTS and verifies the first one has already been disposed.
+- Next steps:
+  - continue bughunting adjacent long-lived lifecycle paths after relay/watchdog
+  - prioritize services that replace clients, timers, or cancellation sources on option changes or retry loops
+
+## 2026-03-23 11:11 CST
+- Finished another green runtime-hardening batch across SongID, HashDb, mesh waiters, and adjacent lifecycle spillover.
+- Current fixes in this batch:
+  - raw transcript/OCR/comment phrases now survive SongID fallback planning
+  - deserialized HashDb job payloads are normalized before readback
+  - shared mesh `REQKEY` waiters now have ownership-safe cleanup
+  - `ConnectionWatchdog` retry CTS replacement leak was folded in from the dirty tree
+- Next steps:
+  - continue the placeholder/null-heavy bughunt from the inventory
+  - prioritize remaining `HashDbService`, `SongIdService`, and Mesh/PodCore read-side/runtime bottom-out paths
