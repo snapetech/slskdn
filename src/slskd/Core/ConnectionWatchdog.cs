@@ -71,7 +71,7 @@ namespace slskd
 
             // the timer is used here to ensure that we keep trying if the connection logic fails for some reason. i'm questioning
             // this at the moment and may continue to do so
-            WatchdogTimer.Elapsed += (sender, args) => _ = AttemptConnection(source: nameof(WatchdogTimer));
+            WatchdogTimer.Elapsed += (sender, args) => _ = ObserveAttemptConnectionAsync(nameof(WatchdogTimer));
 
             OptionsMonitor.OnChange(options => OptionsChanged(options));
         }
@@ -345,6 +345,18 @@ namespace slskd
                     // do this after the semaphore is released so that IsAttemptingConnection is false and the next attempt is nulled
                     UpdateApplicationState();
                 }
+            }
+        }
+
+        private async Task ObserveAttemptConnectionAsync(string source)
+        {
+            try
+            {
+                await AttemptConnection(source).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Connection watchdog callback failed: {Message}", ex.Message);
             }
         }
     }

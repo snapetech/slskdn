@@ -14637,3 +14637,25 @@ previousCancellationTokenSource?.Dispose();
 ```
 
 **Why This Keeps Happening**: retry loops often treat the current CTS as just another mutable field and only dispose whatever happens to be stored at shutdown. If the loop swaps ownership on each attempt, the old owner must be disposed at the replacement point, not only in the outer `finally`.
+
+### 0k110. Timer Callbacks Must Not Fire Raw Async Work
+
+**The Bug**: both `VPNService` and `ConnectionWatchdog` attached timer callbacks that kicked off async work directly. If the callback path threw before reaching its inner catch logic, the exception escaped the timer thread as an unobserved background fault. A misconfigured VPN client was enough to trigger this repeatedly.
+
+**Files Affected**:
+- `src/slskd/Integrations/VPN/VPNService.cs`
+- `src/slskd/Core/ConnectionWatchdog.cs`
+
+**Wrong**:
+```csharp
+Timer.Elapsed += async (_, _) => await CheckConnection();
+WatchdogTimer.Elapsed += (sender, args) => _ = AttemptConnection(source: nameof(WatchdogTimer));
+```
+
+**Correct**:
+```csharp
+Timer.Elapsed += (_, _) => _ = ObserveCheckConnectionAsync();
+WatchdogTimer.Elapsed += (sender, args) => _ = ObserveAttemptConnectionAsync(nameof(WatchdogTimer));
+```
+
+**Why This Keeps Happening**: timer events look like ordinary callbacks, so it is easy to treat them like safe places for raw `async` lambdas or fire-and-forget tasks. They are really detached background entry points and need the same top-level observation wrapper as any other fire-and-forget work.

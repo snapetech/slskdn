@@ -742,6 +742,14 @@ dotnet test
   - continue bughunting adjacent long-lived lifecycle paths after relay/watchdog
   - prioritize services that replace clients, timers, or cancellation sources on option changes or retry loops
 
+## 2026-03-23 11:15 CST
+- Continued into timer-driven background callbacks after the retry-loop fix.
+- Fixed `VPNService` and `ConnectionWatchdog` so timer events now go through explicit observer wrappers instead of running raw async work directly from the timer callback.
+- Added focused `VPNServiceTests` coverage for the misconfigured-VPN polling path and kept the watchdog retry-lifecycle regression green in the same slice.
+- Next steps:
+  - continue bughunting detached callbacks and long-lived lifecycle paths outside relay/watchdog/vpn
+  - prioritize remaining timer/event entry points that can still fault silently or outlive shutdown
+
 ## 2026-03-23 11:11 CST
 - Finished another green runtime-hardening batch across SongID, HashDb, mesh waiters, and adjacent lifecycle spillover.
 - Current fixes in this batch:
