@@ -170,7 +170,10 @@ namespace slskd
 
             foreach (var key in keys)
             {
-                Cancel(key);
+                while (IsWaitingFor(key))
+                {
+                    Cancel(key);
+                }
             }
         }
 
