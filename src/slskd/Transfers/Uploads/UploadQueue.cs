@@ -98,7 +98,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Orchestrates uploads.
     /// </summary>
-    public class UploadQueue : IUploadQueue
+    public class UploadQueue : IUploadQueue, IDisposable
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="UploadQueue"/> class.
@@ -112,20 +112,31 @@ namespace slskd.Transfers
             Users = userService;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(Configure);
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(Configure);
 
             Configure(OptionsMonitor.CurrentValue);
         }
 
+        private bool Disposed { get; set; }
         private int GlobalSlots { get; set; } = 0;
         private Dictionary<string, UploadGroup> Groups { get; set; } = new Dictionary<string, UploadGroup>();
         private int LastGlobalSlots { get; set; }
         private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<UploadQueue>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
         private ConcurrentDictionary<string, List<Upload>> Uploads { get; set; } = new ConcurrentDictionary<string, List<Upload>>();
         private IUserService Users { get; }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Awaits the start of an upload.
@@ -551,6 +562,25 @@ namespace slskd.Transfers
             finally
             {
                 SyncRoot.Release();
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    SyncRoot.Dispose();
+                }
+
+                Disposed = true;
             }
         }
     }

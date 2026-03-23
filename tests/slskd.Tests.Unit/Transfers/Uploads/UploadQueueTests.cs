@@ -29,6 +29,18 @@ namespace slskd.Tests.Unit.Transfers.Uploads
         }
 
         [Fact]
+        public void Dispose_UnsubscribesOptionsMonitor()
+        {
+            var (queue, mocks) = GetFixture();
+
+            Assert.Equal(1, mocks.OptionsMonitor.ListenerCount);
+
+            queue.Dispose();
+
+            Assert.Equal(0, mocks.OptionsMonitor.ListenerCount);
+        }
+
+        [Fact]
         public void Instantiates_With_Expected_Privileged_Options()
         {
             var (queue, _) = GetFixture();

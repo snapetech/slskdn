@@ -27,6 +27,21 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             Assert.True(buckets.ContainsKey(Application.LeecherGroup));
         }
 
+        [Fact]
+        public void Dispose_UnsubscribesOptionsMonitor_AndDisposesBuckets()
+        {
+            var (governor, mocks) = GetFixture();
+            var buckets = governor.GetProperty<Dictionary<string, ITokenBucket>>("TokenBuckets");
+            var defaultBucket = (TokenBucket)buckets[Application.DefaultGroup];
+
+            Assert.Equal(1, mocks.OptionsMonitor.ListenerCount);
+
+            governor.Dispose();
+
+            Assert.Equal(0, mocks.OptionsMonitor.ListenerCount);
+            Assert.ThrowsAsync<ObjectDisposedException>(() => defaultBucket.GetAsync(1, CancellationToken.None)).GetAwaiter().GetResult();
+        }
+
         [Theory, AutoData]
         public void Instantiates_With_User_Defined_Buckets(string group1, string group2)
         {
@@ -229,6 +244,29 @@ namespace slskd.Tests.Unit.Transfers.Uploads
 
                 Assert.Equal(4, buckets.Count);
                 Assert.True(buckets.ContainsKey(group));
+            }
+
+            [Theory, AutoData]
+            public void Reconfigures_Buckets_When_Options_Change_Disposes_Previous_Buckets(string group)
+            {
+                var options = new AppOptions()
+                {
+                    Groups = new Options.GroupsOptions()
+                    {
+                        UserDefined = new Dictionary<string, Options.GroupsOptions.UserDefinedOptions>()
+                        {
+                            { group, new Options.GroupsOptions.UserDefinedOptions() },
+                        }
+                    }
+                };
+
+                var (governor, mocks) = GetFixture();
+                var oldBuckets = governor.GetProperty<Dictionary<string, ITokenBucket>>("TokenBuckets");
+                var oldDefaultBucket = (TokenBucket)oldBuckets[Application.DefaultGroup];
+
+                mocks.OptionsMonitor.RaiseOnChange(options);
+
+                Assert.ThrowsAsync<ObjectDisposedException>(() => oldDefaultBucket.GetAsync(1, CancellationToken.None)).GetAwaiter().GetResult();
             }
         }
 

@@ -153,7 +153,7 @@ namespace slskd.Transfers.Uploads
     /// <summary>
     ///     Manages uploads.
     /// </summary>
-    public class UploadService : IUploadService
+    public class UploadService : IUploadService, IDisposable
     {
         public UploadService(
             FileService fileService,
@@ -205,6 +205,16 @@ namespace slskd.Transfers.Uploads
         private IUserService Users { get; set; }
         private EventBus EventBus { get; }
         private ConcurrentDictionary<string, bool> Locks { get; } = new();
+        private bool Disposed { get; set; }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Adds the specified <paramref name="transfer"/>. Supersedes any existing record for the same file and username.
@@ -1067,6 +1077,31 @@ namespace slskd.Transfers.Uploads
             finally
             {
                 semaphore.Release();
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    if (Governor is IDisposable disposableGovernor)
+                    {
+                        disposableGovernor.Dispose();
+                    }
+
+                    if (Queue is IDisposable disposableQueue)
+                    {
+                        disposableQueue.Dispose();
+                    }
+                }
+
+                Disposed = true;
             }
         }
     }

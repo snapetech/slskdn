@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the lifecycle/ownership sweep into upload-control helpers instead of stopping at the first `TokenBucket` leak candidate:
+    - `UploadGovernor` now disposes replaced/current token buckets and its retained options-monitor registration
+    - `UploadQueue` now disposes its retained options-monitor registration
+    - `UploadService` now disposes the owned governor/queue helpers it constructs directly
+  - Added focused regressions in `tests/slskd.Tests.Unit/Transfers/Uploads/UploadGovernorTests.cs`, `tests/slskd.Tests.Unit/Transfers/Uploads/UploadQueueTests.cs`, and new `tests/slskd.Tests.Unit/Transfers/Uploads/UploadServiceLifecycleTests.cs`
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~UploadGovernorTests|FullyQualifiedName~UploadQueueTests|FullyQualifiedName~UploadServiceLifecycleTests"` passed (`46/46`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed
   - Continued the broader registration-ownership sweep across current disposable `OnChange(...)` consumers:
     - `Application`, `ConnectionWatchdog`, and `RelayClient` now retain and dispose their change-registration handles instead of discarding them
     - post-dispose option/state changes no longer re-enter dead instances or keep mutating shared state after shutdown

@@ -7089,3 +7089,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regressions in `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs`, `tests/slskd.Tests.Unit/Core/ConnectionWatchdogTests.cs`, and `tests/slskd.Tests.Unit/Relay/RelayClientTests.cs`.
 - Upgraded `tests/slskd.Tests.Unit/TestOptionsMonitor.cs` to model real registration disposal so lifecycle tests can prove unsubscribe behavior instead of assuming it.
 - Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~RelayClientTests"` passed (`3/3`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed.
+
+## 2026-03-23 16:03 CST
+
+- Continued the same lifecycle/ownership pattern into the upload-control stack instead of treating `UploadGovernor` as a one-off.
+- `UploadGovernor` now disposes its retained options-monitor registration, disposes replaced `TokenBucket` instances whenever it rebuilds buckets, and disposes its current buckets at shutdown.
+- `UploadQueue` now releases its retained options-monitor registration during disposal, and `UploadService` now disposes the owned governor/queue helpers it constructs directly.
+- Added focused coverage in `tests/slskd.Tests.Unit/Transfers/Uploads/UploadGovernorTests.cs`, `tests/slskd.Tests.Unit/Transfers/Uploads/UploadQueueTests.cs`, and new `tests/slskd.Tests.Unit/Transfers/Uploads/UploadServiceLifecycleTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~UploadGovernorTests|FullyQualifiedName~UploadQueueTests|FullyQualifiedName~UploadServiceLifecycleTests"` passed (`46/46`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed.

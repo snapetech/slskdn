@@ -59,7 +59,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Governs upload transfer speed.
     /// </summary>
-    public class UploadGovernor : IUploadGovernor
+    public class UploadGovernor : IUploadGovernor, IDisposable
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="UploadGovernor"/> class.
@@ -76,17 +76,28 @@ namespace slskd.Transfers
             ScheduledRateLimitService = scheduledRateLimitService;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(Configure);
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(Configure);
 
             Configure(OptionsMonitor.CurrentValue);
         }
 
+        private bool Disposed { get; set; }
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private string LastOptionsHash { get; set; } = string.Empty;
         private int LastGlobalSpeedLimit { get; set; }
         private Dictionary<string, ITokenBucket> TokenBuckets { get; set; } = new Dictionary<string, ITokenBucket>();
         private IUserService Users { get; }
         private IScheduledRateLimitService? ScheduledRateLimitService { get; }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Asynchronously obtains a grant of <paramref name="requestedBytes"/> for the requesting <paramref name="username"/>.
@@ -173,10 +184,43 @@ namespace slskd.Transfers
                 tokenBuckets.Add(group.Key, CreateBucket(group.Value.Upload.SpeedLimit));
             }
 
+            var previousBuckets = TokenBuckets;
             TokenBuckets = tokenBuckets;
+            DisposeBuckets(previousBuckets);
 
             LastGlobalSpeedLimit = effectiveGlobalUploadSpeedLimit;
             LastOptionsHash = optionsHash;
+        }
+
+        private static void DisposeBuckets(Dictionary<string, ITokenBucket> buckets)
+        {
+            foreach (var bucket in buckets.Values)
+            {
+                if (bucket is IDisposable disposableBucket)
+                {
+                    disposableBucket.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    DisposeBuckets(TokenBuckets);
+                    TokenBuckets = new Dictionary<string, ITokenBucket>();
+                }
+
+                Disposed = true;
+            }
         }
     }
 }
