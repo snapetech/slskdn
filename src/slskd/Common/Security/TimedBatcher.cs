@@ -49,8 +49,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             // If we've reached the maximum batch size, cancel the current timer
             if (_currentBatch.Count >= _options.MaxBatchSize)
             {
-                _currentBatchTimer?.Cancel();
-                _currentBatchTimer = null;
+                CancelAndDisposeCurrentBatchTimer();
             }
             else if (_currentBatch.Count == 1)
             {
@@ -93,8 +92,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             _currentBatch.Clear();
 
             // Cancel any existing timer
-            _currentBatchTimer?.Cancel();
-            _currentBatchTimer = null;
+            CancelAndDisposeCurrentBatchTimer();
 
             _logger.LogDebug("Returning batch with {Count} messages", batch.Count);
             return batch;
@@ -118,8 +116,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             _currentBatch.Clear();
 
             // Cancel any existing timer
-            _currentBatchTimer?.Cancel();
-            _currentBatchTimer = null;
+            CancelAndDisposeCurrentBatchTimer();
 
             _logger.LogDebug("Flushed batch with {Count} messages", batch.Count);
             return batch;
@@ -132,11 +129,19 @@ public class TimedBatcher : IMessageBatcher, IDisposable
 
     private void StartBatchTimer()
     {
-        _currentBatchTimer?.Cancel();
-        _currentBatchTimer?.Dispose();
+        CancelAndDisposeCurrentBatchTimer();
         _currentBatchTimer = new CancellationTokenSource();
 
         _ = LogBatchTimerExpiryAsync(_currentBatchTimer.Token);
+    }
+
+    private void CancelAndDisposeCurrentBatchTimer()
+    {
+        var currentBatchTimer = _currentBatchTimer;
+        _currentBatchTimer = null;
+
+        currentBatchTimer?.Cancel();
+        currentBatchTimer?.Dispose();
     }
 
     private async Task WaitForBatchAsync(CancellationToken cancellationToken)
@@ -182,8 +187,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             return;
         }
 
-        _currentBatchTimer?.Cancel();
-        _currentBatchTimer?.Dispose();
+        CancelAndDisposeCurrentBatchTimer();
         _batchLock.Dispose();
     }
 
