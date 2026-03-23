@@ -99,14 +99,14 @@ public sealed class EntropyMonitor : IDisposable
             _logger.LogCritical(
                 "CRITICAL: Low entropy detected! Entropy: {Entropy:F3} bits/byte (min: {Min}). Cryptographic security may be compromised!",
                 entropy, MinAcceptableEntropy);
-            EntropyAlert?.Invoke(this, new EntropyAlertEventArgs(check));
+            RaiseEntropyAlert(check);
         }
         else if (check.Status == EntropyStatus.Warning)
         {
             _logger.LogWarning(
                 "Warning: Entropy below optimal level. Entropy: {Entropy:F3} bits/byte (warning: {Warning})",
                 entropy, WarningEntropy);
-            EntropyAlert?.Invoke(this, new EntropyAlertEventArgs(check));
+            RaiseEntropyAlert(check);
         }
         else
         {
@@ -223,6 +223,26 @@ public sealed class EntropyMonitor : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Entropy check failed");
+        }
+    }
+
+    private void RaiseEntropyAlert(EntropyCheck check)
+    {
+        if (EntropyAlert is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<EntropyAlertEventArgs> handler in EntropyAlert.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, new EntropyAlertEventArgs(check));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Entropy alert subscriber failed");
+            }
         }
     }
 

@@ -282,6 +282,7 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Contains("Loose Transcript Phrase", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("OCR Candidate Title", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("Comment Candidate Title", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("Known Title", option.SearchTexts!, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -481,6 +482,57 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Contains(option.SearchTexts, query => query.Contains("Deep cut alt mix", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(option.SearchTexts, query => query.Contains("Title Card", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(option.SearchTexts, query => query.Contains("unreleased version", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void AddFallbackOptions_IncludesUploaderOnlyVariant()
+    {
+        var method = typeof(SongIdService).GetMethod("AddFallbackOptions", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var run = new SongIdRun
+        {
+            Query = "raw query",
+            Metadata = new SongIdMetadata
+            {
+                Title = "Known Title",
+                Extra = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["uploader"] = "Uploader Alias",
+                },
+            },
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "needs_manual_review",
+            },
+        };
+
+        method!.Invoke(null, new object[] { run });
+
+        var option = Assert.Single(run.Options);
+        Assert.Contains(option.SearchTexts!, query => string.Equals(query, "Uploader Alias", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ParseAudfprintFinding_PreservesNormalizedScore()
+    {
+        var method = typeof(SongIdService).GetMethod("ParseAudfprintFinding", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var result = method!.Invoke(null, new object[] { "Matched path/song.flac with confidence 0.92" });
+
+        var finding = Assert.IsType<SongIdRecognizerFinding>(result);
+        Assert.Equal(0.92, finding.Score, 3);
+    }
+
+    [Fact]
+    public void LooksInterestingComment_RecognizesAdditionalSourceHints()
+    {
+        var method = typeof(SongIdService).GetMethod("LooksInterestingComment", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        Assert.True((bool)method!.Invoke(null, new object[] { "who is the artist on this sample?" })!);
+        Assert.True((bool)method.Invoke(null, new object[] { "id this unreleased version please" })!);
     }
 
     [Fact]

@@ -201,7 +201,7 @@ public sealed class FingerprintDetection : IDisposable
                         ip,
                         string.Join(", ", indicators.Select(i => i.Type)));
 
-                    ReconnaissanceDetected?.Invoke(this, new ReconnaissanceEventArgs(evt));
+                    RaiseReconnaissanceDetected(evt);
                 }
             }
         }
@@ -214,6 +214,26 @@ public sealed class FingerprintDetection : IDisposable
             PortsProbed = profile.PortsProbed.Count,
             FirstSeen = profile.FirstSeen,
         };
+    }
+
+    private void RaiseReconnaissanceDetected(ReconnaissanceEvent evt)
+    {
+        if (ReconnaissanceDetected is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<ReconnaissanceEventArgs> handler in ReconnaissanceDetected.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, new ReconnaissanceEventArgs(evt));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Reconnaissance subscriber failed");
+            }
+        }
     }
 
     /// <summary>

@@ -1106,8 +1106,11 @@ public sealed class SongIdService : ISongIdService
         }
 
         var fallbackQueries = new List<string>();
+        AddFallbackQuery(fallbackQueries, run.Metadata.Title);
         AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, run.Metadata.Title));
+        AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Album, run.Metadata.Title));
         AddFallbackQuery(fallbackQueries, run.Query);
+        AddFallbackQuery(fallbackQueries, TryGetMetadataValue(run.Metadata.Extra, "uploader"));
         AddFallbackQuery(fallbackQueries, BuildBestQuery(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Title));
         AddFallbackQuery(fallbackQueries, BuildBestQuery(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Album, run.Metadata.Title));
         foreach (var transcript in run.Transcripts)
@@ -2317,7 +2320,9 @@ public sealed class SongIdService : ISongIdService
 
         var scoreMatch = Regex.Match(bestLine, @"(?<score>\d+(\.\d+)?)");
         var score = scoreMatch.Success && double.TryParse(scoreMatch.Groups["score"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedScore)
-            ? Math.Min(0.99, parsedScore / 100.0)
+            ? parsedScore > 1
+                ? Math.Min(0.99, parsedScore / 100.0)
+                : Math.Min(0.99, Math.Max(0.0, parsedScore))
             : 0.55;
         var pathMatch = Regex.Match(bestLine, @"(?<path>[^\s,;]+\.(wav|flac|mp3|m4a|aac|ogg|opus))", RegexOptions.IgnoreCase);
         var sourcePath = pathMatch.Success ? pathMatch.Groups["path"].Value : null;
@@ -3607,6 +3612,11 @@ public sealed class SongIdService : ISongIdService
         var lowered = text.ToLowerInvariant();
         return lowered.Contains("track") ||
             lowered.Contains("song") ||
+            lowered.Contains("artist") ||
+            lowered.Contains("sample") ||
+            lowered.Contains("version") ||
+            lowered.Contains("unreleased") ||
+            lowered.Contains("id this") ||
             lowered.Contains("what is") ||
             lowered.Contains("name of") ||
             lowered.Contains("playlist") ||

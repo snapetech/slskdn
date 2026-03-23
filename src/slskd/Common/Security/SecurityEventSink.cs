@@ -113,13 +113,13 @@ public sealed class SecurityEventAggregator : ISecurityEventSink, IDisposable
                 _logger.LogCritical(
                     "[SECURITY:{Type}] {Message} - IP:{Ip} User:{User}",
                     evt.Type, evt.Message, evt.IpAddress, evt.Username ?? "(none)");
-                HighSeverityEvent?.Invoke(this, new SecurityEventArgs(evt));
+                RaiseHighSeverityEvent(evt);
                 break;
             case SecuritySeverity.High:
                 _logger.LogError(
                     "[SECURITY:{Type}] {Message} - IP:{Ip} User:{User}",
                     evt.Type, evt.Message, evt.IpAddress, evt.Username ?? "(none)");
-                HighSeverityEvent?.Invoke(this, new SecurityEventArgs(evt));
+                RaiseHighSeverityEvent(evt);
                 break;
             case SecuritySeverity.Medium:
                 _logger.LogWarning(
@@ -207,6 +207,26 @@ public sealed class SecurityEventAggregator : ISecurityEventSink, IDisposable
             _logger.LogInformation(
                 "Security stats: {EventsLastHour} events in last hour ({Critical} critical, {High} high)",
                 stats.EventsLastHour, stats.CriticalEvents, stats.HighEvents);
+        }
+    }
+
+    private void RaiseHighSeverityEvent(SecurityEvent evt)
+    {
+        if (HighSeverityEvent is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<SecurityEventArgs> handler in HighSeverityEvent.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, new SecurityEventArgs(evt));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "High severity security event subscriber failed");
+            }
         }
     }
 

@@ -787,3 +787,13 @@ dotnet test
 - Next steps:
   - continue into the next `SongIdService` fallback/query-generation cluster
   - then take the next Mesh/PodCore runtime slice from the placeholder inventory
+
+## 2026-03-23 10:41 CST
+- Finished another green SongID fallback/query-generation batch.
+- Current fixes in this batch:
+  - fallback search generation now includes direct title, album+title, and uploader-derived variants
+  - Audfprint normalized `0..1` scores are preserved instead of being divided again
+  - more real-world comment/source hints now feed SongID fallback planning
+- Next steps:
+  - continue the remaining `SongIdService` bottom-out paths
+  - then take the next Mesh/PodCore runtime slice from the placeholder inventory

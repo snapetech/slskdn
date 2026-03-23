@@ -6711,3 +6711,13 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+
+## 2026-03-23 10:41 CST
+- Continued the SongID fallback/query-generation bughunt after the HashDb helper normalization pass.
+- `SongIdService` fallback planning now also keeps direct title, album+title, and uploader-derived queries, and the comment classifier now recognizes more real-world source hints like artist/sample/version/unreleased/"id this" phrasing.
+- `SongIdService` Audfprint parsing no longer crushes already-normalized `0.x` confidence values by dividing them a second time.
+- Added focused regressions for title/uploader fallback queries, normalized Audfprint score handling, and the expanded interesting-comment detection.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`
