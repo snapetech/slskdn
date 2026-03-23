@@ -7,6 +7,8 @@ namespace slskd.Tests.Unit.Security;
 
 using System;
 using System.Net;
+using System.Reflection;
+using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using slskd.Common.Security;
 using Xunit;
@@ -228,5 +230,18 @@ public class NetworkGuardTests : IDisposable
 
         // 6th should be blocked
         Assert.False(guard.AllowMessage(_testIp, 100));
+    }
+
+    [Fact]
+    public void Dispose_DisposesCleanupTimer()
+    {
+        var guard = new NetworkGuard(NullLogger<NetworkGuard>.Instance);
+        var field = typeof(NetworkGuard).GetField("_cleanupTimer", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("NetworkGuard._cleanupTimer field was not found.");
+        var timer = (Timer)field.GetValue(guard)!;
+
+        guard.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan));
     }
 }

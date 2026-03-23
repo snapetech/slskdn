@@ -1084,3 +1084,11 @@ dotnet test
 - Next steps:
   - decide whether one more share-repository pass is warranted around keepalive corruption assumptions, or whether the higher-yield move is to widen back out to other owned timer/resource types surfaced by the new timer scan
   - if widening, prioritize timer-backed services that still own timers but do not obviously dispose them
+
+## 2026-03-23 14:31 CST
+- Widened the bughunt into the timer-backed security helper cluster surfaced by the timer scan.
+- Verified that the touched helpers (`NetworkGuard`, `EntropyMonitor`, plus adjacent `FingerprintDetection` / `SecurityEventAggregator`) already dispose their owned timers correctly; the real gap here was missing regression coverage, not missing runtime cleanup.
+- Added focused disposal regressions for `NetworkGuard` and `EntropyMonitor`; confirmed the touched slices passed (`20/20`) and the release build stayed green (`0 warnings / 0 errors`).
+- Next steps:
+  - continue the broader timer/resource sweep on the remaining long-lived helpers surfaced by the scan, especially service-level timers where disposal may be less directly exercised in existing tests
+  - keep preferring cluster passes like this over isolated one-off fixes

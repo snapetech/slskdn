@@ -7065,3 +7065,10 @@ Code quality improvements were completed as part of Option A:
 - The repository no longer leaks the timer or leaves the keepalive callback surface alive after disposal.
 - Extended `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` with focused disposal coverage around the public keepalive toggle surface.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`8/8`) after the updated test assembly was built; `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 14:31 CST
+
+- Followed the timer scan into the security helper cluster (`NetworkGuard`, `EntropyMonitor`, `FingerprintDetection`, `SecurityEventAggregator`, etc.) to confirm which owned timers still lacked disposal.
+- That pass found no new runtime leak in the touched types: `NetworkGuard` and `EntropyMonitor` already had disposal, and `FingerprintDetection` / `SecurityEventAggregator` already matched the ownership contract too.
+- Added focused regression coverage proving timer-backed disposal is observable and stays intact for `NetworkGuard` and `EntropyMonitor`, rather than leaving the contract implicit.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~NetworkGuardTests|FullyQualifiedName~SecurityEventEmitterTests"` passed (`20/20`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.

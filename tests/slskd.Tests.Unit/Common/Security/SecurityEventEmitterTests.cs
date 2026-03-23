@@ -3,12 +3,24 @@ namespace slskd.Tests.Unit.Common.Security;
 using System;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using slskd.Common.Security;
 using Xunit;
 
 public class SecurityEventEmitterTests
 {
+    [Fact]
+    public void EntropyMonitor_Dispose_DisposesCheckTimer()
+    {
+        var monitor = new EntropyMonitor(NullLogger<EntropyMonitor>.Instance);
+        var timer = GetTimerField(monitor, "_checkTimer");
+
+        monitor.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan));
+    }
+
     [Fact]
     public void SecurityEventAggregator_WhenOneSubscriberThrows_ContinuesInvokingRemainingSubscribers()
     {
@@ -90,5 +102,13 @@ public class SecurityEventEmitterTests
         detection.RecordConnection(publicIp, 5003, protocolVersion: "v4", userAgent: "ua-4", succeeded: false);
 
         Assert.True(invokedHealthySubscriber);
+    }
+
+    private static System.Threading.Timer GetTimerField(object instance, string fieldName)
+    {
+        var field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"{instance.GetType().Name}.{fieldName} field was not found.");
+
+        return (System.Threading.Timer)field.GetValue(instance)!;
     }
 }
