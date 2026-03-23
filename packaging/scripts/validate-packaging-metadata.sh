@@ -38,6 +38,25 @@ reject_line() {
     fi
 }
 
+extract_release_from_url() {
+    local url="$1"
+    printf '%s\n' "${url##*/releases/download/}" | sed 's#/.*##'
+}
+
+extract_release_from_formula() {
+    local file="$1"
+    awk '/^  version "/ {gsub(/"/, "", $2); print substr($2, 1); exit}' "$file"
+}
+
+extract_stable_linux_sha() {
+    local file="$1"
+    awk '
+      /on_linux do/ {in_linux=1; next}
+      in_linux && $1=="sha256" {gsub(/"/, "", $2); print $2; exit}
+      in_linux && /^  end/ {in_linux=0}
+    ' "$file"
+}
+
 expect_line flake.nix 'makeWrapper \$out/libexec/\$\{pname\}/slskd \$out/bin/slskd'
 expect_line flake.nix 'ln -s slskd \$out/bin/\$\{pname\}'
 expect_line flake.nix 'nativeBuildInputs = \[ pkgs\.unzip pkgs\.makeWrapper pkgs\.autoPatchelfHook pkgs\.patchelf \];'
@@ -70,24 +89,28 @@ expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-x64\.zip'
 expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
 
 expect_line packaging/aur/PKGBUILD '^source=\($'
-expect_literal packaging/aur/PKGBUILD-bin '"slskdn-${pkgver}-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-${pkgver}-linux-x64.zip"'
-reject_line packaging/aur/PKGBUILD-bin 'slskdn-main-linux-x64\.zip::https://github\.com/snapetech/slskdn/releases/download/\${pkgver//\.slskdn/-slskdn}/slskdn-main-linux-x64\.zip'
+expect_literal packaging/aur/PKGBUILD-bin '"slskdn-main-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"'
+reject_line packaging/aur/PKGBUILD-bin 'slskdn-\$\{pkgver\}-linux-x64\.zip::https://github\.com/snapetech/slskdn/releases/download/\${pkgver//\.slskdn/-slskdn}/slskdn-\$\{pkgver\}-linux-x64\.zip'
 expect_literal packaging/aur/PKGBUILD-dev '"slskdn-dev-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/RELEASE_TAG_PLACEHOLDER/slskdn-dev-linux-x64.zip"'
 
 bash packaging/scripts/validate-release-copy.sh
 
-CHOC_VERSION=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n 1)
-if [[ -z "${CHOC_VERSION}" ]]; then
-  fail "Could not extract Chocolatey version from packaging/chocolatey/slskdn.nuspec"
-fi
+STABLE_FORMULA_VERSION=$(extract_release_from_formula Formula/slskdn.rb)
+fail_if_empty "$STABLE_FORMULA_VERSION" "Stable Formula version"
+
+STABLE_FORMULA_LINUX_SHA=$(extract_stable_linux_sha Formula/slskdn.rb)
+fail_if_empty "$STABLE_FORMULA_LINUX_SHA" "Stable Formula Linux SHA"
 
 HOMEBREW_VERSION=$(sed -n 's#^  version "\([^"]*\)"#\1#p' packaging/homebrew/Formula/slskdn.rb | head -n 1)
 fail_if_empty "$HOMEBREW_VERSION" "Homebrew version"
+if [[ "$HOMEBREW_VERSION" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Homebrew formula version ${HOMEBREW_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
 
 HOME_URL_VERSIONS_COUNT=0
 while IFS= read -r homebrew_release; do
   ((HOME_URL_VERSIONS_COUNT += 1))
-  if [[ "$homebrew_release" != "$HOMEBREW_VERSION" ]]; then
+  if [[ "$homebrew_release" != "$STABLE_FORMULA_VERSION" ]]; then
     fail "Homebrew formula URL release (${homebrew_release}) does not match version ${HOMEBREW_VERSION}"
   fi
 done < <(sed -n "s#.*releases/download/\([^/]*\)/.*#\1#p" packaging/homebrew/Formula/slskdn.rb | grep -v '^$')
@@ -98,8 +121,38 @@ fi
 
 SNAP_VERSION=$(sed -n "s#^version: '\([^']*\)'#\1#p" packaging/snap/snapcraft.yaml | head -n 1)
 fail_if_empty "$SNAP_VERSION" "Snap version"
+if [[ "$SNAP_VERSION" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Snapcraft version ${SNAP_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
 if ! grep -q "releases/download/${SNAP_VERSION}/" packaging/snap/snapcraft.yaml; then
   fail "Snapcraft source URL should contain version ${SNAP_VERSION}"
+fi
+if ! grep -q "source-checksum: sha256/${STABLE_FORMULA_LINUX_SHA}" packaging/snap/snapcraft.yaml; then
+  fail "Snapcraft source-checksum should match stable Linux SHA ${STABLE_FORMULA_LINUX_SHA}"
+fi
+
+FLATPAK_URL=$(sed -n "s#^[[:space:]]*url: \\(.*\\)#\\1#p" packaging/flatpak/io.github.slskd.slskdn.yml | grep '/releases/download/' | head -n 1)
+if [[ -z "$FLATPAK_URL" ]]; then
+  fail "Could not extract Flatpak release URL"
+fi
+FLATPAK_RELEASE=$(extract_release_from_url "$FLATPAK_URL")
+if [[ "$FLATPAK_RELEASE" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Flatpak release ${FLATPAK_RELEASE} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
+if ! grep -q "sha256: ${STABLE_FORMULA_LINUX_SHA}" packaging/flatpak/io.github.slskd.slskdn.yml; then
+  fail "Flatpak source SHA should match stable Linux SHA ${STABLE_FORMULA_LINUX_SHA}"
+fi
+
+TRUENAS_CHART_VERSION=$(sed -n 's/^appVersion: "\(.*\)"$/\1/p' packaging/truenas-scale/charts/slskdn/Chart.yaml)
+fail_if_empty "$TRUENAS_CHART_VERSION" "TrueNAS appVersion"
+if [[ "$TRUENAS_CHART_VERSION" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "TrueNAS chart appVersion ${TRUENAS_CHART_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
+
+HELM_CHART_VERSION=$(sed -n 's/^appVersion: "\(.*\)"$/\1/p' packaging/helm/slskdn/Chart.yaml)
+fail_if_empty "$HELM_CHART_VERSION" "Helm appVersion"
+if [[ "$HELM_CHART_VERSION" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Helm chart appVersion ${HELM_CHART_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
 fi
 
 validate_winget() {
@@ -136,6 +189,32 @@ validate_winget() {
 
 validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
 validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
+
+WINGET_STABLE_VERSION=$(sed -n 's/^PackageVersion: \(.*\)$/\1/p' packaging/winget/snapetech.slskdn.installer.yaml | head -n1)
+if [[ "${WINGET_STABLE_VERSION/.slskdn./-slskdn.}" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Winget stable PackageVersion ${WINGET_STABLE_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
+
+CHOC_VERSION=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n 1)
+if [[ -z "${CHOC_VERSION}" ]]; then
+  fail "Could not extract Chocolatey version from packaging/chocolatey/slskdn.nuspec"
+fi
+if [[ "$CHOC_VERSION" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Chocolatey version ${CHOC_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
+
+CHOC_URL=$(sed -n 's#^\$url[[:space:]]*= "\([^"]*\)"#\1#p' packaging/chocolatey/tools/chocolateyinstall.ps1 | head -n 1)
+if [[ -z "$CHOC_URL" ]]; then
+  fail "Could not extract Chocolatey URL"
+fi
+CHOC_RELEASE=$(extract_release_from_url "$CHOC_URL")
+if [[ "$CHOC_RELEASE" != "$STABLE_FORMULA_VERSION" ]]; then
+  fail "Chocolatey installer URL release ${CHOC_RELEASE} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+fi
+
+if [[ "$CHOC_URL" != "https://github.com/snapetech/slskdn/releases/download/${CHOC_VERSION}/slskdn-main-win-x64.zip" ]]; then
+  fail "Chocolatey installer URL must match version ${CHOC_VERSION}"
+fi
 
 expect_literal packaging/chocolatey/slskdn.nuspec "<version>${CHOC_VERSION}</version>"
 expect_literal packaging/chocolatey/tools/chocolateyinstall.ps1 "releases/download/${CHOC_VERSION}/slskdn-main-win-x64.zip"

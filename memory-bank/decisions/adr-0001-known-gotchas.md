@@ -313,6 +313,30 @@ fi
 
 **Why This Keeps Happening**: utility classes often assume they are “single-threaded enough,” but timer callbacks are already concurrent with callers. If shared state is modified on both paths, use atomic operations. If a queued callback slot is supposed to represent “run at most once,” clear the slot before invoking user code or a failing delegate will be retried forever.
 
+### 0xDF. AUR PKGBUILD Source Name Must Match `main` Artifact Convention
+
+**The Bug**: `packaging/aur/PKGBUILD-bin` still referenced the old versioned release artifact pattern (`slskdn-${pkgver}-linux-x64.zip`) while current stable binary releases use `slskdn-main-linux-x64.zip`. That makes `makepkg` validate a non-existent source URL and fail in fresh rebuilds.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+source=(
+  "slskdn-${pkgver}-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-${pkgver}-linux-x64.zip"
+)
+```
+
+**Correct**:
+```bash
+source=(
+  "slskdn-main-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"
+)
+```
+
+**Why This Keeps Happening**: release naming changes are often introduced in publishing jobs before package-template checks and docs are aligned. Enforce artifact-name assertions in the metadata validator and keep the package template and validation pattern in lockstep.
+
 ### 0xDC. Scene Message Fanout Must Not Let One Subscriber Abort PubSub Or Chat Delivery
 
 **The Bug**: `ScenePubSubService` and `SceneChatService` both raised `MessageReceived` through raw multicast invocation. One throwing scene subscriber could therefore abort later pubsub listeners or stop later chat listeners from seeing a message that had already been accepted and cached.
