@@ -81,6 +81,35 @@ public async Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext
 
 **Why This Keeps Happening**: mesh service adapters often add `HandleStreamAsync(...)` just to satisfy the interface, but if the service already has a single-request payload contract and can safely emit one bounded response, a close-only implementation becomes a runtime lie. Reuse the existing request parser and service logic instead of advertising a reachable no-op.
 
+### 0xE1. Reachable Shadow-Index Streams Must Reuse The Existing Query Contract
+
+**The Bug**: `VirtualSoulfindMeshService.HandleStreamAsync(...)` accepted mesh streams and immediately closed them even though the service already had a bounded single-request query contract (`QueryByMbid`) and a safe response shape. That meant callers could negotiate a stream successfully but receive nothing from a service that already knew how to answer the same request over calls.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/VirtualSoulfindMeshService.cs`
+
+**Wrong**:
+```csharp
+public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
+{
+    _logger.LogWarning("[VirtualSoulfind] Streaming requested by {PeerId}, but shadow-index streaming is not implemented", context.RemotePeerId);
+    return stream.CloseAsync(cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+public async Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
+{
+    var payload = await stream.ReceiveAsync(cancellationToken);
+    var reply = await HandleQueryByMbidAsync(...);
+    await stream.SendAsync(reply.Payload, cancellationToken);
+    await stream.CloseAsync(cancellationToken);
+}
+```
+
+**Why This Keeps Happening**: stream adapters are easy to leave as interface stubs once the call path works, but if the service already has a single JSON request and a bounded JSON reply, the stream path should reuse that logic instead of advertising a reachable no-op. Otherwise the runtime surface and the actual behavior drift apart.
+
 ### 0xDA. Detached Worker Completion Tasks Must Surface One Stable Failure, Not Re-throw And Re-fault
 
 **The Bug**: `ChannelReader<T>` runs its background read loop as fire-and-forget work and exposes completion through `Completed`. But on failure it both re-threw the exception from the detached task and let `ExceptionHandler` run unguarded inside the catch block. That means the callback could mask the original read/handler failure, and the background task could fault separately even though `Completed` was already supposed to be the public failure surface.
