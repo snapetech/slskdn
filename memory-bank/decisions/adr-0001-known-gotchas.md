@@ -130,6 +130,25 @@ var normalizedCall = new ServiceCall
 
 **Why This Keeps Happening**: most boundary normalization work happens at controller/service edges where mutable request models are common. In slskdN, many transport DTOs are intentionally immutable. Normalize by creating a fresh copied object or by using local normalized variables, never by mutating `init`-only properties after construction.
 
+### 0xD7. Virtual Protocol Paths Are Wire Identifiers, Not OS Paths
+
+**The Bug**: capability-file request matching normalized a virtual protocol path using filesystem-style separator assumptions. That worked on some inputs but broke canonical wire-format matching because the reserved capability path uses forward slashes regardless of platform.
+
+**Files Affected**:
+- `src/slskd/Capabilities/CapabilityFileService.cs`
+
+**Wrong**:
+```csharp
+return path.Trim().Replace('/', '\\');
+```
+
+**Correct**:
+```csharp
+return path.Trim().Replace('\\', '/');
+```
+
+**Why This Keeps Happening**: it is easy to treat every “path-like” string as a local filesystem path. Wire identifiers and virtual protocol filenames have their own canonical format. Normalize toward the protocol format, not the host OS separator rules.
+
 ### 0xD7. Transfer And Chunk Result DTOs Must Not Contain Per-Peer Diagnostics Or Exact Throughput Numbers
 
 **The Bug**: swarm and multi-source download helpers were still putting operator-grade diagnostics directly into result DTOs. Those messages included peer IDs, transport labels, exact byte shortfalls, and low-throughput measurements, and then bubbled out through API or job-status surfaces.
