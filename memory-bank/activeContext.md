@@ -803,3 +803,13 @@ dotnet test
 - Next steps:
   - continue the remaining `SongIdService` bottom-out paths
   - then take the next Mesh/PodCore runtime slice from the placeholder inventory
+
+## 2026-03-23 10:45 CST
+- Finished the live PodCore message-routing fix.
+- Current fixes in this batch:
+  - production `SqlitePodMessaging` now routes through `IPodMessageRouter` after persistence
+  - normal pod sends from API and mesh service paths no longer stop at local SQLite storage
+  - direct SQLite messaging tests now cover both routed success and routed failure after persistence
+- Next steps:
+  - continue the remaining Pod/Mesh runtime seams from the placeholder inventory
+  - then re-run the full release gate once the next dense runtime batch lands

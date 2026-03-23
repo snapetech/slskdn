@@ -1683,7 +1683,8 @@ namespace slskd
                 var dbContext = factory.CreateDbContext();
                 return new PodCore.SqlitePodMessaging(
                     dbContext,
-                    sp.GetRequiredService<ILogger<PodCore.SqlitePodMessaging>>());
+                    sp.GetRequiredService<ILogger<PodCore.SqlitePodMessaging>>(),
+                    sp.GetRequiredService<PodCore.IPodMessageRouter>());
             });
 
             // Pod message storage service with full-text search and retention policies

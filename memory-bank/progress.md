@@ -6727,3 +6727,12 @@ Code quality improvements were completed as part of Option A:
 - Replaced raw multicast `?.Invoke(...)` fanout in `SecurityEventAggregator`, `EntropyMonitor`, `Honeypot`, and `FingerprintDetection` with per-subscriber isolation and warning logs.
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Common/Security/SecurityEventEmitterTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused unit slice for `SecurityEventEmitterTests`, `ClockTests`, and `SignalBusTests` passed `16/16`.
+
+## 2026-03-23 10:45 CST
+- Continued into the live PodCore runtime seam after the SongID batch and fixed the production pod-send path rather than the older in-memory fallback implementation.
+- `SqlitePodMessaging` now persists pod messages and then routes them through `IPodMessageRouter`; normal API and mesh pod sends no longer report success after only local storage.
+- Added direct regressions for successful routing and post-persist routing failure handling on the SQLite-backed implementation.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`

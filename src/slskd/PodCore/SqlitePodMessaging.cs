@@ -32,13 +32,16 @@ namespace slskd.PodCore
     {
         private readonly PodDbContext dbContext;
         private readonly ILogger<SqlitePodMessaging> logger;
+        private readonly IPodMessageRouter? messageRouter;
 
         public SqlitePodMessaging(
             PodDbContext dbContext,
-            ILogger<SqlitePodMessaging> logger)
+            ILogger<SqlitePodMessaging> logger,
+            IPodMessageRouter? messageRouter = null)
         {
             this.dbContext = dbContext;
             this.logger = logger;
+            this.messageRouter = messageRouter;
         }
 
         public async Task<bool> SendAsync(
@@ -117,7 +120,23 @@ namespace slskd.PodCore
                 await dbContext.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
-                logger.LogDebug("Message saved successfully");
+                if (messageRouter == null)
+                {
+                    logger.LogDebug("Message saved successfully");
+                    return true;
+                }
+
+                var routingResult = await messageRouter.RouteMessageAsync(message, ct);
+                if (!routingResult.Success)
+                {
+                    logger.LogWarning(
+                        "Message saved but routing failed for {MessageId}: {Error}",
+                        message.MessageId,
+                        routingResult.ErrorMessage ?? "Routing failed");
+                    return false;
+                }
+
+                logger.LogDebug("Message saved and routed successfully");
                 return true;
             }
             catch (Exception ex)
