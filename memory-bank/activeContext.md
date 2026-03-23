@@ -823,3 +823,13 @@ dotnet test
 - Next steps:
   - continue the remaining Pod/Mesh runtime seams from the placeholder inventory
   - then re-run the full release gate once the next dense runtime batch lands
+
+## 2026-03-23 10:50 CST
+- Finished the PodCore router identity-shape fix.
+- Current fixes in this batch:
+  - `PodMessageRouter` now uses canonical `PodId` and `ChannelId` fields throughout routing and result reporting
+  - the live SQLite-backed pod-send path now reaches a router that understands the actual message contract
+  - router tests now cover the modern separated identity shape
+- Next steps:
+  - continue the remaining Pod/Mesh runtime seams from the placeholder inventory
+  - then rerun the release gate after the next dense runtime pass

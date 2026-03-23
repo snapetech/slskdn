@@ -67,31 +67,13 @@ public class PodMessageRouter : IPodMessageRouter
 
         try
         {
-            _logger.LogDebug("[PodMessageRouter] Routing message {MessageId} to pod {PodId}", message.MessageId, message.ChannelId);
+            var podId = message.PodId?.Trim() ?? string.Empty;
+            var channelId = message.ChannelId?.Trim() ?? string.Empty;
 
-            // Extract pod ID from channel (format: "podId:channelId")
-            var channelParts = message.ChannelId.Split(':', 2);
-            if (channelParts.Length != 2)
+            _logger.LogDebug("[PodMessageRouter] Routing message {MessageId} to pod {PodId}", message.MessageId, podId);
+
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
             {
-                return new PodMessageRoutingResult(
-                    Success: false,
-                    MessageId: message.MessageId,
-                    PodId: message.ChannelId,
-                    TargetPeerCount: 0,
-                    SuccessfullyRoutedCount: 0,
-                    FailedRoutingCount: 0,
-                    RoutingDuration: DateTimeOffset.UtcNow - startTime,
-                    ErrorMessage: "Invalid channel ID format");
-            }
-
-            var podId = channelParts[0];
-            var simpleChannelId = channelParts[1];
-
-            // Validate that the channel exists in the pod
-            var channel = await _podService.GetChannelAsync(podId, simpleChannelId, cancellationToken);
-            if (channel == null)
-            {
-                _logger.LogWarning("[PodMessageRouter] Attempted to route message to non-existent channel {ChannelId} in pod {PodId}", simpleChannelId, podId);
                 return new PodMessageRoutingResult(
                     Success: false,
                     MessageId: message.MessageId,
@@ -100,7 +82,23 @@ public class PodMessageRouter : IPodMessageRouter
                     SuccessfullyRoutedCount: 0,
                     FailedRoutingCount: 0,
                     RoutingDuration: DateTimeOffset.UtcNow - startTime,
-                    ErrorMessage: $"Channel {simpleChannelId} does not exist in pod {podId}");
+                    ErrorMessage: "PodId and ChannelId are required");
+            }
+
+            // Validate that the channel exists in the pod
+            var channel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
+            if (channel == null)
+            {
+                _logger.LogWarning("[PodMessageRouter] Attempted to route message to non-existent channel {ChannelId} in pod {PodId}", channelId, podId);
+                return new PodMessageRoutingResult(
+                    Success: false,
+                    MessageId: message.MessageId,
+                    PodId: podId,
+                    TargetPeerCount: 0,
+                    SuccessfullyRoutedCount: 0,
+                    FailedRoutingCount: 0,
+                    RoutingDuration: DateTimeOffset.UtcNow - startTime,
+                    ErrorMessage: $"Channel {channelId} does not exist in pod {podId}");
             }
 
             // Check for duplicate routing using Bloom filter
@@ -169,7 +167,7 @@ public class PodMessageRouter : IPodMessageRouter
             return new PodMessageRoutingResult(
                 Success: false,
                 MessageId: message.MessageId,
-                PodId: message.ChannelId.Split(':', 2).FirstOrDefault() ?? "unknown",
+                PodId: message.PodId?.Trim() ?? string.Empty,
                 TargetPeerCount: 0,
                 SuccessfullyRoutedCount: 0,
                 FailedRoutingCount: 0,
@@ -191,8 +189,8 @@ public class PodMessageRouter : IPodMessageRouter
         var failureCount = 0;
         var failedPeers = new List<string>();
 
-        // Extract pod ID for context
-        var podId = message.ChannelId.Split(':', 2).FirstOrDefault() ?? "unknown";
+        // Use the canonical message pod identity for context.
+        var podId = message.PodId?.Trim() ?? string.Empty;
 
         _logger.LogDebug("[PodMessageRouter] Routing message {MessageId} to {Count} specific peers", message.MessageId, targetList.Count);
 

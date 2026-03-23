@@ -6748,3 +6748,12 @@ Code quality improvements were completed as part of Option A:
 - `ManagedState<T>.SetValue(...)` now snapshots the delegate list and updated state under lock, fans out outside the lock, and rethrows subscriber faults as an `AggregateException` after all listeners run.
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ManagedStateTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `ManagedStateTests` slice passed `1/1`.
+
+## 2026-03-23 10:50 CST
+- Continued the PodCore runtime completion work immediately after wiring live SQLite message routing.
+- Fixed `PodMessageRouter` to use the canonical `PodMessage.PodId` + `ChannelId` fields instead of trying to re-parse a legacy `podId:channelId` string from `ChannelId`.
+- Added a focused router regression proving that trimmed separate `PodId`/`ChannelId` messages route successfully through the normal runtime path.
+- Validation passed:
+  - `dotnet build --no-restore`
+  - `dotnet test --no-restore`
+  - `bash ./bin/lint`
