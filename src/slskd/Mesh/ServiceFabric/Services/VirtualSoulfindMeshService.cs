@@ -74,13 +74,35 @@ public class VirtualSoulfindMeshService : IMeshService
         }
     }
 
-    public Task HandleStreamAsync(
+    public async Task HandleStreamAsync(
         MeshServiceStream stream,
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[VirtualSoulfind] Streaming requested by {PeerId}, but shadow-index streaming is not implemented", context.RemotePeerId);
-        return stream.CloseAsync(cancellationToken);
+        var requestPayload = await stream.ReceiveAsync(cancellationToken);
+        if (requestPayload == null || requestPayload.Length == 0)
+        {
+            await stream.CloseAsync(cancellationToken);
+            return;
+        }
+
+        var reply = await HandleQueryByMbidAsync(
+            new ServiceCall
+            {
+                ServiceName = ServiceName,
+                Method = "QueryByMbid",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = requestPayload,
+            },
+            context,
+            cancellationToken);
+
+        if (reply.StatusCode == ServiceStatusCodes.OK && reply.Payload.Length > 0)
+        {
+            await stream.SendAsync(reply.Payload, cancellationToken);
+        }
+
+        await stream.CloseAsync(cancellationToken);
     }
 
     private async Task<ServiceReply> HandleQueryByMbidAsync(
@@ -90,7 +112,8 @@ public class VirtualSoulfindMeshService : IMeshService
     {
         var (request, err) = ServicePayloadParser.TryParseJson<QueryByMbidRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (request == null || string.IsNullOrWhiteSpace(request.MBID))
+        var normalizedMbid = request?.MBID?.Trim();
+        if (request == null || string.IsNullOrWhiteSpace(normalizedMbid))
         {
             return new ServiceReply
             {
@@ -101,7 +124,7 @@ public class VirtualSoulfindMeshService : IMeshService
         }
 
         // Validate MBID format (basic check)
-        if (!IsValidMbid(request.MBID))
+        if (!IsValidMbid(normalizedMbid))
         {
             return new ServiceReply
             {
@@ -111,7 +134,7 @@ public class VirtualSoulfindMeshService : IMeshService
             };
         }
 
-        var result = await _shadowIndexQuery.QueryAsync(request.MBID, cancellationToken);
+        var result = await _shadowIndexQuery.QueryAsync(normalizedMbid, cancellationToken);
 
         if (result == null)
         {
@@ -152,7 +175,13 @@ public class VirtualSoulfindMeshService : IMeshService
     {
         var (request, err) = ServicePayloadParser.TryParseJson<QueryBatchRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (request == null || request.MBIDs == null || request.MBIDs.Count == 0)
+        var normalizedMbids = request?.MBIDs?
+            .Where(static mbid => !string.IsNullOrWhiteSpace(mbid))
+            .Select(static mbid => mbid.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (request == null || normalizedMbids == null || normalizedMbids.Count == 0)
         {
             return new ServiceReply
             {
@@ -163,7 +192,7 @@ public class VirtualSoulfindMeshService : IMeshService
         }
 
         // Rate limit: max 20 MBIDs per batch query
-        if (request.MBIDs.Count > 20)
+        if (normalizedMbids.Count > 20)
         {
             return new ServiceReply
             {
@@ -174,7 +203,7 @@ public class VirtualSoulfindMeshService : IMeshService
         }
 
         // Validate all MBIDs
-        var invalidMbids = request.MBIDs.Where(m => !IsValidMbid(m)).ToList();
+        var invalidMbids = normalizedMbids.Where(m => !IsValidMbid(m)).ToList();
         if (invalidMbids.Any())
         {
             return new ServiceReply
@@ -185,7 +214,7 @@ public class VirtualSoulfindMeshService : IMeshService
             };
         }
 
-        var results = await _shadowIndexQuery.QueryBatchAsync(request.MBIDs, cancellationToken);
+        var results = await _shadowIndexQuery.QueryBatchAsync(normalizedMbids, cancellationToken);
 
         // Privacy: Strip PII from all results
         var safeResults = results.ToDictionary(
