@@ -52,6 +52,42 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC8. Corpus And Recognizer Metadata Without Exact Fingerprint Payloads Can Still Be Useful Evidence
+
+**The Bug**: SongID helper paths were treating missing exact recognizer payload fields or missing corpus fingerprint files as equivalent to “no useful result.” That caused run-local evidence to bottom out early even when the service still had enough artist/title/label metadata to keep ranking, reuse corpus knowledge, or emit a conservative recognizer finding.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(fingerprintPath))
+{
+    continue;
+}
+
+if (string.IsNullOrWhiteSpace(path))
+{
+    continue;
+}
+```
+
+**Correct**:
+```csharp
+if (!string.IsNullOrWhiteSpace(fingerprintPath))
+{
+    // use fingerprint similarity
+}
+else if (!string.IsNullOrWhiteSpace(entry.RecordingId) ||
+         !string.IsNullOrWhiteSpace(entry.Artist) ||
+         !string.IsNullOrWhiteSpace(entry.Title))
+{
+    // keep conservative corpus metadata evidence
+}
+```
+
+**Why This Keeps Happening**: SongID has many helper probes with different confidence levels. It is easy to wire them as all-or-nothing because the strongest path is exact fingerprint or exact recognizer output. That drops weaker but still actionable evidence. In SongID, missing the strongest field should often downgrade confidence, not force a null result.
+
 ### 0xC7. Low-Traffic Controllers Still Need The Same ID Canonicalization As The Busy APIs
 
 **The Bug**: older or lower-traffic controllers were validating that route/body IDs were present, but they still forwarded padded values like `" job-1 "` or `" share-1 "` straight into lookups and storage-facing services. That made lookups miss existing records and let logically identical IDs behave like different keys.
