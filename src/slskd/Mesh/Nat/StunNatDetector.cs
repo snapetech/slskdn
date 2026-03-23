@@ -199,6 +199,8 @@ public class StunNatDetector : INatDetector
             return false;
         }
 
+        endpoint = endpoint.Trim();
+
         string portPart;
         if (endpoint.StartsWith("[", StringComparison.Ordinal))
         {
@@ -223,7 +225,9 @@ public class StunNatDetector : INatDetector
             portPart = endpoint[(separatorIndex + 1)..];
         }
 
-        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
+        host = host.Trim();
+        portPart = portPart.Trim();
+        return !string.IsNullOrWhiteSpace(host) && int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     private async Task<IPAddress?> ResolveHostAsync(string host, CancellationToken ct)
@@ -234,7 +238,8 @@ public class StunNatDetector : INatDetector
             resolveTimeout.CancelAfter(DnsResolveTimeout);
 
             var addresses = await Dns.GetHostAddressesAsync(host, resolveTimeout.Token);
-            return addresses.FirstOrDefault();
+            return addresses.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork) ??
+                addresses.FirstOrDefault();
         }
         catch (OperationCanceledException)
         {
@@ -288,6 +293,35 @@ public class StunNatDetector : INatDetector
 
                     var addrBytes = BitConverter.GetBytes(address);
                     if (BitConverter.IsLittleEndian) Array.Reverse(addrBytes);
+                    return new IPEndPoint(new IPAddress(addrBytes), port);
+                }
+
+                if (family == 0x02 && attrLen >= 20)
+                {
+                    ushort port = ReadUInt16(buf, offset + 2);
+                    var addrBytes = new byte[16];
+                    Array.Copy(buf, offset + 4, addrBytes, 0, 16);
+
+                    if (attrType == 0x0020)
+                    {
+                        port = (ushort)(port ^ (StunMagicCookie >> 16));
+                        var cookieBytes = BitConverter.GetBytes(StunMagicCookie);
+                        if (BitConverter.IsLittleEndian)
+                        {
+                            Array.Reverse(cookieBytes);
+                        }
+
+                        for (var i = 0; i < 4; i++)
+                        {
+                            addrBytes[i] ^= cookieBytes[i];
+                        }
+
+                        for (var i = 0; i < 12; i++)
+                        {
+                            addrBytes[i + 4] ^= txn[i];
+                        }
+                    }
+
                     return new IPEndPoint(new IPAddress(addrBytes), port);
                 }
             }

@@ -31,7 +31,20 @@ namespace slskd.Jobs.API
         [HttpPost]
         public async Task<ActionResult<object>> Create([FromBody] DiscographyJobRequest request, CancellationToken ct)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.ArtistId))
+            if (request == null)
+            {
+                return BadRequest("artistId is required");
+            }
+
+            request.ArtistId = request.ArtistId?.Trim() ?? string.Empty;
+            request.TargetDirectory = string.IsNullOrWhiteSpace(request.TargetDirectory) ? null : request.TargetDirectory.Trim();
+            request.ReleaseIds = request.ReleaseIds?
+                .Select(id => id?.Trim() ?? string.Empty)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (string.IsNullOrWhiteSpace(request.ArtistId))
             {
                 return BadRequest("artistId is required");
             }
@@ -47,6 +60,12 @@ namespace slskd.Jobs.API
         [HttpGet("{jobId}")]
         public async Task<ActionResult<object>> Get(string jobId, CancellationToken ct)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return BadRequest("jobId is required");
+            }
+
             var job = await jobService.GetJobAsync(jobId, ct).ConfigureAwait(false);
             if (job == null)
             {

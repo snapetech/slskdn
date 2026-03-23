@@ -248,6 +248,11 @@ dotnet test
 - Fixed a separate compile blocker in `MetadataFacade` caused by reused local names during a fallback-refactor, and documented both patterns immediately in `adr-0001-known-gotchas.md`.
 - Next: continue through the next thin-controller/helper batch, with emphasis on native utility controllers and other low-traffic endpoints that still bypass controller-edge canonicalization.
 
+## 2026-03-22 18:29
+- Normalized nested request fields in `ProfileController` and `ContactsController` so optional strings and endpoint collections are canonicalized before the service layer sees them.
+- Added focused regression coverage for trimmed invite/nickname/peerId/display-name flows and for rejecting whitespace-only contact updates.
+- Next: continue through the next low-traffic controller/helper batch, especially native utility endpoints and messaging controllers that still accept raw strings in route/body pairs.
+
 ## 2026-03-22 18:22
 - Executed Batch A against `SongIdService`, `MetadataFacade`, and `MusicBrainzClient`.
 - Replaced one major early-bottom-out pattern: metadata hits without MBIDs now continue through SongID with conservative synthetic IDs instead of being discarded.
@@ -263,3 +268,8 @@ dotnet test
 - Started Batch B with `MeshSyncService`.
 - Fixed two concrete under-reporting/runtime issues: duplicate in-flight request failure and impossible small-mesh quorum requirements.
 - Next: continue Batch B through `CapabilityFileService`, `MeshOverlayConnector`, and `StunNatDetector`, then circle back for any remaining deep `SongIdService` bottom-out paths.
+
+## 2026-03-22 18:55
+- Continued Batch B through `CapabilityFileService`, `MeshOverlayConnector`, and `StunNatDetector`.
+- Fixed capability/endpoint normalization, preserved partial capability identity, restored the live connection return in mesh overlay connect, and added IPv6 STUN mapped-address parsing.
+- Next: inspect the remaining dirty tree, commit everything, then keep pushing through `MeshOverlayConnector` / transport fallback paths or circle back into the next dense `SongIdService` cluster.

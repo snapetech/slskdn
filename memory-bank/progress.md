@@ -6007,6 +6007,13 @@ Code quality improvements were completed as part of Option A:
 - Fixed an unrelated compile blocker in `MetadataFacade.GetByFileAsync(...)` where a later tuple deconstruction reused `artist/title/album` names already declared earlier in the method.
 - Added and immediately committed gotchas for thin controller edge normalization and local-name reuse after refactors in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md).
 
+## 2026-03-22 18:29 - Identity nested-request normalization pass
+
+- Hardened `ProfileController` and `ContactsController` so nested request fields are normalized before dispatch: display names, avatars, invite links, peer IDs, nicknames, and `PeerEndpoint` collection items are now trimmed at the controller edge.
+- `ProfileController` now drops blank endpoint entries before calling `IProfileService`, and `ContactsController.Update(...)` now rejects whitespace-only nicknames instead of silently storing an empty string.
+- Added focused regression coverage in `ProfileControllerTests` and `ContactsControllerTests`; the targeted slice passed `17/17`.
+- Documented the recurring pattern in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and immediately committed the docs-only note.
+
 ## 2026-03-22 18:22 - SongID and metadata completion batch A
 
 - `MetadataFacade` now trims cache/query keys, caches AcoustID-only fallback hits, yields artist/title-only search hits even without a MusicBrainz recording ID, and falls back to filename-derived metadata for local files when tag parsing bottoms out.
@@ -6029,3 +6036,11 @@ Code quality improvements were completed as part of Option A:
 - Mesh hash lookup consensus now adapts the required agreement count to the number of peers actually queried, so small healthy meshes no longer fail impossible quorums.
 - Added focused regression coverage for duplicate pending key/chunk requests and for adaptive consensus on a two-peer mesh with a stricter configured quorum.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for waiter reuse and adaptive quorum.
+
+## 2026-03-22 18:55 - Capability, overlay, and STUN fallback completion
+
+- `CapabilityFileService` now normalizes usernames and capability paths, preserves valid zero-flag client identity, derives capability flags from declared feature names, and parses `ClientVersion` into stable `client/version` values for capability-file fallbacks.
+- `MeshOverlayConnector` now deduplicates candidate endpoints before dialing and returns the successful connection object instead of nulling it on the success path.
+- `StunNatDetector` now trims endpoint strings, prefers IPv4 address resolution where available, and can parse IPv6 `MAPPED-ADDRESS` / `XOR-MAPPED-ADDRESS` responses instead of bottoming out on non-IPv4 mappings.
+- Added focused regression coverage in new `CapabilityFileServiceTests` and `StunNatDetectorTests` for normalized capability parsing and IPv6 STUN parsing.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for success-path ownership nulling.

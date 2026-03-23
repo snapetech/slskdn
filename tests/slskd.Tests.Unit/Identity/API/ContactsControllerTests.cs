@@ -142,6 +142,39 @@ public class ContactsControllerTests
     }
 
     [Fact]
+    public async Task AddFromInvite_TrimsInviteLinkAndNicknameBeforeDispatch()
+    {
+        var c = CreateController();
+        var profile = new PeerProfile
+        {
+            PeerId = "p1",
+            DisplayName = "Test",
+            PublicKey = Convert.ToBase64String(new byte[32]),
+            Signature = Convert.ToBase64String(new byte[64]),
+            CreatedAt = DateTimeOffset.UtcNow,
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7)
+        };
+        var invite = new FriendInvite
+        {
+            Profile = profile,
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(24)
+        };
+        var json = JsonSerializer.Serialize(invite);
+        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var link = $"slskdn://invite/{base64}";
+        var contact = new Contact { Id = Guid.NewGuid(), PeerId = "p1", Nickname = "Bob" };
+
+        _profileMock.Setup(x => x.VerifyProfile(It.IsAny<PeerProfile>())).Returns(true);
+        _contactsMock.Setup(x => x.AddAsync("p1", "Bob", true, It.IsAny<CancellationToken>())).ReturnsAsync(contact);
+        _contactsMock.Setup(x => x.UpdateAsync(It.IsAny<Contact>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+
+        var r = await c.AddFromInvite(new AddFromInviteRequest { InviteLink = $" {link} ", Nickname = " Bob " }, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(r);
+        Assert.Equal(contact, created.Value);
+    }
+
+    [Fact]
     public async Task AddFromDiscovery_ProfileNotFound_ReturnsNotFound()
     {
         var c = CreateController();
@@ -150,6 +183,22 @@ public class ContactsControllerTests
         var r = await c.AddFromDiscovery(new AddFromDiscoveryRequest { PeerId = "p1", Nickname = "Alice" }, CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(r);
+    }
+
+    [Fact]
+    public async Task AddFromDiscovery_TrimsPeerIdAndNicknameBeforeDispatch()
+    {
+        var c = CreateController();
+        var profile = new PeerProfile { PeerId = "p1", DisplayName = "Alice" };
+        var contact = new Contact { Id = Guid.NewGuid(), PeerId = "p1", Nickname = "Friend" };
+        _profileMock.Setup(x => x.GetProfileAsync("p1", It.IsAny<CancellationToken>())).ReturnsAsync(profile);
+        _profileMock.Setup(x => x.VerifyProfile(profile)).Returns(true);
+        _contactsMock.Setup(x => x.AddAsync("p1", "Friend", true, It.IsAny<CancellationToken>())).ReturnsAsync(contact);
+
+        var r = await c.AddFromDiscovery(new AddFromDiscoveryRequest { PeerId = " p1 ", Nickname = " Friend " }, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(r);
+        Assert.Equal(contact, created.Value);
     }
 
     [Fact]
@@ -164,6 +213,19 @@ public class ContactsControllerTests
         var ok = Assert.IsType<OkObjectResult>(r);
         var updated = Assert.IsType<Contact>(ok.Value);
         Assert.Equal("New", updated.Nickname);
+    }
+
+    [Fact]
+    public async Task Update_WithWhitespaceNickname_ReturnsBadRequest()
+    {
+        var c = CreateController();
+        var contact = new Contact { Id = Guid.NewGuid(), PeerId = "p1", Nickname = "Old" };
+        _contactsMock.Setup(x => x.GetByIdAsync(contact.Id, It.IsAny<CancellationToken>())).ReturnsAsync(contact);
+
+        var r = await c.Update(contact.Id, new UpdateContactRequest { Nickname = "   " }, CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(r);
+        Assert.Equal("Nickname is required.", bad.Value);
     }
 
     [Fact]

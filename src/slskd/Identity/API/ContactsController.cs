@@ -73,6 +73,9 @@ public class ContactsController : ControllerBase
     public async Task<IActionResult> AddFromInvite([FromBody] AddFromInviteRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("Request is required.");
+        req.InviteLink = req.InviteLink?.Trim();
+        req.Nickname = req.Nickname?.Trim();
         if (string.IsNullOrWhiteSpace(req.InviteLink)) return BadRequest("InviteLink is required.");
         if (string.IsNullOrWhiteSpace(req.Nickname)) return BadRequest("Nickname is required.");
 
@@ -110,6 +113,9 @@ public class ContactsController : ControllerBase
     public async Task<IActionResult> AddFromDiscovery([FromBody] AddFromDiscoveryRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("Request is required.");
+        req.PeerId = req.PeerId?.Trim();
+        req.Nickname = req.Nickname?.Trim();
         if (string.IsNullOrWhiteSpace(req.PeerId)) return BadRequest("PeerId is required.");
         if (string.IsNullOrWhiteSpace(req.Nickname)) return BadRequest("Nickname is required.");
 
@@ -134,9 +140,20 @@ public class ContactsController : ControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateContactRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("Request is required.");
         var c = await _contacts.GetByIdAsync(id, ct).ConfigureAwait(false);
         if (c == null) return NotFound();
-        if (req.Nickname != null) c.Nickname = req.Nickname.Trim();
+        if (req.Nickname != null)
+        {
+            req.Nickname = req.Nickname.Trim();
+            if (req.Nickname.Length == 0)
+            {
+                return BadRequest("Nickname is required.");
+            }
+
+            c.Nickname = req.Nickname;
+        }
+
         await _contacts.UpdateAsync(c, ct).ConfigureAwait(false);
         return Ok(c);
     }

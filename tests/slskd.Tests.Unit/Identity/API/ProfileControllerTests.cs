@@ -88,6 +88,39 @@ public class ProfileControllerTests
     }
 
     [Fact]
+    public async Task UpdateMyProfile_TrimsNestedFieldsAndDropsBlankEndpoints()
+    {
+        var c = CreateController();
+        var profile = new PeerProfile { PeerId = "p1", DisplayName = "NewName" };
+        _profileMock
+            .Setup(x => x.UpdateMyProfileAsync(
+                "NewName",
+                "https://example.com/avatar.png",
+                7,
+                It.Is<List<PeerEndpoint>>(endpoints =>
+                    endpoints.Count == 1 &&
+                    endpoints[0].Type == "Direct" &&
+                    endpoints[0].Address == "https://peer.example"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        var r = await c.UpdateMyProfile(new UpdateProfileRequest
+        {
+            DisplayName = " NewName ",
+            Avatar = " https://example.com/avatar.png ",
+            Capabilities = 7,
+            Endpoints = new List<PeerEndpoint>
+            {
+                new() { Type = " Direct ", Address = " https://peer.example ", Priority = 1 },
+                new() { Type = "   ", Address = "   ", Priority = 2 },
+            },
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(r);
+        Assert.Equal(profile, ok.Value);
+    }
+
+    [Fact]
     public async Task GetProfile_NotFound_ReturnsNotFound()
     {
         var c = CreateController();

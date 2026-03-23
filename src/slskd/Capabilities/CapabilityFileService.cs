@@ -67,6 +67,12 @@ public sealed class CapabilityFileService
     /// </summary>
     public bool IsCapabilityFileRequest(string filename)
     {
+        if (string.IsNullOrWhiteSpace(filename))
+        {
+            return false;
+        }
+
+        filename = NormalizeCapabilityPath(filename);
         if (string.Equals(filename, CapabilityFilePath, StringComparison.OrdinalIgnoreCase))
         {
             return true;
@@ -93,6 +99,13 @@ public sealed class CapabilityFileService
         string username,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return null;
+        }
+
+        username = username.Trim();
+
         // Check cache first
         if (_cache.TryGetValue(username, out var cached))
         {
@@ -216,11 +229,25 @@ public sealed class CapabilityFileService
                 PropertyNameCaseInsensitive = true,
             });
 
+            if (content != null)
+            {
+                content.Client = content.Client?.Trim() ?? string.Empty;
+                content.Version = content.Version?.Trim() ?? string.Empty;
+                content.Features = content.Features?
+                    .Where(feature => !string.IsNullOrWhiteSpace(feature))
+                    .Select(feature => feature.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray() ?? Array.Empty<string>();
+                if (content.Capabilities == PeerCapabilityFlags.None && content.Features.Length > 0)
+                {
+                    content.Capabilities = ParseCapabilitiesFromFeatures(content.Features);
+                }
+            }
+
             if (content == null ||
                 string.IsNullOrWhiteSpace(content.Client) ||
                 string.IsNullOrWhiteSpace(content.Version) ||
-                content.ProtocolVersion <= 0 ||
-                content.Capabilities == PeerCapabilityFlags.None)
+                content.ProtocolVersion <= 0)
             {
                 _logger.LogDebug("Rejected malformed capability file");
                 return null;
@@ -259,10 +286,11 @@ public sealed class CapabilityFileService
 
     private static CapabilityFileContent BuildCapabilityFileFromPeerCapabilities(PeerCapabilities capabilities)
     {
+        var (client, version) = ParseClientIdentity(capabilities.ClientVersion);
         return new CapabilityFileContent
         {
-            Client = "slskdn",
-            Version = string.IsNullOrWhiteSpace(capabilities.ClientVersion) ? "unknown" : capabilities.ClientVersion,
+            Client = client,
+            Version = version,
             ProtocolVersion = capabilities.ProtocolVersion,
             Capabilities = capabilities.Flags,
             Features = GetFeatures(capabilities.Flags),
@@ -300,17 +328,18 @@ public sealed class CapabilityFileService
         try
         {
             var browseResult = await _soulseekClient.BrowseAsync(username, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var normalizedFilename = NormalizeCapabilityPath(filename);
             var remoteFile = browseResult.Directories
                 .SelectMany(directory => directory.Files.Select(file => new
                 {
-                    RemoteFilename = string.IsNullOrWhiteSpace(directory.Name)
+                    RemoteFilename = NormalizeCapabilityPath(string.IsNullOrWhiteSpace(directory.Name)
                         ? file.Filename
-                        : $"{directory.Name}\\{file.Filename}",
+                        : $"{directory.Name}\\{file.Filename}"),
                     file.Size,
                 }))
                 .FirstOrDefault(file =>
-                    string.Equals(file.RemoteFilename, filename, StringComparison.OrdinalIgnoreCase) ||
-                    file.RemoteFilename.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(file.RemoteFilename, normalizedFilename, StringComparison.OrdinalIgnoreCase) ||
+                    file.RemoteFilename.EndsWith(normalizedFilename, StringComparison.OrdinalIgnoreCase));
             if (remoteFile == null)
             {
                 _logger.LogDebug("Capability file {Path} not exposed by {Username} browse result", filename, username);
@@ -359,6 +388,59 @@ public sealed class CapabilityFileService
     {
         public required CapabilityFileContent Content { get; init; }
         public required DateTimeOffset FetchedAt { get; init; }
+    }
+
+    private static PeerCapabilityFlags ParseCapabilitiesFromFeatures(IEnumerable<string> features)
+    {
+        var flags = PeerCapabilityFlags.None;
+        foreach (var feature in features)
+        {
+            switch (feature.Trim().ToLowerInvariant())
+            {
+                case "dht":
+                    flags |= PeerCapabilityFlags.SupportsDHT;
+                    break;
+                case "hash_exchange":
+                    flags |= PeerCapabilityFlags.SupportsHashExchange;
+                    break;
+                case "partial_download":
+                    flags |= PeerCapabilityFlags.SupportsPartialDownload;
+                    break;
+                case "mesh_sync":
+                    flags |= PeerCapabilityFlags.SupportsMeshSync;
+                    break;
+                case "flac_hash_db":
+                    flags |= PeerCapabilityFlags.SupportsFlacHashDb;
+                    break;
+                case "swarm_download":
+                    flags |= PeerCapabilityFlags.SupportsSwarm;
+                    break;
+            }
+        }
+
+        return flags;
+    }
+
+    private static string NormalizeCapabilityPath(string path)
+    {
+        return path.Trim().Replace('/', '\\');
+    }
+
+    private static (string Client, string Version) ParseClientIdentity(string? clientVersion)
+    {
+        if (string.IsNullOrWhiteSpace(clientVersion))
+        {
+            return ("slskdn", "unknown");
+        }
+
+        clientVersion = clientVersion.Trim();
+        var separator = clientVersion.IndexOf('/');
+        if (separator > 0 && separator < clientVersion.Length - 1)
+        {
+            return (clientVersion[..separator].Trim(), clientVersion[(separator + 1)..].Trim());
+        }
+
+        return ("slskdn", clientVersion);
     }
 }
 

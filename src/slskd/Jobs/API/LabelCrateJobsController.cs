@@ -30,7 +30,15 @@ namespace slskd.Jobs.API
         [HttpPost]
         public async Task<ActionResult<object>> Create([FromBody] LabelCrateJobRequest request, CancellationToken ct)
         {
-            if (request == null || (string.IsNullOrWhiteSpace(request.LabelId) && string.IsNullOrWhiteSpace(request.LabelName)))
+            if (request == null)
+            {
+                return BadRequest("labelId or labelName is required");
+            }
+
+            request.LabelId = string.IsNullOrWhiteSpace(request.LabelId) ? null : request.LabelId.Trim();
+            request.LabelName = string.IsNullOrWhiteSpace(request.LabelName) ? null : request.LabelName.Trim();
+
+            if (string.IsNullOrWhiteSpace(request.LabelId) && string.IsNullOrWhiteSpace(request.LabelName))
             {
                 return BadRequest("labelId or labelName is required");
             }
@@ -46,6 +54,12 @@ namespace slskd.Jobs.API
         [HttpGet("{jobId}")]
         public async Task<ActionResult<object>> Get(string jobId, CancellationToken ct)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return BadRequest("jobId is required");
+            }
+
             var job = await jobService.GetJobAsync(jobId, ct).ConfigureAwait(false);
             if (job == null)
             {

@@ -60,6 +60,39 @@ public class JobsControllerBoundaryTests
     }
 
     [Fact]
+    public async Task CreateMbReleaseJob_NormalizesBlankTargetDirectoryToNull()
+    {
+        var discographyService = new Mock<IDiscographyJobService>();
+        var musicBrainzClient = new Mock<IMusicBrainzClient>();
+        musicBrainzClient
+            .Setup(client => client.GetReleaseAsync("release-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Release
+            {
+                Id = "release-1",
+                MusicBrainzArtistId = "artist-1",
+            });
+        discographyService
+            .Setup(service => service.CreateJobAsync(It.IsAny<DiscographyJobRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("job-123");
+
+        var controller = CreateController(discographyService: discographyService, musicBrainzClient: musicBrainzClient);
+
+        var result = await controller.CreateMbReleaseJob(
+            new MbReleaseJobRequest(" release-1 ", "   "),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        discographyService.Verify(
+            service => service.CreateJobAsync(
+                It.Is<DiscographyJobRequest>(request =>
+                    request.ArtistId == "artist-1" &&
+                    request.TargetDirectory == null &&
+                    request.ReleaseIds!.SequenceEqual(new[] { "release-1" })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task CreateLabelCrateJob_WithNoLabelFields_ReturnsBadRequest()
     {
         var controller = CreateController();
