@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xC9. Batch And Query Controllers Must Canonicalize Identifier Collections Before Dispatch
+
+**The Bug**: retrieval/export/hash controllers validated that IDs were present but still forwarded raw route/query/body values and identifier collections like `ContentIds`, `domain`, `type`, `filename`, `byteHash`, and `flacKey`. That let padded identifiers miss lookups, duplicated the same logical ID inside batch calls, and produced non-canonical hash keys from transport whitespace.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/DescriptorRetrieverController.cs`
+- `src/slskd/MediaCore/API/Controllers/MetadataPortabilityController.cs`
+- `src/slskd/HashDb/API/HashDbController.cs`
+
+**Wrong**:
+```csharp
+if (request?.ContentIds == null || !request.ContentIds.Any(contentId => !string.IsNullOrWhiteSpace(contentId)))
+{
+    return BadRequest("At least one ContentID is required");
+}
+
+var result = await _retriever.RetrieveBatchAsync(request.ContentIds, cancellationToken);
+var key = HashDbEntry.GenerateFlacKey(filename, size);
+```
+
+**Correct**:
+```csharp
+var contentIds = request?.ContentIds?
+    .Select(contentId => contentId?.Trim() ?? string.Empty)
+    .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
+domain = domain?.Trim() ?? string.Empty;
+type = string.IsNullOrWhiteSpace(type) ? null : type.Trim();
+filename = filename?.Trim() ?? string.Empty;
+```
+
+**Why This Keeps Happening**: controller code often assumes collections and route/query strings are “already structured” once model binding succeeds. They are still transport input. Any value that becomes a lookup key, a content identifier, or a generated hash input must be trimmed, blank-filtered, and deduplicated before it crosses into service logic.
+
 ### 0xC8. Corpus And Recognizer Metadata Without Exact Fingerprint Payloads Can Still Be Useful Evidence
 
 **The Bug**: SongID helper paths were treating missing exact recognizer payload fields or missing corpus fingerprint files as equivalent to “no useful result.” That caused run-local evidence to bottom out early even when the service still had enough artist/title/label metadata to keep ranking, reuse corpus knowledge, or emit a conservative recognizer finding.
