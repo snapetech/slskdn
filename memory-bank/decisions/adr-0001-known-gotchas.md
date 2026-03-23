@@ -14730,3 +14730,29 @@ await Task.WhenAll(tasks);
 ```
 
 **Why This Keeps Happening**: `Task.WhenAll` is easy to reach for when faning out async work, but it still aggregates faults back to the caller. For shared bus infrastructure, each subscriber needs its own top-level catch so one bad integration cannot fail the whole delivery path.
+
+### 0k113. Live Pod Messaging Must Route, Not Only Persist
+
+**The Bug**: `SqlitePodMessaging` is the production `IPodMessaging` implementation, but it only saved pod messages to SQLite. Normal pod sends from the API and mesh service paths returned success without ever invoking `IPodMessageRouter`, so messages looked delivered locally while never leaving the node.
+
+**Files Affected**:
+- `src/slskd/PodCore/SqlitePodMessaging.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+var entity = new PodMessageEntity { ... };
+dbContext.Messages.Add(entity);
+await dbContext.SaveChangesAsync(ct);
+await transaction.CommitAsync(ct);
+return true;
+```
+
+**Correct**:
+```csharp
+await transaction.CommitAsync(ct);
+var routingResult = await _messageRouter.RouteMessageAsync(message, ct);
+return routingResult.Success;
+```
+
+**Why This Keeps Happening**: there are two `IPodMessaging` implementations in the repo, and the older in-memory `PodMessaging` already attempted routing. It is easy to patch the wrong class and miss that DI serves the SQLite-backed implementation in production.
