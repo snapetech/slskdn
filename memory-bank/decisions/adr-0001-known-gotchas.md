@@ -14617,6 +14617,27 @@ catch (OperationCanceledException)
 
 **Why This Keeps Happening**: once a deduplicated async request path starts sharing a `TaskCompletionSource`, it is easy to keep the old cleanup logic that assumed one caller owned one waiter. Any timeout/error cleanup on a shared waiter must be ownership-aware, or follower calls will accidentally delete the creator's in-flight state.
 
+### 0k109. Recognizer Parsers Must Not Assume Every Numeric Score Uses The Same Scale
+
+**The Bug**: `SongIdService.ParseAudfprintFinding(...)` treated the first numeric token in a match line as a percentage and always divided by 100. When a tool emitted a normalized `0.x` confidence instead, the parser crushed it down to `0.00x`, which changed ranking and fallback selection even though the recognizer had already produced a usable match.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+
+**Wrong**:
+```csharp
+var score = parsedScore / 100.0;
+```
+
+**Correct**:
+```csharp
+var score = parsedScore > 1
+    ? parsedScore / 100.0
+    : parsedScore;
+```
+
+**Why This Keeps Happening**: tool integrations often start from one sample output shape and silently bake in assumptions about units. Any parser that consumes third-party scores needs to normalize based on the observed range, not on one remembered format.
+
 ### 0k109. Retry Loops Must Dispose Superseded CancellationTokenSources Immediately
 
 **The Bug**: `ConnectionWatchdog.AttemptConnection(...)` created a fresh reconnect `CancellationTokenSource` on every retry iteration and overwrote the previous instance without disposing it. A long sequence of failed reconnect attempts leaked token sources and their registrations until the watchdog finally stopped.
