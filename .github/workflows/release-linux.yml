@@ -108,6 +108,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          CURL_AUTH_ARGS=()
+          if [ -n "$GH_TOKEN" ]; then
+            CURL_AUTH_ARGS=(-H "Authorization: Bearer ${GH_TOKEN}")
+          fi
+
           ASSET_NAMES=(
             "slskdn-main-linux-x64.zip"
             "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
@@ -118,7 +123,7 @@ jobs:
               ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/${ASSET_NAME}"
               echo "Attempt $attempt: checking ${ASSET_NAME}..."
 
-              if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o release-linux-x64.zip; then
+              if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o release-linux-x64.zip; then
                 SHA=$(sha256sum release-linux-x64.zip | cut -d' ' -f1)
                 echo "sha256=${SHA}" >> $GITHUB_OUTPUT
                 echo "SHA256 (${ASSET_NAME}): ${SHA}"
