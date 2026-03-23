@@ -15768,3 +15768,34 @@ sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM
 ```
 
 **Why This Keeps Happening**: AUR source validation assumes the upstream artifact at a given URL is immutable. GitHub release assets are not a safe fit for that assumption when the workflow can rerun, replace, or republish the same asset name under the same tag. If the package points at a mutable binary asset, either publish through an immutable channel or use `SKIP` for the binary and checksum only the repo-owned static packaging files.
+
+### 0k132. Event-Subscription Start Guards Must Be Atomic Under Concurrent Start Calls
+
+**The Bug**: long-lived channel handlers used a plain `bool receivingStarted` to avoid duplicate event subscriptions, but `StartReceivingAsync(...)` had no synchronization. Sequential starts looked fine, yet concurrent starts could still observe `false` twice and attach the same handler multiple times, causing duplicate delivery for every later message.
+
+**Files Affected**:
+- `src/slskd/Signals/MeshSignalChannelHandler.cs`
+- `src/slskd/Signals/BtExtensionSignalChannelHandler.cs`
+
+**Wrong**:
+```csharp
+if (!receivingStarted)
+{
+    sender.OnMessage += HandleIncoming;
+    receivingStarted = true;
+}
+```
+
+**Correct**:
+```csharp
+lock (receivingLock)
+{
+    if (!receivingStarted)
+    {
+        sender.OnMessage += HandleIncoming;
+        receivingStarted = true;
+    }
+}
+```
+
+**Why This Keeps Happening**: start/init methods often get written and tested as if they are only ever called serially from one bootstrap path. But once a service exposes a public async `Start...` method, duplicate or concurrent calls are part of the real contract surface. If idempotence depends on a guard flag, that guard must be synchronized or atomic; otherwise the code is only "idempotent" in the single-threaded happy path.
