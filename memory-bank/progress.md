@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-03-23 16:22 - CI placeholder-hash tolerance for AUR dev PKGBUILD
+
+### Completed
+- Added `.github/workflows/ci.yml` check update so AUR checksum validation ignores `PLACEHOLDER` tokens in `sha256sums` (for example `SHA256_SERVICE_PLACEHOLDER`) when they are known template-only values.
+- Fixed a YAML formatting regression in the CI workflow step while updating the check.
+- Documented the pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` as gotcha `0k14I`.
+
+### Verification
+- `python - <<'PY' ... yaml.safe_load ...` confirmed `ci.yml` parses.
+- `bash packaging/scripts/validate-packaging-metadata.sh` passed.
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Continue scanning for other release-template placeholders in validation paths and automate their tolerance as a reusable helper if more appear.
+
 ## 2026-03-23 13:43 - AUR binary checksum drift hardening
 
 ### Completed

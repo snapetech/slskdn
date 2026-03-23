@@ -23,10 +23,13 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue bughunting broader helper/control-path patterns where ancillary callbacks can still poison primary runtime behavior
+- **Current Task**: Continue packaging-oriented bughunting and broad-pattern validation, with current focus on release workflows and AUR validation edge-cases.
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued broader packaging bughunt and fixed CI AUR checksum validation for template placeholders.
+  - Broadened `.github/workflows/ci.yml` to skip known placeholder tokens in `packaging/aur/PKGBUILD-dev` during checksum validation, while still enforcing static file hash checks.
+  - Documented the pattern as ADR-0001 `0k14I` and logged verification details in `memory-bank/progress.md`.
   - Continued the repo-wide singleton-interface ownership sweep beyond the mesh-only subset:
     - `IGossipService`, `IRealmAwareGossipService`, `IGovernanceClient`, `IRealmAwareGovernanceClient`, `ISignalBus`, `IActivityPubKeyStore`, `IAnonymityTransportSelector`, `ILanDiscoveryService`, `IUploadService`, `IUploadQueue`, and `IUploadGovernor` now expose disposal so their DI-facing contracts match the already-disposable singleton implementations
   - Confirmed the broader validation slice passed: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~SignalBusTests|FullyQualifiedName~LanDiscoveryServiceTests|FullyQualifiedName~ActivityPubKeyStoreTests|FullyQualifiedName~UploadGovernorTests|FullyQualifiedName~UploadQueueTests|FullyQualifiedName~UploadServiceLifecycleTests|FullyQualifiedName~RealmAwareGovernanceClientTests|FullyQualifiedName~RealmAwareGossipServiceTests"` (`100/100`), plus unit-project build (`0 errors`), release build (`0 warnings / 0 errors`), and `bash ./bin/lint`
