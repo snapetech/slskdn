@@ -50,6 +50,18 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ---
 
+### 0xF00. Release Metadata Must Be Synchronized Across Packaging Surfaces
+
+**The Bug**: Stable release pointers (tags, URLs, and example commands) drifted independently in multiple packaging files, so manuals and templates described older releases while primary metadata had moved on.
+
+**Files Affected**:
+- `packaging/flatpak/FLATHUB_SUBMISSION.md`
+- `packaging/proxmox-lxc/README.md`
+- `packaging/rpm/slskdn.spec`
+- `packaging/debian/changelog`
+
+**Why This Keeps Happening**: release-manifest edits are often done in a few primary files only; support docs and alternate-package manifests are easy to miss when versions advance, then future packagers read stale values and reproduce the wrong release.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract
