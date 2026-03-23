@@ -20,6 +20,7 @@
 // </copyright>
 namespace slskd.Shares
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Soulseek;
@@ -27,7 +28,7 @@ namespace slskd.Shares
     /// <summary>
     ///     Provides control and interactions with configured shares and shared files.
     /// </summary>
-    public interface IShareService
+    public interface IShareService : IDisposable
     {
         /// <summary>
         ///     Gets the list of share hosts.

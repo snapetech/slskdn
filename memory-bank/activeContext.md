@@ -27,6 +27,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the ownership sweep into `ShareService` and fixed the broader repository lifecycle seam:
+    - `IShareService` now exposes disposal
+    - `ShareService` now retains/disposes scanner/options registrations, disposes removed host repositories in `TryRemoveHost(...)`, and tears down all owned repositories/semaphores on disposal
+  - Added focused regressions in new `tests/slskd.Tests.Unit/Shares/ShareServiceLifecycleTests.cs`
+  - Confirmed `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ShareServiceLifecycleTests"` passed (`2/2`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`)
   - Continued the lifecycle/ownership sweep into upload-control helpers instead of stopping at the first `TokenBucket` leak candidate:
     - `UploadGovernor` now disposes replaced/current token buckets and its retained options-monitor registration
     - `UploadQueue` now disposes its retained options-monitor registration

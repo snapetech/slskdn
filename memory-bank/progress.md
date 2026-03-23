@@ -7097,3 +7097,10 @@ Code quality improvements were completed as part of Option A:
 - `UploadQueue` now releases its retained options-monitor registration during disposal, and `UploadService` now disposes the owned governor/queue helpers it constructs directly.
 - Added focused coverage in `tests/slskd.Tests.Unit/Transfers/Uploads/UploadGovernorTests.cs`, `tests/slskd.Tests.Unit/Transfers/Uploads/UploadQueueTests.cs`, and new `tests/slskd.Tests.Unit/Transfers/Uploads/UploadServiceLifecycleTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~UploadGovernorTests|FullyQualifiedName~UploadQueueTests|FullyQualifiedName~UploadServiceLifecycleTests"` passed (`46/46`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed.
+
+## 2026-03-23 16:20 CST
+
+- Continued the same ownership sweep into `ShareService`, which turned out to be a broader repository-lifecycle bug rather than only another missing unsubscribe.
+- `ShareService` now has a real disposal contract through `IShareService : IDisposable`, retains/disposes its scanner/options registrations, disposes removed remote-host repositories in `TryRemoveHost(...)`, and releases all owned repositories/semaphores during service teardown.
+- Added focused regressions in new `tests/slskd.Tests.Unit/Shares/ShareServiceLifecycleTests.cs` covering both removed-host disposal and full service teardown.
+- Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ShareServiceLifecycleTests"` passed (`2/2`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
