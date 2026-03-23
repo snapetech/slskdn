@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the same startup/restart lifecycle sweep into the remaining initializer surfaces:
+    - `Application` and `DhtRendezvousService` now cancel prior startup/background initialization CTS instances before disposing/replacing them
+    - repeated startup/restart paths no longer risk leaving previous initialization work attached to a disposed CTS
+  - Extended focused regression coverage in `tests/slskd.Tests.Unit/Core/HostedServiceLifecycleTests.cs`
+  - Confirmed the focused lifecycle slice passed (`4/4`) and the runtime release build remained green (`0 warnings / 0 errors`)
+  - Extended the existing ADR-0001 startup-CTS gotcha entry and committed it immediately per repo policy (`docs: Add gotcha for startup CTS disposal races`)
   - Fixed another long-lived lifecycle bug cluster in startup/disposal helpers:
     - `HashDbOptimizationHostedService`, `RealmHostedService`, `MultiRealmHostedService`, and `MdnsAdvertiser` now capture stable local CTS instances for detached startup work instead of dereferencing mutable fields from background tasks
     - dispose/replacement paths now cancel before disposing so startup work does not outlive the owning service or trip disposed/null CTS races during shutdown

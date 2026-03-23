@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using slskd.DhtRendezvous;
 using slskd.HashDb.Optimization;
 using slskd.Mesh.Realm;
 using Xunit;
@@ -78,6 +79,29 @@ public class HostedServiceLifecycleTests
         service.Dispose();
 
         Assert.True(initializationCts.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task DhtRendezvousService_StartAsync_CancelsPreviousInitializationTokenSource()
+    {
+        var service = new DhtRendezvousService(
+            Mock.Of<ILogger<DhtRendezvousService>>(),
+            Mock.Of<IMeshOverlayServer>(),
+            Mock.Of<IMeshOverlayConnector>(),
+            new MeshNeighborRegistry(Mock.Of<ILogger<MeshNeighborRegistry>>()),
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+            });
+
+        var previousInitializationCts = new CancellationTokenSource();
+        SetPrivateField(service, "_backgroundInitializationCts", previousInitializationCts);
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.True(previousInitializationCts.IsCancellationRequested);
+
+        await service.StopAsync(CancellationToken.None);
     }
 
     private static void SetPrivateField(object instance, string fieldName, object? value)

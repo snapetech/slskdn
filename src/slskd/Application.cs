@@ -377,9 +377,11 @@ namespace slskd
             Log.Information("Application started");
 
             // Start the actual initialization in the background to avoid blocking other hosted services
+            _startupInitializationCts?.Cancel();
             _startupInitializationCts?.Dispose();
-            _startupInitializationCts = new CancellationTokenSource();
-            _startupInitializationTask = Task.Run(() => InitializeApplicationAsync(_startupInitializationCts.Token), CancellationToken.None);
+            var startupInitializationCts = new CancellationTokenSource();
+            _startupInitializationCts = startupInitializationCts;
+            _startupInitializationTask = Task.Run(() => InitializeApplicationAsync(startupInitializationCts.Token), CancellationToken.None);
             _ = ObserveBackgroundTaskAsync(
                 _startupInitializationTask,
                 "Failed to initialize application in background task");

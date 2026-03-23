@@ -88,9 +88,11 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         _logger.LogInformation("Starting DHT rendezvous service with MonoTorrent DHT");
 
         // Start the background service immediately to avoid blocking other hosted services
+        _backgroundInitializationCts?.Cancel();
         _backgroundInitializationCts?.Dispose();
-        _backgroundInitializationCts = new CancellationTokenSource();
-        _backgroundInitializationTask = StartBackgroundInitializationAsync(_backgroundInitializationCts.Token);
+        var backgroundInitializationCts = new CancellationTokenSource();
+        _backgroundInitializationCts = backgroundInitializationCts;
+        _backgroundInitializationTask = StartBackgroundInitializationAsync(backgroundInitializationCts.Token);
 
         return Task.CompletedTask;
     }

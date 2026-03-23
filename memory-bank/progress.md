@@ -6702,6 +6702,15 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
 
+## 2026-03-23 12:08 CST
+- Continued the startup/restart lifecycle bughunt into the remaining background initialization paths.
+- `Application` and `DhtRendezvousService` now cancel previous startup/background initialization CTS instances before disposing/replacing them, so restart/startup replacement no longer leaves prior initialization work running against a disposed token source.
+- Extended `HostedServiceLifecycleTests` with a DHT-specific regression that proves `StartAsync()` cancels the previously installed background-init CTS before spinning up a replacement worker.
+- Extended the existing ADR-0001 startup-CTS gotcha entry to include the `Application` and DHT rendezvous surfaces.
+- Validation passed:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter HostedServiceLifecycleTests`
+  - `dotnet build src/slskd/slskd.csproj -c Release -v minimal`
+
 ## 2026-03-23 11:52 CST
 - Continued the long-lived startup/disposal lifecycle bughunt and fixed a shared cancellation-token race across hosted/background startup helpers.
 - `HashDbOptimizationHostedService`, `RealmHostedService`, `MultiRealmHostedService`, and `MdnsAdvertiser` now capture a stable local `CancellationTokenSource` for detached startup work instead of reading mutable CTS fields after startup has moved on.
