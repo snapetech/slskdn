@@ -16879,3 +16879,31 @@ foreach (var callback in new[] { originalStateChanged, stateChanged })
 ```
 
 **Why This Keeps Happening**: callback fanout is often added as a convenience path for extension points, and it is easy to forget that each delegate is caller-owned. A single subscriber throwing is now treated as a per-callback failure, not a shared control-flow break, and fatal paths (downloads/search updates) stay resilient.
+
+### 0k14L. AUR Binary Package Source Filename and Validation Path Must Stay Canonical
+
+**The Bug**: `release-linux.yml` used a stale path to the AUR validator script and `packaging/aur/PKGBUILD-bin` named the downloaded binary source as a versioned filename (`slskdn-${pkgver}-linux-x64.zip`) while release assets are canonicalized as `slskdn-main-linux-x64.zip`. This made AUR update jobs brittle and increased the risk of install-time checksum confusion across versions.
+
+**Files Affected**:
+- `.github/workflows/release-linux.yml`
+- `packaging/aur/PKGBUILD-bin`
+
+**Wrong**:
+```sh
+source=(
+    "slskdn-${pkgver}-linux-x64.zip::https://github.com/.../releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"
+)
+
+bash ../scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD PKGBUILD-bin
+```
+
+**Correct**:
+```sh
+source=(
+    "slskdn-main-linux-x64.zip::https://github.com/.../releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"
+)
+
+bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD PKGBUILD-bin
+```
+
+**Why This Keeps Happening**: release automation is often touched across workflows, and small packaging contract changes (filenames, paths, URLs) drift unless validated as a cluster. Keeping those references canonical prevents silent installer breakage, especially when release assets are mutable and cached workflows are rerun.
