@@ -344,11 +344,12 @@ if (request.RequesterId == null || request.RequesterId.Length != 20)
 
 ### 0xCE. Init-Only Records Must Be Normalized Via Copies, Not In-Place Mutation
 
-**The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence.
+**The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence, and later recurred in `DhtMeshServiceDirectory` while canonicalizing service descriptors read from DHT.
 
 **Files Affected**:
 - `src/slskd/HashDb/HashDbService.cs`
 - `src/slskd/Integrations/MusicBrainz/Models/AlbumTarget.cs`
+- `src/slskd/Mesh/ServiceFabric/DhtMeshServiceDirectory.cs`
 
 **Wrong**:
 ```csharp
