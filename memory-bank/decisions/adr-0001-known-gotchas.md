@@ -107,6 +107,53 @@ var requestId = $"{(e.Username ?? string.Empty).Trim()}:{(response.FlacKey ?? st
 
 **Why This Keeps Happening**: identity bridges and response waiters look like small in-memory helpers, so it is easy to treat them as internal trusted state. They are not. They sit directly on chat, transport, and protocol seams. If both directions do not share the same canonical key format, you get split identities and “missing” responses with no real network failure.
 
+### 0xD0. Local Aggregators Must Consume Real Cached State, Not Placeholder Activity Inputs
+
+**The Bug**: Pod aggregation code was already wired to membership history, message storage, and opinion state, but it still hardcoded `memberOpinions = 0`, `RecentActivity = new[] { "messages", "opinions" }`, and default membership timing. At the same time, the sqlite pod store persisted only part of the pod model and then dropped fields on readback, so downstream logic kept recomputing from incomplete state.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodOpinionAggregator.cs`
+- `src/slskd/PodCore/IPodOpinionService.cs`
+- `src/slskd/PodCore/PodOpinionService.cs`
+- `src/slskd/PodCore/SqlitePodService.cs`
+
+**Wrong**:
+```csharp
+var memberOpinions = 0; // TODO: Implement opinion count per member
+LastActivity: now,
+RecentActivity: new[] { "messages", "opinions" });
+
+var entity = new PodEntity
+{
+    PodId = pod.PodId,
+    Name = pod.Name,
+    Visibility = pod.Visibility,
+    FocusContentId = normalizedFocusContentId,
+};
+```
+
+**Correct**:
+```csharp
+var knownContentIds = await _opinionService.GetKnownContentIdsAsync(podId, ct);
+var opinionCounts = await LoadOpinionCountsAsync(podId, knownContentIds, ct);
+var activity = await LoadMessageActivityAsync(podId, channelIds, ct);
+
+var entity = new PodEntity
+{
+    PodId = pod.PodId,
+    Name = pod.Name,
+    Description = pod.Description,
+    IsPublic = pod.IsPublic,
+    MaxMembers = pod.MaxMembers,
+    AllowGuests = pod.AllowGuests,
+    RequireApproval = pod.RequireApproval,
+    UpdatedAt = pod.UpdatedAt,
+    FocusContentId = normalizedFocusContentId,
+};
+```
+
+**Why This Keeps Happening**: once a feature has the right services injected, it is easy to stop at “shape complete” and leave placeholder values in place. That creates a worse failure mode than a hard TODO because the feature appears implemented while silently weighting, caching, or persisting the wrong state. If a service already has the dependencies needed to compute a value, use them before inventing default placeholders.
+
 ### 0xCE. Init-Only Records Must Be Normalized Via Copies, Not In-Place Mutation
 
 **The Bug**: normalization code treated C# `record` inputs like mutable DTOs and assigned trimmed values back onto `init` properties. That broke the runtime build in `HashDbService` as soon as album and track targets were normalized before persistence.
