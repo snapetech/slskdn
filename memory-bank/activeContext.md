@@ -1068,3 +1068,11 @@ dotnet test
 - Next steps:
   - continue bughunting share-repository lifecycle seams where keepalive, validation, backup, or migration logic may still assume only the original core schema exists
   - then widen back out to other repository/store types that own hand-written SQLite DDL plus separate health-check or reset code
+
+## 2026-03-23 14:12 CST
+- Continued the same share-repository lifecycle sweep into additive-schema upgrades.
+- Fixed `TryValidate()` so older share databases missing `content_items` are migrated in place by creating the table and indexes before validation proceeds, instead of being treated like invalid repositories.
+- Extended `ShareScannerModerationTests` with a focused migration regression; confirmed the focused share-repository slice passed (`8/8`) and the release build stayed green (`0 warnings / 0 errors`).
+- Next steps:
+  - continue bughunting remaining share-repository health/keepalive assumptions that may still only verify the original FTS core and ignore newer owned schema
+  - then widen back out to other hand-written SQLite stores where additive tables or indexes may still lack non-destructive migration paths

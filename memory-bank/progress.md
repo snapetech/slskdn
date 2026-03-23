@@ -7049,3 +7049,11 @@ Code quality improvements were completed as part of Option A:
 - A repository rebuild now actually starts from a clean slate instead of retaining stale advertisable content mappings from the previous schema instance.
 - Extended `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` with a focused reset regression proving `discardExisting: true` clears persisted content-item rows.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`7/7`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 14:12 CST
+
+- Closed the remaining additive-schema upgrade gap in `SqliteShareRepository`.
+- `TryValidate()` now migrates the missing `content_items` table and its indexes in place for older share databases instead of treating the repository as invalid just because it predates that auxiliary table.
+- This keeps pre-`content_items` share caches on the normal upgrade path instead of forcing a destructive rebuild for a routine additive schema change.
+- Extended `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` with a focused migration regression proving `TryValidate()` recreates a dropped/missing `content_items` table and still returns valid.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareRepositoryModerationTests"` passed (`8/8`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.

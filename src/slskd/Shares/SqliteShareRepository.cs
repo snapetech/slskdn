@@ -701,6 +701,26 @@ namespace slskd.Shares
                     migrationConn.ExecuteNonQuery("ALTER TABLE files ADD COLUMN moderationReason TEXT");
                 }
 
+                try
+                {
+                    migrationConn.ExecuteNonQuery("SELECT 1 FROM content_items LIMIT 1");
+                }
+                catch
+                {
+                    Log.Information("Adding content_items table and indexes to shares database (migration)");
+                    migrationConn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS content_items " +
+                        "(contentId TEXT PRIMARY KEY, " +
+                        "domain TEXT NOT NULL, " +
+                        "workId TEXT, " +
+                        "maskedFilename TEXT NOT NULL, " +
+                        "isAdvertisable INTEGER DEFAULT 0 NOT NULL, " +
+                        "moderationReason TEXT, " +
+                        "checkedAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(maskedFilename) REFERENCES files(maskedFilename) ON DELETE CASCADE);");
+                    migrationConn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_filename ON content_items(maskedFilename);");
+                    migrationConn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_advertisable ON content_items(isAdvertisable);");
+                }
+
                 using var conn = GetConnection();
 
                 using var cmd = new SqliteCommand("SELECT name, sql from sqlite_master WHERE type = 'table';", conn);

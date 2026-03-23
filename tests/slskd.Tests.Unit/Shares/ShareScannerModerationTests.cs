@@ -195,6 +195,24 @@ public class ShareRepositoryModerationTests : IDisposable
     }
 
     [Fact]
+    public void TryValidate_WhenContentItemsTableIsMissing_MigratesItInPlace()
+    {
+        using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_databasePath}"))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DROP TABLE IF EXISTS content_items;";
+            command.ExecuteNonQuery();
+        }
+
+        var isValid = _repository.TryValidate(out var problems);
+
+        Assert.True(isValid);
+        Assert.Empty(problems);
+        Assert.Equal(0, _repository.CountAdvertisableItems());
+    }
+
+    [Fact]
     public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
     {
         using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");
