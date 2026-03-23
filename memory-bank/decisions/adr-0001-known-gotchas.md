@@ -15510,3 +15510,30 @@ Listener.Invoke((args.Previous!, args.Current));
 ```
 
 **Why This Keeps Happening**: event-like helpers often assume unsubscription alone is enough, but many delivery paths snapshot delegates before iterating. If a disposable listener wrapper can be invoked from a previously captured snapshot, it needs its own disposed guard so post-dispose delivery fails closed.
+
+### 0k125. `WaitIndefinitely()` Helpers Must Not Secretly Allocate Timeout Timers
+
+**The Bug**: `Waiter.WaitIndefinitely(...)` delegated to `Wait(..., int.MaxValue)`. That still built a `CancellationTokenSource(int.MaxValue)` and registered a timeout callback for every supposedly indefinite wait, wasting a long-lived timer allocation on the exact path that claimed to have no timeout.
+
+**Files Affected**:
+- `src/slskd/Common/Waiter.cs`
+
+**Wrong**:
+```csharp
+public Task<T> WaitIndefinitely<T>(WaitKey key, CancellationToken? cancellationToken = null)
+{
+    return Wait<T>(key, int.MaxValue, cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+var wait = new PendingWait(
+    taskCompletionSource,
+    timeout: null,
+    cancelAction: () => Cancel(key),
+    timeoutAction: () => Timeout(key),
+    cancellationToken.Value);
+```
+
+**Why This Keeps Happening**: "indefinite" helper APIs are often implemented as "very large timeout" shortcuts because they reuse the same code path, but that still creates timeout machinery and registrations. If the semantic contract is "no timeout", model that explicitly and skip timeout allocation entirely.

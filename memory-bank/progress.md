@@ -6913,3 +6913,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ManagedStateTests.cs`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter ManagedStateTests` passed (`2/2`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
 - Added ADR-0001 gotcha `0k124` for disposed subscription snapshot races and committed it immediately per repo policy (`docs: Add gotcha for managed-state disposed listeners`).
+
+## 2026-03-23 13:20 CST
+
+- Fixed `Waiter.WaitIndefinitely(...)` so it no longer allocates a timeout `CancellationTokenSource` and timer behind the scenes.
+- Indefinite waits now model `timeout: null` explicitly and skip timeout registration entirely.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/WaiterTests.cs`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter WaiterTests` passed (`3/3`); `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+- Added ADR-0001 gotcha `0k125` for false-indefinite wait timers and committed it immediately per repo policy (`docs: Add gotcha for waiter indefinite timeout allocation`).

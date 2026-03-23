@@ -973,3 +973,12 @@ dotnet test
 - Next steps:
   - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
   - prioritize primitives where disposal/unsubscription can race with already-snapped background delivery
+
+## 2026-03-23 13:20 CST
+- Continued the helper sweep back through `Waiter`.
+- Fixed `WaitIndefinitely(...)` so it no longer allocates timeout machinery under the hood; indefinite waits now skip timeout token creation entirely.
+- Extended `WaiterTests` with a focused timeout-allocation regression and confirmed the focused slice passed (`3/3`) while the release build stayed green (`0 warnings / 0 errors`).
+- Added ADR-0001 gotcha `0k125` and will commit it immediately per repo policy (`docs: Add gotcha for waiter indefinite timeout allocation`).
+- Next steps:
+  - continue bughunting the remaining low-level callback, timer, and event-fanout helpers
+  - prioritize primitives that claim indefinite or disposal-safe behavior but still allocate hidden timers or registrations
