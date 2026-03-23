@@ -214,6 +214,21 @@ namespace slskd
         /// </summary>
         public static bool IsDevelopment { get; } = new Version(0, 0, 0, 0) == AssemblyVersion;
 
+        private static void RaiseLogEmitted(LogRecord record)
+        {
+            foreach (EventHandler<LogRecord> handler in LogEmitted.GetInvocationList())
+            {
+                try
+                {
+                    handler.Invoke(null, record);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "LogEmitted subscriber failed");
+                }
+            }
+        }
+
         /// <summary>
         ///     Gets a value indicating whether the application is being run in Relay Agent mode.
         /// </summary>
@@ -3405,7 +3420,7 @@ namespace slskd
                         };
 
                         LogBuffer.Enqueue(record);
-                        LogEmitted?.Invoke(null, record);
+                        RaiseLogEmitted(record);
                     }
                     catch (Exception ex)
                     {

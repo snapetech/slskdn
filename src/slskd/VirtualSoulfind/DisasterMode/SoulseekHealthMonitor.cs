@@ -42,7 +42,26 @@ public class SoulseekClientWrapper : ISoulseekClient
     public SoulseekClientWrapper(Soulseek.ISoulseekClient client)
     {
         this.client = client;
-        this.client.RoomMessageReceived += (sender, e) => RoomMessageReceived?.Invoke(sender, e);
+        this.client.RoomMessageReceived += (sender, e) => RaiseRoomMessageReceived(sender, e);
+    }
+
+    private void RaiseRoomMessageReceived(object? sender, RoomMessageReceivedEventArgs args)
+    {
+        if (RoomMessageReceived is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<RoomMessageReceivedEventArgs> handler in RoomMessageReceived.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(sender, args);
+            }
+            catch
+            {
+            }
+        }
     }
 }
 
@@ -89,7 +108,7 @@ public sealed class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedServi
                 logger.LogWarning("[VSF-HEALTH] Soulseek health changed: {Old} → {New}",
                     oldHealth, value);
 
-                HealthChanged?.Invoke(this, new SoulseekHealthChangedEventArgs
+                RaiseHealthChanged(new SoulseekHealthChangedEventArgs
                 {
                     OldHealth = oldHealth,
                     NewHealth = value,
@@ -101,6 +120,26 @@ public sealed class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedServi
     }
 
     public event EventHandler<SoulseekHealthChangedEventArgs>? HealthChanged;
+
+    private void RaiseHealthChanged(SoulseekHealthChangedEventArgs args)
+    {
+        if (HealthChanged is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<SoulseekHealthChangedEventArgs> handler in HealthChanged.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-HEALTH] HealthChanged subscriber failed");
+            }
+        }
+    }
 
     public Task StartMonitoringAsync(CancellationToken ct = default)
     {

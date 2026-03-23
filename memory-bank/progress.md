@@ -6736,3 +6736,9 @@ Code quality improvements were completed as part of Option A:
   - `dotnet build --no-restore`
   - `dotnet test --no-restore`
   - `bash ./bin/lint`
+## 2026-03-23 10:47 CST
+
+- Hardened more shared infrastructure emitters so one subscriber fault no longer poisons global logging or VSF disaster/health notifications.
+- Replaced raw multicast invocation in `Program.LogEmitted`, `DisasterModeCoordinator.DisasterModeLevelChanged`, `SoulseekHealthMonitor.HealthChanged`, and the `SoulseekClientWrapper` room-message forwarder with isolated dispatch helpers.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Core/SharedEventEmitterTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused unit slice for `SharedEventEmitterTests` and `LogsControllerTests` passed `4/4`.

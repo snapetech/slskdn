@@ -132,7 +132,7 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
         CurrentLevel = level;
 
         // Emit telemetry
-        DisasterModeLevelChanged?.Invoke(this, new DisasterModeLevelChangedEventArgs
+        RaiseDisasterModeLevelChanged(new DisasterModeLevelChangedEventArgs
         {
             Level = level,
             PreviousLevel = previousLevel,
@@ -144,6 +144,26 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
             level, GetLevelDescription(level));
 
         await Task.CompletedTask;
+    }
+
+    private void RaiseDisasterModeLevelChanged(DisasterModeLevelChangedEventArgs args)
+    {
+        if (DisasterModeLevelChanged is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<DisasterModeLevelChangedEventArgs> handler in DisasterModeLevelChanged.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-DISASTER] Disaster mode subscriber failed");
+            }
+        }
     }
 
     private string GetLevelDescription(DisasterModeLevel level) => level switch

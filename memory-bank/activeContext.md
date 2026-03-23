@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Hardened more shared infrastructure emitters:
+    - `Program.LogEmitted`, `DisasterModeCoordinator`, and `SoulseekHealthMonitor` no longer use raw multicast fanout
+    - `SoulseekClientWrapper` room-message forwarding now isolates listener faults too
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/SharedEventEmitterTests.cs`
+  - Confirmed the focused slice passed (`4/4`) and the runtime build remains green
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened the remaining shared security/event emitters:
     - `SecurityEventAggregator`, `EntropyMonitor`, `Honeypot`, and `FingerprintDetection` no longer use raw `?.Invoke(...)` multicast fanout
     - one subscriber fault is now isolated and logged instead of aborting other listeners or escaping the emitter path

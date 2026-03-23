@@ -52,6 +52,40 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDE. Shared Infrastructure Emitters Must Not Use Raw Multicast Fanout
+
+**The Bug**: older shared emitters (`Program.LogEmitted`, `DisasterModeCoordinator.DisasterModeLevelChanged`, `SoulseekHealthMonitor.HealthChanged`, and the `SoulseekClientWrapper` room-message forwarder) still used raw multicast invocation. One bad subscriber could therefore break unrelated listeners or leak out through global logging / health-notification paths.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/DisasterModeCoordinator.cs`
+- `src/slskd/VirtualSoulfind/DisasterMode/SoulseekHealthMonitor.cs`
+
+**Wrong**:
+```csharp
+LogEmitted?.Invoke(null, record);
+DisasterModeLevelChanged?.Invoke(this, args);
+HealthChanged?.Invoke(this, args);
+this.client.RoomMessageReceived += (sender, e) => RoomMessageReceived?.Invoke(sender, e);
+```
+
+**Correct**:
+```csharp
+foreach (EventHandler<LogRecord> handler in LogEmitted.GetInvocationList())
+{
+    try
+    {
+        handler.Invoke(null, record);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "LogEmitted subscriber failed");
+    }
+}
+```
+
+**Why This Keeps Happening**: infrastructure events look like “just telemetry,” so it is easy to forget they are still synchronous delegate chains. Global logs and health/disaster emitters sit underneath unrelated features; if one subscriber throws, the failure propagates across the whole app. Shared emitter code needs the same per-subscriber isolation as timers and buses.
+
 ### 0xDF. Shared Security Event Emitters Must Isolate Per-Subscriber Failures
 
 **The Bug**: several security emitters (`SecurityEventAggregator`, `EntropyMonitor`, `Honeypot`, `FingerprintDetection`) raised .NET events with raw `?.Invoke(...)` multicast fanout. One throwing subscriber could therefore abort the rest of the listeners and escape the emitter path during high-severity alerts, entropy warnings, honeypot triggers, or reconnaissance detection.
