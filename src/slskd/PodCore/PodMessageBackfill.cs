@@ -64,6 +64,7 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     public async Task<PodBackfillResult> SyncOnRejoinAsync(string podId, IReadOnlyDictionary<string, long> lastSeenTimestamps, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         var stopwatch = Stopwatch.StartNew();
         var channelsRequested = 0;
         var totalMessagesReceived = 0;
@@ -83,18 +84,19 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             foreach (var (channelId, lastSeen) in lastSeenTimestamps)
             {
-                if (!PodValidation.IsValidChannelId(channelId))
+                var normalizedChannelId = channelId?.Trim() ?? string.Empty;
+                if (!PodValidation.IsValidChannelId(normalizedChannelId))
                 {
                     _logger.LogWarning("Skipping invalid channel ID {ChannelId} in backfill sync", channelId);
                     continue;
                 }
 
                 // Get the newest message timestamp we have for this channel
-                var newestTimestamp = await GetNewestMessageTimestampAsync(podId, channelId, ct);
+                var newestTimestamp = await GetNewestMessageTimestampAsync(podId, normalizedChannelId, ct);
                 if (newestTimestamp > lastSeen)
                 {
                     // We have newer messages, request backfill
-                    channelsNeedingBackfill[channelId] = new MessageRange(
+                    channelsNeedingBackfill[normalizedChannelId] = new MessageRange(
                         FromTimestampInclusive: lastSeen + 1, // Start from the next message after last seen
                         ToTimestampExclusive: newestTimestamp + 1, // Up to and including the newest
                         MaxMessages: MaxMessagesPerRange);
@@ -125,13 +127,17 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             // Send backfill requests to multiple peers for redundancy
             // Limit to 3 peers to avoid overwhelming the network.
-            foreach (var peer in targetPeers.Take(3))
+            foreach (var peer in targetPeers
+                .Where(peer => !string.IsNullOrWhiteSpace(peer.PeerId))
+                .GroupBy(peer => peer.PeerId.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .Take(3))
             {
                 await semaphore.WaitAsync(ct);
                 var task = RequestBackfillWithConcurrencyLimitAsync(
                     semaphore,
                     podId,
-                    peer.PeerId,
+                    peer.PeerId.Trim(),
                     channelsNeedingBackfill,
                     localPeerId,
                     ct);
@@ -140,15 +146,24 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             // Wait for all backfill requests to complete
             var results = await Task.WhenAll(backfillTasks);
+            var successfulResults = results.Where(result => result.Success).ToList();
 
             // Aggregate results
-            foreach (var result in results)
+            foreach (var result in successfulResults)
             {
-                if (result.Success)
-                {
-                    totalMessagesReceived += result.MessagesStored;
-                    Interlocked.Increment(ref _totalBackfillRequestsSent);
-                }
+                totalMessagesReceived += result.MessagesStored;
+                Interlocked.Increment(ref _totalBackfillRequestsSent);
+            }
+
+            if (successfulResults.Count == 0)
+            {
+                var errorMessage = results
+                    .Select(result => result.ErrorMessage)
+                    .FirstOrDefault(error => !string.IsNullOrWhiteSpace(error))
+                    ?? "Backfill requests failed";
+
+                _logger.LogWarning("All backfill requests failed for pod {PodId}: {Error}", podId, errorMessage);
+                return new PodBackfillResult(false, podId, channelsRequested, 0, stopwatch.Elapsed, errorMessage);
             }
 
             Interlocked.Add(ref _totalMessagesBackfilled, totalMessagesReceived);
@@ -188,6 +203,8 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     public async Task<PodBackfillResponse> HandleBackfillRequestAsync(string podId, string requestingPeerId, IReadOnlyDictionary<string, MessageRange> channelRanges, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        requestingPeerId = requestingPeerId?.Trim() ?? string.Empty;
         Interlocked.Increment(ref _totalBackfillRequestsReceived);
 
         try
@@ -211,7 +228,8 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             foreach (var (channelId, range) in channelRanges)
             {
-                if (!PodValidation.IsValidChannelId(channelId))
+                var normalizedChannelId = channelId?.Trim() ?? string.Empty;
+                if (!PodValidation.IsValidChannelId(normalizedChannelId))
                 {
                     _logger.LogWarning("Skipping invalid channel ID {ChannelId} in backfill request", channelId);
                     continue;
@@ -220,7 +238,7 @@ public class PodMessageBackfill : IPodMessageBackfill
                 // Get messages in the requested range
                 var messages = await _messageStorage.GetMessagesAsync(
                     podId,
-                    channelId,
+                    normalizedChannelId,
                     sinceTimestamp: range.FromTimestampInclusive - 1, // Include the start timestamp
                     limit: range.MaxMessages,
                     ct);
@@ -232,12 +250,12 @@ public class PodMessageBackfill : IPodMessageBackfill
                     .OrderBy(m => m.TimestampUnixMs)
                     .ToList();
 
-                channelMessages[channelId] = filteredMessages;
+                channelMessages[normalizedChannelId] = filteredMessages;
 
                 // Check if there are more messages available
                 if (filteredMessages.Count >= range.MaxMessages)
                 {
-                    var totalCount = await _messageStorage.GetMessageCountAsync(podId, channelId, ct);
+                    var totalCount = await _messageStorage.GetMessageCountAsync(podId, normalizedChannelId, ct);
                     var lastMessageTime = filteredMessages.LastOrDefault()?.TimestampUnixMs ?? 0;
                     if (lastMessageTime < range.ToTimestampExclusive - 1)
                     {
@@ -276,6 +294,8 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     public async Task<PodBackfillProcessingResult> ProcessBackfillResponseAsync(string podId, string respondingPeerId, PodBackfillResponse response, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        respondingPeerId = respondingPeerId?.Trim() ?? string.Empty;
         var stopwatch = Stopwatch.StartNew();
         var messagesProcessed = 0;
         var messagesStored = 0;
@@ -284,7 +304,7 @@ public class PodMessageBackfill : IPodMessageBackfill
         try
         {
             // Validate response
-            if (response.PodId != podId)
+            if (!string.Equals(response.PodId?.Trim(), podId, StringComparison.Ordinal))
             {
                 throw new ArgumentException("Response pod ID does not match request", nameof(response));
             }
@@ -294,26 +314,54 @@ public class PodMessageBackfill : IPodMessageBackfill
 
             foreach (var (channelId, messages) in response.ChannelMessages)
             {
+                var normalizedChannelId = channelId?.Trim() ?? string.Empty;
+                if (!PodValidation.IsValidChannelId(normalizedChannelId))
+                {
+                    _logger.LogWarning("Skipping invalid channel ID {ChannelId} in backfill response", channelId);
+                    continue;
+                }
+
                 foreach (var message in messages)
                 {
                     messagesProcessed++;
 
+                    if (message == null)
+                    {
+                        continue;
+                    }
+
+                    message.PodId = message.PodId?.Trim() ?? string.Empty;
+                    message.ChannelId = message.ChannelId?.Trim() ?? string.Empty;
+                    message.SenderPeerId = message.SenderPeerId?.Trim() ?? string.Empty;
+                    message.MessageId = message.MessageId?.Trim() ?? string.Empty;
+
                     // Validate message belongs to this channel
-                    if (message.ChannelId != channelId)
+                    if (!string.Equals(message.ChannelId, normalizedChannelId, StringComparison.Ordinal))
                     {
                         _logger.LogWarning("Message channel ID mismatch in backfill response: expected {Expected}, got {Actual}",
-                            channelId, message.ChannelId);
+                            normalizedChannelId, message.ChannelId);
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(message.PodId) &&
+                        !string.Equals(message.PodId, podId, StringComparison.Ordinal))
+                    {
+                        _logger.LogWarning("Message pod ID mismatch in backfill response: expected {Expected}, got {Actual}",
+                            podId, message.PodId);
                         continue;
                     }
 
                     // Store the message (storage handles deduplication)
-                    var stored = await _messageStorage.StoreMessageAsync(podId, channelId, message, ct);
+                    message.PodId = podId;
+                    message.ChannelId = normalizedChannelId;
+
+                    var stored = await _messageStorage.StoreMessageAsync(podId, normalizedChannelId, message, ct);
                     if (stored)
                     {
                         messagesStored++;
 
                         // Update last seen timestamp
-                        UpdateLastSeenTimestamp(podId, channelId, message.TimestampUnixMs);
+                        UpdateLastSeenTimestamp(podId, normalizedChannelId, message.TimestampUnixMs);
                     }
                     else
                     {
@@ -348,12 +396,20 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     public void UpdateLastSeenTimestamp(string podId, string channelId, long timestamp)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+        {
+            return;
+        }
+
         var podTimestamps = _lastSeenTimestamps.GetOrAdd(podId, _ => new ConcurrentDictionary<string, long>());
         podTimestamps[channelId] = Math.Max(podTimestamps.GetValueOrDefault(channelId, 0), timestamp);
     }
 
     public IReadOnlyDictionary<string, long> GetLastSeenTimestamps(string podId)
     {
+        podId = podId?.Trim() ?? string.Empty;
         return _lastSeenTimestamps.TryGetValue(podId, out var timestamps)
             ? timestamps.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             : new Dictionary<string, long>();
@@ -381,6 +437,8 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     private async Task<long> GetNewestMessageTimestampAsync(string podId, string channelId, CancellationToken ct)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         // Get the most recent message timestamp for this channel
         var recentMessages = await _messageStorage.GetMessagesAsync(podId, channelId, limit: 1, ct: ct);
         return recentMessages.FirstOrDefault()?.TimestampUnixMs ?? 0;
@@ -388,13 +446,14 @@ public class PodMessageBackfill : IPodMessageBackfill
 
     private Task<IReadOnlyList<PodMember>> GetPodMembersAsync(string podId, CancellationToken ct)
     {
+        podId = podId?.Trim() ?? string.Empty;
         return _podService.GetMembersAsync(podId, ct);
     }
 
     private async Task<string> GetLocalPeerIdAsync(CancellationToken ct)
     {
         var profile = await _profileService.GetMyProfileAsync(ct).ConfigureAwait(false);
-        return profile.PeerId;
+        return profile.PeerId?.Trim() ?? string.Empty;
     }
 
     private async Task<PodBackfillProcessingResult> RequestBackfillFromPeerAsync(

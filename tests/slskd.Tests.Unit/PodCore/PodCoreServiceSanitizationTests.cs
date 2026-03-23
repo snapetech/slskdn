@@ -124,6 +124,99 @@ public class PodCoreServiceSanitizationTests
     }
 
     [Fact]
+    public async Task PodMessageBackfill_WhenAllPeerRequestsFail_ReturnsFailure()
+    {
+        var messageStorage = new Mock<IPodMessageStorage>();
+        messageStorage
+            .Setup(storage => storage.GetMessagesAsync("pod-1", "general", null, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { new PodMessage { PodId = "pod-1", ChannelId = "general", TimestampUnixMs = 10 } });
+
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.GetMembersAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember> { new() { PeerId = "peer-remote" } });
+
+        var profileService = new Mock<IProfileService>();
+        profileService
+            .Setup(service => service.GetMyProfileAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerProfile { PeerId = "peer-self" });
+
+        var messageRouter = new Mock<IPodMessageRouter>();
+        messageRouter
+            .Setup(router => router.RouteMessageToPeersAsync(It.IsAny<PodMessage>(), It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodMessageRoutingResult(false, "msg-1", "pod-1", 1, 0, 1, TimeSpan.Zero, "Backfill request delivery failed."));
+
+        var service = new PodMessageBackfill(
+            messageStorage.Object,
+            messageRouter.Object,
+            Mock.Of<IOverlayClient>(),
+            podService.Object,
+            profileService.Object,
+            NullLogger<PodMessageBackfill>.Instance);
+
+        var result = await service.SyncOnRejoinAsync(
+            "pod-1",
+            new Dictionary<string, long> { ["general"] = 0 },
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("Backfill request delivery failed.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task PodMessageBackfill_ProcessBackfillResponse_NormalizesAndStoresTrimmedMessages()
+    {
+        var messageStorage = new Mock<IPodMessageStorage>();
+        messageStorage
+            .Setup(storage => storage.StoreMessageAsync("pod-1", "general", It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = new PodMessageBackfill(
+            messageStorage.Object,
+            Mock.Of<IPodMessageRouter>(),
+            Mock.Of<IOverlayClient>(),
+            Mock.Of<IPodService>(),
+            Mock.Of<IProfileService>(),
+            NullLogger<PodMessageBackfill>.Instance);
+
+        var response = new PodBackfillResponse(
+            " pod-1 ",
+            "peer-remote",
+            new Dictionary<string, IReadOnlyList<PodMessage>>
+            {
+                [" general "] = new[]
+                {
+                    new PodMessage
+                    {
+                        PodId = " pod-1 ",
+                        ChannelId = " general ",
+                        SenderPeerId = " peer-remote ",
+                        MessageId = " msg-1 ",
+                        Body = "hello",
+                        TimestampUnixMs = 100,
+                    }
+                }
+            },
+            false,
+            DateTimeOffset.UtcNow);
+
+        var result = await service.ProcessBackfillResponseAsync(" pod-1 ", " peer-remote ", response, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.MessagesStored);
+        messageStorage.Verify(storage => storage.StoreMessageAsync(
+            "pod-1",
+            "general",
+            It.Is<PodMessage>(message =>
+                message.PodId == "pod-1" &&
+                message.ChannelId == "general" &&
+                message.SenderPeerId == "peer-remote" &&
+                message.MessageId == "msg-1"),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task PodDhtPublisher_WhenPublishThrows_ReturnsSanitizedErrorMessage()
     {
         var dhtClient = new Mock<IMeshDhtClient>();

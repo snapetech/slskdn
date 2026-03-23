@@ -305,6 +305,11 @@ dotnet test
 - Mesh hash lookups and chunk requests now reuse the same in-flight waiters even when transport strings arrive padded, instead of splitting one logical request into separate pending keys.
 - Next: keep pushing through the remaining Mesh/PodCore placeholder paths, especially larger transport-response completion gaps and any new dirty spillover in the tree.
 
+## 2026-03-22 20:02
+- Returned to the Pod backfill flow and fixed the top-level fan-out contract so backfill no longer reports success when every peer request failed.
+- Backfill request/response processing now trims pod/channel/peer/message identifiers, deduplicates target peers more safely, and stores normalized messages instead of dropping them on harmless whitespace drift.
+- Next: continue through the remaining larger transport-response gaps, especially actual backfill response transport handling and the next Mesh/PodCore placeholder cluster.
+
 ## 2026-03-22 19:47
 - Normalized older helper/controller boundaries in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController`, and trimmed decoded relative paths in `FilesController`.
 - Added focused regressions for those controller/path cases and cleared the adjacent unit-project compile blockers in `HttpSignatureKeyFetcher`, `PathGuardTests`, and several stale test files so focused test slices run cleanly again.

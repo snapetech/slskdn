@@ -6085,6 +6085,13 @@ Code quality improvements were completed as part of Option A:
 - That keeps local lookups and in-flight waiters stable when transport/runtime strings arrive padded instead of silently treating the same logical mesh request as different keys.
 - Added focused mesh regressions covering trimmed local lookup, trimmed REQKEY waiter reuse, and trimmed REQCHUNK waiter reuse.
 
+## 2026-03-22 20:02 - Pod backfill fan-out and response normalization
+
+- `PodMessageBackfill.SyncOnRejoinAsync(...)` now distinguishes total failure from partial success instead of always collapsing fan-out results into a successful top-level summary.
+- Target peer selection now trims and deduplicates peer IDs before fan-out, and request/response helpers normalize pod/channel/peer/message identifiers before routing or storing messages.
+- `ProcessBackfillResponseAsync(...)` now accepts harmlessly padded backfill payloads, rewrites stored messages to canonical pod/channel values, and still rejects real pod/channel mismatches.
+- Added focused regressions covering total peer-request failure and normalized response storage.
+
 ## 2026-03-22 19:47 - Older helper-controller normalization and test drift cleanup
 
 - Normalized helper-style controller input in `MusicBrainzController`, `DiscoveryGraphController`, `WishlistController`, and `DestinationsController` so padded IDs, compare-node fields, and request strings are canonicalized before dispatch.
