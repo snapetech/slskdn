@@ -768,14 +768,14 @@ namespace slskd.HashDb
         {
             return new AlbumTargetEntry
             {
-                ReleaseId = reader.GetString(0),
-                DiscogsReleaseId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                Title = reader.GetString(2),
-                Artist = reader.GetString(3),
-                ReleaseDate = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                Country = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
-                Label = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
-                Status = reader.IsDBNull(7) ? string.Empty : reader.GetString(7),
+                ReleaseId = reader.GetString(0).Trim(),
+                DiscogsReleaseId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
+                Title = reader.GetString(2).Trim(),
+                Artist = reader.GetString(3).Trim(),
+                ReleaseDate = reader.IsDBNull(4) ? string.Empty : reader.GetString(4).Trim(),
+                Country = reader.IsDBNull(5) ? string.Empty : reader.GetString(5).Trim(),
+                Label = reader.IsDBNull(6) ? string.Empty : reader.GetString(6).Trim(),
+                Status = reader.IsDBNull(7) ? string.Empty : reader.GetString(7).Trim(),
                 CreatedAt = reader.GetInt64(8),
             };
         }
@@ -784,18 +784,26 @@ namespace slskd.HashDb
         {
             return new AlbumTargetTrackEntry
             {
-                ReleaseId = reader.GetString(0),
+                ReleaseId = reader.GetString(0).Trim(),
                 Position = reader.GetInt32(1),
-                RecordingId = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
-                Title = reader.GetString(3),
-                Artist = reader.GetString(4),
+                RecordingId = reader.IsDBNull(2) ? string.Empty : reader.GetString(2).Trim(),
+                Title = reader.GetString(3).Trim(),
+                Artist = reader.GetString(4).Trim(),
                 DurationMs = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                Isrc = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                Isrc = reader.IsDBNull(6) ? string.Empty : reader.GetString(6).Trim(),
             };
         }
 
         private async Task UpsertAlbumTargetInternalAsync(SqliteConnection conn, AlbumTarget target, CancellationToken cancellationToken)
         {
+            target.MusicBrainzReleaseId = target.MusicBrainzReleaseId?.Trim() ?? string.Empty;
+            target.DiscogsReleaseId = string.IsNullOrWhiteSpace(target.DiscogsReleaseId) ? null : target.DiscogsReleaseId.Trim();
+            target.Title = target.Title?.Trim() ?? string.Empty;
+            target.Artist = target.Artist?.Trim() ?? string.Empty;
+            target.Metadata.Country = string.IsNullOrWhiteSpace(target.Metadata.Country) ? null : target.Metadata.Country.Trim();
+            target.Metadata.Label = string.IsNullOrWhiteSpace(target.Metadata.Label) ? null : target.Metadata.Label.Trim();
+            target.Metadata.Status = string.IsNullOrWhiteSpace(target.Metadata.Status) ? null : target.Metadata.Status.Trim();
+
             using var albumCmd = conn.CreateCommand();
             albumCmd.CommandText = @"
                 INSERT INTO AlbumTargets (
@@ -843,6 +851,10 @@ namespace slskd.HashDb
             for (var i = 0; i < tracks.Count; i++)
             {
                 var track = tracks[i];
+                track.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(track.MusicBrainzRecordingId) ? null : track.MusicBrainzRecordingId.Trim();
+                track.Title = track.Title?.Trim() ?? string.Empty;
+                track.Artist = track.Artist?.Trim() ?? string.Empty;
+                track.Isrc = string.IsNullOrWhiteSpace(track.Isrc) ? null : track.Isrc.Trim();
                 using var trackCmd = conn.CreateCommand();
                 trackCmd.CommandText = @"
                     INSERT INTO AlbumTargetTracks (
@@ -1866,6 +1878,17 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpsertCanonicalStatsAsync(CanonicalStats stats, CancellationToken cancellationToken = default)
         {
+            stats.Id = stats.Id?.Trim() ?? string.Empty;
+            stats.MusicBrainzRecordingId = stats.MusicBrainzRecordingId?.Trim() ?? string.Empty;
+            stats.CodecProfileKey = stats.CodecProfileKey?.Trim() ?? string.Empty;
+            stats.BestVariantId = string.IsNullOrWhiteSpace(stats.BestVariantId) ? null : stats.BestVariantId.Trim();
+            if (string.IsNullOrWhiteSpace(stats.Id) ||
+                string.IsNullOrWhiteSpace(stats.MusicBrainzRecordingId) ||
+                string.IsNullOrWhiteSpace(stats.CodecProfileKey))
+            {
+                return;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -3342,15 +3365,15 @@ namespace slskd.HashDb
         {
             var stats = new CanonicalStats
             {
-                Id = reader.GetString(reader.GetOrdinal("id")),
-                MusicBrainzRecordingId = reader.GetString(reader.GetOrdinal("musicbrainz_recording_id")),
-                CodecProfileKey = reader.GetString(reader.GetOrdinal("codec_profile_key")),
+                Id = reader.GetString(reader.GetOrdinal("id")).Trim(),
+                MusicBrainzRecordingId = reader.GetString(reader.GetOrdinal("musicbrainz_recording_id")).Trim(),
+                CodecProfileKey = reader.GetString(reader.GetOrdinal("codec_profile_key")).Trim(),
                 VariantCount = reader.GetInt32(reader.GetOrdinal("variant_count")),
                 TotalSeenCount = reader.GetInt32(reader.GetOrdinal("total_seen_count")),
                 AvgQualityScore = reader.GetDouble(reader.GetOrdinal("avg_quality_score")),
                 MaxQualityScore = reader.GetDouble(reader.GetOrdinal("max_quality_score")),
                 PercentTranscodeSuspect = reader.GetDouble(reader.GetOrdinal("percent_transcode_suspect")),
-                BestVariantId = reader.IsDBNull(reader.GetOrdinal("best_variant_id")) ? string.Empty : reader.GetString(reader.GetOrdinal("best_variant_id")),
+                BestVariantId = reader.IsDBNull(reader.GetOrdinal("best_variant_id")) ? string.Empty : reader.GetString(reader.GetOrdinal("best_variant_id")).Trim(),
                 CanonicalityScore = reader.GetDouble(reader.GetOrdinal("canonicality_score")),
                 LastUpdated = DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(reader.GetOrdinal("last_updated"))),
             };

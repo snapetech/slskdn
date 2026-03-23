@@ -228,6 +228,86 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpsertAlbumTargetAsync_TrimsStoredAlbumAndTrackFields()
+    {
+        var target = new AlbumTarget
+        {
+            MusicBrainzReleaseId = " mb:release-1 ",
+            DiscogsReleaseId = " discogs-1 ",
+            Title = " Test Album ",
+            Artist = " Test Artist ",
+            Metadata = new ReleaseMetadata
+            {
+                Country = " US ",
+                Label = " Test Label ",
+                Status = " Official ",
+            },
+            Tracks = new[]
+            {
+                new TrackTarget
+                {
+                    MusicBrainzRecordingId = " rec:1 ",
+                    Position = 1,
+                    Title = " Track One ",
+                    Artist = " Test Artist ",
+                    Isrc = " US-AAA-01 ",
+                }
+            }
+        };
+
+        await service.UpsertAlbumTargetAsync(target);
+
+        var album = await service.GetAlbumTargetAsync("mb:release-1");
+        var track = (await service.GetAlbumTracksAsync("mb:release-1")).Single();
+
+        Assert.NotNull(album);
+        Assert.Equal("mb:release-1", album!.ReleaseId);
+        Assert.Equal("discogs-1", album.DiscogsReleaseId);
+        Assert.Equal("Test Album", album.Title);
+        Assert.Equal("Test Artist", album.Artist);
+        Assert.Equal("US", album.Country);
+        Assert.Equal("Test Label", album.Label);
+        Assert.Equal("Official", album.Status);
+        Assert.Equal("mb:release-1", track.ReleaseId);
+        Assert.Equal("rec:1", track.RecordingId);
+        Assert.Equal("Track One", track.Title);
+        Assert.Equal("Test Artist", track.Artist);
+        Assert.Equal("US-AAA-01", track.Isrc);
+    }
+
+    [Fact]
+    public async Task UpsertCanonicalStatsAsync_TrimsKeysBeforePersisting()
+    {
+        var stats = new CanonicalStats
+        {
+            Id = " stats-1 ",
+            MusicBrainzRecordingId = " rec-1 ",
+            CodecProfileKey = " FLAC_44100_16_2 ",
+            BestVariantId = " variant-1 ",
+            VariantCount = 2,
+            TotalSeenCount = 3,
+            AvgQualityScore = 0.8,
+            MaxQualityScore = 0.9,
+            PercentTranscodeSuspect = 0.1,
+            CodecDistribution = new Dictionary<string, int> { ["FLAC"] = 2 },
+            BitrateDistribution = new Dictionary<int, int> { [1000] = 2 },
+            SampleRateDistribution = new Dictionary<int, int> { [44100] = 2 },
+            CanonicalityScore = 0.85,
+            LastUpdated = DateTimeOffset.UtcNow,
+        };
+
+        await service.UpsertCanonicalStatsAsync(stats);
+
+        var stored = await service.GetCanonicalStatsAsync("rec-1", "FLAC_44100_16_2");
+
+        Assert.NotNull(stored);
+        Assert.Equal("stats-1", stored!.Id);
+        Assert.Equal("rec-1", stored.MusicBrainzRecordingId);
+        Assert.Equal("FLAC_44100_16_2", stored.CodecProfileKey);
+        Assert.Equal("variant-1", stored.BestVariantId);
+    }
+
+    [Fact]
     public async Task LookupHashesByRecordingIdAsync_ReturnsMatches()
     {
         var entry = new HashDbEntry

@@ -1239,6 +1239,48 @@ public sealed class SongIdService : ISongIdService
             }
         }
 
+        foreach (var transcript in run.Transcripts)
+        {
+            var startSeconds = Math.Max(0, transcript.ExcerptStartSeconds);
+            foreach (var phrase in transcript.MusicBrainzQueries.Take(3))
+            {
+                var cleaned = CleanSegmentTitle(phrase);
+                if (string.IsNullOrWhiteSpace(cleaned))
+                {
+                    continue;
+                }
+
+                var query = BuildBestQuery(artistContext, cleaned);
+                TryAddSegmentQuery(
+                    segments,
+                    seenQueries,
+                    query,
+                    $"Transcript {FormatTimestamp(startSeconds)}",
+                    $"transcript from {transcript.Source}",
+                    startSeconds,
+                    0.44);
+            }
+        }
+
+        foreach (var ocr in run.Ocr)
+        {
+            var cleaned = CleanSegmentTitle(ocr.Text);
+            if (string.IsNullOrWhiteSpace(cleaned))
+            {
+                continue;
+            }
+
+            var query = BuildBestQuery(artistContext, cleaned);
+            TryAddSegmentQuery(
+                segments,
+                seenQueries,
+                query,
+                $"OCR {FormatTimestamp(ocr.TimestampSeconds)}",
+                "frame text",
+                ocr.TimestampSeconds,
+                0.40);
+        }
+
         foreach (var comment in run.Comments.Where(comment => comment.TimestampSeconds.HasValue))
         {
             var cleaned = CleanSegmentTitle(RemoveTimestampText(comment.Text));

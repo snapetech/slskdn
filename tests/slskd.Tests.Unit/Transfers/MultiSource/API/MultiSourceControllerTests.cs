@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Transfers.MultiSource.API;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using slskd.Transfers;
@@ -27,8 +28,8 @@ public class MultiSourceControllerTests
                 It.IsAny<SearchScope>(),
                 It.IsAny<int?>(),
                 It.IsAny<SearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken>((query, _, _, _, _, _) => capturedQuery = query)
+                It.IsAny<CancellationToken?>()))
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken?>((query, _, _, _, _, _) => capturedQuery = query)
             .ReturnsAsync((Search)null);
 
         var controller = new MultiSourceController(
@@ -57,8 +58,8 @@ public class MultiSourceControllerTests
                 It.IsAny<SearchScope>(),
                 It.IsAny<int?>(),
                 It.IsAny<SearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken>((query, _, _, _, _, _) => capturedQuery = query)
+                It.IsAny<CancellationToken?>()))
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken?>((query, _, _, _, _, _) => capturedQuery = query)
             .ReturnsAsync((Search)null);
 
         var controller = new MultiSourceController(
@@ -92,7 +93,13 @@ public class MultiSourceControllerTests
             Mock.Of<ISoulseekClient>(),
             Mock.Of<ITransferService>(),
             Mock.Of<ISourceDiscoveryService>(),
-            Mock.Of<IContentVerificationService>());
+            Mock.Of<IContentVerificationService>())
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
 
         var result = await controller.VerifySources(new VerifyRequest
         {
@@ -122,7 +129,13 @@ public class MultiSourceControllerTests
             Mock.Of<ISoulseekClient>(),
             Mock.Of<ITransferService>(),
             Mock.Of<ISourceDiscoveryService>(),
-            Mock.Of<IContentVerificationService>());
+            Mock.Of<IContentVerificationService>())
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
 
         var result = await controller.Download(new DownloadRequest
         {

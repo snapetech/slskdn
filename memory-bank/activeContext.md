@@ -261,6 +261,26 @@ dotnet test
 - Next:
   1. Continue grouped controller-edge passes where batch/query endpoints still pass raw identifier collections into services.
   2. Either clear the unrelated `PodMessageBackfill.cs` style warning or work around the in-use runtime DLL when taking the runtime build back to `0/0`.
+
+## 2026-03-22 19:18
+- Fixed a grouped MultiSource / VirtualSoulfind v2 controller-normalization cluster:
+  - `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs`
+  - `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs`
+- The batch normalized parallel endpoint families rather than single methods:
+  - MultiSource search/verify/download/test/search-user endpoints now trim shared transport strings and normalize per-source request fields before service calls.
+  - VirtualSoulfind v2 intent/catalogue endpoints now trim route and request IDs before queue/catalogue/planner/processor dispatch.
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/MultiSourceControllerTests.cs`
+  - `tests/slskd.Tests.Unit/VirtualSoulfind/v2/API/VirtualSoulfindV2ControllerTests.cs`
+- Gotcha commit made immediately per repo policy:
+  - `7ce8a5c2` `docs: Add gotcha for parallel endpoint family normalization`
+- Validation:
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` -> `556 warnings / 0 errors`
+  - direct `vstest` slice for the 9 new controller tests -> `Passed: 9, Failed: 0`
+  - `dotnet build src/slskd/slskd.csproj -v q` -> `0 errors`, with current warning noise coming from already-dirty nullable/style areas plus a transient copy-retry warning while the DLL is in use
+- Next:
+  1. Continue grouped controller-edge passes where sibling endpoints still drift on normalization rules.
+  2. Decide whether to spend the next pass paying down the now-visible runtime warning floor (`HashDbService`, `SongIdService`, `PodMessageBackfill`) or keep prioritizing more request-boundary bugs first.
 - Sanitized certificate validation and mesh-sync fallback messages that were still exposing internal parser/runtime state.
 - Next: continue the broader bughunt from the next clean head, focusing on remaining placeholder/null-heavy runtime paths rather than message leakage.
 
@@ -288,6 +308,21 @@ dotnet test
 - Next:
   1. recommit the full dirty tree, including adjacent controller files from parallel work
   2. continue deeper into the remaining `SongIdService` and `HashDbService` bottom-out cluster
+
+## 2026-03-22 19:41
+- Continued the deeper `SongIdService` + `HashDbService` cluster:
+  - SongID segment-query planning now uses transcript phrases and OCR text instead of ignoring those collected findings
+  - HashDb album target and canonical stats write/read paths now normalize more of their key/value fields symmetrically
+- Added focused unit coverage for:
+  - transcript/OCR-derived segment queries
+  - stringified helper payload parsing
+  - trimmed album target persistence
+  - trimmed canonical stats persistence
+- Gotcha commit made immediately per repo policy:
+  - `8ebb6a04` `docs: Add gotcha for unused songid evidence`
+- Next:
+  1. recommit the full tree
+  2. continue the next `SongIdService` + `HashDbService` batch after this clean head
 
 ## 2026-03-22 18:01
 - Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.

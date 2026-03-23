@@ -6148,6 +6148,22 @@ Code quality improvements were completed as part of Option A:
     - pre-existing `SA1515` in `src/slskd/PodCore/PodMessageBackfill.cs`
     - transient `MSB3026` copy-retry because `slskd.dll` was in use during build
 
+## 2026-03-22 19:18
+- Hardened a grouped MultiSource/VirtualSoulfind v2 controller-normalization batch:
+  - `src/slskd/Transfers/MultiSource/API/MultiSourceController.cs` now trims `searchText`, `username`, `filename`, optional `filter`, optional `ExpectedHash`, deduplicates/filters username collections, and normalizes per-source request fields before search/verify/download/test dispatch.
+  - `src/slskd/VirtualSoulfind/v2/API/VirtualSoulfindV2Controller.cs` now trims route/body identifiers like `intentId`, `trackId`, `releaseId`, `artistId`, `executionId`, search `query`, and optional release notes/parent-release IDs before queue or catalogue calls.
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Transfers/MultiSource/API/MultiSourceControllerTests.cs`
+  - `tests/slskd.Tests.Unit/VirtualSoulfind/v2/API/VirtualSoulfindV2ControllerTests.cs`
+- Documented the recurring pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `7ce8a5c2` (`docs: Add gotcha for parallel endpoint family normalization`).
+- Validation:
+  - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` passed with pre-existing analyzer warning noise (`556 warnings / 0 errors`)
+  - direct `vstest` slice for the new MultiSource/v2 controller tests passed `9/9`
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 errors`; current warnings are still mostly outside this batch:
+    - existing nullable warnings in `src/slskd/HashDb/HashDbService.cs`, `src/slskd/SongID/SongIdService.cs`, and `src/slskd/PodCore/PodMessageBackfill.cs`
+    - existing style warning in `src/slskd/PodCore/PodMessageBackfill.cs`
+    - transient `MSB3026` copy-retry when `slskd.dll` is in use
+
 ## 2026-03-22 19:22
 - Continued the three-way placeholder/null-heavy pass across SongID, HashDb, and PodCore.
 - `src/slskd/SongID/SongIdService.cs`
@@ -6171,3 +6187,17 @@ Code quality improvements were completed as part of Option A:
   - self-peer filtering now uses trimmed, case-insensitive peer IDs
   - blank message IDs / sender IDs are skipped during response processing instead of flowing into storage as weak identities
 - Documented the recurring parser/runtime seam pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `9b38d978` (`docs: Add gotcha for stringified parser payloads`).
+
+## 2026-03-22 19:41
+- Continued the next SongID/HashDb completion batch from the clean head.
+- `src/slskd/SongID/SongIdService.cs`
+  - segment decomposition now consumes transcript-derived `MusicBrainzQueries`
+  - OCR text now also feeds segment-query planning instead of only being stored as evidence
+- `src/slskd/HashDb/HashDbService.cs`
+  - album target upserts now trim release/track metadata before persistence
+  - canonical stats upserts now trim/guard IDs before write
+  - album target / canonical stats readback now returns trimmed values too
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+  - `tests/slskd.Tests.Unit/HashDb/HashDbServiceTests.cs`
+- Documented the recurring SongID planning gap in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `8ebb6a04` (`docs: Add gotcha for unused songid evidence`).

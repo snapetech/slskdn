@@ -334,6 +334,61 @@ public sealed class SongIdServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildSegmentQueries_IncludesTranscriptAndOcrDerivedQueries()
+    {
+        var method = typeof(SongIdService).GetMethod("BuildSegmentQueries", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var run = new SongIdRun
+        {
+            Metadata = new SongIdMetadata
+            {
+                Artist = "Known Artist",
+            },
+            Transcripts = new List<SongIdTranscriptFinding>
+            {
+                new()
+                {
+                    TranscriptId = "tx-1",
+                    Source = "whisper",
+                    ExcerptStartSeconds = 45,
+                    MusicBrainzQueries = new List<string> { "Known Title live mix" },
+                },
+            },
+            Ocr = new List<SongIdOcrFinding>
+            {
+                new()
+                {
+                    OcrId = "ocr-1",
+                    TimestampSeconds = 60,
+                    Text = "Known Title [Live]",
+                },
+            },
+        };
+
+        var queries = Assert.IsAssignableFrom<IEnumerable<object>>(method!.Invoke(null, new object[] { run })!);
+        var serialized = queries.Select(query => JsonSerializer.Serialize(query)).ToList();
+
+        Assert.Contains(serialized, item => item.Contains("Transcript 00:45", StringComparison.Ordinal));
+        Assert.Contains(serialized, item => item.Contains("OCR 01:00", StringComparison.Ordinal));
+        Assert.Contains(serialized, item => item.Contains("Known Artist Known Title live mix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void TryGetString_ParsesStringifiedNumericAndBooleanValues()
+    {
+        var method = typeof(SongIdService).GetMethod("TryGetString", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        using var doc = JsonDocument.Parse("{\"duration\":123,\"verified\":true}");
+        var duration = method!.Invoke(null, new object[] { doc.RootElement, "duration" });
+        var verified = method.Invoke(null, new object[] { doc.RootElement, "verified" });
+
+        Assert.Equal("123", duration);
+        Assert.Equal(bool.TrueString, verified);
+    }
+
+    [Fact]
     public async Task AnalyzeLocalFileAsync_WhenFingerprintExtractionThrows_SanitizesEvidence()
     {
         var store = new SongIdRunStore();
