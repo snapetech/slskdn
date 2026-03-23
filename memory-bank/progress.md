@@ -6512,4 +6512,13 @@ Code quality improvements were completed as part of Option A:
 - Documented the query-echo list-envelope pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and will commit it immediately as required.
 - Next: continue the secure-release sweep through the last controller envelopes that still mirror request/query values into otherwise self-contained results.
 
+## 2026-03-23 00:04
+- Finished another small admin-action response cleanup.
+- `AnalyzerMigrationController` success payloads no longer mirror `targetVersion` or `force`; they now return the new state only (`updated`).
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused `AudioBoundaryControllerTests` slice passed
+- Documented the admin-action query-flag echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and will commit it immediately as required.
+- Next: continue the secure-release sweep through any remaining success envelopes that still behave like debug echoes instead of minimal release contracts.
+
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.

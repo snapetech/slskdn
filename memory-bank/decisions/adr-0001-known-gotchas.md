@@ -14124,3 +14124,22 @@ return Ok(new { inboundLinks });
 ```
 
 **Why This Keeps Happening**: collection endpoints are often designed as ad hoc debugging envelopes, so the original query values get mirrored into the response “for convenience.” For public release contracts, keep the response focused on returned data and any new cursor/state the client cannot already infer from its own request.
+
+### 0k105. Admin Action Success Payloads Should Not Mirror Query Flags When Only The Result Count Matters
+
+**The Bug**: `AnalyzerMigrationController` returned the query-supplied `targetVersion` and `force` flags back to the caller in a success payload even though the only new state was the number of variants updated. That kept the public contract wider than necessary.
+
+**Files Affected**:
+- `src/slskd/Audio/API/AnalyzerMigrationController.cs`
+
+**Wrong**:
+```csharp
+return Ok(new { updated, targetVersion, force });
+```
+
+**Correct**:
+```csharp
+return Ok(new { updated });
+```
+
+**Why This Keeps Happening**: operational/admin endpoints often start as “echo plus result” debugging helpers. Once the workflow stabilizes, keep only the newly produced result unless the caller truly needs the reflected flags for correlation.

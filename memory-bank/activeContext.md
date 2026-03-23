@@ -108,6 +108,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused coverage in `HashDbControllerTests` and `IpldControllerTests`
   - Confirmed the touched runtime build remains green (`0 warnings / 0 errors`) and the focused controller slices pass individually
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
+  - Hardened another admin-action response contract:
+    - `AnalyzerMigrationController` no longer mirrors `targetVersion` / `force` in success payloads
+  - Added focused coverage in `AudioBoundaryControllerTests`
+  - Confirmed the touched runtime build remains green (`0 warnings / 0 errors`) and the focused audio boundary slice passes
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses
