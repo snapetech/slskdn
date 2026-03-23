@@ -15321,3 +15321,45 @@ var reader = new slskd.Shares.ChannelReader<int>(channel, handler);
 ```
 
 **Why This Keeps Happening**: tests often rely on broad namespace imports, and helper types with framework-matching names are especially collision-prone. If a repo introduces a wrapper with a BCL-identical type name, tests need to fully qualify the intended one.
+
+### 0k119. Startup Background Workers Must Capture A Stable CTS And Be Canceled Before Disposal
+
+**The Bug**: several hosted/background startup helpers launched detached work that read a mutable `CancellationTokenSource` field directly. On shutdown or restart, the field could be disposed, replaced, or nulled while the worker still used it, and some `Dispose()` paths disposed the CTS without canceling it first. That turns normal shutdown into a timing-dependent race where startup work can keep running past disposal or trip `ObjectDisposedException`/null access in cancellation paths.
+
+**Files Affected**:
+- `src/slskd/HashDb/Optimization/HashDbOptimizationHostedService.cs`
+- `src/slskd/Mesh/Realm/RealmHostedService.cs`
+- `src/slskd/Mesh/Realm/MultiRealmHostedService.cs`
+- `src/slskd/Identity/MdnsAdvertiser.cs`
+
+**Wrong**:
+```csharp
+_initializationCts = new CancellationTokenSource();
+_initializationTask = Task.Run(async () =>
+{
+    await service.InitializeAsync(_initializationCts.Token);
+}, CancellationToken.None);
+
+public void Dispose()
+{
+    _initializationCts?.Dispose();
+}
+```
+
+**Correct**:
+```csharp
+var initializationCts = new CancellationTokenSource();
+_initializationCts = initializationCts;
+_initializationTask = Task.Run(async () =>
+{
+    await service.InitializeAsync(initializationCts.Token);
+}, CancellationToken.None);
+
+public void Dispose()
+{
+    _initializationCts?.Cancel();
+    _initializationCts?.Dispose();
+}
+```
+
+**Why This Keeps Happening**: it is easy to treat a CTS field as both the lifecycle handle and the worker's runtime dependency, but detached tasks need a stable local token source once they start. If background startup work can outlive the calling method, capture the CTS locally, cancel it before any disposal/replacement, and only then clear the shared field.
