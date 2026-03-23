@@ -18,6 +18,7 @@
 using System;
 using System.Threading;
 using System.Timers;
+using Serilog;
 
 namespace slskd
 {
@@ -84,7 +85,15 @@ namespace slskd
         private void Elapsed(object? sender, ElapsedEventArgs args)
         {
             var count = Interlocked.Exchange(ref this.count, 0);
-            OnElapsed?.Invoke(count);
+
+            try
+            {
+                OnElapsed?.Invoke(count);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "TimedCounter elapsed callback failed");
+            }
         }
     }
 }
