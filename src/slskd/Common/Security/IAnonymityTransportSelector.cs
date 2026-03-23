@@ -7,7 +7,7 @@ namespace slskd.Common.Security;
 /// <summary>
 /// Interface for selecting and managing anonymity transports with policy-aware selection.
 /// </summary>
-public interface IAnonymityTransportSelector
+public interface IAnonymityTransportSelector : IDisposable
 {
     /// <summary>
     /// Selects the best available transport for a connection with policy consideration.

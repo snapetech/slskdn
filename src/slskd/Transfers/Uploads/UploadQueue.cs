@@ -35,7 +35,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Orchestrates uploads.
     /// </summary>
-    public interface IUploadQueue
+    public interface IUploadQueue : IDisposable
     {
         /// <summary>
         ///     Awaits the start of an upload.

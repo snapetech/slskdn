@@ -14,7 +14,7 @@ namespace slskd.Mesh.Governance
     ///     T-REALM-03: Base interface for governance operations.
     ///     Extended by IRealmAwareGovernanceClient for realm-specific governance.
     /// </remarks>
-    public interface IGovernanceClient
+    public interface IGovernanceClient : IDisposable
     {
         /// <summary>
         ///     Validates a governance document.

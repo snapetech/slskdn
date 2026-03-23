@@ -15,7 +15,7 @@ namespace slskd.Mesh.Gossip
     ///     T-REALM-03: Base interface for gossip operations.
     ///     Extended by IRealmAwareGossipService for realm-specific gossip.
     /// </remarks>
-    public interface IGossipService
+    public interface IGossipService : IDisposable
     {
         /// <summary>
         ///     Publishes a gossip message to the network.

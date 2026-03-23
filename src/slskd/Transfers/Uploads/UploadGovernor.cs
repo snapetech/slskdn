@@ -31,7 +31,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Governs upload transfer speed.
     /// </summary>
-    public interface IUploadGovernor
+    public interface IUploadGovernor : IDisposable
     {
         /// <summary>
         ///     Asynchronously obtains a grant of <paramref name="requestedBytes"/> for the requesting <paramref name="username"/>.

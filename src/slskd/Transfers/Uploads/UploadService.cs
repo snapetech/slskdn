@@ -43,7 +43,7 @@ namespace slskd.Transfers.Uploads
     /// <summary>
     ///     Manages uploads.
     /// </summary>
-    public interface IUploadService
+    public interface IUploadService : IDisposable
     {
         /// <summary>
         ///     Gets the upload governor.
