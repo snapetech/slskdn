@@ -13184,3 +13184,26 @@ if (successfulResults.Count == 0)
 ```
 
 **Why This Keeps Happening**: fan-out code is easy to write as “best effort” and then accidentally collapse all outcomes into a success-shaped summary. Aggregate orchestration results explicitly: distinguish total failure, partial success, and full success before returning the top-level contract.
+
+### 0k95. HashDb Helper Methods Need The Same Key Normalization Discipline As The Main Lookup APIs
+
+**The Bug**: even after normalizing the major HashDb read/write paths, smaller helper methods still accepted raw identifiers. That left whitespace-drift bugs in capability updates, FLAC hash updates, codec-profile reads, and release-job listings, so the same logical row could still miss or duplicate at the edges.
+
+**Files Affected**:
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+cmd.Parameters.AddWithValue("@peer_id", username);
+cmd.Parameters.AddWithValue("@file_id", fileId);
+list.Add(reader.GetString(0));
+```
+
+**Correct**:
+```csharp
+username = username?.Trim() ?? string.Empty;
+fileId = fileId?.Trim() ?? string.Empty;
+var recordingId = reader.GetString(0).Trim();
+```
+
+**Why This Keeps Happening**: once the “main” APIs are normalized, the smaller maintenance helpers are easy to overlook because they look low-risk. They are still storage boundaries. Treat helper updates, list reads, and status setters with the same normalization rules as the flagship lookup methods.
