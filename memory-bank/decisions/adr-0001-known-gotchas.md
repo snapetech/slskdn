@@ -13153,3 +13153,34 @@ var requestId = $"{username}:{flacKey}";
 ```
 
 **Why This Keeps Happening**: transport/runtime code often assumes identifiers are already normalized because they “came from inside the mesh.” They are still boundary inputs. Canonicalize before DB lookup, pending-request correlation, and peer-state indexing or you silently split one logical operation into several inconsistent ones.
+
+### 0k94. Multi-Peer Orchestrators Must Not Report Success When Every Fan-Out Attempt Failed
+
+**The Bug**: `PodMessageBackfill.SyncOnRejoinAsync(...)` aggregated per-peer backfill requests but still returned an overall successful result even when every peer request failed and zero messages were stored.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+
+**Wrong**:
+```csharp
+foreach (var result in results)
+{
+    if (result.Success)
+    {
+        totalMessagesReceived += result.MessagesStored;
+    }
+}
+
+return new PodBackfillResult(true, podId, channelsRequested, totalMessagesReceived, stopwatch.Elapsed);
+```
+
+**Correct**:
+```csharp
+var successfulResults = results.Where(result => result.Success).ToList();
+if (successfulResults.Count == 0)
+{
+    return new PodBackfillResult(false, podId, channelsRequested, 0, stopwatch.Elapsed, ...);
+}
+```
+
+**Why This Keeps Happening**: fan-out code is easy to write as “best effort” and then accidentally collapse all outcomes into a success-shaped summary. Aggregate orchestration results explicitly: distinguish total failure, partial success, and full success before returning the top-level contract.
