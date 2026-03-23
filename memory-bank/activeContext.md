@@ -23,10 +23,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Secure-release boundary sweep on a validated green head, continuing through remaining public response contracts that still leak identifiers or limits
+- **Current Task**: Release-blocker fix for the failed morning CI run caused by the Loki sink dependency bump
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Investigated the failed morning GitHub Actions runs and confirmed the blocking compile error was the Dependabot `Serilog.Sinks.Grafana.Loki` upgrade.
+  - Updated `Program.cs` to use the formatter-based `GrafanaLoki(..., textFormatter: ...)` overload required by Loki sink 8.3.2.
+  - Bumped `Serilog.Sinks.Grafana.Loki` in `src/slskd/slskd.csproj` to `8.3.2` so local and CI builds use the same dependency shape.
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and recorded the work in `progress.md`.
   - Closed the secure-release validation loop:
     - fixed the remaining release-only unit-test drift in `LibraryHealthControllerTests` and `SearchActionsControllerTests`
     - confirmed serial validation passes:

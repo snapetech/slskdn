@@ -6547,3 +6547,9 @@ Code quality improvements were completed as part of Option A:
   - GitHub Actions failed at `builtins.getFlake` with `unexpected invalid token`
 - Documented the pattern in `adr-0001-known-gotchas.md` and will commit it immediately as required.
 - Next: commit the script fix, push it, and trigger the next release tag build.
+## 2026-03-23 11:53 - Loki sink CI failure fix
+
+- Investigated the failed morning CI runs and traced the real compile break to the Dependabot Loki sink upgrade (`Serilog.Sinks.Grafana.Loki` 8.3.2).
+- Updated `Program.cs` to use the current `GrafanaLoki(..., textFormatter: ...)` overload with `MessageTemplateTextFormatter` instead of the removed `outputTemplate:` named parameter.
+- Bumped the runtime package reference to `Serilog.Sinks.Grafana.Loki` 8.3.2 so the repo matches the dependency state CI was building.
+- Documented the named-argument dependency drift in `adr-0001-known-gotchas.md` before validation.

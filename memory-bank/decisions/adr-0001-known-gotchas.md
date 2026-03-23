@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xDA. Named-Argument Calls To Third-Party Sinks Break Easily Across Dependency Upgrades
+
+**The Bug**: the Loki logger setup used the old `outputTemplate:` named argument on `GrafanaLoki(...)`. After `Serilog.Sinks.Grafana.Loki` moved to the formatter-based overload, Dependabot PRs started failing CI with `CS1739` even though the main branch still built against the older package.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/slskd.csproj`
+
+**Wrong**:
+```csharp
+config => config.GrafanaLoki(
+    OptionsAtStartup.Logger.Loki ?? string.Empty,
+    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+```
+
+**Correct**:
+```csharp
+config => config.GrafanaLoki(
+    OptionsAtStartup.Logger.Loki ?? string.Empty,
+    textFormatter: new MessageTemplateTextFormatter(
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+        provider: null))
+```
+
+**Why This Keeps Happening**: named arguments against third-party APIs are brittle when maintainers replace overload shapes instead of keeping obsolete shims. For dependency bumps, prefer adapting to the current stable abstraction (`ITextFormatter` here) and validate the build against the upgraded package, not just the currently pinned one.
+
 ### 0xD9. Release Gates Must Exercise Release-Build Test Compiles, Not Just Debug `dotnet test`
 
 **The Bug**: several stale unit tests kept passing targeted Debug runs but still broke the release gate because Release-mode test compilation exercises a different path. In this case, tests were still referencing removed controller methods and old type names like `slskd.Downloads.Download`, so local focused validation looked green while `run-release-gate.sh` failed compiling the Release unit project.
