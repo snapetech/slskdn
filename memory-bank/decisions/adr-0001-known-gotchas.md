@@ -15328,6 +15328,7 @@ var reader = new slskd.Shares.ChannelReader<int>(channel, handler);
 
 **Files Affected**:
 - `src/slskd/Application.cs`
+- `src/slskd/Common/Security/CoverTrafficGenerator.cs`
 - `src/slskd/HashDb/Optimization/HashDbOptimizationHostedService.cs`
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
 - `src/slskd/Mesh/Realm/RealmHostedService.cs`
