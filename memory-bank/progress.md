@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-03-23 19:02 - Search callback fanout and download state-callback hardening
+
+### Completed
+- Documented and fixed another callback-fanout cluster so user callbacks no longer abort one another or the hosting flow.
+- `Search.WithActions` now invokes existing and injected callbacks through a per-callback collection with failure aggregation, so one handler throwing does not skip later handlers.
+- `DownloadService` state-change callback invocation is now isolated in a `try/catch` and logged, so one subscriber failure cannot break download state updates.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/Search/ExtensionsTests.cs`.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ExtensionsTests"` passed (`39/39` in this run).
+- `dotnet build src/slskd/slskd.csproj -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`).
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Continue the broad pass by searching for remaining callback fanout sites that can be made exception-safe in the same pattern across the repository.
+
 ## 2026-03-23 16:22 - CI placeholder-hash tolerance for AUR dev PKGBUILD
 
 ### Completed

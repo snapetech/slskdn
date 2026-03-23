@@ -27,6 +27,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Completed callback-fanout hardening for search options and download state callbacks.
   - Continued broader packaging bughunt and fixed CI AUR checksum validation for template placeholders.
   - Broadened `.github/workflows/ci.yml` to skip known placeholder tokens in `packaging/aur/PKGBUILD-dev` during checksum validation, while still enforcing static file hash checks.
   - Documented the pattern as ADR-0001 `0k14I` and logged verification details in `memory-bank/progress.md`.

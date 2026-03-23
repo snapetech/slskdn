@@ -1040,7 +1040,17 @@ namespace slskd.Transfers.Downloads
                         }
                         finally
                         {
-                            stateChanged?.Invoke(transfer);
+                            if (stateChanged != null)
+                            {
+                                try
+                                {
+                                    stateChanged(transfer);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Warning(ex, "Download state callback failed for {Filename} from {Username}", transfer.Filename, transfer.Username);
+                                }
+                            }
                         }
                     },
                     progressUpdated: (args) => rateLimiter.Invoke(() =>
