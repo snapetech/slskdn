@@ -49,7 +49,8 @@ expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^PackageIde
 expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^Moniker: slskdn-dev$'
 
 reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
-reject_line .github/workflows/release-packages.yml 'slskdn-\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
+expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-x64\.zip'
+expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
 
 bash packaging/scripts/validate-release-copy.sh
 
