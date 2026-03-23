@@ -5,6 +5,7 @@
 #nullable enable
 
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -73,6 +74,38 @@ public class SceneServicesTests
     }
 
     [Fact]
+    public void SceneChatService_WhenOneSubscriberThrows_ContinuesInvokingRemainingSubscribers()
+    {
+        var pubsub = new StubScenePubSubService();
+        var profileService = new Mock<IProfileService>();
+        profileService
+            .Setup(service => service.GetMyProfileAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PeerProfile { PeerId = "local-peer" });
+
+        var service = new SceneChatService(
+            NullLogger<SceneChatService>.Instance,
+            pubsub,
+            CreateOptionsMonitor(),
+            profileService.Object);
+
+        SceneChatMessage? received = null;
+        service.MessageReceived += (_, _) => throw new InvalidOperationException("boom");
+        service.MessageReceived += (_, message) => received = message;
+
+        pubsub.RaiseMessageReceived(new SceneMessageReceivedEventArgs
+        {
+            SceneId = "scene:test",
+            PeerId = "remote-peer",
+            Message = System.Text.Encoding.UTF8.GetBytes("plain text fallback"),
+            Timestamp = DateTimeOffset.UtcNow,
+        });
+
+        Assert.NotNull(received);
+        Assert.Equal("scene:test", received!.SceneId);
+        Assert.Equal("remote-peer", received.PeerId);
+    }
+
+    [Fact]
     public async Task ScenePubSubService_PollLoop_DoesNotOverlapWhenPollTakesLongerThanInterval()
     {
         using var dht = new BlockingDhtClient();
@@ -90,6 +123,30 @@ public class SceneServicesTests
         Assert.Equal(1, dht.MaxConcurrentCalls);
 
         dht.AllowCallsToComplete.Set();
+    }
+
+    [Fact]
+    public void ScenePubSubService_WhenOneSubscriberThrows_ContinuesInvokingRemainingSubscribers()
+    {
+        using var service = new TestScenePubSubService(
+            NullLogger<ScenePubSubService>.Instance,
+            new StubDhtClient());
+
+        SceneMessageReceivedEventArgs? received = null;
+        service.MessageReceived += (_, _) => throw new InvalidOperationException("boom");
+        service.MessageReceived += (_, args) => received = args;
+
+        var args = new SceneMessageReceivedEventArgs
+        {
+            SceneId = "scene:test",
+            PeerId = "peer-1",
+            Message = [1, 2, 3],
+            Timestamp = DateTimeOffset.UtcNow,
+        };
+
+        service.Raise(args);
+
+        Assert.Same(args, received);
     }
 
     private static IOptionsMonitor<slskd.Options> CreateOptionsMonitor()
@@ -175,6 +232,21 @@ public class SceneServicesTests
         {
             AllowCallsToComplete.Set();
             AllowCallsToComplete.Dispose();
+        }
+    }
+
+    private sealed class TestScenePubSubService : ScenePubSubService
+    {
+        public TestScenePubSubService(
+            Microsoft.Extensions.Logging.ILogger<ScenePubSubService> logger,
+            IDhtClient dht)
+            : base(logger, dht, TimeSpan.FromHours(1))
+        {
+        }
+
+        public void Raise(SceneMessageReceivedEventArgs args)
+        {
+            OnMessageReceived(args);
         }
     }
 }

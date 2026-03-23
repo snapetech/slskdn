@@ -196,6 +196,38 @@ staged?.Invoke();
 
 **Why This Keeps Happening**: utility classes often assume they are “single-threaded enough,” but timer callbacks are already concurrent with callers. If shared state is modified on both paths, use atomic operations. If a queued callback slot is supposed to represent “run at most once,” clear the slot before invoking user code or a failing delegate will be retried forever.
 
+### 0xDC. Scene Message Fanout Must Not Let One Subscriber Abort PubSub Or Chat Delivery
+
+**The Bug**: `ScenePubSubService` and `SceneChatService` both raised `MessageReceived` through raw multicast invocation. One throwing scene subscriber could therefore abort later pubsub listeners or stop later chat listeners from seeing a message that had already been accepted and cached.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/Scenes/ScenePubSubService.cs`
+- `src/slskd/VirtualSoulfind/Scenes/SceneChatService.cs`
+
+**Wrong**:
+```csharp
+MessageReceived?.Invoke(this, e);
+...
+MessageReceived?.Invoke(this, message);
+```
+
+**Correct**:
+```csharp
+foreach (EventHandler<SceneMessageReceivedEventArgs> handler in MessageReceived.GetInvocationList())
+{
+    try
+    {
+        handler.Invoke(this, e);
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "[VSF-PUBSUB] MessageReceived subscriber failed");
+    }
+}
+```
+
+**Why This Keeps Happening**: chat/pubsub delivery looks like ordinary in-process eventing, so multicast delegates feel like “free fanout.” They are still one synchronous call chain. If a scene service is responsible for notifying multiple listeners, subscriber exceptions must be isolated just like timer, bus, or infrastructure fanout failures.
+
 ### 0xDD. Shared State Change Fanout Must Happen Outside The State Lock
 
 **The Bug**: `ManagedState<T>.SetValue(...)` cloned and updated the state under its lock and then invoked the whole `Changed` multicast delegate while still holding that lock. One listener exception aborted all later listeners, and any listener reentry or lock-taking path could deadlock the state publisher.

@@ -213,7 +213,22 @@ public class ScenePubSubService : IScenePubSubService, IDisposable
 
     protected virtual void OnMessageReceived(SceneMessageReceivedEventArgs e)
     {
-        MessageReceived?.Invoke(this, e);
+        if (MessageReceived is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<SceneMessageReceivedEventArgs> handler in MessageReceived.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, e);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-PUBSUB] MessageReceived subscriber failed");
+            }
+        }
     }
 
     private bool ShouldDeliver(string sceneId, byte[] message)

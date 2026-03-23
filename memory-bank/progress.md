@@ -6786,4 +6786,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ChannelReaderTests.cs`.
 - Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed; focused `ChannelReaderTests` slice passed. The only warning was a transient `MSB3026` copy-retry from running build and test against the same output tree in parallel.
 
+## 2026-03-23 11:12 CST
+
+- Hardened scene message fanout so one failing subscriber no longer aborts pubsub or scene-chat delivery.
+- `ScenePubSubService` and `SceneChatService` now isolate `MessageReceived` subscribers per handler and log subscriber failures instead of using raw multicast invocation.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/VirtualSoulfind/SceneServicesTests.cs`.
+- Validation: `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`; focused `SceneServicesTests` slice passed `6/6`.
+
 - 2026-03-23: Hardened PeerResolutionService alias caching so DHT-resolved mappings are reusable by peer ID and username alias; fixed ChannelReader test type collisions by fully qualifying the slskd wrapper type; folded in dirty LAN discovery updates and revalidated build/test/lint.

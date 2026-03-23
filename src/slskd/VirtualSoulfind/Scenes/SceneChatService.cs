@@ -142,7 +142,7 @@ public class SceneChatService : ISceneChatService
                 }
 
                 StoreMessage(message);
-                MessageReceived?.Invoke(this, message);
+                RaiseMessageReceived(message);
 
                 logger.LogDebug("[VSF-SCENE-CHAT] Received message {MessageId} in scene {SceneId}",
                     message.MessageId, message.SceneId);
@@ -151,6 +151,26 @@ public class SceneChatService : ISceneChatService
         catch (Exception ex)
         {
             logger.LogError(ex, "[VSF-SCENE-CHAT] Failed to process pubsub message");
+        }
+    }
+
+    private void RaiseMessageReceived(SceneChatMessage message)
+    {
+        if (MessageReceived is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<SceneChatMessage> handler in MessageReceived.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-SCENE-CHAT] MessageReceived subscriber failed");
+            }
         }
     }
 
