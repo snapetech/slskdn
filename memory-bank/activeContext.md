@@ -23,10 +23,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue bughunting broader helper/control-path patterns where auxiliary callbacks can poison primary runtime behavior
+- **Current Task**: Fix Arch/AUR release brittleness caused by mutable GitHub asset checksums, then resume the broader helper/control-path bughunt
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Investigated the reported Arch `makepkg` failure for `slskdn-bin` `0.24.5.slskdn.97`:
+    - cloned the live AUR `slskdn-bin` package and verified it currently pins SHA256 `ada54ed76a8e32cdbf35cbed422a62eba079c4766677ec63d384554d36da241e`
+    - downloaded the live GitHub asset `slskdn-main-linux-x64.zip` for release `0.24.5-slskdn.97` and confirmed it currently hashes to the same value
+    - concluded the release process is brittle because stable AUR was pinning a mutable GitHub asset checksum; failures can happen when the asset is replaced or users keep stale cached bytes under the same version
+  - Hardened the stable AUR publish path:
+    - `.github/workflows/build-on-tag.yml` now keeps the `slskdn-bin` ZIP on `sha256sums=('SKIP' ...)` and only rewrites static packaging-file hashes
+    - `packaging/aur/README.md` now documents that both stable and dev AUR binary zips use `SKIP`
+  - Added ADR-0001 gotcha `0k131` and committed it immediately per repo policy (`docs: Add gotcha for AUR mutable release asset checksums`)
   - Expanded the bughunt from single issues to a broader helper-pattern pass:
     - `Retry` now preserves the original operation exception when `onFailure` or `isRetryable` callbacks throw by surfacing both failures through `RetryException(AggregateException)`
     - `RateLimiter` timer fanout now isolates staged callback failures on the timer thread instead of letting them escape shared scheduling infrastructure

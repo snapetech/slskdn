@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-03-23 13:43 - AUR binary checksum drift hardening
+
+### Completed
+- Investigated the live Arch install failure against `slskdn-bin` `0.24.5.slskdn.97`.
+- Verified the current AUR `PKGBUILD` hash and the current GitHub release asset hash for `slskdn-main-linux-x64.zip` match, which points to mutable-release/cached-asset drift rather than a permanently wrong checksum in the current package definition.
+- Documented the root cause pattern in ADR-0001: stable AUR binary packages were pinning SHA256 to a GitHub release asset even though that asset can change on reruns/replacements.
+- Hardened the stable release workflow so `slskdn-bin` now keeps the GitHub-hosted binary zip on `sha256sums=('SKIP' ...)`, hashing only the repo-owned static packaging files.
+- Updated `packaging/aur/README.md` so the stable/dev AUR checksum policy matches the workflow behavior.
+
+### Verification
+- Confirmed live AUR `slskdn-bin` `pkgver=0.24.5.slskdn.97` currently carries SHA256 `ada54ed76a8e32cdbf35cbed422a62eba079c4766677ec63d384554d36da241e`.
+- Confirmed the live GitHub asset `https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.97/slskdn-main-linux-x64.zip` currently hashes to the same SHA256.
+- `git diff --check -- .github/workflows/build-on-tag.yml packaging/aur/README.md memory-bank/decisions/adr-0001-known-gotchas.md` passed.
+
+### Remaining
+- Publish the workflow fix in the next stable release so future `slskdn-bin` AUR updates stop pinning mutable GitHub asset hashes.
+- For the already-published `.97` package, users with stale cached source zips may still need to clear their AUR cache and redownload.
+
 ## 2026-03-23 13:20 - Broader helper callback-failure isolation pass
 
 ### Completed
