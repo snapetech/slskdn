@@ -900,8 +900,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
     // Identity mapping: Soulseek username <-> Pod PeerId
     // In production, this would be stored in database or queried from DHT
-    private readonly Dictionary<string, string> soulseekToPodMapping = new(); // username -> peerId
-    private readonly Dictionary<string, string> podToSoulseekMapping = new(); // peerId -> username
+    private readonly Dictionary<string, string> soulseekToPodMapping = new(StringComparer.OrdinalIgnoreCase); // username -> peerId
+    private readonly Dictionary<string, string> podToSoulseekMapping = new(StringComparer.OrdinalIgnoreCase); // peerId -> username
     private readonly object mappingLock = new();
 
     public SoulseekChatBridge(
@@ -1072,7 +1072,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
     private string? MapSoulseekToPodPeerId(string soulseekUsername)
     {
-        if (string.IsNullOrWhiteSpace(soulseekUsername))
+        var normalizedUsername = NormalizeSoulseekUsername(soulseekUsername);
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
         {
             return null;
         }
@@ -1080,7 +1081,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         lock (mappingLock)
         {
             // Check if mapping exists
-            if (soulseekToPodMapping.TryGetValue(soulseekUsername, out var peerId))
+            if (soulseekToPodMapping.TryGetValue(normalizedUsername, out var peerId))
             {
                 return peerId;
             }
@@ -1088,15 +1089,15 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             // Check if user is a pod member (they might have joined with their Soulseek username)
             // This is a simplified lookup - in production would query all pods or use DHT
             // For now, create a deterministic mapping that doesn't leak external identities
-            var rawPeerId = $"bridge:{soulseekUsername}";
+            var rawPeerId = $"bridge:{normalizedUsername}";
             peerId = IdentitySeparationEnforcer.SanitizePodPeerId(rawPeerId);
 
-            // Store bidirectional mapping (raw bridge ID for reverse lookup, sanitized for pod use)
-            soulseekToPodMapping[soulseekUsername] = peerId;
-            podToSoulseekMapping[peerId] = soulseekUsername;
+            // Store bidirectional mapping using normalized keys so reverse lookups stay aligned.
+            soulseekToPodMapping[normalizedUsername] = peerId;
+            podToSoulseekMapping[peerId] = normalizedUsername;
 
             logger.LogDebug("[ChatBridge] Created identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
-                LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), peerId);
+                LoggingSanitizer.SanitizeExternalIdentifier(normalizedUsername), peerId);
 
             return peerId;
         }
@@ -1108,18 +1109,20 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     /// </summary>
     public void RegisterIdentityMapping(string soulseekUsername, string podPeerId)
     {
-        if (string.IsNullOrWhiteSpace(soulseekUsername) || string.IsNullOrWhiteSpace(podPeerId))
+        var normalizedUsername = NormalizeSoulseekUsername(soulseekUsername);
+        var normalizedPeerId = NormalizePodPeerId(podPeerId);
+        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrWhiteSpace(normalizedPeerId))
         {
             return;
         }
 
         lock (mappingLock)
         {
-            soulseekToPodMapping[soulseekUsername] = podPeerId;
-            podToSoulseekMapping[podPeerId] = soulseekUsername;
+            soulseekToPodMapping[normalizedUsername] = normalizedPeerId;
+            podToSoulseekMapping[normalizedPeerId] = normalizedUsername;
 
             logger.LogInformation("[ChatBridge] Registered identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
-                LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), podPeerId);
+                LoggingSanitizer.SanitizeExternalIdentifier(normalizedUsername), normalizedPeerId);
         }
     }
 
@@ -1177,7 +1180,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
     private string? MapPodToSoulseekUsername(string podPeerId)
     {
-        if (string.IsNullOrWhiteSpace(podPeerId))
+        var normalizedPeerId = NormalizePodPeerId(podPeerId);
+        if (string.IsNullOrWhiteSpace(normalizedPeerId))
         {
             return null;
         }
@@ -1185,18 +1189,18 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         lock (mappingLock)
         {
             // Check if mapping exists
-            if (podToSoulseekMapping.TryGetValue(podPeerId, out var username))
+            if (podToSoulseekMapping.TryGetValue(normalizedPeerId, out var username))
             {
                 return username;
             }
 
             // Extract username from bridge: prefix if present (backward compatibility)
-            if (podPeerId.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase))
+            if (normalizedPeerId.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase))
             {
-                var extractedUsername = podPeerId.Substring("bridge:".Length);
+                var extractedUsername = normalizedPeerId.Substring("bridge:".Length).Trim();
 
                 // Register the mapping for future use
-                RegisterIdentityMapping(extractedUsername, podPeerId);
+                RegisterIdentityMapping(extractedUsername, normalizedPeerId);
                 return extractedUsername;
             }
 
@@ -1205,9 +1209,19 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             // - Query pod membership records for public key -> username mapping
             // - Query DHT for peer's identity record
             // - Return null if no mapping found
-            logger.LogDebug("[ChatBridge] No identity mapping found for Pod peer {PeerId}", podPeerId);
+            logger.LogDebug("[ChatBridge] No identity mapping found for Pod peer {PeerId}", normalizedPeerId);
             return null;
         }
+    }
+
+    private static string NormalizeSoulseekUsername(string soulseekUsername)
+    {
+        return soulseekUsername?.Trim() ?? string.Empty;
+    }
+
+    private static string NormalizePodPeerId(string podPeerId)
+    {
+        return podPeerId?.Trim() ?? string.Empty;
     }
 }
 

@@ -2616,7 +2616,7 @@ public sealed class SongIdService : ISongIdService
                 Label = entry.Label ?? entry.Source ?? "songid-corpus",
                 Source = entry.Source ?? string.Empty,
                 SimilarityScore = Math.Round(similarity, 4),
-                FingerprintPath = fingerprintPath,
+                FingerprintPath = fingerprintPath ?? string.Empty,
                 RecordingId = entry.RecordingId,
                 Artist = entry.Artist,
                 Title = entry.Title,

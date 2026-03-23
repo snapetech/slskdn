@@ -27,6 +27,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed another identity/runtime drift cluster:
+    - `SoulseekChatBridge` now normalizes bidirectional Soulseek username <-> Pod peer mappings before storing and looking them up
+    - `MeshSyncService` now normalizes inbound response correlation IDs before completing pending waiters
+  - Added focused `SoulseekChatBridgeTests` coverage for normalized bridge mapping and backward-compatible `bridge:` extraction
   - Fixed a file-safety / transfer-status result cluster:
     - `PathGuard` no longer echoes raw path exceptions in validation results
     - both `ContentSafety` implementations no longer echo raw file-read exceptions

@@ -796,13 +796,21 @@ namespace slskd.HashDb
 
         private async Task UpsertAlbumTargetInternalAsync(SqliteConnection conn, AlbumTarget target, CancellationToken cancellationToken)
         {
-            target.MusicBrainzReleaseId = target.MusicBrainzReleaseId?.Trim() ?? string.Empty;
-            target.DiscogsReleaseId = string.IsNullOrWhiteSpace(target.DiscogsReleaseId) ? null : target.DiscogsReleaseId.Trim();
-            target.Title = target.Title?.Trim() ?? string.Empty;
-            target.Artist = target.Artist?.Trim() ?? string.Empty;
-            target.Metadata.Country = string.IsNullOrWhiteSpace(target.Metadata.Country) ? null : target.Metadata.Country.Trim();
-            target.Metadata.Label = string.IsNullOrWhiteSpace(target.Metadata.Label) ? null : target.Metadata.Label.Trim();
-            target.Metadata.Status = string.IsNullOrWhiteSpace(target.Metadata.Status) ? null : target.Metadata.Status.Trim();
+            var normalizedMetadata = target.Metadata with
+            {
+                Country = string.IsNullOrWhiteSpace(target.Metadata.Country) ? null : target.Metadata.Country.Trim(),
+                Label = string.IsNullOrWhiteSpace(target.Metadata.Label) ? null : target.Metadata.Label.Trim(),
+                Status = string.IsNullOrWhiteSpace(target.Metadata.Status) ? null : target.Metadata.Status.Trim(),
+            };
+
+            var normalizedTarget = target with
+            {
+                MusicBrainzReleaseId = target.MusicBrainzReleaseId?.Trim() ?? string.Empty,
+                DiscogsReleaseId = string.IsNullOrWhiteSpace(target.DiscogsReleaseId) ? null : target.DiscogsReleaseId.Trim(),
+                Title = target.Title?.Trim() ?? string.Empty,
+                Artist = target.Artist?.Trim() ?? string.Empty,
+                Metadata = normalizedMetadata,
+            };
 
             using var albumCmd = conn.CreateCommand();
             albumCmd.CommandText = @"
@@ -835,26 +843,33 @@ namespace slskd.HashDb
                     metadata_label = excluded.metadata_label,
                     metadata_status = excluded.metadata_status;
             ";
-            albumCmd.Parameters.AddWithValue("@release_id", target.MusicBrainzReleaseId);
-            albumCmd.Parameters.AddWithValue("@discogs_release_id", (object?)target.DiscogsReleaseId ?? DBNull.Value);
-            albumCmd.Parameters.AddWithValue("@title", target.Title);
-            albumCmd.Parameters.AddWithValue("@artist", target.Artist);
-            albumCmd.Parameters.AddWithValue("@metadata_release_date", (object?)FormatReleaseDate(target.Metadata.ReleaseDate) ?? DBNull.Value);
-            albumCmd.Parameters.AddWithValue("@metadata_country", (object?)target.Metadata.Country ?? DBNull.Value);
-            albumCmd.Parameters.AddWithValue("@metadata_label", (object?)target.Metadata.Label ?? DBNull.Value);
-            albumCmd.Parameters.AddWithValue("@metadata_status", (object?)target.Metadata.Status ?? DBNull.Value);
+            albumCmd.Parameters.AddWithValue("@release_id", normalizedTarget.MusicBrainzReleaseId);
+            albumCmd.Parameters.AddWithValue("@discogs_release_id", (object?)normalizedTarget.DiscogsReleaseId ?? DBNull.Value);
+            albumCmd.Parameters.AddWithValue("@title", normalizedTarget.Title);
+            albumCmd.Parameters.AddWithValue("@artist", normalizedTarget.Artist);
+            albumCmd.Parameters.AddWithValue("@metadata_release_date", (object?)FormatReleaseDate(normalizedTarget.Metadata.ReleaseDate) ?? DBNull.Value);
+            albumCmd.Parameters.AddWithValue("@metadata_country", (object?)normalizedTarget.Metadata.Country ?? DBNull.Value);
+            albumCmd.Parameters.AddWithValue("@metadata_label", (object?)normalizedTarget.Metadata.Label ?? DBNull.Value);
+            albumCmd.Parameters.AddWithValue("@metadata_status", (object?)normalizedTarget.Metadata.Status ?? DBNull.Value);
             await albumCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
-            await DeleteAlbumTracksAsync(conn, target.MusicBrainzReleaseId, cancellationToken).ConfigureAwait(false);
+            await DeleteAlbumTracksAsync(conn, normalizedTarget.MusicBrainzReleaseId, cancellationToken).ConfigureAwait(false);
 
-            var tracks = target.Tracks ?? Array.Empty<TrackTarget>();
+            var tracks = normalizedTarget.Tracks ?? Array.Empty<TrackTarget>();
             for (var i = 0; i < tracks.Count; i++)
             {
-                var track = tracks[i];
-                track.MusicBrainzRecordingId = string.IsNullOrWhiteSpace(track.MusicBrainzRecordingId) ? null : track.MusicBrainzRecordingId.Trim();
-                track.Title = track.Title?.Trim() ?? string.Empty;
-                track.Artist = track.Artist?.Trim() ?? string.Empty;
-                track.Isrc = string.IsNullOrWhiteSpace(track.Isrc) ? null : track.Isrc.Trim();
+                var sourceTrack = tracks[i];
+                var normalizedRecordingId = string.IsNullOrWhiteSpace(sourceTrack.MusicBrainzRecordingId) ? string.Empty : sourceTrack.MusicBrainzRecordingId.Trim();
+                var normalizedIsrc = string.IsNullOrWhiteSpace(sourceTrack.Isrc) ? null : sourceTrack.Isrc?.Trim();
+
+                var track = sourceTrack with
+                {
+                    MusicBrainzRecordingId = normalizedRecordingId,
+                    Title = sourceTrack.Title?.Trim() ?? string.Empty,
+                    Artist = sourceTrack.Artist?.Trim() ?? string.Empty,
+                    Isrc = normalizedIsrc,
+                };
+
                 using var trackCmd = conn.CreateCommand();
                 trackCmd.CommandText = @"
                     INSERT INTO AlbumTargetTracks (
@@ -882,9 +897,9 @@ namespace slskd.HashDb
                         duration_ms = excluded.duration_ms,
                         isrc = excluded.isrc;
                 ";
-                trackCmd.Parameters.AddWithValue("@release_id", target.MusicBrainzReleaseId);
+                trackCmd.Parameters.AddWithValue("@release_id", normalizedTarget.MusicBrainzReleaseId);
                 trackCmd.Parameters.AddWithValue("@track_position", track.Position == 0 ? i + 1 : track.Position);
-                trackCmd.Parameters.AddWithValue("@recording_id", (object?)track.MusicBrainzRecordingId ?? DBNull.Value);
+                trackCmd.Parameters.AddWithValue("@recording_id", string.IsNullOrWhiteSpace(track.MusicBrainzRecordingId) ? DBNull.Value : track.MusicBrainzRecordingId);
                 trackCmd.Parameters.AddWithValue("@title", track.Title);
                 trackCmd.Parameters.AddWithValue("@artist", track.Artist);
                 trackCmd.Parameters.AddWithValue("@duration_ms", (object?)DurationToMilliseconds(track.Duration) ?? DBNull.Value);
@@ -1881,7 +1896,7 @@ namespace slskd.HashDb
             stats.Id = stats.Id?.Trim() ?? string.Empty;
             stats.MusicBrainzRecordingId = stats.MusicBrainzRecordingId?.Trim() ?? string.Empty;
             stats.CodecProfileKey = stats.CodecProfileKey?.Trim() ?? string.Empty;
-            stats.BestVariantId = string.IsNullOrWhiteSpace(stats.BestVariantId) ? null : stats.BestVariantId.Trim();
+            stats.BestVariantId = string.IsNullOrWhiteSpace(stats.BestVariantId) ? string.Empty : stats.BestVariantId.Trim();
             if (string.IsNullOrWhiteSpace(stats.Id) ||
                 string.IsNullOrWhiteSpace(stats.MusicBrainzRecordingId) ||
                 string.IsNullOrWhiteSpace(stats.CodecProfileKey))

@@ -98,7 +98,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}"
+                    ErrorMessage = "Unknown method"
                 }
             };
         }
@@ -342,7 +342,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = dnsResult.ErrorMessage
+                ErrorMessage = "DNS validation failed"
             };
         }
 

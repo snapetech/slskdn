@@ -72,7 +72,7 @@ public sealed class MeshContentMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}",
+                    ErrorMessage = "Unknown method",
                     Payload = Array.Empty<byte>(),
                 },
             };

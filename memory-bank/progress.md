@@ -6225,3 +6225,8 @@ Code quality improvements were completed as part of Option A:
   - `tests/slskd.Tests.Unit/PodCore/PeerResolutionServiceTests.cs`
   - `tests/slskd.Tests.Unit/PodCore/PodDiscoveryTests.cs`
 - Documented the recurring DHT metadata normalization pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `4bcb1cb9` (`docs: Add gotcha for dht metadata normalization`).
+## 2026-03-22 18:03
+- Fixed another identity/runtime drift cluster:
+  - `SoulseekChatBridge` now normalizes both directions of the username <-> pod peer mapping, so padded/case-drifted bridge identities no longer split into separate keys.
+  - `MeshSyncService` now normalizes incoming RESPKEY/RESPCHUNK correlation IDs before completing pending waiters, so trimmed outbound requests match trimmed inbound responses.
+  - Added focused `SoulseekChatBridgeTests` coverage for normalized bridge-map storage and backward-compatible `bridge:` extraction.

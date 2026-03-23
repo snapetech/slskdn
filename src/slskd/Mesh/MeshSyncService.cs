@@ -127,6 +127,8 @@ namespace slskd.Mesh
 
         private void SoulseekClient_PrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs e)
         {
+            var normalizedUsername = (e.Username ?? string.Empty).Trim();
+
             // Check if this is a mesh message
             if (!e.Message.StartsWith(MeshMessagePrefix, StringComparison.OrdinalIgnoreCase))
             {
@@ -153,7 +155,7 @@ namespace slskd.Mesh
                     var response = JsonSerializer.Deserialize<MeshRespKeyMessage>(payload);
                     if (response != null && messageSigner.VerifyMessage(response) && !string.IsNullOrEmpty(response.FlacKey))
                     {
-                        var requestId = $"{e.Username}:{response.FlacKey}";
+                        var requestId = $"{normalizedUsername}:{(response.FlacKey ?? string.Empty).Trim()}";
                         if (pendingRequests.TryRemove(requestId, out var tcs))
                         {
                             tcs.SetResult(response);
@@ -176,7 +178,7 @@ namespace slskd.Mesh
                     var response = JsonSerializer.Deserialize<MeshRespChunkMessage>(payload);
                     if (response != null && messageSigner.VerifyMessage(response) && !string.IsNullOrEmpty(response.FlacKey))
                     {
-                        var requestId = $"{e.Username}:{response.FlacKey}:{response.Offset}";
+                        var requestId = $"{normalizedUsername}:{(response.FlacKey ?? string.Empty).Trim()}:{response.Offset}";
                         if (pendingChunkRequests.TryRemove(requestId, out var tcs))
                         {
                             tcs.SetResult(response);
@@ -211,11 +213,11 @@ namespace slskd.Mesh
 
                         if (message != null)
                         {
-                            var response = await HandleMessageAsync(e.Username, message);
+                            var response = await HandleMessageAsync(normalizedUsername, message);
                             if (response != null)
                             {
                                 // Send response back
-                                await SendMeshMessageAsync(e.Username, response);
+                                await SendMeshMessageAsync(normalizedUsername, response);
                             }
                         }
                     }

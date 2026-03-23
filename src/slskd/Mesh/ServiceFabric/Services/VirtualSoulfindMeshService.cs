@@ -181,7 +181,7 @@ public class VirtualSoulfindMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.InvalidPayload,
-                ErrorMessage = $"Invalid MBIDs: {string.Join(", ", invalidMbids.Take(3))}"
+                ErrorMessage = "Invalid MBID list"
             };
         }
 

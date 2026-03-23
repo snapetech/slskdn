@@ -458,7 +458,7 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Size is required (exact file size in bytes).");
             }
 
-            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? null : request.Filename.Trim();
+            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? string.Empty : request.Filename.Trim();
 
             if (request.Size == 0)
             {
@@ -658,7 +658,7 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Size is required (exact file size in bytes).");
             }
 
-            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? null : request.Filename.Trim();
+            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? string.Empty : request.Filename.Trim();
 
             if (request.Size == 0)
             {
@@ -933,7 +933,7 @@ namespace slskd.Transfers.MultiSource.API
                 .Select(username => username?.Trim() ?? string.Empty)
                 .Where(username => !string.IsNullOrWhiteSpace(username))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .ToList() ?? new List<string>();
 
             if (request.Usernames == null || request.Usernames.Count == 0)
             {
@@ -980,7 +980,7 @@ namespace slskd.Transfers.MultiSource.API
                 {
                     Username = source.Username?.Trim() ?? string.Empty,
                     FullPath = string.IsNullOrWhiteSpace(source.FullPath) ? request.Filename : source.FullPath.Trim(),
-                    ContentHash = string.IsNullOrWhiteSpace(source.ContentHash) ? null : source.ContentHash.Trim(),
+                    ContentHash = string.IsNullOrWhiteSpace(source.ContentHash) ? string.Empty : source.ContentHash.Trim(),
                     Method = source.Method,
                 })
                 .Where(source => !string.IsNullOrWhiteSpace(source.Username))
