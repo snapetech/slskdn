@@ -23,6 +23,7 @@ namespace slskd
     using System;
     using System.ComponentModel;
     using System.Threading;
+    using Serilog;
 
     /// <summary>
     ///     Ensures a minimum interval between successive invocations of a delegate.
@@ -138,7 +139,14 @@ namespace slskd
                 {
                     var staged = Staged;
                     Staged = null;
-                    staged?.Invoke();
+                    try
+                    {
+                        staged?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "RateLimiter staged callback failed");
+                    }
                 }
                 finally
                 {

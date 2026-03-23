@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-03-23 13:20 - Broader helper callback-failure isolation pass
+
+### Completed
+- Documented a new gotcha for auxiliary retry and timer callbacks that were allowed to replace or poison the primary helper failure path.
+- Hardened `Retry` so `onFailure` / `isRetryable` callback failures now throw `RetryException` with an `AggregateException` that preserves the original operation failure alongside the callback failure instead of masking the root cause.
+- Hardened `RateLimiter` timer fanout so staged callbacks are isolated and logged on the timer thread instead of escaping shared scheduling infrastructure.
+- Simplified the non-generic `Retry.Do(Func<Task>)` adapter so it no longer returns a stray boxed `Task` result from the generic path.
+- Added focused regression coverage in:
+  - `CallbackInfrastructureTests`
+  - `RetryTests`
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~RetryTests|FullyQualifiedName~CallbackInfrastructureTests"` passed (`7/7`).
+- `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`).
+- `bash ./bin/lint` passed.
+
+### Remaining
+- Continue the broader helper/runtime sweep for other detached or callback-driven infrastructure that still lets auxiliary hooks interfere with the primary control path.
+
 ## 2026-03-22 03:08 - Background task scheduler-token hardening batch
 
 ### Completed

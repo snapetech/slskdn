@@ -27,10 +27,11 @@ public class CallbackInfrastructureTests
     }
 
     [Fact]
-    public void RateLimiter_WhenStagedActionThrows_DropsFailedActionBeforeNextTick()
+    public void RateLimiter_WhenStagedActionThrows_IsolatesFailureAndAllowsLaterTicks()
     {
         using var rateLimiter = new RateLimiter(interval: 1000);
         var attempts = 0;
+        var successfulTicks = 0;
 
         rateLimiter.Invoke(() => { });
         rateLimiter.Invoke(() =>
@@ -44,11 +45,13 @@ public class CallbackInfrastructureTests
             BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("RateLimiter.Timer_Elapsed method was not found.");
 
-        Assert.Throws<TargetInvocationException>(() => elapsedMethod.Invoke(rateLimiter, [null, EventArgs.Empty]));
+        elapsedMethod.Invoke(rateLimiter, [null, EventArgs.Empty]);
 
+        rateLimiter.Invoke(() => successfulTicks++);
         elapsedMethod.Invoke(rateLimiter, [null, EventArgs.Empty]);
 
         Assert.Equal(1, attempts);
+        Assert.Equal(1, successfulTicks);
     }
 
     [Fact]

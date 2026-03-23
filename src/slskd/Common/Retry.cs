@@ -45,7 +45,7 @@ namespace slskd
             await Do<object>(async () =>
             {
                 await task();
-                return Task.FromResult<object?>(null);
+                return null!;
             }, isRetryable, onFailure, maxAttempts, maxDelayInMilliseconds, cancellationToken);
         }
 
@@ -97,9 +97,11 @@ namespace slskd
                             break;
                         }
                     }
-                    catch (Exception retryEx)
+                    catch (Exception retryCallbackException)
                     {
-                        throw new RetryException($"Failed to retry operation: {retryEx.Message}", ex);
+                        throw new RetryException(
+                            "Retry callback failed while handling an operation failure.",
+                            new AggregateException(ex, retryCallbackException));
                     }
                 }
             }

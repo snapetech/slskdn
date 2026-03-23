@@ -23,10 +23,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue bughunting long-lived client and retry lifecycle paths after the relay sweep
+- **Current Task**: Continue bughunting broader helper/control-path patterns where auxiliary callbacks can poison primary runtime behavior
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Expanded the bughunt from single issues to a broader helper-pattern pass:
+    - `Retry` now preserves the original operation exception when `onFailure` or `isRetryable` callbacks throw by surfacing both failures through `RetryException(AggregateException)`
+    - `RateLimiter` timer fanout now isolates staged callback failures on the timer thread instead of letting them escape shared scheduling infrastructure
+    - the non-generic `Retry.Do(Func<Task>)` adapter no longer returns a stray boxed `Task` object from the generic path
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/RetryTests.cs` and extended `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`
+  - Confirmed the focused helper slice passed (`7/7`), the runtime release build remained green (`0 warnings / 0 errors`), and `bash ./bin/lint` passed
+  - Added ADR-0001 gotcha `0k129` and committed it immediately per repo policy (`docs: Add gotcha for retry callback failure masking`)
   - Continued the lifecycle bughunt into `LocalPortForwarder` stream mapping:
     - `ForwarderConnection` now launches mapping workers with a stable local CTS, not a mutable field lookup
     - natural stream-mapping completion now clears and disposes `_streamMappingCts` instead of leaving stale mapping state behind until `CloseAsync()`

@@ -1,0 +1,36 @@
+namespace slskd.Tests.Unit.Core;
+
+using System;
+using System.Threading.Tasks;
+using Xunit;
+
+public class RetryTests
+{
+    [Fact]
+    public async Task Do_WhenOnFailureThrows_PreservesOriginalOperationException()
+    {
+        var exception = await Assert.ThrowsAsync<RetryException>(() => Retry.Do(
+            task: () => Task.FromException(new InvalidOperationException("primary failure")),
+            onFailure: (_, _) => throw new ApplicationException("callback failure"),
+            maxAttempts: 1));
+
+        var aggregate = Assert.IsType<AggregateException>(exception.InnerException);
+
+        Assert.Contains(aggregate.InnerExceptions, ex => ex is InvalidOperationException ioe && ioe.Message == "primary failure");
+        Assert.Contains(aggregate.InnerExceptions, ex => ex is ApplicationException ae && ae.Message == "callback failure");
+    }
+
+    [Fact]
+    public async Task Do_WhenIsRetryableThrows_PreservesOriginalOperationException()
+    {
+        var exception = await Assert.ThrowsAsync<RetryException>(() => Retry.Do(
+            task: () => Task.FromException(new InvalidOperationException("primary failure")),
+            isRetryable: (_, _) => throw new ApplicationException("retryable failure"),
+            maxAttempts: 1));
+
+        var aggregate = Assert.IsType<AggregateException>(exception.InnerException);
+
+        Assert.Contains(aggregate.InnerExceptions, ex => ex is InvalidOperationException ioe && ioe.Message == "primary failure");
+        Assert.Contains(aggregate.InnerExceptions, ex => ex is ApplicationException ae && ae.Message == "retryable failure");
+    }
+}
