@@ -259,6 +259,38 @@ Staged?.Invoke();
 Staged = null;
 ```
 
+### 0xDD. Debug Logging Must Be Routed Through ILogger
+
+**The Bug**: Several production paths used `System.Diagnostics.Debug.WriteLine` for exception telemetry. Those writes disappear in release builds and never flow through the app’s structured logging, making incidents hard to diagnose in production and sometimes silently ignored by hosting environments.
+
+**Files Affected**:
+- `src/slskd/VirtualSoulfind/v2/Resolution/SimpleResolver.cs`
+- `src/slskd/VirtualSoulfind/v2/Backends/HttpBackend.cs`
+- `src/slskd/VirtualSoulfind/v2/Backends/WebDavBackend.cs`
+- `src/slskd/PodCore/PodServices.cs`
+- `src/slskd/Common/Security/ContentSafety.cs`
+- `src/slskd/DhtRendezvous/Security/ContentSafety.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    System.Diagnostics.Debug.WriteLine(ex);
+    return StepResult.Failure("Backend fetch failed");
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    _logger?.LogWarning(ex, "Backend fetch failed for {TrackId}", trackId);
+    return StepResult.Failure("Backend fetch failed");
+}
+```
+
+**Why This Keeps Happening**: In fast-changing areas, it is easy to reach for direct debug output for expedience. Without explicit instruction, teams assume this is “just temporary,” but these call sites often ship and become silent production blind spots. Standardize on optional `ILogger` injection and structured warning/error logs at all exception boundaries.
+
 **Correct**:
 ```csharp
 Interlocked.Add(ref this.count, count);
