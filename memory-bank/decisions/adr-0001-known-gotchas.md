@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xCD. DHT-Fed Metadata Must Be Canonicalized On Read Or Valid Peers And Pods Look Missing
+
+**The Bug**: Pod and peer discovery code was trimming the lookup key but then trusting DHT payload fields exactly as stored. If the returned `PodId`, tags, focus content IDs, usernames, or endpoints carried padding or hostname endpoints, discovery/resolution treated them as mismatches or invalid even though the metadata was otherwise usable.
+
+**Files Affected**:
+- `src/slskd/PodCore/PeerResolutionService.cs`
+- `src/slskd/PodCore/PodDiscovery.cs`
+
+**Wrong**:
+```csharp
+var endpoint = ParseEndpoint(metadata.Endpoint);
+filtered = filtered.Where(p => string.Equals(p.FocusContentId, normalizedFocusContentId, StringComparison.Ordinal));
+```
+
+**Correct**:
+```csharp
+var endpoint = ParseEndpoint(metadata.Endpoint?.Trim());
+metadata.PodId = string.IsNullOrWhiteSpace(metadata.PodId) ? requestedPodId : metadata.PodId.Trim();
+metadata.Tags = metadata.Tags?.Select(tag => tag.Trim()).Where(tag => !string.IsNullOrWhiteSpace(tag)).ToList();
+```
+
+**Why This Keeps Happening**: once the request-side ID is normalized, it is easy to assume the returned metadata is canonical too. DHT payloads are transport data. Normalize them on the way in or every whitespace/format drift turns into a false “not found.”
+
 ### 0xCC. Parallel Endpoint Families Drift On Raw Transport Strings Unless You Normalize The Whole Surface
 
 **The Bug**: one controller in a feature family gets hardened, but sibling endpoints in the same family still pass raw route/query/body strings into search, queue, or catalogue services. That left multi-source search/verify/download endpoints and VirtualSoulfind v2 intent/catalogue endpoints using padded `searchText`, `filename`, `username`, `intentId`, `artistId`, `releaseId`, and note fields as if they were canonical values.
