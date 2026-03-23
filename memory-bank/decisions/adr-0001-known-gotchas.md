@@ -16088,3 +16088,31 @@ public sealed class EntropyMonitor : IDisposable
 ```
 
 **Why This Keeps Happening**: cleanup timers often feel like invisible implementation details, so they get added during feature work without revisiting the type’s ownership contract. But a repeating timer is a live background resource just like a socket or connection. If a class stores a `Timer` field, disposal must be implemented or updated in the same change.
+
+### 0k140. Replacing Live State Sources Must Dispose Their Old Change Subscriptions
+
+**The Bug**: `RelayService` subscribes to each active client’s `StateMonitor.OnChange(...)` to mirror controller state into the service state. But when the service replaces the live client, it disposed the old client instance without disposing the old monitor subscription. Any later state mutation from the old monitor could still flow into the service and overwrite the current controller state with stale data.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayService.cs`
+
+**Wrong**:
+```csharp
+var client = new RelayClient(...);
+
+client.StateMonitor.OnChange(clientState
+    => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
+
+ReplaceClient(client);
+```
+
+**Correct**:
+```csharp
+var client = new RelayClient(...);
+var stateRegistration = client.StateMonitor.OnChange(clientState
+    => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
+
+ReplaceClient(client, stateRegistration);
+```
+
+**Why This Keeps Happening**: replacing a live dependency looks like "just swap the field and dispose the old object", but reactive subscriptions are separate owned resources. If the old dependency exposes change notifications, the subscription must be disposed alongside the old instance or the old source can keep mutating shared state after replacement.
