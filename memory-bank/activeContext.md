@@ -278,6 +278,17 @@ dotnet test
   1. recommit the full dirty tree, including adjacent controller/test files from parallel work
   2. continue the same three-way pass with the next dense `SongIdService` and `HashDbService` bottom-out cluster
 
+## 2026-03-22 19:31
+- Continued the same three-way pass:
+  - `SongIdService` parser helpers now tolerate stringified tool payloads and alternate Spotify track forms
+  - `HashDbService.TryResolveAcoustIdAsync(...)` now normalizes helper inputs before lookup/tagging
+  - `PodMessageBackfill` now excludes self using canonical peer IDs and skips blank message/sender identities during response processing
+- Gotcha commit made immediately per repo policy:
+  - `9b38d978` `docs: Add gotcha for stringified parser payloads`
+- Next:
+  1. recommit the full dirty tree, including adjacent controller files from parallel work
+  2. continue deeper into the remaining `SongIdService` and `HashDbService` bottom-out cluster
+
 ## 2026-03-22 18:01
 - Normalized PodCore peer/pod read paths and VSF source-registry reads so whitespace drift and blank persisted keys no longer under-report available state.
 - Next: keep widening through remaining placeholder/null-heavy runtime paths in PodCore, VirtualSoulfind, and Mesh.

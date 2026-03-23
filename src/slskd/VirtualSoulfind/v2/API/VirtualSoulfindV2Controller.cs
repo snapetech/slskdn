@@ -101,6 +101,11 @@ namespace slskd.VirtualSoulfind.v2.API
                 return BadRequest(ModelState);
             }
 
+            request.TrackId = request.TrackId?.Trim() ?? string.Empty;
+            request.ParentDesiredReleaseId = string.IsNullOrWhiteSpace(request.ParentDesiredReleaseId)
+                ? null
+                : request.ParentDesiredReleaseId.Trim();
+
             // H-VF01: Validate ContentDomain and required fields
             if (!VirtualSoulfindValidation.IsValidContentDomain(request.Domain, out var domainError))
             {
@@ -156,6 +161,9 @@ namespace slskd.VirtualSoulfind.v2.API
                 return BadRequest(ModelState);
             }
 
+            request.ReleaseId = request.ReleaseId?.Trim() ?? string.Empty;
+            request.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+
             var intent = await _intentQueue.EnqueueReleaseAsync(
                 request.ReleaseId,
                 request.Priority,
@@ -210,6 +218,12 @@ namespace slskd.VirtualSoulfind.v2.API
                 return disabledResult;
             }
 
+            intentId = intentId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(intentId))
+            {
+                return BadRequest();
+            }
+
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
 
             if (intent == null)
@@ -237,6 +251,12 @@ namespace slskd.VirtualSoulfind.v2.API
             if (disabledResult != null)
             {
                 return disabledResult;
+            }
+
+            intentId = intentId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(intentId))
+            {
+                return BadRequest();
             }
 
             var intent = await _intentQueue.GetReleaseIntentAsync(intentId, cancellationToken);
@@ -268,6 +288,12 @@ namespace slskd.VirtualSoulfind.v2.API
             if (disabledResult != null)
             {
                 return disabledResult;
+            }
+
+            intentId = intentId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(intentId))
+            {
+                return BadRequest();
             }
 
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);
@@ -319,6 +345,7 @@ namespace slskd.VirtualSoulfind.v2.API
                 return disabledResult;
             }
 
+            query = query?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(query))
             {
                 return BadRequest(new { Message = "Query is required" });
@@ -345,6 +372,12 @@ namespace slskd.VirtualSoulfind.v2.API
             if (disabledResult != null)
             {
                 return disabledResult;
+            }
+
+            artistId = artistId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(artistId))
+            {
+                return BadRequest();
             }
 
             var artist = await _catalogueStore.FindArtistByIdAsync(artistId, cancellationToken);
@@ -377,6 +410,12 @@ namespace slskd.VirtualSoulfind.v2.API
                 return disabledResult;
             }
 
+            artistId = artistId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(artistId))
+            {
+                return BadRequest();
+            }
+
             var releases = await _catalogueStore.ListReleaseGroupsForArtistAsync(artistId, cancellationToken);
 
             // Apply limit client-side
@@ -400,6 +439,12 @@ namespace slskd.VirtualSoulfind.v2.API
             if (disabledResult != null)
             {
                 return disabledResult;
+            }
+
+            releaseId = releaseId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(releaseId))
+            {
+                return BadRequest();
             }
 
             var tracks = await _catalogueStore.ListTracksForReleaseAsync(releaseId, cancellationToken);
@@ -429,6 +474,8 @@ namespace slskd.VirtualSoulfind.v2.API
             {
                 return BadRequest(ModelState);
             }
+
+            request.TrackId = request.TrackId?.Trim() ?? string.Empty;
 
             if (!VirtualSoulfindValidation.IsValidContentDomain(request.Domain, out var domainError))
             {
@@ -482,6 +529,12 @@ namespace slskd.VirtualSoulfind.v2.API
                 return disabledResult;
             }
 
+            executionId = executionId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(executionId))
+            {
+                return BadRequest();
+            }
+
             var state = await _resolver.GetExecutionStatusAsync(executionId, cancellationToken);
 
             if (state == null)
@@ -509,6 +562,12 @@ namespace slskd.VirtualSoulfind.v2.API
             if (disabledResult != null)
             {
                 return disabledResult;
+            }
+
+            intentId = intentId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(intentId))
+            {
+                return BadRequest();
             }
 
             var intent = await _intentQueue.GetTrackIntentAsync(intentId, cancellationToken);

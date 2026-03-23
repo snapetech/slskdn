@@ -6159,3 +6159,15 @@ Code quality improvements were completed as part of Option A:
   - success-path request messaging now reflects the actual runtime state (`waiting for peer response`) instead of the older placeholder wording
 - Documented the recurring SongID pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `35c4fe52` (`docs: Add gotcha for songid corpus metadata fallback`).
 - Folded in adjacent dirty controller/test files already in the repo so the tree can be recommitted cleanly.
+
+## 2026-03-22 19:31
+- Continued the same three-way completion pass with another parser/runtime-focused batch.
+- `src/slskd/SongID/SongIdService.cs`
+  - lightweight JSON helpers now accept stringified numeric/boolean fields instead of treating them as hard misses
+  - Spotify track extraction now recognizes both URL and `spotify:track:` forms
+- `src/slskd/HashDb/HashDbService.cs`
+  - `TryResolveAcoustIdAsync(...)` now trims file/key/fingerprint inputs and short-circuits blank keys before lookup/tagging
+- `src/slskd/PodCore/PodMessageBackfill.cs`
+  - self-peer filtering now uses trimmed, case-insensitive peer IDs
+  - blank message IDs / sender IDs are skipped during response processing instead of flowing into storage as weak identities
+- Documented the recurring parser/runtime seam pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `9b38d978` (`docs: Add gotcha for stringified parser payloads`).

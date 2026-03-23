@@ -1592,7 +1592,15 @@ namespace slskd.HashDb
 
         private async Task TryResolveAcoustIdAsync(string filePath, string flacKey, string fingerprint, CancellationToken cancellationToken = default)
         {
+            filePath = filePath?.Trim() ?? string.Empty;
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            fingerprint = fingerprint?.Trim() ?? string.Empty;
             if (acoustIdClient == null || optionsMonitor == null || musicBrainzClient == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(flacKey) || string.IsNullOrWhiteSpace(fingerprint))
             {
                 return;
             }
@@ -1613,7 +1621,7 @@ namespace slskd.HashDb
 
             var track = await musicBrainzClient.GetRecordingAsync(recordingId, cancellationToken).ConfigureAwait(false);
 
-            if (track is not null && autoTaggingService != null)
+            if (track is not null && autoTaggingService != null && !string.IsNullOrWhiteSpace(filePath))
             {
                 try
                 {

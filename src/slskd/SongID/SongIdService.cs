@@ -3584,7 +3584,7 @@ public sealed class SongIdService : ISongIdService
 
     private static string? ExtractSpotifyTrackId(string source)
     {
-        var match = Regex.Match(source, @"track/(?<id>[A-Za-z0-9]+)", RegexOptions.IgnoreCase);
+        var match = Regex.Match(source, @"(?:track/|spotify:track:)(?<id>[A-Za-z0-9]+)", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups["id"].Value : null;
     }
 
@@ -3631,13 +3631,19 @@ public sealed class SongIdService : ISongIdService
     private static string? TryGetString(JsonElement element, string propertyName)
     {
         if (element.ValueKind != JsonValueKind.Object ||
-            !element.TryGetProperty(propertyName, out var property) ||
-            property.ValueKind != JsonValueKind.String)
+            !element.TryGetProperty(propertyName, out var property))
         {
             return null;
         }
 
-        return property.GetString();
+        return property.ValueKind switch
+        {
+            JsonValueKind.String => property.GetString()?.Trim(),
+            JsonValueKind.Number => property.GetRawText(),
+            JsonValueKind.True => bool.TrueString,
+            JsonValueKind.False => bool.FalseString,
+            _ => null,
+        };
     }
 
     private static Dictionary<string, string> ExtractOgMeta(string html)
@@ -3725,6 +3731,8 @@ public sealed class SongIdService : ISongIdService
         {
             JsonValueKind.Number when property.TryGetInt32(out var intValue) => intValue,
             JsonValueKind.Number when property.TryGetDouble(out var doubleValue) => (int)Math.Round(doubleValue),
+            JsonValueKind.String when int.TryParse(property.GetString()?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var stringIntValue) => stringIntValue,
+            JsonValueKind.String when double.TryParse(property.GetString()?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var stringDoubleValue) => (int)Math.Round(stringDoubleValue),
             _ => null,
         };
     }

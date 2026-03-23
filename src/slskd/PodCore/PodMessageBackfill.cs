@@ -117,7 +117,11 @@ public class PodMessageBackfill : IPodMessageBackfill
             // Get pod members (excluding ourselves)
             var podMembers = await GetPodMembersAsync(podId, ct);
             var localPeerId = await GetLocalPeerIdAsync(ct);
-            var targetPeers = podMembers.Where(m => m.PeerId != localPeerId).ToList();
+            var normalizedLocalPeerId = localPeerId?.Trim() ?? string.Empty;
+            var targetPeers = podMembers
+                .Where(m => !string.IsNullOrWhiteSpace(m.PeerId))
+                .Where(m => !string.Equals(m.PeerId.Trim(), normalizedLocalPeerId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             if (!targetPeers.Any())
             {
@@ -334,6 +338,11 @@ public class PodMessageBackfill : IPodMessageBackfill
                     message.ChannelId = message.ChannelId?.Trim() ?? string.Empty;
                     message.SenderPeerId = message.SenderPeerId?.Trim() ?? string.Empty;
                     message.MessageId = message.MessageId?.Trim() ?? string.Empty;
+
+                    if (string.IsNullOrWhiteSpace(message.MessageId) || string.IsNullOrWhiteSpace(message.SenderPeerId))
+                    {
+                        continue;
+                    }
 
                     // Validate message belongs to this channel
                     if (!string.Equals(message.ChannelId, normalizedChannelId, StringComparison.Ordinal))

@@ -84,6 +84,7 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> GetTopUsers([FromQuery] string searchText)
         {
+            searchText = searchText?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(searchText))
             {
                 return BadRequest("Search text is required");
@@ -171,6 +172,14 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetUserFiles(string username, [FromQuery] string? filter = null)
         {
+            username = username?.Trim() ?? string.Empty;
+            filter = string.IsNullOrWhiteSpace(filter) ? null : filter.Trim();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             if (LastSearchResults == null || LastSearchResults.Count == 0)
             {
                 return BadRequest("No search results. Call /users?searchText=... first");
@@ -238,6 +247,8 @@ namespace slskd.Transfers.MultiSource.API
             {
                 return BadRequest("Filename is required");
             }
+
+            request.Filename = request.Filename.Trim();
 
             var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
 
@@ -347,6 +358,8 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Filename and size are required");
             }
 
+            request.Filename = request.Filename.Trim();
+
             var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
 
             // First find sources with wide search
@@ -440,6 +453,13 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> SwarmDownload([FromBody] SwarmDownloadRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("Size is required (exact file size in bytes).");
+            }
+
+            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? null : request.Filename.Trim();
+
             if (request.Size == 0)
             {
                 return BadRequest("Size is required (exact file size in bytes).");
@@ -633,6 +653,13 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> SwarmDownloadAsync([FromBody] SwarmDownloadRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("Size is required (exact file size in bytes).");
+            }
+
+            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? null : request.Filename.Trim();
+
             if (request.Size == 0)
             {
                 return BadRequest("Size is required (exact file size in bytes).");
@@ -796,6 +823,7 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> Search([FromQuery] string searchText)
         {
+            searchText = searchText?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(searchText))
             {
                 return BadRequest("Search text is required");
@@ -895,10 +923,17 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> VerifySources([FromBody] VerifyRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.Filename))
+            if (request == null || string.IsNullOrWhiteSpace(request.Filename))
             {
                 return BadRequest("Filename is required");
             }
+
+            request.Filename = request.Filename.Trim();
+            request.Usernames = request.Usernames?
+                .Select(username => username?.Trim() ?? string.Empty)
+                .Where(username => !string.IsNullOrWhiteSpace(username))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             if (request.Usernames == null || request.Usernames.Count == 0)
             {
@@ -927,12 +962,31 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> Download([FromBody] DownloadRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.Filename))
+            if (request == null || string.IsNullOrWhiteSpace(request.Filename))
             {
                 return BadRequest("Filename is required");
             }
 
+            request.Filename = request.Filename.Trim();
+            request.ExpectedHash = string.IsNullOrWhiteSpace(request.ExpectedHash) ? null : request.ExpectedHash.Trim();
+
             if (request.Sources == null || request.Sources.Count < 2)
+            {
+                return BadRequest("At least 2 verified sources are required");
+            }
+
+            request.Sources = request.Sources
+                .Select(source => new SourceRequest
+                {
+                    Username = source.Username?.Trim() ?? string.Empty,
+                    FullPath = string.IsNullOrWhiteSpace(source.FullPath) ? request.Filename : source.FullPath.Trim(),
+                    ContentHash = string.IsNullOrWhiteSpace(source.ContentHash) ? null : source.ContentHash.Trim(),
+                    Method = source.Method,
+                })
+                .Where(source => !string.IsNullOrWhiteSpace(source.Username))
+                .ToList();
+
+            if (request.Sources.Count < 2)
             {
                 return BadRequest("At least 2 verified sources are required");
             }
@@ -981,10 +1035,12 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> RunTest([FromBody] TestRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.SearchText))
+            if (request == null || string.IsNullOrWhiteSpace(request.SearchText))
             {
                 return BadRequest("Search text is required");
             }
+
+            request.SearchText = request.SearchText.Trim();
 
             var testResult = new TestResult
             {

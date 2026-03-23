@@ -16,6 +16,143 @@ using Xunit;
 public class MultiSourceControllerTests
 {
     [Fact]
+    public async Task GetTopUsers_TrimsSearchTextBeforeDispatch()
+    {
+        SearchQuery? capturedQuery = null;
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .Setup(client => client.SearchAsync(
+                It.IsAny<SearchQuery>(),
+                It.IsAny<Action<SearchResponse>>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<int?>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken>((query, _, _, _, _, _) => capturedQuery = query)
+            .ReturnsAsync((Search)null);
+
+        var controller = new MultiSourceController(
+            Mock.Of<IMultiSourceDownloadService>(),
+            soulseekClient.Object,
+            Mock.Of<ITransferService>(),
+            Mock.Of<ISourceDiscoveryService>(),
+            Mock.Of<IContentVerificationService>());
+
+        var result = await controller.GetTopUsers(" hello ");
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(capturedQuery);
+        Assert.Equal("hello", capturedQuery!.SearchText);
+    }
+
+    [Fact]
+    public async Task Search_TrimsSearchTextBeforeDispatch()
+    {
+        SearchQuery? capturedQuery = null;
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .Setup(client => client.SearchAsync(
+                It.IsAny<SearchQuery>(),
+                It.IsAny<Action<SearchResponse>>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<int?>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<SearchQuery, Action<SearchResponse>, SearchScope, int?, SearchOptions, CancellationToken>((query, _, _, _, _, _) => capturedQuery = query)
+            .ReturnsAsync((Search)null);
+
+        var controller = new MultiSourceController(
+            Mock.Of<IMultiSourceDownloadService>(),
+            soulseekClient.Object,
+            Mock.Of<ITransferService>(),
+            Mock.Of<ISourceDiscoveryService>(),
+            Mock.Of<IContentVerificationService>());
+
+        var result = await controller.Search(" hello ");
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(capturedQuery);
+        Assert.Equal("hello", capturedQuery!.SearchText);
+    }
+
+    [Fact]
+    public async Task VerifySources_TrimsFilenameAndDeduplicatesUsernamesBeforeDispatch()
+    {
+        var multiSource = new Mock<IMultiSourceDownloadService>();
+        multiSource
+            .Setup(service => service.FindVerifiedSourcesAsync(
+                "song.flac",
+                1234,
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContentVerificationResult());
+
+        var controller = new MultiSourceController(
+            multiSource.Object,
+            Mock.Of<ISoulseekClient>(),
+            Mock.Of<ITransferService>(),
+            Mock.Of<ISourceDiscoveryService>(),
+            Mock.Of<IContentVerificationService>());
+
+        var result = await controller.VerifySources(new VerifyRequest
+        {
+            Filename = " song.flac ",
+            FileSize = 1234,
+            Usernames = new List<string> { " alice ", "alice", " ", "bob " },
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        multiSource.Verify(
+            service => service.FindVerifiedSourcesAsync("song.flac", 1234, It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Download_TrimsFilenameAndSourceFieldsBeforeDispatch()
+    {
+        var multiSource = new Mock<IMultiSourceDownloadService>();
+        multiSource
+            .Setup(service => service.DownloadAsync(
+                It.IsAny<MultiSourceDownloadRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MultiSourceDownloadResult { Success = true, Filename = "song.flac" });
+
+        var controller = new MultiSourceController(
+            multiSource.Object,
+            Mock.Of<ISoulseekClient>(),
+            Mock.Of<ITransferService>(),
+            Mock.Of<ISourceDiscoveryService>(),
+            Mock.Of<IContentVerificationService>());
+
+        var result = await controller.Download(new DownloadRequest
+        {
+            Filename = " song.flac ",
+            FileSize = 1234,
+            ExpectedHash = " hash ",
+            Sources = new List<SourceRequest>
+            {
+                new() { Username = " alice ", FullPath = " Music/song.flac ", ContentHash = " hash ", Method = VerificationMethod.None },
+                new() { Username = "bob", FullPath = " ", ContentHash = " ", Method = VerificationMethod.None },
+            },
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        multiSource.Verify(
+            service => service.DownloadAsync(
+                It.Is<MultiSourceDownloadRequest>(request =>
+                    request.Filename == "song.flac" &&
+                    request.ExpectedHash == "hash" &&
+                    request.Sources.Count == 2 &&
+                    request.Sources[0].Username == "alice" &&
+                    request.Sources[0].FullPath == "Music/song.flac" &&
+                    request.Sources[0].ContentHash == "hash" &&
+                    request.Sources[1].FullPath == "song.flac" &&
+                    request.Sources[1].ContentHash == null),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetTopUsers_WhenSearchThrows_DoesNotLeakExceptionMessage()
     {
         var soulseekClient = new Mock<ISoulseekClient>();

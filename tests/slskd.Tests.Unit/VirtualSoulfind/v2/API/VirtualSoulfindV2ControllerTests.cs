@@ -110,6 +110,29 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         }
 
         [Fact]
+        public async Task EnqueueTrack_TrimsTrackAndParentReleaseIdsBeforeDispatch()
+        {
+            var trackId = ContentItemId.NewId().ToString();
+            var request = new EnqueueTrackRequest
+            {
+                Domain = ContentDomain.Music,
+                TrackId = $" {trackId} ",
+                ParentDesiredReleaseId = " release-1 ",
+            };
+
+            _mockIntentQueue
+                .Setup(q => q.EnqueueTrackAsync(ContentDomain.Music, trackId, request.Priority, "release-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredTrack { DesiredTrackId = Guid.NewGuid().ToString(), TrackId = trackId });
+
+            var result = await _controller.EnqueueTrack(request, CancellationToken.None);
+
+            Assert.IsType<CreatedAtActionResult>(result);
+            _mockIntentQueue.Verify(
+                q => q.EnqueueTrackAsync(ContentDomain.Music, trackId, request.Priority, "release-1", It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task EnqueueRelease_ValidRequest_ReturnsCreated()
         {
             // Arrange
@@ -144,6 +167,27 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
             Assert.Equal(nameof(_controller.GetReleaseIntent), createdResult.ActionName);
             var returnedIntent = Assert.IsType<DesiredRelease>(createdResult.Value);
             Assert.Equal(expectedIntent.DesiredReleaseId, returnedIntent.DesiredReleaseId);
+        }
+
+        [Fact]
+        public async Task EnqueueRelease_TrimsReleaseIdAndNotesBeforeDispatch()
+        {
+            var request = new EnqueueReleaseRequest
+            {
+                ReleaseId = " release:test ",
+                Notes = " note ",
+            };
+
+            _mockIntentQueue
+                .Setup(q => q.EnqueueReleaseAsync("release:test", request.Priority, request.Mode, "note", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredRelease { DesiredReleaseId = Guid.NewGuid().ToString(), ReleaseId = "release:test" });
+
+            var result = await _controller.EnqueueRelease(request, CancellationToken.None);
+
+            Assert.IsType<CreatedAtActionResult>(result);
+            _mockIntentQueue.Verify(
+                q => q.EnqueueReleaseAsync("release:test", request.Priority, request.Mode, "note", It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
@@ -315,6 +359,20 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         }
 
         [Fact]
+        public async Task GetTrackIntent_TrimsIntentIdBeforeLookup()
+        {
+            var intentId = Guid.NewGuid().ToString();
+            _mockIntentQueue
+                .Setup(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredTrack { DesiredTrackId = intentId, TrackId = ContentItemId.NewId().ToString() });
+
+            var result = await _controller.GetTrackIntent($" {intentId} ", CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            _mockIntentQueue.Verify(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
         public async Task UpdateTrackIntent_NonExistingIntent_ReturnsNotFound()
         {
             // Arrange
@@ -333,6 +391,37 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task SearchArtists_TrimsQueryBeforeDispatch()
+        {
+            _mockCatalogueStore
+                .Setup(store => store.SearchArtistsAsync("hello", 50, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<Artist>());
+
+            var result = await _controller.SearchArtists(" hello ", 50, CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            _mockCatalogueStore.Verify(store => store.SearchArtistsAsync("hello", 50, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessIntent_TrimsIntentIdBeforeDispatch()
+        {
+            var intentId = Guid.NewGuid().ToString();
+            _mockIntentQueue
+                .Setup(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredTrack { DesiredTrackId = intentId, TrackId = ContentItemId.NewId().ToString() });
+            _mockProcessor
+                .Setup(processor => processor.ProcessIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var result = await _controller.ProcessIntent($" {intentId} ", CancellationToken.None);
+
+            var accepted = Assert.IsType<AcceptedResult>(result);
+            Assert.Contains(intentId, accepted.Value?.ToString() ?? string.Empty);
+            _mockIntentQueue.Verify(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         #endregion
