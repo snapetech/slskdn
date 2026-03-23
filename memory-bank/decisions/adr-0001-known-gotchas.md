@@ -13039,6 +13039,35 @@ decodedPath = (encodedPath.FromBase64() ?? string.Empty).Trim();
 
 **Why This Keeps Happening**: “thin controller” code often looks like glue and gets exempted from normalization discipline, especially when the downstream helper already appears tolerant. But those helpers then see multiple spellings of the same identifier or path, and tests only catch it later when equality or path-join behavior changes. Normalize at the HTTP/base64 boundary, even for controller methods that do little more than delegate.
 
+### 0k92. Async Refactors Often Leave Reused Local Names In Nested Scopes That Stop The Build
+
+**The Bug**: a JSON traversal helper in `HttpSignatureKeyFetcher` used `out var pkix` for the object branch and later re-declared `var pkix = ...` inside the array branch. C# treats those as the same enclosing scope inside the `switch`, so the later rename-less edit broke the build with `CS0136`.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/HttpSignatureKeyFetcher.cs`
+
+**Wrong**:
+```csharp
+if (TryExtractPkixFromKeyObject(element, keyId, out var pkix))
+{
+    return pkix;
+}
+
+var pkix = ExtractPublicKeyPkix(item, keyId);
+```
+
+**Correct**:
+```csharp
+if (TryExtractPkixFromKeyObject(element, keyId, out var pkix))
+{
+    return pkix;
+}
+
+var nestedPkix = ExtractPublicKeyPkix(item, keyId);
+```
+
+**Why This Keeps Happening**: small helper refactors encourage copy-paste of short names like `id`, `key`, or `pkix`, and `switch`/pattern scopes are broader than they look. After extracting or inlining a branch, scan for repeated local names in sibling branches before assuming the compiler will keep them isolated.
+
 ### 0k91. Supported Domains Should Fall Back To Conservative Metadata Instead Of Becoming Invalid When Enrichment Is Missing
 
 **The Bug**: `ContentLinkService` treated some supported domains and types as invalid whenever an external metadata lookup was unavailable. That meant video content IDs and partially resolvable artist IDs failed validation outright even though the parsed content ID already carried enough information to return structured conservative metadata.
