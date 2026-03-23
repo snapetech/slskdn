@@ -740,7 +740,8 @@ namespace slskd.HashDb
         public async Task<IEnumerable<HashDbEntry>> LookupHashesByRecordingIdAsync(string recordingId, CancellationToken cancellationToken = default)
         {
             var matches = new List<HashDbEntry>();
-            if (string.IsNullOrEmpty(recordingId))
+            recordingId = recordingId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(recordingId))
             {
                 return matches;
             }
@@ -1312,7 +1313,9 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task UpdateHashRecordingIdAsync(string flacKey, string musicBrainzId, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(musicBrainzId))
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            musicBrainzId = musicBrainzId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey) || string.IsNullOrWhiteSpace(musicBrainzId))
             {
                 return;
             }
@@ -1945,6 +1948,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<Jobs.DiscographyJob?> GetDiscographyJobAsync(string jobId, CancellationToken cancellationToken = default)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -2006,6 +2015,21 @@ namespace slskd.HashDb
                 return;
             }
 
+            job.JobId = job.JobId.Trim();
+            job.ArtistId = job.ArtistId?.Trim() ?? string.Empty;
+            job.ArtistName = job.ArtistName?.Trim() ?? string.Empty;
+            job.TargetDirectory = job.TargetDirectory?.Trim() ?? string.Empty;
+            job.ReleaseJobIds = job.ReleaseJobIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            job.ReleaseIds = job.ReleaseIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             var json = JsonSerializer.Serialize(job);
 
             using var conn = GetConnection();
@@ -2043,6 +2067,11 @@ namespace slskd.HashDb
         public async Task<List<DiscographyReleaseJobStatus>> GetDiscographyReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default)
         {
             var list = new List<DiscographyReleaseJobStatus>();
+            jobId = jobId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return list;
+            }
 
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
@@ -2413,6 +2442,12 @@ namespace slskd.HashDb
         /// <inheritdoc/>
         public async Task<LabelCrateJob?> GetLabelCrateJobAsync(string jobId, CancellationToken cancellationToken = default)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return null;
+            }
+
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -2470,6 +2505,15 @@ namespace slskd.HashDb
                 return;
             }
 
+            job.JobId = job.JobId.Trim();
+            job.LabelId = job.LabelId?.Trim() ?? string.Empty;
+            job.LabelName = job.LabelName?.Trim() ?? string.Empty;
+            job.ReleaseIds = job.ReleaseIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             var json = JsonSerializer.Serialize(job);
 
             using var conn = GetConnection();
@@ -2505,6 +2549,11 @@ namespace slskd.HashDb
         public async Task<List<DiscographyReleaseJobStatus>> GetLabelCrateReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default)
         {
             var list = new List<DiscographyReleaseJobStatus>();
+            jobId = jobId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return list;
+            }
 
             using var conn = GetConnection();
             using var cmd = conn.CreateCommand();
@@ -2627,6 +2676,8 @@ namespace slskd.HashDb
             {
                 return;
             }
+
+            graph.ArtistId = graph.ArtistId.Trim();
 
             var json = JsonSerializer.Serialize(graph);
 

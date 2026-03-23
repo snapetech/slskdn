@@ -253,6 +253,11 @@ dotnet test
 - Added focused regression coverage for trimmed invite/nickname/peerId/display-name flows and for rejecting whitespace-only contact updates.
 - Next: continue through the next low-traffic controller/helper batch, especially native utility endpoints and messaging controllers that still accept raw strings in route/body pairs.
 
+## 2026-03-22 18:36
+- Aligned the specialized discography/label-crate job controllers with the native jobs API so the whole job domain now applies the same controller-edge normalization rules.
+- Restored the runtime build to `0 warnings / 0 errors` after the batch by matching the existing non-nullable `TargetDirectory` contract.
+- Next: continue through the next controller/helper cluster, likely messaging or telemetry endpoints that still mix route/body strings and older pass-through patterns.
+
 ## 2026-03-22 18:22
 - Executed Batch A against `SongIdService`, `MetadataFacade`, and `MusicBrainzClient`.
 - Replaced one major early-bottom-out pattern: metadata hits without MBIDs now continue through SongID with conservative synthetic IDs instead of being discarded.
@@ -273,3 +278,8 @@ dotnet test
 - Continued Batch B through `CapabilityFileService`, `MeshOverlayConnector`, and `StunNatDetector`.
 - Fixed capability/endpoint normalization, preserved partial capability identity, restored the live connection return in mesh overlay connect, and added IPv6 STUN mapped-address parsing.
 - Next: inspect the remaining dirty tree, commit everything, then keep pushing through `MeshOverlayConnector` / transport fallback paths or circle back into the next dense `SongIdService` cluster.
+
+## 2026-03-22 19:07
+- Switched into the next dense HashDb completion slice.
+- Fixed symmetric key normalization for HashDb recording/job identifiers and added focused readback regression coverage.
+- Next: commit the current tree, then continue into the next HashDb null-heavy read path or return to the remaining Mesh/PathGuard clusters.

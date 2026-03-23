@@ -249,6 +249,70 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LookupHashesByRecordingIdAsync_TrimsInput()
+    {
+        var entry = new HashDbEntry
+        {
+            FlacKey = HashDbEntry.GenerateFlacKey("test.flac", 123456),
+            ByteHash = "abcdef",
+            Size = 123456,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+        };
+
+        await service.StoreHashAsync(entry);
+        await service.UpdateHashRecordingIdAsync($" {entry.FlacKey} ", " mb:trimmed ", CancellationToken.None);
+
+        var matches = await service.LookupHashesByRecordingIdAsync("  mb:trimmed  ");
+
+        var match = Assert.Single(matches);
+        Assert.Equal(entry.FlacKey, match.FlacKey);
+    }
+
+    [Fact]
+    public async Task GetDiscographyJobAsync_TrimsStoredAndLookupJobId()
+    {
+        await service.UpsertDiscographyJobAsync(new slskd.Jobs.DiscographyJob
+        {
+            JobId = "  job-1  ",
+            ArtistId = " artist-1 ",
+            ArtistName = " Artist ",
+            TargetDirectory = " /tmp/test ",
+        });
+
+        var job = await service.GetDiscographyJobAsync(" job-1 ");
+
+        Assert.NotNull(job);
+        Assert.Equal("job-1", job!.JobId);
+        Assert.Equal("artist-1", job.ArtistId);
+        Assert.Equal("Artist", job.ArtistName);
+        Assert.Equal("/tmp/test", job.TargetDirectory);
+    }
+
+    [Fact]
+    public async Task GetLabelCrateJobAsync_TrimsStoredAndLookupJobId()
+    {
+        await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob
+        {
+            JobId = "  label-job  ",
+            LabelId = " label-1 ",
+            LabelName = " Label Name ",
+            ReleaseIds = new List<string> { " rel-1 ", "rel-1", "  " },
+        });
+
+        var job = await service.GetLabelCrateJobAsync(" label-job ");
+
+        Assert.NotNull(job);
+        Assert.Equal("label-job", job!.JobId);
+        Assert.Equal("label-1", job.LabelId);
+        Assert.Equal("Label Name", job.LabelName);
+        Assert.Single(job.ReleaseIds);
+        Assert.Equal("rel-1", job.ReleaseIds[0]);
+    }
+
+    [Fact]
     public async Task GetFlacEntriesBySizeAsync_FindsMatchingEntries()
     {
         // Arrange
@@ -632,4 +696,3 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal(bitDepth, unpackedDepth);
     }
 }
-

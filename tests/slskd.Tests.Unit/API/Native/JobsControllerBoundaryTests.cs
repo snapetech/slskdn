@@ -60,7 +60,7 @@ public class JobsControllerBoundaryTests
     }
 
     [Fact]
-    public async Task CreateMbReleaseJob_NormalizesBlankTargetDirectoryToNull()
+    public async Task CreateMbReleaseJob_NormalizesBlankTargetDirectoryToEmptyString()
     {
         var discographyService = new Mock<IDiscographyJobService>();
         var musicBrainzClient = new Mock<IMusicBrainzClient>();
@@ -86,7 +86,7 @@ public class JobsControllerBoundaryTests
             service => service.CreateJobAsync(
                 It.Is<DiscographyJobRequest>(request =>
                     request.ArtistId == "artist-1" &&
-                    request.TargetDirectory == null &&
+                    request.TargetDirectory == string.Empty &&
                     request.ReleaseIds!.SequenceEqual(new[] { "release-1" })),
                 It.IsAny<CancellationToken>()),
             Times.Once);

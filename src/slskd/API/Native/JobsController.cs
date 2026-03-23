@@ -58,7 +58,7 @@ public class JobsController : ControllerBase
         }
 
         var releaseId = request.MbReleaseId?.Trim() ?? string.Empty;
-        var targetDir = string.IsNullOrWhiteSpace(request.TargetDir) ? null : request.TargetDir.Trim();
+        var targetDir = string.IsNullOrWhiteSpace(request.TargetDir) ? string.Empty : request.TargetDir.Trim();
 
         if (string.IsNullOrWhiteSpace(releaseId))
         {

@@ -37,7 +37,7 @@ namespace slskd.Jobs.API
             }
 
             request.ArtistId = request.ArtistId?.Trim() ?? string.Empty;
-            request.TargetDirectory = string.IsNullOrWhiteSpace(request.TargetDirectory) ? null : request.TargetDirectory.Trim();
+            request.TargetDirectory = string.IsNullOrWhiteSpace(request.TargetDirectory) ? string.Empty : request.TargetDirectory.Trim();
             request.ReleaseIds = request.ReleaseIds?
                 .Select(id => id?.Trim() ?? string.Empty)
                 .Where(id => !string.IsNullOrWhiteSpace(id))

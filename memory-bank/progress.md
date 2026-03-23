@@ -6014,6 +6014,13 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage in `ProfileControllerTests` and `ContactsControllerTests`; the targeted slice passed `17/17`.
 - Documented the recurring pattern in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and immediately committed the docs-only note.
 
+## 2026-03-22 18:36 - Job controller alignment pass
+
+- Hardened the dedicated job controllers in `src/slskd/Jobs/API/` so `jobId`, `artistId`, `labelId`, `labelName`, and `releaseIds` are normalized the same way as the native jobs API.
+- Aligned `JobsController.CreateMbReleaseJob(...)` with the existing service contract by canonicalizing blank target directories to `string.Empty` instead of forwarding raw whitespace.
+- Added focused regression coverage in `JobsControllerBoundaryTests` and the new `JobApiControllerTests`; the targeted job slice passed `5/5`.
+- Documented the sibling-controller drift pattern in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) and immediately committed the docs-only note.
+
 ## 2026-03-22 18:22 - SongID and metadata completion batch A
 
 - `MetadataFacade` now trims cache/query keys, caches AcoustID-only fallback hits, yields artist/title-only search hits even without a MusicBrainz recording ID, and falls back to filename-derived metadata for local files when tag parsing bottoms out.
@@ -6044,3 +6051,10 @@ Code quality improvements were completed as part of Option A:
 - `StunNatDetector` now trims endpoint strings, prefers IPv4 address resolution where available, and can parse IPv6 `MAPPED-ADDRESS` / `XOR-MAPPED-ADDRESS` responses instead of bottoming out on non-IPv4 mappings.
 - Added focused regression coverage in new `CapabilityFileServiceTests` and `StunNatDetectorTests` for normalized capability parsing and IPv6 STUN parsing.
 - Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for success-path ownership nulling.
+
+## 2026-03-22 19:07 - HashDb key normalization symmetry
+
+- `HashDbService` now normalizes recording IDs and job IDs symmetrically on both write and lookup paths, so harmless whitespace drift no longer turns into false negatives or duplicate logical records.
+- Trim/dedupe normalization now covers `UpdateHashRecordingIdAsync`, `LookupHashesByRecordingIdAsync`, `UpsertDiscographyJobAsync`, `GetDiscographyJobAsync`, `UpsertLabelCrateJobAsync`, `GetLabelCrateJobAsync`, the related release-job list reads, and artist-release graph upserts.
+- Added focused HashDb tests covering trimmed recording-ID lookup and trimmed persisted/readback job identifiers.
+- Added and immediately committed the matching gotcha in [adr-0001-known-gotchas.md](/home/keith/Documents/code/slskdn/memory-bank/decisions/adr-0001-known-gotchas.md) for read/write key normalization symmetry.
