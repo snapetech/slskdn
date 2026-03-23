@@ -88,7 +88,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
         }
 
         // Special message for the very first mesh peer ever!
-        _ = SendGreetingAsync(e.Username, isFirstEver: true);
+        QueueGreeting(e.Username, isFirstEver: true);
     }
 
     private void OnNeighborAdded(object? sender, MeshNeighborEventArgs e)
@@ -118,7 +118,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
             return;
         }
 
-        _ = SendGreetingAsync(e.Username, isFirstEver: false);
+        QueueGreeting(e.Username, isFirstEver: false);
     }
 
     private async Task SendGreetingAsync(string username, bool isFirstEver)
@@ -126,6 +126,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
         if (!_soulseekClient.State.HasFlag(SoulseekClientStates.Connected))
         {
             _logger.LogDebug("Not connected to Soulseek, skipping greeting to {Username}", username);
+            _greetedPeers.TryRemove(username, out _);
             return;
         }
 
@@ -148,8 +149,20 @@ public sealed class DhtPeerGreetingService : BackgroundService
         }
         catch (Exception ex)
         {
+            _greetedPeers.TryRemove(username, out _);
             _logger.LogWarning(ex, "Failed to send greeting to {Username}", username);
         }
+    }
+
+    private void QueueGreeting(string username, bool isFirstEver)
+    {
+        if (!_greetedPeers.TryAdd(username, DateTimeOffset.MinValue))
+        {
+            _logger.LogDebug("Already greeted {Username}, skipping", username);
+            return;
+        }
+
+        _ = SendGreetingAsync(username, isFirstEver);
     }
 
     /// <summary>

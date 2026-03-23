@@ -110,6 +110,42 @@ public async Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext
 
 **Why This Keeps Happening**: stream adapters are easy to leave as interface stubs once the call path works, but if the service already has a single JSON request and a bounded JSON reply, the stream path should reuse that logic instead of advertising a reachable no-op. Otherwise the runtime surface and the actual behavior drift apart.
 
+### 0xE2. Shadow-Index Service Boundaries Must Trim MBID Inputs Before Validation
+
+**The Bug**: `VirtualSoulfindMeshService` validated and queried `QueryByMbid` and `QueryBatch` inputs using raw request strings. Padded MBIDs therefore failed the format check or produced avoidable misses even though the canonical identifier was otherwise valid.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/Services/VirtualSoulfindMeshService.cs`
+
+**Wrong**:
+```csharp
+if (request == null || string.IsNullOrWhiteSpace(request.MBID))
+{
+    ...
+}
+
+if (!IsValidMbid(request.MBID))
+{
+    ...
+}
+
+var result = await _shadowIndexQuery.QueryAsync(request.MBID, cancellationToken);
+```
+
+**Correct**:
+```csharp
+var normalizedMbid = request?.MBID?.Trim();
+...
+if (!IsValidMbid(normalizedMbid))
+{
+    ...
+}
+
+var result = await _shadowIndexQuery.QueryAsync(normalizedMbid, cancellationToken);
+```
+
+**Why This Keeps Happening**: service adapters often validate “wire” payloads directly instead of normalizing once at the boundary. For identifier-based services like MBID lookup, trim first, then validate and query using the normalized value so stream/call paths behave the same way.
+
 ### 0xDA. Detached Worker Completion Tasks Must Surface One Stable Failure, Not Re-throw And Re-fault
 
 **The Bug**: `ChannelReader<T>` runs its background read loop as fire-and-forget work and exposes completion through `Completed`. But on failure it both re-threw the exception from the detached task and let `ExceptionHandler` run unguarded inside the catch block. That means the callback could mask the original read/handler failure, and the background task could fault separately even though `Completed` was already supposed to be the public failure surface.
@@ -322,6 +358,35 @@ if (!receivingStarted)
 ```
 
 **Why This Keeps Happening**: "start receiving" methods look idempotent at the API level, but event subscription is not idempotent unless the implementation makes it so. Any long-lived channel handler that stores the latest callback and subscribes to an underlying sender needs a one-time subscription guard or explicit unsubscribe/re-subscribe logic.
+
+### 0xDF. Fire-And-Forget Greeting Hooks Must Reserve Recipients Before The Async Send Starts
+
+**The Bug**: `DhtPeerGreetingService` checked `_greetedPeers.ContainsKey(...)` and then launched `_ = SendGreetingAsync(...)`. Two quick neighbor-added events for the same username could both pass the check before the first async send recorded the peer, resulting in duplicate greetings.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtPeerGreetingService.cs`
+
+**Wrong**:
+```csharp
+if (_greetedPeers.ContainsKey(e.Username))
+{
+    return;
+}
+
+_ = SendGreetingAsync(e.Username, isFirstEver: false);
+```
+
+**Correct**:
+```csharp
+if (!_greetedPeers.TryAdd(username, DateTimeOffset.MinValue))
+{
+    return;
+}
+
+_ = SendGreetingAsync(username, isFirstEver);
+```
+
+**Why This Keeps Happening**: a "seen" cache feels like enough protection, but once the actual side effect runs asynchronously there is a gap between the check and the write. If duplicate suppression is meant to cover in-flight work, reserve the key synchronously before starting the fire-and-forget task and roll the reservation back on failure.
 
 ### 0xDD. Shared State Change Fanout Must Happen Outside The State Lock
 

@@ -54,6 +54,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused regression coverage in `tests/slskd.Tests.Unit/Signals/SignalChannelHandlerTests.cs`
   - Confirmed the focused signal slice passed (`2/2`) and the runtime build remains green (`0 warnings / 0 errors`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
+  - Fixed a duplicate-greeting race in `DhtPeerGreetingService`:
+    - peer greetings are now reserved in `_greetedPeers` before the async send starts
+    - repeated neighbor-added events for the same peer no longer launch duplicate private-message greetings while the first send is still in flight
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/DhtRendezvous/DhtPeerGreetingServiceTests.cs`
+  - Confirmed the focused DHT greeting slice passed and the runtime build remains green (`0 warnings / 0 errors`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened `TimedCounter` and `RateLimiter` callback/timer state handling
   - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/CallbackInfrastructureTests.cs`
   - Confirmed the focused slice passed (`2/2`) and the runtime build remains green
