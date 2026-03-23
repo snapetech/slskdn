@@ -15058,3 +15058,25 @@ peerMappings[normalizedUsername] = mapping;
 ```
 
 **Why This Keeps Happening**: identity services often start from a single canonical key and then later accept aliases. If the cache layer is not updated to mirror both identities, runtime callers see inconsistent behavior depending on which shape they pass first.
+
+### 0k118. Tests Must Fully Qualify `ChannelReader<T>` After Adding the slskd Wrapper Type
+
+**The Bug**: unit tests imported both `System.Threading.Channels` and `slskd.Shares`, then instantiated `ChannelReader<T>` unqualified. Once the slskd wrapper type existed, the test project stopped compiling with an ambiguous reference.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Core/ChannelReaderTests.cs`
+
+**Wrong**:
+```csharp
+using System.Threading.Channels;
+using slskd.Shares;
+...
+var reader = new ChannelReader<int>(channel, handler);
+```
+
+**Correct**:
+```csharp
+var reader = new slskd.Shares.ChannelReader<int>(channel, handler);
+```
+
+**Why This Keeps Happening**: tests often rely on broad namespace imports, and helper types with framework-matching names are especially collision-prone. If a repo introduces a wrapper with a BCL-identical type name, tests need to fully qualify the intended one.
