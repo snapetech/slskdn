@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using slskd.Common.Security;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -448,6 +450,16 @@ public class MeshServiceRouter
             WorkBudgetEnabled = true,
             WorkBudgetMetrics = workBudgetMetrics
         };
+    }
+
+    /// <summary>
+    /// Gets the currently registered service names.
+    /// </summary>
+    public IReadOnlyList<string> GetRegisteredServiceNames()
+    {
+        return _services.Keys
+            .OrderBy(serviceName => serviceName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
 

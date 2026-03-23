@@ -364,7 +364,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Too many active tunnels per peer (max {policy.MaxConcurrentTunnelsPerPeer})"
+                ErrorMessage = "Too many active tunnels per peer"
             };
         }
 
@@ -378,7 +378,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Too many active tunnels for pod (max {policy.MaxConcurrentTunnelsPod})"
+                ErrorMessage = "Too many active tunnels for pod"
             };
         }
 
@@ -397,7 +397,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Tunnel creation rate limit exceeded (max {policy.MaxNewTunnelsPerMinutePerPeer} per minute)"
+                ErrorMessage = "Tunnel creation rate limit exceeded"
             };
         }
 

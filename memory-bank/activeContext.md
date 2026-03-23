@@ -477,3 +477,13 @@ dotnet test
   - `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v q` with existing analyzer warning noise only
   - `vstest` slice for `PrivateGatewayMeshServiceTests`, `PodsMeshServiceTests`, `MeshContentMeshServiceTests`, and `VirtualSoulfindMeshServiceTests` passed (`20/20`)
 - Next: continue through the next secure-release surfaces, prioritizing remaining externally visible mesh/service replies and helper result DTOs over internal-only logging cleanup.
+
+## 2026-03-22 20:43
+- Continued through adjacent infrastructure-facing result surfaces after the first mesh reply batch.
+- Mesh introspection and DHT method-not-found replies now use the same generic contract, mesh-content no longer exposes local file sizes in oversized-file errors, and realm migration import failures no longer return absolute filesystem paths.
+- Focused validation passed:
+  - `dotnet build src/slskd/slskd.csproj -v q`
+  - `vstest` slice for `MeshIntrospectionServiceTests`, `DhtMeshServiceTests`, `MeshContentMeshServiceTests`, and `RealmMigrationToolTests` (`17/17`)
+- Next: keep pushing toward a fixed secure release by auditing the next layer of externally visible result DTOs and mesh/service error objects before spending time on purely internal analyzer noise.
+
+- Replaced placeholder-success controller/introspection responses with real local-state answers in PodCore and Mesh Service Fabric.

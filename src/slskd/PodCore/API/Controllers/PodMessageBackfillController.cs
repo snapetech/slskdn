@@ -4,6 +4,7 @@
 
 namespace slskd.PodCore.API.Controllers;
 
+using slskd.Identity;
 using slskd.Core.Security;
 
 using System;
@@ -26,13 +27,19 @@ using Microsoft.Extensions.Logging;
 public class PodMessageBackfillController : ControllerBase
 {
     private readonly IPodMessageBackfill _backfillService;
+    private readonly IPodService? _podService;
+    private readonly IProfileService? _profileService;
     private readonly ILogger<PodMessageBackfillController> _logger;
 
     public PodMessageBackfillController(
         IPodMessageBackfill backfillService,
-        ILogger<PodMessageBackfillController> logger)
+        ILogger<PodMessageBackfillController> logger,
+        IPodService? podService = null,
+        IProfileService? profileService = null)
     {
         _backfillService = backfillService;
+        _podService = podService;
+        _profileService = profileService;
         _logger = logger;
     }
 
@@ -215,20 +222,57 @@ public class PodMessageBackfillController : ControllerBase
     [HttpPost("sync-all")]
     [ProducesResponseType(typeof(List<PodBackfillResult>), 200)]
     [ProducesResponseType(500)]
-    public Task<IActionResult> SyncAllPods(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> SyncAllPods(CancellationToken cancellationToken = default)
     {
         try
         {
-            // This would need to be implemented to get all pods the local peer is a member of
-            // For now, return a placeholder response
+            if (_podService == null || _profileService == null)
+            {
+                return Ok(Array.Empty<PodBackfillResult>());
+            }
+
+            var myProfile = await _profileService.GetMyProfileAsync(cancellationToken);
+            var localPeerId = myProfile.PeerId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(localPeerId))
+            {
+                return Ok(Array.Empty<PodBackfillResult>());
+            }
+
+            var pods = await _podService.ListAsync(cancellationToken);
             var results = new List<PodBackfillResult>();
-            _logger.LogWarning("SyncAllPods not fully implemented - needs pod membership integration");
-            return Task.FromResult<IActionResult>(Ok(results));
+
+            foreach (var pod in pods)
+            {
+                var podId = pod.PodId?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(podId))
+                {
+                    continue;
+                }
+
+                var members = await _podService.GetMembersAsync(podId, cancellationToken);
+                var isMember = members.Any(member =>
+                    string.Equals(member.PeerId?.Trim(), localPeerId, StringComparison.OrdinalIgnoreCase));
+                if (!isMember)
+                {
+                    continue;
+                }
+
+                var lastSeenTimestamps = _backfillService.GetLastSeenTimestamps(podId);
+                if (lastSeenTimestamps.Count == 0)
+                {
+                    continue;
+                }
+
+                var result = await _backfillService.SyncOnRejoinAsync(podId, lastSeenTimestamps, cancellationToken);
+                results.Add(result);
+            }
+
+            return Ok(results);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing all pods for backfill");
-            return Task.FromResult<IActionResult>(StatusCode(500, "An error occurred while syncing all pods"));
+            return StatusCode(500, "An error occurred while syncing all pods");
         }
     }
 }

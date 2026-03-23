@@ -112,7 +112,7 @@ public class DhtMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid FindNode request: target ID must be 20 bytes",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -178,7 +178,7 @@ public class DhtMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid FindValue request: key required",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -271,7 +271,7 @@ public class DhtMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid Store request: key, value, public key, and signature required",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }

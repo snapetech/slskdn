@@ -6269,6 +6269,29 @@ Code quality improvements were completed as part of Option A:
   - focused `vstest` slice for private-gateway, pods mesh, mesh-content, and VirtualSoulfind mesh services passed (`20/20`)
 - Documented the reply-contract sanitization pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `4495486e` (`docs: Add gotcha for mesh service reply sanitization`).
 
+## 2026-03-22 20:43
+- Continued the secure-release contract pass across infrastructure-facing reply/result surfaces.
+- `src/slskd/Mesh/ServiceFabric/Services/MeshIntrospectionService.cs`
+  - unknown method replies no longer echo caller-controlled method names
+- `src/slskd/Mesh/ServiceFabric/Services/DhtMeshService.cs`
+  - unknown method replies now use the same generic method-not-found contract as the rest of the service-fabric layer
+- `src/slskd/Mesh/ServiceFabric/Services/MeshContentMeshService.cs`
+  - oversized-file failures no longer expose local file sizes or internal response limits in the public reply
+- `src/slskd/Mesh/Realm/Migration/RealmMigrationTool.cs`
+  - missing import-path failures no longer leak absolute local filesystem paths in `MigrationImportResult.Errors`
+- Added focused regressions in:
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/MeshIntrospectionServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/DhtMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/ServiceFabric/MeshContentMeshServiceTests.cs`
+  - `tests/slskd.Tests.Unit/Mesh/Realm/Migration/RealmMigrationToolTests.cs`
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused `vstest` slice for mesh introspection, DHT mesh, mesh content, and realm migration passed (`17/17`)
+- Documented the result-detail leak pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as `71fdd0a4` (`docs: Add gotcha for infrastructure result detail leaks`).
+
 ## 2026-03-22 18:18
 - Replaced Pod affinity placeholder inputs with real local message/opinion/membership-derived activity and repaired sqlite pod persistence/readback for full pod state.
 - Next: keep pushing through remaining Pod/Mesh runtime completion seams from the placeholder inventory.
+
+## 2026-03-22 18:29
+- Replaced placeholder-success backfill and mesh introspection endpoints with real local-state answers: SyncAllPods now enumerates actual local pod memberships, and MeshIntrospection now reports registered services from the router instead of hardcoded names.

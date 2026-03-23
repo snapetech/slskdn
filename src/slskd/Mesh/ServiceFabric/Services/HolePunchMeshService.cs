@@ -110,7 +110,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid HolePunchRequest: targetPeerId and localEndpoints required",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -234,7 +234,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid HolePunchForwardRequest",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
