@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Secure-release boundary sweep completed; repository is on a validated green head
+- **Current Task**: Secure-release boundary sweep on a validated green head, continuing through remaining public response contracts that still leak identifiers or limits
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -64,6 +64,14 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Tightened a final low-traffic success payload:
     - `PortForwardingController` start/stop success replies no longer echo the exact local port
   - Confirmed the focused `PortForwardingControllerTests` slice passed (`8/8`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Hardened another error-object batch:
+    - `CanonicalController` and `ShadowIndexController` no longer attach MBIDs to generic 500 payloads
+    - `UsersCompatibilityController` no longer returns the browsed username in 500 responses
+    - `PodMembershipController` membership misses no longer echo `podId` / `peerId` in the not-found payload
+    - `MeshGatewayController` no longer echoes service names, payload-size thresholds, or timeout seconds in public error messages
+  - Added focused coverage in `CanonicalControllerTests`, `ShadowIndexControllerTests`, `UsersCompatibilityControllerTests`, `PodMembershipControllerTests`, and `MeshGatewayControllerTests`
+  - Confirmed the focused error-contract slice passed (`18/18`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
@@ -204,7 +212,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. If a release is desired, create an explicit build tag and let the tag-only pipeline run.
+1. Continue the secure-release boundary sweep through remaining public JSON/problem payloads that still leak identifiers or numeric limits in sibling fields.
 2. Keep future secure-release work behind the real release gate, not just focused Debug slices.
 3. Continue broad bughunt work only from this validated green head.
 

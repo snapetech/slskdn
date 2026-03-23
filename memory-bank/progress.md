@@ -6438,4 +6438,16 @@ Code quality improvements were completed as part of Option A:
 - Documented the success-payload identifier echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: continue through any remaining low-traffic success/not-found payloads that still repeat caller-supplied identifiers, then rerun broader release validation.
 
+## 2026-03-22 23:05
+- Finished another secure-release error-contract batch.
+- `CanonicalController` and `ShadowIndexController` no longer attach MBIDs to generic 500 payloads.
+- `UsersCompatibilityController` no longer returns the browsed username in 500 responses.
+- `PodMembershipController` membership misses no longer echo `podId` / `peerId` in the not-found payload.
+- `MeshGatewayController` no longer echoes service names, payload-size thresholds, or timeout seconds in public gateway error messages.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `CanonicalControllerTests`, `ShadowIndexControllerTests`, `UsersCompatibilityControllerTests`, `PodMembershipControllerTests`, and `MeshGatewayControllerTests` passed (`18/18`)
+- Documented the sibling-field identifier leakage pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
+- Next: keep sweeping for any remaining public JSON/problem payloads that still carry identifiers or numeric thresholds in sibling fields even when the primary error text is already generic.
+
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.

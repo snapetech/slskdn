@@ -13974,3 +13974,30 @@ return Ok(new { Message = "Port forwarding started" });
 ```
 
 **Why This Keeps Happening**: success payloads feel harmless because they are not errors, but they are still part of the public release surface. If the caller already supplied the identifier or can correlate the operation from context, prefer a stable category-level success message instead of echoing the exact route or configuration value back.
+
+### 0k99. Error DTOs Must Not Carry Identifier Side-Channels In Sibling Fields
+
+**The Bug**: some controllers already had generic `error` text, but still attached user-controlled identifiers or thresholds in sibling JSON fields or interpolated `message` properties. That leaked MBIDs, usernames, service names, pod/member IDs, and timeout/limit specifics even after the main error string had been sanitized.
+
+**Files Affected**:
+- `src/slskd/API/VirtualSoulfind/CanonicalController.cs`
+- `src/slskd/API/VirtualSoulfind/ShadowIndexController.cs`
+- `src/slskd/API/Compatibility/UsersCompatibilityController.cs`
+- `src/slskd/PodCore/API/Controllers/PodMembershipController.cs`
+- `src/slskd/API/Mesh/MeshGatewayController.cs`
+
+**Wrong**:
+```csharp
+return StatusCode(500, new { error = "Failed to browse user", username });
+return NotFound(new { podId, peerId, found = false, error = "Membership not found" });
+message = $"No providers found for service '{serviceName}'";
+```
+
+**Correct**:
+```csharp
+return StatusCode(500, new { error = "Failed to browse user" });
+return NotFound(new { found = false, error = "Membership not found" });
+message = "No providers found for the requested service";
+```
+
+**Why This Keeps Happening**: once the main error string is generic, it is easy to miss that adjacent JSON fields and interpolated `message` values still leak the same sensitive context. Audit the whole response object, not just the primary `error` property.
