@@ -95,6 +95,13 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused coverage in `MeshControllerTests` and `ApiLibraryHealthControllerTests`
   - Confirmed the focused acknowledgement slice passed (`9/9`)
   - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and committed it immediately per repo policy
+  - Hardened another success-payload response-contract batch:
+    - `ContentIdController` no longer repeats raw request fields when the canonical result is already present
+    - `HashDbController` key-generation/store success payloads no longer echo `filename` or derived `flacKey`
+    - `MeshController` lookup success/not-found payloads no longer echo the queried `flacKey`
+  - Added focused coverage in `ContentIdControllerTests`, `HashDbControllerTests`, and `MeshControllerTests`
+  - Confirmed the focused response-contract slice passed (`30/30`) and the runtime build remains green (`0 warnings / 0 errors`)
+  - Added the corresponding gotcha to `adr-0001-known-gotchas.md` and will commit it immediately per repo policy
   - Hardened another release-facing boundary cluster:
     - `DhtRendezvousController` unblock failures no longer echo raw blocklist `type` / `target` values
     - added focused not-found / invalid-type coverage for DHT rendezvous, port forwarding, and pod-channel controller misses
@@ -234,7 +241,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Continue the secure-release boundary sweep through remaining public JSON/problem payloads that still leak identifiers or numeric limits in sibling fields.
+1. Continue the secure-release boundary sweep through remaining public JSON/problem payloads that still leak identifiers or mix canonical results with redundant request echoes.
 2. Keep future secure-release work behind the real release gate, not just focused Debug slices.
 3. Continue broad bughunt work only from this validated green head.
 

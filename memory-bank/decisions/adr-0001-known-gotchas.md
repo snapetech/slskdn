@@ -14075,3 +14075,28 @@ Message = "Remediation job created";
 ```
 
 **Why This Keeps Happening**: these responses usually evolve from manual debugging or admin tooling, where echoing inputs feels convenient. For release-facing contracts, make request echoes opt-in and only keep them when the client truly needs the reflected value to continue the workflow.
+
+### 0k103. Success Payloads Should Not Repeat Request-Shaped Fields When The Real Result Already Carries The Data
+
+**The Bug**: several success responses still echoed request-shaped fields like raw `domain`, `type`, `filename`, or `flacKey` even though the response already contained the canonical result (`normalizedDomain`, `normalizedType`, `contentIds`, `flacKey`, `entry`, or a simple success flag). That widened the public surface without adding useful state.
+
+**Files Affected**:
+- `src/slskd/MediaCore/API/Controllers/ContentIdController.cs`
+- `src/slskd/HashDb/API/HashDbController.cs`
+- `src/slskd/Mesh/API/MeshController.cs`
+
+**Wrong**:
+```csharp
+return Ok(new { domain, normalizedDomain, contentIds });
+return Ok(new { filename, size, flacKey = key });
+return Ok(new { flacKey, found = true, entry });
+```
+
+**Correct**:
+```csharp
+return Ok(new { normalizedDomain, contentIds });
+return Ok(new { size, flacKey = key });
+return Ok(new { found = true, entry });
+```
+
+**Why This Keeps Happening**: once a controller is already returning a useful result object, it is tempting to tack the original request fields onto the anonymous object for debugging symmetry. For release-facing contracts, only keep echoed request fields when they are newly created outputs or when the canonical result would otherwise be ambiguous to the caller.

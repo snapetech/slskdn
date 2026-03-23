@@ -6484,4 +6484,17 @@ Code quality improvements were completed as part of Option A:
 - Documented the request-echo acknowledgement pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately as required.
 - Next: continue scanning for any remaining debug-shaped response DTOs, but the remaining obvious public leaks are getting sparse.
 
+## 2026-03-22 23:43
+- Finished another secure-release response-contract batch.
+- `ContentIdController` success responses no longer repeat raw request-shaped fields when the canonical result is already present:
+  - resolve/existence/external-id lookups no longer carry `externalId` / `contentId` sibling echoes
+  - domain and domain+type queries now return normalized fields plus results only
+- `HashDbController` no longer repeats `filename` in key-generation success payloads, and store-hash success no longer echoes the derived `flacKey`.
+- `MeshController` hash lookup success/not-found payloads no longer echo the queried `flacKey`.
+- Validation state:
+  - `dotnet build src/slskd/slskd.csproj -v q` passed with `0 warnings / 0 errors`
+  - focused unit slice for `ContentIdControllerTests`, `HashDbControllerTests`, `MeshControllerTests`, `CanonicalControllerTests`, and `ShadowIndexControllerTests` passed (`30/30`)
+- Documented the success-payload request-echo pattern in `memory-bank/decisions/adr-0001-known-gotchas.md` and will commit it immediately as required.
+- Next: keep sweeping for remaining public success/problem payloads that still mix canonical result data with redundant request echoes.
+
 - 2026-03-22 20:05 CST: Closed the secure-release validation loop. Fixed remaining release-only test drift in LibraryHealth/SearchActions unit coverage, confirmed serial validation passes (`dotnet build --no-restore`, `dotnet test --no-restore`, `bash ./bin/lint`, `bash packaging/scripts/run-release-gate.sh`), and documented the release-mode compile gotcha in ADR-0001.
