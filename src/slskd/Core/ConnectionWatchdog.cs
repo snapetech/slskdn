@@ -40,6 +40,7 @@ namespace slskd
     public class ConnectionWatchdog
     {
         private static readonly int ReconnectMaxDelayMilliseconds = 300000; // 5 minutes
+        private IDisposable? OptionsMonitorRegistration { get; set; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ConnectionWatchdog"/> class.
@@ -73,7 +74,7 @@ namespace slskd
             // this at the moment and may continue to do so
             WatchdogTimer.Elapsed += (sender, args) => _ = ObserveAttemptConnectionAsync(nameof(WatchdogTimer));
 
-            OptionsMonitor.OnChange(options => OptionsChanged(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => OptionsChanged(options));
         }
 
         /// <summary>
@@ -188,6 +189,8 @@ namespace slskd
             {
                 if (disposing)
                 {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
                     WatchdogTimer?.Dispose();
                     CancellationTokenSource?.Dispose();
                 }

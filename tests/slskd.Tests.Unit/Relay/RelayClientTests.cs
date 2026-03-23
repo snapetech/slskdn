@@ -70,16 +70,30 @@ public class RelayClientTests
         Assert.True(previousCts.IsCancellationRequested);
     }
 
+    [Fact]
+    public void Dispose_UnsubscribesOptionsMonitor()
+    {
+        var optionsMonitor = new TestOptionsMonitor<Options>(new Options());
+        var client = CreateClient(optionsMonitor);
+
+        Assert.Equal(1, optionsMonitor.ListenerCount);
+
+        client.Dispose();
+
+        Assert.Equal(0, optionsMonitor.ListenerCount);
+    }
+
     private static RelayClient CreateClient(Options options)
     {
-        var optionsMonitor = new Mock<IOptionsMonitor<Options>>();
-        optionsMonitor.SetupGet(x => x.CurrentValue).Returns(options);
-        optionsMonitor.Setup(x => x.OnChange(It.IsAny<Action<Options, string?>>())).Returns(Mock.Of<IDisposable>());
+        return CreateClient(new TestOptionsMonitor<Options>(options));
+    }
 
+    private static RelayClient CreateClient(TestOptionsMonitor<Options> optionsMonitor)
+    {
         return new RelayClient(
             Mock.Of<IShareService>(),
-            new FileService(optionsMonitor.Object),
-            optionsMonitor.Object,
+            new FileService(optionsMonitor),
+            optionsMonitor,
             Mock.Of<IHttpClientFactory>());
     }
 

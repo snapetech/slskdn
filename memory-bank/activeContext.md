@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the broader registration-ownership sweep across current disposable `OnChange(...)` consumers:
+    - `Application`, `ConnectionWatchdog`, and `RelayClient` now retain and dispose their change-registration handles instead of discarding them
+    - post-dispose option/state changes no longer re-enter dead instances or keep mutating shared state after shutdown
+  - Added focused lifecycle regressions in `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs`, `tests/slskd.Tests.Unit/Core/ConnectionWatchdogTests.cs`, and `tests/slskd.Tests.Unit/Relay/RelayClientTests.cs`
+  - Upgraded `tests/slskd.Tests.Unit/TestOptionsMonitor.cs` so disposal-aware tests can prove unsubscribe behavior using a real removable registration model
+  - Confirmed `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~RelayClientTests"` passed (`3/3`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed
   - Hardened another signal-system registration seam:
     - `SignalBus.RegisterChannelHandler(...)` now ignores duplicate registration for an already-registered channel instead of replacing the live handler and starting another receiver with no unsubscribe path
     - repeated signal-system initialization no longer silently orphaned the old live handler behind a dictionary overwrite

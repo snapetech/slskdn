@@ -7081,3 +7081,11 @@ Code quality improvements were completed as part of Option A:
 - Extended `tests/slskd.Tests.Unit/Relay/RelayServiceTests.cs` with a focused regression proving stale client state no longer overwrites current controller state after replacement.
 - Also corrected an incidental unit-project compile break in `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` by qualifying `System.IO.File.Delete(...)` after the earlier keepalive disposal test addition.
 - Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~RelayServiceTests"` passed (`3/3`), and `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed with `0 warnings / 0 errors`.
+
+## 2026-03-23 15:28 CST
+
+- Continued the broader registration-ownership sweep across every current disposable type that uses `OnChange(...)`: `Application`, `ConnectionWatchdog`, and `RelayClient`.
+- Each type now retains its change-registration `IDisposable` handles and releases them during disposal, so post-dispose option/state updates no longer re-enter dead instances or keep mutating shared state after shutdown.
+- Added focused regressions in `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs`, `tests/slskd.Tests.Unit/Core/ConnectionWatchdogTests.cs`, and `tests/slskd.Tests.Unit/Relay/RelayClientTests.cs`.
+- Upgraded `tests/slskd.Tests.Unit/TestOptionsMonitor.cs` to model real registration disposal so lifecycle tests can prove unsubscribe behavior instead of assuming it.
+- Validation: `dotnet build tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -v minimal -clp:ErrorsOnly` passed (`0 errors`), `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~ConnectionWatchdogTests|FullyQualifiedName~RelayClientTests"` passed (`3/3`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal` passed (`0 warnings / 0 errors`), and `bash ./bin/lint` passed.

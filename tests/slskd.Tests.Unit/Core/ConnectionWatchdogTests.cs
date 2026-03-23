@@ -61,6 +61,30 @@ public class ConnectionWatchdogTests
         }
     }
 
+    [Fact]
+    public void Dispose_UnsubscribesOptionsMonitor()
+    {
+        var optionsAtStartup = new OptionsAtStartup();
+        var optionsMonitor = new TestOptionsMonitor<Options>(new Options());
+        var watchdog = new ConnectionWatchdog(
+            Mock.Of<ISoulseekClient>(),
+            new VPNService(
+                optionsAtStartup,
+                optionsMonitor,
+                Mock.Of<IStateMutator<State>>(),
+                Mock.Of<ISoulseekClient>(),
+                Mock.Of<IHttpClientFactory>()),
+            optionsMonitor,
+            optionsAtStartup,
+            new ManagedState<State>());
+
+        Assert.Equal(1, optionsMonitor.ListenerCount);
+
+        watchdog.Dispose();
+
+        Assert.Equal(0, optionsMonitor.ListenerCount);
+    }
+
     private static async Task<CancellationTokenSource> WaitForCancellationTokenSourceAsync(
         ConnectionWatchdog watchdog,
         Func<CancellationTokenSource, bool> predicate)

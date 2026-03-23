@@ -68,6 +68,7 @@ namespace slskd
     public sealed class Application : IApplication, IDisposable
     {
         private readonly List<PosixSignalRegistration> _posixSignalRegistrations = new();
+        private readonly List<IDisposable> _changeRegistrations = new();
         private CancellationTokenSource? _startupInitializationCts;
         private Task? _startupInitializationTask;
 
@@ -147,7 +148,7 @@ namespace slskd
             OptionsAtStartup = optionsAtStartup;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(async options => await OptionsMonitor_OnChange(options));
+            RegisterChange(OptionsMonitor.OnChange(async options => await OptionsMonitor_OnChange(options)));
 
             IncomingSearchRequestSemaphore = new SemaphoreSlim(
                 initialCount: OptionsAtStartup.Throttling.Search.Incoming.Concurrency,
@@ -170,12 +171,12 @@ namespace slskd
                 .AsReadOnly();
 
             State = state;
-            State.OnChange(state => State_OnChange(state));
+            RegisterChange(State.OnChange(state => State_OnChange(state)));
 
             Files = fileService;
 
             Shares = shareService;
-            Shares.StateMonitor.OnChange(state => ShareState_OnChange(state));
+            RegisterChange(Shares.StateMonitor.OnChange(state => ShareState_OnChange(state)));
 
             Search = searchService;
 
@@ -189,7 +190,7 @@ namespace slskd
             ApplicationHub = applicationHub;
 
             Relay = relayService;
-            Relay.StateMonitor.OnChange(relayState => State.SetValue(state => state with { Relay = relayState.Current }));
+            RegisterChange(Relay.StateMonitor.OnChange(relayState => State.SetValue(state => state with { Relay = relayState.Current })));
 
             LogHub = logHub;
             TransfersHub = transfersHub;
@@ -2340,8 +2341,22 @@ namespace slskd
             }
         }
 
+        private void RegisterChange(IDisposable? registration)
+        {
+            if (registration != null)
+            {
+                _changeRegistrations.Add(registration);
+            }
+        }
+
         public void Dispose()
         {
+            foreach (var registration in _changeRegistrations)
+            {
+                registration.Dispose();
+            }
+
+            _changeRegistrations.Clear();
             _startupInitializationCts?.Cancel();
             _startupInitializationCts?.Dispose();
             _startupInitializationCts = null;

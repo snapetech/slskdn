@@ -63,7 +63,7 @@ namespace slskd.Relay
             StateMonitor = State;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(options => Configure(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
 
             Configure(OptionsMonitor.CurrentValue);
         }
@@ -83,6 +83,7 @@ namespace slskd.Relay
         private bool LoggedIn { get; set; }
         private TaskCompletionSource LoggedInTaskCompletionSource { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private IShareService Shares { get; }
         private CancellationTokenSource? StartCancellationTokenSource { get; set; }
         private bool StartRequested { get; set; }
@@ -237,6 +238,8 @@ namespace slskd.Relay
                     var hubConnection = HubConnection;
                     HubConnection = null;
 
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
                     StartCancellationTokenSource?.Cancel();
                     StartCancellationTokenSource?.Dispose();
 
