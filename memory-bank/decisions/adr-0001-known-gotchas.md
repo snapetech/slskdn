@@ -15799,3 +15799,29 @@ lock (receivingLock)
 ```
 
 **Why This Keeps Happening**: start/init methods often get written and tested as if they are only ever called serially from one bootstrap path. But once a service exposes a public async `Start...` method, duplicate or concurrent calls are part of the real contract surface. If idempotence depends on a guard flag, that guard must be synchronized or atomic; otherwise the code is only "idempotent" in the single-threaded happy path.
+
+### 0k133. Channel Registration Must Not Silently Replace Live Handlers Without Unsubscribing Them
+
+**The Bug**: `SignalBus.RegisterChannelHandler(...)` stored handlers in a dictionary keyed by channel, but a second registration for the same channel simply overwrote the dictionary entry and started the new handler. The original handler stayed subscribed to its external event source, so repeated initialization could leave orphaned live receivers and duplicate signal delivery even though the bus only exposed one handler per channel.
+
+**Files Affected**:
+- `src/slskd/Signals/SignalBus.cs`
+
+**Wrong**:
+```csharp
+channelHandlers[channel] = handler;
+_ = handler.StartReceivingAsync(OnSignalReceivedAsync, CancellationToken.None);
+```
+
+**Correct**:
+```csharp
+if (!channelHandlers.TryAdd(channel, handler))
+{
+    logger.LogDebug("Signal channel {Channel} is already registered; ignoring duplicate handler registration", channel);
+    return;
+}
+
+_ = handler.StartReceivingAsync(OnSignalReceivedAsync, CancellationToken.None);
+```
+
+**Why This Keeps Happening**: dictionaries make replacement look harmless, but registration APIs for long-lived receivers are not just storage updates. Once a handler has subscribed to an external source, replacing the dictionary entry does nothing to stop the original subscription. If replacement is not fully supported, registration must be idempotent and refuse duplicates instead of pretending a dictionary overwrite updated the live runtime wiring.
