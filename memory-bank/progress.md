@@ -6611,6 +6611,14 @@ Code quality improvements were completed as part of Option A:
 - Reconfiguration now disposes the previous hub connection explicitly before publishing the replacement, preventing orphaned connections and duplicate event handlers after option churn.
 - Documented the reconfiguration/disposal gotcha in `adr-0001-known-gotchas.md` before validation.
 
+## 2026-03-23 14:12 - RelayService reconfiguration guard + client disposal fix
+
+- Found two real bugs in `RelayService.Configure()`:
+  - the dual-hash early-return used `||`, so top-level relay changes were skipped whenever controller settings stayed the same
+  - replacing the agent-side relay client did not dispose the previous client instance
+- Fixed the change-detection guard, added explicit client replacement/disposal, and covered both with focused relay service tests.
+- Documented both gotchas in `adr-0001-known-gotchas.md` before validation.
+
 ## 2026-03-23 09:26 CST
 - Investigated first-run Docker startup crash from latest image logs: host startup failed resolving `slskd.Shares.IShareRepository` for `slskd.VirtualSoulfind.v2.Backends.LocalLibraryBackend`.
 - Fixed root DI wiring in `Program.cs` by mapping `IShareRepository` to `IShareService.GetLocalRepository()` before VSF v2 backend registration.

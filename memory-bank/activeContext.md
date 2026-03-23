@@ -53,6 +53,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - relay option changes rebuilt `HubConnection` without disposing the previous connection instance
     - reconfiguration now disposes the previous SignalR client explicitly before replacing it
   - Added the corresponding reconfiguration/disposal gotcha to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
+  - Found two more relay-service reconfiguration bugs:
+    - `RelayService.Configure()` used `||` in its dual-hash early-return, so real top-level relay changes could be skipped if controller settings were unchanged
+    - replacing the relay client instance did not dispose the previous client
+  - Fixed both and added focused `RelayServiceTests` coverage.
+  - Added the corresponding configuration-guard and client-disposal gotchas to `adr-0001-known-gotchas.md` and recorded the fix in `progress.md`.
   - Investigated the failed `.95` main release and confirmed all build/publish jobs succeeded except `Publish to Snap (Main/Stable)`.
   - The Snap artifact built correctly; the only failing external response was the Snap Store processing error `binary_sha3_384: Error checking upload uniqueness.`
   - Hardened `.github/workflows/build-on-tag.yml` so both Snap publish paths retry this known store-side processing failure for longer with capped backoff instead of aborting after a short fixed retry window.

@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0xE6. Multi-Hash Reconfiguration Guards Must Return Only When All Relevant Hashes Match
+
+**The Bug**: `RelayService.Configure()` kept both a full relay hash and a controller-only hash, but returned early when either one matched. That means legitimate changes like `Relay.Enabled` or `Relay.Mode` were skipped whenever the controller subsection stayed the same.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayService.cs`
+
+**Wrong**:
+```csharp
+if (optionsHash == LastOptionsHash || controllerOptionsHash == LastControllerOptionsHash)
+{
+    return;
+}
+```
+
+**Correct**:
+```csharp
+if (optionsHash == LastOptionsHash && controllerOptionsHash == LastControllerOptionsHash)
+{
+    return;
+}
+```
+
+**Why This Keeps Happening**: once multiple hashes or cache keys exist, it is easy to invert the change-detection logic and accidentally treat “one subsection unchanged” as “nothing changed.” Early-return guards must reflect the real invariant: only skip work when all relevant inputs are unchanged.
+
 ### 0xE5. Reconfiguring A SignalR Client Must Dispose The Previous `HubConnection`
 
 **The Bug**: `RelayClient.Configure()` canceled the existing start loop and replaced `HubConnection` with a freshly built instance, but it never disposed the previous connection object. Repeated relay option changes could therefore leave orphaned SignalR connections and duplicate event handlers behind.

@@ -872,34 +872,39 @@ namespace slskd.Relay
                 var optionsHash = Compute.Sha1Hash(options.Relay.ToJson());
                 var controllerOptionsHash = Compute.Sha1Hash(options.Relay.Controller.ToJson());
 
-                if (optionsHash == LastOptionsHash || controllerOptionsHash == LastControllerOptionsHash)
+                if (optionsHash == LastOptionsHash && controllerOptionsHash == LastControllerOptionsHash)
                 {
                     return;
                 }
 
+                var mode = options.Relay.Mode.ToEnum<RelayMode>();
+
                 if (options.Relay.Enabled)
                 {
-                    var mode = options.Relay.Mode.ToEnum<RelayMode>();
-
                     if (mode == RelayMode.Controller)
                     {
+                        ReplaceClient(new NullRelayClient());
+
                         State.SetValue(state => state with
                         {
                             Mode = mode,
                             Agents = RegisteredAgents,
+                            Controller = new RelayControllerState(),
                         });
                     }
                     else
                     {
                         // the controller changed. disconnect and throw away the client and create a new one
-                        Client = new RelayClient(
+                        var client = new RelayClient(
                             shareService: Shares,
                             fileService: Files,
                             optionsMonitor: OptionsMonitor,
                             httpClientFactory: HttpClientFactory);
 
-                        Client.StateMonitor.OnChange(clientState
+                        client.StateMonitor.OnChange(clientState
                             => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
+
+                        ReplaceClient(client);
 
                         State.SetValue(state => state with
                         {
@@ -912,6 +917,16 @@ namespace slskd.Relay
                         });
                     }
                 }
+                else
+                {
+                    ReplaceClient(new NullRelayClient());
+
+                    State.SetValue(state => state with
+                    {
+                        Mode = mode,
+                        Controller = new RelayControllerState(),
+                    });
+                }
 
                 LastOptionsHash = optionsHash;
                 LastControllerOptionsHash = controllerOptionsHash;
@@ -919,6 +934,17 @@ namespace slskd.Relay
             finally
             {
                 SyncRoot.Release();
+            }
+        }
+
+        private void ReplaceClient(IRelayClient nextClient)
+        {
+            var previousClient = Client;
+            Client = nextClient;
+
+            if (!ReferenceEquals(previousClient, nextClient) && previousClient is IDisposable disposableClient)
+            {
+                disposableClient.Dispose();
             }
         }
 
