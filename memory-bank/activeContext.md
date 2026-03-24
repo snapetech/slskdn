@@ -23,10 +23,19 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue broad-pattern release metadata parity hardening across packaging and distribution manifests.
+- **Current Task**: Continue broad repo bughunting with clustered fixes, especially app-directory/runtime path handling beyond the earlier release/install work.
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the broader runtime path bughunt beyond the original mesh-overlay failure into parallel option-backed write directories:
+    - `Program` now exposes `ResolveOptionalAppRelativePath(...)` for optional app-owned paths that should remain blank when unset
+    - `SecurityStartup` now normalizes relative `DownloadRoot`, `ShareRoot`, and `QuarantineDirectory` values against `Program.AppDirectory`
+    - `SimpleResolver` now normalizes a relative `DownloadDirectory` against `Program.AppDirectory` and creates it before first write
+  - The first verification pass exposed a second-order static-state harness race:
+    - all tests that mutate `Program.AppDirectory` now share one non-parallel xUnit collection (`ProgramAppDirectory`)
+    - retired the separate SongID-only collection so SongID, profile, path-normalization, security-startup, and resolver tests no longer race each other through the same static app-directory field
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~SecurityStartupTests|FullyQualifiedName~SimpleResolverTests|FullyQualifiedName~ProfileServiceTests|FullyQualifiedName~SongIdServiceTests|FullyQualifiedName~SongIdRunStoreTests" -v minimal` passed (`45/45`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`)
+  - Next likely cluster is other option-backed file/directory paths that still trust process CWD or other tests that mutate shared static runtime state outside the new collection
   - Continued the broader runtime-storage bughunt into secret material persistence:
     - `ProfileService` now sets owner-only Unix permissions on `peer-profile.key`
     - `Program.GenerateX509Certificate(...)` now sets owner-only Unix permissions on generated `.pfx` files

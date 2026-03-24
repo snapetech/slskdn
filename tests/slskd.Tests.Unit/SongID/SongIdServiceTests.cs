@@ -22,9 +22,10 @@ using slskd.Integrations.MetadataFacade;
 using slskd.Integrations.MusicBrainz;
 using slskd.SongID;
 using slskd.SongID.API;
+using slskd.Tests.Unit;
 using Xunit;
 
-[Collection("SongIdAppDirectory")]
+[Collection("ProgramAppDirectory")]
 public sealed class SongIdServiceTests : IDisposable
 {
     private readonly string _tempDir;

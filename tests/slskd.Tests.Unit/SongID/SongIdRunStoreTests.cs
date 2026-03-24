@@ -8,9 +8,10 @@ namespace slskd.Tests.Unit.SongID;
 
 using System.Reflection;
 using slskd.SongID;
+using slskd.Tests.Unit;
 using Xunit;
 
-[Collection("SongIdAppDirectory")]
+[Collection("ProgramAppDirectory")]
 public sealed class SongIdRunStoreTests : IDisposable
 {
     private readonly string _tempDir;

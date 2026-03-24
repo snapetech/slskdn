@@ -331,10 +331,20 @@ namespace slskd
             return string.IsNullOrWhiteSpace(AppDirectory) ? DefaultAppDirectory : AppDirectory;
         }
 
+        internal static string ResolveOptionalAppRelativePath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return string.Empty;
+            }
+
+            return Path.IsPathRooted(path) ? path : Path.Combine(GetWriteBaseDirectory(), path);
+        }
+
         internal static string ResolveAppRelativePath(string path, string fallbackRelativePath)
         {
             var candidate = string.IsNullOrWhiteSpace(path) ? fallbackRelativePath : path;
-            return Path.IsPathRooted(candidate) ? candidate : Path.Combine(GetWriteBaseDirectory(), candidate);
+            return ResolveOptionalAppRelativePath(candidate);
         }
 
         private static IDisposable? DotNetRuntimeStats { get; set; }

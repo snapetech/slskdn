@@ -133,17 +133,17 @@ public static class SecurityStartup
             // Apply path configuration
             if (!string.IsNullOrEmpty(options.PathGuard.DownloadRoot))
             {
-                transferSecurity.DownloadRoot = options.PathGuard.DownloadRoot;
+                transferSecurity.DownloadRoot = Program.ResolveOptionalAppRelativePath(options.PathGuard.DownloadRoot);
             }
 
             if (!string.IsNullOrEmpty(options.PathGuard.ShareRoot))
             {
-                transferSecurity.ShareRoot = options.PathGuard.ShareRoot;
+                transferSecurity.ShareRoot = Program.ResolveOptionalAppRelativePath(options.PathGuard.ShareRoot);
             }
 
             if (!string.IsNullOrEmpty(options.ContentSafety.QuarantineDirectory))
             {
-                transferSecurity.QuarantineDirectory = options.ContentSafety.QuarantineDirectory;
+                transferSecurity.QuarantineDirectory = Program.ResolveOptionalAppRelativePath(options.ContentSafety.QuarantineDirectory);
                 transferSecurity.QuarantineSuspicious = options.ContentSafety.QuarantineSuspicious;
             }
 

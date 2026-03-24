@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using Xunit;
 
+[Collection("ProgramAppDirectory")]
 public class ProgramPathNormalizationTests
 {
     [Fact]
@@ -57,6 +58,33 @@ public class ProgramPathNormalizationTests
         {
             SetAppDirectory(originalAppDirectory);
         }
+    }
+
+    [Fact]
+    public void ResolveOptionalAppRelativePath_UsesAppDirectory_ForRelativePaths()
+    {
+        var originalAppDirectory = Program.AppDirectory;
+
+        try
+        {
+            SetAppDirectory(Path.Combine(Path.GetTempPath(), $"slskdn-appdir-{Guid.NewGuid():N}"));
+
+            var resolved = Program.ResolveOptionalAppRelativePath("quarantine");
+
+            Assert.Equal(Path.Combine(Program.AppDirectory, "quarantine"), resolved);
+        }
+        finally
+        {
+            SetAppDirectory(originalAppDirectory);
+        }
+    }
+
+    [Fact]
+    public void ResolveOptionalAppRelativePath_LeavesBlankValuesBlank()
+    {
+        var resolved = Program.ResolveOptionalAppRelativePath(string.Empty);
+
+        Assert.Equal(string.Empty, resolved);
     }
 
     [Fact]

@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-03-24 12:24 - Relative write-directory normalization sweep
+
+- Extended the runtime path-normalization sweep beyond mesh key/data paths into other app-owned writable directories:
+  - `SecurityStartup` now resolves relative `DownloadRoot`, `ShareRoot`, and `QuarantineDirectory` values against `Program.AppDirectory`
+  - `SimpleResolver` now resolves a relative `DownloadDirectory` against `Program.AppDirectory` and creates the directory before first write
+  - `Program` now exposes `ResolveOptionalAppRelativePath(...)` for optional path values that should remain blank when unset
+- Added regressions for optional app-relative path normalization, security transfer path normalization, and resolver relative download-directory creation.
+- The first test run exposed a second-order harness race: multiple classes were overriding the same static `Program.AppDirectory` in separate xUnit collections, so the fix now also consolidates all `Program.AppDirectory` mutator tests under one shared non-parallel collection.
+
 ## 2026-03-24 12:04 - AppDirectory test harness cleanup
 
 - Standardized remaining SongID test setup to override `Program.AppDirectory` via the static backing field instead of the private property setter reflection path that had already drifted in `ProfileServiceTests`.

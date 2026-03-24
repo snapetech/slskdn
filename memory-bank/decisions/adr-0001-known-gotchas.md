@@ -205,7 +205,34 @@ var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__Backin
 field!.SetValue(null, tempDir);
 ```
 
-**Why This Keeps Happening**: reflective test setup often targets the public property and assumes `SetValue` will behave like direct assignment. With private setters and static bootstrapping state, that assumption is fragile. If a test truly needs to override `Program.AppDirectory`, use the backing field helper consistently and derive expected file paths from `Program.GetWriteBaseDirectory()` so the test matches current runtime behavior.
+**Why This Keeps Happening**: reflective test setup often targets the public property and assumes `SetValue` will behave like direct assignment. With private setters and static bootstrapping state, that assumption is fragile. If a test truly needs to override `Program.AppDirectory`, use the backing field helper consistently, derive expected file paths from `Program.GetWriteBaseDirectory()`, and place every `Program.AppDirectory` mutator test in the same non-parallel xUnit collection so static path state does not race between unrelated classes.
+
+### 0xF06. Option-Backed Write Directories Must Be Normalized And Created Before First Use
+
+**The Bug**: several write-capable subsystems accepted directory options and used them directly. Relative values then resolved against the process current directory instead of `AppDirectory`, and fresh subdirectories failed on first write because the code assumed the directory already existed.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Common/Security/SecurityStartup.cs`
+- `src/slskd/VirtualSoulfind/v2/Resolution/SimpleResolver.cs`
+- `tests/slskd.Tests.Unit/Common/Security/SecurityStartupTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Resolution/SimpleResolverTests.cs`
+
+**Wrong**:
+```csharp
+transferSecurity.QuarantineDirectory = options.ContentSafety.QuarantineDirectory;
+var downloadDir = _options.CurrentValue.DownloadDirectory!;
+await using var fs = File.Create(Path.Combine(downloadDir, name));
+```
+
+**Correct**:
+```csharp
+transferSecurity.QuarantineDirectory = Program.ResolveOptionalAppRelativePath(options.ContentSafety.QuarantineDirectory);
+var downloadDir = Program.ResolveOptionalAppRelativePath(_options.CurrentValue.DownloadDirectory!);
+Directory.CreateDirectory(downloadDir);
+```
+
+**Why This Keeps Happening**: path bugs often get fixed only at the first failing call site, but the real pattern is broader: any option-backed path that represents app-owned writable state must be normalized once against `AppDirectory`, and any component that writes beneath a configurable directory must ensure the directory exists before opening files inside it.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 

@@ -17,10 +17,12 @@ using Moq;
 using slskd;
 using slskd.Identity;
 using slskd.Mesh.Transport;
+using slskd.Tests.Unit;
 using System.Reflection;
 using Xunit;
 using TestOptionsMonitor = slskd.Tests.Unit.TestOptionsMonitor<slskd.Options>;
 
+[Collection("ProgramAppDirectory")]
 public class ProfileServiceTests : IDisposable
 {
     private readonly Ed25519Signer _signer = new();

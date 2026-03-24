@@ -219,7 +219,9 @@ namespace slskd.VirtualSoulfind.v2.Resolution
 
             var downloadDir = string.IsNullOrWhiteSpace(_options.CurrentValue.DownloadDirectory)
                 ? Path.GetTempPath()
-                : _options.CurrentValue.DownloadDirectory!;
+                : Program.ResolveOptionalAppRelativePath(_options.CurrentValue.DownloadDirectory!)!;
+
+            Directory.CreateDirectory(downloadDir);
 
             using var stepTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             if (step.Timeout > TimeSpan.Zero)
