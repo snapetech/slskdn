@@ -149,12 +149,17 @@ public sealed class ConnectionFingerprintService
     {
         if (_fingerprints.TryGetValue(fingerprintId, out var fingerprint))
         {
-            fingerprint.SecurityEvents.Add(new ConnectionSecurityEvent
+            // SecurityEvents is a List<T> shared across threads (multiple concurrent
+            // connections can record events for the same fingerprint); lock before mutating.
+            lock (fingerprint.SecurityEvents)
             {
-                Type = eventType,
-                Details = details,
-                Timestamp = DateTimeOffset.UtcNow,
-            });
+                fingerprint.SecurityEvents.Add(new ConnectionSecurityEvent
+                {
+                    Type = eventType,
+                    Details = details,
+                    Timestamp = DateTimeOffset.UtcNow,
+                });
+            }
 
             RecordEvent(new ConnectionEvent
             {
@@ -271,7 +276,7 @@ public sealed class ConnectionFingerprintService
             ConnectionsLastHour = fingerprints.Count(f => f.Timestamp >= lastHour),
             UniqueIpHashes = fingerprints.Select(f => f.IpHash).Distinct().Count(),
             UniqueUsernames = fingerprints.Where(f => f.Username != null).Select(f => f.Username).Distinct().Count(),
-            TotalSecurityEvents = fingerprints.Sum(f => f.SecurityEvents.Count),
+            TotalSecurityEvents = fingerprints.Sum(f => { lock (f.SecurityEvents) { return f.SecurityEvents.Count; } }),
             EventLogSize = _eventLog.Count,
         };
     }
