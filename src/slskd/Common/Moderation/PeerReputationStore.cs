@@ -38,7 +38,7 @@ namespace slskd.Common.Moderation
         private readonly ConcurrentDictionary<string, List<PeerReputationEvent>> _eventCache = new();
         private readonly SemaphoreSlim _fileLock = new(1, 1);
         private readonly SemaphoreSlim _loadLock = new(1, 1);
-        private bool _dataLoaded;
+        private volatile bool _dataLoaded;
 
         // Configuration constants
         private const int BanThreshold = 10; // 10 negative events = ban

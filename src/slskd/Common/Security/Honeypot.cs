@@ -265,7 +265,9 @@ public sealed class Honeypot : IDisposable
             return ThreatLevel.Low;
         }
 
-        return CalculateThreatLevel(profile);
+        // Return the stored threat level (already computed under lock in UpdateThreatProfile)
+        // rather than re-reading the mutable HashSet fields without the lock.
+        return profile.ThreatLevel;
     }
 
     private void RaiseHoneypotTriggered(HoneypotEvent evt)

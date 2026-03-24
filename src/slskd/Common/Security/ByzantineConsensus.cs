@@ -109,13 +109,14 @@ public sealed class ByzantineConsensus : IDisposable
             return VoteResult.Failed("Session not found");
         }
 
-        if (session.State != ConsensusState.Collecting)
-        {
-            return VoteResult.Failed($"Session is {session.State}, not collecting");
-        }
-
         lock (session)
         {
+            // Re-check state under lock; FinalizeSession mutates it while holding the same lock
+            if (session.State != ConsensusState.Collecting)
+            {
+                return VoteResult.Failed($"Session is {session.State}, not collecting");
+            }
+
             // Get or create chunk votes
             if (!session.ChunkVotes.TryGetValue(chunkIndex, out var votes))
             {

@@ -120,7 +120,7 @@ public sealed class TemporalConsistency : IDisposable
             {
                 Timestamp = now,
                 Metadata = metadata,
-                Changes = lastEntry != null ? DetectChanges(lastEntry.Metadata, metadata) : new List<string>(),
+                Changes = lastEntry != null ? changes : new List<string>(),
             };
 
             history.Entries.Add(entry);

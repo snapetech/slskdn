@@ -170,32 +170,36 @@ public sealed class ProofOfStorage : IDisposable
             return ChallengeVerification.Failed("Challenge not found");
         }
 
-        if (challenge.State != ChallengeState.Pending)
+        // Lock to prevent concurrent double-verification of the same one-time challenge
+        lock (challenge)
         {
-            return ChallengeVerification.Failed($"Challenge already {challenge.State}");
+            if (challenge.State != ChallengeState.Pending)
+            {
+                return ChallengeVerification.Failed($"Challenge already {challenge.State}");
+            }
+
+            if (challenge.ExpiresAt < DateTimeOffset.UtcNow)
+            {
+                challenge.State = ChallengeState.Expired;
+                return ChallengeVerification.Failed("Challenge expired");
+            }
+
+            // Use constant-time comparison
+            var responseValid = CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(response.ToLowerInvariant()),
+                Encoding.UTF8.GetBytes(expectedResponse.ToLowerInvariant()));
+
+            if (!responseValid)
+            {
+                challenge.State = ChallengeState.Failed;
+                return ChallengeVerification.Failed("Invalid proof - peer may not have the file");
+            }
+
+            challenge.State = ChallengeState.Verified;
+            challenge.VerifiedAt = DateTimeOffset.UtcNow;
+
+            return ChallengeVerification.Succeeded();
         }
-
-        if (challenge.ExpiresAt < DateTimeOffset.UtcNow)
-        {
-            challenge.State = ChallengeState.Expired;
-            return ChallengeVerification.Failed("Challenge expired");
-        }
-
-        // Use constant-time comparison
-        var responseValid = CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(response.ToLowerInvariant()),
-            Encoding.UTF8.GetBytes(expectedResponse.ToLowerInvariant()));
-
-        if (!responseValid)
-        {
-            challenge.State = ChallengeState.Failed;
-            return ChallengeVerification.Failed("Invalid proof - peer may not have the file");
-        }
-
-        challenge.State = ChallengeState.Verified;
-        challenge.VerifiedAt = DateTimeOffset.UtcNow;
-
-        return ChallengeVerification.Succeeded();
     }
 
     /// <summary>

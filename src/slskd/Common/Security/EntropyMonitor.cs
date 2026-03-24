@@ -197,7 +197,7 @@ public sealed class EntropyMonitor : IDisposable
 
         // Test 5: Runs test (check for too many/few runs)
         var runs = CountRuns(largeSample);
-        var expectedRuns = (largeSample.Length - 1) / 2.0; // Approximate
+        var expectedRuns = (2.0 * largeSample.Length - 1) / 3.0; // Correct formula for up-down runs
         if (runs < expectedRuns * 0.8 || runs > expectedRuns * 1.2)
         {
             issues.Add($"Runs test suspicious: {runs} runs (expected ~{expectedRuns:F0})");
