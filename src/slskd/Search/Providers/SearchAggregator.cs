@@ -188,7 +188,12 @@ public class SearchAggregator
 
         public void AddResult(SearchResult result)
         {
-            _results.Add(result);
+            // Multiple providers run concurrently via Task.WhenAll; lock to prevent
+            // concurrent List<T> mutations from corrupting the results list.
+            lock (_results)
+            {
+                _results.Add(result);
+            }
         }
 
         public List<SearchResult> Results => _results;
