@@ -152,16 +152,6 @@ namespace slskd.Configuration
                     {
                         var fileContent = File.ReadAllText(filePath);
 
-                        // DEBUG: Log what we're reading for security section
-                        if (fileContent.Contains("security:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var securityMatch = System.Text.RegularExpressions.Regex.Match(fileContent, @"security:\s*\n\s*enabled:\s*(\w+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline);
-                            if (securityMatch.Success)
-                            {
-                                System.Console.WriteLine($"[YamlConfigurationProvider] DEBUG - Found security.enabled = '{securityMatch.Groups[1].Value}' in file: {filePath}");
-                            }
-                        }
-
                         memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(fileContent));
                         actualStream = memoryStream;
                     }

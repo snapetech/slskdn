@@ -244,7 +244,7 @@ namespace slskd.Mesh.Governance
         /// <param name="document">The document to validate.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>True if the signature is valid.</returns>
-        private static Task<bool> ValidateDocumentSignatureAsync(GovernanceDocument document, CancellationToken cancellationToken)
+        private Task<bool> ValidateDocumentSignatureAsync(GovernanceDocument document, CancellationToken cancellationToken)
         {
             try
             {
@@ -261,8 +261,7 @@ namespace slskd.Mesh.Governance
             }
             catch (Exception ex)
             {
-                // Log the error but don't expose details
-                Console.WriteLine($"Signature validation failed: {ex.Message}");
+                _logger.LogWarning(ex, "[Governance] Signature validation failed");
                 return Task.FromResult(false);
             }
         }
