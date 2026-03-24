@@ -186,7 +186,11 @@ namespace slskd.Transfers
 
             var previousBuckets = TokenBuckets;
             TokenBuckets = tokenBuckets;
-            DisposeBuckets(previousBuckets);
+
+            // Delay disposal so any in-flight GetBytesAsync calls that already captured a reference
+            // to the old bucket can complete safely before SyncRoot is disposed.  The timer interval
+            // is 100 ms, so 5 s is many multiples of the worst-case hold time.
+            _ = Task.Delay(5000).ContinueWith(_ => DisposeBuckets(previousBuckets), TaskScheduler.Default);
 
             LastGlobalSpeedLimit = effectiveGlobalUploadSpeedLimit;
             LastOptionsHash = optionsHash;
