@@ -57,16 +57,7 @@ public class LocalPortForwarder : IDisposable
         int destinationPort,
         string? serviceName = null)
     {
-        if (_activeForwarders.ContainsKey(localPort))
-        {
-            throw new InvalidOperationException($"Port {localPort} is already being forwarded");
-        }
-
-        ForwarderInstance? forwarder = null;
-
-        try
-        {
-            forwarder = new ForwarderInstance(
+        var forwarder = new ForwarderInstance(
             localPort,
             podId,
             destinationHost,
@@ -75,10 +66,18 @@ public class LocalPortForwarder : IDisposable
             this,
             _logger);
 
-            _activeForwarders[localPort] = forwarder;
+        // TryAdd is atomic — prevents two concurrent calls for the same port from both
+        // succeeding (non-atomic ContainsKey+assign would allow the second store to
+        // overwrite the first, leaking the first ForwarderInstance's socket).
+        if (!_activeForwarders.TryAdd(localPort, forwarder))
+        {
+            forwarder.Dispose();
+            throw new InvalidOperationException($"Port {localPort} is already being forwarded");
+        }
 
+        try
+        {
             await forwarder.StartAsync();
-            forwarder = null;
             _logger.LogInformation(
                 "[PortForward] Started forwarding local port {LocalPort} to {Host}:{Port} via pod {PodId}",
                 localPort, destinationHost, destinationPort, podId);
@@ -86,7 +85,7 @@ public class LocalPortForwarder : IDisposable
         catch (Exception ex)
         {
             _activeForwarders.TryRemove(localPort, out _);
-            forwarder?.Dispose();
+            forwarder.Dispose();
             _logger.LogError(ex,
                 "[PortForward] Failed to start forwarding on port {LocalPort}", localPort);
             throw;
