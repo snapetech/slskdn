@@ -35,9 +35,8 @@ public sealed class SongIdServiceTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), "slskdn-songid-service-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDir);
 
-        var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
-        _originalAppDirectory = property?.GetValue(null) as string;
-        property?.SetValue(null, _tempDir);
+        _originalAppDirectory = Program.AppDirectory;
+        SetAppDirectory(_tempDir);
     }
 
     [Fact]
@@ -740,8 +739,7 @@ public sealed class SongIdServiceTests : IDisposable
 
     public void Dispose()
     {
-        var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
-        property?.SetValue(null, _originalAppDirectory);
+        SetAppDirectory(_originalAppDirectory);
 
         if (Directory.Exists(_tempDir))
         {
@@ -800,5 +798,11 @@ public sealed class SongIdServiceTests : IDisposable
             yield return result;
             await Task.Yield();
         }
+    }
+
+    private static void SetAppDirectory(string? value)
+    {
+        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
+        field!.SetValue(null, value ?? string.Empty);
     }
 }

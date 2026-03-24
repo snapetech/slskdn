@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-03-24 12:04 - AppDirectory test harness cleanup
+
+- Standardized remaining SongID test setup to override `Program.AppDirectory` via the static backing field instead of the private property setter reflection path that had already drifted in `ProfileServiceTests`.
+- Removed the remaining `GetProperty(nameof(Program.AppDirectory))` test uses and kept expected file paths aligned with `Program.GetWriteBaseDirectory()`.
+- Verified `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SongIdServiceTests|FullyQualifiedName~SongIdRunStoreTests" -v minimal` passed (`26/26`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`).
+
 ## 2026-03-24 11:49 - Private key file permission hardening
 
 - Hardened remaining obvious runtime key writers so they no longer rely on ambient umask:

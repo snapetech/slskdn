@@ -184,6 +184,29 @@ if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
 
 **Why This Keeps Happening**: key persistence code gets added in different subsystems over time, and once one path already has permission hardening it is easy to assume the others do too. Any file containing a private key, PFX, or password sidecar needs explicit restrictive permissions at the write site; relying on ambient umask is not consistent enough for runtime secrets.
 
+### 0xF05. Tests That Override `Program.AppDirectory` Must Update The Backing Field, Not The Public Property Setter
+
+**The Bug**: several unit tests tried to override `Program.AppDirectory` via `GetProperty(...).SetValue(...)`, but the property has a private setter. That made the override brittle and left tests asserting against the process working directory or stale app-directory state instead of the intended temp path.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Identity/ProfileServiceTests.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdRunStoreTests.cs`
+
+**Wrong**:
+```csharp
+var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
+property?.SetValue(null, tempDir);
+```
+
+**Correct**:
+```csharp
+var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
+field!.SetValue(null, tempDir);
+```
+
+**Why This Keeps Happening**: reflective test setup often targets the public property and assumes `SetValue` will behave like direct assignment. With private setters and static bootstrapping state, that assumption is fragile. If a test truly needs to override `Program.AppDirectory`, use the backing field helper consistently and derive expected file paths from `Program.GetWriteBaseDirectory()` so the test matches current runtime behavior.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract
