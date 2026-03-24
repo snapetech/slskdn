@@ -111,7 +111,9 @@ public class PodService : IPodService
         // Publish to DHT if publisher is available and pod is listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod to DHT");
+            // CancellationToken.None: background publish must not inherit the caller's token —
+            // if the caller cancels, we still want the background DHT publish to complete.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod to DHT");
         }
 
         return Task.FromResult(pod);
@@ -145,7 +147,9 @@ public class PodService : IPodService
         // Re-publish pod to DHT if publisher available and visibility allows
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = PublishPodInBackgroundAsync(() => podPublisher.UpdatePodAsync(pod, ct), "update pod in DHT");
+            // CancellationToken.None: background publish must not inherit the caller's token —
+            // if the caller cancels, we still want the background DHT update to complete.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.UpdatePodAsync(pod, CancellationToken.None), "update pod in DHT");
         }
 
         return Task.FromResult(pod);
@@ -358,7 +362,8 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod update to DHT");
+            // CancellationToken.None: background publish must not inherit the caller's token.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod update to DHT");
         }
 
         return Task.FromResult(channel);
@@ -397,7 +402,8 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod update to DHT");
+            // CancellationToken.None: background publish must not inherit the caller's token.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod update to DHT");
         }
 
         return Task.FromResult(true);
@@ -466,7 +472,8 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, ct), "publish pod update to DHT");
+            // CancellationToken.None: background publish must not inherit the caller's token.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod update to DHT");
         }
 
         return Task.FromResult(true);

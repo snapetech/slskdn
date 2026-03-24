@@ -268,11 +268,11 @@ public class PeerWorkBudgetTracker
                 ConsumedUnits = consumedUnits,
                 WindowStart = DateTimeOffset.UtcNow
             },
-            // Return a new object rather than mutating in place: AddOrUpdate may call
-            // the update delegate multiple times on CAS collision, so in-place += would
-            // over-count consumedUnits on each retry.
             (_, existing) => new PeerWorkWindow
             {
+                // Return a new object rather than mutating in place: AddOrUpdate may call
+                // the update delegate multiple times on CAS collision, so in-place += would
+                // over-count consumedUnits on each retry.
                 ConsumedUnits = existing.ConsumedUnits + consumedUnits,
                 WindowStart = existing.WindowStart,
             });
