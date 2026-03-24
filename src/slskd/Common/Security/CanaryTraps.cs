@@ -219,11 +219,16 @@ public sealed class CanaryTraps
             };
         }
 
-        record.Sightings.Add(new CanarySighting
+        int totalSightings;
+        lock (record)
         {
-            Context = foundContext,
-            ReportedAt = DateTimeOffset.UtcNow,
-        });
+            record.Sightings.Add(new CanarySighting
+            {
+                Context = foundContext,
+                ReportedAt = DateTimeOffset.UtcNow,
+            });
+            totalSightings = record.Sightings.Count;
+        }
 
         _logger.LogWarning(
             "CANARY ALERT: File {Filename} shared with {Username} found at {Context}",
@@ -235,7 +240,7 @@ public sealed class CanaryTraps
             OriginalUsername = record.Username,
             OriginalFilename = record.Filename,
             SharedAt = record.CreatedAt,
-            TotalSightings = record.Sightings.Count,
+            TotalSightings = totalSightings,
             Message = $"File was shared with {record.Username} on {record.CreatedAt:g}",
         };
     }
@@ -286,11 +291,14 @@ public sealed class CanaryTraps
     public CanaryStats GetStats()
     {
         var records = _canaries.Values.ToList();
+
+        // Lock each record individually to get a consistent Sightings.Count snapshot.
+        var sightingCounts = records.Select(r => { lock (r) { return r.Sightings.Count; } }).ToList();
         return new CanaryStats
         {
             TotalCanaries = records.Count,
-            CanariesWithSightings = records.Count(r => r.Sightings.Count > 0),
-            TotalSightings = records.Sum(r => r.Sightings.Count),
+            CanariesWithSightings = sightingCounts.Count(c => c > 0),
+            TotalSightings = sightingCounts.Sum(),
             UniqueUsersTracked = records.Select(r => r.Username).Distinct().Count(),
         };
     }

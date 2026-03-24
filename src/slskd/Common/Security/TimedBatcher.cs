@@ -84,8 +84,10 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             _logger.LogDebug("Batch retrieval cancelled, returning current batch");
         }
 
-        // Extract the current batch
-        await _batchLock.WaitAsync(cancellationToken);
+        // Extract the current batch.
+        // Use CancellationToken.None: if cancellationToken was already cancelled (the reason we
+        // fell through the catch above), passing it here would throw immediately and lose the batch.
+        await _batchLock.WaitAsync(CancellationToken.None);
         try
         {
             var batch = _currentBatch.ToList();

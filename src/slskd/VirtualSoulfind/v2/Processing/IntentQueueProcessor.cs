@@ -207,7 +207,10 @@ namespace slskd.VirtualSoulfind.v2.Processing
             catch (OperationCanceledException)
             {
                 _logger.LogInformation("Processing of intent {IntentId} was cancelled", desiredTrackId);
-                await _intentQueue.UpdateTrackStatusAsync(desiredTrackId, IntentStatus.Pending, cancellationToken);
+
+                // Use CancellationToken.None: the original token is already cancelled so any
+                // awaitable using it would throw immediately, preventing the status reset.
+                await _intentQueue.UpdateTrackStatusAsync(desiredTrackId, IntentStatus.Pending, CancellationToken.None);
                 throw;
             }
             catch (Exception ex)
