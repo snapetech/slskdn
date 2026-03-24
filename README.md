@@ -8,7 +8,7 @@
   <a href="https://github.com/snapetech/slskdn/issues">Issues</a> •
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="https://discord.gg/NRzj8xycQZ">Discord</a>
+  <a href="https://discord.gg/5PyXBfvS6T">Discord</a>
 </p>
 <p align="center">
   <a href="https://github.com/snapetech/slskdn/actions/workflows/ci.yml"><img src="https://github.com/snapetech/slskdn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
