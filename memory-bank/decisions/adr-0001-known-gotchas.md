@@ -62,6 +62,46 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 **Why This Keeps Happening**: release-manifest edits are often done in a few primary files only; support docs and alternate-package manifests are easy to miss when versions advance, then future packagers read stale values and reproduce the wrong release.
 
+### 0xF01. Release Metadata Must Be Updated Across All Packaging Manifests in One Transaction
+
+**The Bug**: `0.24.5-slskdn.90` release metadata (tag, checksums, and changelog/version fields) persisted in some packaging manifests after other channels were already moved to `.97`, causing installer tooling (`makepkg`, `snap`, `winget`, `choco`, and packaging scripts) to validate against mismatched artifacts.
+
+**Files Affected**:
+- `Formula/slskdn.rb`
+- `packaging/debian/changelog`
+- `packaging/homebrew/Formula/slskdn.rb`
+- `packaging/flatpak/io.github.slskd.slskdn.yml`
+- `packaging/flatpak/FLATHUB_SUBMISSION.md`
+- `packaging/rpm/slskdn.spec`
+- `packaging/snap/snapcraft.yaml`
+- `packaging/winget/snapetech.slskdn.yaml`
+- `packaging/winget/snapetech.slskdn.locale.en-US.yaml`
+- `packaging/winget/snapetech.slskdn.installer.yaml`
+- `packaging/chocolatey/slskdn.nuspec`
+- `packaging/chocolatey/tools/chocolateyinstall.ps1`
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/truenas-scale/charts/slskdn/Chart.yaml`
+- `packaging/helm/slskdn/Chart.yaml`
+- `packaging/helm/slskdn/README.md`
+- `packaging/proxmox-lxc/README.md`
+- `flake.nix`
+
+**Wrong**:
+```text
+Multiple packaging definitions kept individual `.90` release versions and old checksums after the release tag was advanced elsewhere.
+```
+
+**Correct**:
+```text
+Update all active release manifests, scripts, and docs together when advancing stable release metadata:
+- one source tag (`0.24.5-slskdn.97`)
+- matching artifact hashes per file type
+- aligned changelog/chart/image/version fields
+```
+
+**Why This Keeps Happening**: release automation often touches only one packaging channel per run, so unrelated channels and docs fall behind unless change batches include an explicit “release metadata parity” sweep.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract
