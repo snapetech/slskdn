@@ -76,6 +76,7 @@ namespace slskd.Mesh
 
         private readonly ConcurrentDictionary<string, MeshPeerState> peerStates = new(StringComparer.OrdinalIgnoreCase);
         private readonly MeshSyncStats stats = new();
+        private readonly object statsLock = new();
         private readonly SemaphoreSlim syncLock = new(1, 1);
 
         // Pending requests: requestId -> TaskCompletionSource
@@ -435,16 +436,19 @@ namespace slskd.Mesh
             catch (Exception ex)
             {
                 result.Error = "Mesh sync failed";
-                stats.FailedSyncs++;
+                lock (statsLock) { stats.FailedSyncs++; }
                 log.Warning(ex, "[MESH] Sync with {Peer} failed", username);
             }
 
             result.DurationMs = sw.ElapsedMilliseconds;
-            stats.TotalSyncs++;
-            if (result.Success)
+            lock (statsLock)
             {
-                stats.SuccessfulSyncs++;
-                stats.LastSyncTime = DateTime.UtcNow;
+                stats.TotalSyncs++;
+                if (result.Success)
+                {
+                    stats.SuccessfulSyncs++;
+                    stats.LastSyncTime = DateTime.UtcNow;
+                }
             }
 
             return result;
@@ -460,7 +464,7 @@ namespace slskd.Mesh
             if (!usernameValidation.IsValid)
             {
                 log.Warning("[MESH] Rejecting message from invalid username: {Error}", usernameValidation.Error);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
                 return null;
             }
 
@@ -468,7 +472,7 @@ namespace slskd.Mesh
             if (message == null)
             {
                 log.Warning("[MESH] Rejecting null message from {Peer}", fromUser);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
                 return null;
             }
 
@@ -476,7 +480,7 @@ namespace slskd.Mesh
             if (IsQuarantined(fromUser))
             {
                 log.Warning("[MESH] Rejecting message from quarantined peer {Peer}", fromUser);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
 
                 // Note: QuarantinedPeers count is updated in Stats getter
                 return null;
@@ -486,8 +490,12 @@ namespace slskd.Mesh
             if (!messageSigner.VerifyMessage(message))
             {
                 log.Warning("[MESH] Rejecting message with invalid signature from {Peer}", fromUser);
-                stats.RejectedMessages++;
-                stats.SignatureVerificationFailures++; // T-1436
+                lock (statsLock)
+                {
+                    stats.RejectedMessages++;
+                    stats.SignatureVerificationFailures++; // T-1436
+                }
+
                 return null;
             }
 
@@ -496,7 +504,7 @@ namespace slskd.Mesh
             if (!messageValidation.IsValid)
             {
                 log.Warning("[MESH] Rejecting invalid message from {Peer}: {Error}", fromUser, messageValidation.Error);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
 
                 // SECURITY: Track invalid message for rate limiting (T-1432)
                 RecordInvalidMessage(fromUser);
@@ -505,7 +513,7 @@ namespace slskd.Mesh
                 if (IsRateLimited(fromUser, isMessage: true))
                 {
                     log.Warning("[MESH] Peer {Peer} exceeded invalid message rate limit, rejecting", fromUser);
-                    stats.RateLimitViolations++; // T-1436
+                    lock (statsLock) { stats.RateLimitViolations++; } // T-1436
 
                     if (peerReputation != null)
                     {
@@ -940,7 +948,7 @@ namespace slskd.Mesh
             if (IsQuarantined(fromUser))
             {
                 log.Warning("[MESH] Rejecting entries from quarantined peer {Peer}", fromUser);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
                 return 0;
             }
 
@@ -949,8 +957,11 @@ namespace slskd.Mesh
             {
                 var score = peerReputation.GetScore(fromUser);
                 log.Warning("[MESH] Rejecting entries from untrusted peer {Peer} (score={Score})", fromUser, score);
-                stats.RejectedMessages++;
-                stats.ReputationBasedRejections++; // T-1436
+                lock (statsLock)
+                {
+                    stats.RejectedMessages++;
+                    stats.ReputationBasedRejections++; // T-1436
+                }
 
                 // Record protocol violation for attempting to sync with low reputation
                 peerReputation.RecordProtocolViolation(fromUser, "Attempted mesh sync with untrusted reputation");
@@ -1011,7 +1022,7 @@ namespace slskd.Mesh
             if (skipped > 0)
             {
                 log.Warning("[MESH] Skipped {Skipped}/{Total} invalid entries from {Peer}", skipped, entryList.Count, fromUser);
-                stats.SkippedEntries += skipped;
+                lock (statsLock) { stats.SkippedEntries += skipped; }
 
                 // SECURITY: Track invalid entries for rate limiting (T-1432)
                 RecordInvalidEntries(fromUser, skipped);
@@ -1020,7 +1031,7 @@ namespace slskd.Mesh
                 if (IsRateLimited(fromUser, isMessage: false))
                 {
                     log.Warning("[MESH] Peer {Peer} exceeded invalid entry rate limit, rejecting remaining entries", fromUser);
-                    stats.RateLimitViolations++; // T-1436
+                    lock (statsLock) { stats.RateLimitViolations++; } // T-1436
 
                     if (peerReputation != null)
                     {
@@ -1065,7 +1076,7 @@ namespace slskd.Mesh
                         popCache[key] = ok;
                         if (!ok)
                         {
-                            stats.ProofOfPossessionFailures++;
+                            lock (statsLock) { stats.ProofOfPossessionFailures++; }
                             log.Debug("[MESH] Proof-of-possession failed for {Key} from {Peer}", entry.FlacKey, fromUser);
                         }
                     }
@@ -1086,8 +1097,11 @@ namespace slskd.Mesh
 
             var merged = await hashDb.MergeEntriesFromMeshAsync(validatedEntries, cancellationToken);
 
-            stats.TotalEntriesReceived += entryList.Count;
-            stats.TotalEntriesMerged += merged;
+            lock (statsLock)
+            {
+                stats.TotalEntriesReceived += entryList.Count;
+                stats.TotalEntriesMerged += merged;
+            }
 
             // Update peer state - only consider validated entries for max seq
             var state = GetOrCreatePeerState(fromUser);
@@ -1125,7 +1139,7 @@ namespace slskd.Mesh
             log.Debug("[MESH] {Peer} requested delta since seq={SeqId}, max={Max}", fromUser, req.SinceSeqId, req.MaxEntries);
 
             var response = await GenerateDeltaResponseAsync(req.SinceSeqId, Math.Min(req.MaxEntries, MaxEntriesPerSync), cancellationToken);
-            stats.TotalEntriesSent += response.Entries.Count;
+            lock (statsLock) { stats.TotalEntriesSent += response.Entries.Count; }
 
             log.Information("[MESH] Sending {Count} entries to {Peer} (hasMore={HasMore})", response.Entries.Count, fromUser, response.HasMore);
             return response;
@@ -1364,7 +1378,7 @@ namespace slskd.Mesh
                     log.Warning("[MESH] Quarantined peer {Peer} until {Until} (reason: {Reason}, violations: {Count})",
                         username, state.QuarantinedUntil, reason, state.RateLimitViolationCount);
 
-                    stats.QuarantineEvents++; // T-1436
+                    lock (statsLock) { stats.QuarantineEvents++; } // T-1436
 
                     // Reset violation count after quarantine
                     state.RateLimitViolationCount = 0;
