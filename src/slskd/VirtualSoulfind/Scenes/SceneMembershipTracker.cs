@@ -307,7 +307,15 @@ public class SceneMembershipTracker : ISceneMembershipTracker
 
     private void RefreshCachedMetadata(string sceneId, List<SceneMember> members)
     {
-        var activeCount = members.Count(member => member.IsActive);
+        // All callers (TrackJoinAsync, TrackLeaveAsync) lock on members before mutating it,
+        // but release the lock before calling here. Lock for the read too to prevent a
+        // concurrent Add/Remove from racing with the LINQ iteration.
+        int activeCount;
+        lock (members)
+        {
+            activeCount = members.Count(member => member.IsActive);
+        }
+
         metadataCache.AddOrUpdate(
             sceneId,
             _ => CreateFallbackMetadata(sceneId, activeCount),
