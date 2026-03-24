@@ -157,6 +157,33 @@ services.PostConfigure<Mesh.Overlay.OverlayOptions>(options =>
 
 **Why This Keeps Happening**: relative path defaults seem harmless during local runs because the repo root or service `WorkingDirectory` hides the bug. Daemons, Nix/NixOS wrappers, tests, and package managers can launch with a different current directory, so every option-backed write path that is meant to live under app state must be normalized once during startup instead of trusting process CWD.
 
+### 0xF04. Private Key Files Must Set Owner-Only Permissions When Written
+
+**The Bug**: some runtime key writers explicitly locked file mode to user read/write, while other key-generation paths relied on the process umask. That left private key material readable more broadly on Unix-like systems depending on environment defaults.
+
+**Files Affected**:
+- `src/slskd/Identity/ProfileService.cs`
+- `src/slskd/Program.cs`
+- `src/slskd/Mesh/Overlay/KeyStore.cs`
+- `src/slskd/DhtRendezvous/Security/CertificateManager.cs`
+
+**Wrong**:
+```csharp
+File.WriteAllText(keyFile, json);
+IOFile.WriteAllBytes(filename, cert.Export(X509ContentType.Pkcs12, password));
+```
+
+**Correct**:
+```csharp
+File.WriteAllText(keyFile, json);
+if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+{
+    File.SetUnixFileMode(keyFile, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+}
+```
+
+**Why This Keeps Happening**: key persistence code gets added in different subsystems over time, and once one path already has permission hardening it is easy to assume the others do too. Any file containing a private key, PFX, or password sidecar needs explicit restrictive permissions at the write site; relying on ambient umask is not consistent enough for runtime secrets.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract

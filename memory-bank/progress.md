@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-03-24 11:49 - Private key file permission hardening
+
+- Hardened remaining obvious runtime key writers so they no longer rely on ambient umask:
+  - `ProfileService` now applies owner-only Unix permissions to `peer-profile.key`
+  - `Program.GenerateX509Certificate(...)` now applies owner-only Unix permissions to generated `.pfx` files
+- Extended `tests/slskd.Tests.Unit/Identity/ProfileServiceTests.cs` with Unix permission coverage for generated profile keys and fixed the test harness to set/read `Program.AppDirectory` through the same backing-field/base-directory path logic used elsewhere in the suite.
+- Verified `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ProfileServiceTests" -v minimal` passed (`14/14`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`).
+
 ## 2026-03-24 11:27 - Runtime path normalization sweep
 
 - Normalized mesh runtime write paths at startup so relative `Mesh.DataDirectory` and `Overlay.KeyPath` now resolve under `Program.AppDirectory` instead of depending on process CWD.

@@ -34,7 +34,7 @@ public class ProfileServiceTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), "ProfileServiceTest_" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_tempDir);
         _originalAppDirectory = Program.AppDirectory;
-        typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static)?.SetValue(null, _tempDir);
+        SetAppDirectory(_tempDir);
         _options = new TestOptionsMonitor(new slskd.Options
         {
             Directories = new slskd.Options.DirectoriesOptions(),
@@ -48,13 +48,13 @@ public class ProfileServiceTests : IDisposable
         // Clean up any profile files created in Program.AppDirectory
         try
         {
-            var profileFile = Path.Combine(Program.AppDirectory ?? _tempDir, "peer-profile.json");
+            var profileFile = GetProfileFilePath();
             if (File.Exists(profileFile)) File.Delete(profileFile);
-            var keyFile = Path.Combine(Program.AppDirectory ?? _tempDir, "peer-profile.key");
+            var keyFile = Path.ChangeExtension(profileFile, ".key");
             if (File.Exists(keyFile)) File.Delete(keyFile);
         }
         catch { }
-        typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static)?.SetValue(null, _originalAppDirectory);
+        SetAppDirectory(_originalAppDirectory);
         try { Directory.Delete(_tempDir, true); } catch { }
         _signer?.Dispose();
     }
@@ -68,7 +68,7 @@ public class ProfileServiceTests : IDisposable
     public async Task GetMyProfile_FirstCall_GeneratesProfile()
     {
         // Delete any existing profile file to ensure fresh generation
-        var profileFile = Path.Combine(Program.AppDirectory ?? _tempDir, "peer-profile.json");
+        var profileFile = GetProfileFilePath();
         var keyFile = Path.ChangeExtension(profileFile, ".key");
         try { if (File.Exists(profileFile)) File.Delete(profileFile); } catch { }
         try { if (File.Exists(keyFile)) File.Delete(keyFile); } catch { }
@@ -82,6 +82,26 @@ public class ProfileServiceTests : IDisposable
         // DisplayName comes from Options.Soulseek.Username which is "testuser"
         Assert.Equal("testuser", p.DisplayName);
         Assert.NotNull(p.Signature);
+    }
+
+    [Fact]
+    public async Task GetMyProfile_FirstCall_SetsRestrictiveKeyPermissionsOnUnix()
+    {
+        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+        {
+            return;
+        }
+
+        var profileFile = GetProfileFilePath();
+        var keyFile = Path.ChangeExtension(profileFile, ".key");
+        try { if (File.Exists(profileFile)) File.Delete(profileFile); } catch { }
+        try { if (File.Exists(keyFile)) File.Delete(keyFile); } catch { }
+
+        var svc = CreateService();
+        _ = await svc.GetMyProfileAsync(CancellationToken.None);
+
+        var mode = File.GetUnixFileMode(keyFile);
+        Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, mode);
     }
 
     [Fact]
@@ -195,4 +215,12 @@ public class ProfileServiceTests : IDisposable
 
         Assert.Null(decoded);
     }
+
+    private static void SetAppDirectory(string? value)
+    {
+        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
+        field!.SetValue(null, value ?? string.Empty);
+    }
+
+    private static string GetProfileFilePath() => Path.Combine(Program.GetWriteBaseDirectory(), "peer-profile.json");
 }

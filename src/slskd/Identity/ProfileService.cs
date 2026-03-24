@@ -80,6 +80,18 @@ public sealed class ProfileService : IProfileService
             PublicKey = Convert.ToBase64String(pub)
         };
         File.WriteAllText(keyFile, JsonSerializer.Serialize(keyPairData, new JsonSerializerOptions { WriteIndented = true }));
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                File.SetUnixFileMode(keyFile, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "[ProfileService] Could not set restrictive permissions on {KeyFile}", keyFile);
+            }
+        }
+
         _log.LogInformation("[ProfileService] Generated new Ed25519 keypair");
         return (priv, pub);
     }

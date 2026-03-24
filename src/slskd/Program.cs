@@ -3625,6 +3625,17 @@ namespace slskd
 
             using var cert = X509.Generate(subject: AppName, password, X509KeyStorageFlags.Exportable);
             IOFile.WriteAllBytes(filename, cert.Export(X509ContentType.Pkcs12, password));
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    IOFile.SetUnixFileMode(filename, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Could not set restrictive permissions on generated certificate {Filename}", filename);
+                }
+            }
 
             return (filename, password);
         }

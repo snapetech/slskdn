@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the broader runtime-storage bughunt into secret material persistence:
+    - `ProfileService` now sets owner-only Unix permissions on `peer-profile.key`
+    - `Program.GenerateX509Certificate(...)` now sets owner-only Unix permissions on generated `.pfx` files
+  - Fixed `ProfileServiceTests` harness drift so it uses the same backing-field/base-directory `Program.AppDirectory` setup as current runtime behavior
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ProfileServiceTests"` passed (`14/14`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`)
+  - Next likely cluster is other runtime persistence points where security-sensitive files are written without explicit permissions or where tests still carry old assumptions about `Program.AppDirectory`
   - Continued the repo-wide bughunt beyond release/install surfaces with a runtime path-resolution sweep:
     - `Program` now normalizes relative mesh write paths (`Mesh.DataDirectory`, `Overlay.KeyPath`) against `AppDirectory` during startup option post-configuration
     - `JobManifestService` and `SwarmEventStore` now use the same app-owned base directory instead of falling back to `.`
