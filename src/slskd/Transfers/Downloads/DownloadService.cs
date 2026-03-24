@@ -1141,10 +1141,12 @@ namespace slskd.Transfers.Downloads
                 // Record successful chunk completion for peer metrics (Phase 2C - T-409)
                 if (PeerMetrics != null)
                 {
+                    // CancellationToken.None: download already completed; record success
+                    // unconditionally (error paths at nearby catch blocks do the same).
                     _ = PeerMetrics.RecordChunkCompletionAsync(
                         transfer.Username,
                         ChunkCompletionResult.Success,
-                        cancellationToken);
+                        cancellationToken: CancellationToken.None);
                 }
 
                 // explicitly dispose the rate limiter to prevent updates from it beyond this point, and in doing so we
