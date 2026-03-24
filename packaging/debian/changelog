@@ -1,6 +1,6 @@
-slskdn (0.24.5.slskdn.90-1) stable; urgency=medium
+slskdn (0.24.5.slskdn.97-1) stable; urgency=medium
 
-  * Bump packaging metadata to stable release 0.24.5-slskdn.90
+  * Bump packaging metadata to stable release 0.24.5-slskdn.97
     (slskdn-main-linux-x64.zip)
 
  -- snapetech <slskdn@proton.me>  Mon, 23 Mar 2026 00:00:00 +0000
@@ -39,7 +39,6 @@ slskdn (0.24.1.slskdn.6-1) stable; urgency=medium
   * PWA manifest for mobile
 
  -- snapetech <slskdn@proton.me>  Fri, 05 Dec 2025 12:00:00 +0000
-
 
 
 

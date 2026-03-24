@@ -21,6 +21,21 @@
 ### Remaining
 - Continue the broad pass by searching for remaining callback fanout sites that can be made exception-safe in the same pattern across the repository.
 
+## 2026-03-24 10:00 - Release metadata parity sweep
+
+### Completed
+- Synchronized release metadata from the stale `0.24.5-slskdn.90` to `0.24.5-slskdn.97` across packaging/distribution manifests.
+- Updated checksum-bearing channels (`Formula`, `snap`, `flatpak`, `rpm`, `chocolatey`, `winget`) and versioned metadata fields in AUR, deb/charts, and docs.
+- Ran and passed `bash packaging/scripts/validate-packaging-metadata.sh`.
+- Ran and passed `bash packaging/scripts/validate-aur-pkgbuild-hashes.sh packaging/aur/PKGBUILD packaging/aur/PKGBUILD-bin packaging/aur/PKGBUILD-dev`.
+
+### Verification
+- `bash packaging/scripts/validate-packaging-metadata.sh` passed.
+- `bash packaging/scripts/validate-aur-pkgbuild-hashes.sh packaging/aur/PKGBUILD packaging/aur/PKGBUILD-bin packaging/aur/PKGBUILD-dev` passed.
+
+### Remaining
+- Continue the broader bughunt in runtime/source code surfaces where release/debug/logging assumptions still leak across package boundaries.
+
 ## 2026-03-23 16:22 - CI placeholder-hash tolerance for AUR dev PKGBUILD
 
 ### Completed

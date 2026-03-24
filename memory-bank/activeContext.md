@@ -23,11 +23,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue broad-pattern callback fanout hardening across repository runtime/service callback surfaces.
+- **Current Task**: Continue broad-pattern release metadata parity hardening across packaging and distribution manifests.
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
   - Completed callback-fanout hardening for search options and download state callbacks.
+  - Completed a broad packaging metadata parity sweep for `0.24.5-slskdn.97` across Formula, Homebrew, AUR, snap, winget, chocolatey, rpm, deb, flatpak, helm/truenas, proxmox, and flake manifests.
   - Continued broader packaging bughunt and fixed CI AUR checksum validation for template placeholders.
   - Broadened `.github/workflows/ci.yml` to skip known placeholder tokens in `packaging/aur/PKGBUILD-dev` during checksum validation, while still enforcing static file hash checks.
   - Documented the pattern as ADR-0001 `0k14I` and logged verification details in `memory-bank/progress.md`.
