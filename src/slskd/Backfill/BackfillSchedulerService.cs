@@ -46,6 +46,7 @@ namespace slskd.Backfill
 
         private readonly BackfillConfig config = new();
         private readonly BackfillStats stats = new();
+        private readonly object statsLock = new();
         private readonly SemaphoreSlim backfillLock = new(2, 2); // Max 2 concurrent
         private int activeBackfills;
         private bool isIdle;
@@ -146,7 +147,7 @@ namespace slskd.Backfill
                     if (todayCount >= config.MaxPerPeerPerDay)
                     {
                         result.RateLimited++;
-                        stats.RateLimited++;
+                        lock (statsLock) { stats.RateLimited++; }
                         continue;
                     }
 
@@ -164,16 +165,19 @@ namespace slskd.Backfill
                     if (backfillResult.Success)
                     {
                         result.Successful++;
-                        stats.Successful++;
-                        stats.HashesDiscovered++;
+                        lock (statsLock)
+                        {
+                            stats.Successful++;
+                            stats.HashesDiscovered++;
+                        }
                     }
                     else
                     {
                         result.Failed++;
-                        stats.Failed++;
+                        lock (statsLock) { stats.Failed++; }
                     }
 
-                    stats.TotalAttempts++;
+                    lock (statsLock) { stats.TotalAttempts++; }
                 }
 
                 stats.LastCycleTime = DateTime.UtcNow;
