@@ -149,9 +149,8 @@ public sealed class DhtPeerGreetingService : BackgroundService
         try
         {
             // Pick a random message
-            var random = new Random();
             var messages = isFirstEver ? FirstConnectionMessages : RegularGreetings;
-            var message = messages[random.Next(messages.Length)];
+            var message = messages[Random.Shared.Next(messages.Length)];
 
             _logger.LogInformation("Sending mesh greeting to {Username}: {Message}", username, message);
 

@@ -1204,14 +1204,12 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             // Speed monitor - cancel if too slow for too long
             var slowSince = (DateTime?)null;
             var lastBytes = 0L;
-            var random = new Random();
-
             var speedMonitorTask = Task.Run(async () =>
             {
                 while (!cts.Token.IsCancellationRequested && !limitedStream.LimitReached)
                 {
                     // Randomize check interval to prevent simultaneous cancellations
-                    await Task.Delay(2000 + random.Next(1000), cts.Token).ConfigureAwait(false);
+                    await Task.Delay(2000 + Random.Shared.Next(1000), cts.Token).ConfigureAwait(false);
 
                     var currentBytes = limitedStream.BytesWritten;
                     var bytesInInterval = currentBytes - lastBytes;
