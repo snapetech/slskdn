@@ -55,12 +55,19 @@ namespace slskd.Messaging
         {
             Rooms.AddOrUpdate(roomName, new Room() { Messages = new List<RoomMessage>() { message } }, (_, room) =>
             {
-                if (room.Messages.Count >= MessageLimit)
+                // room.Messages is a List<T> — lock the room to prevent concurrent
+                // mutations from corrupting the list when multiple messages arrive
+                // for the same room simultaneously.
+                lock (room)
                 {
-                    room.Messages = room.Messages.TakeLast(MessageLimit - 1).ToList();
+                    if (room.Messages.Count >= MessageLimit)
+                    {
+                        room.Messages = room.Messages.TakeLast(MessageLimit - 1).ToList();
+                    }
+
+                    room.Messages.Add(message);
                 }
 
-                room.Messages.Add(message);
                 return room;
             });
         }
@@ -81,7 +88,11 @@ namespace slskd.Messaging
         {
             if (Rooms.TryGetValue(roomName, out var room))
             {
-                room.Users.Add(userData);
+                // room.Users is a List<T> — lock the room to prevent concurrent corruption.
+                lock (room)
+                {
+                    room.Users.Add(userData);
+                }
             }
         }
 
@@ -108,7 +119,11 @@ namespace slskd.Messaging
         {
             if (Rooms.TryGetValue(roomName, out var room))
             {
-                room.Users = room.Users.Where(u => u.Username != username).ToList();
+                // room.Users is a List<T> — lock the room to prevent concurrent corruption.
+                lock (room)
+                {
+                    room.Users = room.Users.Where(u => u.Username != username).ToList();
+                }
             }
         }
     }
