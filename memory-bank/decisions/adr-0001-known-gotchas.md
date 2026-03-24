@@ -102,6 +102,28 @@ Update all active release manifests, scripts, and docs together when advancing s
 
 **Why This Keeps Happening**: release automation often touches only one packaging channel per run, so unrelated channels and docs fall behind unless change batches include an explicit “release metadata parity” sweep.
 
+### 0xF02. Core Runtime Paths Should Not Write to Console for Internal Validation Failures
+
+**The Bug**: Runtime classes outside explicit CLI code paths used `Console.WriteLine` for debug/error diagnostics (`YamlConfigurationSource`, `RealmAwareGovernanceClient`), which can pollute daemon stdout, make logs inconsistent, and bypass configured logging providers.
+
+**Files Affected**:
+- `src/slskd/Common/Configuration/YamlConfigurationSource.cs`
+- `src/slskd/Mesh/Governance/RealmAwareGovernanceClient.cs`
+
+**Wrong**:
+```csharp
+Console.WriteLine($"[YamlConfigurationProvider] DEBUG ...");
+Console.WriteLine($"Signature validation failed: {ex.Message}");
+```
+
+**Correct**:
+```csharp
+// Remove debug-only direct stdout writes and rely on ILogger in non-CLI runtime paths.
+_logger.LogWarning(ex, "[Governance] Signature validation failed");
+```
+
+**Why This Keeps Happening**: when adding temporary debugging in core services, stdout writes are fast to add and often forgotten after debugging passes; without policy checks, those writes persist long after the debugging reason is gone.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract
