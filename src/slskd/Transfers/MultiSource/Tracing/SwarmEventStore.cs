@@ -42,7 +42,7 @@ namespace slskd.Transfers.MultiSource.Tracing
 
         public SwarmEventStore()
         {
-            sessionsDir = Path.Combine(Program.AppDirectory ?? ".", "logs", "sessions");
+            sessionsDir = Path.Combine(Program.GetWriteBaseDirectory(), "logs", "sessions");
             Directory.CreateDirectory(sessionsDir);
         }
 

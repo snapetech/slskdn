@@ -326,6 +326,17 @@ namespace slskd
             return $"{AppName}_{Compute.Sha256Hash(dir)}";
         }
 
+        internal static string GetWriteBaseDirectory()
+        {
+            return string.IsNullOrWhiteSpace(AppDirectory) ? DefaultAppDirectory : AppDirectory;
+        }
+
+        internal static string ResolveAppRelativePath(string path, string fallbackRelativePath)
+        {
+            var candidate = string.IsNullOrWhiteSpace(path) ? fallbackRelativePath : path;
+            return Path.IsPathRooted(candidate) ? candidate : Path.Combine(GetWriteBaseDirectory(), candidate);
+        }
+
         private static IDisposable? DotNetRuntimeStats { get; set; }
         private static VolatileOverlayConfigurationSource<OptionsOverlay> VolatileOverlayConfigurationSource { get; set; } = new VolatileOverlayConfigurationSource<OptionsOverlay>();
 
@@ -1823,6 +1834,14 @@ namespace slskd
             services.AddSingleton(sp => sp.GetRequiredService<IOptions<Common.Security.MeekTransportOptions>>().Value);
             services.AddOptions<MediaCore.MediaCoreOptions>().Bind(Configuration.GetSlskdSection("MediaCore"));
             services.AddOptions<Mesh.Overlay.OverlayOptions>().Bind(Configuration.GetSlskdSection("Overlay"));
+            services.PostConfigure<Mesh.MeshOptions>(options =>
+            {
+                options.DataDirectory = ResolveAppRelativePath(options.DataDirectory, "data");
+            });
+            services.PostConfigure<Mesh.Overlay.OverlayOptions>(options =>
+            {
+                options.KeyPath = ResolveAppRelativePath(options.KeyPath, "mesh-overlay.key");
+            });
             services.AddOptions<Mesh.ServiceFabric.MeshGatewayOptions>().Bind(Configuration.GetSlskdSection("MeshGateway"));
 
             // Realm services (T-REALM-01, T-REALM-02, T-REALM-04)

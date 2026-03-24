@@ -5,6 +5,13 @@
 
 ---
 
+## 2026-03-24 11:27 - Runtime path normalization sweep
+
+- Normalized mesh runtime write paths at startup so relative `Mesh.DataDirectory` and `Overlay.KeyPath` now resolve under `Program.AppDirectory` instead of depending on process CWD.
+- Folded the same fix family into `JobManifestService` and `SwarmEventStore`, which were still falling back to `.` when `Program.AppDirectory` was unset.
+- Added focused regression coverage in `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs` for app-directory-relative resolution and default-app-directory fallback.
+- Verified `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter FullyQualifiedName~ProgramPathNormalizationTests -v minimal` passed (`4/4`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`).
+
 ## 2026-03-23 19:02 - Search callback fanout and download state-callback hardening
 
 ### Completed

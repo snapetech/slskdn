@@ -69,9 +69,10 @@ public class MeshOptions
     public MeshTransportOptions Transport { get; set; } = new();
 
     /// <summary>
-    /// Data directory for mesh-related storage (certificates, pins, etc.).
+    /// Base directory for mesh-related storage (certificates, pins, etc.).
+    /// Relative values are resolved against the application directory during service registration.
     /// </summary>
-    public string DataDirectory { get; set; } = "./data/mesh";
+    public string DataDirectory { get; set; } = "data";
 
     /// <summary>
     /// Security options for overlay/transport (PR-01, §8): enforce remote payload limits and safe deserialization.

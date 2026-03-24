@@ -124,6 +124,39 @@ _logger.LogWarning(ex, "[Governance] Signature validation failed");
 
 **Why This Keeps Happening**: when adding temporary debugging in core services, stdout writes are fast to add and often forgotten after debugging passes; without policy checks, those writes persist long after the debugging reason is gone.
 
+### 0xF03. Relative Runtime Write Paths Must Be Normalized Against `AppDirectory` At Startup
+
+**The Bug**: mesh runtime options used relative defaults like `mesh-overlay.key` and `data`, and services consumed them directly for writes. On package-managed launches where the process current directory was `/`, the app attempted to write `mesh-overlay.key` at `/mesh-overlay.key` instead of inside the application working directory.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Mesh/MeshOptions.cs`
+- `src/slskd/Mesh/Overlay/OverlayOptions.cs`
+- `src/slskd/Mesh/Transport/CertificatePinManager.cs`
+- `src/slskd/Jobs/Manifests/JobManifestService.cs`
+- `src/slskd/Transfers/MultiSource/Tracing/SwarmEventStore.cs`
+
+**Wrong**:
+```csharp
+public string KeyPath { get; set; } = "mesh-overlay.key";
+public string DataDirectory { get; set; } = "./data/mesh";
+var path = options.KeyPath;
+```
+
+**Correct**:
+```csharp
+services.PostConfigure<Mesh.MeshOptions>(options =>
+{
+    options.DataDirectory = ResolveAppRelativePath(options.DataDirectory, "data");
+});
+services.PostConfigure<Mesh.Overlay.OverlayOptions>(options =>
+{
+    options.KeyPath = ResolveAppRelativePath(options.KeyPath, "mesh-overlay.key");
+});
+```
+
+**Why This Keeps Happening**: relative path defaults seem harmless during local runs because the repo root or service `WorkingDirectory` hides the bug. Daemons, Nix/NixOS wrappers, tests, and package managers can launch with a different current directory, so every option-backed write path that is meant to live under app state must be normalized once during startup instead of trusting process CWD.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract

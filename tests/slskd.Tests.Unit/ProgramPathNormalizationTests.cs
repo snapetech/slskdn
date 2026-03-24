@@ -1,0 +1,86 @@
+// <copyright file="ProgramPathNormalizationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+namespace slskd.Tests.Unit;
+
+using System;
+using System.IO;
+using System.Reflection;
+using Xunit;
+
+public class ProgramPathNormalizationTests
+{
+    [Fact]
+    public void ResolveAppRelativePath_UsesAppDirectory_ForRelativePaths()
+    {
+        var originalAppDirectory = Program.AppDirectory;
+
+        try
+        {
+            SetAppDirectory(Path.Combine(Path.GetTempPath(), $"slskdn-appdir-{Guid.NewGuid():N}"));
+
+            var resolved = Program.ResolveAppRelativePath("mesh-overlay.key", "mesh-overlay.key");
+
+            Assert.Equal(Path.Combine(Program.AppDirectory, "mesh-overlay.key"), resolved);
+        }
+        finally
+        {
+            SetAppDirectory(originalAppDirectory);
+        }
+    }
+
+    [Fact]
+    public void ResolveAppRelativePath_KeepsAbsolutePaths()
+    {
+        var absolutePath = Path.Combine(Path.GetTempPath(), $"slskdn-absolute-{Guid.NewGuid():N}", "mesh-overlay.key");
+
+        var resolved = Program.ResolveAppRelativePath(absolutePath, "mesh-overlay.key");
+
+        Assert.Equal(absolutePath, resolved);
+    }
+
+    [Fact]
+    public void ResolveAppRelativePath_UsesFallback_ForBlankValues()
+    {
+        var originalAppDirectory = Program.AppDirectory;
+
+        try
+        {
+            SetAppDirectory(Path.Combine(Path.GetTempPath(), $"slskdn-appdir-{Guid.NewGuid():N}"));
+
+            var resolved = Program.ResolveAppRelativePath(string.Empty, "data");
+
+            Assert.Equal(Path.Combine(Program.AppDirectory, "data"), resolved);
+        }
+        finally
+        {
+            SetAppDirectory(originalAppDirectory);
+        }
+    }
+
+    [Fact]
+    public void GetWriteBaseDirectory_UsesDefaultAppDirectory_WhenAppDirectoryIsBlank()
+    {
+        var originalAppDirectory = Program.AppDirectory;
+
+        try
+        {
+            SetAppDirectory(string.Empty);
+
+            var baseDirectory = Program.GetWriteBaseDirectory();
+
+            Assert.Equal(Program.DefaultAppDirectory, baseDirectory);
+        }
+        finally
+        {
+            SetAppDirectory(originalAppDirectory);
+        }
+    }
+
+    private static void SetAppDirectory(string value)
+    {
+        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
+        field!.SetValue(null, value);
+    }
+}

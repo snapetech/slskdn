@@ -56,7 +56,7 @@ namespace slskd.Jobs.Manifests
                 .Build();
 
             // Place manifests under <AppDirectory>/jobs/{active|completed}
-            jobsRoot = Path.Combine(Program.AppDirectory ?? ".", "jobs");
+            jobsRoot = Path.Combine(Program.GetWriteBaseDirectory(), "jobs");
         }
 
         public async Task<string> ExportAsync(JobManifest manifest, bool completed = false, CancellationToken ct = default)

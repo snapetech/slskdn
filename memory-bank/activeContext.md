@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued the repo-wide bughunt beyond release/install surfaces with a runtime path-resolution sweep:
+    - `Program` now normalizes relative mesh write paths (`Mesh.DataDirectory`, `Overlay.KeyPath`) against `AppDirectory` during startup option post-configuration
+    - `JobManifestService` and `SwarmEventStore` now use the same app-owned base directory instead of falling back to `.`
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests"` passed (`4/4`) and `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`)
+  - Next likely cluster is other runtime write/read surfaces that still implicitly trust process CWD or duplicate app-directory fallback logic outside the options/bootstrap path
   - Completed callback-fanout hardening for search options and download state callbacks.
   - Completed a broad packaging metadata parity sweep for `0.24.5-slskdn.97` across Formula, Homebrew, AUR, snap, winget, chocolatey, rpm, deb, flatpak, helm/truenas, proxmox, and flake manifests.
   - Continued broader packaging bughunt and fixed CI AUR checksum validation for template placeholders.
