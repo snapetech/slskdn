@@ -331,10 +331,15 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
                     };
                 }
 
-                // Increment count and add service name
-                existing.ServiceNamesQueried.Add(serviceName);
-                existing.QueryCount++;
-                return existing;
+                // Return a new object rather than mutating in place: AddOrUpdate may call
+                // the update delegate multiple times on CAS collision, so in-place mutation
+                // would over-count QueryCount and duplicate-insert ServiceNamesQueried.
+                return new DiscoveryStats
+                {
+                    QueryCount = existing.QueryCount + 1,
+                    ServiceNamesQueried = new HashSet<string>(existing.ServiceNamesQueried) { serviceName },
+                    WindowStart = existing.WindowStart,
+                };
             });
 
         // Check for suspicious patterns

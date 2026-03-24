@@ -701,8 +701,10 @@ public class PodMessaging : IPodMessaging
         // 7. Forward to Soulseek room if channel is bound (mirror mode)
         _ = chatBridge.ForwardPodToSoulseekAsync(message.ChannelId, message);
 
-        // 8. Route message to pod members via decentralized overlay network
-        _ = messageRouter.RouteMessageAsync(message, ct);
+        // 8. Route message to pod members via decentralized overlay network.
+        // CancellationToken.None: the message was already stored, so routing must
+        // complete even if the caller's request is cancelled/disconnected.
+        _ = messageRouter.RouteMessageAsync(message, CancellationToken.None);
 
         return true;
     }

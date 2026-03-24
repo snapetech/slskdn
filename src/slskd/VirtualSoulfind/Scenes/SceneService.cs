@@ -109,38 +109,47 @@ public class SceneService : ISceneService
             throw new InvalidOperationException($"Maximum joined scenes limit reached ({maxScenes})");
         }
 
-        if (joinedScenes.ContainsKey(sceneId))
+        // TryAdd is atomic — prevents two concurrent JoinSceneAsync calls for the same
+        // sceneId from both passing a ContainsKey check, then both announcing to DHT.
+        if (!joinedScenes.TryAdd(sceneId, new Scene { SceneId = sceneId, JoinedAt = DateTimeOffset.UtcNow }))
         {
             logger.LogDebug("[VSF-SCENE] Already joined scene {SceneId}", sceneId);
             return;
         }
 
-        // Get scene metadata
-        var metadata = await GetSceneMetadataAsync(sceneId, ct);
-        if (metadata == null)
+        try
         {
-            logger.LogWarning("[VSF-SCENE] Scene {SceneId} not found", sceneId);
-            throw new InvalidOperationException($"Scene not found: {sceneId}");
+            // Get scene metadata
+            var metadata = await GetSceneMetadataAsync(sceneId, ct);
+            if (metadata == null)
+            {
+                logger.LogWarning("[VSF-SCENE] Scene {SceneId} not found", sceneId);
+                throw new InvalidOperationException($"Scene not found: {sceneId}");
+            }
+
+            // Announce membership to DHT
+            await announcements.AnnounceJoinAsync(sceneId, ct);
+
+            // Replace placeholder with full scene data
+            joinedScenes[sceneId] = new Scene
+            {
+                SceneId = sceneId,
+                Type = metadata.Type,
+                DisplayName = metadata.DisplayName,
+                Description = metadata.Description,
+                MemberCount = metadata.ApproximateMemberCount,
+                JoinedAt = DateTimeOffset.UtcNow
+            };
+
+            logger.LogInformation("[VSF-SCENE] Joined scene {SceneId} ({DisplayName})",
+                sceneId, metadata.DisplayName);
         }
-
-        // Announce membership to DHT
-        await announcements.AnnounceJoinAsync(sceneId, ct);
-
-        // Track locally
-        var scene = new Scene
+        catch
         {
-            SceneId = sceneId,
-            Type = metadata.Type,
-            DisplayName = metadata.DisplayName,
-            Description = metadata.Description,
-            MemberCount = metadata.ApproximateMemberCount,
-            JoinedAt = DateTimeOffset.UtcNow
-        };
-
-        joinedScenes[sceneId] = scene;
-
-        logger.LogInformation("[VSF-SCENE] Joined scene {SceneId} ({DisplayName})",
-            sceneId, metadata.DisplayName);
+            // Remove the placeholder so a future call can retry
+            joinedScenes.TryRemove(sceneId, out _);
+            throw;
+        }
     }
 
     public async Task LeaveSceneAsync(string sceneId, CancellationToken ct)
