@@ -4,6 +4,7 @@
 
 namespace slskd.VirtualSoulfind.DisasterMode;
 
+using System.Threading;
 using Microsoft.Extensions.Options;
 using slskd;
 using OptionsModel = slskd.Options;
@@ -206,9 +207,9 @@ public sealed class DisasterModeCoordinator : IDisasterModeCoordinator
 
             if (e.NewHealth == SoulseekHealth.Unavailable)
             {
-                consecutiveUnhealthyChecks++;
+                var checks = Interlocked.Increment(ref consecutiveUnhealthyChecks);
 
-                var elapsedMinutes = consecutiveUnhealthyChecks * 0.5; // Checks every 30 seconds
+                var elapsedMinutes = checks * 0.5; // Checks every 30 seconds
 
                 // Progressive escalation based on downtime duration
                 DisasterModeLevel targetLevel;
@@ -246,7 +247,7 @@ public sealed class DisasterModeCoordinator : IDisasterModeCoordinator
             }
             else if (e.NewHealth == SoulseekHealth.Healthy)
             {
-                consecutiveUnhealthyChecks = 0;
+                Interlocked.Exchange(ref consecutiveUnhealthyChecks, 0);
 
                 if (CurrentLevel > DisasterModeLevel.Normal)
                 {
