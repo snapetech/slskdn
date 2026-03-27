@@ -89,29 +89,29 @@ public sealed class DisasterModeRecovery : IDisasterModeRecovery
 
         if (health == SoulseekHealth.Healthy)
         {
-            consecutiveHealthyChecks++;
+            var checks = Interlocked.Increment(ref consecutiveHealthyChecks);
 
             // Require multiple consecutive healthy checks before recovery
             var requiredChecks = recoveryOptions?.RecoveryHealthyChecksRequired ?? 3;
 
-            if (consecutiveHealthyChecks >= requiredChecks)
+            if (checks >= requiredChecks)
             {
                 logger.LogInformation("[VSF-RECOVERY] Soulseek healthy for {Checks} checks, deactivating disaster mode",
-                    consecutiveHealthyChecks);
+                    checks);
 
                 await disasterMode.DeactivateDisasterModeAsync(ct);
-                consecutiveHealthyChecks = 0;
+                Interlocked.Exchange(ref consecutiveHealthyChecks, 0);
             }
             else
             {
                 logger.LogDebug("[VSF-RECOVERY] Soulseek healthy but need {Required} consecutive checks (have {Current})",
-                    requiredChecks, consecutiveHealthyChecks);
+                    requiredChecks, checks);
             }
         }
         else
         {
             // Reset counter if health is not healthy
-            consecutiveHealthyChecks = 0;
+            Interlocked.Exchange(ref consecutiveHealthyChecks, 0);
             logger.LogDebug("[VSF-RECOVERY] Soulseek not healthy ({Health}), recovery not possible", health);
         }
     }
@@ -139,7 +139,7 @@ public sealed class DisasterModeRecovery : IDisasterModeRecovery
             else if (e.NewHealth != SoulseekHealth.Healthy)
             {
                 // Health degraded, reset recovery counter
-                consecutiveHealthyChecks = 0;
+                Interlocked.Exchange(ref consecutiveHealthyChecks, 0);
             }
         }
         catch (OperationCanceledException)
