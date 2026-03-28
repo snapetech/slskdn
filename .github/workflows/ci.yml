@@ -31,10 +31,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Set up .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: |
+          # Pre-installed at /usr/share/dotnet by myoung34/github-runner image
+          echo "/usr/share/dotnet" >> $GITHUB_PATH
+          /usr/share/dotnet/dotnet --version
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -144,10 +152,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET
+      - name: Set up .NET (GitHub-hosted)
+        if: ${{ !contains(runner.name, 'keith') }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Set up .NET (self-hosted)
+        if: ${{ contains(runner.name, 'keith') }}
+        run: echo "/usr/share/dotnet" >> $GITHUB_PATH
 
       - name: Set Environment Variables
         run: |
