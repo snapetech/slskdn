@@ -71,8 +71,9 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
         _tunnelConnectivity = tunnelConnectivity ?? new DefaultTunnelConnectivity();
         _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? slskd.Mesh.Transport.SecurityUtils.MaxRemotePayloadSize;
 
-        // Start cleanup task
-        _cleanupTask = Task.Run(CleanupExpiredTunnelsAsync);
+        // LongRunning ensures a dedicated OS thread starts immediately, avoiding thread-pool
+        // saturation delays that would prevent the cleanup task from starting in tests.
+        _cleanupTask = Task.Factory.StartNew(CleanupExpiredTunnelsAsync, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
     }
 
     public string ServiceName => "private-gateway";

@@ -2,8 +2,10 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -202,16 +204,20 @@ public class DnsLeakPreventionVerifierTests
             _listener.Start();
             Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
 
-            _serverTask = Task.Run(async () =>
+            // LongRunning ensures a dedicated OS thread starts immediately, bypassing thread-pool
+            // scheduling delays that can cause the server to not start under heavy parallel-test load.
+            // The entire accept+handle loop is synchronous so it never needs to re-enter the thread
+            // pool — critical for correctness under thread-pool saturation in parallel test runs.
+            _serverTask = Task.Factory.StartNew(() =>
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
                     try
                     {
-                        var client = await _listener.AcceptTcpClientAsync(_cts.Token);
-                        _ = HandleClientAsync(client, _cts.Token);
+                        var client = _listener!.AcceptTcpClient();
+                        HandleClientSync(client);
                     }
-                    catch (OperationCanceledException)
+                    catch (SocketException)
                     {
                         break;
                     }
@@ -219,15 +225,11 @@ public class DnsLeakPreventionVerifierTests
                     {
                         break;
                     }
-                    catch (SocketException) when (_cts.IsCancellationRequested)
-                    {
-                        break;
-                    }
                 }
-            });
+            }, _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
-        private async Task HandleClientAsync(TcpClient client, CancellationToken ct)
+        private void HandleClientSync(TcpClient client)
         {
             using var c = client;
             try
@@ -236,28 +238,26 @@ public class DnsLeakPreventionVerifierTests
 
                 // Read the SOCKS5 handshake from the client.
                 var handshake = new byte[3];
-                await stream.ReadAsync(handshake, 0, handshake.Length, ct);
+                var read = 0;
+                while (read < handshake.Length)
+                    read += stream.Read(handshake, read, handshake.Length - read);
 
                 var response = new byte[] { 0x05, 0x00 };
-                await WriteFragmentedAsync(stream, response, FragmentHandshakeResponse, ct);
+                if (FragmentHandshakeResponse && response.Length > 1)
+                {
+                    stream.Write(response, 0, 1);
+                    Thread.Sleep(5); // simulate network fragmentation delay
+                    stream.Write(response, 1, response.Length - 1);
+                }
+                else
+                {
+                    stream.Write(response, 0, response.Length);
+                }
             }
             catch
             {
                 // Ignore mock transport errors in test environment.
             }
-        }
-
-        private static async Task WriteFragmentedAsync(Stream stream, byte[] payload, bool fragment, CancellationToken ct)
-        {
-            if (!fragment || payload.Length <= 1)
-            {
-                await stream.WriteAsync(payload, 0, payload.Length, ct);
-                return;
-            }
-
-            await stream.WriteAsync(payload, 0, 1, ct);
-            await Task.Delay(5, ct);
-            await stream.WriteAsync(payload, 1, payload.Length - 1, ct);
         }
 
         public void Dispose()

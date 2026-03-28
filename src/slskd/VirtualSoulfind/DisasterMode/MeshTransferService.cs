@@ -167,7 +167,7 @@ public sealed class MeshTransferService : IMeshTransferService
         transferCancellationSources[transferId] = transferCancellationSource;
 
         // Start transfer asynchronously
-        _ = Task.Run(() => ExecuteTransferAsync(transferId, transferCancellationSource.Token), CancellationToken.None);
+        _ = Task.Factory.StartNew(() => ExecuteTransferAsync(transferId, transferCancellationSource.Token), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
 
         return Task.FromResult(transferId);
     }

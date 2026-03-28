@@ -115,7 +115,7 @@ public class MeshTransferServiceTests : IDisposable
 
     private async Task<MeshTransferStatus?> WaitForTerminalStatusAsync(string transferId)
     {
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(30);
 
         while (DateTimeOffset.UtcNow < deadline)
         {

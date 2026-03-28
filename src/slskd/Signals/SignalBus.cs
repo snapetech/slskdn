@@ -38,8 +38,9 @@ public class SignalBus : ISignalBus, IDisposable
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         options = optionsMonitor?.CurrentValue ?? throw new ArgumentNullException(nameof(optionsMonitor));
 
-        // Start cleanup task for expired signal IDs
-        cleanupTask = Task.Run(CleanupExpiredSignalIdsAsync);
+        // LongRunning ensures a dedicated OS thread starts immediately, avoiding thread-pool
+        // saturation delays that would prevent the cleanup task from starting in tests.
+        cleanupTask = Task.Factory.StartNew(CleanupExpiredSignalIds, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
     /// <inheritdoc />
@@ -201,16 +202,22 @@ public class SignalBus : ISignalBus, IDisposable
 
     /// <summary>
     /// Cleanup expired signal IDs from the deduplication cache.
+    /// Runs entirely on the dedicated LongRunning OS thread so that cancellation
+    /// via WaitHandle.WaitOne wakes up synchronously without requiring a thread-pool
+    /// continuation, making Dispose() reliably fast under thread-pool saturation.
     /// </summary>
-    private async Task CleanupExpiredSignalIdsAsync()
+    private void CleanupExpiredSignalIds()
     {
         while (!cleanupCancellationTokenSource.IsCancellationRequested)
         {
+            // Block the dedicated thread until cancelled or 5 minutes elapses.
+            // WaitHandle.WaitOne returns immediately (synchronously) when Cancel() is called.
+            cleanupCancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMinutes(5));
+            if (cleanupCancellationTokenSource.IsCancellationRequested) break;
+
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(5), cleanupCancellationTokenSource.Token);
-
-                await seenSignalIdsLock.WaitAsync(cleanupCancellationTokenSource.Token);
+                seenSignalIdsLock.Wait();
                 try
                 {
                     var now = DateTimeOffset.UtcNow;
@@ -251,10 +258,6 @@ public class SignalBus : ISignalBus, IDisposable
                 {
                     seenSignalIdsLock.Release();
                 }
-            }
-            catch (OperationCanceledException) when (cleanupCancellationTokenSource.IsCancellationRequested)
-            {
-                break;
             }
             catch (Exception ex)
             {

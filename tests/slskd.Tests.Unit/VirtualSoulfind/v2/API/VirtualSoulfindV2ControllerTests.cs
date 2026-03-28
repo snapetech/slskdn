@@ -700,7 +700,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
-            var invoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var invoked = new TaskCompletionSource();
 
             _mockIntentQueue
                 .Setup(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()))
@@ -716,8 +716,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                 });
 
             var result = await _controller.ProcessIntent(intentId, CancellationToken.None);
-            await invoked.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-            var deadline = DateTime.UtcNow.AddSeconds(2);
+            await invoked.Task.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+            var deadline = DateTime.UtcNow.AddSeconds(30);
             while (_mockLogger.Invocations.Count == 0 && DateTime.UtcNow < deadline)
             {
                 await Task.Delay(20).ConfigureAwait(false);

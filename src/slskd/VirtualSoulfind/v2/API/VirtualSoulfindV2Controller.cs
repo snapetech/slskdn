@@ -579,7 +579,7 @@ namespace slskd.VirtualSoulfind.v2.API
 
             // Process asynchronously
             _ = ObserveBackgroundTaskAsync(
-                Task.Run(() => _processor.ProcessIntentAsync(intentId, CancellationToken.None), CancellationToken.None),
+                Task.Factory.StartNew(() => _processor.ProcessIntentAsync(intentId, CancellationToken.None), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap(),
                 intentId);
 
             return Accepted(new { Message = "Processing started", IntentId = intentId });

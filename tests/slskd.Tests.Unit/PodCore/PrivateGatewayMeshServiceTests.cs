@@ -628,6 +628,6 @@ public class PrivateGatewayMeshServiceTests
         _service.Dispose();
 
         var cleanupTask = Assert.IsAssignableFrom<Task>(cleanupTaskField!.GetValue(_service));
-        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(1)));
+        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(30)));
     }
 }

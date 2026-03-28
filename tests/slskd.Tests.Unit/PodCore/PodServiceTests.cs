@@ -15,17 +15,13 @@ public class PodServiceTests
     [Fact]
     public async Task CreateAsync_StillStartsBackgroundPublish_WhenCallerTokenIsAlreadyCancelled()
     {
-        var publishStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var publisher = new Mock<IPodPublisher>();
         publisher
             .Setup(x => x.PublishPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .Returns<Pod, CancellationToken>((_, ct) =>
-            {
-                publishStarted.TrySetResult(true);
-                return Task.CompletedTask;
-            });
+            .Returns(Task.CompletedTask);
 
-        var service = new PodService(publisher.Object);
+        // Synchronous runner: background work runs inline, no thread-scheduling dependency.
+        var service = new PodService(publisher.Object, backgroundRunner: work => work());
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -36,8 +32,6 @@ public class PodServiceTests
             Visibility = PodVisibility.Listed,
         }, cts.Token);
 
-        await publishStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-
         Assert.Equal("pod:00000000000000000000000000000001", pod.PodId);
         publisher.Verify(x => x.PublishPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -45,17 +39,13 @@ public class PodServiceTests
     [Fact]
     public async Task UpdateChannelAsync_StillStartsBackgroundPublish_WhenCallerTokenIsAlreadyCancelled()
     {
-        var publishStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var publisher = new Mock<IPodPublisher>();
         publisher
             .Setup(x => x.PublishPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
-            .Returns<Pod, CancellationToken>((_, ct) =>
-            {
-                publishStarted.TrySetResult(true);
-                return Task.CompletedTask;
-            });
+            .Returns(Task.CompletedTask);
 
-        var service = new PodService(publisher.Object);
+        // Synchronous runner: background work runs inline, no thread-scheduling dependency.
+        var service = new PodService(publisher.Object, backgroundRunner: work => work());
         await service.CreateAsync(new Pod
         {
             PodId = "pod:00000000000000000000000000000002",
@@ -79,8 +69,6 @@ public class PodServiceTests
             "pod:00000000000000000000000000000002",
             new PodChannel { ChannelId = "updates", Name = "release-updates", Kind = PodChannelKind.General },
             cts.Token);
-
-        await publishStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.True(updated);
         publisher.Verify(x => x.PublishPodAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()), Times.Once);

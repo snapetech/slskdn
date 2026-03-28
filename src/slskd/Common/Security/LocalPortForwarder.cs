@@ -930,7 +930,9 @@ internal class ForwarderConnection : IDisposable
             }
         }
 
-        _streamMappingCompletion.TrySetResult();
+        // Do NOT signal completion here. MapStreamsAsync's finally block sets _streamMappingCts = null
+        // before calling TrySetResult; signalling here races with that cleanup and can cause callers
+        // of WaitForStreamMappingAsync to observe a non-null _streamMappingCts.
     }
 
     public async Task CloseAsync()

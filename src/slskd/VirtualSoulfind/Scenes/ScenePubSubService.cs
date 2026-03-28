@@ -77,7 +77,7 @@ public class ScenePubSubService : IScenePubSubService, IDisposable
         this.logger = logger;
         this.dht = dht;
 
-        pollLoopTask = Task.Run(() => RunPollLoopAsync(pollInterval, pollLoopCancellationTokenSource.Token), CancellationToken.None);
+        pollLoopTask = Task.Factory.StartNew(() => RunPollLoopAsync(pollInterval, pollLoopCancellationTokenSource.Token), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
     }
 
     public event EventHandler<SceneMessageReceivedEventArgs>? MessageReceived;

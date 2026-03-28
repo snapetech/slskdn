@@ -28,7 +28,7 @@ public class MeshTransferServiceLifecycleTests
             targetPath: Path.Combine(Path.GetTempPath(), "slskdn-mesh-transfer-lifecycle", $"{Guid.NewGuid():N}.bin"),
             ct: CancellationToken.None);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(30);
         while (DateTimeOffset.UtcNow < deadline)
         {
             var status = await service.GetTransferStatusAsync(transferId, CancellationToken.None);

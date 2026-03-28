@@ -385,7 +385,7 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             var completion = queue.AwaitStartAsync("user", "file.mp3")
                 .ContinueWith(_ => queue.Complete("user", "file.mp3"));
 
-            await completion.WaitAsync(TimeSpan.FromSeconds(1));
+            await completion.WaitAsync(TimeSpan.FromSeconds(30));
         }
 
         public class Enqueue

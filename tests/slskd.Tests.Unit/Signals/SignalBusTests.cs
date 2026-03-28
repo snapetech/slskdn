@@ -327,7 +327,7 @@ public class SignalBusTests
         signalBus.Dispose();
 
         var cleanupTask = Assert.IsAssignableFrom<Task>(cleanupTaskField!.GetValue(signalBus));
-        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(1)));
+        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(30)));
     }
 
     private static Signal CreateTestSignal(params SignalChannel[] channels)

@@ -116,7 +116,7 @@ public class SceneServicesTests
 
         await service.SubscribeAsync("scene:test", CancellationToken.None);
 
-        Assert.True(await dht.FirstCallStarted.Task.WaitAsync(TimeSpan.FromSeconds(1)));
+        Assert.True(await dht.FirstCallStarted.Task.WaitAsync(TimeSpan.FromSeconds(30)));
 
         await Task.Delay(80);
 

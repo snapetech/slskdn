@@ -58,7 +58,7 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
         _generationCts?.Dispose();
         var generationCts = new CancellationTokenSource();
         _generationCts = generationCts;
-        _generationTask = GenerateCoverTrafficAsync(generationCts.Token);
+        _generationTask = Task.Factory.StartNew(() => GenerateCoverTraffic(generationCts.Token), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
         _logger.LogInformation("Cover traffic generation started with interval {Interval}s", _options.IntervalSeconds);
         return Task.CompletedTask;
@@ -68,11 +68,11 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
     /// Stops the cover traffic generation.
     /// </summary>
     /// <returns>A task that completes when generation stops.</returns>
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         if (_disposed)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         _generationCts?.Cancel();
@@ -81,11 +81,12 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
         {
             try
             {
-                await _generationTask.WaitAsync(TimeSpan.FromSeconds(5));
+                if (!_generationTask.Wait(TimeSpan.FromSeconds(5)))
+                    _logger.LogWarning("Cover traffic generation did not stop cleanly within timeout");
             }
-            catch (TimeoutException)
+            catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException))
             {
-                _logger.LogWarning("Cover traffic generation did not stop cleanly within timeout");
+                // Expected on cancellation
             }
             finally
             {
@@ -96,6 +97,7 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
         }
 
         _logger.LogInformation("Cover traffic generation stopped");
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -140,59 +142,55 @@ public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private async Task GenerateCoverTrafficAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Runs the cover traffic generation loop on a dedicated LongRunning OS thread.
+    /// Uses WaitHandle.WaitOne for the interval so that Cancel() wakes the thread
+    /// synchronously — no thread-pool continuation needed, making Stop() reliably fast
+    /// under thread-pool saturation.
+    /// </summary>
+    private void GenerateCoverTraffic(CancellationToken cancellationToken)
     {
         var intervalMs = _options.IntervalSeconds * 1000;
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            try
-            {
-                // Wait for the configured interval
-                await Task.Delay(intervalMs, cancellationToken);
-                if (cancellationToken.IsCancellationRequested)
-                    break;
-
-                // Check if we should send cover traffic
-                bool shouldSend = false;
-                TimeSpan timeSinceLastTraffic;
-
-                lock (_statsLock)
-                {
-                    timeSinceLastTraffic = DateTimeOffset.UtcNow - _lastTrafficTime;
-                    shouldSend = timeSinceLastTraffic.TotalSeconds >= _options.IntervalSeconds;
-                }
-
-                if (shouldSend && (_options.OnlyWhenIdle || timeSinceLastTraffic.TotalSeconds >= _options.IntervalSeconds))
-                {
-                    // Generate and send cover message
-                    try
-                    {
-                        await _sendCoverMessageAsync();
-
-                        lock (_statsLock)
-                        {
-                            _coverMessagesSent++;
-                        }
-
-                        _logger.LogDebug("Sent cover traffic message ({Total} total)", _coverMessagesSent);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to send cover traffic message");
-                    }
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                // Expected when cancelled
+            // Block the dedicated thread until the interval elapses or cancelled.
+            cancellationToken.WaitHandle.WaitOne(intervalMs);
+            if (cancellationToken.IsCancellationRequested)
                 break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in cover traffic generation loop");
 
-                // Continue the loop despite errors
+            // Check if we should send cover traffic
+            bool shouldSend = false;
+            TimeSpan timeSinceLastTraffic;
+
+            lock (_statsLock)
+            {
+                timeSinceLastTraffic = DateTimeOffset.UtcNow - _lastTrafficTime;
+                shouldSend = timeSinceLastTraffic.TotalSeconds >= _options.IntervalSeconds;
+            }
+
+            if (shouldSend && (_options.OnlyWhenIdle || timeSinceLastTraffic.TotalSeconds >= _options.IntervalSeconds))
+            {
+                // Generate and send cover message
+                try
+                {
+                    _sendCoverMessageAsync().GetAwaiter().GetResult();
+
+                    lock (_statsLock)
+                    {
+                        _coverMessagesSent++;
+                    }
+
+                    _logger.LogDebug("Sent cover traffic message ({Total} total)", _coverMessagesSent);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to send cover traffic message");
+                }
             }
         }
     }

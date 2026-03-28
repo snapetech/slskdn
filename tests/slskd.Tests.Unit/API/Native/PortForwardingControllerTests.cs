@@ -137,19 +137,30 @@ public class PortForwardingControllerTests
     [Fact]
     public async Task StartForwarding_ReturnsSanitizedSuccessMessage()
     {
-        var controller = CreateController();
+        var forwarder = new LocalPortForwarder(
+            NullLogger<LocalPortForwarder>.Instance,
+            Mock.Of<IMeshServiceClient>());
+        var controller = new PortForwardingController(forwarder);
 
-        var result = await controller.StartForwarding(new StartPortForwardingRequest
+        try
         {
-            LocalPort = 12347,
-            PodId = "pod-1",
-            DestinationHost = "example.com",
-            DestinationPort = 80
-        });
+            var result = await controller.StartForwarding(new StartPortForwardingRequest
+            {
+                LocalPort = 12347,
+                PodId = "pod-1",
+                DestinationHost = "example.com",
+                DestinationPort = 80
+            });
 
-        var ok = Assert.IsType<OkObjectResult>(result);
-        Assert.Contains("Port forwarding started", ok.Value?.ToString() ?? string.Empty);
-        Assert.DoesNotContain("12347", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.Contains("Port forwarding started", ok.Value?.ToString() ?? string.Empty);
+            Assert.DoesNotContain("12347", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            await forwarder.StopForwardingAsync(12347);
+            forwarder.Dispose();
+        }
     }
 
     [Fact]

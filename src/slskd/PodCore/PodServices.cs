@@ -61,14 +61,20 @@ public class PodService : IPodService
         IPodPublisher? podPublisher = null,
         IPodMembershipSigner? membershipSigner = null,
         IContentLinkService? contentLinkService = null,
-        ILogger<PodService>? logger = null)
+        ILogger<PodService>? logger = null,
+        Func<Func<Task>, Task>? backgroundRunner = null)
     {
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
         this.logger = logger;
         ContentLinkService = contentLinkService;
+        BackgroundRunner = backgroundRunner ?? DefaultBackgroundRunner;
     }
 
+    private static readonly Func<Func<Task>, Task> DefaultBackgroundRunner =
+        work => Task.Factory.StartNew(work, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+
+    private Func<Func<Task>, Task> BackgroundRunner { get; }
     private IContentLinkService? ContentLinkService { get; }
 
     public Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
@@ -501,7 +507,7 @@ public class PodService : IPodService
     {
         try
         {
-            await Task.Run(publishAsync, CancellationToken.None).ConfigureAwait(false);
+            await BackgroundRunner(publishAsync).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

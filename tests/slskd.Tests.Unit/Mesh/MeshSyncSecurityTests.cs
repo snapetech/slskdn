@@ -779,7 +779,7 @@ namespace slskd.Tests.Unit.Mesh
             var pendingRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>>)pendingRequestsField!.GetValue(meshSyncService)!;
 
             var requestId = "mesh-peer:0123456789abcdef";
-            var existing = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var existing = new TaskCompletionSource<MeshRespKeyMessage>();
             pendingRequests[requestId] = existing;
 
             var method = typeof(MeshSyncService).GetMethod("QueryPeerForHashAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -814,7 +814,7 @@ namespace slskd.Tests.Unit.Mesh
             Assert.NotNull(pendingRequestsField);
             var pendingRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespKeyMessage>>)pendingRequestsField!.GetValue(meshSyncService)!;
 
-            var existing = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var existing = new TaskCompletionSource<MeshRespKeyMessage>();
             pendingRequests["mesh-peer:0123456789abcdef"] = existing;
 
             var method = typeof(MeshSyncService).GetMethod("QueryPeerForHashAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -842,7 +842,7 @@ namespace slskd.Tests.Unit.Mesh
             var pendingChunkRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>>)pendingChunkRequestsField!.GetValue(meshSyncService)!;
 
             var requestId = "mesh-peer:0123456789abcdef:0";
-            var existing = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var existing = new TaskCompletionSource<MeshRespChunkMessage>();
             pendingChunkRequests[requestId] = existing;
 
             var task = meshSyncService.RequestChunkAsync("mesh-peer", "0123456789abcdef", 0, 1024, CancellationToken.None);
@@ -867,7 +867,7 @@ namespace slskd.Tests.Unit.Mesh
             Assert.NotNull(pendingChunkRequestsField);
             var pendingChunkRequests = (ConcurrentDictionary<string, TaskCompletionSource<MeshRespChunkMessage>>)pendingChunkRequestsField!.GetValue(meshSyncService)!;
 
-            var existing = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var existing = new TaskCompletionSource<MeshRespChunkMessage>();
             pendingChunkRequests["mesh-peer:0123456789abcdef:0"] = existing;
 
             var task = meshSyncService.RequestChunkAsync(" mesh-peer ", " 0123456789abcdef ", 0, 1024, CancellationToken.None);

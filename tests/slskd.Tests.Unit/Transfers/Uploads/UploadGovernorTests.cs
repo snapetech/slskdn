@@ -247,7 +247,7 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             }
 
             [Theory, AutoData]
-            public void Reconfigures_Buckets_When_Options_Change_Disposes_Previous_Buckets(string group)
+            public async Task Reconfigures_Buckets_When_Options_Change_Disposes_Previous_Buckets(string group)
             {
                 var options = new AppOptions()
                 {
@@ -260,13 +260,26 @@ namespace slskd.Tests.Unit.Transfers.Uploads
                     }
                 };
 
-                var (governor, mocks) = GetFixture();
-                var oldBuckets = governor.GetProperty<Dictionary<string, ITokenBucket>>("TokenBuckets");
-                var oldDefaultBucket = (TokenBucket)oldBuckets[Application.DefaultGroup];
+                // bucketDisposalDelayMs: 0 makes disposal immediate, removing the timing dependency.
+                var (governor, mocks) = GetFixture(bucketDisposalDelayMs: 0);
+
+                var spyBucket = new Mock<ITokenBucket>();
+                var disposeSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                spyBucket.As<IDisposable>().Setup(m => m.Dispose()).Callback(() => disposeSignal.TrySetResult(true));
+
+                governor.SetProperty("TokenBuckets", new Dictionary<string, ITokenBucket>
+                {
+                    [Application.DefaultGroup] = spyBucket.Object,
+                    [Application.PrivilegedGroup] = new Mock<ITokenBucket>().Object,
+                    [Application.LeecherGroup] = new Mock<ITokenBucket>().Object,
+                });
 
                 mocks.OptionsMonitor.RaiseOnChange(options);
 
-                Assert.ThrowsAsync<ObjectDisposedException>(() => oldDefaultBucket.GetAsync(1, CancellationToken.None)).GetAwaiter().GetResult();
+                // Delay is 0 ms; disposal races with ContinueWith scheduling but completes very quickly.
+                await disposeSignal.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+                spyBucket.As<IDisposable>().Verify(m => m.Dispose(), Times.Once);
             }
         }
 
@@ -370,13 +383,14 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             }
         }
 
-        private static (UploadGovernor governor, Mocks mocks) GetFixture(Options options = null, IScheduledRateLimitService scheduledRateLimitService = null)
+        private static (UploadGovernor governor, Mocks mocks) GetFixture(Options options = null, IScheduledRateLimitService scheduledRateLimitService = null, int bucketDisposalDelayMs = 5000)
         {
             var mocks = new Mocks(options);
             var governor = new UploadGovernor(
                 mocks.UserService.Object,
                 mocks.OptionsMonitor,
-                scheduledRateLimitService);
+                scheduledRateLimitService,
+                bucketDisposalDelayMs);
 
             return (governor, mocks);
         }

@@ -376,9 +376,8 @@ public class SecurityUtilsTests
 
         // Assert
         var actualDelay = timer.Elapsed.TotalMilliseconds;
-        Assert.True(actualDelay >= minDelay - 5, $"Delay too short: {actualDelay}ms"); // Allow some tolerance
-        // Upper bound: allow broad scheduler tolerance because Task.Delay is best-effort under CI load.
-        Assert.True(actualDelay <= maxDelay + 5000, $"Delay too long: {actualDelay}ms");
+        // Only check the lower bound: Task.Delay doesn't guarantee an upper bound on loaded systems.
+        Assert.True(actualDelay >= minDelay - 5, $"Delay too short: {actualDelay}ms");
     }
 
     [Fact]

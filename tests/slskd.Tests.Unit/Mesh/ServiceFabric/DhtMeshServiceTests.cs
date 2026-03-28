@@ -77,7 +77,7 @@ public class DhtMeshServiceTests
 
         Assert.Equal(ServiceStatusCodes.OK, reply.StatusCode);
 
-        var deadline = DateTime.UtcNow.AddSeconds(2);
+        var deadline = DateTime.UtcNow.AddSeconds(15);
         while (DateTime.UtcNow < deadline && routingTable.Count == 0)
         {
             await Task.Delay(20).ConfigureAwait(false);

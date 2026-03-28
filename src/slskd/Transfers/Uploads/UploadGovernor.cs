@@ -67,13 +67,16 @@ namespace slskd.Transfers
         /// <param name="userService">The UserService instance to use.</param>
         /// <param name="optionsMonitor">The OptionsMonitor instance to use.</param>
         /// <param name="scheduledRateLimitService">The scheduled rate limit service to use.</param>
+        /// <param name="bucketDisposalDelayMs">Milliseconds to delay disposal of replaced buckets. Defaults to 5000. Pass 0 in unit tests.</param>
         public UploadGovernor(
             IUserService userService,
             IOptionsMonitor<Options> optionsMonitor,
-            IScheduledRateLimitService? scheduledRateLimitService = null)
+            IScheduledRateLimitService? scheduledRateLimitService = null,
+            int bucketDisposalDelayMs = 5000)
         {
             Users = userService;
             ScheduledRateLimitService = scheduledRateLimitService;
+            BucketDisposalDelayMs = bucketDisposalDelayMs;
 
             OptionsMonitor = optionsMonitor;
             OptionsMonitorRegistration = OptionsMonitor.OnChange(Configure);
@@ -86,6 +89,7 @@ namespace slskd.Transfers
         private IDisposable? OptionsMonitorRegistration { get; set; }
         private string LastOptionsHash { get; set; } = string.Empty;
         private int LastGlobalSpeedLimit { get; set; }
+        private int BucketDisposalDelayMs { get; }
         private Dictionary<string, ITokenBucket> TokenBuckets { get; set; } = new Dictionary<string, ITokenBucket>();
         private IUserService Users { get; }
         private IScheduledRateLimitService? ScheduledRateLimitService { get; }
@@ -190,7 +194,16 @@ namespace slskd.Transfers
             // Delay disposal so any in-flight GetBytesAsync calls that already captured a reference
             // to the old bucket can complete safely before SyncRoot is disposed.  The timer interval
             // is 100 ms, so 5 s is many multiples of the worst-case hold time.
-            _ = Task.Delay(5000).ContinueWith(_ => DisposeBuckets(previousBuckets), TaskScheduler.Default);
+            // When delay is 0 (test mode), dispose synchronously to avoid thread-pool scheduling
+            // delays that make timing-sensitive tests unreliable.
+            if (BucketDisposalDelayMs == 0)
+            {
+                DisposeBuckets(previousBuckets);
+            }
+            else
+            {
+                _ = Task.Delay(BucketDisposalDelayMs).ContinueWith(_ => DisposeBuckets(previousBuckets), TaskScheduler.Default);
+            }
 
             LastGlobalSpeedLimit = effectiveGlobalUploadSpeedLimit;
             LastOptionsHash = optionsHash;

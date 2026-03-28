@@ -56,12 +56,16 @@ public class RateLimitTimeoutTests
     {
         private readonly int _port;
         public TestTunnelConnectivity(int port) => _port = port;
-        public async Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
+        public Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var c = new TcpClient();
-            await c.ConnectAsync(IPAddress.Loopback, _port, cancellationToken);
+            // Use synchronous connect to bypass the async I/O subsystem. Under heavy parallel
+            // test load, async TCP completions can be delayed 10+ seconds even for loopback;
+            // synchronous Socket.Connect returns as soon as the kernel accepts the SYN.
+            c.Client.Connect("127.0.0.1", _port);
             var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
-            return (c.GetStream(), ip);
+            return Task.FromResult<(NetworkStream, string?)>((c.GetStream(), ip));
         }
     }
 
@@ -126,15 +130,14 @@ public class RateLimitTimeoutTests
         _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
         _podServiceMock.Setup(x => x.GetMembersAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod.Members);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
         var request = CreateOpenTunnelRequest(TestPodId, "192.168.1.100", 80);
         var result = await service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = "test-peer" });
 
         Assert.True(result.IsSuccess);
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload!);
         Assert.True(response?.Accepted == true);
-        using (await acceptTask) { }
+        // Sync connect already put the connection in the kernel backlog; accept it synchronously.
+        listener.AcceptTcpClient().Dispose();
         listener.Stop();
     }
 
@@ -232,15 +235,14 @@ public class RateLimitTimeoutTests
         _podServiceMock.Setup(x => x.GetPodAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
         _podServiceMock.Setup(x => x.GetMembersAsync(TestPodId, It.IsAny<CancellationToken>())).ReturnsAsync(pod.Members);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
         var request = CreateOpenTunnelRequest(TestPodId, "192.168.1.100", 80);
         var result = await service.HandleCallAsync(CreateServiceCall("OpenTunnel", request), new MeshServiceContext { RemotePeerId = "test-peer" });
 
         Assert.True(result.IsSuccess);
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload!);
         Assert.True(response?.Accepted == true);
-        using (await acceptTask) { }
+        // Sync connect already put the connection in the kernel backlog; accept it synchronously.
+        listener.AcceptTcpClient().Dispose();
         listener.Stop();
     }
 
