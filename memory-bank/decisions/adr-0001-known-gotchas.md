@@ -234,6 +234,38 @@ Directory.CreateDirectory(downloadDir);
 
 **Why This Keeps Happening**: path bugs often get fixed only at the first failing call site, but the real pattern is broader: any option-backed path that represents app-owned writable state must be normalized once against `AppDirectory`, and any component that writes beneath a configurable directory must ensure the directory exists before opening files inside it.
 
+### 0xF07. Partially Constructed `SoulseekClient` Instances Must Disable Listener And Distributed Network Until Startup Reconfiguration Completes
+
+**The Bug**: the DI-time `SoulseekClient` placeholder was created with implicit library defaults, which enable the listener and distributed network before `Application.InitializeApplicationAsync(...)` applies the real startup configuration. In Docker startup this allowed upstream detached listener/connect tasks to fault with benign `Not listening...` and `Connection refused` exceptions that later surfaced as unobserved-task "fatal" logs.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+new SoulseekClient(options: new SoulseekClientOptions(
+    maximumConcurrentUploads: OptionsAtStartup.Global.Upload.Slots,
+    maximumConcurrentDownloads: OptionsAtStartup.Global.Download.Slots,
+    raiseEventsAsynchronously: true));
+```
+
+**Correct**:
+```csharp
+internal static SoulseekClientOptions CreateInitialSoulseekClientOptions(OptionsAtStartup optionsAtStartup)
+{
+    return new SoulseekClientOptions(
+        enableListener: false,
+        enableDistributedNetwork: false,
+        acceptDistributedChildren: false,
+        maximumConcurrentUploads: optionsAtStartup.Global.Upload.Slots,
+        maximumConcurrentDownloads: optionsAtStartup.Global.Download.Slots,
+        raiseEventsAsynchronously: true);
+}
+```
+
+**Why This Keeps Happening**: partial bootstrapping objects feel "inactive", but many third-party clients carry live background infrastructure behind default constructor values. When a service will be fully reconfigured later, the placeholder instance must start in the most inert state possible, and the unobserved-task handler should only downgrade the exact benign library races that remain instead of logging them as process-fatal failures.
+
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 ### 0xE0. Reachable Mesh Content Streams Must Reuse The Existing Content Retrieval Contract

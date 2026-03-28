@@ -6,7 +6,9 @@ namespace slskd.Tests.Unit;
 
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Reflection;
+using Soulseek;
 using Xunit;
 
 [Collection("ProgramAppDirectory")]
@@ -104,6 +106,40 @@ public class ProgramPathNormalizationTests
         {
             SetAppDirectory(originalAppDirectory);
         }
+    }
+
+    [Fact]
+    public void CreateInitialSoulseekClientOptions_DisablesListenerAndDistributedNetworkUntilStartupReconfiguration()
+    {
+        var options = Program.CreateInitialSoulseekClientOptions(new OptionsAtStartup());
+
+        Assert.False(options.EnableListener);
+        Assert.False(options.EnableDistributedNetwork);
+        Assert.False(options.AcceptDistributedChildren);
+    }
+
+    [Fact]
+    public void IsBenignUnobservedTaskException_ReturnsTrue_ForListenerStartupRace()
+    {
+        var exception = new AggregateException(new InvalidOperationException("Not listening. You must call the Start() method before calling this method."));
+
+        Assert.True(Program.IsBenignUnobservedTaskException(exception));
+    }
+
+    [Fact]
+    public void IsBenignUnobservedTaskException_ReturnsTrue_ForConnectionRefusedSocketFailure()
+    {
+        var exception = new AggregateException(new SocketException((int)SocketError.ConnectionRefused));
+
+        Assert.True(Program.IsBenignUnobservedTaskException(exception));
+    }
+
+    [Fact]
+    public void IsBenignUnobservedTaskException_ReturnsFalse_ForUnexpectedFailures()
+    {
+        var exception = new AggregateException(new InvalidOperationException("boom"));
+
+        Assert.False(Program.IsBenignUnobservedTaskException(exception));
     }
 
     private static void SetAppDirectory(string value)

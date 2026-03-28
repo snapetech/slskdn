@@ -347,6 +347,41 @@ namespace slskd
             return ResolveOptionalAppRelativePath(candidate);
         }
 
+        internal static SoulseekClientOptions CreateInitialSoulseekClientOptions(OptionsAtStartup optionsAtStartup)
+        {
+            return new SoulseekClientOptions(
+                enableListener: false,
+                enableDistributedNetwork: false,
+                acceptDistributedChildren: false,
+                maximumConcurrentUploads: optionsAtStartup.Global.Upload.Slots,
+                maximumConcurrentDownloads: optionsAtStartup.Global.Download.Slots,
+                minimumDiagnosticLevel: optionsAtStartup.Soulseek.DiagnosticLevel.ToEnum<Soulseek.Diagnostics.DiagnosticLevel>(),
+                maximumConcurrentSearches: 2,
+                raiseEventsAsynchronously: true);
+        }
+
+        internal static bool IsBenignUnobservedTaskException(Exception exception)
+        {
+            var aggregate = exception as AggregateException;
+            var exceptions = aggregate?.Flatten().InnerExceptions ?? [exception];
+
+            return exceptions.Count > 0 && exceptions.All(IsBenignUnobservedTaskInnerException);
+        }
+
+        private static bool IsBenignUnobservedTaskInnerException(Exception exception)
+        {
+            return exception switch
+            {
+                InvalidOperationException invalidOperationException
+                    when string.Equals(
+                        invalidOperationException.Message,
+                        "Not listening. You must call the Start() method before calling this method.",
+                        StringComparison.Ordinal) => true,
+                SocketException socketException when socketException.SocketErrorCode == SocketError.ConnectionRefused => true,
+                _ => false,
+            };
+        }
+
         private static IDisposable? DotNetRuntimeStats { get; set; }
         private static VolatileOverlayConfigurationSource<OptionsOverlay> VolatileOverlayConfigurationSource { get; set; } = new VolatileOverlayConfigurationSource<OptionsOverlay>();
 
@@ -995,12 +1030,7 @@ namespace slskd
             // add a partially configured instance of SoulseekClient. the Application instance will
             // complete configuration at startup.
             services.AddSingleton<ISoulseekClient, SoulseekClient>(_ =>
-                new SoulseekClient(options: new SoulseekClientOptions(
-                    maximumConcurrentUploads: OptionsAtStartup.Global.Upload.Slots,
-                    maximumConcurrentDownloads: OptionsAtStartup.Global.Download.Slots,
-                    minimumDiagnosticLevel: OptionsAtStartup.Soulseek.DiagnosticLevel.ToEnum<Soulseek.Diagnostics.DiagnosticLevel>(),
-                    maximumConcurrentSearches: 2,
-                    raiseEventsAsynchronously: true)));
+                new SoulseekClient(options: CreateInitialSoulseekClientOptions(OptionsAtStartup)));
 
             // add the core application service to DI as well as a hosted service so that other services can
             // access instance methods
@@ -3888,15 +3918,30 @@ namespace slskd
 
             TaskScheduler.UnobservedTaskException += (sender, e) =>
             {
-                var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
-                Console.Error.WriteLine(msg);
-                Console.Error.WriteLine(e.Exception.StackTrace);
-                try
+                if (IsBenignUnobservedTaskException(e.Exception))
                 {
-                    Log?.Fatal(e.Exception, msg);
+                    var msg = $"[WARN] Ignoring benign unobserved task exception: {e.Exception.Message}";
+                    Console.Error.WriteLine(msg);
+                    try
+                    {
+                        Log?.Warning(e.Exception, msg);
+                    }
+                    catch
+                    {
+                    }
                 }
-                catch
+                else
                 {
+                    var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
+                    Console.Error.WriteLine(msg);
+                    Console.Error.WriteLine(e.Exception.StackTrace);
+                    try
+                    {
+                        Log?.Fatal(e.Exception, msg);
+                    }
+                    catch
+                    {
+                    }
                 }
 
                 e.SetObserved(); // Prevent process termination
