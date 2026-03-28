@@ -73,6 +73,32 @@ Log.Debug("Validation failed: Supplied response credential does not match expect
 
 **Why This Keeps Happening**: Relay auth/debug code lives right next to token verification, so it is easy to log the raw values that are convenient during manual troubleshooting. Treat relay agent names, connection ids, and response credentials like secrets in logs and emit only stable hashed identifiers or higher-level state.
 
+### 0k. `Serilog.Sinks.Grafana.Loki` 8.x Replaced `outputTemplate` With `textFormatter`
+
+**The Bug**: Upgrading `Serilog.Sinks.Grafana.Loki` from 7.x to 8.x broke `Program.ConfigureGlobalLogger()` at compile time because the sink overload no longer accepts `outputTemplate`, and the new default formatter changes payload shape unless a formatter is provided explicitly.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/slskd.csproj`
+
+**Wrong**:
+```csharp
+config => config.GrafanaLoki(
+    OptionsAtStartup.Logger.Loki ?? string.Empty,
+    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+```
+
+**Correct**:
+```csharp
+config => config.GrafanaLoki(
+    OptionsAtStartup.Logger.Loki ?? string.Empty,
+    textFormatter: new MessageTemplateTextFormatter(
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+        null))
+```
+
+**Why This Keeps Happening**: version-bump PRs that look like pure package updates can still carry sink/config API breaks, especially around logging formatters. When upgrading logging sinks, check the new extension-method signature and preserve the intended output shape explicitly instead of assuming template parameters are stable across major versions.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
