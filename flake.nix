@@ -82,15 +82,15 @@
         stableSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-x64.zip";
-            sha256 = "sha256-raVO12qOMs2_NcvtQipi66B5xHZmd-xj04RVTTbaJB4="; # x86_64-linux
+            sha256 = "sha256-raVO12qOMs2/NcvtQipi66B5xHZmd+xj04RVTTbaJB4="; # x86_64-linux
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-arm64.zip";
-            sha256 = "sha256-WdonJtoyH2YJebV_s8s0krsQEYvsdoLgZGOms84FdhU="; # aarch64-linux
+            sha256 = "sha256-WdonJtoyH2YJebV/s8s0krsQEYvsdoLgZGOms84FdhU="; # aarch64-linux
           };
           "x86_64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-x64.zip";
-            sha256 = "sha256-KY70uIcy8KyMzc_D8yWN_5O5jJNksAQj_UubWn3Qoo0="; # x86_64-darwin
+            sha256 = "sha256-KY70uIcy8KyMzc/D8yWN/5O5jJNksAQj/UubWn3Qoo0="; # x86_64-darwin
           };
           "aarch64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-arm64.zip";
