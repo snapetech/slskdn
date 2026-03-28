@@ -31,17 +31,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+      - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Verify .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
-        run: |
-          echo "Using pre-installed .NET SDK"
-          dotnet --version
 
       - name: Setup Soulfind (Docker)
         if: ${{ !contains(runner.name, 'keith') }}
@@ -144,15 +137,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+      - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Verify .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
-        run: dotnet --version
 
       - name: Set Environment Variables
         run: |
