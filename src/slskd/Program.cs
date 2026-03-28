@@ -363,9 +363,11 @@ namespace slskd
         internal static bool IsBenignUnobservedTaskException(Exception exception)
         {
             var aggregate = exception as AggregateException;
-            var exceptions = aggregate?.Flatten().InnerExceptions ?? [exception];
+            var exceptions = aggregate != null
+                ? aggregate.Flatten().InnerExceptions.ToArray()
+                : new[] { exception };
 
-            return exceptions.Count > 0 && exceptions.All(IsBenignUnobservedTaskInnerException);
+            return exceptions.Length > 0 && exceptions.All(IsBenignUnobservedTaskInnerException);
         }
 
         private static bool IsBenignUnobservedTaskInnerException(Exception exception)

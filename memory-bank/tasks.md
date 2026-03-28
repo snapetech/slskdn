@@ -1,3 +1,9 @@
+## 2026-03-28 Completed
+
+- [x] Resolve GitHub issues `#164` and `#165`
+  - Status: done
+  - Notes: Confirmed the mesh overlay key-path fix for non-root Docker app-dir launches and fixed the Docker startup/unobserved-task regression by making the DI-time `SoulseekClient` inert until application reconfiguration completes, then downgrading the exact known-benign upstream listener/connect races from fake-fatal telemetry to warnings. Verified with focused tests, full `dotnet test`, release build, and `bash ./bin/lint`.
+
 # Tasks (Source of Truth)
 
 > This file is the canonical task list for slskdN development.  

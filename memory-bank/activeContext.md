@@ -23,10 +23,20 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Continue broad repo bughunting with clustered fixes, especially app-directory/runtime path handling beyond the earlier release/install work.
+- **Current Task**: Cleared the GitHub issue follow-up for Docker/non-root startup regressions (`#164`, `#165`).
 - **Branch**: `release-main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Closed the Docker startup regression loop for the two open GitHub issues:
+    - confirmed the existing app-directory normalization fix covers the non-root mesh overlay key-path failure from `#164`
+    - made the DI-time placeholder `SoulseekClient` inert (`EnableListener=false`, distributed network disabled) until startup reconfiguration finishes, which removes the detached upstream listener/connect race behind `#165`
+    - downgraded the exact known-benign upstream `Not listening...` / `Connection refused` unobserved exceptions from fake-fatal shutdown telemetry to warnings while preserving fatal treatment for everything else
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs` for the inert initial client options and benign unobserved-exception classifier behavior.
+  - Documented the new gotcha as `adr-0001` entry `0xF07` and committed it immediately per repo policy (`docs: Add gotcha for Soulseek startup listener defaults`).
+  - Confirmed `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ConnectionWatchdogTests" -v minimal` passed (`12/12`), `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`), full `dotnet test` passed (`3671/3671`), and `bash ./bin/lint` passed.
+  - Next steps:
+    - post short non-closing resolution comments on GitHub issues `#164` and `#165` with `gh`
+    - continue the broader runtime/startup bughunt only after those issue updates are posted
   - Continued the broader runtime path bughunt beyond the original mesh-overlay failure into parallel option-backed write directories:
     - `Program` now exposes `ResolveOptionalAppRelativePath(...)` for optional app-owned paths that should remain blank when unset
     - `SecurityStartup` now normalizes relative `DownloadRoot`, `ShareRoot`, and `QuarantineDirectory` values against `Program.AppDirectory`
