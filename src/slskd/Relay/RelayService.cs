@@ -958,7 +958,7 @@ namespace slskd.Relay
 
                 if (!TryGetAgentRegistration(trustedConnectionId, out var trustedRecord))
                 {
-                    Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+                    Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", GetConnectionLogId(trustedConnectionId));
                     return false;
                 }
 
@@ -974,7 +974,7 @@ namespace slskd.Relay
 
                 if (expectedCredential != credential)
                 {
-                    Log.Debug("Validation failed: Supplied credential {Credential} does not match expected credential {Expected}", credential, expectedCredential);
+                    Log.Debug("Validation failed: Supplied response credential does not match expected credential for agent {Agent}", GetAgentLogId(agentName));
                     return false;
                 }
 
@@ -1003,7 +1003,7 @@ namespace slskd.Relay
 
             if (!TryGetAgentRegistration(trustedConnectionId, out var trustedRecord))
             {
-                Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+                Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", GetConnectionLogId(trustedConnectionId));
                 return false;
             }
 
@@ -1019,6 +1019,17 @@ namespace slskd.Relay
 
             var digest = SHA256.HashData(Encoding.UTF8.GetBytes(agentName));
             return $"agent:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
+
+        private static string GetConnectionLogId(string connectionId)
+        {
+            if (string.IsNullOrWhiteSpace(connectionId))
+            {
+                return "connection:unknown";
+            }
+
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(connectionId));
+            return $"connection:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
         }
     }
 }

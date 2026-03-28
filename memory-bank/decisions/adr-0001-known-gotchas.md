@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0j. Relay Validation Logs Must Hash Agent And Connection Identifiers
+
+**The Bug**: Relay credential-validation paths logged raw cached relay connection ids and compared response credentials directly in debug logs, which exposed server-internal identifiers and kept triggering CodeQL cleartext-storage findings.
+
+**Files Affected**:
+- `src/slskd/Relay/RelayService.cs`
+
+**Wrong**:
+```csharp
+Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", trustedConnectionId);
+Log.Debug("Validation failed: Supplied credential {Credential} does not match expected credential {Expected}", credential, expectedCredential);
+```
+
+**Correct**:
+```csharp
+Log.Debug("Validation failed: No registration for cached relay connection {ConnectionId}", GetConnectionLogId(trustedConnectionId));
+Log.Debug("Validation failed: Supplied response credential does not match expected credential for agent {Agent}", GetAgentLogId(agentName));
+```
+
+**Why This Keeps Happening**: Relay auth/debug code lives right next to token verification, so it is easy to log the raw values that are convenient during manual troubleshooting. Treat relay agent names, connection ids, and response credentials like secrets in logs and emit only stable hashed identifiers or higher-level state.
+
 ### 0f. Invalid-Config Startup Tests Must Satisfy Base Option Validation Before Asserting Later Hardening Failures
 
 **The Bug**: `EnforceInvalidConfigIntegrationTests` expected the subprocess to fail on a hardening rule, but CI hit the earlier base-options validation first because the temporary app directory did not contain `wwwroot`, so startup returned success from the early validation path and never reached the hardening check.
