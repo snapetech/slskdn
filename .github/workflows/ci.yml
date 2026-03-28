@@ -35,7 +35,6 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-install-dir: ~/.dotnet
 
       - name: Setup Soulfind (Docker)
         if: ${{ !contains(runner.name, 'keith') }}
@@ -142,7 +141,6 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          dotnet-install-dir: ~/.dotnet
 
       - name: Set Environment Variables
         run: |
