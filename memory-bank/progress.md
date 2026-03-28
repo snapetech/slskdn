@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-03-28 13:08 - GitHub security backlog cleanup on `master`
+
+### Completed
+- Switched to a focused `master`-based security branch to clear the GitHub backlog that was still open only because `release-main` fixes had never landed on the default branch.
+- Finished the remaining relay log hardening in `RelayService` by hashing cached relay connection ids in validation failures and removing direct credential/expected-credential debug logging.
+- Documented that relay logging bug pattern immediately in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it per repo policy.
+- Updated the web dependency line and regenerated the lockfile so `yaml` moved to `2.8.3`, `jsdom` moved to `29.0.1`, `vite` moved to `8.0.3`, and `npm audit fix` normalized the remaining transitive `picomatch` / `brace-expansion` vulnerabilities to patched versions.
+
+### Verification
+- `cd src/web && npm audit --json` reports `0` vulnerabilities.
+- `cd src/web && npm run build` passed.
+- `cd src/web && npm run test -- --run` passed (`8` files / `91` tests).
+
+### Remaining
+- Push the `master` security branch so Dependabot and CodeQL can auto-reconcile against the default branch.
+- Close superseded Dependabot PRs after the default-branch fixes land.
+- Follow up separately on the non-security frontend peer-range drift (`@vitejs/plugin-react` vs Vite 8, `@vitest/coverage-v8` vs Vitest 4).
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

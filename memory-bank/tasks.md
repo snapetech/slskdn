@@ -21,6 +21,11 @@
 - 6. Audit every remaining `AllowAnonymous` controller individually; only true read-only or protocol-required surfaces should stay public.
 - 7. Add a dedicated regression test for intentionally-public protocol endpoints (`ActivityPub`, `WebFinger`, streaming token access, session login/enabled, public profile lookup) so the allowed anonymous surface is documented in code too.
 
+- [ ] **chore**: Align frontend peer dependency ranges after the Vite 8 security bump.
+ - Status: pending
+ - Priority: P3
+ - Notes: The March 2026 security dependency refresh cleared `npm audit`, but `@vitejs/plugin-react` still advertises support through Vite 7 and `@vitest/coverage-v8` still peers against the older Vitest line. Follow up with a deliberate toolchain alignment pass instead of mixing peer-range churn into security-only fixes.
+
 - [ ] **T-919**: Discovery Graph / Constellation substrate
  - Status: in progress
  - Priority: P1

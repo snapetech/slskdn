@@ -23,10 +23,19 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Warning-cleanup, validation, and release-prep are complete locally; root backup-key ignore fixed and repo is ready to be landed on `master` and tagged for the next `build-main` release
-- **Branch**: `e2e-fixture-fix2`
+- **Current Task**: Clear the remaining GitHub Dependabot and CodeQL backlog on the default branch after the release-main fixes landed separately.
+- **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Switched to a focused `master`-based security branch because the remaining open GitHub PRs and security alerts were all tied to `refs/heads/master`, not `release-main`.
+  - Finished the residual relay log hardening on the default-branch line by hashing cached relay connection ids in `RelayService` validation logs and removing direct credential/expected-credential mismatch logging.
+  - Documented that relay logging bug pattern immediately in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it as `docs: Add gotcha for relay validation identifier logging`.
+  - Updated `src/web/package.json` / `src/web/package-lock.json` so `yaml` moved to `2.8.3`, `jsdom` moved to `29.0.1`, `vite` moved to `8.0.3`, and a clean `npm audit fix` normalized the remaining transitive `picomatch` / `brace-expansion` vulnerabilities.
+  - Confirmed `cd src/web && npm audit --json` now reports `0` vulnerabilities, `npm run build` passed, and `npm run test -- --run` passed (`8` files / `91` tests).
+  - Next steps:
+    - commit the web dependency remediation on this branch
+    - push the default-branch security fixes so GitHub can auto-reconcile the open Dependabot / CodeQL findings
+    - close superseded Dependabot PRs after the default branch reflects the fixed dependency line
   - Added the correct root-level ignore for `mesh-overlay.key.prev`; the repository already ignored `/src/slskd/mesh-overlay.key.prev`, but the actual local backup file lives at the repo root.
   - Re-verified the current tree after the warning-reduction and regression-repair passes:
     - `dotnet build src/slskd/slskd.csproj -c Release -p:Version=0.0.0 -t:Rebuild` passes with `0 warnings, 0 errors`

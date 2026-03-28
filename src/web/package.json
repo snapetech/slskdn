@@ -29,7 +29,7 @@
     "semantic-ui-react": "^2.1.5",
     "signalr": "^2.4.1",
     "uuid": "^8.3.0",
-    "yaml": "^1.10.2"
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
@@ -40,14 +40,14 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.5.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.27.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "esbuild": "^0.27.0",
     "eslint": "^8.56.0",
     "eslint-config-canonical": "^47.4.2",
-    "jsdom": "^25.0.0",
+    "jsdom": "^29.0.1",
     "less": "^4.2.0",
     "typescript": "^5.0.0",
-    "vite": "^8.0.0",
+    "vite": "^8.0.3",
     "vitest": "^4.0.0"
   },
   "name": "web",
