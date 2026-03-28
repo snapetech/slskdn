@@ -362,8 +362,8 @@ namespace slskd.Transfers.MultiSource.Discovery
             {
                 try
                 {
-                    searchCycles++;
-                    log.Information("[Discovery] Starting search cycle #{Cycle} for: {Term}", searchCycles, CurrentSearchTerm);
+                    var cycle = Interlocked.Increment(ref searchCycles);
+                    log.Information("[Discovery] Starting search cycle #{Cycle} for: {Term}", cycle, CurrentSearchTerm);
 
                     // Collect responses during the search window
                     var responses = new List<SearchResponse>();
@@ -389,13 +389,14 @@ namespace slskd.Transfers.MultiSource.Discovery
 
                     var searchDuration = DateTime.UtcNow - searchStarted;
                     log.Information("[Discovery] Search cycle #{Cycle} collected {Count} responses in {Duration:F1}s",
-                        searchCycles, responses.Count, searchDuration.TotalSeconds);
+                        cycle, responses.Count, searchDuration.TotalSeconds);
 
                     // Process responses and store in DB
-                    lastCycleNewFiles = await ProcessResponsesAsync(responses, cancellationToken);
+                    var newFiles = await ProcessResponsesAsync(responses, cancellationToken);
+                    Interlocked.Exchange(ref lastCycleNewFiles, newFiles);
 
                     log.Information("[Discovery] Cycle #{Cycle} complete. New files: {New}. Total in DB: {Total}",
-                        searchCycles, lastCycleNewFiles, GetStats().TotalFiles);
+                        cycle, newFiles, GetStats().TotalFiles);
 
                     // Small pause before next cycle
                     await Task.Delay(CyclePauseMs, cancellationToken);
