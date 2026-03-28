@@ -360,6 +360,8 @@ internal sealed class StubDisasterModeCoordinator : global::slskd.VirtualSoulfin
 
         return Task.CompletedTask;
     }
+
+    public void Dispose() { }
 }
 
 internal sealed class StubShadowIndexQueryForFactory : global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery
@@ -616,6 +618,8 @@ internal sealed class StubDownloadService : IDownloadService
     {
         _storage[transfer.Id] = transfer;
     }
+
+    public void Dispose() { }
 }
 
 internal class StubLibraryHealthService : ILibraryHealthService
@@ -761,6 +765,8 @@ internal class StubShareService : IShareService
     public bool TryCancelScan() => false;
     public bool TryGetHost(string name, out slskd.Shares.Host host) { host = _localHost; return name == "local"; }
     public bool TryRemoveHost(string name) => false;
+
+    public void Dispose() { }
 }
 
 internal class StubContentLocator : IContentLocator
@@ -957,4 +963,6 @@ internal class StubSearchService : ISearchService
 
     public Task<int> PruneAsync(int age) => Task.FromResult(0);
     public Task<int> DeleteAllAsync() => Task.FromResult(0);
+
+    public void Dispose() { }
 }

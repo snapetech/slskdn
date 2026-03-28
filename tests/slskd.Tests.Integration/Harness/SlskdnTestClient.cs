@@ -548,6 +548,8 @@ internal sealed class StubDisasterModeCoordinatorForTests : global::slskd.Virtua
 
         return Task.CompletedTask;
     }
+
+    public void Dispose() { }
 }
 
 // Bridge service stubs for BridgeController and BridgeAdminController tests

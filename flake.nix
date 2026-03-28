@@ -94,7 +94,7 @@
           };
           "aarch64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-arm64.zip";
-            sha256 = "sha256-238-YF8RH6hua9UnuPRyEDM20Pou3LL0GxkioxYmpAg="; # aarch64-darwin
+            sha256 = "sha256-238+YF8RH6hua9UnuPRyEDM20Pou3LL0GxkioxYmpAg="; # aarch64-darwin
           };
         };
 
