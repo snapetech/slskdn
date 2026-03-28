@@ -5,6 +5,7 @@
 namespace slskd.VirtualSoulfind.Bridge;
 
 using System.Collections.Concurrent;
+using System.Threading;
 
 /// <summary>
 /// Interface for bridge dashboard data.
@@ -115,6 +116,7 @@ public class BridgeDashboard : IBridgeDashboard
     private readonly BridgeStatistics stats = new();
     private readonly MeshBenefits benefits = new();
     private readonly DateTimeOffset startTime = DateTimeOffset.UtcNow;
+    private readonly object statsLock = new();
 
     public BridgeDashboard(
         ILogger<BridgeDashboard> logger,
@@ -177,17 +179,20 @@ public class BridgeDashboard : IBridgeDashboard
         client.LastActivity = DateTimeOffset.UtcNow;
 
         // Update type-specific counters
-        switch (requestType.ToLowerInvariant())
+        lock (statsLock)
         {
-            case "search":
-                stats.TotalSearches++;
-                break;
-            case "download":
-                stats.TotalDownloads++;
-                break;
-            case "room":
-                stats.TotalRoomJoins++;
-                break;
+            switch (requestType.ToLowerInvariant())
+            {
+                case "search":
+                    stats.TotalSearches++;
+                    break;
+                case "download":
+                    stats.TotalDownloads++;
+                    break;
+                case "room":
+                    stats.TotalRoomJoins++;
+                    break;
+            }
         }
 
         logger.LogDebug("[VSF-BRIDGE-DASHBOARD] Recorded {RequestType} from {ClientId}",
@@ -213,7 +218,10 @@ public class BridgeDashboard : IBridgeDashboard
 
         if (added)
         {
-            stats.TotalConnections++;
+            lock (statsLock)
+            {
+                stats.TotalConnections++;
+            }
         }
 
         client.IpAddress = ipAddress;
@@ -244,8 +252,11 @@ public class BridgeDashboard : IBridgeDashboard
 
     public void RecordMeshBenefit(long bytesViaMesh)
     {
-        benefits.BytesViaMesh += bytesViaMesh;
-        stats.TotalBytesProxied += bytesViaMesh;
+        lock (statsLock)
+        {
+            benefits.BytesViaMesh += bytesViaMesh;
+            stats.TotalBytesProxied += bytesViaMesh;
+        }
 
         logger.LogDebug("[VSF-BRIDGE-DASHBOARD] Recorded {Bytes} bytes via mesh", bytesViaMesh);
     }
