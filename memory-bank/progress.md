@@ -23,6 +23,31 @@
 - Close superseded Dependabot PRs after the default-branch fixes land.
 - Follow up separately on the non-security frontend peer-range drift (`@vitejs/plugin-react` vs Vite 8, `@vitest/coverage-v8` vs Vitest 4).
 
+## 2026-03-28 13:29 - Remaining Dependabot package bump sweep
+
+### Completed
+- Applied the remaining open Dependabot package versions directly to `src/slskd/slskd.csproj` instead of leaving the NuGet PRs stalled:
+  - `AWSSDK.S3` `3.7.511.1 -> 3.7.511.4`
+  - `prometheus-net.DotNetRuntime` `4.4.0 -> 4.4.1`
+  - `Serilog.AspNetCore` `8.0.1 -> 8.0.3`
+  - `Serilog.Sinks.Grafana.Loki` `7.1.1 -> 8.3.2`
+  - `OpenTelemetry` / `OpenTelemetry.Extensions.Hosting` `1.9.0 -> 1.15.0`
+  - `OpenTelemetry.Instrumentation.AspNetCore` `1.9.0 -> 1.15.1`
+  - `OpenTelemetry.Instrumentation.Http` `1.9.0 -> 1.15.0`
+- Fixed the one real upgrade break immediately: Loki 8 removed the `outputTemplate` sink argument, so `Program.ConfigureGlobalLogger()` now supplies an explicit `MessageTemplateTextFormatter` through `textFormatter` to preserve the existing payload shape.
+- Documented that upgrade gotcha in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it immediately per repo policy.
+
+### Verification
+- `dotnet restore src/slskd/slskd.csproj` passed.
+- `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly` passed (`0 warnings / 0 errors`).
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --no-build --filter "FullyQualifiedName~RelayControllerModerationTests|FullyQualifiedName~HashDbOptimizationServiceTests" -v minimal` passed (`7/7`).
+- `bash ./bin/lint` passed.
+- `dotnet test --no-restore -v minimal` still surfaces an unrelated integration failure in `tests/slskd.Tests.Integration/VirtualSoulfind/Bridge/BridgePerformanceTests.cs` (`ProtocolParser_Should_Use_Reasonable_Memory`), where the memory-release threshold assertion fails after cleanup.
+
+### Remaining
+- Push the Dependabot version sweep to `master`.
+- Close the seven remaining Dependabot PRs as superseded once `master` contains the same or newer versions.
+
 ## 2026-03-22 02:01 - Broad analyzer/disposal cleanup pass checkpoint
 
 ### Completed

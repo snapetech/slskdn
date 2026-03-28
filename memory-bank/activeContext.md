@@ -27,6 +27,26 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Continued past the security-alert-only cleanup into the remaining open Dependabot NuGet backlog and applied the outstanding package versions directly in `src/slskd/slskd.csproj`:
+    - `AWSSDK.S3` `3.7.511.4`
+    - `prometheus-net.DotNetRuntime` `4.4.1`
+    - `Serilog.AspNetCore` `8.0.3`
+    - `Serilog.Sinks.Grafana.Loki` `8.3.2`
+    - `OpenTelemetry` / `OpenTelemetry.Extensions.Hosting` `1.15.0`
+    - `OpenTelemetry.Instrumentation.AspNetCore` `1.15.1`
+    - `OpenTelemetry.Instrumentation.Http` `1.15.0`
+  - The only real code break from that batch was the Loki sink upgrade: v8 removed the old `outputTemplate` parameter, so `Program.ConfigureGlobalLogger()` now passes an explicit `MessageTemplateTextFormatter` via `textFormatter` to preserve the previous log payload shape.
+  - Documented that upgrade gotcha immediately in `adr-0001-known-gotchas.md` and committed it as `docs: Add gotcha for Grafana Loki 8 formatter migration`.
+  - Verified the upgraded package set with:
+    - `dotnet restore src/slskd/slskd.csproj`
+    - `dotnet build src/slskd/slskd.csproj -c Release -v minimal -clp:ErrorsOnly`
+    - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --no-build --filter "FullyQualifiedName~RelayControllerModerationTests|FullyQualifiedName~HashDbOptimizationServiceTests" -v minimal`
+    - `bash ./bin/lint`
+  - A broad `dotnet test --no-restore -v minimal` pass still reports an unrelated existing integration failure in `BridgePerformanceTests.ProtocolParser_Should_Use_Reasonable_Memory`.
+  - Next steps:
+    - commit the remaining memory-bank updates alongside the package batch
+    - push the package sweep to `master`
+    - close the seven remaining Dependabot PRs as superseded by the landed versions
   - Switched to a focused `master`-based security branch because the remaining open GitHub PRs and security alerts were all tied to `refs/heads/master`, not `release-main`.
   - Finished the residual relay log hardening on the default-branch line by hashing cached relay connection ids in `RelayService` validation logs and removing direct credential/expected-credential mismatch logging.
   - Documented that relay logging bug pattern immediately in `memory-bank/decisions/adr-0001-known-gotchas.md` and committed it as `docs: Add gotcha for relay validation identifier logging`.
