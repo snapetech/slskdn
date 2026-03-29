@@ -5553,6 +5553,15 @@ Code quality improvements were completed as part of Option A:
   - `docker run -d --rm --name slskdn-mergecheck-fixed -p 127.0.0.1:15033:5030 -v /tmp/slskdn-mergecheck-app:/app slskdn:local-mergecheck-fixed`
   - `curl http://127.0.0.1:15033/health` → `Degraded`
   - `curl -I http://127.0.0.1:15033/` → `HTTP/1.1 200 OK`
+
+## 2026-03-29 06:55:00Z
+
+- Investigated the failed `build-main-0.24.5-slskdn.106` tag run and confirmed the immediate failure moved from Docker to release metadata drift: `Build on Tag` failed in `Release Gate` because checked-in stable package metadata was split across `.97`, `.101`, and `.105`.
+- Re-synced the checked-in stable metadata baseline to the latest actually published stable release `0.24.5-slskdn.105`, including `Formula/slskdn.rb`, `flake.nix`, Winget, Homebrew, Snap, Flatpak, Chocolatey, RPM, Debian, AUR, chart appVersions, and the touched package-manager docs.
+- Added a repo-owned `packaging/scripts/update-stable-release-metadata.sh` helper and rewired `.github/workflows/build-on-tag.yml` to use it after successful stable releases, covering the full checked-in metadata set and fixing the old `origin/master` push target to `origin/main`.
+- Validation:
+  - `bash packaging/scripts/validate-packaging-metadata.sh`
+  - `git diff --check`
 ### 2026-03-28 23:55:00 -06:00
 - Fixed the repo process gap where release notes were effectively being reconstructed at tag time because feature/fix commits were not required to touch `docs/CHANGELOG.md`.
 - Added `scripts/validate-changelog-entry.sh` to enforce a real `## [Unreleased]` bullet for release-worthy staged changes locally and for PR diffs in CI.

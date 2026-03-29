@@ -1769,48 +1769,15 @@ jobs:
       - name: Update Metadata Files
         run: |
           VERSION="${{ needs.parse.outputs.version }}"
-          WIN_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-win-x64.zip"
-
-          sed -i "s/version = \".*\";/version = \"${VERSION}\";/" flake.nix
-          sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
-          sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
-          sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
-          sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
-
-          bash packaging/scripts/update-winget-manifests.sh \
-            stable \
+          chmod +x packaging/scripts/update-stable-release-metadata.sh
+          bash packaging/scripts/update-stable-release-metadata.sh \
             "${VERSION}" \
-            "${WIN_URL}" \
+            "${{ steps.hashes.outputs.linux_x64_hex }}" \
+            "${{ steps.hashes.outputs.linux_arm64_hex }}" \
+            "${{ steps.hashes.outputs.macos_x64_hex }}" \
+            "${{ steps.hashes.outputs.macos_arm64_hex }}" \
             "${{ steps.hashes.outputs.win_x64_sha }}" \
             "${VERSION}"
-
-          printf '%s\n' \
-            'class Slskdn < Formula' \
-            '  desc "Batteries-included Soulseek web client"' \
-            '  homepage "https://github.com/snapetech/slskdn"' \
-            '  license "AGPL-3.0-or-later"' \
-            "  version \"${VERSION}\"" \
-            '  on_macos do' \
-            '    on_arm do' \
-            "      url \"https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip\"" \
-            "      sha256 \"${{ steps.hashes.outputs.macos_arm64_hex }}\"" \
-            '    end' \
-            '    on_intel do' \
-            "      url \"https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip\"" \
-            "      sha256 \"${{ steps.hashes.outputs.macos_x64_hex }}\"" \
-            '    end' \
-            '  end' \
-            '  on_linux do' \
-            "    url \"https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip\"" \
-            "    sha256 \"${{ steps.hashes.outputs.linux_x64_hex }}\"" \
-            '  end' \
-            '  def install' \
-            '    libexec.install Dir["*"]' \
-            '    (bin/"slskd").write_exec_script libexec/"slskd"' \
-            '    (bin/"slskdn").write_exec_script libexec/"slskd"' \
-            '  end' \
-            'end' \
-            > Formula/slskdn.rb
 
       - name: Verify Flake
         run: |
@@ -1825,55 +1792,39 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            git fetch origin +refs/heads/master:refs/remotes/origin/master
-            git reset --hard origin/master
+            git fetch origin +refs/heads/main:refs/remotes/origin/main
+            git reset --hard origin/main
             git clean -fd
 
             VERSION="${{ needs.parse.outputs.version }}"
-            WIN_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-win-x64.zip"
-
-            sed -i "s/version = \".*\";/version = \"${VERSION}\";/" flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux|sha256 = "${{ steps.hashes.outputs.linux_x64_sha }}"; # x86_64-linux|' flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux|sha256 = "${{ steps.hashes.outputs.linux_arm64_sha }}"; # aarch64-linux|' flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "${{ steps.hashes.outputs.macos_x64_sha }}"; # x86_64-darwin|' flake.nix
-            sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "${{ steps.hashes.outputs.macos_arm64_sha }}"; # aarch64-darwin|' flake.nix
-
-            bash packaging/scripts/update-winget-manifests.sh \
-              stable \
+            chmod +x packaging/scripts/update-stable-release-metadata.sh
+            bash packaging/scripts/update-stable-release-metadata.sh \
               "${VERSION}" \
-              "${WIN_URL}" \
+              "${{ steps.hashes.outputs.linux_x64_hex }}" \
+              "${{ steps.hashes.outputs.linux_arm64_hex }}" \
+              "${{ steps.hashes.outputs.macos_x64_hex }}" \
+              "${{ steps.hashes.outputs.macos_arm64_hex }}" \
               "${{ steps.hashes.outputs.win_x64_sha }}" \
               "${VERSION}"
 
-            printf '%s\n' \
-              'class Slskdn < Formula' \
-              '  desc "Batteries-included Soulseek web client"' \
-              '  homepage "https://github.com/snapetech/slskdn"' \
-              '  license "AGPL-3.0-or-later"' \
-              "  version \"${VERSION}\"" \
-              '  on_macos do' \
-              '    on_arm do' \
-              "      url \"https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-arm64.zip\"" \
-              "      sha256 \"${{ steps.hashes.outputs.macos_arm64_hex }}\"" \
-              '    end' \
-              '    on_intel do' \
-              "      url \"https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-osx-x64.zip\"" \
-              "      sha256 \"${{ steps.hashes.outputs.macos_x64_hex }}\"" \
-              '    end' \
-              '  end' \
-              '  on_linux do' \
-              "    url \"https://github.com/${{ github.repository }}/releases/download/${VERSION}/slskdn-main-linux-x64.zip\"" \
-              "    sha256 \"${{ steps.hashes.outputs.linux_x64_hex }}\"" \
-              '  end' \
-              '  def install' \
-              '    libexec.install Dir["*"]' \
-              '    (bin/"slskd").write_exec_script libexec/"slskd"' \
-              '    (bin/"slskdn").write_exec_script libexec/"slskd"' \
-              '  end' \
-              'end' \
-              > Formula/slskdn.rb
-
-            git add flake.nix Formula/slskdn.rb packaging/winget/
+            git add \
+              flake.nix \
+              Formula/slskdn.rb \
+              packaging/winget/ \
+              packaging/homebrew/Formula/slskdn.rb \
+              packaging/snap/snapcraft.yaml \
+              packaging/flatpak/io.github.slskd.slskdn.yml \
+              packaging/truenas-scale/charts/slskdn/Chart.yaml \
+              packaging/helm/slskdn/Chart.yaml \
+              packaging/chocolatey/slskdn.nuspec \
+              packaging/chocolatey/tools/chocolateyinstall.ps1 \
+              packaging/rpm/slskdn.spec \
+              packaging/debian/changelog \
+              packaging/aur/PKGBUILD \
+              packaging/aur/PKGBUILD-bin \
+              packaging/proxmox-lxc/README.md \
+              packaging/helm/slskdn/README.md \
+              packaging/flatpak/FLATHUB_SUBMISSION.md
 
             if git diff --cached --quiet; then
               echo "No metadata changes"
@@ -1882,7 +1833,7 @@ jobs:
 
             git commit -m "chore(release): update stable metadata to ${VERSION} [skip ci]"
 
-            if git push origin HEAD:master; then
+            if git push origin HEAD:main; then
               echo "✅ Updated main repo metadata"
               exit 0
             fi
