@@ -217,6 +217,31 @@ Keep them out of the generated Included-Commits list so the visible commit summa
 
 **Why This Keeps Happening**: this repo intentionally creates extra docs-only commits during bugfix work, and the generic git-log based release-note generator has no idea those commits are bookkeeping for the real fix. Without an explicit filter, the release page inflates one bugfix into multiple apparent changes.
 
+### 0t. Changelog Discipline Must Be Enforced At Commit/PR Time, Not Deferred To Release Generation
+
+**The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
+
+**Files Affected**:
+- `docs/CHANGELOG.md`
+- `.githooks/pre-commit`
+- `.github/workflows/ci.yml`
+
+**Wrong**:
+```text
+Ship a feature/fix commit without touching docs/CHANGELOG.md, then hope the release-time generator can reconstruct something acceptable from git subjects later.
+```
+
+**Correct**:
+```text
+If a commit or PR changes product code, packaging behavior, user-visible UI, or workflows that affect shipped behavior, require a corresponding entry under `docs/CHANGELOG.md` `## [Unreleased]` before the commit/PR can pass.
+```
+
+```text
+Release generation should consume curated changelog content, not serve as the first time release-worthy changes are summarized.
+```
+
+**Why This Keeps Happening**: release automation is easier to notice because it runs on every tag, while changelog discipline has no pain until much later. Without a local hook and CI validation, developers optimize for shipping code and defer the changelog until the release is already being cut, which is exactly when recall is worst.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
