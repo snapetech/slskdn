@@ -27,6 +27,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Added `scripts/setup-git-hooks.sh` so clones can explicitly install `.githooks` via `git config --local core.hooksPath .githooks`, and updated README/local-development docs to make hook installation part of first-time setup.
   - Added commit/PR-time changelog enforcement so release-worthy changes must update `docs/CHANGELOG.md` `## [Unreleased]` when they land instead of relying on release-time git-history fallback.
   - Added `scripts/validate-changelog-entry.sh`, wired it into `.githooks/pre-commit` for staged-change checks and `.github/workflows/ci.yml` for pull-request diff checks, and updated `docs/CHANGELOG.md` to document the policy.
   - Cleaned up `scripts/generate-release-notes.sh` so generated `Included Commits` lists no longer surface standalone ADR gotcha commits, release-note doc commits, or stable metadata bookkeeping commits as if they were separate product changes.
@@ -59,7 +60,6 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `bash ./bin/lint`
     - `dotnet test --no-restore -v minimal`
   - Next steps:
-    - verify whether the repo should also install `core.hooksPath=.githooks` automatically or just document that requirement more explicitly
     - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
     - configure `WINGETCREATE_GITHUB_TOKEN` in GitHub secrets if stable releases should auto-submit to `microsoft/winget-pkgs`
     - decide whether to also hide other non-user-facing CI-only commits from generated release commit lists beyond the currently-filtered release-hygiene subjects

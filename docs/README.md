@@ -38,7 +38,7 @@ Complete guide to all slskdn documentation.
 - [Fork Vision](archive/FORK_VISION.md) - Project philosophy and roadmap
 - [Contributing](../CONTRIBUTING.md) - How to contribute to the project
 - [API Documentation](api-documentation.md) - Complete API reference
-- [Local Development](dev/LOCAL_DEVELOPMENT.md) - Development environment setup
+- [Local Development](dev/LOCAL_DEVELOPMENT.md) - Development environment setup, including git hook installation
 
 ## 🔍 Additional Resources
 

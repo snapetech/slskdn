@@ -141,6 +141,7 @@
 - [ ] **Release regression follow-up: add a subpath-hosted web smoke test**: Add automated coverage that serves the built web UI under a non-root `web.url_base` such as `/slskd` and verifies the HTML references relative assets rather than root-relative `/assets/...` URLs, so future frontend build-tool changes cannot silently reintroduce blank white-page deployments.
 - [x] **Testing hardening: add one repo-level release gate**: Added `packaging/scripts/run-release-gate.sh`, wired it into `ci.yml` and `build-on-tag.yml`, added built-web output verification for subpath-safe assets, and documented the policy in `docs/dev/testing-policy.md`. Validated locally with packaging checks, 91 frontend tests, 2619 unit tests, and 46 backend smoke/regression tests passing. Done.
 - [x] **Changelog discipline at commit time**: Added `scripts/validate-changelog-entry.sh`, wired it into `.githooks/pre-commit` and PR CI in `.github/workflows/ci.yml`, and updated `docs/CHANGELOG.md` so release-worthy changes must add a real `## [Unreleased]` bullet when the work lands instead of deferring summary writing to release time.
+- [x] **Git hook bootstrap**: Added `scripts/setup-git-hooks.sh` so clones can install `.githooks` with one command, and updated onboarding docs to require the hook-setup step during local development.
 
 ### 40-fixes Out of Scope (docs)
 

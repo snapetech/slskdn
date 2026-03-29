@@ -5537,3 +5537,6 @@ Code quality improvements were completed as part of Option A:
 - Fixed the repo process gap where release notes were effectively being reconstructed at tag time because feature/fix commits were not required to touch `docs/CHANGELOG.md`.
 - Added `scripts/validate-changelog-entry.sh` to enforce a real `## [Unreleased]` bullet for release-worthy staged changes locally and for PR diffs in CI.
 - Wired the new validator into `.githooks/pre-commit` and `.github/workflows/ci.yml`, and updated `docs/CHANGELOG.md` to state the new commit/PR-time policy explicitly.
+### 2026-03-29 00:03:00 -06:00
+- Closed the last-mile gap for local hook enforcement by adding `scripts/setup-git-hooks.sh`, an idempotent repo-owned installer for `git config --local core.hooksPath .githooks`.
+- Updated `README.md`, `docs/dev/LOCAL_DEVELOPMENT.md`, and `docs/README.md` so first-time local setup now explicitly installs the checked-in hooks and documents how to verify the configuration later.

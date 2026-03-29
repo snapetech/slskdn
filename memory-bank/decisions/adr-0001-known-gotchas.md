@@ -268,6 +268,28 @@ If local hook enforcement matters, install the hooks as part of normal developer
 
 **Why This Keeps Happening**: checked-in hooks look "present" in the tree, so it is easy to forget Git ignores them unless `core.hooksPath` or `.git/hooks` is configured. CI catches some problems later, but the whole point of local hooks is to fail earlier than PR time.
 
+### 0v. Packaging Static-File Edits Must Immediately Refresh AUR `sha256sums`
+
+**The Bug**: Changing packaged static files like `packaging/aur/slskd.service` or `packaging/aur/slskd.yml` without updating `PKGBUILD` and `PKGBUILD-bin` left the repo in a state where later unrelated commits were blocked by the AUR hash consistency hook.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/slskd.service`
+- `packaging/aur/slskd.yml`
+
+**Wrong**:
+```text
+Edit `packaging/aur/slskd.service` or `packaging/aur/slskd.yml`, but leave the checked-in `sha256sums=()` entries pointing at the old file contents.
+```
+
+**Correct**:
+```text
+Whenever a packaged static file changes, recompute and commit the matching `sha256sums` in both AUR PKGBUILDs as part of the same change.
+```
+
+**Why This Keeps Happening**: the package templates and the hash declarations live in different files, so it is easy to update one and forget the other until a later pre-commit run trips over it. The fix belongs with the packaging edit, not in some later cleanup commit.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.

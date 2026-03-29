@@ -4,6 +4,24 @@
 
 ---
 
+## First-Time Setup
+
+Run this once after cloning the repo:
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+That installs the checked-in local git hooks by setting `core.hooksPath` to `.githooks`, so the pre-commit changelog/packaging checks and the pre-push secret scan actually run on your clone.
+
+You can verify it later with:
+
+```bash
+./scripts/setup-git-hooks.sh --check
+```
+
+---
+
 ## Build and Test
 
 ### Standard Build (with tests)

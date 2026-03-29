@@ -436,10 +436,13 @@ services:
 ### From Source
 ```bash
 git clone https://github.com/snapetech/slskdn.git && cd slskdn
+./scripts/setup-git-hooks.sh
 curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
 export PATH="$HOME/.dotnet:$PATH"
 dotnet run --project src/slskd/slskd.csproj
 ```
+
+`./scripts/setup-git-hooks.sh` installs the repo's local `pre-commit` and `pre-push` checks by setting `git config --local core.hooksPath .githooks`.
 
 ---
 
