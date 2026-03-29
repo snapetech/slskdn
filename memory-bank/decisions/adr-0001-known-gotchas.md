@@ -316,6 +316,41 @@ Reserve `[FATAL]` for truly unhandled process-level failures.
 
 **Why This Keeps Happening**: unobserved task handlers are a tempting catch-all for "silent crash" telemetry, but P2P networking libraries often use fire-and-forget tasks internally and can surface expected connection churn there. Without classification, ordinary peer timeout noise becomes indistinguishable from an actual daemon-killing fault.
 
+### 0x. Docker Images Must Override The Loopback HTTP Bind Default
+
+**The Bug**: The container image inherited the global `web.address = 127.0.0.1` default, so `docker run -p 5030:5030 ...` looked healthy from inside the container while every host-side HTTP request reset because Kestrel was only listening on container loopback.
+
+**Files Affected**:
+- `Dockerfile`
+
+**Wrong**:
+```dockerfile
+ENV \
+  SLSKD_HTTP_PORT=5030 \
+  SLSKD_HTTPS_PORT=5031
+```
+
+```text
+Result: `/health` succeeds inside the container, Docker marks the container healthy,
+but `curl http://host:5030/` from outside the container resets because nothing is
+bound on the container's non-loopback interface.
+```
+
+**Correct**:
+```dockerfile
+ENV \
+  SLSKD_HTTP_ADDRESS=0.0.0.0 \
+  SLSKD_HTTP_PORT=5030 \
+  SLSKD_HTTPS_PORT=5031
+```
+
+```text
+Any Docker or container-oriented distribution path must force the web listener to
+`0.0.0.0` unless it deliberately expects an in-container reverse proxy.
+```
+
+**Why This Keeps Happening**: the repo-wide default is intentionally conservative for bare-metal installs, but containers invert the reachability model. A loopback default that is safe on a host is broken in Docker unless the image or packaged config explicitly overrides it.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
