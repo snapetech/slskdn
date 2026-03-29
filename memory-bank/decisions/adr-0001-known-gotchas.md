@@ -91,6 +91,28 @@ Also make packaging install yt-dlp anywhere we claim YouTube SongID works out of
 
 **Why This Keeps Happening**: The source-analysis phase already handles missing helper tools gracefully, but the downstream evidence pipeline is easy to forget because it runs later and uses different helper methods. Any external tool that is optional for enrichment must be checked again at the asset-preparation stage, not just when building the initial query.
 
+### 0o. Metadata-Only SongID Runs Cannot Call `Max()` On An Empty Clip List
+
+**The Bug**: Once YouTube SongID was allowed to continue without `yt-dlp`, the evidence pipeline still crashed when no clips were generated because `AddPipelineEvidenceAsync()` computed `MaxAiArtifactScore` with `run.Clips.Max(...)`.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+
+**Wrong**:
+```csharp
+run.Scorecard.MaxAiArtifactScore = run.Clips.Max(clip => clip.AiHeuristics?.ArtifactScore ?? 0);
+```
+
+**Correct**:
+```csharp
+run.Scorecard.MaxAiArtifactScore = run.Clips.Count == 0
+    ? 0
+    : run.Clips.Max(clip => clip.AiHeuristics?.ArtifactScore ?? 0);
+```
+
+**Why This Keeps Happening**: SongID scoring code was written assuming the evidence pipeline always produces at least one clip for non-text sources. As soon as optional-tool fallback paths or metadata-only analysis are introduced, every aggregate over `run.Clips` needs an empty-list-safe default.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
