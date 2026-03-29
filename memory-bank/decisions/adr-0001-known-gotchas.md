@@ -169,6 +169,32 @@ If the fetch times out or fails, continue with a lightweight artist candidate in
 
 **Why This Keeps Happening**: the artist-graph stage looks like lightweight candidate enrichment from the SongID side, but the underlying MusicBrainz graph service performs deep release-group expansion with rate-limited per-group requests. Treat that dependency like a potentially expensive remote enrichment step and bound it explicitly inside SongID.
 
+### 0r. SongID Search Actions Must Emit Canonical `Artist - Track` Queries, Not Metadata Soup
+
+**The Bug**: SongID-generated searches were reusing generic query builders that concatenated uploader names, album text, duplicate titles, and other metadata into the search string. That made the actual Soulseek searches noisy and reduced recall for the intended `artist + track` match.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+
+**Wrong**:
+```csharp
+analysis.Query = BuildBestQuery(track, artist, title, uploader);
+SearchText = string.Join(" ", new[] { hit.Artist, hit.Title }.Where(value => !string.IsNullOrWhiteSpace(value)));
+```
+
+**Correct**:
+```csharp
+analysis.Query = BuildTrackSearchText(artist ?? uploader, track ?? title);
+SearchText = BuildTrackSearchText(hit.Artist, hit.Title);
+```
+
+```text
+Use a dedicated formatter for user-facing search actions so generated searches stay in the canonical `Artist - Track` shape unless there truly is no artist/title pair to work with.
+```
+
+**Why This Keeps Happening**: `BuildBestQuery(...)` is fine for broad metadata lookups, but it is too permissive for the actual search strings we send to Soulseek. Once SongID has an artist/title pair, switching back to a generic "join every clue" helper quickly pollutes the query with low-signal metadata.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
