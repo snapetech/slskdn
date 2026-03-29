@@ -219,6 +219,55 @@ Keep them out of the generated Included-Commits list so the visible commit summa
 
 ### 0t. Changelog Discipline Must Be Enforced At Commit/PR Time, Not Deferred To Release Generation
 
+### 0u. GitHub Actions Metadata Jobs Must Emit Every Referenced Checksum Output
+
+**The Bug**: The stable release metadata job in `build-on-tag.yml` called `update-stable-release-metadata.sh` with `${{ steps.hashes.outputs.linux_arm64_hex }}` even though the `Calculate Hashes` step never emitted that output. The same block also passed a Windows checksum under the inconsistent name `win_x64_sha`, which made the argument contract harder to audit. The metadata update step then failed immediately with the script usage error.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `packaging/scripts/update-stable-release-metadata.sh`
+
+**Wrong**:
+```yaml
+echo "linux_x64_hex=$(sha256sum slskdn-main-linux-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "macos_x64_hex=$(sha256sum slskdn-main-osx-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "macos_arm64_hex=$(sha256sum slskdn-main-osx-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "win_x64_sha=$(sha256sum slskdn-main-win-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+```
+
+```yaml
+bash packaging/scripts/update-stable-release-metadata.sh \
+  "${VERSION}" \
+  "${{ steps.hashes.outputs.linux_x64_hex }}" \
+  "${{ steps.hashes.outputs.linux_arm64_hex }}" \
+  "${{ steps.hashes.outputs.macos_x64_hex }}" \
+  "${{ steps.hashes.outputs.macos_arm64_hex }}" \
+  "${{ steps.hashes.outputs.win_x64_sha }}" \
+  "${VERSION}"
+```
+
+**Correct**:
+```yaml
+echo "linux_x64_hex=$(sha256sum slskdn-main-linux-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "linux_arm64_hex=$(sha256sum slskdn-main-linux-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "macos_x64_hex=$(sha256sum slskdn-main-osx-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "macos_arm64_hex=$(sha256sum slskdn-main-osx-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+echo "win_x64_hex=$(sha256sum slskdn-main-win-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+```
+
+```yaml
+bash packaging/scripts/update-stable-release-metadata.sh \
+  "${VERSION}" \
+  "${{ steps.hashes.outputs.linux_x64_hex }}" \
+  "${{ steps.hashes.outputs.linux_arm64_hex }}" \
+  "${{ steps.hashes.outputs.macos_x64_hex }}" \
+  "${{ steps.hashes.outputs.macos_arm64_hex }}" \
+  "${{ steps.hashes.outputs.win_x64_hex }}" \
+  "${VERSION}"
+```
+
+**Why This Keeps Happening**: GitHub Actions expressions silently expand missing outputs to empty strings, so the workflow looks correct at a glance until the downstream script rejects the argument list. Whenever a shell script has positional required arguments, define the workflow outputs next to the call site and keep the output names aligned with the script parameter names.
+
 **The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
 
 **Files Affected**:
