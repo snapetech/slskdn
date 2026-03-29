@@ -69,6 +69,48 @@ sudo systemctl enable --now slskd
 xdg-open http://localhost:5030
 ```
 
+### Optional AUR extras for SongID workflows
+
+`slskdn` installs with only the core runtime dependencies. If you want full SongID workflows, install any of these optional packages separately.
+
+- `ffmpeg` — audio decoding and media handling used by SongID/AcoustID pipelines
+- `python` — Python runtime for optional SongID tools
+- `python-torchaudio` — optional advanced Python fingerprint and analysis features
+- `docker` — containerized deployment (optional)
+
+Why this is optional:
+- Slskdn works without these for normal transfer/search/download behavior.
+- SongID uses them only when advanced audio analysis is enabled in configuration.
+- Keeping them optional avoids blocking installs on systems that do not need SongID extras or are behind Python package availability delays.
+
+To avoid every optional dependency prompt (or accidental “all”), install like this:
+
+```bash
+yay -S --noconfirm slskdn-bin
+```
+
+### Optional fix for `python-torchaudio` download failures
+
+If `python-torchaudio` fails with:
+
+> `curl: (33) HTTP server does not seem to support byte ranges. Cannot resume.`
+
+it is a GitHub download issue in that package build, not a slskdn dependency problem.
+
+Use the local helper script in this repo (Arch Linux / AUR only):
+
+```bash
+cd /path/to/slskdn
+bash ./scripts/fix-python-torchaudio-no-resume.sh
+```
+
+Why this works:
+- the helper uses `wget -O` (no resume mode), which avoids `curl` resume errors,
+- it refreshes a clean AUR source checkout,
+- it builds and installs `python-torchaudio` without the interactive `pacman` prompt.
+
+If you are not on Arch Linux (or not using AUR), you do not need this script.
+
 ## Configuration
 
 The default config is at `/etc/slskd/slskd.yml`. Key settings:
@@ -98,7 +140,7 @@ shares:
 ## CI / Release
 
 - **slskdn-dev**: `PKGBUILD-dev` uses `RELEASE_TAG_PLACEHOLDER` in the zip source URL. The workflow (`.github/workflows/build-on-tag.yml` AUR dev job) replaces it with the actual release tag (e.g. `build-dev-0.24.1.dev.91769637539`) before pushing to AUR. Do not remove this placeholder; CI must substitute it so the package points at the correct GitHub release.
-- **Checksums**: Dev zip uses `sha256sums=('SKIP' ...)` (binary changes each build). Static files (slskd.service, slskd.yml, slskd.sysusers) use real hashes.
+- **Checksums**: Both `slskdn-bin` and `slskdn-dev` keep the GitHub-hosted binary zip on `sha256sums=('SKIP' ...)`. GitHub release assets are not treated as immutable here, so only the repo-owned static packaging files (`slskd.service`, `slskd.yml`, `slskd.sysusers`) use real hashes.
 
 ## Building Manually
 

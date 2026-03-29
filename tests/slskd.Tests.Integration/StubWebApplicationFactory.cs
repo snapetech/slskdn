@@ -360,6 +360,8 @@ internal sealed class StubDisasterModeCoordinator : global::slskd.VirtualSoulfin
 
         return Task.CompletedTask;
     }
+
+    public void Dispose() { }
 }
 
 internal sealed class StubShadowIndexQueryForFactory : global::slskd.VirtualSoulfind.ShadowIndex.IShadowIndexQuery
@@ -616,13 +618,15 @@ internal sealed class StubDownloadService : IDownloadService
     {
         _storage[transfer.Id] = transfer;
     }
+
+    public void Dispose() { }
 }
 
 internal class StubLibraryHealthService : ILibraryHealthService
 {
     public Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default) => Task.FromResult(Guid.NewGuid().ToString("N"));
 
-    public Task<LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default) => Task.FromResult(new LibraryHealthScan
+    public Task<LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default) => Task.FromResult<LibraryHealthScan?>(new LibraryHealthScan
     {
         ScanId = scanId,
         LibraryPath = "(all)",
@@ -643,6 +647,9 @@ internal class StubLibraryHealthService : ILibraryHealthService
 /// <summary>Configurable bridge API for integration tests. Resolve as StubBridgeApi to seed SearchResults/Rooms.</summary>
 internal class StubBridgeApi : IBridgeApi
 {
+    public Task<LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default) =>
+        Task.FromResult<LegacyTransferProgress?>(null);
+
     public List<BridgeUser> SearchResults { get; set; } = new();
     public List<BridgeRoom> Rooms { get; set; } = new();
 
@@ -686,6 +693,14 @@ internal class TestSoulfindBridgeService : ISoulfindBridgeService
             ActiveConnections = 0,
             StartedAt = _startedAt ?? DateTimeOffset.MinValue
         });
+
+    public void RecordClientConnection(string clientId)
+    {
+    }
+
+    public void RecordClientDisconnection(string clientId)
+    {
+    }
 }
 
 internal class NullProxy<T> : DispatchProxy where T : class
@@ -750,6 +765,8 @@ internal class StubShareService : IShareService
     public bool TryCancelScan() => false;
     public bool TryGetHost(string name, out slskd.Shares.Host host) { host = _localHost; return name == "local"; }
     public bool TryRemoveHost(string name) => false;
+
+    public void Dispose() { }
 }
 
 internal class StubContentLocator : IContentLocator
@@ -946,4 +963,6 @@ internal class StubSearchService : ISearchService
 
     public Task<int> PruneAsync(int age) => Task.FromResult(0);
     public Task<int> DeleteAllAsync() => Task.FromResult(0);
+
+    public void Dispose() { }
 }

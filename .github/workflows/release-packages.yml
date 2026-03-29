@@ -36,13 +36,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Wait up to 10 minutes for CI to upload the asset
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-main-linux-x64.zip"
+          CURL_AUTH_ARGS=()
+          if [ -n "$GH_TOKEN" ]; then
+            CURL_AUTH_ARGS=(-H "Authorization: Bearer ${GH_TOKEN}")
+          fi
+
+          ASSET_NAMES=(
+            "slskdn-main-linux-x64.zip"
+            "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          )
+
           for i in {1..20}; do
-            echo "Attempt $i: Checking for asset..."
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdn.zip; then
-              echo "Asset downloaded successfully"
-              break
-            fi
+            for ASSET_NAME in "${ASSET_NAMES[@]}"; do
+              ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/${ASSET_NAME}"
+              echo "Attempt $i: Checking ${ASSET_NAME}..."
+              if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o slskdn.zip; then
+                echo "Asset downloaded successfully"
+                break 2
+              fi
+            done
+
             if [ $i -eq 20 ]; then
               echo "Asset not available after 10 minutes"
               exit 1
@@ -77,7 +90,7 @@ jobs:
         run: |
           cd pkg
           # Update changelog version
-          sed -i "s/0.24.1.slskdn.7/${{ steps.version.outputs.version }}/g" debian/changelog
+          sed -i -E "0,/^slskdn \\([^\\)]*\\)/ s/^slskdn \\([^\\)]*\\)/slskdn (${{ steps.version.outputs.version }})/" debian/changelog
           dpkg-buildpackage -us -uc -b
           cd ..
           mv *.deb slskdn_${{ steps.version.outputs.version }}_amd64.deb
@@ -121,13 +134,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Wait up to 10 minutes for CI to upload the asset
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-main-linux-x64.zip"
+          CURL_AUTH_ARGS=()
+          if [ -n "$GH_TOKEN" ]; then
+            CURL_AUTH_ARGS=(-H "Authorization: Bearer ${GH_TOKEN}")
+          fi
+
+          ASSET_NAMES=(
+            "slskdn-main-linux-x64.zip"
+            "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          )
+
           for i in {1..20}; do
-            echo "Attempt $i: Checking for asset..."
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-main-linux-x64.zip; then
-              echo "Asset downloaded successfully"
-              break
-            fi
+            for ASSET_NAME in "${ASSET_NAMES[@]}"; do
+              ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/${ASSET_NAME}"
+              echo "Attempt $i: Checking ${ASSET_NAME}..."
+              if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-main-linux-x64.zip; then
+                echo "Asset downloaded successfully"
+                break 2
+              fi
+            done
+
             if [ $i -eq 20 ]; then
               echo "Asset not available after 10 minutes"
               exit 1

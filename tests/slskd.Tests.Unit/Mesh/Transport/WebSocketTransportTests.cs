@@ -120,6 +120,54 @@ public class WebSocketTransportTests : IDisposable
         Assert.NotNull(status.LastError);
     }
 
+    [Fact]
+    public async Task IsAvailableAsync_WhenConnectionThrows_SetsSanitizedLastError()
+    {
+        var options = new WebSocketTransportOptions
+        {
+            ServerUrl = "wss://127.0.0.1:1/tunnel"
+        };
+
+        var transport = new WebSocketTransport(options, _loggerMock.Object);
+
+        var isAvailable = await transport.IsAvailableAsync();
+
+        Assert.False(isAvailable);
+        Assert.Equal("WebSocket transport unavailable", transport.GetStatus().LastError);
+    }
+
+    [Fact]
+    public async Task IsAvailableAsync_WithInvalidServerUrl_ReturnsFalseWithoutThrowing()
+    {
+        var options = new WebSocketTransportOptions
+        {
+            ServerUrl = "not a uri"
+        };
+
+        var transport = new WebSocketTransport(options, _loggerMock.Object);
+
+        var isAvailable = await transport.IsAvailableAsync();
+
+        Assert.False(isAvailable);
+        Assert.Equal("WebSocket server URL is not a valid absolute URI", transport.GetStatus().LastError);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WithInvalidServerUrl_ThrowsInvalidOperationException()
+    {
+        var options = new WebSocketTransportOptions
+        {
+            ServerUrl = "http://example.com/not-websocket"
+        };
+
+        var transport = new WebSocketTransport(options, _loggerMock.Object);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => transport.ConnectAsync("example.com", 80));
+
+        Assert.Equal("WebSocket server URL must use ws:// or wss://", ex.Message);
+        Assert.Equal("WebSocket server URL must use ws:// or wss://", transport.GetStatus().LastError);
+    }
+
     [Theory]
     [InlineData("wss://test.example.com/tunnel")]
     [InlineData("ws://localhost:8080/websocket")]
@@ -161,5 +209,17 @@ public class WebSocketTransportTests : IDisposable
         // Act & Assert - Should not throw
         var transport = new WebSocketTransport(options, _loggerMock.Object);
         Assert.Equal(AnonymityTransportType.WebSocket, transport.TransportType);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WhenConnectionFails_StoresSanitizedStatusError()
+    {
+        var transport = new WebSocketTransport(_defaultOptions, _loggerMock.Object);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+
+        var status = transport.GetStatus();
+        Assert.Equal("WebSocket tunnel connection failed", status.LastError);
+        Assert.DoesNotContain("Name or service", status.LastError ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 }

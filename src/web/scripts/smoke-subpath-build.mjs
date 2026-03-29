@@ -1,0 +1,128 @@
+import fs from 'fs';
+import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const buildDir = path.resolve(scriptDir, '..', 'build');
+const indexPath = path.join(buildDir, 'index.html');
+const mountPath = '/slskd/';
+
+const contentTypes = new Map([
+  ['.css', 'text/css; charset=utf-8'],
+  ['.html', 'text/html; charset=utf-8'],
+  ['.ico', 'image/x-icon'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.map', 'application/json; charset=utf-8'],
+  ['.png', 'image/png'],
+  ['.svg', 'image/svg+xml; charset=utf-8'],
+  ['.txt', 'text/plain; charset=utf-8'],
+  ['.webmanifest', 'application/manifest+json; charset=utf-8'],
+]);
+
+function fail(message) {
+  console.error(`ERROR: ${message}`);
+  process.exit(1);
+}
+
+function getContentType(filePath) {
+  return contentTypes.get(path.extname(filePath).toLowerCase()) ?? 'application/octet-stream';
+}
+
+function normalizeRequestPath(requestUrl) {
+  const pathname = new URL(requestUrl, 'http://127.0.0.1').pathname;
+
+  if (pathname === '/slskd') {
+    return mountPath;
+  }
+
+  return pathname;
+}
+
+function resolveFilePath(requestPath) {
+  if (!requestPath.startsWith(mountPath)) {
+    return null;
+  }
+
+  const relativePath = requestPath === mountPath
+    ? 'index.html'
+    : requestPath.slice(mountPath.length);
+  const normalizedRelativePath = path.posix.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
+  const filePath = path.resolve(buildDir, normalizedRelativePath);
+
+  if (!filePath.startsWith(buildDir)) {
+    return null;
+  }
+
+  return filePath;
+}
+
+if (!fs.existsSync(indexPath)) {
+  fail(`Missing built index.html at ${indexPath}`);
+}
+
+const server = http.createServer((req, res) => {
+  const requestPath = normalizeRequestPath(req.url ?? mountPath);
+  const filePath = resolveFilePath(requestPath);
+
+  if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Not Found');
+    return;
+  }
+
+  res.writeHead(200, { 'Content-Type': getContentType(filePath) });
+  fs.createReadStream(filePath).pipe(res);
+});
+
+server.listen(0, '127.0.0.1', async () => {
+  const address = server.address();
+
+  if (!address || typeof address === 'string') {
+    fail('Failed to bind subpath smoke test server');
+  }
+
+  const baseUrl = `http://127.0.0.1:${address.port}${mountPath}`;
+
+  try {
+    const indexResponse = await fetch(baseUrl);
+
+    if (!indexResponse.ok) {
+      fail(`Expected ${baseUrl} to return 200, got ${indexResponse.status}`);
+    }
+
+    const indexHtml = await indexResponse.text();
+    const relativeAssetMatches = [...indexHtml.matchAll(/(?:src|href)="(\.[^"]+)"/g)];
+    const relativeAssetPaths = [...new Set(relativeAssetMatches.map((match) => match[1]))];
+
+    if (relativeAssetPaths.length === 0) {
+      fail('Expected built index.html to contain relative asset references under a subpath');
+    }
+
+    for (const relativeAssetPath of relativeAssetPaths) {
+      const assetUrl = new URL(relativeAssetPath, baseUrl);
+      const assetResponse = await fetch(assetUrl);
+
+      if (!assetResponse.ok) {
+        fail(`Expected ${assetUrl} to return 200, got ${assetResponse.status}`);
+      }
+
+      const contentType = assetResponse.headers.get('content-type') ?? '';
+
+      if (relativeAssetPath.endsWith('.js') && contentType.includes('text/html')) {
+        fail(`Expected ${assetUrl} to resolve to JavaScript, got ${contentType}`);
+      }
+
+      if (relativeAssetPath.endsWith('.css') && contentType.includes('text/html')) {
+        fail(`Expected ${assetUrl} to resolve to CSS, got ${contentType}`);
+      }
+    }
+
+    console.log('Verified built web output loads correctly when mounted under /slskd/.');
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  } finally {
+    server.close();
+  }
+});

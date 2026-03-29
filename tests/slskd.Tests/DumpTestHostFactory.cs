@@ -112,6 +112,7 @@ public class DumpTestHostFactory : WebApplicationFactory<ProgramStub>
                                 o.Username = "Test";
                                 o.Role = Role;
                                 o.AllowRemoteNoAuth = true;
+                                o.AllowedCidrs = "127.0.0.1/32,::1/128";
                             });
                     services.AddAuthorization(o =>
                     {
@@ -144,7 +145,14 @@ public class DumpTestHostFactory : WebApplicationFactory<ProgramStub>
                     {
                         if (context.Request.Headers.TryGetValue("X-Test-Remote-IP", out var v) &&
                             IPAddress.TryParse(v!, out var ip))
+                        {
                             context.Connection.RemoteIpAddress = ip;
+                        }
+                        else
+                        {
+                            context.Connection.RemoteIpAddress = IPAddress.Loopback;
+                        }
+
                         await next();
                     });
                     app.UseAuthentication();

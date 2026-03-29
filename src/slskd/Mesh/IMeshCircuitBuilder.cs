@@ -7,7 +7,7 @@ namespace slskd.Mesh;
 /// <summary>
 /// Builds and maintains mesh circuits. Abstraction to allow tests to mock PerformMaintenance and GetStatistics.
 /// </summary>
-public interface IMeshCircuitBuilder
+public interface IMeshCircuitBuilder : IDisposable
 {
     /// <summary>Removes expired circuits.</summary>
     void PerformMaintenance();

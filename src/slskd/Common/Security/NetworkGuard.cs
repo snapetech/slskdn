@@ -413,7 +413,7 @@ public sealed class NetworkGuard : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
     }
 
     private sealed class ConnectionTracker

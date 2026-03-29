@@ -44,9 +44,9 @@ public class MeshStatsController : ControllerBase
                 natType = stats.DetectedNatType.ToString().ToLowerInvariant()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { error = "Failed to retrieve mesh stats", message = ex.Message });
+            return StatusCode(500, new { error = "Failed to retrieve mesh stats" });
         }
     }
 }

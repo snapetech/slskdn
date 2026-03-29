@@ -101,7 +101,7 @@ namespace slskd.Mesh.Realm.Migration
             catch (Exception ex)
             {
                 result.Success = false;
-                result.ErrorMessage = ex.Message;
+                result.ErrorMessage = "Migration export failed";
                 _logger.LogError(ex, "[Migration] Export failed: {Message}", ex.Message);
             }
 
@@ -138,7 +138,7 @@ namespace slskd.Mesh.Realm.Migration
                 // Validate import path
                 if (!Directory.Exists(importPath))
                 {
-                    result.Errors.Add($"Import path does not exist: {importPath}");
+                    result.Errors.Add("Import path does not exist");
                     return result;
                 }
 
@@ -181,7 +181,7 @@ namespace slskd.Mesh.Realm.Migration
             catch (Exception ex)
             {
                 result.Success = false;
-                result.Errors.Add($"Import failed: {ex.Message}");
+                result.Errors.Add("Import failed");
                 _logger.LogError(ex, "[Migration] Import failed: {Message}", ex.Message);
             }
 

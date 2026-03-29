@@ -40,29 +40,48 @@ public class PortForwardingController : ControllerBase
     [HttpPost("start")]
     public async Task<IActionResult> StartForwarding([FromBody] StartPortForwardingRequest request)
     {
+        if (request == null)
+        {
+            return BadRequest(new { Error = "Request is required" });
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        var podId = request.PodId?.Trim() ?? string.Empty;
+        var destinationHost = request.DestinationHost?.Trim() ?? string.Empty;
+        var serviceName = string.IsNullOrWhiteSpace(request.ServiceName) ? null : request.ServiceName.Trim();
+
+        if (string.IsNullOrWhiteSpace(podId))
+        {
+            return BadRequest(new { Error = "PodId is required" });
+        }
+
+        if (string.IsNullOrWhiteSpace(destinationHost))
+        {
+            return BadRequest(new { Error = "DestinationHost is required" });
         }
 
         try
         {
             await _portForwarder.StartForwardingAsync(
                 request.LocalPort,
-                request.PodId,
-                request.DestinationHost,
+                podId,
+                destinationHost,
                 request.DestinationPort,
-                request.ServiceName);
+                serviceName);
 
-            return Ok(new { Message = $"Port forwarding started on local port {request.LocalPort}" });
+            return Ok(new { Message = "Port forwarding started" });
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return Conflict(new { Error = ex.Message });
+            return Conflict(new { Error = "Port forwarding is already configured for this local port" });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to start port forwarding: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to start port forwarding" });
         }
     }
 
@@ -77,11 +96,11 @@ public class PortForwardingController : ControllerBase
         try
         {
             await _portForwarder.StopForwardingAsync(localPort);
-            return Ok(new { Message = $"Port forwarding stopped on local port {localPort}" });
+            return Ok(new { Message = "Port forwarding stopped" });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to stop port forwarding: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to stop port forwarding" });
         }
     }
 
@@ -97,9 +116,9 @@ public class PortForwardingController : ControllerBase
             var status = _portForwarder.GetForwardingStatus();
             return Ok(status);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get forwarding status: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get forwarding status" });
         }
     }
 
@@ -116,14 +135,14 @@ public class PortForwardingController : ControllerBase
             var status = _portForwarder.GetForwardingStatus(localPort);
             if (status == null)
             {
-                return NotFound(new { Error = $"No forwarding configured on port {localPort}" });
+                return NotFound(new { Error = "No forwarding configured for this port" });
             }
 
             return Ok(status);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get forwarding status: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get forwarding status" });
         }
     }
 
@@ -141,7 +160,7 @@ public class PortForwardingController : ControllerBase
         try
         {
             // Validate port range
-            if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || startPort >= endPort)
+            if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535 || startPort > endPort)
             {
                 return BadRequest(new { Error = "Invalid port range" });
             }
@@ -161,9 +180,9 @@ public class PortForwardingController : ControllerBase
 
             return Ok(new { AvailablePorts = availablePorts });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get available ports: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get available ports" });
         }
     }
 
@@ -211,9 +230,9 @@ public class PortForwardingController : ControllerBase
 
             return Ok(stats);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { Error = $"Failed to get stream statistics: {ex.Message}" });
+            return StatusCode(500, new { Error = "Failed to get stream statistics" });
         }
     }
 }

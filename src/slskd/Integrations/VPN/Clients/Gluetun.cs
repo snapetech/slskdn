@@ -99,7 +99,9 @@ public class Gluetun : IVPNClient
             return new VPNStatus
             {
                 IsConnected = true,
-                PublicIPAddress = IPAddress.Parse(publicIp.PublicIp),
+                PublicIPAddress = !IPAddress.TryParse(publicIp.PublicIp, out var ipAddress)
+                    ? throw new InvalidOperationException($"Invalid public IP returned by Gluetun: {publicIp.PublicIp}")
+                    : ipAddress,
                 Location = string.Join(", ", [publicIp.City, publicIp.Country]),
                 ForwardedPort = port,
             };

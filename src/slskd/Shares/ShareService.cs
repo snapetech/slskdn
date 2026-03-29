@@ -73,7 +73,7 @@ namespace slskd.Shares
 
             ContentPeerHintService = contentPeerHintService;
 
-            Scanner.StateMonitor.OnChange(cacheState =>
+            ScannerStateMonitorRegistration = Scanner.StateMonitor.OnChange(cacheState =>
             {
                 var (previous, current) = cacheState;
 
@@ -91,7 +91,7 @@ namespace slskd.Shares
             });
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(options => Configure(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
 
             StateMonitor = State;
 
@@ -116,9 +116,12 @@ namespace slskd.Shares
         private IShareRepositoryFactory ShareRepositoryFactory { get; }
         private IShareScanner Scanner { get; }
         private IContentPeerHintService? ContentPeerHintService { get; }
+        private bool Disposed { get; set; }
+        private IDisposable? ScannerStateMonitorRegistration { get; set; }
         private SemaphoreSlim ScannerSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private string LastOptionsHash { get; set; } = string.Empty;
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private ConcurrentDictionary<string, (Host Host, IShareRepository Repository)> HostDictionary { get; set; } = new();
         private IManagedState<ShareState> State { get; } = new ManagedState<ShareState>();
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
@@ -241,6 +244,15 @@ namespace slskd.Shares
         }
 
         /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
         ///     Removes the share host with the specified <paramref name="name"/>.
         /// </summary>
         /// <param name="name">The name of the host.</param>
@@ -249,8 +261,9 @@ namespace slskd.Shares
         {
             var removed = false;
 
-            if (HostDictionary.TryRemove(name, out _))
+            if (HostDictionary.TryRemove(name, out var removedHost))
             {
+                removedHost.Repository.Dispose();
                 removed = true;
             }
 
@@ -655,6 +668,36 @@ namespace slskd.Shares
             finally
             {
                 SyncRoot.Release();
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    ScannerStateMonitorRegistration?.Dispose();
+                    ScannerStateMonitorRegistration = null;
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+
+                    foreach (var host in HostDictionary.Values)
+                    {
+                        host.Repository.Dispose();
+                    }
+
+                    HostDictionary.Clear();
+                    Local.Repository.Dispose();
+                    ScannerSyncRoot.Dispose();
+                    SyncRoot.Dispose();
+                }
+
+                Disposed = true;
             }
         }
     }

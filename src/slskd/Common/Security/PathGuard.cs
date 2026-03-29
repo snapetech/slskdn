@@ -85,6 +85,9 @@ public static partial class PathGuard
             return null;
         }
 
+        peerPath = peerPath.Trim();
+        root = root.Trim();
+
         // 2. Length check BEFORE any processing
         if (peerPath.Length > MaxPathLength)
         {
@@ -190,6 +193,8 @@ public static partial class PathGuard
             return null;
         }
 
+        path = path.Trim();
+
         if (path.Length > MaxPathLength)
         {
             return null;
@@ -217,6 +222,7 @@ public static partial class PathGuard
 
             var normalizedRoots = allowedRoots
                 .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Select(root => root.Trim())
                 .Select(NormalizeUnicode)
                 .Select(Path.GetFullPath)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -381,6 +387,8 @@ public static partial class PathGuard
             return false;
         }
 
+        filename = filename.Trim();
+
         var extension = Path.GetExtension(filename);
         if (string.IsNullOrEmpty(extension))
         {
@@ -401,6 +409,8 @@ public static partial class PathGuard
         {
             return false;
         }
+
+        filename = filename.Trim();
 
         var extension = Path.GetExtension(filename);
         if (string.IsNullOrEmpty(extension))
@@ -423,6 +433,8 @@ public static partial class PathGuard
         {
             return PathValidationResult.Fail("Path is empty", PathViolationType.Empty);
         }
+
+        peerPath = peerPath.Trim();
 
         if (peerPath.Length > MaxPathLength)
         {

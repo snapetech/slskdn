@@ -19,13 +19,15 @@ using Soulseek;
 /// Receives share-grant announcements via private messages and ingests them into the local sharing DB
 /// so "Shared with Me" can function cross-node.
 /// </summary>
-public sealed class ShareGrantAnnouncementService
+public sealed class ShareGrantAnnouncementService : IDisposable
 {
     private const string Prefix = "SHAREGRANT:";
 
     private readonly IDbContextFactory<CollectionsDbContext> _factory;
     private readonly ILogger<ShareGrantAnnouncementService> _log;
     private readonly IOptionsMonitor<slskd.Options> _options;
+    private readonly ISoulseekClient? _soulseekClient;
+    private bool _disposed;
 
     public ShareGrantAnnouncementService(
         IDbContextFactory<CollectionsDbContext> factory,
@@ -36,10 +38,11 @@ public sealed class ShareGrantAnnouncementService
         _factory = factory;
         _log = log;
         _options = options;
+        _soulseekClient = soulseekClient;
 
-        if (soulseekClient != null)
+        if (_soulseekClient != null)
         {
-            soulseekClient.PrivateMessageReceived += OnPrivateMessageReceived;
+            _soulseekClient.PrivateMessageReceived += OnPrivateMessageReceived;
         }
     }
 
@@ -52,17 +55,9 @@ public sealed class ShareGrantAnnouncementService
 
         _log.LogInformation("[ShareGrantInbox] Received SHAREGRANT message from {User}", e.Username);
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await HandleAnnouncementAsync(e.Message.Substring(Prefix.Length), CancellationToken.None).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "[ShareGrantInbox] Failed to handle announcement from {User}", e.Username);
-            }
-        });
+        _ = ObserveBackgroundTaskAsync(
+            Task.Run(() => HandleAnnouncementAsync(e.Message.Substring(Prefix.Length), CancellationToken.None), CancellationToken.None),
+            e.Username);
     }
 
     private async Task HandleAnnouncementAsync(string payload, CancellationToken ct)
@@ -211,6 +206,34 @@ public sealed class ShareGrantAnnouncementService
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         _log.LogInformation("[ShareGrantInbox] Ingested incoming share {ShareId} for collection {CollectionId}", msg.ShareGrantId, msg.CollectionId);
+    }
+
+    private async Task ObserveBackgroundTaskAsync(Task task, string username)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "[ShareGrantInbox] Failed to handle announcement from {User}", username);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_soulseekClient != null)
+        {
+            _soulseekClient.PrivateMessageReceived -= OnPrivateMessageReceived;
+        }
+
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 }
 

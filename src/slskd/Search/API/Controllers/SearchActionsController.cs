@@ -88,7 +88,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "search_not_found",
                 Title = "Search not found",
-                Detail = $"Search {searchId} not found"
+                Detail = "Search not found"
             });
         }
 
@@ -109,14 +109,16 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "item_not_found",
                 Title = "Item not found",
-                Detail = $"Response index {responseIndex} not found in search {searchId}"
+                Detail = "Search result item not found"
             });
         }
 
         var response = search.Responses.ElementAt(responseIndex);
+        var itemParts = itemId.Split(':', StringSplitOptions.TrimEntries);
+        var explicitFileIndex = itemParts.Length == 2;
         var file = fileIndex >= 0 && fileIndex < response.Files.Count
             ? response.Files.ElementAt(fileIndex)
-            : response.Files.FirstOrDefault();
+            : explicitFileIndex ? null : response.Files.FirstOrDefault();
 
         if (file == null)
         {
@@ -124,7 +126,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "file_not_found",
                 Title = "File not found",
-                Detail = $"File index {fileIndex} not found in response {responseIndex}"
+                Detail = "Search result file not found"
             });
         }
 
@@ -147,7 +149,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "invalid_source",
                 Title = "Invalid source",
-                Detail = $"Cannot determine download source for item {itemId}"
+                Detail = "Cannot determine download source"
             });
         }
     }
@@ -180,7 +182,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "search_not_found",
                 Title = "Search not found",
-                Detail = $"Search {searchId} not found"
+                Detail = "Search not found"
             });
         }
 
@@ -201,7 +203,7 @@ public class SearchActionsController : ControllerBase
             {
                 Type = "item_not_found",
                 Title = "Item not found",
-                Detail = $"Response index {responseIndex} not found in search {searchId}"
+                Detail = "Search result item not found"
             });
         }
 
@@ -261,17 +263,19 @@ public class SearchActionsController : ControllerBase
             if (string.IsNullOrWhiteSpace(targetPeerId))
             {
                 var peers = await _meshDirectory.FindPeersByContentAsync(contentId, ct);
-                if (peers == null || peers.Count == 0)
+                var fallbackPeer = peers?
+                    .FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate.PeerId));
+                if (fallbackPeer == null)
                 {
                     return NotFound(new ProblemDetails
                     {
                         Type = "pod_peer_not_found",
                         Title = "Pod peer not found",
-                        Detail = $"No pod peers found hosting content {contentId}"
+                        Detail = "No pod peers found hosting content"
                     });
                 }
 
-                targetPeerId = peers[0].PeerId;
+                targetPeerId = fallbackPeer.PeerId;
                 _logger.LogDebug("[SearchActions] Using peer {PeerId} from mesh directory lookup", targetPeerId);
             }
 
@@ -293,7 +297,7 @@ public class SearchActionsController : ControllerBase
                 {
                     Type = "pod_fetch_failed",
                     Title = "Pod content fetch failed",
-                    Detail = fetchResult.Error ?? "Failed to fetch content from pod peer"
+                    Detail = "Failed to fetch content from pod peer"
                 });
             }
 
@@ -337,12 +341,12 @@ public class SearchActionsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[SearchActions] Pod download failed: {Message}", ex.Message);
+            _logger.LogError(ex, "[SearchActions] Pod download failed");
             return StatusCode(500, new ProblemDetails
             {
                 Type = "pod_download_exception",
                 Title = "Pod download exception",
-                Detail = ex.Message
+                Detail = "Pod download failed"
             });
         }
     }
@@ -373,7 +377,7 @@ public class SearchActionsController : ControllerBase
                 {
                     Type = "download_failed",
                     Title = "Download failed",
-                    Detail = string.Join("; ", failed)
+                    Detail = "Failed to enqueue scene download"
                 });
             }
             else
@@ -388,12 +392,12 @@ public class SearchActionsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[SearchActions] Scene download failed: {Message}", ex.Message);
+            _logger.LogError(ex, "[SearchActions] Scene download failed");
             return StatusCode(500, new ProblemDetails
             {
                 Type = "download_exception",
                 Title = "Download exception",
-                Detail = ex.Message
+                Detail = "Scene download failed"
             });
         }
     }
@@ -408,11 +412,11 @@ public class SearchActionsController : ControllerBase
             return false;
         }
 
-        var parts = itemId.Split(':');
+        var parts = itemId.Split(':', StringSplitOptions.TrimEntries);
         if (parts.Length == 1)
         {
             // Just response index
-            if (int.TryParse(parts[0], out responseIndex))
+            if (int.TryParse(parts[0], out responseIndex) && responseIndex >= 0)
             {
                 fileIndex = 0; // Default to first file
                 return true;
@@ -420,7 +424,10 @@ public class SearchActionsController : ControllerBase
         }
         else if (parts.Length == 2)
         {
-            if (int.TryParse(parts[0], out responseIndex) && int.TryParse(parts[1], out fileIndex))
+            if (int.TryParse(parts[0], out responseIndex) &&
+                int.TryParse(parts[1], out fileIndex) &&
+                responseIndex >= 0 &&
+                fileIndex >= 0)
             {
                 return true;
             }

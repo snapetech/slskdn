@@ -29,6 +29,18 @@ namespace slskd.Tests.Unit.Transfers.Uploads
         }
 
         [Fact]
+        public void Dispose_UnsubscribesOptionsMonitor()
+        {
+            var (queue, mocks) = GetFixture();
+
+            Assert.Equal(1, mocks.OptionsMonitor.ListenerCount);
+
+            queue.Dispose();
+
+            Assert.Equal(0, mocks.OptionsMonitor.ListenerCount);
+        }
+
+        [Fact]
         public void Instantiates_With_Expected_Privileged_Options()
         {
             var (queue, _) = GetFixture();
@@ -361,6 +373,19 @@ namespace slskd.Tests.Unit.Transfers.Uploads
                 Assert.Equal(usedSlots, p.UsedSlots);
                 Assert.Equal(newPriority, p.Priority);
             }
+        }
+
+        [Fact]
+        public async Task AwaitStartAsync_ContinuationCanCompleteUploadWithoutDeadlockingQueue()
+        {
+            var (queue, _) = GetFixture();
+
+            queue.Enqueue("user", "file.mp3");
+
+            var completion = queue.AwaitStartAsync("user", "file.mp3")
+                .ContinueWith(_ => queue.Complete("user", "file.mp3"));
+
+            await completion.WaitAsync(TimeSpan.FromSeconds(30));
         }
 
         public class Enqueue

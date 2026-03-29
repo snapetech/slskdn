@@ -66,12 +66,15 @@ jobs:
         run: |
           cd publish-linux-${{ matrix.arch }}
           zip -r ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip .
+          cp ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip ../slskdn-main-linux-${{ matrix.arch }}.zip
 
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
-          files: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
+          files: |
+            slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
+            slskdn-main-linux-${{ matrix.arch }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -100,29 +103,40 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT
 
-      - name: Download and Calculate SHA256 from Release
-        id: sha
+      - name: Wait for Linux Release Asset
+        id: wait_for_linux_asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Download the ACTUAL release asset (from main CI) to get correct hash
-          ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
-          echo "Downloading from: $ASSET_URL"
-          
-          for i in {1..20}; do
-            if curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/octet-stream" "$ASSET_URL" -o release-linux-x64.zip; then
-              echo "Downloaded successfully"
-              SHA=$(sha256sum release-linux-x64.zip | cut -d' ' -f1)
-              echo "sha256=${SHA}" >> $GITHUB_OUTPUT
-              echo "SHA256: $SHA"
-              exit 0
+          CURL_AUTH_ARGS=()
+          if [ -n "$GH_TOKEN" ]; then
+            CURL_AUTH_ARGS=(-H "Authorization: Bearer ${GH_TOKEN}")
+          fi
+
+          ASSET_NAMES=(
+            "slskdn-main-linux-x64.zip"
+            "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
+          )
+
+          for attempt in {1..20}; do
+            for ASSET_NAME in "${ASSET_NAMES[@]}"; do
+              ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/${ASSET_NAME}"
+              echo "Attempt $attempt: checking ${ASSET_NAME}..."
+
+              if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o release-linux-x64.zip; then
+                echo "Found Linux asset: ${ASSET_NAME}"
+                exit 0
+              fi
+            done
+
+            if [ "$attempt" -eq 20 ]; then
+              echo "Failed to download a Linux x64 asset after 10 minutes"
+              exit 1
             fi
-            echo "Attempt $i failed, waiting 30s..."
+
+            echo "Assets not ready, waiting 30s..."
             sleep 30
           done
-          
-          echo "Failed to download release asset after 10 minutes"
-          echo "sha256=SKIP" >> $GITHUB_OUTPUT
 
       - name: Update PKGBUILDs
         run: |
@@ -138,11 +152,14 @@ jobs:
           # Update binary package PKGBUILD
           # source=() order: zip slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD-bin
-          sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.sha.outputs.sha256 }}' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
+          # keep binary archive hash on SKIP since release assets are mutable and can be replaced in-place
+          sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD-bin
 
           # Update source package PKGBUILD (tarball is SKIP, static file hashes are the same)
           sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '$SVC_SUM' '$YML_SUM' '$SYS_SUM')/" PKGBUILD
+
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD PKGBUILD-bin
 
       - name: Setup and Push to AUR
         env:

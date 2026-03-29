@@ -17,6 +17,7 @@
 
 namespace slskd.Transfers.MultiSource.Discovery.API
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
@@ -73,7 +74,13 @@ namespace slskd.Transfers.MultiSource.Discovery.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> Start([FromBody] DiscoveryStartRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.SearchTerm))
+            if (request == null)
+            {
+                return BadRequest("SearchTerm is required");
+            }
+
+            var normalizedSearchTerm = request.SearchTerm?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedSearchTerm))
             {
                 return BadRequest("SearchTerm is required");
             }
@@ -88,17 +95,19 @@ namespace slskd.Transfers.MultiSource.Discovery.API
                 });
             }
 
-            Log.Information("[Discovery API] Starting discovery for: {SearchTerm}", request.SearchTerm);
+            Log.Information("[Discovery API] Starting discovery for: {SearchTerm}", normalizedSearchTerm);
+
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
 
             await Discovery.StartDiscoveryAsync(
-                request.SearchTerm,
+                normalizedSearchTerm,
                 request.EnableHashVerification ?? true, // Default ON for FLAC testing
-                HttpContext.RequestAborted);
+                cancellationToken);
 
             return Ok(new
             {
                 message = "Discovery started",
-                searchTerm = request.SearchTerm,
+                searchTerm = normalizedSearchTerm,
                 hashVerificationEnabled = request.EnableHashVerification ?? true,
             });
         }
@@ -135,6 +144,16 @@ namespace slskd.Transfers.MultiSource.Discovery.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetSourcesBySize(long size, [FromQuery] int limit = 100)
         {
+            if (size <= 0)
+            {
+                return BadRequest("size must be greater than zero");
+            }
+
+            if (limit <= 0)
+            {
+                return BadRequest("limit must be greater than zero");
+            }
+
             var sources = Discovery.GetSourcesBySize(size, limit);
             return Ok(new
             {
@@ -154,9 +173,15 @@ namespace slskd.Transfers.MultiSource.Discovery.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetSourcesByFilename([FromQuery] string pattern, [FromQuery] int limit = 100)
         {
+            pattern = pattern?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 return BadRequest("pattern query parameter is required");
+            }
+
+            if (limit <= 0)
+            {
+                return BadRequest("limit must be greater than zero");
             }
 
             var sources = Discovery.GetSourcesByFilename(pattern, limit);
@@ -177,6 +202,11 @@ namespace slskd.Transfers.MultiSource.Discovery.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetSummaries([FromQuery] int minSources = 2)
         {
+            if (minSources <= 0)
+            {
+                return BadRequest("minSources must be greater than zero");
+            }
+
             var summaries = Discovery.GetFileSizeSummaries(minSources);
             return Ok(new
             {

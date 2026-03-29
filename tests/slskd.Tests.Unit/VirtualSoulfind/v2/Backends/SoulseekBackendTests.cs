@@ -11,6 +11,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
     using slskd.Common.Security;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
+    using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.v2.Sources;
     using Xunit;
 
@@ -20,6 +21,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         private readonly Mock<ISoulseekSafetyLimiter> _mockLimiter;
         private readonly Mock<ILogger<SoulseekBackend>> _mockLogger;
         private readonly Mock<IOptionsMonitor<SoulseekBackendOptions>> _mockOptions;
+        private readonly Mock<ICatalogueStore> _mockCatalogueStore;
         private readonly SoulseekBackendOptions _defaultOptions;
 
         public SoulseekBackendTests()
@@ -28,6 +30,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             _mockLimiter = new Mock<ISoulseekSafetyLimiter>();
             _mockLogger = new Mock<ILogger<SoulseekBackend>>();
             _mockOptions = new Mock<IOptionsMonitor<SoulseekBackendOptions>>();
+            _mockCatalogueStore = new Mock<ICatalogueStore>();
 
             _defaultOptions = new SoulseekBackendOptions
             {
@@ -46,7 +49,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public void Type_IsSoulseek()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             Assert.Equal(ContentBackendType.Soulseek, backend.Type);
         }
@@ -54,7 +57,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public void SupportedDomain_IsMusic()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             Assert.Equal(ContentDomain.Music, backend.SupportedDomain);
         }
@@ -63,7 +66,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task FindCandidates_WhenDisabled_ReturnsEmpty()
         {
             _defaultOptions.Enabled = false;
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var results = await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
 
@@ -74,7 +77,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task FindCandidates_WhenRateLimited_ReturnsEmpty()
         {
             _mockLimiter.Setup(l => l.TryConsumeSearch(It.IsAny<string>())).Returns(false);
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var results = await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
 
@@ -88,7 +91,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // This test verifies H-08 integration
             _mockLimiter.Setup(l => l.TryConsumeSearch(It.IsAny<string>())).Returns(false);
 
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             await backend.FindCandidatesAsync(ContentItemId.NewId(), CancellationToken.None);
 
@@ -110,7 +113,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_WithValidSoulseekCandidate_ReturnsValid()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var candidate = new SourceCandidate
             {
@@ -132,7 +135,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_WithNonSoulseekBackend_ReturnsInvalid()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var candidate = new SourceCandidate
             {
@@ -152,7 +155,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_WhenDisabled_ReturnsInvalid()
         {
             _defaultOptions.Enabled = false;
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var candidate = new SourceCandidate
             {
@@ -171,7 +174,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_WithInvalidBackendRef_ReturnsInvalid()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var candidate = new SourceCandidate
             {
@@ -190,7 +193,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_WithLowTrustScore_ReturnsInvalid()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var candidate = new SourceCandidate
             {
@@ -211,7 +214,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_ParsesBackendRefCorrectly()
         {
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             var candidate = new SourceCandidate
             {
@@ -256,7 +259,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
                     return false; // Always reject
                 });
 
-            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockOptions.Object, _mockLogger.Object);
+            var backend = new SoulseekBackend(_mockClient.Object, _mockLimiter.Object, _mockCatalogueStore.Object, _mockOptions.Object, _mockLogger.Object);
 
             // Try multiple searches
             for (int i = 0; i < 5; i++)

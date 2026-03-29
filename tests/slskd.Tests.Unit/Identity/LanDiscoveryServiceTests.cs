@@ -131,9 +131,24 @@ public class LanDiscoveryServiceTests : IDisposable
     {
         var svc = CreateService();
         DiscoveredPeer? discovered = null;
+        svc.PeerDiscovered += (s, e) => throw new InvalidOperationException("boom");
         svc.PeerDiscovered += (s, e) => discovered = e;
 
-        // Event may not fire in tests, but subscription should work
-        Assert.NotNull(svc);
+        var raiseMethod = typeof(LanDiscoveryService).GetMethod(
+            "RaisePeerDiscovered",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var peer = new DiscoveredPeer
+        {
+            PeerCode = "ABCD-EFGH",
+            DisplayName = "Nearby Peer",
+            PeerId = "peer-1",
+            Endpoint = "http://127.0.0.1:8080",
+            Capabilities = 1,
+        };
+
+        Assert.NotNull(raiseMethod);
+        raiseMethod!.Invoke(svc, [peer]);
+
+        Assert.Same(peer, discovered);
     }
 }

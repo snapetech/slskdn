@@ -21,7 +21,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using Moq;
+    using slskd.MediaCore;
     using slskd.Shares;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
@@ -33,17 +35,24 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
     /// </summary>
     public class LocalLibraryBackendTests
     {
+        private static async Task<LocalLibraryBackend> CreateBackendAsync(Mock<IShareRepository> mockRepo, ContentItemId itemId, string contentId)
+        {
+            var registry = new ContentIdRegistry();
+            await registry.RegisterAsync("mb:recording:" + itemId.Value, contentId);
+            return new LocalLibraryBackend(mockRepo.Object, registry);
+        }
+
         [Fact]
         public async Task FindCandidates_ContentExists_ReturnsCandidate()
         {
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
             var contentId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(contentId);
             mockRepo.Setup(r => r.FindContentItem(contentId))
                 .Returns(("Music", "work:123", "file.flac", true, string.Empty, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
 
-            var backend = new LocalLibraryBackend(mockRepo.Object);
-            var itemId = ContentItemId.Parse(contentId);
+            var backend = await CreateBackendAsync(mockRepo, itemId, contentId);
 
             // Act
             var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
@@ -53,7 +62,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             var candidate = candidates.First();
             Assert.Equal(ContentBackendType.LocalLibrary, candidate.Backend);
             Assert.Equal(1.0f, candidate.TrustScore);
-            Assert.Equal(100f, candidate.ExpectedQuality);
+            Assert.Equal(1.0f, candidate.ExpectedQuality);
             Assert.True(candidate.IsPreferred);
         }
 
@@ -63,11 +72,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
             var contentId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(contentId);
             mockRepo.Setup(r => r.FindContentItem(contentId))
                 .Returns(("Music", "work:123", "file.flac", false, "blocked", DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
 
-            var backend = new LocalLibraryBackend(mockRepo.Object);
-            var itemId = ContentItemId.Parse(contentId);
+            var backend = await CreateBackendAsync(mockRepo, itemId, contentId);
 
             // Act
             var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
@@ -82,11 +91,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
             var contentId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(contentId);
             mockRepo.Setup(r => r.FindContentItem(contentId))
                 .Returns((ValueTuple<string, string, string, bool, string, long>?)null);
 
-            var backend = new LocalLibraryBackend(mockRepo.Object);
-            var itemId = ContentItemId.Parse(contentId);
+            var backend = await CreateBackendAsync(mockRepo, itemId, contentId);
 
             // Act
             var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
@@ -101,17 +110,18 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
             var contentId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(contentId);
             mockRepo.Setup(r => r.FindContentItem(contentId))
                 .Returns(("Music", "work:123", "file.flac", true, string.Empty, DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
 
-            var backend = new LocalLibraryBackend(mockRepo.Object);
+            var backend = await CreateBackendAsync(mockRepo, itemId, contentId);
             var candidate = new SourceCandidate
             {
                 Id = "local:123",
-                ItemId = ContentItemId.Parse(contentId),
+                ItemId = itemId,
                 Backend = ContentBackendType.LocalLibrary,
                 BackendRef = contentId,
-                ExpectedQuality = 100,
+                ExpectedQuality = 1.0f,
                 TrustScore = 1.0f,
                 LastValidatedAt = DateTimeOffset.UtcNow,
                 LastSeenAt = DateTimeOffset.UtcNow,
@@ -131,11 +141,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         {
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
-            var backend = new LocalLibraryBackend(mockRepo.Object);
+            var itemId = ContentItemId.NewId();
+            var backend = await CreateBackendAsync(mockRepo, itemId, itemId.ToString());
             var candidate = new SourceCandidate
             {
                 Id = "slsk:123",
-                ItemId = ContentItemId.NewId(),
+                ItemId = itemId,
                 Backend = ContentBackendType.Soulseek, // Wrong backend
                 BackendRef = "slsk:user:file",
                 ExpectedQuality = 80,
@@ -158,17 +169,18 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
             var contentId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(contentId);
             mockRepo.Setup(r => r.FindContentItem(contentId))
                 .Returns((ValueTuple<string, string, string, bool, string, long>?)null);
 
-            var backend = new LocalLibraryBackend(mockRepo.Object);
+            var backend = await CreateBackendAsync(mockRepo, itemId, contentId);
             var candidate = new SourceCandidate
             {
                 Id = "local:123",
-                ItemId = ContentItemId.Parse(contentId),
+                ItemId = itemId,
                 Backend = ContentBackendType.LocalLibrary,
                 BackendRef = contentId,
-                ExpectedQuality = 100,
+                ExpectedQuality = 1.0f,
                 TrustScore = 1.0f,
                 LastValidatedAt = DateTimeOffset.UtcNow,
                 LastSeenAt = DateTimeOffset.UtcNow,
@@ -188,17 +200,18 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Arrange
             var mockRepo = new Mock<IShareRepository>();
             var contentId = ContentItemId.NewId().ToString();
+            var itemId = ContentItemId.Parse(contentId);
             mockRepo.Setup(r => r.FindContentItem(contentId))
                 .Returns(("Music", "work:123", "file.flac", false, "quarantined", DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
 
-            var backend = new LocalLibraryBackend(mockRepo.Object);
+            var backend = await CreateBackendAsync(mockRepo, itemId, contentId);
             var candidate = new SourceCandidate
             {
                 Id = "local:123",
-                ItemId = ContentItemId.Parse(contentId),
+                ItemId = itemId,
                 Backend = ContentBackendType.LocalLibrary,
                 BackendRef = contentId,
-                ExpectedQuality = 100,
+                ExpectedQuality = 1.0f,
                 TrustScore = 1.0f,
                 LastValidatedAt = DateTimeOffset.UtcNow,
                 LastSeenAt = DateTimeOffset.UtcNow,
@@ -210,6 +223,28 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             // Assert
             Assert.False(result.IsValid);
             Assert.Contains("no longer advertisable", result.InvalidityReason);
+        }
+
+        [Fact]
+        public void DiRegistration_LocalShareRepositoryMapping_ResolvesBackend()
+        {
+            var mockRepo = new Mock<IShareRepository>();
+            var mockShareService = new Mock<IShareService>();
+            mockShareService.Setup(service => service.GetLocalRepository()).Returns(mockRepo.Object);
+
+            var services = new ServiceCollection();
+            services.AddSingleton(mockShareService.Object);
+            services.AddSingleton<IShareRepository>(sp =>
+                sp.GetRequiredService<IShareService>().GetLocalRepository());
+            services.AddSingleton<IContentIdRegistry, ContentIdRegistry>();
+            services.AddSingleton<LocalLibraryBackend>();
+
+            using var provider = services.BuildServiceProvider();
+
+            var backend = provider.GetRequiredService<LocalLibraryBackend>();
+
+            Assert.NotNull(backend);
+            Assert.Same(mockRepo.Object, provider.GetRequiredService<IShareRepository>());
         }
     }
 }

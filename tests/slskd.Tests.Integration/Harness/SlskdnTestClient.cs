@@ -438,8 +438,8 @@ internal class StubLibraryHealthService : global::slskd.LibraryHealth.ILibraryHe
     public Task<string> StartScanAsync(global::slskd.LibraryHealth.LibraryHealthScanRequest request, CancellationToken ct = default) =>
         Task.FromResult(Guid.NewGuid().ToString("N"));
 
-    public Task<global::slskd.LibraryHealth.LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default) =>
-        Task.FromResult(new global::slskd.LibraryHealth.LibraryHealthScan
+    public Task<global::slskd.LibraryHealth.LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default) =>
+        Task.FromResult<global::slskd.LibraryHealth.LibraryHealthScan?>(new global::slskd.LibraryHealth.LibraryHealthScan
         {
             ScanId = scanId,
             LibraryPath = "(all)",
@@ -548,11 +548,16 @@ internal sealed class StubDisasterModeCoordinatorForTests : global::slskd.Virtua
 
         return Task.CompletedTask;
     }
+
+    public void Dispose() { }
 }
 
 // Bridge service stubs for BridgeController and BridgeAdminController tests
 internal class StubBridgeApiForTests : global::slskd.VirtualSoulfind.Bridge.IBridgeApi
 {
+    public Task<global::slskd.VirtualSoulfind.Bridge.LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default) =>
+        Task.FromResult<global::slskd.VirtualSoulfind.Bridge.LegacyTransferProgress?>(null);
+
     public Task<global::slskd.VirtualSoulfind.Bridge.BridgeSearchResult> SearchAsync(string query, CancellationToken ct = default) =>
         Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeSearchResult
         {
@@ -608,6 +613,14 @@ internal class StubSoulfindBridgeServiceForTests : global::slskd.VirtualSoulfind
             ActiveConnections = 0,
             StartedAt = _isRunning ? DateTimeOffset.UtcNow : DateTimeOffset.MinValue
         });
+
+    public void RecordClientConnection(string clientId)
+    {
+    }
+
+    public void RecordClientDisconnection(string clientId)
+    {
+    }
 }
 
 internal class StubBridgeDashboardForTests : global::slskd.VirtualSoulfind.Bridge.IBridgeDashboard
@@ -634,6 +647,12 @@ internal class StubBridgeDashboardForTests : global::slskd.VirtualSoulfind.Bridg
         Task.FromResult(new global::slskd.VirtualSoulfind.Bridge.BridgeStatistics());
 
     public void RecordRequest(string clientId, string requestType) { }
+
+    public void RecordConnection(string clientId, string ipAddress) { }
+
+    public void RecordAuthentication(string clientId, string username) { }
+
+    public void RecordDisconnection(string clientId) { }
 
     public void RecordMeshBenefit(long bytesViaMesh) { }
 }

@@ -11,13 +11,16 @@ using Microsoft.Extensions.Options;
 /// <summary>
 /// Channel handler for delivering signals over BitTorrent extension protocol.
 /// </summary>
-public class BtExtensionSignalChannelHandler : ISignalChannelHandler
+public sealed class BtExtensionSignalChannelHandler : ISignalChannelHandler
 {
     private readonly ILogger<BtExtensionSignalChannelHandler> logger;
     private readonly SignalSystemOptions options;
     private readonly IBtExtensionSender btExtensionSender;
     private readonly string localPeerId;
+    private readonly object receivingLock = new();
     private Func<Signal, CancellationToken, Task>? onSignalReceived;
+    private bool receivingStarted;
+    private bool disposed;
 
     public BtExtensionSignalChannelHandler(
         ILogger<BtExtensionSignalChannelHandler> logger,
@@ -90,11 +93,38 @@ public class BtExtensionSignalChannelHandler : ISignalChannelHandler
     {
         this.onSignalReceived = onSignalReceived ?? throw new ArgumentNullException(nameof(onSignalReceived));
 
-        // Subscribe to slskdn extension messages
-        btExtensionSender.OnSlskdnExtensionMessageReceived += HandleIncomingMessage;
+        lock (receivingLock)
+        {
+            if (!receivingStarted)
+            {
+                // Subscribe to slskdn extension messages only once.
+                btExtensionSender.OnSlskdnExtensionMessageReceived += HandleIncomingMessage;
+                receivingStarted = true;
+            }
+        }
 
         logger.LogInformation("BT extension signal channel handler started receiving");
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        lock (receivingLock)
+        {
+            if (receivingStarted)
+            {
+                btExtensionSender.OnSlskdnExtensionMessageReceived -= HandleIncomingMessage;
+                receivingStarted = false;
+            }
+        }
+
+        onSignalReceived = null;
+        disposed = true;
     }
 
     private async Task HandleIncomingMessage(SlskdnExtensionMessage message, string fromPeerId, CancellationToken cancellationToken)

@@ -405,4 +405,14 @@ public sealed class SongIdScoringTests
 
         Assert.True(higherIdentity > lowerIdentity);
     }
+
+    [Fact]
+    public void CompareLooseText_TreatsFeatAndAmpersandVariantsAsEquivalent()
+    {
+        var featuringScore = SongIdScoring.CompareLooseText("Artist feat. Guest", "Artist featuring Guest");
+        var andScore = SongIdScoring.CompareLooseText("Artist & Guest", "Artist and Guest");
+
+        Assert.Equal(1, featuringScore);
+        Assert.Equal(1, andScore);
+    }
 }

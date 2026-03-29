@@ -66,16 +66,6 @@ public class UdpHolePuncher : IUdpHolePuncher
     /// <summary>
     /// Attempt UDP hole punching with NAT type awareness.
     /// </summary>
-    public async Task<UdpHolePunchResult> TryPunchAsync(
-        IPEndPoint localEp,
-        IPEndPoint remoteEp,
-        NatType localNatType,
-        NatType remoteNatType,
-        CancellationToken ct = default)
-    {
-        return await TryPunchWithNatAsync(localEp, remoteEp, localNatType, remoteNatType, ct);
-    }
-
     public async Task<UdpHolePunchResult> TryPunchWithNatAsync(
         IPEndPoint localEp,
         IPEndPoint remoteEp,
@@ -95,26 +85,23 @@ public class UdpHolePuncher : IUdpHolePuncher
                 "[HolePunch] Starting punch from {Local} to {Remote} (LocalNAT: {LocalNat}, RemoteNAT: {RemoteNat})",
                 localEp, remoteEp, localNatType, remoteNatType);
 
-            // Determine punching strategy based on NAT types
+            // Determine punching strategy based on NAT types.
             var strategy = DeterminePunchStrategy(localNatType, remoteNatType);
 
-            bool success = false;
+            var success = false;
 
             for (int attempt = 0; attempt < MaxAttempts && !ct.IsCancellationRequested; attempt++)
             {
                 logger.LogDebug("[HolePunch] Attempt {Attempt}/{MaxAttempts}", attempt + 1, MaxAttempts);
 
-                // Send punch packets according to strategy
                 await SendPunchPacketsAsync(udp, remoteEp, strategy, ct);
 
-                // Try to receive a response
                 if (await TryReceiveResponseAsync(udp, remoteEp, ct))
                 {
                     success = true;
                     break;
                 }
 
-                // Wait before next attempt
                 if (attempt < MaxAttempts - 1)
                 {
                     await Task.Delay(PacketIntervalMs * 2, ct);
@@ -143,8 +130,8 @@ public class UdpHolePuncher : IUdpHolePuncher
     /// </summary>
     private PunchStrategy DeterminePunchStrategy(NatType localNat, NatType remoteNat)
     {
-        // For most NAT types, we use a basic strategy
-        // More sophisticated strategies could be implemented for specific NAT combinations
+        // For most NAT types, we use a basic strategy.
+        // More sophisticated strategies could be implemented for specific NAT combinations.
         return new PunchStrategy
         {
             PacketCount = PacketsPerAttempt,
@@ -160,24 +147,33 @@ public class UdpHolePuncher : IUdpHolePuncher
     {
         for (int i = 0; i < strategy.PacketCount; i++)
         {
+            ct.ThrowIfCancellationRequested();
             await udp.SendAsync(PunchPayload, PunchPayload.Length, remoteEp);
 
-            // For symmetric NAT, also try adjacent ports
             if (strategy.UsePortPrediction)
             {
-                // Try a few adjacent ports (simple port prediction)
+                // Try a few adjacent ports (simple port prediction).
                 for (int offset = -2; offset <= 2; offset++)
                 {
-                    if (offset == 0) continue; // Already sent to main port
+                    if (offset == 0)
+                    {
+                        continue;
+                    }
 
-                    var predictedEp = new IPEndPoint(remoteEp.Address, remoteEp.Port + offset);
+                    var predictedPort = remoteEp.Port + offset;
+                    if (predictedPort is <= 0 or > ushort.MaxValue)
+                    {
+                        continue;
+                    }
+
+                    var predictedEp = new IPEndPoint(remoteEp.Address, predictedPort);
                     try
                     {
                         await udp.SendAsync(PunchPayload, PunchPayload.Length, predictedEp);
                     }
                     catch
                     {
-                        // Ignore send failures for predicted ports
+                        // Ignore send failures for predicted ports.
                     }
                 }
             }
@@ -194,45 +190,43 @@ public class UdpHolePuncher : IUdpHolePuncher
     /// </summary>
     private async Task<bool> TryReceiveResponseAsync(UdpClient udp, IPEndPoint remoteEp, CancellationToken ct)
     {
+        using var receiveTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        receiveTimeout.CancelAfter(ReceiveTimeoutMs);
+
         try
         {
-            var receiveTask = udp.ReceiveAsync(ct).AsTask();
+            var result = await udp.ReceiveAsync(receiveTimeout.Token).ConfigureAwait(false);
 
-            // Wait for response with timeout
-            if (await Task.WhenAny(receiveTask, Task.Delay(ReceiveTimeoutMs, ct)) == receiveTask)
+            if (result.RemoteEndPoint.Equals(remoteEp) &&
+                result.Buffer.Length >= ResponsePayload.Length &&
+                result.Buffer.AsSpan(0, ResponsePayload.Length).SequenceEqual(ResponsePayload))
             {
-                var result = receiveTask.Result;
+                logger.LogDebug("[HolePunch] Received valid response from {Remote}", result.RemoteEndPoint);
 
-                // Verify the response is from the expected peer and contains expected payload
-                if (result.RemoteEndPoint.Equals(remoteEp) &&
-                    result.Buffer.Length >= 4 &&
-                    result.Buffer.AsSpan(0, 4).SequenceEqual(ResponsePayload))
-                {
-                    logger.LogDebug("[HolePunch] Received valid response from {Remote}", result.RemoteEndPoint);
-
-                    // Send acknowledgment
-                    await udp.SendAsync(ResponsePayload, ResponsePayload.Length, remoteEp);
-
-                    return true;
-                }
-                else
-                {
-                    logger.LogDebug(
-                        "[HolePunch] Received unexpected data from {Remote} (expected {Expected})",
-                        result.RemoteEndPoint, remoteEp);
-                }
+                // Send acknowledgment.
+                await udp.SendAsync(ResponsePayload, ResponsePayload.Length, remoteEp);
+                return true;
             }
-            else
-            {
-                logger.LogDebug("[HolePunch] No response received within timeout");
-            }
+
+            logger.LogDebug(
+                "[HolePunch] Received unexpected data from {Remote} (expected {Expected})",
+                result.RemoteEndPoint, remoteEp);
+            return false;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogDebug("[HolePunch] No response received within timeout");
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "[HolePunch] Error receiving response");
+            return false;
         }
-
-        return false;
     }
 }
 

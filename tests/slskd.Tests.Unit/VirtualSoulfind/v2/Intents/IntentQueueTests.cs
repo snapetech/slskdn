@@ -98,5 +98,19 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
             Assert.Equal(IntentMode.Wanted, intent.Mode);
             Assert.Equal("Test notes", intent.Notes);
         }
+
+        [Fact]
+        public async Task GetReleaseIntent_ReturnsReleaseOrNull()
+        {
+            var queue = new InMemoryIntentQueue();
+            var intent = await queue.EnqueueReleaseAsync("release123");
+
+            var found = await queue.GetReleaseIntentAsync(intent.DesiredReleaseId);
+            var missing = await queue.GetReleaseIntentAsync("missing-id");
+
+            Assert.NotNull(found);
+            Assert.Equal(intent.DesiredReleaseId, found.DesiredReleaseId);
+            Assert.Null(missing);
+        }
     }
 }

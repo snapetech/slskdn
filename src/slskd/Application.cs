@@ -65,9 +65,20 @@ namespace slskd
         public void CollectGarbage();
     }
 
-    public sealed class Application : IApplication
+    public sealed class Application : IApplication, IDisposable
     {
         private readonly List<PosixSignalRegistration> _posixSignalRegistrations = new();
+        private readonly List<IDisposable> _changeRegistrations = new();
+        private CancellationTokenSource? _startupInitializationCts;
+        private Task? _startupInitializationTask;
+        private ConsoleCancelEventHandler? _cancelKeyPressHandler;
+        private EventHandler<LogRecord>? _programLogEmittedHandler;
+        private EventHandler<string>? _privateRoomMembershipAddedHandler;
+        private EventHandler<string>? _privateRoomMembershipRemovedHandler;
+        private EventHandler<string>? _privateRoomModerationAddedHandler;
+        private EventHandler<string>? _privateRoomModerationRemovedHandler;
+        private EventHandler<DownloadDeniedEventArgs>? _downloadDeniedHandler;
+        private EventHandler<DownloadFailedEventArgs>? _downloadFailedHandler;
 
         /// <summary>
         ///     The name of the default user group.
@@ -124,12 +135,13 @@ namespace slskd
         {
             Log.Information("[Application] Constructor called");
             Log.Information("[Application] Setting up event handlers...");
-            Console.CancelKeyPress += (_, args) =>
+            _cancelKeyPressHandler = (_, args) =>
             {
                 ShuttingDown = true;
                 Program.MasterCancellationTokenSource.Cancel();
                 Log.Warning("Received SIGINT");
             };
+            Console.CancelKeyPress += _cancelKeyPressHandler;
 
             foreach (var signal in new[] { PosixSignal.SIGINT, PosixSignal.SIGQUIT, PosixSignal.SIGTERM })
             {
@@ -145,7 +157,7 @@ namespace slskd
             OptionsAtStartup = optionsAtStartup;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(async options => await OptionsMonitor_OnChange(options));
+            RegisterChange(OptionsMonitor.OnChange(async options => await OptionsMonitor_OnChange(options)));
 
             IncomingSearchRequestSemaphore = new SemaphoreSlim(
                 initialCount: OptionsAtStartup.Throttling.Search.Incoming.Concurrency,
@@ -168,12 +180,12 @@ namespace slskd
                 .AsReadOnly();
 
             State = state;
-            State.OnChange(state => State_OnChange(state));
+            RegisterChange(State.OnChange(state => State_OnChange(state)));
 
             Files = fileService;
 
             Shares = shareService;
-            Shares.StateMonitor.OnChange(state => ShareState_OnChange(state));
+            RegisterChange(Shares.StateMonitor.OnChange(state => ShareState_OnChange(state)));
 
             Search = searchService;
 
@@ -187,11 +199,12 @@ namespace slskd
             ApplicationHub = applicationHub;
 
             Relay = relayService;
-            Relay.StateMonitor.OnChange(relayState => State.SetValue(state => state with { Relay = relayState.Current }));
+            RegisterChange(Relay.StateMonitor.OnChange(relayState => State.SetValue(state => state with { Relay = relayState.Current })));
 
             LogHub = logHub;
             TransfersHub = transfersHub;
-            Program.LogEmitted += (_, log) => LogHub.EmitLogAsync(log);
+            _programLogEmittedHandler = (_, log) => LogHub.EmitLogAsync(log);
+            Program.LogEmitted += _programLogEmittedHandler;
 
             EventBus = eventBus;
             EventService = eventService;
@@ -210,10 +223,14 @@ namespace slskd
             Client.UserStatusChanged += Client_UserStatusChanged;
             Client.PrivateMessageReceived += Client_PrivateMessageReceived;
 
-            Client.PrivateRoomMembershipAdded += (e, room) => Log.Information("Added to private room {Room}", room);
-            Client.PrivateRoomMembershipRemoved += (e, room) => Log.Information("Removed from private room {Room}", room);
-            Client.PrivateRoomModerationAdded += (e, room) => Log.Information("Promoted to moderator in private room {Room}", room);
-            Client.PrivateRoomModerationRemoved += (e, room) => Log.Information("Demoted from moderator in private room {Room}", room);
+            _privateRoomMembershipAddedHandler = (e, room) => Log.Information("Added to private room {Room}", room);
+            _privateRoomMembershipRemovedHandler = (e, room) => Log.Information("Removed from private room {Room}", room);
+            _privateRoomModerationAddedHandler = (e, room) => Log.Information("Promoted to moderator in private room {Room}", room);
+            _privateRoomModerationRemovedHandler = (e, room) => Log.Information("Demoted from moderator in private room {Room}", room);
+            Client.PrivateRoomMembershipAdded += _privateRoomMembershipAddedHandler;
+            Client.PrivateRoomMembershipRemoved += _privateRoomMembershipRemovedHandler;
+            Client.PrivateRoomModerationAdded += _privateRoomModerationAddedHandler;
+            Client.PrivateRoomModerationRemoved += _privateRoomModerationRemovedHandler;
 
             Client.RoomMessageReceived += Client_RoomMessageReceived;
             Client.Disconnected += Client_Disconnected;
@@ -221,8 +238,10 @@ namespace slskd
             Client.LoggedIn += Client_LoggedIn;
             Client.StateChanged += Client_StateChanged;
             Client.DistributedNetworkStateChanged += Client_DistributedNetworkStateChanged;
-            Client.DownloadDenied += (e, args) => Log.Error("Download of {Filename} from {Username} was denied by the remote user: {Message}", args.Filename, args.Username, args.Message);
-            Client.DownloadFailed += (e, args) => Log.Error("Download of {Filename} from {Username} reported as failed by the remote user", args.Filename, args.Username);
+            _downloadDeniedHandler = (e, args) => Log.Error("Download of {Filename} from {Username} was denied by the remote user: {Message}", args.Filename, args.Username, args.Message);
+            _downloadFailedHandler = (e, args) => Log.Error("Download of {Filename} from {Username} reported as failed by the remote user", args.Filename, args.Username);
+            Client.DownloadDenied += _downloadDeniedHandler;
+            Client.DownloadFailed += _downloadFailedHandler;
 
             Client.ExcludedSearchPhrasesReceived += Client_ExcludedSearchPhrasesReceived;
 
@@ -375,17 +394,14 @@ namespace slskd
             Log.Information("Application started");
 
             // Start the actual initialization in the background to avoid blocking other hosted services
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await InitializeApplicationAsync(cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Failed to initialize application in background task");
-                }
-            }, cancellationToken);
+            _startupInitializationCts?.Cancel();
+            _startupInitializationCts?.Dispose();
+            var startupInitializationCts = new CancellationTokenSource();
+            _startupInitializationCts = startupInitializationCts;
+            _startupInitializationTask = Task.Run(() => InitializeApplicationAsync(startupInitializationCts.Token), CancellationToken.None);
+            _ = ObserveBackgroundTaskAsync(
+                _startupInitializationTask,
+                "Failed to initialize application in background task");
 
             return Task.CompletedTask;
         }
@@ -481,8 +497,14 @@ namespace slskd
                 writeBufferSize: OptionsAtStartup.Soulseek.Connection.Buffer.Transfer,
                 inactivityTimeout: OptionsAtStartup.Soulseek.Connection.Timeout.Transfer);
 
+            if (!IPAddress.TryParse(OptionsAtStartup.Soulseek.ListenIpAddress, out var startupListenAddress))
+            {
+                Log.Warning("Invalid Soulseek listen IP address '{Address}', defaulting to 0.0.0.0", OptionsAtStartup.Soulseek.ListenIpAddress);
+                startupListenAddress = IPAddress.Any;
+            }
+
             var patch = new SoulseekClientOptionsPatch(
-                listenIPAddress: IPAddress.Parse(OptionsAtStartup.Soulseek.ListenIpAddress),
+                listenIPAddress: startupListenAddress,
                 listenPort: OptionsAtStartup.Soulseek.ListenPort,
                 enableListener: true,
                 userEndPointCache: new UserEndPointCache(),
@@ -576,21 +598,7 @@ namespace slskd
             }
 
             // Register mesh services for DHT operations (non-blocking - run after startup completes)
-            _ = RegisterMeshServicesAsync(cancellationToken).ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                {
-                    var baseException = task.Exception?.GetBaseException();
-                    if (baseException is OperationCanceledException)
-                    {
-                        Log.Information("Mesh service registration cancelled");
-                    }
-                    else
-                    {
-                        Log.Error(baseException, "Failed to register mesh services in background");
-                    }
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            _ = RegisterMeshServicesInBackgroundAsync(cancellationToken);
 
             Log.Information("[Application] Initialization complete");
         }
@@ -652,10 +660,44 @@ namespace slskd
             return Task.CompletedTask;
         }
 
-        Task IHostedService.StopAsync(CancellationToken cancellationToken)
+        private async Task RegisterMeshServicesInBackgroundAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await RegisterMeshServicesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                Log.Information("Mesh service registration cancelled");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to register mesh services in background");
+            }
+        }
+
+        async Task IHostedService.StopAsync(CancellationToken cancellationToken)
         {
             ShuttingDown = true;
             Log.Warning("Application is shutting down");
+
+            _startupInitializationCts?.Cancel();
+
+            if (_startupInitializationTask != null)
+            {
+                try
+                {
+                    await _startupInitializationTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown.
+                }
+            }
+
+            _startupInitializationTask = null;
+            _startupInitializationCts?.Dispose();
+            _startupInitializationCts = null;
 
             Clock.Stop();
 
@@ -667,7 +709,6 @@ namespace slskd
             }
 
             Log.Information("Client stopped");
-            return Task.CompletedTask;
         }
 
         private void ConfigureSocketKeepaliveOptions(Socket socket, Options.SoulseekOptions.ConnectionOptions options)
@@ -1208,54 +1249,50 @@ namespace slskd
             }
         }
 
-        private async void Client_LoggedIn(object? sender, EventArgs e)
+        private void Client_LoggedIn(object? sender, EventArgs e)
+            => _ = ObserveBackgroundTaskAsync(HandleClientLoggedInAsync(), "Failed to execute post-login actions");
+
+        private async Task HandleClientLoggedInAsync()
         {
             Log.Information("Logged in to the Soulseek server as {Username}", Client.Username);
 
-            try
+            // send whatever counts we have currently. we'll probably connect before the cache is primed, so these will be zero
+            // initially, but we'll update them when the cache is filled.
+            await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
+
+            // fetch our average upload speed from the server, so we can provide it along with search results
+            await RefreshUserStatistics(force: true);
+
+            // we previously saved a list of all of the download ids that were active at the previous shutdown; fetch the latest
+            // record for those transfers from the db and ensure they haven't been removed from the UI while the application was offline
+            // the user doesn't want those transfers anymore and we don't want to add them back.
+            var resumableDownloads = Transfers.Downloads.List(t => !t.Removed && ActiveDownloadIdsAtPreviousShutdown.Contains(t.Id));
+
+            if (resumableDownloads.Any())
             {
-                // send whatever counts we have currently. we'll probably connect before the cache is primed, so these will be zero
-                // initially, but we'll update them when the cache is filled.
-                await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
+                Log.Information("Attempting to re-enqueue previously active downloads...");
 
-                // fetch our average upload speed from the server, so we can provide it along with search results
-                await RefreshUserStatistics(force: true);
+                var groups = resumableDownloads.GroupBy(d => d.Username);
 
-                // we previously saved a list of all of the download ids that were active at the previous shutdown; fetch the latest
-                // record for those transfers from the db and ensure they haven't been removed from the UI while the application was offline
-                // the user doesn't want those transfers anymore and we don't want to add them back.
-                var resumableDownloads = Transfers.Downloads.List(t => !t.Removed && ActiveDownloadIdsAtPreviousShutdown.Contains(t.Id));
-
-                if (resumableDownloads.Any())
+                // re-request downloads. we use a try/catch here because there's a very good chance that the other user is offline.
+                foreach (var group in groups)
                 {
-                    Log.Information("Attempting to re-enqueue previously active downloads...");
+                    var username = group.Key;
+                    var files = group.Select(f => (f.Filename, f.Size));
 
-                    var groups = resumableDownloads.GroupBy(d => d.Username);
-
-                    // re-request downloads. we use a try/catch here because there's a very good chance that the other user is offline.
-                    foreach (var group in groups)
+                    try
                     {
-                        var username = group.Key;
-                        var files = group.Select(f => (f.Filename, f.Size));
-
-                        try
-                        {
-                            await Transfers.Downloads.EnqueueAsync(username, files);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning("Failed to re-enqueue {Count} file(s) from {Username}: {Message}", files.Count(), username, ex.Message);
-                        }
+                        await Transfers.Downloads.EnqueueAsync(username, files);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("Failed to re-enqueue {Count} file(s) from {Username}: {Message}", files.Count(), username, ex.Message);
                     }
                 }
+            }
 
-                // clear the ids we saved at startup; we don't want to re-request these again if the connection is cycled
-                ActiveDownloadIdsAtPreviousShutdown = [];
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to execute post-login actions");
-            }
+            // clear the ids we saved at startup; we don't want to re-request these again if the connection is cycled
+            ActiveDownloadIdsAtPreviousShutdown = [];
         }
 
         private void Client_PrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs args)
@@ -1273,7 +1310,10 @@ namespace slskd
             // HARDENING: Handle PODMSG group pod messages
             if (args.Message.StartsWith("PODMSG:", StringComparison.Ordinal))
             {
-                _ = Task.Run(() => HandlePodMessageAsync(args.Username, args.Message));
+                _ = ObserveBackgroundTaskAsync(
+                    Task.Run(() => HandlePodMessageAsync(args.Username, args.Message), CancellationToken.None),
+                    "Failed to handle pod message from {Username}",
+                    args.Username);
                 return; // Don't process as regular PM
             }
 
@@ -1474,19 +1514,19 @@ namespace slskd
 
         private void Clock_EveryFiveMinutes(object? sender, ClockEventArgs e)
         {
-            _ = Task.Run(() => PruneSearches());
-            _ = Task.Run(() => PruneTransfers());
-            _ = Task.Run(() => PruneEvents());
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneSearches(), CancellationToken.None), "Failed to prune searches");
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneTransfers(), CancellationToken.None), "Failed to prune transfers");
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneEvents(), CancellationToken.None), "Failed to prune events");
         }
 
         private void Clock_EveryThirtyMinutes(object? sender, ClockEventArgs e)
         {
-            _ = Task.Run(() => PruneFiles());
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => PruneFiles(), CancellationToken.None), "Failed to prune files");
         }
 
         private void Clock_EveryHour(object? sender, ClockEventArgs e)
         {
-            _ = Task.Run(() => MaybeRescanShares());
+            _ = ObserveBackgroundTaskAsync(Task.Run(() => MaybeRescanShares(), CancellationToken.None), "Failed to evaluate scheduled share rescan");
         }
 
         private async Task MaybeRescanShares()
@@ -1522,7 +1562,7 @@ namespace slskd
                 Log.Information("Beginning scheduled re-scan of shares (previous scan is older than {Minutes} minutes)", ttl);
 
                 // fire and forget. if something slips through the underlying logic will log.
-                _ = Task.Run(() => Shares.ScanAsync());
+                _ = ObserveBackgroundTaskAsync(Task.Run(() => Shares.ScanAsync(), CancellationToken.None), "Failed to start scheduled share scan");
             }
         }
 
@@ -1886,8 +1926,17 @@ namespace slskd
                             inactivityTimeout: connection.Timeout.Transfer);
                     }
 
+                    IPAddress? updateListenIpAddress = null;
+                    if (!string.IsNullOrWhiteSpace(update.ListenIpAddress) && old.ListenIpAddress != update.ListenIpAddress)
+                    {
+                        if (!IPAddress.TryParse(update.ListenIpAddress, out updateListenIpAddress))
+                        {
+                            Log.Warning("Invalid Soulseek listen IP address '{Address}' in options update; keeping existing listen IP", update.ListenIpAddress);
+                        }
+                    }
+
                     var patch = new SoulseekClientOptionsPatch(
-                        listenIPAddress: old.ListenIpAddress == update.ListenIpAddress ? null : IPAddress.Parse(update.ListenIpAddress),
+                        listenIPAddress: updateListenIpAddress,
                         listenPort: old.ListenPort == update.ListenPort ? null : update.ListenPort,
                         enableDistributedNetwork: old.DistributedNetwork.Disabled == update.DistributedNetwork.Disabled ? null : !update.DistributedNetwork.Disabled,
                         distributedChildLimit: old.DistributedNetwork.ChildLimit == update.DistributedNetwork.ChildLimit ? null : update.DistributedNetwork.ChildLimit,
@@ -2124,11 +2173,13 @@ namespace slskd
 
                     if (Client.State.HasFlag(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn))
                     {
-                        _ = Task.Run(async () =>
-                        {
-                            await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
-                            await RefreshUserStatistics(force: true);
-                        });
+                        _ = ObserveBackgroundTaskAsync(
+                            Task.Run(async () =>
+                            {
+                                await Client.SetSharedCountsAsync(State.CurrentValue.Shares.Directories, State.CurrentValue.Shares.Files);
+                                await RefreshUserStatistics(force: true);
+                            }, CancellationToken.None),
+                            "Failed to refresh shared counts after scan");
                     }
                 }
             }
@@ -2292,6 +2343,109 @@ namespace slskd
                 Log.Warning(ex, "Failed to resolve user info: {Message}", ex.Message);
                 throw;
             }
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate, params object[] propertyValues)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, messageTemplate, propertyValues);
+            }
+        }
+
+        private void RegisterChange(IDisposable? registration)
+        {
+            if (registration != null)
+            {
+                _changeRegistrations.Add(registration);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_cancelKeyPressHandler != null)
+            {
+                Console.CancelKeyPress -= _cancelKeyPressHandler;
+                _cancelKeyPressHandler = null;
+            }
+
+            if (_programLogEmittedHandler != null)
+            {
+                Program.LogEmitted -= _programLogEmittedHandler;
+                _programLogEmittedHandler = null;
+            }
+
+            Clock.EveryMinute -= Clock_EveryMinute;
+            Clock.EveryThirtySeconds -= Clock_EveryThirtySeconds;
+            Clock.EveryFiveMinutes -= Clock_EveryFiveMinutes;
+            Clock.EveryThirtyMinutes -= Clock_EveryThirtyMinutes;
+            Clock.EveryHour -= Clock_EveryHour;
+
+            Client.DiagnosticGenerated -= Client_DiagnosticGenerated;
+            Client.TransferStateChanged -= Client_TransferStateChanged;
+            Client.TransferProgressUpdated -= Client_TransferProgressUpdated;
+            Client.BrowseProgressUpdated -= Client_BrowseProgressUpdated;
+            Client.UserStatusChanged -= Client_UserStatusChanged;
+            Client.PrivateMessageReceived -= Client_PrivateMessageReceived;
+
+            if (_privateRoomMembershipAddedHandler != null)
+            {
+                Client.PrivateRoomMembershipAdded -= _privateRoomMembershipAddedHandler;
+                _privateRoomMembershipAddedHandler = null;
+            }
+
+            if (_privateRoomMembershipRemovedHandler != null)
+            {
+                Client.PrivateRoomMembershipRemoved -= _privateRoomMembershipRemovedHandler;
+                _privateRoomMembershipRemovedHandler = null;
+            }
+
+            if (_privateRoomModerationAddedHandler != null)
+            {
+                Client.PrivateRoomModerationAdded -= _privateRoomModerationAddedHandler;
+                _privateRoomModerationAddedHandler = null;
+            }
+
+            if (_privateRoomModerationRemovedHandler != null)
+            {
+                Client.PrivateRoomModerationRemoved -= _privateRoomModerationRemovedHandler;
+                _privateRoomModerationRemovedHandler = null;
+            }
+
+            Client.RoomMessageReceived -= Client_RoomMessageReceived;
+            Client.Disconnected -= Client_Disconnected;
+            Client.Connected -= Client_Connected;
+            Client.LoggedIn -= Client_LoggedIn;
+            Client.StateChanged -= Client_StateChanged;
+            Client.DistributedNetworkStateChanged -= Client_DistributedNetworkStateChanged;
+
+            if (_downloadDeniedHandler != null)
+            {
+                Client.DownloadDenied -= _downloadDeniedHandler;
+                _downloadDeniedHandler = null;
+            }
+
+            if (_downloadFailedHandler != null)
+            {
+                Client.DownloadFailed -= _downloadFailedHandler;
+                _downloadFailedHandler = null;
+            }
+
+            Client.ExcludedSearchPhrasesReceived -= Client_ExcludedSearchPhrasesReceived;
+
+            foreach (var registration in _changeRegistrations)
+            {
+                registration.Dispose();
+            }
+
+            _changeRegistrations.Clear();
+            _startupInitializationCts?.Cancel();
+            _startupInitializationCts?.Dispose();
+            _startupInitializationCts = null;
         }
     }
 }

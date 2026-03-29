@@ -56,12 +56,25 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateProfileRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest("Request is required.");
+        req.DisplayName = req.DisplayName?.Trim();
+        req.Avatar = string.IsNullOrWhiteSpace(req.Avatar) ? null : req.Avatar.Trim();
+        req.Endpoints = (req.Endpoints ?? new List<PeerEndpoint>())
+            .Select(endpoint => new PeerEndpoint
+            {
+                Type = endpoint.Type?.Trim() ?? string.Empty,
+                Address = endpoint.Address?.Trim() ?? string.Empty,
+                Priority = endpoint.Priority,
+            })
+            .Where(endpoint => !string.IsNullOrWhiteSpace(endpoint.Type) && !string.IsNullOrWhiteSpace(endpoint.Address))
+            .ToList();
+
         if (string.IsNullOrWhiteSpace(req.DisplayName)) return BadRequest("DisplayName is required.");
         var p = await _profile.UpdateMyProfileAsync(
-            req.DisplayName.Trim(),
-            req.Avatar?.Trim(),
+            req.DisplayName,
+            req.Avatar,
             req.Capabilities ?? 0,
-            req.Endpoints ?? new List<PeerEndpoint>(),
+            req.Endpoints,
             ct).ConfigureAwait(false);
         return Ok(p);
     }
@@ -74,6 +87,8 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> GetProfile([FromRoute] string peerId, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        peerId = peerId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(peerId)) return BadRequest("PeerId is required.");
         var p = await _profile.GetProfileAsync(peerId, ct).ConfigureAwait(false);
         if (p == null) return NotFound();
         return Ok(p);
@@ -86,6 +101,11 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> CreateInvite([FromBody] CreateInviteRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null)
+        {
+            return BadRequest("Request is required.");
+        }
+
         try
         {
             var profile = await _profile.GetMyProfileAsync(ct).ConfigureAwait(false);
@@ -109,11 +129,11 @@ public class ProfileController : ControllerBase
             var link = $"slskdn://invite/{base64}";
             return Ok(new InviteResponse { InviteLink = link, FriendCode = _profile.GetFriendCode(profile.PeerId) });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Problem(
                 title: "Failed to create invite",
-                detail: $"Cannot create invite: {ex.Message}",
+                detail: "Cannot create invite.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
     }

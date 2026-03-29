@@ -10,6 +10,7 @@ using Moq;
 using slskd.Mesh;
 using slskd.Messaging;
 using slskd.PodCore;
+using System.Linq;
 using System.Security.Claims;
 using Xunit;
 using slskd.API.Native;
@@ -114,6 +115,19 @@ public class PodsControllerTests
     }
 
     [Fact]
+    public async Task GetPod_WithMissingPod_DoesNotEchoPodId()
+    {
+        var podId = "pod:00000000000000000000000000000000";
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync((Pod?)null);
+
+        var result = await _controller.GetPod(podId);
+
+        var notFound = Assert.IsType<NotFoundObjectResult>(result);
+        Assert.DoesNotContain(podId, notFound.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Pod not found", notFound.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
     public async Task CreatePod_WithValidPod_ReturnsCreatedResult()
     {
         // Arrange
@@ -139,6 +153,71 @@ public class PodsControllerTests
     }
 
     [Fact]
+    public async Task CreatePod_TrimsNestedPodFieldsBeforeDispatch()
+    {
+        var podId = "pod:test123";
+        var pod = new Pod
+        {
+            PodId = $" {podId} ",
+            Name = " Test Pod ",
+            Description = "  ambient room  ",
+            Tags = new List<string> { " electronic ", "electronic", " ambient " },
+            Members = new List<PodMember> { new() { PeerId = " peer:creator ", Role = " owner ", PublicKey = " key " } },
+            ExternalBindings = new List<ExternalBinding> { new() { Kind = " soulseek-room ", Mode = " readonly ", Identifier = " ambient-room " } },
+            PrivateServicePolicy = new PodPrivateServicePolicy
+            {
+                GatewayPeerId = " peer:creator ",
+                RegisteredServices = new List<RegisteredService> { new() { Name = " web ui ", Description = " local ", Host = " example.local ", Protocol = " tcp " } },
+                AllowedDestinations = new List<AllowedDestination> { new() { HostPattern = " 192.168.1.2 ", Protocol = " tcp " } }
+            },
+            Channels = new List<PodChannel> { new() { ChannelId = " general ", Name = " Main ", BindingInfo = " soulseek-room:ambient ", Description = "  room  " } },
+            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
+        };
+        var request = new CreatePodRequest(pod, " peer:creator ");
+
+        _podServiceMock
+            .Setup(x => x.CreateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Pod createdPod, CancellationToken _) => createdPod);
+        _podServiceMock
+            .Setup(x => x.JoinAsync(podId, It.IsAny<PodMember>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _controller.CreatePod(request);
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        _podServiceMock.Verify(
+            x => x.CreateAsync(
+                It.Is<Pod>(created =>
+                    created.PodId == podId &&
+                    created.Name == "Test Pod" &&
+                    created.Description == "ambient room" &&
+                    created.Tags.SequenceEqual(new[] { "electronic", "ambient" }) &&
+                    created.Members != null &&
+                    created.Members[0].PeerId == "peer:creator" &&
+                    created.Members[0].Role == "owner" &&
+                    created.Members[0].PublicKey == "key" &&
+                    created.ExternalBindings.Count == 1 &&
+                    created.ExternalBindings[0].Kind == "soulseek-room" &&
+                    created.ExternalBindings[0].Mode == "readonly" &&
+                    created.ExternalBindings[0].Identifier == "ambient-room" &&
+                    created.PrivateServicePolicy != null &&
+                    created.PrivateServicePolicy.GatewayPeerId == "peer:creator" &&
+                    created.PrivateServicePolicy.RegisteredServices[0].Name == "web ui" &&
+                    created.PrivateServicePolicy.RegisteredServices[0].Description == "local" &&
+                    created.PrivateServicePolicy.RegisteredServices[0].Host == "example.local" &&
+                    created.PrivateServicePolicy.RegisteredServices[0].Protocol == "tcp" &&
+                    created.PrivateServicePolicy.AllowedDestinations[0].HostPattern == "192.168.1.2" &&
+                    created.PrivateServicePolicy.AllowedDestinations[0].Protocol == "tcp" &&
+                    created.Channels.Count == 1 &&
+                    created.Channels[0].ChannelId == "general" &&
+                    created.Channels[0].Name == "Main" &&
+                    created.Channels[0].BindingInfo == "soulseek-room:ambient" &&
+                    created.Channels[0].Description == "room"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task CreatePod_WithNullPod_ReturnsBadRequest()
     {
         // Act
@@ -146,6 +225,23 @@ public class PodsControllerTests
 
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task CreatePod_WhenServiceThrowsArgumentException_ReturnsSanitizedBadRequest()
+    {
+        var request = new CreatePodRequest(
+            new Pod { PodId = "pod:test123", Name = "Test Pod", Visibility = PodVisibility.Private },
+            "peer:creator");
+
+        _podServiceMock
+            .Setup(x => x.CreateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("sensitive detail"));
+
+        var result = await _controller.CreatePod(request);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("Invalid pod request", badRequest.Value?.ToString() ?? string.Empty);
     }
 
     [Fact]
@@ -169,6 +265,53 @@ public class PodsControllerTests
 
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
         Assert.Contains("not found", notFound.Value?.ToString() ?? "");
+    }
+
+    [Fact]
+    public async Task UpdatePod_TrimsNestedPodFieldsBeforeDispatch()
+    {
+        var podId = "pod:test123";
+        var existingPod = new Pod
+        {
+            PodId = podId,
+            Name = "Existing",
+            Members = new List<PodMember> { new() { PeerId = "peer:creator", Role = "owner" } }
+        };
+        var updatedPod = new Pod
+        {
+            PodId = " pod:test123 ",
+            Name = " Updated Pod ",
+            Description = "  updated desc  ",
+            Tags = new List<string> { " ambient ", "ambient", " dub " },
+            PrivateServicePolicy = new PodPrivateServicePolicy
+            {
+                GatewayPeerId = " peer:creator "
+            }
+        };
+
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(existingPod);
+        _podServiceMock.Setup(x => x.GetMembersAsync(podId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember> { new() { PeerId = "peer:creator", Role = "owner" } });
+        _podServiceMock.Setup(x => x.UpdateAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Pod { PodId = podId, Name = "Updated Pod" });
+
+        var result = await _controller.UpdatePod(
+            podId,
+            new UpdatePodRequest(updatedPod, " peer:creator "),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        _podServiceMock.Verify(
+            x => x.UpdateAsync(
+                It.Is<Pod>(updated =>
+                    updated.PodId == "pod:test123" &&
+                    updated.Name == "Updated Pod" &&
+                    updated.Description == "updated desc" &&
+                    updated.Tags.SequenceEqual(new[] { "ambient", "dub" }) &&
+                    updated.PrivateServicePolicy != null &&
+                    updated.PrivateServicePolicy.GatewayPeerId == "peer:creator"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -286,7 +429,10 @@ public class PodsControllerTests
         var result = await _controller.JoinPod(podId, request);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("joined", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain(podId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("peer:joiner", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -316,7 +462,10 @@ public class PodsControllerTests
         var result = await _controller.LeavePod(podId, request);
 
         // Assert
-        Assert.IsType<OkObjectResult>(result);
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("left", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain(podId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("peer:leaver", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -335,6 +484,28 @@ public class PodsControllerTests
     }
 
     [Fact]
+    public async Task BindRoom_ReturnsSanitizedSuccessPayload()
+    {
+        var podId = "pod:00000000000000000000000000000001";
+        var channelId = "general";
+        _chatBridgeMock
+            .Setup(x => x.BindRoomAsync(podId, channelId, "ambient", "readonly", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await _controller.BindRoom(
+            podId,
+            channelId,
+            new BindRoomRequest("ambient", "readonly"),
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("bound", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain(podId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(channelId, ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ambient", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task UpdatePod_ValidRequest_ReturnsOk()
     {
         // Arrange
@@ -344,7 +515,9 @@ public class PodsControllerTests
 
         _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
         _podServiceMock.Setup(x => x.GetMembersAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(new List<PodMember>());
-        _podServiceMock.Setup(x => x.UpdateAsync(pod, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock
+            .Setup(x => x.UpdateAsync(It.Is<Pod>(candidate => candidate.PodId == podId && candidate.Name == "Test Pod"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pod);
 
         // Act
         var result = await _controller.UpdatePod(podId, request);

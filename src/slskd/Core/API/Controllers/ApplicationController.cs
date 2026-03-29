@@ -182,7 +182,8 @@ namespace slskd.Core.API
             {
                 if (error != null && error.Contains("Insufficient", StringComparison.OrdinalIgnoreCase))
                 {
-                    return StatusCode(507, error);
+                    Log.Warning("Dump failed due to insufficient space or resources: {Error}", error);
+                    return StatusCode(507, "Insufficient space to create memory dump.");
                 }
 
                 Log.Warning("Dump failed: {Error}", error);
@@ -210,6 +211,11 @@ namespace slskd.Core.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult Loopback([FromBody] object body)
         {
+            if (body == null)
+            {
+                return BadRequest("Body is required");
+            }
+
             Log.Information("Loopback POST: {Body}", body);
             return Ok();
         }

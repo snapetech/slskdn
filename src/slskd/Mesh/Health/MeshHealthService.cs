@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Dht;
+using slskd.VirtualSoulfind.ShadowIndex;
 
 namespace slskd.Mesh.Health;
 
@@ -26,7 +27,7 @@ public class MeshHealthService : IMeshHealthService
     private readonly ILogger<MeshHealthService> logger;
     private readonly InMemoryDhtClient? memDht;
 
-    public MeshHealthService(ILogger<MeshHealthService> logger, IMeshDhtClient dht)
+    public MeshHealthService(ILogger<MeshHealthService> logger, IDhtClient dht)
     {
         this.logger = logger;
         memDht = dht as InMemoryDhtClient;
@@ -39,7 +40,7 @@ public class MeshHealthService : IMeshHealthService
             return new MeshHealthSnapshot(0, 0, 0, DateTimeOffset.UtcNow);
         }
 
-        var routingCount = memDht.FindClosest(Array.Empty<byte>(), 1000).Count;
+        var routingCount = memDht.GetNodeCount();
         var (storedKeys, contentHints) = memDht.GetStoreStats();
 
         var snap = new MeshHealthSnapshot(routingCount, storedKeys, contentHints, DateTimeOffset.UtcNow);

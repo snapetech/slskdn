@@ -167,7 +167,7 @@ namespace slskd.Shares
 
             if (discardExisting)
             {
-                conn.ExecuteNonQuery("DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS scans; DROP TABLE IF EXISTS directories; DROP TABLE IF EXISTS filenames; DROP TABLE IF EXISTS files;");
+                conn.ExecuteNonQuery("DROP TABLE IF EXISTS content_items; DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS scans; DROP TABLE IF EXISTS directories; DROP TABLE IF EXISTS filenames; DROP TABLE IF EXISTS files;");
             }
 
             conn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS version (a INTEGER PRIMARY KEY)");
@@ -680,6 +680,7 @@ namespace slskd.Shares
                 { "filenames_docsize", "CREATE TABLE 'filenames_docsize'(id INTEGER PRIMARY KEY, sz BLOB)" },
                 { "filenames_config", "CREATE TABLE 'filenames_config'(k PRIMARY KEY, v) WITHOUT ROWID" },
                 { "files", "CREATE TABLE files (maskedFilename TEXT PRIMARY KEY, originalFilename TEXT NOT NULL, size BIGINT NOT NULL, touchedAt TEXT NOT NULL, code INTEGER DEFAULT 1 NOT NULL, extension TEXT, attributeJson TEXT NOT NULL, timestamp INTEGER NOT NULL, isBlocked INTEGER DEFAULT 0 NOT NULL, isQuarantined INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT)" },
+                { "content_items", "CREATE TABLE content_items (contentId TEXT PRIMARY KEY, domain TEXT NOT NULL, workId TEXT, maskedFilename TEXT NOT NULL, isAdvertisable INTEGER DEFAULT 0 NOT NULL, moderationReason TEXT, checkedAt INTEGER NOT NULL, FOREIGN KEY(maskedFilename) REFERENCES files(maskedFilename) ON DELETE CASCADE)" },
             };
 
             try
@@ -700,36 +701,58 @@ namespace slskd.Shares
                     migrationConn.ExecuteNonQuery("ALTER TABLE files ADD COLUMN moderationReason TEXT");
                 }
 
+                try
+                {
+                    migrationConn.ExecuteNonQuery("SELECT 1 FROM content_items LIMIT 1");
+                }
+                catch
+                {
+                    Log.Information("Adding content_items table and indexes to shares database (migration)");
+                    migrationConn.ExecuteNonQuery("CREATE TABLE IF NOT EXISTS content_items " +
+                        "(contentId TEXT PRIMARY KEY, " +
+                        "domain TEXT NOT NULL, " +
+                        "workId TEXT, " +
+                        "maskedFilename TEXT NOT NULL, " +
+                        "isAdvertisable INTEGER DEFAULT 0 NOT NULL, " +
+                        "moderationReason TEXT, " +
+                        "checkedAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(maskedFilename) REFERENCES files(maskedFilename) ON DELETE CASCADE);");
+                    migrationConn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_filename ON content_items(maskedFilename);");
+                    migrationConn.ExecuteNonQuery("CREATE INDEX IF NOT EXISTS idx_content_items_advertisable ON content_items(isAdvertisable);");
+                }
+
                 using var conn = GetConnection();
 
                 using var cmd = new SqliteCommand("SELECT name, sql from sqlite_master WHERE type = 'table';", conn);
 
                 var reader = cmd.ExecuteReader();
-                var rows = 0;
+                var validatedTables = 0;
 
                 while (reader.Read())
                 {
                     var table = reader.GetString(0);
                     var expectedSql = reader.GetString(1);
 
-                    if (schema.TryGetValue(table, out var actualSql))
+                    if (!schema.TryGetValue(table, out var actualSql))
                     {
-                        if (actualSql != expectedSql)
-                        {
-                            list.Add($"Expected {table} schema to be {expectedSql}, found {actualSql}");
-                        }
-                        else
-                        {
-                            Log.Debug("Shares database table {Table} is valid: {Actual}", table, actualSql);
-                        }
+                        continue;
                     }
 
-                    rows++;
+                    validatedTables++;
+
+                    if (actualSql != expectedSql)
+                    {
+                        list.Add($"Expected {table} schema to be {expectedSql}, found {actualSql}");
+                    }
+                    else
+                    {
+                        Log.Debug("Shares database table {Table} is valid: {Actual}", table, actualSql);
+                    }
                 }
 
-                if (rows != schema.Count)
+                if (validatedTables != schema.Count)
                 {
-                    list.Add($"Expected {schema.Count} tables, found {rows}");
+                    list.Add($"Expected {schema.Count} tables, found {validatedTables}");
                 }
 
                 return !problems.Any();
@@ -737,7 +760,7 @@ namespace slskd.Shares
             catch (Exception ex)
             {
                 Log.Debug(ex, $"Failed to validate database: {ex.Message}");
-                list.Add($"Failed to validate database: {ex.Message}");
+                list.Add("Failed to validate database");
                 return false;
             }
         }
@@ -879,6 +902,7 @@ namespace slskd.Shares
             {
                 if (disposing)
                 {
+                    Common.TimerDisposer.DisposeWithWait(KeepaliveTimer);
                     KeepaliveConnection.Dispose();
                 }
 

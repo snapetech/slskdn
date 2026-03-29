@@ -77,6 +77,18 @@ namespace slskd.Search.API
                 return Forbid();
             }
 
+            if (request == null)
+            {
+                return BadRequest("Request is required");
+            }
+
+            request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+            request.Providers = request.Providers?
+                .Select(provider => provider?.Trim() ?? string.Empty)
+                .Where(provider => !string.IsNullOrWhiteSpace(provider))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState.GetReadableString());
@@ -103,20 +115,25 @@ namespace slskd.Search.API
                         request.Providers);
                     return Ok(search);
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is Soulseek.DuplicateTokenException)
+                catch (ArgumentException ex)
                 {
-                    Log.Error(ex, "Failed to execute search {Search}: {Message}", request, ex.Message);
-                    return BadRequest(ex.Message);
+                    Log.Error(ex, "Failed to execute search {Search}", request);
+                    return BadRequest("Invalid search request");
+                }
+                catch (Soulseek.DuplicateTokenException ex)
+                {
+                    Log.Error(ex, "Failed to execute search {Search}", request);
+                    return Conflict("A search with this ID is already in progress");
                 }
                 catch (InvalidOperationException ex)
                 {
-                    Log.Error(ex, "Failed to execute search {Search}: {Message}", request, ex.Message);
-                    return Conflict(ex.Message);
+                    Log.Error(ex, "Failed to execute search {Search}", request);
+                    return Conflict("Search could not be started");
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Failed to execute search {Search}: {Message}", request, ex.Message);
-                    return StatusCode(500, ex.Message);
+                    Log.Error(ex, "Failed to execute search {Search}", request);
+                    return StatusCode(500, "Failed to execute search");
                 }
             }
             finally
@@ -191,6 +208,11 @@ namespace slskd.Search.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            if (limit < 0 || offset < 0)
+            {
+                return BadRequest();
             }
 
             var searches = await Searches.ListAsync(limit: limit, offset: offset);

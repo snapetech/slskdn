@@ -36,6 +36,20 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         }
 
         [Fact]
+        public async Task RunPerformanceBenchmarksAsync_WithZeroIterations_ReturnsSanitizedFailureMessages()
+        {
+            var results = await RegressionHarness.RunPerformanceBenchmarksAsync(0);
+
+            Assert.NotEmpty(results.Benchmarks);
+            Assert.All(results.Benchmarks, benchmark =>
+            {
+                Assert.False(benchmark.Success);
+                Assert.Equal("Benchmark execution failed", benchmark.ErrorMessage);
+                Assert.DoesNotContain("divide", benchmark.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        [Fact]
         public void GenerateCoverageReport_WithValidReport_CreatesFiles()
         {
             // Arrange
@@ -144,5 +158,4 @@ namespace slskd.Tests.Unit.Common.CodeQuality
         }
     }
 }
-
 

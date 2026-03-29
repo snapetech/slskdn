@@ -223,7 +223,7 @@ public class QuicDataServer : BackgroundService
                 if (line.StartsWith("RELAY_TCP ", StringComparison.Ordinal))
                 {
                     var parts = line.Split(' ');
-                    if (parts.Length >= 3 && int.TryParse(parts[2], out var port))
+                    if (parts.Length >= 3 && int.TryParse(parts[2], out var port) && port is > 0 and <= ushort.MaxValue)
                     {
                         var host = parts[1];
                         try
@@ -242,12 +242,26 @@ public class QuicDataServer : BackgroundService
                         catch (Exception ex)
                         {
                             logger.LogWarning(ex, "[Overlay-QUIC-DATA] RELAY_TCP to {Host}:{Port} failed", host, port);
-                            try { await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR " + ex.Message + "\n"), ct); } catch { /* best effort */ }
+                            try
+                            {
+                                await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR " + ex.Message + "\n"), ct);
+                            }
+                            catch (Exception responseEx)
+                            {
+                                logger.LogDebug(responseEx, "[Overlay-QUIC-DATA] Failed to send relay error response to {Endpoint}", remoteEndPoint);
+                            }
                         }
                     }
                     else
                     {
-                        try { await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR bad RELAY_TCP format\n"), ct); } catch { }
+                        try
+                        {
+                            await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes("ERR bad RELAY_TCP format\n"), ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogDebug(ex, "[Overlay-QUIC-DATA] Failed to send bad-format response to {Endpoint}", remoteEndPoint);
+                        }
                     }
 
                     return;

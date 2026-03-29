@@ -45,6 +45,9 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("jobId is required");
             }
 
+            payload.JobId = payload.JobId.Trim();
+            payload.TrackId = string.IsNullOrWhiteSpace(payload.TrackId) ? null : payload.TrackId.Trim();
+
             await feedback.RecordAsync(payload, ct).ConfigureAwait(false);
             var priority = priorities.GetPriority(payload.JobId);
             return Ok(new { priority });
@@ -56,6 +59,7 @@ namespace slskd.Transfers.MultiSource.API
         [HttpGet("{jobId}/diagnostics")]
         public IActionResult GetDiagnostics(string jobId)
         {
+            jobId = jobId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(jobId))
             {
                 return BadRequest("jobId is required");

@@ -576,7 +576,7 @@ namespace slskd.Messaging
                 context.Conversations.Add(new Conversation { Username = username, IsActive = true });
 
                 // HARDENING: Create DM pod for new conversation
-                _ = Task.Run(() => EnsureDmPodAsync(username));
+                _ = ObserveBackgroundTaskAsync(Task.Run(() => EnsureDmPodAsync(username), CancellationToken.None), username);
             }
 
             try
@@ -587,6 +587,18 @@ namespace slskd.Messaging
             {
                 // Duplicate insert under contention; safe to ignore
                 Log.Debug("Ignored duplicate conversation insert for {Username}", username);
+            }
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string username)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to ensure DM pod for {Username}", username);
             }
         }
     }

@@ -81,6 +81,12 @@ public class KademliaRoutingTable
         if (nodeId.Length != selfId.Length || nodeId.SequenceEqual(selfId))
             return;
 
+        if (pingFunc is null)
+        {
+            TouchWithoutPing(nodeId, address);
+            return;
+        }
+
         // Handle ping-before-evict outside the lock to avoid async in lock
         KNode? nodeToRemove = null;
         lock (splitLock)
@@ -110,20 +116,12 @@ public class KademliaRoutingTable
             }
 
             // Cannot split - prepare for ping-before-evict
-            if (pingFunc != null)
-            {
-                // Find the least recently seen node (but don't ping yet)
-                nodeToRemove = bucket.Nodes.OrderBy(n => n.LastSeen).First();
-            }
-            else
-            {
-                // No ping function - just add and let LRU eviction happen
-                bucket.Touch(nodeId, address);
-            }
+            // Find the least recently seen node (but don't ping yet)
+            nodeToRemove = bucket.Nodes.OrderBy(n => n.LastSeen).First();
         }
 
         // Handle ping-before-evict outside the lock
-        if (nodeToRemove != null && pingFunc != null)
+        if (nodeToRemove != null)
         {
             var isAlive = await pingFunc(nodeToRemove.NodeId);
 
@@ -150,9 +148,46 @@ public class KademliaRoutingTable
     /// </summary>
     public void Touch(byte[] nodeId, string address)
     {
-        // Use synchronous version without ping
-        var task = TouchAsync(nodeId, address, null);
-        task.GetAwaiter().GetResult();
+        TouchWithoutPing(nodeId, address);
+    }
+
+    private void TouchWithoutPing(byte[] nodeId, string address)
+    {
+        // Handle non-async path without ping-before-evict.
+        if (nodeId.Length != selfId.Length || nodeId.SequenceEqual(selfId))
+        {
+            return;
+        }
+
+        lock (splitLock)
+        {
+            var bucketIndex = GetBucketIndex(nodeId);
+            EnsureBucketExists(bucketIndex);
+
+            var bucket = buckets[bucketIndex];
+
+            // If bucket is not full, just add the node.
+            if (bucket.Nodes.Count < BucketSize)
+            {
+                bucket.Touch(nodeId, address);
+                return;
+            }
+
+            // Bucket is full - check if we can split it.
+            if (CanSplitBucket(bucketIndex))
+            {
+                SplitBucket(bucketIndex);
+
+                // After splitting, retry the insertion.
+                bucketIndex = GetBucketIndex(nodeId);
+                EnsureBucketExists(bucketIndex);
+                buckets[bucketIndex].Touch(nodeId, address);
+                return;
+            }
+
+            // No ping function - add and let LRU eviction happen.
+            bucket.Touch(nodeId, address);
+        }
     }
 
     public IReadOnlyList<KNode> GetClosest(byte[] target, int count)

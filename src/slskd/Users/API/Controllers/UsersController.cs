@@ -88,6 +88,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             try
             {
                 var endpoint = await Users.GetIPEndPointAsync(username);
@@ -95,7 +101,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for endpoint lookup", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -115,6 +122,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             // H-08: Check Soulseek safety caps before initiating browse
             if (!SafetyLimiter.TryConsumeBrowse("user"))
             {
@@ -125,18 +138,16 @@ namespace slskd.Users.API
             try
             {
                 var result = await Client.BrowseAsync(username);
+                BrowseTracker.TryGet(username, out var completedProgress);
 
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(5000);
-                    BrowseTracker.TryRemove(username);
-                });
+                _ = ObserveBrowseCleanupAsync(username, completedProgress);
 
                 return Ok(result);
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for browse", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -156,12 +167,38 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             if (BrowseTracker.TryGet(username, out var progress))
             {
                 return Ok(progress);
             }
 
             return NotFound();
+        }
+
+        private async Task ObserveBrowseCleanupAsync(string username, BrowseProgressUpdatedEventArgs? completedProgress)
+        {
+            try
+            {
+                await Task.Delay(5000).ConfigureAwait(false);
+
+                if (completedProgress is null)
+                {
+                    BrowseTracker.TryRemove(username);
+                    return;
+                }
+
+                BrowseTracker.TryRemove(username, completedProgress);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to clean up browse tracker entry for {Username}", username);
+            }
         }
 
         /// <summary>
@@ -181,7 +218,19 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
-            if (request == null || string.IsNullOrEmpty(request.Directory))
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
+            if (request == null)
+            {
+                return BadRequest();
+            }
+
+            request.Directory = request.Directory?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(request.Directory))
             {
                 return BadRequest();
             }
@@ -196,7 +245,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for directory browse", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -216,6 +266,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             try
             {
                 var response = await Users.GetInfoAsync(username);
@@ -223,7 +279,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for info", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -243,6 +300,12 @@ namespace slskd.Users.API
                 return Forbid();
             }
 
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             try
             {
                 var response = await Users.GetStatusAsync(username);
@@ -250,7 +313,8 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                return NotFound(ex.Message);
+                Log.Information(ex, "User {Username} is offline for status", username);
+                return NotFound("User is offline");
             }
         }
 
@@ -267,6 +331,12 @@ namespace slskd.Users.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
             }
 
             var group = Users.GetGroup(username);

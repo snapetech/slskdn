@@ -54,6 +54,24 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
             };
         }
 
+        private static MultiRealmConfig ConfigWithActivityPubReadWriteAndMetadataAllowed()
+        {
+            return new MultiRealmConfig
+            {
+                Realms = new[]
+                {
+                    new RealmConfig { Id = "realm-a", GovernanceRoots = new[] { "root-a" }, Policies = new RealmPolicies() },
+                    new RealmConfig { Id = "realm-b", GovernanceRoots = new[] { "root-b" }, Policies = new RealmPolicies() }
+                },
+                Bridge = new BridgeConfig
+                {
+                    Enabled = true,
+                    AllowedFlows = new[] { "activitypub:read", "activitypub:write", "metadata:read" },
+                    DisallowedFlows = Array.Empty<string>()
+                }
+            };
+        }
+
         private static MultiRealmService CreateMultiRealmService(MultiRealmConfig config)
         {
             return new MultiRealmService(
@@ -201,6 +219,51 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
 
         [Fact]
+        public async Task PerformActivityPubReadAsync_WhenOperationThrows_ReturnsSanitizedError()
+        {
+            var enforcer = CreateEnforcer();
+
+            var result = await enforcer.PerformActivityPubReadAsync(
+                "realm-a",
+                "realm-b",
+                () => throw new InvalidOperationException("sensitive detail"));
+
+            Assert.False(result.Success);
+            Assert.Equal("ActivityPub read failed", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task PerformActivityPubWriteAsync_WhenOperationThrows_ReturnsSanitizedError()
+        {
+            var enforcer = CreateEnforcer(CreateMultiRealmService(ConfigWithActivityPubReadWriteAndMetadataAllowed()));
+
+            var result = await enforcer.PerformActivityPubWriteAsync(
+                "realm-a",
+                "realm-b",
+                () => throw new InvalidOperationException("sensitive detail"));
+
+            Assert.False(result.Success);
+            Assert.Equal("ActivityPub write failed", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task PerformMetadataReadAsync_WhenOperationThrows_ReturnsSanitizedError()
+        {
+            var enforcer = CreateEnforcer();
+
+            var result = await enforcer.PerformMetadataReadAsync(
+                "realm-a",
+                "realm-b",
+                () => throw new InvalidOperationException("sensitive detail"));
+
+            Assert.False(result.Success);
+            Assert.Equal("Metadata read failed", result.ErrorMessage);
+            Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+        }
+
+        [Fact]
         public void ValidateCrossRealmOperation_WithSameRealm_ReturnsTrue()
         {
             // Arrange
@@ -261,5 +324,3 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
     }
 }
-
-

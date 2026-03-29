@@ -53,8 +53,33 @@ public sealed class MeshContentMeshService : IMeshService
 
     public string ServiceName => "MeshContent";
 
-    public Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Streaming not implemented for MeshContent");
+    public async Task HandleStreamAsync(MeshServiceStream stream, MeshServiceContext context, CancellationToken cancellationToken = default)
+    {
+        var requestPayload = await stream.ReceiveAsync(cancellationToken);
+        if (requestPayload == null || requestPayload.Length == 0)
+        {
+            await stream.CloseAsync(cancellationToken);
+            return;
+        }
+
+        var reply = await HandleGetByContentIdAsync(
+            new ServiceCall
+            {
+                ServiceName = ServiceName,
+                Method = "GetByContentId",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = requestPayload,
+            },
+            context,
+            cancellationToken);
+
+        if (reply.StatusCode == ServiceStatusCodes.OK && reply.Payload.Length > 0)
+        {
+            await stream.SendAsync(reply.Payload, cancellationToken);
+        }
+
+        await stream.CloseAsync(cancellationToken);
+    }
 
     public async Task<ServiceReply> HandleCallAsync(ServiceCall call, MeshServiceContext context, CancellationToken cancellationToken = default)
     {
@@ -69,7 +94,7 @@ public sealed class MeshContentMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}",
+                    ErrorMessage = "Unknown method",
                     Payload = Array.Empty<byte>(),
                 },
             };
@@ -81,7 +106,7 @@ public sealed class MeshContentMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = ex.Message,
+                ErrorMessage = "Mesh content service error",
                 Payload = Array.Empty<byte>(),
             };
         }
@@ -91,7 +116,8 @@ public sealed class MeshContentMeshService : IMeshService
     {
         var (req, err) = ServicePayloadParser.TryParseJson<GetByContentIdRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (req == null || string.IsNullOrWhiteSpace(req.ContentId))
+        var normalizedContentId = req?.ContentId?.Trim();
+        if (req == null || string.IsNullOrWhiteSpace(normalizedContentId))
         {
             return new ServiceReply
             {
@@ -103,7 +129,7 @@ public sealed class MeshContentMeshService : IMeshService
         }
 
         var repo = _shareService.GetLocalRepository();
-        var ci = repo.FindContentItem(req.ContentId);
+        var ci = repo.FindContentItem(normalizedContentId);
         if (ci == null || !ci.Value.IsAdvertisable)
         {
             return new ServiceReply
@@ -142,7 +168,29 @@ public sealed class MeshContentMeshService : IMeshService
         int length = (int)Math.Min(finfo.Size, int.MaxValue);
         if (req.Range != null)
         {
-            offset = Math.Max(0, req.Range.Offset);
+            if (req.Range.Offset < 0 || req.Range.Length < 0)
+            {
+                return new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Invalid range request",
+                    Payload = Array.Empty<byte>(),
+                };
+            }
+
+            offset = req.Range.Offset;
+            if (offset >= finfo.Size)
+            {
+                return new ServiceReply
+                {
+                    CorrelationId = call.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Invalid range request",
+                    Payload = Array.Empty<byte>(),
+                };
+            }
+
             length = req.Range.Length > 0
                 ? (int)Math.Min(req.Range.Length, finfo.Size - offset)
                 : (int)Math.Max(0, finfo.Size - offset);
@@ -153,7 +201,7 @@ public sealed class MeshContentMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.PayloadTooLarge,
-                ErrorMessage = $"File too large ({finfo.Size} bytes); use range request (max {MaxFullResponseBytes} without range)",
+                ErrorMessage = "File too large; use range request",
                 Payload = Array.Empty<byte>(),
             };
         }

@@ -36,6 +36,12 @@ public class CanonicalController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetCanonical(string mbid, CancellationToken ct)
     {
+        mbid = mbid?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(mbid))
+        {
+            return BadRequest(new { error = "MBID is required" });
+        }
+
         logger.LogDebug("Canonical variant requested for MBID: {Mbid}", mbid);
 
         try
@@ -46,7 +52,6 @@ public class CanonicalController : ControllerBase
             {
                 return Ok(new
                 {
-                    mbid = mbid,
                     canonical_variant = (object?)null,
                     available_variants = 0,
                     selection_reason = "No variants found in shadow index"
@@ -58,7 +63,6 @@ public class CanonicalController : ControllerBase
 
             return Ok(new
             {
-                mbid = mbid,
                 canonical_variant = canonicalVariant is null ? null : new
                 {
                     codec = canonicalVariant.Codec,
@@ -73,7 +77,7 @@ public class CanonicalController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to select canonical variant for MBID: {Mbid}", mbid);
-            return StatusCode(500, new { error = "Failed to select canonical variant", mbid });
+            return StatusCode(500, new { error = "Failed to select canonical variant" });
         }
     }
 

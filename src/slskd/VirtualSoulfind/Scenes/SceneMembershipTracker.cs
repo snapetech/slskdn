@@ -58,6 +58,14 @@ public class SceneMembershipTracker : ISceneMembershipTracker
         if (metadataCache.TryGetValue(sceneId, out var cached))
         {
             var age = DateTimeOffset.UtcNow - cached.LastUpdatedAt;
+            if (memberCache.TryGetValue(sceneId, out var cachedMembers))
+            {
+                lock (cachedMembers)
+                {
+                    cached.ApproximateMemberCount = cachedMembers.Count(member => member.IsActive);
+                }
+            }
+
             if (age < TimeSpan.FromMinutes(5))
             {
                 logger.LogDebug("[VSF-SCENE-TRACK] Metadata cache hit for {SceneId}", sceneId);
@@ -73,6 +81,23 @@ public class SceneMembershipTracker : ISceneMembershipTracker
 
         if (data == null)
         {
+            if (memberCache.TryGetValue(sceneId, out var cachedMembers))
+            {
+                int activeCount;
+                lock (cachedMembers)
+                {
+                    activeCount = cachedMembers.Count(member => member.IsActive);
+                }
+
+                if (activeCount > 0)
+                {
+                    logger.LogDebug("[VSF-SCENE-TRACK] No DHT metadata for {SceneId}, synthesizing from local membership cache", sceneId);
+                    var synthesized = CreateFallbackMetadata(sceneId, activeCount);
+                    metadataCache[sceneId] = synthesized;
+                    return synthesized;
+                }
+            }
+
             logger.LogDebug("[VSF-SCENE-TRACK] No metadata found for scene {SceneId}", sceneId);
             return null;
         }
@@ -92,15 +117,7 @@ public class SceneMembershipTracker : ISceneMembershipTracker
             logger.LogWarning(ex, "[VSF-SCENE-TRACK] Failed to deserialize scene metadata, using defaults");
 
             // Fallback: create metadata from scene ID
-            metadata = new SceneMetadata
-            {
-                SceneId = sceneId,
-                DisplayName = sceneId.Split(':').LastOrDefault() ?? sceneId,
-                Type = ParseSceneType(sceneId),
-                ApproximateMemberCount = 0,
-                CreatedAt = DateTimeOffset.UtcNow.AddDays(-30),
-                LastUpdatedAt = DateTimeOffset.UtcNow
-            };
+            metadata = CreateFallbackMetadata(sceneId, 0);
         }
 
         // Get member count from members list
@@ -119,7 +136,12 @@ public class SceneMembershipTracker : ISceneMembershipTracker
         if (memberCache.TryGetValue(sceneId, out var cached))
         {
             logger.LogDebug("[VSF-SCENE-TRACK] Member cache hit for {SceneId}", sceneId);
-            return cached.ToList();
+            lock (cached)
+            {
+                return cached
+                    .Where(member => member.IsActive)
+                    .ToList();
+            }
         }
 
         // Query DHT for scene members
@@ -140,19 +162,31 @@ public class SceneMembershipTracker : ISceneMembershipTracker
         }
 
         // Cache members
-        memberCache[sceneId] = members;
+        var normalizedMembers = members
+            .GroupBy(member => member.PeerId, StringComparer.Ordinal)
+            .Select(group => group.OrderByDescending(member => member.LastSeenAt).First())
+            .OrderByDescending(member => member.LastSeenAt)
+            .ToList();
+        memberCache[sceneId] = normalizedMembers;
+
+        if (metadataCache.TryGetValue(sceneId, out var cachedMetadata))
+        {
+            cachedMetadata.ApproximateMemberCount = normalizedMembers.Count;
+            cachedMetadata.LastUpdatedAt = DateTimeOffset.UtcNow;
+        }
 
         logger.LogInformation("[VSF-SCENE-TRACK] Found {Count} active members in scene {SceneId}",
-            members.Count, sceneId);
+            normalizedMembers.Count, sceneId);
 
-        return members;
+        return normalizedMembers;
     }
 
     public Task TrackJoinAsync(string sceneId, string peerId, CancellationToken ct)
     {
         logger.LogDebug("[VSF-SCENE-TRACK] Tracking join: {PeerId} → {SceneId}", peerId, sceneId);
 
-        if (memberCache.TryGetValue(sceneId, out var members))
+        var members = memberCache.GetOrAdd(sceneId, _ => new List<SceneMember>());
+        lock (members)
         {
             var existing = members.FirstOrDefault(m => m.PeerId == peerId);
             if (existing != null)
@@ -173,6 +207,8 @@ public class SceneMembershipTracker : ISceneMembershipTracker
             }
         }
 
+        RefreshCachedMetadata(sceneId, members);
+
         return Task.CompletedTask;
     }
 
@@ -182,11 +218,17 @@ public class SceneMembershipTracker : ISceneMembershipTracker
 
         if (memberCache.TryGetValue(sceneId, out var members))
         {
-            var existing = members.FirstOrDefault(m => m.PeerId == peerId);
-            if (existing != null)
+            lock (members)
             {
-                existing.IsActive = false;
+                var existing = members.FirstOrDefault(m => m.PeerId == peerId);
+                if (existing != null)
+                {
+                    existing.IsActive = false;
+                    existing.LastSeenAt = DateTimeOffset.UtcNow;
+                }
             }
+
+            RefreshCachedMetadata(sceneId, members);
         }
 
         return Task.CompletedTask;
@@ -206,15 +248,21 @@ public class SceneMembershipTracker : ISceneMembershipTracker
 
     private SceneMember? ParseMemberAnnouncement(string sceneId, byte[] data)
     {
-        if (data.Length < 17)
+        if (data.Length < 11)
             return null;
 
         var isJoin = data[0] == 1;
         var timestamp = BitConverter.ToInt64(data, 1);
+        if (timestamp <= 0)
+        {
+            timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        }
 
-        // Extract peer ID hint (8 bytes)
-        var peerIdHint = data.Skip(9).Take(8).ToArray();
-        var peerId = $"peer:vsf:{Convert.ToHexString(peerIdHint).ToLowerInvariant()}";
+        var peerId = ParsePeerId(data);
+        if (string.IsNullOrWhiteSpace(peerId))
+        {
+            return null;
+        }
 
         return new SceneMember
         {
@@ -224,5 +272,58 @@ public class SceneMembershipTracker : ISceneMembershipTracker
             LastSeenAt = DateTimeOffset.FromUnixTimeSeconds(timestamp),
             IsActive = isJoin
         };
+    }
+
+    private static string? ParsePeerId(byte[] data)
+    {
+        if (data.Length >= 11)
+        {
+            var peerIdLength = BitConverter.ToUInt16(data, 9);
+            if (peerIdLength > 0 && data.Length >= 11 + peerIdLength)
+            {
+                var peerId = System.Text.Encoding.UTF8.GetString(data, 11, peerIdLength).Trim();
+                return string.IsNullOrWhiteSpace(peerId) ? null : peerId;
+            }
+        }
+
+        if (data.Length >= 17)
+            return null;
+
+        return null;
+    }
+
+    private SceneMetadata CreateFallbackMetadata(string sceneId, int approximateMemberCount)
+    {
+        return new SceneMetadata
+        {
+            SceneId = sceneId,
+            DisplayName = sceneId.Split(':').LastOrDefault() ?? sceneId,
+            Type = ParseSceneType(sceneId),
+            ApproximateMemberCount = approximateMemberCount,
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-30),
+            LastUpdatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private void RefreshCachedMetadata(string sceneId, List<SceneMember> members)
+    {
+        // All callers (TrackJoinAsync, TrackLeaveAsync) lock on members before mutating it,
+        // but release the lock before calling here. Lock for the read too to prevent a
+        // concurrent Add/Remove from racing with the LINQ iteration.
+        int activeCount;
+        lock (members)
+        {
+            activeCount = members.Count(member => member.IsActive);
+        }
+
+        metadataCache.AddOrUpdate(
+            sceneId,
+            _ => CreateFallbackMetadata(sceneId, activeCount),
+            (_, existing) =>
+            {
+                existing.ApproximateMemberCount = activeCount;
+                existing.LastUpdatedAt = DateTimeOffset.UtcNow;
+                return existing;
+            });
     }
 }

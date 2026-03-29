@@ -21,6 +21,7 @@
 namespace slskd.Search
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using Soulseek;
 
@@ -38,8 +39,8 @@ namespace slskd.Search
             Action<(SearchStates PreviousState, Soulseek.Search Search)>? stateChanged = null,
             Action<(Soulseek.Search Search, SearchResponse Response)>? responseReceived = null)
         {
-            stateChanged ??= (args) => { };
-            responseReceived ??= (args) => { };
+            stateChanged ??= static _ => { };
+            responseReceived ??= static _ => { };
 
             return new SearchOptions(
                 searchTimeout: options.SearchTimeout,
@@ -54,22 +55,50 @@ namespace slskd.Search
                 fileFilter: options.FileFilter,
                 stateChanged: (args) =>
                 {
-                    if (options.StateChanged != null)
-                    {
-                        options.StateChanged(args);
-                    }
-
-                    stateChanged(args);
+                    InvokeActionWithAggregation(
+                        new Action<(SearchStates PreviousState, Soulseek.Search Search)>?[] { options.StateChanged, stateChanged },
+                        args);
                 },
                 responseReceived: (args) =>
                 {
-                    if (options.ResponseReceived != null)
-                    {
-                        options.ResponseReceived(args);
-                    }
-
-                    responseReceived(args);
+                    InvokeActionWithAggregation(
+                        new Action<(Soulseek.Search Search, SearchResponse Response)>?[] { options.ResponseReceived, responseReceived },
+                        args);
                 });
+        }
+
+        private static void InvokeActionWithAggregation<T>(
+            IReadOnlyCollection<Action<T>?> actions,
+            T args)
+        {
+            var exceptions = new List<Exception>();
+
+            foreach (var action in actions)
+            {
+                if (action == null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    action(args);
+                }
+                catch (Exception ex)
+                {
+                    exceptions.Add(ex);
+                }
+            }
+
+            if (exceptions.Count == 1)
+            {
+                throw exceptions[0];
+            }
+
+            if (exceptions.Count > 1)
+            {
+                throw new AggregateException(exceptions);
+            }
         }
 
         /// <summary>

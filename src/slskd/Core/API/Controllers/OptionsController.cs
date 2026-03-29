@@ -94,13 +94,13 @@ namespace slskd.Core.API
 
             if (overlay is null)
             {
-                return NoContent();
+                return BadRequest("Options overlay is required");
             }
 
             if (!overlay.TryValidate(out var result))
             {
                 Log.Warning("Options patch validation failed: {Message}", result.GetResultString());
-                return BadRequest(result.GetResultString());
+                return BadRequest("Invalid options overlay");
             }
 
             try
@@ -110,8 +110,8 @@ namespace slskd.Core.API
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to apply options patch: {Message}", ex.Message);
-                return StatusCode(500, $"Failed to apply options patch: {ex.Message}");
+                Log.Error(ex, "Failed to apply options patch");
+                return StatusCode(500, "Failed to apply options patch");
             }
         }
 
@@ -174,6 +174,11 @@ namespace slskd.Core.API
                 return Forbid();
             }
 
+            if (string.IsNullOrWhiteSpace(Program.ConfigurationFile) || !IOFile.Exists(Program.ConfigurationFile))
+            {
+                return NotFound();
+            }
+
             var yaml = IOFile.ReadAllText(Program.ConfigurationFile);
             return Ok(yaml);
         }
@@ -188,9 +193,14 @@ namespace slskd.Core.API
                 return Forbid();
             }
 
+            if (yaml is null)
+            {
+                return BadRequest("YAML is required");
+            }
+
             if (!TryValidateYaml(yaml, out var error))
             {
-                Log.Error(error, "Failed to validate YAML configuration");
+                Log.Error("Failed to validate YAML configuration: {Error}", error);
                 return BadRequest(error);
             }
 
@@ -210,7 +220,8 @@ namespace slskd.Core.API
             }
             catch (Exception ex)
             {
-                throw new IOException($"Failed to update configuration file: {ex.Message}");
+                Log.Error(ex, "Failed to update configuration file");
+                return StatusCode(500, "Failed to update configuration file");
             }
         }
 
@@ -222,6 +233,11 @@ namespace slskd.Core.API
             if (!OptionsSnapshot.Value.RemoteConfiguration)
             {
                 return Forbid();
+            }
+
+            if (yaml is null)
+            {
+                return BadRequest("YAML is required");
             }
 
             if (!TryValidateYaml(yaml, out var error))
@@ -247,20 +263,15 @@ namespace slskd.Core.API
 
                 if (!options.TryValidate(out var result))
                 {
-                    error = result.GetResultView();
+                    Log.Warning("Configuration validation failed: {Message}", result.GetResultString());
+                    error = "Invalid YAML configuration";
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Configuration validation failed");
-
-                error = ex.Message;
-
-                if (ex.InnerException != null)
-                {
-                    error += $": {ex.InnerException.Message}";
-                }
+                error = "Invalid YAML configuration";
 
                 return false;
             }

@@ -6,6 +6,7 @@ namespace slskd.Tests.Unit.Streaming;
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using slskd.Streaming;
 using Xunit;
 
@@ -71,5 +72,18 @@ public class ReleaseOnDisposeStreamTests
         Assert.Equal(10, outBuf[0]);
         Assert.Equal(20, outBuf[1]);
         Assert.Equal(30, outBuf[2]);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_InvokesOnDisposeOnce()
+    {
+        var count = 0;
+        var inner = new MemoryStream(new byte[] { 1, 2, 3 });
+        var wrapped = new ReleaseOnDisposeStream(inner, () => count++);
+
+        await wrapped.DisposeAsync();
+        await wrapped.DisposeAsync();
+
+        Assert.Equal(1, count);
     }
 }

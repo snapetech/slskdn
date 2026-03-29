@@ -5,9 +5,7 @@
 
 set -e
 
-SLSKDN_VERSION="${SLSKDN_VERSION:-0.24.1-slskdn.40}"
-ZIP="slskdn-main-linux-x64.zip"
-URL="https://github.com/snapetech/slskdn/releases/download/${SLSKDN_VERSION}/${ZIP}"
+SLSKDN_VERSION="${SLSKDN_VERSION:-}"
 DEST="/opt/slskdn"
 USER="slskd"
 DATA_DIR="/var/lib/slskd"
@@ -32,6 +30,39 @@ else
   VERSION="12"
 fi
 
+resolve_release_tag() {
+  local release_tag="$1"
+
+  if [ -n "$release_tag" ]; then
+    echo "$release_tag"
+    return
+  fi
+
+  local latest_json
+  latest_json="$(wget -qO- https://api.github.com/repos/snapetech/slskdn/releases/latest)"
+  local latest_tag
+  latest_tag="$(echo "$latest_json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  if [ -z "$latest_tag" ]; then
+    echo "Unable to resolve latest release tag from GitHub API" >&2
+    exit 1
+  fi
+
+  echo "$latest_tag"
+}
+
+download_asset() {
+  local release_tag="$1"
+  local zip_name="$2"
+  local destination="$3"
+
+  local url="https://github.com/snapetech/slskdn/releases/download/${release_tag}/${zip_name}"
+  if wget -q -O "$destination" "$url"; then
+    echo "$url"
+  else
+    return 1
+  fi
+}
+
 echo "[1/7] Installing .NET 8 (Microsoft repo)…"
 apt-get update -qq
 apt-get install -y -qq wget ca-certificates unzip lsb-release
@@ -43,10 +74,47 @@ echo "deb [arch=amd64] ${REPO} ${CODENAME} main" > /etc/apt/sources.list.d/micro
 apt-get update -qq
 apt-get install -y -qq aspnetcore-runtime-8.0 yt-dlp
 
+if [ -z "$SLSKDN_VERSION" ]; then
+  SLSKDN_VERSION="$(resolve_release_tag)"
+fi
+
 echo "[2/7] Downloading slskdn ${SLSKDN_VERSION}…"
 mkdir -p /tmp/slskdn-setup
 cd /tmp/slskdn-setup
-wget -q -O "$ZIP" "$URL" || { echo "Download failed: $URL"; exit 1; }
+
+ZIP_CANDIDATES=(
+  "slskdn-main-linux-x64.zip"
+  "slskdn-${SLSKDN_VERSION//-slskdn/.}-linux-x64.zip"
+  "slskdn-${SLSKDN_VERSION}-linux-x64.zip"
+)
+
+ZIP=""
+RELEASE_TAGS=(
+  "$SLSKDN_VERSION"
+  "${SLSKDN_VERSION//.slskdn./-slskdn.}"
+)
+
+for release_tag in "${RELEASE_TAGS[@]}"; do
+  for candidate in "${ZIP_CANDIDATES[@]}"; do
+    # Skip duplicate zip candidate entries
+    if [ -n "$ZIP" ]; then
+      break 2
+    fi
+    if download_asset "$release_tag" "$candidate" "$candidate"; then
+      ZIP="$candidate"
+      break
+    else
+      echo "[2/7] Candidate not found: ${candidate} from ${release_tag}"
+    fi
+  done
+done
+
+if [ -z "$ZIP" ]; then
+  echo "Download failed for ${SLSKDN_VERSION}: all candidate asset names were not found"
+  exit 1
+fi
+
+echo "[2/7] Downloaded ${ZIP}"
 
 echo "[3/7] Extracting to ${DEST}…"
 mkdir -p "$DEST"
@@ -55,6 +123,10 @@ unzip -o -q "$ZIP" -d "$DEST"
 if [ -d "${DEST}/slskdn-main" ] && [ ! -f "${DEST}/slskd.dll" ]; then
   mv "${DEST}"/slskdn-main/* "${DEST}/"
   rmdir "${DEST}/slskdn-main" 2>/dev/null || true
+fi
+if [ -d "${DEST}/slskd" ] && [ ! -f "${DEST}/slskd.dll" ]; then
+  mv "${DEST}"/slskd/* "${DEST}/"
+  rmdir "${DEST}/slskd" 2>/dev/null || true
 fi
 if [ ! -f "${DEST}/slskd.dll" ]; then
   echo "Expected slskd.dll in ${DEST}; contents: $(ls -la ${DEST})"

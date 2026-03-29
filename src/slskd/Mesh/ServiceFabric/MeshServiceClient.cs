@@ -55,11 +55,27 @@ public class MeshServiceClient : IMeshServiceClient
         ServiceCall call,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(targetPeerId))
+        var normalizedTargetPeerId = targetPeerId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedTargetPeerId))
             throw new ArgumentException("Target peer ID cannot be empty", nameof(targetPeerId));
 
         if (call == null)
             throw new ArgumentNullException(nameof(call));
+
+        var normalizedCall = new ServiceCall
+        {
+            ServiceName = call.ServiceName?.Trim() ?? string.Empty,
+            Method = call.Method?.Trim() ?? string.Empty,
+            CorrelationId = call.CorrelationId?.Trim() ?? string.Empty,
+            Payload = call.Payload
+        };
+
+        if (string.IsNullOrWhiteSpace(normalizedCall.ServiceName) ||
+            string.IsNullOrWhiteSpace(normalizedCall.Method) ||
+            string.IsNullOrWhiteSpace(normalizedCall.CorrelationId))
+        {
+            throw new ArgumentException("Service name, method, and correlation ID are required", nameof(call));
+        }
 
         // MEDIUM-3 FIX 1: Check global pending call limit
         if (_pendingCalls.Count >= _maxTotalPendingCalls)
@@ -70,53 +86,58 @@ public class MeshServiceClient : IMeshServiceClient
 
             return Task.FromResult(new ServiceReply
             {
-                CorrelationId = call.CorrelationId,
+                CorrelationId = normalizedCall.CorrelationId,
                 StatusCode = ServiceStatusCodes.RateLimited,
                 ErrorMessage = "Too many pending calls (global limit)"
             });
         }
 
         // MEDIUM-3 FIX 2: Check per-peer concurrent call limit
-        var currentPeerCalls = _perPeerCallCounts.GetOrAdd(targetPeerId, 0);
-        if (currentPeerCalls >= _maxConcurrentCallsPerPeer)
+        if (!TryIncrementPeerCallCount(normalizedTargetPeerId))
         {
             _logger.LogWarning(
                 "[ServiceClient] Max concurrent calls to peer reached: {PeerId}, count: {Count}",
-                targetPeerId, currentPeerCalls);
+                normalizedTargetPeerId,
+                _perPeerCallCounts.GetValueOrDefault(normalizedTargetPeerId));
 
             return Task.FromResult(new ServiceReply
             {
-                CorrelationId = call.CorrelationId,
+                CorrelationId = normalizedCall.CorrelationId,
                 StatusCode = ServiceStatusCodes.RateLimited,
                 ErrorMessage = "Too many concurrent calls to this peer"
             });
         }
 
-        // Increment per-peer counter
-        _perPeerCallCounts.AddOrUpdate(targetPeerId, 1, (_, count) => count + 1);
-
-        // Create task completion source for this call
-        var tcs = new TaskCompletionSource<ServiceReply>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        if (!_pendingCalls.TryAdd(call.CorrelationId, tcs))
-        {
-            _logger.LogWarning(
-                "[ServiceClient] Duplicate correlation ID: {CorrelationId}",
-                call.CorrelationId);
-            throw new InvalidOperationException("Duplicate correlation ID");
-        }
-
-        if (cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogDebug(
-                "[ServiceClient] Call cancelled: {Service}.{Method}",
-                call.ServiceName, call.Method);
-            return Task.FromCanceled<ServiceReply>(cancellationToken);
-        }
+        var peerCallReserved = true;
 
         try
         {
-            var callBytes = MessagePackSerializer.Serialize(call, cancellationToken: CancellationToken.None);
+            // Create task completion source for this call
+            var tcs = new TaskCompletionSource<ServiceReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (!_pendingCalls.TryAdd(normalizedCall.CorrelationId, tcs))
+            {
+                _logger.LogWarning(
+                    "[ServiceClient] Duplicate correlation ID: {CorrelationId}",
+                    normalizedCall.CorrelationId);
+                return Task.FromResult(new ServiceReply
+                {
+                    CorrelationId = normalizedCall.CorrelationId,
+                    StatusCode = ServiceStatusCodes.InvalidPayload,
+                    ErrorMessage = "Duplicate correlation ID"
+                });
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogDebug(
+                    "[ServiceClient] Call cancelled: {Service}.{Method}",
+                    normalizedCall.ServiceName, normalizedCall.Method);
+                _pendingCalls.TryRemove(normalizedCall.CorrelationId, out _);
+                return Task.FromCanceled<ServiceReply>(cancellationToken);
+            }
+
+            var callBytes = MessagePackSerializer.Serialize(normalizedCall, cancellationToken: CancellationToken.None);
             var envelope = new ControlEnvelope
             {
                 Type = OverlayControlTypes.ServiceCall,
@@ -127,21 +148,70 @@ public class MeshServiceClient : IMeshServiceClient
             _signer.Sign(envelope);
             _statsCollector?.RecordMessageSent();
 
-            var exception = new FeatureNotImplementedException("Mesh service calls are not yet implemented. This feature will be available in a future version.");
-            _logger.LogError(
-                exception,
-                "[ServiceClient] Error calling service: {Service}.{Method} to {PeerId}",
-                call.ServiceName, call.Method, targetPeerId);
-            return Task.FromException<ServiceReply>(exception);
+            _logger.LogWarning(
+                "[ServiceClient] Mesh service transport is not implemented for {Service}.{Method} to {PeerId}",
+                normalizedCall.ServiceName, normalizedCall.Method, normalizedTargetPeerId);
+            return Task.FromResult(new ServiceReply
+            {
+                CorrelationId = normalizedCall.CorrelationId,
+                StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                ErrorMessage = "Mesh service transport is not implemented."
+            });
         }
         finally
         {
-            _pendingCalls.TryRemove(call.CorrelationId, out _);
-            _perPeerCallCounts.AddOrUpdate(targetPeerId, 0, (_, count) => Math.Max(0, count - 1));
-
-            if (_perPeerCallCounts.TryGetValue(targetPeerId, out var remainingCalls) && remainingCalls == 0)
+            _pendingCalls.TryRemove(normalizedCall.CorrelationId, out _);
+            if (peerCallReserved)
             {
-                _perPeerCallCounts.TryRemove(targetPeerId, out _);
+                ReleasePeerCallCount(normalizedTargetPeerId);
+            }
+        }
+    }
+
+    private bool TryIncrementPeerCallCount(string targetPeerId)
+    {
+        while (true)
+        {
+            if (_perPeerCallCounts.TryGetValue(targetPeerId, out var currentCount))
+            {
+                if (currentCount >= _maxConcurrentCallsPerPeer)
+                {
+                    return false;
+                }
+
+                if (_perPeerCallCounts.TryUpdate(targetPeerId, currentCount + 1, currentCount))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (_perPeerCallCounts.TryAdd(targetPeerId, 1))
+            {
+                return true;
+            }
+        }
+    }
+
+    private void ReleasePeerCallCount(string targetPeerId)
+    {
+        while (true)
+        {
+            if (!_perPeerCallCounts.TryGetValue(targetPeerId, out var currentCount))
+            {
+                return;
+            }
+
+            var nextCount = Math.Max(0, currentCount - 1);
+            if (_perPeerCallCounts.TryUpdate(targetPeerId, nextCount, currentCount))
+            {
+                if (nextCount == 0)
+                {
+                    _perPeerCallCounts.TryRemove(targetPeerId, out _);
+                }
+
+                return;
             }
         }
     }
@@ -152,35 +222,61 @@ public class MeshServiceClient : IMeshServiceClient
         ReadOnlyMemory<byte> payload,
         CancellationToken cancellationToken = default)
     {
+        var normalizedServiceName = serviceName?.Trim() ?? string.Empty;
+        var normalizedMethod = method?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedServiceName) || string.IsNullOrWhiteSpace(normalizedMethod))
+        {
+            return new ServiceReply
+            {
+                CorrelationId = Guid.NewGuid().ToString(),
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "Service name and method are required"
+            };
+        }
+
         // 1. Discover service
-        var descriptors = await _serviceDirectory.FindByNameAsync(serviceName, cancellationToken);
+        var descriptors = await _serviceDirectory.FindByNameAsync(normalizedServiceName, cancellationToken);
 
         if (descriptors.Count == 0)
         {
             _logger.LogWarning(
                 "[ServiceClient] No providers found for service: {ServiceName}",
-                serviceName);
+                normalizedServiceName);
 
             return new ServiceReply
             {
                 CorrelationId = Guid.NewGuid().ToString(),
                 StatusCode = ServiceStatusCodes.ServiceNotFound,
-                ErrorMessage = $"No providers for '{serviceName}'"
+                ErrorMessage = "No providers available for requested service"
             };
         }
 
-        // 2. Pick first descriptor (TODO: Reputation-based selection)
-        var descriptor = descriptors.First();
+        // 2. Pick the freshest valid descriptor deterministically.
+        var descriptor = descriptors
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate.OwnerPeerId))
+            .OrderByDescending(candidate => candidate.ExpiresAt)
+            .ThenBy(candidate => candidate.OwnerPeerId, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        if (descriptor == null)
+        {
+            return new ServiceReply
+            {
+                CorrelationId = Guid.NewGuid().ToString(),
+                StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                ErrorMessage = "No valid providers available for requested service"
+            };
+        }
 
         _logger.LogDebug(
             "[ServiceClient] Selected provider for {ServiceName}: {PeerId}",
-            serviceName, descriptor.OwnerPeerId);
+            normalizedServiceName, descriptor.OwnerPeerId);
 
         // 3. Create call
         var call = new ServiceCall
         {
-            ServiceName = serviceName,
-            Method = method,
+            ServiceName = normalizedServiceName,
+            Method = normalizedMethod,
             CorrelationId = Guid.NewGuid().ToString(),
             Payload = payload.ToArray()
         };

@@ -148,7 +148,7 @@ public class MeshSearchService : IMeshSearchService
                     {
                         matchingFiles.Add(new MeshFileResult
                         {
-                            Filename = content.ContentId ?? "unknown",
+                            Filename = GetDisplayFilename(content.ContentId, content.Codec),
                             Size = content.SizeBytes ?? 0,
                             Codec = content.Codec,
                             QualityScore = 0.5, // Default score
@@ -231,7 +231,7 @@ public class MeshSearchService : IMeshSearchService
                     {
                         var files = matchingContent.Select(c => new MeshFileResult
                         {
-                            Filename = c.ContentId ?? "unknown",
+                            Filename = GetDisplayFilename(c.ContentId, c.Codec),
                             Size = c.SizeBytes ?? 0,
                             Codec = c.Codec,
                             MbRecordingId = mbid,
@@ -269,5 +269,37 @@ public class MeshSearchService : IMeshSearchService
             result.SearchDuration = stopwatch.Elapsed;
             return result;
         }
+    }
+
+    private static string GetDisplayFilename(string? contentId, string? codec)
+    {
+        var extension = string.IsNullOrWhiteSpace(codec)
+            ? string.Empty
+            : "." + codec.Trim().TrimStart('.').ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return string.IsNullOrWhiteSpace(extension) ? "content" : "content" + extension;
+        }
+
+        var parsed = slskd.MediaCore.ContentIdParser.Parse(contentId);
+        if (parsed == null)
+        {
+            return contentId;
+        }
+
+        var basename = parsed.Id;
+        if (string.IsNullOrWhiteSpace(basename))
+        {
+            basename = parsed.FullId.Replace(':', '-');
+        }
+
+        if (!string.IsNullOrWhiteSpace(extension) &&
+            !basename.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+        {
+            basename += extension;
+        }
+
+        return basename;
     }
 }

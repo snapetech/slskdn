@@ -72,12 +72,19 @@ public class PodsController : ControllerBase
     [HttpGet("{podId}")]
     public async Task<IActionResult> GetPod(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
             var pod = await podService.GetPodAsync(podId, ct);
             if (pod == null)
             {
-                return NotFound(new { error = $"Pod {podId} not found" });
+                return NotFound(new { error = "Pod not found" });
             }
 
             return Ok(pod);
@@ -95,6 +102,8 @@ public class PodsController : ControllerBase
     [HttpDelete("{podId}")]
     public async Task<IActionResult> DeletePod(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
             if (string.IsNullOrWhiteSpace(podId))
@@ -102,7 +111,7 @@ public class PodsController : ControllerBase
 
             var deleted = await podService.DeletePodAsync(podId, ct);
             if (!deleted)
-                return NotFound(new { error = $"Pod {podId} not found" });
+                return NotFound(new { error = "Pod not found" });
 
             return NoContent();
         }
@@ -125,6 +134,12 @@ public class PodsController : ControllerBase
             {
                 return BadRequest(new { error = "Pod data is required" });
             }
+
+            request = request with
+            {
+                RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty,
+                Pod = NormalizePod(request.Pod)
+            };
 
             if (string.IsNullOrWhiteSpace(request.RequestingPeerId))
             {
@@ -155,7 +170,8 @@ public class PodsController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            logger.LogWarning(ex, "Invalid pod create request");
+            return BadRequest(new { error = "Invalid pod request" });
         }
         catch (Exception ex)
         {
@@ -180,6 +196,13 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "Pod data is required" });
             }
 
+            podId = podId?.Trim() ?? string.Empty;
+            request = request with
+            {
+                RequestingPeerId = request.RequestingPeerId?.Trim() ?? string.Empty,
+                Pod = NormalizePod(request.Pod)
+            };
+
             if (request.Pod.PodId != podId)
             {
                 return BadRequest(new { error = "PodId in URL must match PodId in body" });
@@ -194,7 +217,7 @@ public class PodsController : ControllerBase
             var existingPod = await podService.GetPodAsync(podId, ct);
             if (existingPod == null)
             {
-                return NotFound(new { error = $"Pod {podId} not found" });
+                return NotFound(new { error = "Pod not found" });
             }
 
             // Get current members for authorization check
@@ -231,11 +254,12 @@ public class PodsController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = $"Pod {podId} not found" });
+            return NotFound(new { error = "Pod not found" });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            logger.LogWarning(ex, "Invalid pod update request for {PodId}", podId);
+            return BadRequest(new { error = "Invalid pod request" });
         }
         catch (Exception ex)
         {
@@ -250,8 +274,15 @@ public class PodsController : ControllerBase
     [HttpGet("{podId}/members")]
     public async Task<IActionResult> GetMembers(string podId, CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
             var members = await podService.GetMembersAsync(podId, ct);
             return Ok(members);
         }
@@ -271,16 +302,25 @@ public class PodsController : ControllerBase
         [FromBody] JoinPodRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PeerId))
+            var peerId = request?.PeerId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(peerId))
             {
                 return BadRequest(new { error = "PeerId is required" });
             }
 
             var member = new PodMember
             {
-                PeerId = request.PeerId,
+                PeerId = peerId,
                 Role = "member",
                 IsBanned = false,
             };
@@ -291,7 +331,7 @@ public class PodsController : ControllerBase
                 return BadRequest(new { error = "Failed to join pod (may already be a member)" });
             }
 
-            return Ok(new { podId, peerId = request.PeerId, joined = true });
+            return Ok(new { joined = true });
         }
         catch (Exception ex)
         {
@@ -309,20 +349,29 @@ public class PodsController : ControllerBase
         [FromBody] LeavePodRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PeerId))
+            var peerId = request?.PeerId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(peerId))
             {
                 return BadRequest(new { error = "PeerId is required" });
             }
 
-            var left = await podService.LeaveAsync(podId, request.PeerId, ct);
+            var left = await podService.LeaveAsync(podId, peerId, ct);
             if (!left)
             {
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            return Ok(new { podId, peerId = request.PeerId, left = true });
+            return Ok(new { left = true });
         }
         catch (Exception ex)
         {
@@ -340,20 +389,29 @@ public class PodsController : ControllerBase
         [FromBody] BanMemberRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.PeerId))
+            var peerId = request?.PeerId?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(podId))
+            {
+                return BadRequest(new { error = "PodId is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(peerId))
             {
                 return BadRequest(new { error = "PeerId is required" });
             }
 
-            var banned = await podService.BanAsync(podId, request.PeerId, ct);
+            var banned = await podService.BanAsync(podId, peerId, ct);
             if (!banned)
             {
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            return Ok(new { podId, peerId = request.PeerId, banned = true });
+            return Ok(new { banned = true });
         }
         catch (Exception ex)
         {
@@ -372,8 +430,16 @@ public class PodsController : ControllerBase
         [FromQuery] long? since = null,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
             var soulseekUsername = await TryGetSoulseekDmUsernameAsync(podId, channelId, ct);
             if (soulseekUsername != null && conversationService != null)
             {
@@ -417,14 +483,26 @@ public class PodsController : ControllerBase
         [FromBody] SendMessageRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.Body))
+            var body = request?.Body?.Trim() ?? string.Empty;
+            var senderPeerId = request?.SenderPeerId?.Trim() ?? string.Empty;
+            var signature = request?.Signature?.Trim();
+
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(body))
             {
                 return BadRequest(new { error = "Message body is required" });
             }
 
-            if (string.IsNullOrWhiteSpace(request.SenderPeerId))
+            if (string.IsNullOrWhiteSpace(senderPeerId))
             {
                 return BadRequest(new { error = "SenderPeerId is required" });
             }
@@ -432,7 +510,7 @@ public class PodsController : ControllerBase
             var soulseekUsername = await TryGetSoulseekDmUsernameAsync(podId, channelId, ct);
             if (soulseekUsername != null && conversationService != null)
             {
-                await conversationService.SendMessageAsync(soulseekUsername, request.Body);
+                await conversationService.SendMessageAsync(soulseekUsername, body);
                 return Ok(new { messageId = Guid.NewGuid().ToString("N"), sent = true });
             }
 
@@ -441,10 +519,10 @@ public class PodsController : ControllerBase
                 MessageId = Guid.NewGuid().ToString("N"),
                 PodId = podId,
                 ChannelId = channelId,
-                SenderPeerId = request.SenderPeerId,
-                Body = request.Body,
+                SenderPeerId = senderPeerId,
+                Body = body,
                 TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                Signature = request.Signature ?? string.Empty,
+                Signature = signature ?? string.Empty,
             };
 
             var sent = await podMessaging.SendAsync(message, ct);
@@ -482,26 +560,36 @@ public class PodsController : ControllerBase
         [FromBody] BindRoomRequest request,
         CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.RoomName))
+            var roomName = request?.RoomName?.Trim() ?? string.Empty;
+            var mode = string.IsNullOrWhiteSpace(request?.Mode) ? "readonly" : request.Mode.Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(roomName))
             {
                 return BadRequest(new { error = "RoomName is required" });
             }
 
-            var mode = request.Mode ?? "readonly";
             if (mode != "readonly" && mode != "mirror")
             {
                 return BadRequest(new { error = "Mode must be 'readonly' or 'mirror'" });
             }
 
-            var bound = await chatBridge.BindRoomAsync(podId, channelId, request.RoomName, mode, ct);
+            var bound = await chatBridge.BindRoomAsync(podId, channelId, roomName, mode, ct);
             if (!bound)
             {
                 return BadRequest(new { error = "Failed to bind channel to room" });
             }
 
-            return Ok(new { podId, channelId, roomName = request.RoomName, mode, bound = true });
+            return Ok(new { bound = true });
         }
         catch (Exception ex)
         {
@@ -519,21 +607,126 @@ public class PodsController : ControllerBase
             string channelId,
             CancellationToken ct = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
+
         try
         {
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                return BadRequest(new { error = "PodId and ChannelId are required" });
+            }
+
             var unbound = await chatBridge.UnbindRoomAsync(podId, channelId, ct);
             if (!unbound)
             {
                 return NotFound(new { error = "Channel binding not found" });
             }
 
-            return Ok(new { podId, channelId, unbound = true });
+            return Ok(new { unbound = true });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to unbind pod {PodId} channel {ChannelId}", podId, channelId);
             return StatusCode(500, new { error = "Failed to unbind room" });
         }
+    }
+
+    private static Pod NormalizePod(Pod pod)
+    {
+        ArgumentNullException.ThrowIfNull(pod);
+
+        return new Pod
+        {
+            PodId = pod.PodId?.Trim() ?? string.Empty,
+            Name = pod.Name?.Trim() ?? string.Empty,
+            Description = string.IsNullOrWhiteSpace(pod.Description) ? null : pod.Description.Trim(),
+            Visibility = pod.Visibility,
+            IsPublic = pod.IsPublic,
+            MaxMembers = pod.MaxMembers,
+            AllowGuests = pod.AllowGuests,
+            RequireApproval = pod.RequireApproval,
+            UpdatedAt = pod.UpdatedAt,
+            FocusContentId = string.IsNullOrWhiteSpace(pod.FocusContentId) ? null : pod.FocusContentId.Trim(),
+            Tags = pod.Tags?
+                .Select(tag => tag?.Trim() ?? string.Empty)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.Ordinal)
+                .ToList()
+                ?? new List<string>(),
+            Channels = pod.Channels?
+                .Select(channel => new PodChannel
+                {
+                    ChannelId = channel.ChannelId?.Trim() ?? string.Empty,
+                    Kind = channel.Kind,
+                    Name = channel.Name?.Trim() ?? string.Empty,
+                    BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim(),
+                    Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim(),
+                })
+                .ToList()
+                ?? new List<PodChannel>(),
+            Members = pod.Members?
+                .Select(member => new PodMember
+                {
+                    PeerId = member.PeerId?.Trim() ?? string.Empty,
+                    Role = member.Role?.Trim() ?? string.Empty,
+                    IsBanned = member.IsBanned,
+                    PublicKey = string.IsNullOrWhiteSpace(member.PublicKey) ? null : member.PublicKey.Trim(),
+                    JoinedAt = member.JoinedAt,
+                    LastSeen = member.LastSeen,
+                })
+                .ToList(),
+            ExternalBindings = pod.ExternalBindings?
+                .Select(binding => new ExternalBinding
+                {
+                    Kind = binding.Kind?.Trim() ?? string.Empty,
+                    Mode = binding.Mode?.Trim() ?? string.Empty,
+                    Identifier = binding.Identifier?.Trim() ?? string.Empty,
+                })
+                .ToList()
+                ?? new List<ExternalBinding>(),
+            Capabilities = pod.Capabilities,
+            PrivateServicePolicy = pod.PrivateServicePolicy == null ? null : new PodPrivateServicePolicy
+            {
+                Enabled = pod.PrivateServicePolicy.Enabled,
+                MaxMembers = pod.PrivateServicePolicy.MaxMembers,
+                GatewayPeerId = pod.PrivateServicePolicy.GatewayPeerId?.Trim() ?? string.Empty,
+                RegisteredServices = pod.PrivateServicePolicy.RegisteredServices?
+                    .Select(service => new RegisteredService
+                    {
+                        Name = service.Name?.Trim() ?? string.Empty,
+                        Description = service.Description?.Trim() ?? string.Empty,
+                        Host = service.Host?.Trim() ?? string.Empty,
+                        Port = service.Port,
+                        Protocol = service.Protocol?.Trim() ?? string.Empty,
+                        Kind = service.Kind,
+                    })
+                    .ToList()
+                    ?? new List<RegisteredService>(),
+                AllowedDestinations = pod.PrivateServicePolicy.AllowedDestinations?
+                    .Select(destination => new AllowedDestination
+                    {
+                        HostPattern = destination.HostPattern?.Trim() ?? string.Empty,
+                        Port = destination.Port,
+                        Protocol = destination.Protocol?.Trim() ?? string.Empty,
+                        AllowPublic = destination.AllowPublic,
+                        Kind = destination.Kind,
+                    })
+                    .ToList()
+                    ?? new List<AllowedDestination>(),
+                AllowPrivateRanges = pod.PrivateServicePolicy.AllowPrivateRanges,
+                AllowPublicDestinations = pod.PrivateServicePolicy.AllowPublicDestinations,
+                MaxConcurrentTunnelsPerPeer = pod.PrivateServicePolicy.MaxConcurrentTunnelsPerPeer,
+                MaxConcurrentTunnelsPod = pod.PrivateServicePolicy.MaxConcurrentTunnelsPod,
+                MaxNewTunnelsPerMinutePerPeer = pod.PrivateServicePolicy.MaxNewTunnelsPerMinutePerPeer,
+                MaxBytesPerDayPerPeer = pod.PrivateServicePolicy.MaxBytesPerDayPerPeer,
+                IdleTimeout = pod.PrivateServicePolicy.IdleTimeout,
+                MaxLifetime = pod.PrivateServicePolicy.MaxLifetime,
+                DialTimeout = pod.PrivateServicePolicy.DialTimeout,
+                MaxBufferedBytesPerTunnel = pod.PrivateServicePolicy.MaxBufferedBytesPerTunnel,
+                MaxFrameSize = pod.PrivateServicePolicy.MaxFrameSize,
+            },
+        };
     }
 }
 

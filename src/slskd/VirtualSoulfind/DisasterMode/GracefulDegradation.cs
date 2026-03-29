@@ -32,7 +32,7 @@ public enum OperationType
 }
 
 /// <summary>
-/// Manages graceful degradation between Soulseek and mesh.
+/// Manages the legacy fallback policy between Soulseek and mesh.
 /// </summary>
 public class GracefulDegradationService : IGracefulDegradationService
 {
@@ -52,10 +52,10 @@ public class GracefulDegradationService : IGracefulDegradationService
 
     public bool ShouldUseSoulseek(OperationType operationType)
     {
-        // If disaster mode is active, never use Soulseek
+        // If the legacy auto-fallback is active, never use Soulseek.
         if (disasterMode.IsDisasterModeActive)
         {
-            logger.LogDebug("[VSF-DEGRADATION] Disaster mode active, Soulseek disabled for {OpType}",
+            logger.LogDebug("[VSF-DEGRADATION] Legacy fallback active, Soulseek disabled for {OpType}",
                 operationType);
             return false;
         }
@@ -88,17 +88,18 @@ public class GracefulDegradationService : IGracefulDegradationService
 }
 
 /// <summary>
-/// Disaster mode configuration.
+/// Legacy fallback configuration.
 /// </summary>
 public class DisasterModeOptions
 {
     /// <summary>
-    /// Auto-detect and activate disaster mode.
+    /// Auto-detect and activate the legacy fallback mode.
+    /// Defaults to false so normal operation stays Soulseek + mesh unless explicitly opted in.
     /// </summary>
-    public bool Auto { get; set; } = true;
+    public bool Auto { get; set; } = false;
 
     /// <summary>
-    /// Force disaster mode (for testing).
+    /// Force legacy fallback mode (for testing).
     /// </summary>
     public bool Force { get; set; } = false;
 
@@ -108,7 +109,7 @@ public class DisasterModeOptions
     public int UnavailableThresholdMinutes { get; set; } = 10;
 
     /// <summary>
-    /// Enable graceful degradation (partial Soulseek use).
+    /// Enable legacy fallback behavior before full mesh-primary escalation.
     /// </summary>
     public bool EnableGracefulDegradation { get; set; } = true;
 

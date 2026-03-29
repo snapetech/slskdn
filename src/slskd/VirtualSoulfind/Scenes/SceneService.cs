@@ -72,11 +72,25 @@ public class SceneService : ISceneService
         this.optionsMonitor = optionsMonitor;
     }
 
-    public Task<List<Scene>> GetJoinedScenesAsync(CancellationToken ct)
+    public async Task<List<Scene>> GetJoinedScenesAsync(CancellationToken ct)
     {
         var scenes = joinedScenes.Values.ToList();
+        foreach (var scene in scenes)
+        {
+            var metadata = await membershipTracker.GetSceneMetadataAsync(scene.SceneId, ct);
+            if (metadata != null)
+            {
+                scene.MemberCount = metadata.ApproximateMemberCount;
+                scene.DisplayName = string.IsNullOrWhiteSpace(metadata.DisplayName) ? scene.DisplayName : metadata.DisplayName;
+                scene.Description = metadata.Description ?? scene.Description;
+                scene.LastActivityAt = metadata.LastUpdatedAt;
+            }
+        }
+
         logger.LogDebug("[VSF-SCENE] Retrieved {Count} joined scenes", scenes.Count);
-        return Task.FromResult(scenes);
+        return scenes
+            .OrderByDescending(scene => scene.LastActivityAt ?? scene.JoinedAt)
+            .ToList();
     }
 
     public async Task JoinSceneAsync(string sceneId, CancellationToken ct)
@@ -95,38 +109,47 @@ public class SceneService : ISceneService
             throw new InvalidOperationException($"Maximum joined scenes limit reached ({maxScenes})");
         }
 
-        if (joinedScenes.ContainsKey(sceneId))
+        // TryAdd is atomic — prevents two concurrent JoinSceneAsync calls for the same
+        // sceneId from both passing a ContainsKey check, then both announcing to DHT.
+        if (!joinedScenes.TryAdd(sceneId, new Scene { SceneId = sceneId, JoinedAt = DateTimeOffset.UtcNow }))
         {
             logger.LogDebug("[VSF-SCENE] Already joined scene {SceneId}", sceneId);
             return;
         }
 
-        // Get scene metadata
-        var metadata = await GetSceneMetadataAsync(sceneId, ct);
-        if (metadata == null)
+        try
         {
-            logger.LogWarning("[VSF-SCENE] Scene {SceneId} not found", sceneId);
-            throw new InvalidOperationException($"Scene not found: {sceneId}");
+            // Get scene metadata
+            var metadata = await GetSceneMetadataAsync(sceneId, ct);
+            if (metadata == null)
+            {
+                logger.LogWarning("[VSF-SCENE] Scene {SceneId} not found", sceneId);
+                throw new InvalidOperationException($"Scene not found: {sceneId}");
+            }
+
+            // Announce membership to DHT
+            await announcements.AnnounceJoinAsync(sceneId, ct);
+
+            // Replace placeholder with full scene data
+            joinedScenes[sceneId] = new Scene
+            {
+                SceneId = sceneId,
+                Type = metadata.Type,
+                DisplayName = metadata.DisplayName,
+                Description = metadata.Description,
+                MemberCount = metadata.ApproximateMemberCount,
+                JoinedAt = DateTimeOffset.UtcNow
+            };
+
+            logger.LogInformation("[VSF-SCENE] Joined scene {SceneId} ({DisplayName})",
+                sceneId, metadata.DisplayName);
         }
-
-        // Announce membership to DHT
-        await announcements.AnnounceJoinAsync(sceneId, ct);
-
-        // Track locally
-        var scene = new Scene
+        catch
         {
-            SceneId = sceneId,
-            Type = metadata.Type,
-            DisplayName = metadata.DisplayName,
-            Description = metadata.Description,
-            MemberCount = metadata.ApproximateMemberCount,
-            JoinedAt = DateTimeOffset.UtcNow
-        };
-
-        joinedScenes[sceneId] = scene;
-
-        logger.LogInformation("[VSF-SCENE] Joined scene {SceneId} ({DisplayName})",
-            sceneId, metadata.DisplayName);
+            // Remove the placeholder so a future call can retry
+            joinedScenes.TryRemove(sceneId, out _);
+            throw;
+        }
     }
 
     public async Task LeaveSceneAsync(string sceneId, CancellationToken ct)
@@ -154,9 +177,24 @@ public class SceneService : ISceneService
         {
             logger.LogInformation("[VSF-SCENE] Retrieved metadata for {SceneId}: {MemberCount} members",
                 sceneId, metadata.ApproximateMemberCount);
+            return metadata;
         }
 
-        return metadata;
+        if (joinedScenes.TryGetValue(sceneId, out var joinedScene))
+        {
+            return new SceneMetadata
+            {
+                SceneId = joinedScene.SceneId,
+                DisplayName = joinedScene.DisplayName,
+                Description = joinedScene.Description,
+                Type = joinedScene.Type,
+                ApproximateMemberCount = joinedScene.MemberCount,
+                CreatedAt = joinedScene.JoinedAt,
+                LastUpdatedAt = joinedScene.LastActivityAt ?? joinedScene.JoinedAt,
+            };
+        }
+
+        return null;
     }
 
     public async Task<List<SceneMember>> GetSceneMembersAsync(string sceneId, CancellationToken ct)
@@ -173,6 +211,12 @@ public class SceneService : ISceneService
 
     public async Task<List<SceneMetadata>> SearchScenesAsync(string query, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new List<SceneMetadata>();
+        }
+
+        query = query.Trim();
         logger.LogDebug("[VSF-SCENE] Searching scenes: {Query}", query);
 
         // Phase 6C: T-813 - DHT-based scene search
@@ -188,7 +232,7 @@ public class SceneService : ISceneService
             query // Direct scene ID
         };
 
-        foreach (var sceneId in prefixes)
+        foreach (var sceneId in prefixes.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             try
             {
@@ -204,7 +248,12 @@ public class SceneService : ISceneService
             }
         }
 
-        logger.LogInformation("[VSF-SCENE] Scene search '{Query}' returned {Count} results", query, results.Count);
-        return results;
+        var deduped = results
+            .GroupBy(metadata => metadata.SceneId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+
+        logger.LogInformation("[VSF-SCENE] Scene search '{Query}' returned {Count} results", query, deduped.Count);
+        return deduped;
     }
 }

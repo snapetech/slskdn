@@ -28,18 +28,22 @@ namespace slskd.SocialFederation.API
     public class WebFingerController : ControllerBase
     {
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
+        private readonly LibraryActorService _libraryActorService;
         private readonly ILogger<WebFingerController> _logger;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="WebFingerController"/> class.
         /// </summary>
         /// <param name="federationOptions">The federation options.</param>
+        /// <param name="libraryActorService">The library actor service.</param>
         /// <param name="logger">The logger.</param>
         public WebFingerController(
             IOptionsMonitor<SocialFederationOptions> federationOptions,
+            LibraryActorService libraryActorService,
             ILogger<WebFingerController> logger)
         {
             _federationOptions = federationOptions ?? throw new ArgumentNullException(nameof(federationOptions));
+            _libraryActorService = libraryActorService ?? throw new ArgumentNullException(nameof(libraryActorService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -62,6 +66,9 @@ namespace slskd.SocialFederation.API
             [FromQuery] string? rel = null,
             CancellationToken cancellationToken = default)
         {
+            resource = resource?.Trim() ?? string.Empty;
+            rel = string.IsNullOrWhiteSpace(rel) ? null : rel.Trim();
+
             var opts = _federationOptions.CurrentValue;
 
             // Check if federation is enabled and not in hermit mode
@@ -88,13 +95,6 @@ namespace slskd.SocialFederation.API
             if (!string.Equals(domain, opts.Domain, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogDebug("[WebFinger] Domain mismatch: {Domain} != {ExpectedDomain}", domain, opts.Domain);
-                return NotFound();
-            }
-
-            // For friends-only mode, check if this is an approved peer
-            if (opts.IsFriendsOnly && !opts.ApprovedPeers.Contains(domain, StringComparer.OrdinalIgnoreCase))
-            {
-                _logger.LogDebug("[WebFinger] Domain not in approved peers list: {Domain}", domain);
                 return NotFound();
             }
 
@@ -140,6 +140,7 @@ namespace slskd.SocialFederation.API
         {
             username = string.Empty;
             domain = string.Empty;
+            resource = resource.Trim();
 
             // Handle acct: URIs (acct:username@domain)
             if (resource.StartsWith("acct:", StringComparison.OrdinalIgnoreCase))
@@ -151,42 +152,39 @@ namespace slskd.SocialFederation.API
                     return false;
                 }
 
-                username = acctPart.Substring(0, atIndex);
-                domain = acctPart.Substring(atIndex + 1);
-                return true;
+                username = acctPart.Substring(0, atIndex).Trim();
+                domain = acctPart.Substring(atIndex + 1).Trim();
+                return !string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(domain);
             }
 
             // Handle https: URIs (https://domain/@username or https://domain/actors/username)
             if (resource.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    var uri = new Uri(resource);
-
-                    // Extract domain
-                    domain = uri.Host;
-
-                    // Extract username from path
-                    var path = uri.AbsolutePath.Trim('/');
-                    if (path.StartsWith("@"))
-                    {
-                        username = path.Substring(1);
-                    }
-                    else if (path.StartsWith("actors/"))
-                    {
-                        username = path.Substring(7); // Remove "actors/"
-                    }
-                    else
-                    {
-                        return false;
-                    }
-
-                    return true;
-                }
-                catch
+                if (!Uri.TryCreate(resource, UriKind.Absolute, out var uri) ||
+                    !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }
+
+                domain = uri.Host;
+
+                var pathSegments = uri.AbsolutePath
+                    .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                if (pathSegments.Length == 1 && pathSegments[0].StartsWith("@", StringComparison.Ordinal))
+                {
+                    username = pathSegments[0][1..].Trim();
+                    return !string.IsNullOrWhiteSpace(username);
+                }
+
+                if (pathSegments.Length == 2 &&
+                    string.Equals(pathSegments[0], "actors", StringComparison.OrdinalIgnoreCase))
+                {
+                    username = pathSegments[1].Trim();
+                    return !string.IsNullOrWhiteSpace(username);
+                }
+
+                return false;
             }
 
             return false;
@@ -194,20 +192,7 @@ namespace slskd.SocialFederation.API
 
         private Task<bool> IsValidActorAsync(string username, CancellationToken cancellationToken)
         {
-            // For now, we only support a "library" actor for content federation
-            // This can be extended to support user actors in the future
-            var opts = _federationOptions.CurrentValue;
-
-            // Check if this is the library actor (content collection)
-            if (string.Equals(username, "library", StringComparison.OrdinalIgnoreCase))
-            {
-                // TODO: Check if library actor is enabled and has content
-                return Task.FromResult(true);
-            }
-
-            // TODO: Add support for user actors
-            // For now, only library actor is supported
-            return Task.FromResult(false);
+            return Task.FromResult(_libraryActorService.IsLibraryActor(username));
         }
 
         /// <summary>

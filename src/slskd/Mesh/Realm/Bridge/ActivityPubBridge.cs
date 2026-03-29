@@ -63,18 +63,24 @@ namespace slskd.Mesh.Realm.Bridge
                 remoteRealmId,
                 () =>
                 {
-                    // Implementation would:
-                    // 1. Resolve the remote actor
-                    // 2. Send a Follow activity
-                    // 3. Handle the response
                     _logger.LogInformation(
                         "[ActivityPubBridge] Following actor '{ActorId}' from realm '{RemoteRealm}' in local realm '{LocalRealm}'",
                         actorId, remoteRealmId, localRealmId);
 
-                    // Placeholder implementation
-                    return Task.FromResult(BridgeOperationResult.CreateSuccess(new { FollowedActor = actorId }));
+                    return FollowRemoteActorInternalAsync(localRealmId, actorId, cancellationToken);
                 },
                 cancellationToken);
+        }
+
+        private async Task<BridgeOperationResult> FollowRemoteActorInternalAsync(
+            string localRealmId,
+            string actorId,
+            CancellationToken cancellationToken)
+        {
+            var followed = await _federationService.FollowActorAsync("music", actorId, cancellationToken).ConfigureAwait(false);
+            return followed
+                ? BridgeOperationResult.CreateSuccess(new { FollowedActor = actorId, LocalActor = "music", LocalRealm = localRealmId })
+                : BridgeOperationResult.Failed("Failed to follow remote actor.");
         }
 
         /// <summary>

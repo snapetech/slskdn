@@ -28,6 +28,7 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
     /// </summary>
     public sealed class LibraryReconciliationService : ILibraryReconciliationService
     {
+        private const int PageSize = 250;
         private readonly ICatalogueStore _catalogue;
 
         public LibraryReconciliationService(ICatalogueStore catalogue)
@@ -62,7 +63,6 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
         {
             var results = new List<ReleaseGapAnalysis>();
 
-            // Get all releases (this could be paginated in a real implementation)
             var releaseCount = await _catalogue.CountReleasesAsync(ct);
 
             if (releaseCount == 0)
@@ -70,14 +70,19 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
                 return results;
             }
 
-            // For simplicity, we'll analyze what we have
-            // In a real implementation, this would be paginated or use a cursor
-            // For now, let's get release groups and their releases
-            var artistCount = await _catalogue.CountArtistsAsync(ct);
+            for (var offset = 0; offset < releaseCount; offset += PageSize)
+            {
+                var releases = await _catalogue.ListReleasesAsync(offset, PageSize, ct);
+                foreach (var release in releases)
+                {
+                    var analysis = await AnalyzeReleaseAsync(release, ct);
+                    if (analysis != null)
+                    {
+                        results.Add(analysis);
+                    }
+                }
+            }
 
-            // This is a simplified implementation - in production, you'd want pagination
-            // For now, we'll just return empty since we can't efficiently list all releases
-            // without pagination support in the catalogue store
             return results;
         }
 
@@ -86,8 +91,6 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
             CancellationToken ct = default)
         {
             var suggestions = new List<UpgradeSuggestion>();
-
-            // Get count of local files
             var fileCount = await _catalogue.CountLocalFilesAsync(ct);
 
             if (fileCount == 0)
@@ -95,16 +98,52 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
                 return suggestions;
             }
 
-            // In a real implementation, we'd paginate through all local files
-            // For now, this is a simplified version that would need pagination support
+            var verifiedByLocalFileId = await GetVerifiedCopiesByLocalFileIdAsync(ct);
+
+            for (var offset = 0; offset < fileCount; offset += PageSize)
+            {
+                var localFiles = await _catalogue.ListLocalFilesAsync(offset, PageSize, ct);
+                foreach (var localFile in localFiles)
+                {
+                    var trackId = localFile.InferredTrackId;
+                    if (string.IsNullOrWhiteSpace(trackId) &&
+                        verifiedByLocalFileId.TryGetValue(localFile.LocalFileId, out var verifiedCopy))
+                    {
+                        trackId = verifiedCopy.TrackId;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(trackId))
+                    {
+                        continue;
+                    }
+
+                    var qualityImprovement = 1.0f - localFile.QualityRating;
+                    if (qualityImprovement < minQualityImprovement)
+                    {
+                        continue;
+                    }
+
+                    var track = await _catalogue.FindTrackByIdAsync(trackId, ct);
+                    suggestions.Add(new UpgradeSuggestion
+                    {
+                        TrackId = trackId,
+                        TrackTitle = track?.Title ?? trackId,
+                        LocalFileId = localFile.LocalFileId,
+                        CurrentQuality = localFile.QualityRating,
+                        TargetQuality = "FLAC",
+                        QualityImprovement = qualityImprovement,
+                        CurrentCodec = localFile.Codec,
+                        CurrentBitrate = localFile.Bitrate,
+                    });
+                }
+            }
+
             return suggestions;
         }
 
         public async Task<IReadOnlyList<string>> FindTracksWithoutLocalCopiesAsync(int limit = 100, CancellationToken ct = default)
         {
             var tracksWithoutCopies = new List<string>();
-
-            // Get total track count
             var trackCount = await _catalogue.CountTracksAsync(ct);
 
             if (trackCount == 0)
@@ -112,16 +151,29 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
                 return tracksWithoutCopies;
             }
 
-            // In a real implementation, we'd need a paginated query
-            // This is a placeholder that shows the intent
+            for (var offset = 0; offset < trackCount && tracksWithoutCopies.Count < limit; offset += PageSize)
+            {
+                var tracks = await _catalogue.ListTracksAsync(offset, PageSize, ct);
+                foreach (var track in tracks)
+                {
+                    var localFiles = await _catalogue.ListLocalFilesForTrackAsync(track.TrackId, ct);
+                    if (localFiles.Count == 0)
+                    {
+                        tracksWithoutCopies.Add(track.TrackId);
+                        if (tracksWithoutCopies.Count >= limit)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
             return tracksWithoutCopies;
         }
 
         public async Task<IReadOnlyList<string>> FindOrphanedLocalFilesAsync(CancellationToken ct = default)
         {
             var orphanedFiles = new List<string>();
-
-            // Get count of local files
             var fileCount = await _catalogue.CountLocalFilesAsync(ct);
 
             if (fileCount == 0)
@@ -129,11 +181,97 @@ namespace slskd.VirtualSoulfind.v2.Reconciliation
                 return orphanedFiles;
             }
 
-            // In a real implementation, we'd query for files with:
-            // - InferredTrackId == null
-            // - AND no VerifiedCopy linking them
-            // This requires pagination support
+            var verifiedByLocalFileId = await GetVerifiedCopiesByLocalFileIdAsync(ct);
+
+            for (var offset = 0; offset < fileCount; offset += PageSize)
+            {
+                var localFiles = await _catalogue.ListLocalFilesAsync(offset, PageSize, ct);
+                foreach (var localFile in localFiles)
+                {
+                    if (string.IsNullOrWhiteSpace(localFile.InferredTrackId) &&
+                        !verifiedByLocalFileId.ContainsKey(localFile.LocalFileId))
+                    {
+                        orphanedFiles.Add(localFile.LocalFileId);
+                    }
+                }
+            }
+
             return orphanedFiles;
+        }
+
+        private async Task<ReleaseGapAnalysis?> AnalyzeReleaseAsync(Release release, CancellationToken ct)
+        {
+            var tracks = await _catalogue.ListTracksForReleaseAsync(release.ReleaseId, ct);
+            if (tracks.Count == 0)
+            {
+                return null;
+            }
+
+            var releaseGroup = await _catalogue.FindReleaseGroupByIdAsync(release.ReleaseGroupId, ct);
+            var artist = releaseGroup == null
+                ? null
+                : await _catalogue.FindArtistByIdAsync(releaseGroup.ArtistId, ct);
+
+            var localCopyCount = 0;
+            var verifiedCopyCount = 0;
+            var missingTrackIds = new List<string>();
+
+            foreach (var track in tracks)
+            {
+                var localFiles = await _catalogue.ListLocalFilesForTrackAsync(track.TrackId, ct);
+                var verifiedCopy = await _catalogue.FindVerifiedCopyForTrackAsync(track.TrackId, ct);
+
+                if (localFiles.Count > 0)
+                {
+                    localCopyCount++;
+                }
+
+                if (verifiedCopy != null)
+                {
+                    verifiedCopyCount++;
+                }
+
+                if (localFiles.Count == 0 && verifiedCopy == null)
+                {
+                    missingTrackIds.Add(track.TrackId);
+                }
+            }
+
+            if (localCopyCount == 0 || missingTrackIds.Count == 0)
+            {
+                return null;
+            }
+
+            return new ReleaseGapAnalysis
+            {
+                ReleaseId = release.ReleaseId,
+                ReleaseTitle = release.Title,
+                ArtistName = artist?.Name ?? "Unknown Artist",
+                TotalTracks = tracks.Count,
+                TracksWithLocalCopies = localCopyCount,
+                TracksWithVerifiedCopies = verifiedCopyCount,
+                MissingTrackIds = missingTrackIds,
+            };
+        }
+
+        private async Task<Dictionary<string, VerifiedCopy>> GetVerifiedCopiesByLocalFileIdAsync(CancellationToken ct)
+        {
+            var verifiedCopies = new Dictionary<string, VerifiedCopy>();
+            var verifiedCopyCount = await _catalogue.CountVerifiedCopiesAsync(ct);
+
+            for (var offset = 0; offset < verifiedCopyCount; offset += PageSize)
+            {
+                var page = await _catalogue.ListVerifiedCopiesAsync(offset, PageSize, ct);
+                foreach (var verifiedCopy in page)
+                {
+                    if (!verifiedCopies.ContainsKey(verifiedCopy.LocalFileId))
+                    {
+                        verifiedCopies[verifiedCopy.LocalFileId] = verifiedCopy;
+                    }
+                }
+            }
+
+            return verifiedCopies;
         }
     }
 }

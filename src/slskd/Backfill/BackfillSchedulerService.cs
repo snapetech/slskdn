@@ -30,6 +30,7 @@ namespace slskd.Backfill
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh;
+    using slskd.Capabilities;
     using slskd.Transfers.MultiSource;
 
     /// <summary>
@@ -40,10 +41,12 @@ namespace slskd.Backfill
         private readonly IHashDbService hashDb;
         private readonly IMeshSyncService meshSync;
         private readonly ISoulseekClient soulseekClient;
+        private readonly ICapabilityService? capabilityService;
         private readonly ILogger<BackfillSchedulerService> logger;
 
         private readonly BackfillConfig config = new();
         private readonly BackfillStats stats = new();
+        private readonly object statsLock = new();
         private readonly SemaphoreSlim backfillLock = new(2, 2); // Max 2 concurrent
         private int activeBackfills;
         private bool isIdle;
@@ -56,11 +59,13 @@ namespace slskd.Backfill
             IHashDbService hashDb,
             IMeshSyncService meshSync,
             ISoulseekClient soulseekClient,
+            ICapabilityService? capabilityService,
             ILogger<BackfillSchedulerService> logger)
         {
             this.hashDb = hashDb;
             this.meshSync = meshSync;
             this.soulseekClient = soulseekClient;
+            this.capabilityService = capabilityService;
             this.logger = logger;
         }
 
@@ -142,7 +147,7 @@ namespace slskd.Backfill
                     if (todayCount >= config.MaxPerPeerPerDay)
                     {
                         result.RateLimited++;
-                        stats.RateLimited++;
+                        lock (statsLock) { stats.RateLimited++; }
                         continue;
                     }
 
@@ -160,16 +165,19 @@ namespace slskd.Backfill
                     if (backfillResult.Success)
                     {
                         result.Successful++;
-                        stats.Successful++;
-                        stats.HashesDiscovered++;
+                        lock (statsLock)
+                        {
+                            stats.Successful++;
+                            stats.HashesDiscovered++;
+                        }
                     }
                     else
                     {
                         result.Failed++;
-                        stats.Failed++;
+                        lock (statsLock) { stats.Failed++; }
                     }
 
-                    stats.TotalAttempts++;
+                    lock (statsLock) { stats.TotalAttempts++; }
                 }
 
                 stats.LastCycleTime = DateTime.UtcNow;
@@ -196,6 +204,17 @@ namespace slskd.Backfill
             foreach (var entry in entries)
             {
                 var backfillsToday = await hashDb.GetPeerBackfillCountTodayAsync(entry.PeerId, cancellationToken);
+                var isPeerOnline = false;
+
+                try
+                {
+                    var userStatus = await soulseekClient.GetUserStatusAsync(entry.PeerId);
+                    isPeerOnline = !string.Equals(userStatus.Presence.ToString(), "Offline", StringComparison.OrdinalIgnoreCase);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "[BACKFILL] Failed to resolve online status for {PeerId}", entry.PeerId);
+                }
 
                 candidates.Add(new BackfillCandidate
                 {
@@ -205,8 +224,8 @@ namespace slskd.Backfill
                     Size = entry.Size,
                     DiscoveredAt = entry.DiscoveredAtUtc,
                     PeerBackfillsToday = backfillsToday,
-                    IsPeerOnline = true, // TODO: Check actual online status
-                    IsPeerSlskdn = false, // TODO: Check capability service
+                    IsPeerOnline = isPeerOnline,
+                    IsPeerSlskdn = capabilityService?.GetPeerCapabilities(entry.PeerId)?.IsSlskdnClient == true,
                 });
             }
 
@@ -298,7 +317,7 @@ namespace slskd.Backfill
                 {
                     // If we didn't get enough bytes, fail
                     result.Success = false;
-                    result.Error = ex.Message;
+                    result.Error = "Failed to read FLAC header";
                     throw; // Re-throw to catch block below
                 }
 
@@ -332,7 +351,9 @@ namespace slskd.Backfill
             }
             catch (Exception ex)
             {
-                result.Error = ex.Message;
+                result.Error = string.IsNullOrWhiteSpace(result.Error)
+                    ? "Backfill probe failed"
+                    : result.Error;
                 await hashDb.MarkFlacHashFailedAsync(fileId, cancellationToken);
                 logger.LogDebug("[BACKFILL] ✗ Failed {Peer}/{Path}: {Error}", peerId, System.IO.Path.GetFileName(path), ex.Message);
             }

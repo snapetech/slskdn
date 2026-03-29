@@ -2,9 +2,6 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-// <copyright file="DescriptorRetriever.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,6 +50,7 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (string.IsNullOrWhiteSpace(contentId))
             throw new ArgumentException("ContentId cannot be empty", nameof(contentId));
 
+        contentId = contentId.Trim();
         var startTime = DateTimeOffset.UtcNow;
         Interlocked.Increment(ref _totalRetrievals);
 
@@ -103,13 +101,16 @@ public class DescriptorRetriever : IDescriptorRetriever
                     _cache[contentId] = cacheEntry;
 
                     // Update domain stats
-                    var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+                    var parsed = ContentIdParser.Parse(contentId);
+                    var domain = parsed == null
+                        ? "unknown"
+                        : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
                     _retrievalStats.AddOrUpdate(domain, 1, (_, count) => count + 1);
                 }
             }
             catch (Exception ex)
             {
-                errorMessage = ex.Message;
+                errorMessage = "Failed to retrieve descriptor from DHT";
                 _logger.LogWarning(ex, "[DescriptorRetriever] Failed to retrieve {ContentId} from DHT", contentId);
             }
 
@@ -145,7 +146,7 @@ public class DescriptorRetriever : IDescriptorRetriever
                 RetrievalDuration: DateTimeOffset.UtcNow - startTime,
                 FromCache: false,
                 Verification: null,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to retrieve descriptor");
         }
     }
 
@@ -155,7 +156,11 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (contentIds == null)
             throw new ArgumentNullException(nameof(contentIds));
 
-        var contentIdList = contentIds.Distinct().ToList();
+        var contentIdList = contentIds
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Select(contentId => contentId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         var startTime = DateTimeOffset.UtcNow;
         var results = new List<DescriptorRetrievalResult>();
         var found = 0;
@@ -212,39 +217,49 @@ public class DescriptorRetriever : IDescriptorRetriever
         if (string.IsNullOrWhiteSpace(domain))
             throw new ArgumentException("Domain cannot be empty", nameof(domain));
 
+        var trimmedDomain = domain.Trim();
+        var trimmedType = string.IsNullOrWhiteSpace(type) ? null : type.Trim();
+
+        domain = ContentIdParser.NormalizeDomain(trimmedDomain, trimmedType ?? string.Empty);
+        type = trimmedType == null ? null : ContentIdParser.NormalizeType(domain, trimmedType);
+        maxResults = Math.Clamp(maxResults, 1, 500);
+
         var startTime = DateTimeOffset.UtcNow;
         var results = new List<ContentDescriptor>();
         var hasMore = false;
 
         try
         {
-            // In a real implementation, this would query an index or search the DHT
-            // For now, we'll search through cached entries as a demonstration
-            var matchingContentIds = _cache.Keys
-                .Where(contentId =>
+            var matchingDescriptors = _cache
+                .Where(kvp =>
                 {
-                    var parsed = ContentIdParser.Parse(contentId);
+                    if (IsExpired(kvp.Value))
+                    {
+                        _cache.TryRemove(kvp.Key, out _);
+                        return false;
+                    }
+
+                    var parsed = ContentIdParser.Parse(kvp.Key);
                     return parsed != null &&
-                           parsed.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase) &&
-                           (type == null || parsed.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
+                           ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type)
+                               .Equals(domain, StringComparison.OrdinalIgnoreCase) &&
+                           (type == null || ContentIdParser.NormalizeType(parsed.Domain, parsed.Type)
+                               .Equals(type, StringComparison.OrdinalIgnoreCase));
                 })
-                .Take(maxResults + 1) // +1 to check if there are more
+                .OrderByDescending(kvp => kvp.Value.RetrievedAt)
+                .Select(kvp => kvp.Value.Descriptor)
+                .GroupBy(descriptor => descriptor.ContentId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .Take(maxResults + 1)
                 .ToList();
 
-            if (matchingContentIds.Count > maxResults)
+            if (matchingDescriptors.Count > maxResults)
             {
                 hasMore = true;
-                matchingContentIds = matchingContentIds.Take(maxResults).ToList();
+                matchingDescriptors = matchingDescriptors.Take(maxResults).ToList();
             }
 
-            // Retrieve the descriptors
-            foreach (var contentId in matchingContentIds)
-            {
-                if (_cache.TryGetValue(contentId, out var cached) && !IsExpired(cached))
-                {
-                    results.Add(cached.Descriptor);
-                }
-            }
+            results = matchingDescriptors;
         }
         catch (Exception ex)
         {
@@ -331,7 +346,7 @@ public class DescriptorRetriever : IDescriptorRetriever
                 SignatureValid: false,
                 FreshnessValid: false,
                 Age: age,
-                ValidationError: ex.Message);
+                ValidationError: "Descriptor verification failed");
         }
     }
 
@@ -344,8 +359,10 @@ public class DescriptorRetriever : IDescriptorRetriever
         var cacheMisses = _totalRetrievals - _cacheHits;
         var cacheHitRatio = _totalRetrievals > 0 ? (double)_cacheHits / _totalRetrievals : 0;
 
-        var activeEntries = _cache.Count(kvp => !IsExpired(kvp.Value));
-        var cacheSizeBytes = _cache.Values.Sum(c => EstimateDescriptorSize(c.Descriptor));
+        var activeEntries = _cache.Values.Count(cached => !IsExpired(cached));
+        var cacheSizeBytes = _cache.Values
+            .Where(cached => !IsExpired(cached))
+            .Sum(cached => EstimateDescriptorSize(cached.Descriptor));
 
         var avgRetrievalTime = TimeSpan.Zero; // Would need to track individual retrieval times
 

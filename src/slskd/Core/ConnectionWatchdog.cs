@@ -40,6 +40,7 @@ namespace slskd
     public class ConnectionWatchdog
     {
         private static readonly int ReconnectMaxDelayMilliseconds = 300000; // 5 minutes
+        private IDisposable? OptionsMonitorRegistration { get; set; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ConnectionWatchdog"/> class.
@@ -71,9 +72,9 @@ namespace slskd
 
             // the timer is used here to ensure that we keep trying if the connection logic fails for some reason. i'm questioning
             // this at the moment and may continue to do so
-            WatchdogTimer.Elapsed += (sender, args) => _ = AttemptConnection(source: nameof(WatchdogTimer));
+            WatchdogTimer.Elapsed += (sender, args) => _ = ObserveAttemptConnectionAsync(nameof(WatchdogTimer));
 
-            OptionsMonitor.OnChange(options => OptionsChanged(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => OptionsChanged(options));
         }
 
         /// <summary>
@@ -188,7 +189,9 @@ namespace slskd
             {
                 if (disposing)
                 {
-                    WatchdogTimer?.Dispose();
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    Common.TimerDisposer.DisposeWithWait(WatchdogTimer);
                     CancellationTokenSource?.Dispose();
                 }
 
@@ -261,7 +264,9 @@ namespace slskd
 
                         IsAwaitingVpn = false;
 
+                        var previousCancellationTokenSource = CancellationTokenSource;
                         CancellationTokenSource = new CancellationTokenSource();
+                        previousCancellationTokenSource?.Dispose();
 
                         if (attempts > 0)
                         {
@@ -343,6 +348,18 @@ namespace slskd
                     // do this after the semaphore is released so that IsAttemptingConnection is false and the next attempt is nulled
                     UpdateApplicationState();
                 }
+            }
+        }
+
+        private async Task ObserveAttemptConnectionAsync(string source)
+        {
+            try
+            {
+                await AttemptConnection(source).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Connection watchdog callback failed: {Message}", ex.Message);
             }
         }
     }

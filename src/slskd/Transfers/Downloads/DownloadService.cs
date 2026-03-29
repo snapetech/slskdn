@@ -39,7 +39,7 @@ namespace slskd.Transfers.Downloads
     /// <summary>
     ///     Manages downloads.
     /// </summary>
-    public interface IDownloadService
+    public interface IDownloadService : IDisposable
     {
         /// <summary>
         ///     Adds the specified <paramref name="transfer"/>. Supersedes any existing record for the same file and username.
@@ -135,6 +135,9 @@ namespace slskd.Transfers.Downloads
     /// </summary>
     public class DownloadService : IDownloadService
     {
+        private readonly EventHandler<ClockEventArgs> _cleanupEnqueueSemaphoresHandler;
+        private bool _disposed;
+
         public DownloadService(
             IOptionsMonitor<Options> optionsMonitor,
             ISoulseekClient soulseekClient,
@@ -154,7 +157,10 @@ namespace slskd.Transfers.Downloads
             EventBus = eventBus;
             PeerMetrics = peerMetricsService;
 
-            Clock.EveryMinute += (_, _) => Task.Run(() => CleanupEnqueueSemaphoresAsync());
+            _cleanupEnqueueSemaphoresHandler = (_, _) => _ = ObserveBackgroundTaskAsync(
+                Task.Run(() => CleanupEnqueueSemaphoresAsync(), CancellationToken.None),
+                "Failed to clean up download enqueue semaphores");
+            Clock.EveryMinute += _cleanupEnqueueSemaphoresHandler;
         }
 
         /// <summary>
@@ -186,6 +192,18 @@ namespace slskd.Transfers.Downloads
         private EventBus EventBus { get; }
         private IPeerMetricsService? PeerMetrics { get; }
 
+        private async Task ObserveBackgroundTaskAsync(Task task, string message)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "{Message}", message);
+            }
+        }
+
         /// <summary>
         ///     Allow only one enqueue operation for a given user at a time. Entries are added on the fly if they
         ///     don't already exist, and a timer asynchronously cleans the dictionary up.
@@ -198,6 +216,46 @@ namespace slskd.Transfers.Downloads
         ///     removed from the dictionary and discarded.
         /// </summary>
         private SemaphoreSlim EnqueueSemaphoreSyncRoot { get; } = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed || !disposing)
+            {
+                return;
+            }
+
+            Clock.EveryMinute -= _cleanupEnqueueSemaphoresHandler;
+
+            foreach (var cancellationTokenSource in CancellationTokens.Values)
+            {
+                cancellationTokenSource.Cancel();
+                cancellationTokenSource.Dispose();
+            }
+
+            CancellationTokens.Clear();
+
+            foreach (var enqueueSemaphore in EnqueueSemaphores.Values)
+            {
+                enqueueSemaphore.Dispose();
+            }
+
+            EnqueueSemaphores.Clear();
+            EnqueueSemaphoreSyncRoot.Dispose();
+            _disposed = true;
+        }
 
         /// <summary>
         ///     Adds the specified <paramref name="transfer"/>. Supersedes any existing record for the same file and username.
@@ -438,10 +496,10 @@ namespace slskd.Transfers.Downloads
                             add this to the dictionary before inserting the record, so we are guaranteed to have it
                             in the right place once the transfer hits the UI
                         */
-                        var enqueuedTcs = new TaskCompletionSource<Transfer>();
+                        var enqueuedTcs = new TaskCompletionSource<Transfer>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                         // satisfies condition #3; CancellationTokenSource set cancelled by the user (via API call)
-                        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        var cts = new CancellationTokenSource();
                         CancellationTokens.TryAdd(transfer.Id, cts);
                         cts.Token.Register(() => enqueuedTcs.TrySetCanceled());
 
@@ -453,7 +511,7 @@ namespace slskd.Transfers.Downloads
 
                         Log.Debug("Scheduling Task for enqueue of {Filename} from {Username}", file.Filename, username);
 
-                        var downloadEnqueueTask = Task.Run(async () =>
+                        var downloadEnqueueTask = ObserveDownloadEnqueueTaskAsync(Task.Run(async () =>
                         {
                             Log.Debug("Awaiting download enqueue semaphore for {Filename} from {Username}", transfer.Filename, transfer.Username);
                             await enqueueSemaphore.WaitAsync(cts.Token);
@@ -501,24 +559,11 @@ namespace slskd.Transfers.Downloads
 
                                 Log.Debug("Scheduling Task for download of {Filename} from {Username}", transfer.Filename, transfer.Username);
 
-                                var downloadTask = Task.Run(() => DownloadAsync(transfer, stateChanged, cancellationToken: cts.Token)).ContinueWith(task =>
-                                {
-                                    if (task.IsCompletedSuccessfully)
-                                    {
-                                        Log.Information("Task for download of {Filename} from {Username} completed successfully", transfer.Filename, transfer.Username);
-                                        return;
-                                    }
-
-                                    Exception? ex = task.IsCanceled ? new OperationCanceledException("Task was cancelled") : task.Exception;
-                                    ex = ex?.InnerException ?? ex ?? new Exception("Unknown error");
-
-                                    Log.Error(ex, "Task for download of {Filename} from {Username} did not complete successfully: {Error}", file.Filename, username, ex.Message);
-
-                                    if (!TryFail(transferId, exception: ex))
-                                    {
-                                        Log.Error(ex, "Failed to clean up transfer {Id} after failed download", transferId);
-                                    }
-                                }, cancellationToken: CancellationToken.None); // end downloadTask.Run();
+                                var downloadTask = ObserveDownloadTaskAsync(
+                                    Task.Run(() => DownloadAsync(transfer, stateChanged, cancellationToken: cts.Token)),
+                                    transferId,
+                                    file.Filename,
+                                    username);
 
                                 Log.Debug("Download Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadTask.Status);
 
@@ -548,24 +593,10 @@ namespace slskd.Transfers.Downloads
                             {
                                 enqueueSemaphore.Release();
                             }
-                        }, cancellationToken: cts.Token).ContinueWith(task =>
-                        {
-                            if (task.IsCompletedSuccessfully)
-                            {
-                                Log.Information("Task for enqueue of {Filename} from {Username} completed successfully", file.Filename, username);
-                                return;
-                            }
-
-                            Exception? ex = task.IsCanceled ? new OperationCanceledException("Task was cancelled") : task.Exception;
-                            ex = ex?.InnerException ?? ex ?? new Exception("Unknown error");
-
-                            Log.Error(ex, "Task for enqueue of {Filename} from {Username} did not complete successfully: {Error}", file.Filename, username, ex.Message);
-
-                            if (!TryFail(transferId, exception: ex))
-                            {
-                                Log.Error(ex, "Failed to clean up transfer {Id} after failed enqueue", transferId);
-                            }
-                        }, cancellationToken: CancellationToken.None); // end downloadEnqueueTask.Run();
+                        }, cancellationToken: cts.Token),
+                            transferId,
+                            file.Filename,
+                            username);
 
                         Log.Debug("Download enqueue Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadEnqueueTask.Status);
                         Log.Information("Successfully locally enqueued download of {Filename} from {Username} (id: {Id})", file.Filename, username, transferId);
@@ -1009,7 +1040,17 @@ namespace slskd.Transfers.Downloads
                         }
                         finally
                         {
-                            stateChanged?.Invoke(transfer);
+                            if (stateChanged != null)
+                            {
+                                try
+                                {
+                                    stateChanged(transfer);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Warning(ex, "Download state callback failed for {Filename} from {Username}", transfer.Filename, transfer.Username);
+                                }
+                            }
                         }
                     },
                     progressUpdated: (args) => rateLimiter.Invoke(() =>
@@ -1100,10 +1141,12 @@ namespace slskd.Transfers.Downloads
                 // Record successful chunk completion for peer metrics (Phase 2C - T-409)
                 if (PeerMetrics != null)
                 {
+                    // CancellationToken.None: download already completed; record success
+                    // unconditionally (error paths at nearby catch blocks do the same).
                     _ = PeerMetrics.RecordChunkCompletionAsync(
                         transfer.Username,
                         ChunkCompletionResult.Success,
-                        cancellationToken);
+                        cancellationToken: CancellationToken.None);
                 }
 
                 // explicitly dispose the rate limiter to prevent updates from it beyond this point, and in doing so we
@@ -1250,6 +1293,60 @@ namespace slskd.Transfers.Downloads
             finally
             {
                 semaphore.Release();
+            }
+        }
+
+        private async Task ObserveDownloadTaskAsync(Task downloadTask, Guid transferId, string filename, string username)
+        {
+            try
+            {
+                await downloadTask.ConfigureAwait(false);
+                Log.Information("Task for download of {Filename} from {Username} completed successfully", filename, username);
+            }
+            catch (OperationCanceledException ex)
+            {
+                Log.Error(ex, "Task for download of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(transferId, exception: ex))
+                {
+                    Log.Error(ex, "Failed to clean up transfer {Id} after failed download", transferId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Task for download of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(transferId, exception: ex))
+                {
+                    Log.Error(ex, "Failed to clean up transfer {Id} after failed download", transferId);
+                }
+            }
+        }
+
+        private async Task ObserveDownloadEnqueueTaskAsync(Task enqueueTask, Guid transferId, string filename, string username)
+        {
+            try
+            {
+                await enqueueTask.ConfigureAwait(false);
+                Log.Information("Task for enqueue of {Filename} from {Username} completed successfully", filename, username);
+            }
+            catch (OperationCanceledException ex)
+            {
+                Log.Error(ex, "Task for enqueue of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(transferId, exception: ex))
+                {
+                    Log.Error(ex, "Failed to clean up transfer {Id} after failed enqueue", transferId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Task for enqueue of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(transferId, exception: ex))
+                {
+                    Log.Error(ex, "Failed to clean up transfer {Id} after failed enqueue", transferId);
+                }
             }
         }
 

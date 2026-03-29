@@ -46,9 +46,30 @@ public class NetworkGuardPolicy : ISecurityPolicy
             return Task.FromResult(new SecurityDecision(false, $"Peer {context.PeerId} is blocked"));
         }
 
-        // TODO: Resolve PeerId to IP address for IP-based checks
-        // For now, we only check username blocklist
-        // IP-based checks require a PeerId -> IP mapping service
+        if (!string.IsNullOrWhiteSpace(context.Operation) && rateLimiter != null)
+        {
+            var op = context.Operation.ToLowerInvariant();
+            var rateLimitResult =
+                op.Contains("mesh-search", StringComparison.Ordinal) ? rateLimiter.CheckMeshSearchRequest(context.PeerId) :
+                op.Contains("delta", StringComparison.Ordinal) ? rateLimiter.CheckDeltaRequest(context.PeerId) :
+                op.Contains("message", StringComparison.Ordinal) ? rateLimiter.CheckMessage(context.PeerId) :
+                RateLimitResult.Allowed();
+
+            if (!rateLimitResult.IsAllowed)
+            {
+                logger.LogWarning("[NetworkGuard] Rate limited peer {PeerId} for {Operation}: {Reason}", context.PeerId, context.Operation, rateLimitResult.Reason);
+                return Task.FromResult(new SecurityDecision(false, rateLimitResult.Reason ?? "rate limited"));
+            }
+        }
+
+        if (networkGuard != null &&
+            IPAddress.TryParse(context.PeerId, out var peerIp) &&
+            !networkGuard.AllowRequest(peerIp))
+        {
+            logger.LogWarning("[NetworkGuard] Request limit exceeded for {PeerIp}", peerIp);
+            return Task.FromResult(new SecurityDecision(false, $"Too many pending requests from {peerIp}"));
+        }
+
         return Task.FromResult(new SecurityDecision(true, "network ok"));
     }
 }
@@ -123,13 +144,13 @@ public class ConsensusPolicy : ISecurityPolicy
             return Task.FromResult(new SecurityDecision(false, "PeerId is required"));
         }
 
-        // TODO: Implement mesh consensus verification
-        // This requires:
-        // 1. Querying multiple mesh peers for their opinion on this peer/content
-        // 2. Checking if there's consensus (e.g., >50% agree)
-        // 3. Denying if there's strong negative consensus
-        // For now, allow all requests but log that consensus check is not implemented
-        logger.LogDebug("[Consensus] Consensus check not fully implemented, allowing peer {PeerId}", context.PeerId);
+        if (!string.IsNullOrWhiteSpace(context.Operation) &&
+            context.Operation.Contains("consensus", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("[Consensus] Denied consensus-gated operation {Operation} for peer {PeerId}: no consensus backend is wired", context.Operation, context.PeerId);
+            return Task.FromResult(new SecurityDecision(false, "consensus verification unavailable"));
+        }
+
         return Task.FromResult(new SecurityDecision(true, "consensus check not implemented"));
     }
 }
@@ -275,20 +296,64 @@ public class NatAbuseDetectionPolicy : ISecurityPolicy
             return Task.FromResult(new SecurityDecision(false, "PeerId is required"));
         }
 
-        // TODO: Implement NAT abuse detection
-        // This requires:
-        // 1. Tracking peers that claim symmetric NAT but successfully connect directly
-        // 2. Detecting relay abuse (excessive relay usage when direct connection should work)
-        // 3. Detecting peers that change NAT type frequently (suspicious)
-        // For now, allow all requests but log that NAT abuse detection is not fully implemented
-        logger.LogDebug("[NatAbuse] NAT abuse detection not fully implemented, allowing peer {PeerId}", context.PeerId);
-        return Task.FromResult(new SecurityDecision(true, "nat abuse detection not fully implemented"));
+        if (string.IsNullOrWhiteSpace(context.Operation))
+        {
+            return Task.FromResult(new SecurityDecision(true, "no nat signal"));
+        }
+
+        var tracker = abuseTrackers.GetOrAdd(context.PeerId, _ => new NatAbuseTracker());
+        var operation = context.Operation.ToLowerInvariant();
+        var now = DateTimeOffset.UtcNow;
+
+        lock (tracker)
+        {
+            if (operation.Contains("symmetric", StringComparison.Ordinal))
+            {
+                tracker.ClaimedSymmetricNatCount++;
+            }
+
+            if (operation.Contains("direct", StringComparison.Ordinal) && operation.Contains("success", StringComparison.Ordinal))
+            {
+                tracker.SuccessfulDirectConnections++;
+            }
+
+            if (operation.Contains("relay", StringComparison.Ordinal))
+            {
+                tracker.RelayUsageCount++;
+            }
+
+            if (operation.Contains("nat-type-change", StringComparison.Ordinal))
+            {
+                if (tracker.LastNatTypeChange.HasValue && tracker.LastNatTypeChange.Value > now.AddMinutes(-10))
+                {
+                    logger.LogWarning("[NatAbuse] Denied peer {PeerId} for frequent NAT type changes", context.PeerId);
+                    return Task.FromResult(new SecurityDecision(false, "frequent NAT type changes detected"));
+                }
+
+                tracker.LastNatTypeChange = now;
+            }
+
+            if (tracker.ClaimedSymmetricNatCount >= 3 && tracker.SuccessfulDirectConnections >= 2)
+            {
+                logger.LogWarning("[NatAbuse] Denied peer {PeerId} for inconsistent NAT claims", context.PeerId);
+                return Task.FromResult(new SecurityDecision(false, "inconsistent NAT claims detected"));
+            }
+
+            if (tracker.RelayUsageCount >= 20 && tracker.SuccessfulDirectConnections > 0)
+            {
+                logger.LogWarning("[NatAbuse] Denied peer {PeerId} for relay abuse", context.PeerId);
+                return Task.FromResult(new SecurityDecision(false, "relay abuse detected"));
+            }
+        }
+
+        return Task.FromResult(new SecurityDecision(true, "nat behavior ok"));
     }
 
     private class NatAbuseTracker
     {
         public int ClaimedSymmetricNatCount { get; set; }
         public int SuccessfulDirectConnections { get; set; }
+        public int RelayUsageCount { get; set; }
         public DateTimeOffset? LastNatTypeChange { get; set; }
     }
 }

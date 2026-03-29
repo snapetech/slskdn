@@ -5,6 +5,7 @@
 namespace slskd.VirtualSoulfind.Bridge;
 
 using System.Collections.Concurrent;
+using System.Threading;
 
 /// <summary>
 /// Interface for bridge dashboard data.
@@ -30,6 +31,21 @@ public interface IBridgeDashboard
     /// Record a proxied request.
     /// </summary>
     void RecordRequest(string clientId, string requestType);
+
+    /// <summary>
+    /// Record a newly connected legacy client.
+    /// </summary>
+    void RecordConnection(string clientId, string ipAddress);
+
+    /// <summary>
+    /// Record successful legacy client authentication.
+    /// </summary>
+    void RecordAuthentication(string clientId, string username);
+
+    /// <summary>
+    /// Record a disconnected legacy client.
+    /// </summary>
+    void RecordDisconnection(string clientId);
 
     /// <summary>
     /// Record mesh benefit (avoided Soulseek traffic).
@@ -100,6 +116,7 @@ public class BridgeDashboard : IBridgeDashboard
     private readonly BridgeStatistics stats = new();
     private readonly MeshBenefits benefits = new();
     private readonly DateTimeOffset startTime = DateTimeOffset.UtcNow;
+    private readonly object statsLock = new();
 
     public BridgeDashboard(
         ILogger<BridgeDashboard> logger,
@@ -117,6 +134,7 @@ public class BridgeDashboard : IBridgeDashboard
 
         stats.CurrentConnections = clients.Count;
         stats.Uptime = DateTimeOffset.UtcNow - startTime;
+        health.ActiveConnections = stats.CurrentConnections;
 
         var dashboard = new BridgeDashboardData
         {
@@ -152,38 +170,93 @@ public class BridgeDashboard : IBridgeDashboard
         {
             client = new ConnectedClient
             {
-                ClientId = clientId,
-                ConnectedAt = DateTimeOffset.UtcNow
+                ClientId = clientId
             };
             clients[clientId] = client;
-            stats.TotalConnections++;
         }
 
         client.RequestCount++;
         client.LastActivity = DateTimeOffset.UtcNow;
 
         // Update type-specific counters
-        switch (requestType.ToLowerInvariant())
+        lock (statsLock)
         {
-            case "search":
-                stats.TotalSearches++;
-                break;
-            case "download":
-                stats.TotalDownloads++;
-                break;
-            case "room":
-                stats.TotalRoomJoins++;
-                break;
+            switch (requestType.ToLowerInvariant())
+            {
+                case "search":
+                    stats.TotalSearches++;
+                    break;
+                case "download":
+                    stats.TotalDownloads++;
+                    break;
+                case "room":
+                    stats.TotalRoomJoins++;
+                    break;
+            }
         }
 
         logger.LogDebug("[VSF-BRIDGE-DASHBOARD] Recorded {RequestType} from {ClientId}",
             requestType, clientId);
     }
 
+    public void RecordConnection(string clientId, string ipAddress)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var added = false;
+        var client = clients.GetOrAdd(clientId, _ =>
+        {
+            added = true;
+            return new ConnectedClient
+            {
+                ClientId = clientId,
+                ClientType = "Soulseek Legacy",
+                ConnectedAt = now,
+                LastActivity = now,
+                IpAddress = ipAddress
+            };
+        });
+
+        if (added)
+        {
+            lock (statsLock)
+            {
+                stats.TotalConnections++;
+            }
+        }
+
+        client.IpAddress = ipAddress;
+        client.LastActivity = now;
+        if (client.ConnectedAt == default)
+        {
+            client.ConnectedAt = now;
+        }
+    }
+
+    public void RecordAuthentication(string clientId, string username)
+    {
+        if (!clients.TryGetValue(clientId, out var client))
+        {
+            return;
+        }
+
+        client.ClientType = string.IsNullOrWhiteSpace(username)
+            ? client.ClientType
+            : $"Soulseek Legacy ({username})";
+        client.LastActivity = DateTimeOffset.UtcNow;
+    }
+
+    public void RecordDisconnection(string clientId)
+    {
+        clients.TryRemove(clientId, out _);
+    }
+
     public void RecordMeshBenefit(long bytesViaMesh)
     {
-        benefits.BytesViaMesh += bytesViaMesh;
-        stats.TotalBytesProxied += bytesViaMesh;
+        lock (statsLock)
+        {
+            benefits.BytesViaMesh += bytesViaMesh;
+            stats.TotalBytesProxied += bytesViaMesh;
+        }
 
         logger.LogDebug("[VSF-BRIDGE-DASHBOARD] Recorded {Bytes} bytes via mesh", bytesViaMesh);
     }

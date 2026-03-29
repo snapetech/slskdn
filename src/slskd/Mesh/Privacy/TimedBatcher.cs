@@ -64,6 +64,8 @@ public sealed class TimedBatcher : IMessageBatcher, IDisposable
     /// <exception cref="ArgumentNullException">Thrown when message is null.</exception>
     public bool AddMessage(byte[] message)
     {
+        ThrowIfDisposed();
+
         if (message == null)
         {
             throw new ArgumentNullException(nameof(message));
@@ -102,6 +104,8 @@ public sealed class TimedBatcher : IMessageBatcher, IDisposable
     /// <returns>The batched messages, or null if no batch is ready.</returns>
     public IReadOnlyList<byte[]>? GetBatch()
     {
+        ThrowIfDisposed();
+
         _batchLock.Wait();
         try
         {
@@ -132,6 +136,8 @@ public sealed class TimedBatcher : IMessageBatcher, IDisposable
     /// </summary>
     public void Flush()
     {
+        ThrowIfDisposed();
+
         _batchLock.Wait();
         try
         {
@@ -154,6 +160,7 @@ public sealed class TimedBatcher : IMessageBatcher, IDisposable
     {
         get
         {
+            ThrowIfDisposed();
             _batchLock.Wait();
             try
             {
@@ -173,6 +180,7 @@ public sealed class TimedBatcher : IMessageBatcher, IDisposable
     {
         get
         {
+            ThrowIfDisposed();
             _batchLock.Wait();
             try
             {
@@ -264,7 +272,13 @@ public sealed class TimedBatcher : IMessageBatcher, IDisposable
             return;
         }
 
-        _batchLock.Dispose();
         _disposed = true;
+        _batchLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

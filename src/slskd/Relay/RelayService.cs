@@ -43,7 +43,7 @@ namespace slskd.Relay
     /// <summary>
     ///     Handles relay (controller/agent) interactions.
     /// </summary>
-    public interface IRelayService
+    public interface IRelayService : IDisposable
     {
         /// <summary>
         ///     Gets the relay client (agent).
@@ -339,7 +339,7 @@ namespace slskd.Relay
             StateMonitor = State;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(options => Configure(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
             Configure(OptionsMonitor.CurrentValue);
         }
 
@@ -365,6 +365,9 @@ namespace slskd.Relay
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayService>();
         private MemoryCache MemoryCache { get; } = new MemoryCache(new MemoryCacheOptions());
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
+        private IDisposable? ClientStateMonitorRegistration { get; set; }
+        private bool Disposed { get; set; }
         private ConcurrentDictionary<Guid, TaskCompletionSource<(bool Exists, long Length)>> PendingFileInquiryDictionary { get; } = new();
         private ConcurrentDictionary<string, (string ConnectionId, Agent Agent)> RegisteredAgentDictionary { get; } = new();
         private IHubContext<RelayHub, IRelayHub> RelayHub { get; set; }
@@ -374,6 +377,15 @@ namespace slskd.Relay
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
         private IWaiter Waiter { get; }
         private ConcurrentDictionary<WaitKey, Guid> WaitIdDictionary { get; } = new();
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Generates a random authentication challenge token for the specified <paramref name="connectionId"/>.
@@ -872,34 +884,37 @@ namespace slskd.Relay
                 var optionsHash = Compute.Sha1Hash(options.Relay.ToJson());
                 var controllerOptionsHash = Compute.Sha1Hash(options.Relay.Controller.ToJson());
 
-                if (optionsHash == LastOptionsHash || controllerOptionsHash == LastControllerOptionsHash)
+                if (optionsHash == LastOptionsHash && controllerOptionsHash == LastControllerOptionsHash)
                 {
                     return;
                 }
 
+                var mode = options.Relay.Mode.ToEnum<RelayMode>();
+
                 if (options.Relay.Enabled)
                 {
-                    var mode = options.Relay.Mode.ToEnum<RelayMode>();
-
                     if (mode == RelayMode.Controller)
                     {
+                        ReplaceClient(new NullRelayClient());
+
                         State.SetValue(state => state with
                         {
                             Mode = mode,
                             Agents = RegisteredAgents,
+                            Controller = new RelayControllerState(),
                         });
                     }
                     else
                     {
                         // the controller changed. disconnect and throw away the client and create a new one
-                        Client = new RelayClient(
+                        var client = new RelayClient(
                             shareService: Shares,
                             fileService: Files,
                             optionsMonitor: OptionsMonitor,
                             httpClientFactory: HttpClientFactory);
 
-                        Client.StateMonitor.OnChange(clientState
-                            => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
+                        ReplaceClient(client);
+                        AttachClientStateMonitor(client);
 
                         State.SetValue(state => state with
                         {
@@ -907,10 +922,20 @@ namespace slskd.Relay
                             Controller = new RelayControllerState()
                             {
                                 Address = options.Relay.Controller.Address,
-                                State = Client.StateMonitor.CurrentValue,
+                                State = client.StateMonitor.CurrentValue,
                             },
                         });
                     }
+                }
+                else
+                {
+                    ReplaceClient(new NullRelayClient());
+
+                    State.SetValue(state => state with
+                    {
+                        Mode = mode,
+                        Controller = new RelayControllerState(),
+                    });
                 }
 
                 LastOptionsHash = optionsHash;
@@ -920,6 +945,26 @@ namespace slskd.Relay
             {
                 SyncRoot.Release();
             }
+        }
+
+        private void ReplaceClient(IRelayClient nextClient)
+        {
+            var previousClient = Client;
+            ClientStateMonitorRegistration?.Dispose();
+            ClientStateMonitorRegistration = null;
+            Client = nextClient;
+
+            if (!ReferenceEquals(previousClient, nextClient) && previousClient is IDisposable disposableClient)
+            {
+                disposableClient.Dispose();
+            }
+        }
+
+        private void AttachClientStateMonitor(IRelayClient client)
+        {
+            ClientStateMonitorRegistration?.Dispose();
+            ClientStateMonitorRegistration = client.StateMonitor.OnChange(clientState
+                => State.SetValue(state => state with { Controller = state.Controller with { State = clientState.Current } }));
         }
 
         private string GetAuthTokenCacheKey(string connectionId) => $"{connectionId}.auth";
@@ -1030,6 +1075,34 @@ namespace slskd.Relay
 
             var digest = SHA256.HashData(Encoding.UTF8.GetBytes(connectionId));
             return $"connection:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    ClientStateMonitorRegistration?.Dispose();
+                    ClientStateMonitorRegistration = null;
+                    MemoryCache.Dispose();
+
+                    if (Client is IDisposable disposableClient)
+                    {
+                        disposableClient.Dispose();
+                    }
+
+                    SyncRoot.Dispose();
+                }
+
+                Disposed = true;
+            }
         }
     }
 }

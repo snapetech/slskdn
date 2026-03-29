@@ -4,43 +4,44 @@
 
 namespace slskd.VirtualSoulfind.DisasterMode;
 
+using System.Threading;
 using Microsoft.Extensions.Options;
 using slskd;
 using OptionsModel = slskd.Options;
 
 /// <summary>
-/// Interface for disaster mode coordination.
+/// Interface for the legacy fallback coordinator.
 /// </summary>
-public interface IDisasterModeCoordinator
+public interface IDisasterModeCoordinator : IDisposable
 {
     /// <summary>
-    /// Current disaster mode level (0 = normal dual-network operation, higher = more degraded).
+    /// Current legacy fallback level (0 = normal dual-network operation, higher = more degraded).
     /// </summary>
     DisasterModeLevel CurrentLevel { get; }
 
     /// <summary>
-    /// Is disaster mode currently active (level > 0)?
+    /// Is the legacy fallback currently active (level > 0)?
     /// </summary>
     bool IsDisasterModeActive => CurrentLevel > DisasterModeLevel.Normal;
 
     /// <summary>
-    /// Set disaster mode level.
+    /// Set legacy fallback level.
     /// </summary>
     Task SetDisasterModeLevelAsync(DisasterModeLevel level, string reason, CancellationToken ct = default);
 
     /// <summary>
-    /// Deactivate disaster mode (restore normal dual-network operation).
+    /// Deactivate the legacy fallback (restore normal dual-network operation).
     /// </summary>
     Task DeactivateDisasterModeAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Event fired when disaster mode level changes.
+    /// Event fired when the legacy fallback level changes.
     /// </summary>
     event EventHandler<DisasterModeLevelChangedEventArgs> DisasterModeLevelChanged;
 }
 
 /// <summary>
-/// Disaster mode degradation levels.
+/// Legacy fallback degradation levels.
 /// </summary>
 public enum DisasterModeLevel
 {
@@ -66,7 +67,7 @@ public enum DisasterModeLevel
 }
 
 /// <summary>
-/// Disaster mode level changed event args.
+/// Legacy fallback level changed event args.
 /// </summary>
 public class DisasterModeLevelChangedEventArgs : EventArgs
 {
@@ -77,9 +78,9 @@ public class DisasterModeLevelChangedEventArgs : EventArgs
 }
 
 /// <summary>
-/// Coordinates disaster mode level management.
+/// Coordinates the legacy fallback level for the default dual-network runtime.
 /// </summary>
-public class DisasterModeCoordinator : IDisasterModeCoordinator
+public sealed class DisasterModeCoordinator : IDisasterModeCoordinator
 {
     private readonly ILogger<DisasterModeCoordinator> logger;
     private readonly ISoulseekHealthMonitor healthMonitor;
@@ -87,6 +88,7 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
     private DisasterModeLevel currentLevel;
     private DateTimeOffset? lastHealthCheck;
     private int consecutiveUnhealthyChecks;
+    private bool disposed;
 
     public DisasterModeCoordinator(
         ILogger<DisasterModeCoordinator> logger,
@@ -97,10 +99,10 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
         this.healthMonitor = healthMonitor;
         this.optionsMonitor = optionsMonitor;
 
-        // Subscribe to health changes
+        // Subscribe to health changes.
         healthMonitor.HealthChanged += OnHealthChanged;
 
-        // Start in normal mode (dual-network operation)
+        // Start in normal mode (Soulseek + mesh together).
         currentLevel = DisasterModeLevel.Normal;
     }
 
@@ -112,6 +114,18 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
 
     public event EventHandler<DisasterModeLevelChangedEventArgs>? DisasterModeLevelChanged;
 
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        healthMonitor.HealthChanged -= OnHealthChanged;
+        disposed = true;
+        GC.SuppressFinalize(this);
+    }
+
     public Task DeactivateDisasterModeAsync(CancellationToken ct = default)
     {
         return SetDisasterModeLevelAsync(DisasterModeLevel.Normal, "Manual deactivation", ct);
@@ -121,18 +135,18 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
     {
         if (CurrentLevel == level)
         {
-            logger.LogDebug("[VSF-DISASTER] Already at disaster mode level {Level}", level);
+            logger.LogDebug("[VSF-DISASTER] Already at legacy fallback level {Level}", level);
             return;
         }
 
         var previousLevel = CurrentLevel;
-        logger.LogWarning("[VSF-DISASTER] Changing disaster mode level from {Previous} to {New}: {Reason}",
+        logger.LogWarning("[VSF-DISASTER] Changing legacy fallback level from {Previous} to {New}: {Reason}",
             previousLevel, level, reason);
 
         CurrentLevel = level;
 
         // Emit telemetry
-        DisasterModeLevelChanged?.Invoke(this, new DisasterModeLevelChangedEventArgs
+        RaiseDisasterModeLevelChanged(new DisasterModeLevelChangedEventArgs
         {
             Level = level,
             PreviousLevel = previousLevel,
@@ -140,91 +154,122 @@ public class DisasterModeCoordinator : IDisasterModeCoordinator
             Reason = reason
         });
 
-        logger.LogInformation("[VSF-DISASTER] Disaster mode level set to {Level} - {Description}",
+        logger.LogInformation("[VSF-DISASTER] Legacy fallback level set to {Level} - {Description}",
             level, GetLevelDescription(level));
 
         await Task.CompletedTask;
     }
 
+    private void RaiseDisasterModeLevelChanged(DisasterModeLevelChangedEventArgs args)
+    {
+        if (DisasterModeLevelChanged is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<DisasterModeLevelChangedEventArgs> handler in DisasterModeLevelChanged.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-DISASTER] Disaster mode subscriber failed");
+            }
+        }
+    }
+
     private string GetLevelDescription(DisasterModeLevel level) => level switch
     {
         DisasterModeLevel.Normal => "Soulseek + mesh networks operating together",
-        DisasterModeLevel.SoulseekDegraded => "Soulseek degraded, mesh assisting",
-        DisasterModeLevel.SoulseekUnavailable => "Soulseek unavailable, mesh primary",
-        DisasterModeLevel.FullFallback => "Full fallback: shadow-index, relay, swarm-only",
+        DisasterModeLevel.SoulseekDegraded => "Legacy fallback assisting while Soulseek is degraded",
+        DisasterModeLevel.SoulseekUnavailable => "Legacy fallback active: mesh primary while Soulseek is unavailable",
+        DisasterModeLevel.FullFallback => "Legacy full fallback: shadow-index, relay, swarm-only",
         _ => "Unknown level"
     };
 
     private async void OnHealthChanged(object? sender, SoulseekHealthChangedEventArgs e)
     {
-        var options = optionsMonitor.CurrentValue;
-        var disasterOptions = options.VirtualSoulfind?.DisasterMode;
-
-        // Check if auto mode is enabled
-        if (disasterOptions?.Auto != true)
+        try
         {
-            logger.LogDebug("[VSF-DISASTER] Auto disaster mode disabled, ignoring health change");
-            return;
-        }
+            var options = optionsMonitor.CurrentValue;
+            var disasterOptions = options.VirtualSoulfind?.DisasterMode;
 
-        lastHealthCheck = e.Timestamp;
-
-        if (e.NewHealth == SoulseekHealth.Unavailable)
-        {
-            consecutiveUnhealthyChecks++;
-
-            var elapsedMinutes = consecutiveUnhealthyChecks * 0.5; // Checks every 30 seconds
-
-            // Progressive escalation based on downtime duration
-            DisasterModeLevel targetLevel;
-            string reason;
-
-            // 30+ minutes down.
-            if (elapsedMinutes >= 30)
+            // Auto fallback is opt-in only. Normal operation remains dual-network by default.
+            if (disasterOptions?.Auto != true)
             {
-                targetLevel = DisasterModeLevel.FullFallback;
-                reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - full fallback mode";
+                logger.LogDebug("[VSF-DISASTER] Legacy auto-fallback disabled, ignoring health change");
+                return;
             }
 
-            // 10+ minutes down.
-            else if (elapsedMinutes >= 10)
-            {
-                targetLevel = DisasterModeLevel.SoulseekUnavailable;
-                reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - mesh primary";
-            }
+            lastHealthCheck = e.Timestamp;
 
-            // 2+ minutes down.
-            else if (elapsedMinutes >= 2)
+            if (e.NewHealth == SoulseekHealth.Unavailable)
             {
-                targetLevel = DisasterModeLevel.SoulseekDegraded;
-                reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - mesh assisting";
-            }
-            else
-            {
-                return; // Too early to escalate
-            }
+                var checks = Interlocked.Increment(ref consecutiveUnhealthyChecks);
 
-            if (CurrentLevel < targetLevel)
-            {
-                await SetDisasterModeLevelAsync(targetLevel, reason, CancellationToken.None);
-            }
-        }
-        else if (e.NewHealth == SoulseekHealth.Healthy)
-        {
-            consecutiveUnhealthyChecks = 0;
+                var elapsedMinutes = checks * 0.5; // Checks every 30 seconds
 
-            if (CurrentLevel > DisasterModeLevel.Normal)
-            {
-                logger.LogInformation("[VSF-DISASTER] Soulseek healthy again, preparing to restore normal operation");
+                // Progressive escalation based on downtime duration
+                DisasterModeLevel targetLevel;
+                string reason;
 
-                // Wait a bit to ensure stability
-                await Task.Delay(TimeSpan.FromMinutes(1));
-
-                if (healthMonitor.CurrentHealth == SoulseekHealth.Healthy)
+                // 30+ minutes down.
+                if (elapsedMinutes >= 30)
                 {
-                    await DeactivateDisasterModeAsync(CancellationToken.None);
+                    targetLevel = DisasterModeLevel.FullFallback;
+                    reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - legacy full fallback";
+                }
+
+                // 10+ minutes down.
+                else if (elapsedMinutes >= 10)
+                {
+                    targetLevel = DisasterModeLevel.SoulseekUnavailable;
+                    reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - legacy fallback mesh primary";
+                }
+
+                // 2+ minutes down.
+                else if (elapsedMinutes >= 2)
+                {
+                    targetLevel = DisasterModeLevel.SoulseekDegraded;
+                    reason = $"Soulseek unavailable for {elapsedMinutes:F1} minutes - legacy fallback mesh assisting";
+                }
+                else
+                {
+                    return; // Too early to escalate
+                }
+
+                if (CurrentLevel < targetLevel)
+                {
+                    await SetDisasterModeLevelAsync(targetLevel, reason, CancellationToken.None);
                 }
             }
+            else if (e.NewHealth == SoulseekHealth.Healthy)
+            {
+                Interlocked.Exchange(ref consecutiveUnhealthyChecks, 0);
+
+                if (CurrentLevel > DisasterModeLevel.Normal)
+                {
+                    logger.LogInformation("[VSF-DISASTER] Soulseek healthy again, restoring default dual-network operation");
+
+                    // Wait a bit to ensure stability
+                    await Task.Delay(TimeSpan.FromMinutes(1));
+
+                    if (healthMonitor.CurrentHealth == SoulseekHealth.Healthy)
+                    {
+                        await DeactivateDisasterModeAsync(CancellationToken.None);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogDebug("[VSF-DISASTER] Health-change processing cancelled");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[VSF-DISASTER] Unhandled exception while processing health change");
         }
     }
 }

@@ -55,17 +55,26 @@ public class PodService : IPodService
     private readonly Dictionary<string, List<SignedMembershipRecord>> membershipHistory = new(); // podId -> history
     private readonly IPodPublisher? podPublisher;
     private readonly IPodMembershipSigner? membershipSigner;
+    private readonly ILogger<PodService>? logger;
 
     public PodService(
         IPodPublisher? podPublisher = null,
         IPodMembershipSigner? membershipSigner = null,
-        IContentLinkService? contentLinkService = null)
+        IContentLinkService? contentLinkService = null,
+        ILogger<PodService>? logger = null,
+        Func<Func<Task>, Task>? backgroundRunner = null)
     {
         this.podPublisher = podPublisher;
         this.membershipSigner = membershipSigner;
+        this.logger = logger;
         ContentLinkService = contentLinkService;
+        BackgroundRunner = backgroundRunner ?? DefaultBackgroundRunner;
     }
 
+    private static readonly Func<Func<Task>, Task> DefaultBackgroundRunner =
+        work => Task.Factory.StartNew(work, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
+
+    private Func<Func<Task>, Task> BackgroundRunner { get; }
     private IContentLinkService? ContentLinkService { get; }
 
     public Task<Pod> CreateAsync(Pod pod, CancellationToken ct = default)
@@ -108,18 +117,9 @@ public class PodService : IPodService
         // Publish to DHT if publisher is available and pod is listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail pod creation if publishing fails
-                    System.Diagnostics.Debug.WriteLine($"[PodService] Failed to publish pod to DHT: {ex.Message}");
-                }
-            }, ct);
+            // CancellationToken.None: background publish must not inherit the caller's token —
+            // if the caller cancels, we still want the background DHT publish to complete.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod to DHT");
         }
 
         return Task.FromResult(pod);
@@ -153,18 +153,9 @@ public class PodService : IPodService
         // Re-publish pod to DHT if publisher available and visibility allows
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.UpdatePodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail pod update if publishing fails
-                    System.Diagnostics.Debug.WriteLine($"[PodService] Failed to update pod in DHT: {ex.Message}");
-                }
-            }, ct);
+            // CancellationToken.None: background publish must not inherit the caller's token —
+            // if the caller cancels, we still want the background DHT update to complete.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.UpdatePodAsync(pod, CancellationToken.None), "update pod in DHT");
         }
 
         return Task.FromResult(pod);
@@ -235,7 +226,11 @@ public class PodService : IPodService
             if (newMemberCount > maxMembers)
             {
                 // Log the rejection for audit purposes
-                System.Diagnostics.Debug.WriteLine($"[PodService] Rejected join for peer {member.PeerId}: would exceed max members ({maxMembers}) for VPN pod {podId}");
+                logger?.LogInformation(
+                    "Rejected pod join for peer {PeerId}: would exceed max members ({MaxMembers}) for VPN pod {PodId}",
+                    member.PeerId,
+                    maxMembers,
+                    podId);
                 return false;
             }
         }
@@ -270,7 +265,11 @@ public class PodService : IPodService
             catch (Exception ex)
             {
                 // Log but don't fail join if signing fails
-                System.Diagnostics.Debug.WriteLine($"[PodService] Failed to sign membership record: {ex.Message}");
+                logger?.LogWarning(
+                    ex,
+                    "Failed to sign membership record for peer {PeerId} while joining pod {PodId}",
+                    member.PeerId,
+                    podId);
             }
         }
 
@@ -324,7 +323,11 @@ public class PodService : IPodService
                     catch (Exception ex)
                     {
                         // Log but don't fail ban if signing fails
-                        System.Diagnostics.Debug.WriteLine($"[PodService] Failed to sign ban record: {ex.Message}");
+                        logger?.LogWarning(
+                            ex,
+                            "Failed to sign ban record for peer {PeerId} in pod {PodId}",
+                            peerId,
+                            podId);
                     }
                 }
 
@@ -365,18 +368,8 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail the operation
-                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
-                }
-            }, ct);
+            // CancellationToken.None: background publish must not inherit the caller's token.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod update to DHT");
         }
 
         return Task.FromResult(channel);
@@ -415,18 +408,8 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail the operation
-                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
-                }
-            }, ct);
+            // CancellationToken.None: background publish must not inherit the caller's token.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod update to DHT");
         }
 
         return Task.FromResult(true);
@@ -495,18 +478,8 @@ public class PodService : IPodService
         // Publish updated pod to DHT if listed
         if (podPublisher != null && pod.Visibility == PodVisibility.Listed)
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await podPublisher.PublishPodAsync(pod, ct);
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't fail the operation
-                    Console.WriteLine($"Failed to publish pod update to DHT: {ex.Message}");
-                }
-            }, ct);
+            // CancellationToken.None: background publish must not inherit the caller's token.
+            _ = PublishPodInBackgroundAsync(() => podPublisher.PublishPodAsync(pod, CancellationToken.None), "publish pod update to DHT");
         }
 
         return Task.FromResult(true);
@@ -528,6 +501,18 @@ public class PodService : IPodService
         }
 
         return await ContentLinkService.ValidateContentIdAsync(contentId, ct);
+    }
+
+    private async Task PublishPodInBackgroundAsync(Func<Task> publishAsync, string operation)
+    {
+        try
+        {
+            await BackgroundRunner(publishAsync).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(ex, "Failed to {Operation}", operation);
+        }
     }
 
     public async Task<Pod> CreateContentLinkedPodAsync(Pod pod, CancellationToken ct = default)
@@ -722,8 +707,10 @@ public class PodMessaging : IPodMessaging
         // 7. Forward to Soulseek room if channel is bound (mirror mode)
         _ = chatBridge.ForwardPodToSoulseekAsync(message.ChannelId, message);
 
-        // 8. Route message to pod members via decentralized overlay network
-        _ = messageRouter.RouteMessageAsync(message, ct);
+        // 8. Route message to pod members via decentralized overlay network.
+        // CancellationToken.None: the message was already stored, so routing must
+        // complete even if the caller's request is cancelled/disconnected.
+        _ = messageRouter.RouteMessageAsync(message, CancellationToken.None);
 
         return true;
     }
@@ -921,7 +908,7 @@ public class PodMessaging : IPodMessaging
 /// <summary>
 /// Soulseek chat bridge for bound channels (readonly and mirror modes).
 /// </summary>
-public interface ISoulseekChatBridge
+public interface ISoulseekChatBridge : IDisposable
 {
     Task<bool> BindRoomAsync(string podId, string channelId, string roomName, string mode, CancellationToken ct = default);
     Task<bool> UnbindRoomAsync(string podId, string channelId, CancellationToken ct = default);
@@ -932,7 +919,7 @@ public interface ISoulseekChatBridge
 /// <summary>
 /// Implements bidirectional chat bridge between Soulseek rooms and Pod channels.
 /// </summary>
-public class SoulseekChatBridge : ISoulseekChatBridge
+public sealed class SoulseekChatBridge : ISoulseekChatBridge
 {
     private readonly IServiceScopeFactory scopeFactory;
     private readonly IRoomService roomService;
@@ -943,9 +930,10 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
     // Identity mapping: Soulseek username <-> Pod PeerId
     // In production, this would be stored in database or queried from DHT
-    private readonly Dictionary<string, string> soulseekToPodMapping = new(); // username -> peerId
-    private readonly Dictionary<string, string> podToSoulseekMapping = new(); // peerId -> username
+    private readonly Dictionary<string, string> soulseekToPodMapping = new(StringComparer.OrdinalIgnoreCase); // username -> peerId
+    private readonly Dictionary<string, string> podToSoulseekMapping = new(StringComparer.OrdinalIgnoreCase); // peerId -> username
     private readonly object mappingLock = new();
+    private bool disposed;
 
     public SoulseekChatBridge(
         IServiceScopeFactory scopeFactory,
@@ -960,6 +948,23 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
         // Subscribe to Soulseek room messages
         soulseekClient.RoomMessageReceived += SoulseekClient_RoomMessageReceived;
+    }
+
+    public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (disposed || !disposing)
+        {
+            return;
+        }
+
+        soulseekClient.RoomMessageReceived -= SoulseekClient_RoomMessageReceived;
+        disposed = true;
     }
 
     private void SoulseekClient_RoomMessageReceived(object? sender, RoomMessageReceivedEventArgs e)
@@ -1115,7 +1120,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
     private string? MapSoulseekToPodPeerId(string soulseekUsername)
     {
-        if (string.IsNullOrWhiteSpace(soulseekUsername))
+        var normalizedUsername = NormalizeSoulseekUsername(soulseekUsername);
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
         {
             return null;
         }
@@ -1123,7 +1129,7 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         lock (mappingLock)
         {
             // Check if mapping exists
-            if (soulseekToPodMapping.TryGetValue(soulseekUsername, out var peerId))
+            if (soulseekToPodMapping.TryGetValue(normalizedUsername, out var peerId))
             {
                 return peerId;
             }
@@ -1131,15 +1137,15 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             // Check if user is a pod member (they might have joined with their Soulseek username)
             // This is a simplified lookup - in production would query all pods or use DHT
             // For now, create a deterministic mapping that doesn't leak external identities
-            var rawPeerId = $"bridge:{soulseekUsername}";
+            var rawPeerId = $"bridge:{normalizedUsername}";
             peerId = IdentitySeparationEnforcer.SanitizePodPeerId(rawPeerId);
 
-            // Store bidirectional mapping (raw bridge ID for reverse lookup, sanitized for pod use)
-            soulseekToPodMapping[soulseekUsername] = peerId;
-            podToSoulseekMapping[peerId] = soulseekUsername;
+            // Store bidirectional mapping using normalized keys so reverse lookups stay aligned.
+            soulseekToPodMapping[normalizedUsername] = peerId;
+            podToSoulseekMapping[peerId] = normalizedUsername;
 
             logger.LogDebug("[ChatBridge] Created identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
-                LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), peerId);
+                LoggingSanitizer.SanitizeExternalIdentifier(normalizedUsername), peerId);
 
             return peerId;
         }
@@ -1151,18 +1157,20 @@ public class SoulseekChatBridge : ISoulseekChatBridge
     /// </summary>
     public void RegisterIdentityMapping(string soulseekUsername, string podPeerId)
     {
-        if (string.IsNullOrWhiteSpace(soulseekUsername) || string.IsNullOrWhiteSpace(podPeerId))
+        var normalizedUsername = NormalizeSoulseekUsername(soulseekUsername);
+        var normalizedPeerId = NormalizePodPeerId(podPeerId);
+        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrWhiteSpace(normalizedPeerId))
         {
             return;
         }
 
         lock (mappingLock)
         {
-            soulseekToPodMapping[soulseekUsername] = podPeerId;
-            podToSoulseekMapping[podPeerId] = soulseekUsername;
+            soulseekToPodMapping[normalizedUsername] = normalizedPeerId;
+            podToSoulseekMapping[normalizedPeerId] = normalizedUsername;
 
             logger.LogInformation("[ChatBridge] Registered identity mapping: Soulseek {SanitizedUsername} <-> Pod {PeerId}",
-                LoggingSanitizer.SanitizeExternalIdentifier(soulseekUsername), podPeerId);
+                LoggingSanitizer.SanitizeExternalIdentifier(normalizedUsername), normalizedPeerId);
         }
     }
 
@@ -1220,7 +1228,8 @@ public class SoulseekChatBridge : ISoulseekChatBridge
 
     private string? MapPodToSoulseekUsername(string podPeerId)
     {
-        if (string.IsNullOrWhiteSpace(podPeerId))
+        var normalizedPeerId = NormalizePodPeerId(podPeerId);
+        if (string.IsNullOrWhiteSpace(normalizedPeerId))
         {
             return null;
         }
@@ -1228,18 +1237,18 @@ public class SoulseekChatBridge : ISoulseekChatBridge
         lock (mappingLock)
         {
             // Check if mapping exists
-            if (podToSoulseekMapping.TryGetValue(podPeerId, out var username))
+            if (podToSoulseekMapping.TryGetValue(normalizedPeerId, out var username))
             {
                 return username;
             }
 
             // Extract username from bridge: prefix if present (backward compatibility)
-            if (podPeerId.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase))
+            if (normalizedPeerId.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase))
             {
-                var extractedUsername = podPeerId.Substring("bridge:".Length);
+                var extractedUsername = normalizedPeerId.Substring("bridge:".Length).Trim();
 
                 // Register the mapping for future use
-                RegisterIdentityMapping(extractedUsername, podPeerId);
+                RegisterIdentityMapping(extractedUsername, normalizedPeerId);
                 return extractedUsername;
             }
 
@@ -1248,9 +1257,19 @@ public class SoulseekChatBridge : ISoulseekChatBridge
             // - Query pod membership records for public key -> username mapping
             // - Query DHT for peer's identity record
             // - Return null if no mapping found
-            logger.LogDebug("[ChatBridge] No identity mapping found for Pod peer {PeerId}", podPeerId);
+            logger.LogDebug("[ChatBridge] No identity mapping found for Pod peer {PeerId}", normalizedPeerId);
             return null;
         }
+    }
+
+    private static string NormalizeSoulseekUsername(string soulseekUsername)
+    {
+        return soulseekUsername?.Trim() ?? string.Empty;
+    }
+
+    private static string NormalizePodPeerId(string podPeerId)
+    {
+        return podPeerId?.Trim() ?? string.Empty;
     }
 }
 

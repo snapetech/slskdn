@@ -138,8 +138,7 @@ public class StunNatDetector : INatDetector
 
     private async Task<MappingResult?> ProbeServer(string server, CancellationToken ct, bool forceNewLocal = false)
     {
-        var parts = server.Split(':', 2);
-        if (parts.Length != 2 || !int.TryParse(parts[1], out var port))
+        if (!TryParseHostAndPort(server, out var host, out var port))
         {
             return null;
         }
@@ -148,10 +147,10 @@ public class StunNatDetector : INatDetector
         udp.Client.ReceiveTimeout = 2000;
         udp.Client.SendTimeout = 2000;
 
-        var resolvedAddress = await ResolveHostAsync(parts[0], ct);
+        var resolvedAddress = await ResolveHostAsync(host, ct);
         if (resolvedAddress == null)
         {
-            logger.LogDebug("[NAT] DNS resolve timed out for {Host}", parts[0]);
+            logger.LogDebug("[NAT] DNS resolve timed out for {Host}", host);
             return null;
         }
 
@@ -161,38 +160,91 @@ public class StunNatDetector : INatDetector
 
         await udp.SendAsync(request, request.Length, endpoint);
 
-        var receiveTask = udp.ReceiveAsync();
-        if (await Task.WhenAny(receiveTask, Task.Delay(2000, ct)) != receiveTask)
-        {
-            return null;
-        }
+        using var receiveTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        receiveTimeout.CancelAfter(2000);
 
-        var response = receiveTask.Result;
-        var mapped = ParseMappedAddress(response.Buffer, txn);
-        if (mapped == null)
-        {
-            return null;
-        }
-
-        var localEp = (IPEndPoint)udp.Client.LocalEndPoint!;
-        var isDirect = mapped.Address.Equals(localEp.Address) && mapped.Port == localEp.Port;
-
-        return new MappingResult(mapped, localEp, isDirect);
-    }
-
-    private async Task<IPAddress?> ResolveHostAsync(string host, CancellationToken ct)
-    {
         try
         {
-            var resolveTask = Dns.GetHostAddressesAsync(host, ct);
-            var completed = await Task.WhenAny(resolveTask, Task.Delay(DnsResolveTimeout, ct));
-            if (completed != resolveTask)
+            var response = await udp.ReceiveAsync(receiveTimeout.Token);
+            var mapped = ParseMappedAddress(response.Buffer, txn);
+            if (mapped == null)
             {
                 return null;
             }
 
-            var addresses = await resolveTask;
-            return addresses.FirstOrDefault();
+            var localEp = (IPEndPoint)udp.Client.LocalEndPoint!;
+            var isDirect = mapped.Address.Equals(localEp.Address) && mapped.Port == localEp.Port;
+
+            return new MappingResult(mapped, localEp, isDirect);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogDebug("[NAT] Timed out waiting for STUN response from {Server}", server);
+            return null;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            logger.LogDebug("[NAT] STUN probe canceled for {Server}", server);
+            return null;
+        }
+    }
+
+    private static bool TryParseHostAndPort(string endpoint, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return false;
+        }
+
+        endpoint = endpoint.Trim();
+
+        string portPart;
+        if (endpoint.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = endpoint.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= endpoint.Length - 2 || endpoint[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = endpoint[1..closingBracketIndex];
+            portPart = endpoint[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = endpoint.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == endpoint.Length - 1)
+            {
+                return false;
+            }
+
+            host = endpoint[..separatorIndex];
+            portPart = endpoint[(separatorIndex + 1)..];
+        }
+
+        host = host.Trim();
+        portPart = portPart.Trim();
+        return !string.IsNullOrWhiteSpace(host) && int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
+    }
+
+    private async Task<IPAddress?> ResolveHostAsync(string host, CancellationToken ct)
+    {
+        if (IPAddress.TryParse(host, out var parsedAddress))
+        {
+            return parsedAddress;
+        }
+
+        try
+        {
+            using var resolveTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            resolveTimeout.CancelAfter(DnsResolveTimeout);
+
+            var addresses = await Dns.GetHostAddressesAsync(host, resolveTimeout.Token);
+            return addresses.FirstOrDefault(address => address.AddressFamily == AddressFamily.InterNetwork) ??
+                addresses.FirstOrDefault();
         }
         catch (OperationCanceledException)
         {
@@ -228,22 +280,58 @@ public class StunNatDetector : INatDetector
             offset += 4;
             if (offset + attrLen > buf.Length) break;
 
-            // XOR-MAPPED-ADDRESS.
-            if (attrType == 0x0020)
+            // XOR-MAPPED-ADDRESS or MAPPED-ADDRESS.
+            if (attrType is 0x0020 or 0x0001)
             {
                 // Family
                 var family = buf[offset + 1];
                 if (family == 0x01 && attrLen >= 8)
                 {
-                    ushort xport = (ushort)(ReadUInt16(buf, offset + 2) ^ (StunMagicCookie >> 16));
-                    uint xaddr = ReadUInt32(buf, offset + 4) ^ StunMagicCookie;
-                    var addrBytes = BitConverter.GetBytes(xaddr);
+                    ushort port = ReadUInt16(buf, offset + 2);
+                    uint address = ReadUInt32(buf, offset + 4);
+
+                    if (attrType == 0x0020)
+                    {
+                        port = (ushort)(port ^ (StunMagicCookie >> 16));
+                        address ^= StunMagicCookie;
+                    }
+
+                    var addrBytes = BitConverter.GetBytes(address);
                     if (BitConverter.IsLittleEndian) Array.Reverse(addrBytes);
-                    return new IPEndPoint(new IPAddress(addrBytes), xport);
+                    return new IPEndPoint(new IPAddress(addrBytes), port);
+                }
+
+                if (family == 0x02 && attrLen >= 20)
+                {
+                    ushort port = ReadUInt16(buf, offset + 2);
+                    var addrBytes = new byte[16];
+                    Array.Copy(buf, offset + 4, addrBytes, 0, 16);
+
+                    if (attrType == 0x0020)
+                    {
+                        port = (ushort)(port ^ (StunMagicCookie >> 16));
+                        var cookieBytes = BitConverter.GetBytes(StunMagicCookie);
+                        if (BitConverter.IsLittleEndian)
+                        {
+                            Array.Reverse(cookieBytes);
+                        }
+
+                        for (var i = 0; i < 4; i++)
+                        {
+                            addrBytes[i] ^= cookieBytes[i];
+                        }
+
+                        for (var i = 0; i < 12; i++)
+                        {
+                            addrBytes[i + 4] ^= txn[i];
+                        }
+                    }
+
+                    return new IPEndPoint(new IPAddress(addrBytes), port);
                 }
             }
 
-            offset += attrLen;
+            offset += (attrLen + 3) & ~3;
         }
 
         return null;

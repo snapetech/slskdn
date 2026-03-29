@@ -48,6 +48,8 @@ public class PublicProtocolAnonymousActionTests
         AssertAnonymousActions(
             typeof(ActivityPubController),
             nameof(ActivityPubController.GetActor),
+            nameof(ActivityPubController.GetFollowers),
+            nameof(ActivityPubController.GetFollowing),
             nameof(ActivityPubController.GetInbox),
             nameof(ActivityPubController.PostToInbox),
             nameof(ActivityPubController.GetOutbox),

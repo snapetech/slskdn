@@ -41,12 +41,18 @@ public class SearchCompatibilityController : ControllerBase
         [FromBody] SearchRequest request,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Compatibility search: {Query}", request.Query);
-
-        if (string.IsNullOrWhiteSpace(request.Query))
+        if (request == null || string.IsNullOrWhiteSpace(request.Query))
         {
             return BadRequest(new { error = "Query is required" });
         }
+
+        var query = request.Query.Trim();
+        if (request.Limit is <= 0)
+        {
+            return BadRequest(new { error = "Limit must be positive" });
+        }
+
+        logger.LogInformation("Compatibility search: {Query}", query);
 
         // Generate a search ID
         var searchId = Guid.NewGuid();
@@ -54,7 +60,7 @@ public class SearchCompatibilityController : ControllerBase
         try
         {
             // Perform actual search using ISearchService
-            var searchQuery = Soulseek.SearchQuery.FromText(request.Query);
+            var searchQuery = Soulseek.SearchQuery.FromText(query);
             var searchScope = Soulseek.SearchScope.Network;
             var searchOptions = new Soulseek.SearchOptions(
                 filterResponses: true,
@@ -85,14 +91,14 @@ public class SearchCompatibilityController : ControllerBase
             return Ok(new
             {
                 SearchId = searchId.ToString("N"),
-                Query = request.Query,
+                Query = query,
                 Results = results
             });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Search failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = "Search failed", message = ex.Message });
+            logger.LogError(ex, "Search failed");
+            return StatusCode(500, new { error = "Search failed" });
         }
     }
 }

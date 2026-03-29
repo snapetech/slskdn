@@ -42,8 +42,7 @@ public class DnsLeakPreventionVerifier
 
             if (!connectionResult.Success)
             {
-                return DnsLeakVerificationResult.Failure(
-                    $"SOCKS proxy connection failed: {connectionResult.ErrorMessage}");
+                return DnsLeakVerificationResult.Failure("SOCKS proxy connection failed");
             }
 
             // Test 2: Verify no local DNS resolution occurred
@@ -52,8 +51,7 @@ public class DnsLeakPreventionVerifier
 
             if (expectedLeakPrevention && !dnsLeakResult.LeakPrevented)
             {
-                return DnsLeakVerificationResult.Failure(
-                    $"DNS leak prevention verification failed: {dnsLeakResult.ErrorMessage}");
+                return DnsLeakVerificationResult.Failure("DNS leak verification failed");
             }
 
             // Test 3: Verify hostname validation
@@ -69,7 +67,7 @@ public class DnsLeakPreventionVerifier
         catch (Exception ex)
         {
             _logger.LogError(ex, "DNS leak prevention verification failed with exception");
-            return DnsLeakVerificationResult.Failure($"Verification exception: {ex.Message}");
+            return DnsLeakVerificationResult.Failure("DNS leak verification failed");
         }
     }
 
@@ -102,9 +100,9 @@ public class DnsLeakPreventionVerifier
             await stream.WriteAsync(greeting, 0, greeting.Length, cts.Token);
 
             var response = new byte[2];
-            var read = await stream.ReadAsync(response, 0, 2, cts.Token);
+            await ReadExactlyAsync(stream, response, 0, 2, cts.Token);
 
-            if (read != 2 || response[0] != 0x05 || response[1] != 0x00)
+            if (response[0] != 0x05 || response[1] != 0x00)
             {
                 return SocksConnectionResult.Failure("SOCKS5 handshake failed");
             }
@@ -113,7 +111,28 @@ public class DnsLeakPreventionVerifier
         }
         catch (Exception ex)
         {
-            return SocksConnectionResult.Failure($"Connection test failed: {ex.Message}");
+            _logger.LogDebug(ex, "SOCKS connection test failed");
+            return SocksConnectionResult.Failure("Connection test failed");
+        }
+    }
+
+    private static async Task ReadExactlyAsync(
+        Stream stream,
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        var remaining = count;
+        while (remaining > 0)
+        {
+            var read = await stream.ReadAsync(buffer.AsMemory(offset + (count - remaining), remaining), cancellationToken);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("Unexpected end of stream while reading SOCKS5 response");
+            }
+
+            remaining -= read;
         }
     }
 
@@ -144,7 +163,8 @@ public class DnsLeakPreventionVerifier
         }
         catch (Exception ex)
         {
-            return DnsLeakTestResult.LeakDetected($"DNS leak test failed: {ex.Message}");
+            _logger.LogDebug(ex, "DNS leak prevention test failed");
+            return DnsLeakTestResult.LeakDetected("DNS leak test failed");
         }
     }
 

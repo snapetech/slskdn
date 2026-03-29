@@ -31,7 +31,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Governs upload transfer speed.
     /// </summary>
-    public interface IUploadGovernor
+    public interface IUploadGovernor : IDisposable
     {
         /// <summary>
         ///     Asynchronously obtains a grant of <paramref name="requestedBytes"/> for the requesting <paramref name="username"/>.
@@ -59,7 +59,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Governs upload transfer speed.
     /// </summary>
-    public class UploadGovernor : IUploadGovernor
+    public class UploadGovernor : IUploadGovernor, IDisposable
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="UploadGovernor"/> class.
@@ -67,26 +67,41 @@ namespace slskd.Transfers
         /// <param name="userService">The UserService instance to use.</param>
         /// <param name="optionsMonitor">The OptionsMonitor instance to use.</param>
         /// <param name="scheduledRateLimitService">The scheduled rate limit service to use.</param>
+        /// <param name="bucketDisposalDelayMs">Milliseconds to delay disposal of replaced buckets. Defaults to 5000. Pass 0 in unit tests.</param>
         public UploadGovernor(
             IUserService userService,
             IOptionsMonitor<Options> optionsMonitor,
-            IScheduledRateLimitService? scheduledRateLimitService = null)
+            IScheduledRateLimitService? scheduledRateLimitService = null,
+            int bucketDisposalDelayMs = 5000)
         {
             Users = userService;
             ScheduledRateLimitService = scheduledRateLimitService;
+            BucketDisposalDelayMs = bucketDisposalDelayMs;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(Configure);
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(Configure);
 
             Configure(OptionsMonitor.CurrentValue);
         }
 
+        private bool Disposed { get; set; }
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private string LastOptionsHash { get; set; } = string.Empty;
         private int LastGlobalSpeedLimit { get; set; }
+        private int BucketDisposalDelayMs { get; }
         private Dictionary<string, ITokenBucket> TokenBuckets { get; set; } = new Dictionary<string, ITokenBucket>();
         private IUserService Users { get; }
         private IScheduledRateLimitService? ScheduledRateLimitService { get; }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Asynchronously obtains a grant of <paramref name="requestedBytes"/> for the requesting <paramref name="username"/>.
@@ -173,10 +188,56 @@ namespace slskd.Transfers
                 tokenBuckets.Add(group.Key, CreateBucket(group.Value.Upload.SpeedLimit));
             }
 
+            var previousBuckets = TokenBuckets;
             TokenBuckets = tokenBuckets;
+
+            // Delay disposal so any in-flight GetBytesAsync calls that already captured a reference
+            // to the old bucket can complete safely before SyncRoot is disposed.  The timer interval
+            // is 100 ms, so 5 s is many multiples of the worst-case hold time.
+            // When delay is 0 (test mode), dispose synchronously to avoid thread-pool scheduling
+            // delays that make timing-sensitive tests unreliable.
+            if (BucketDisposalDelayMs == 0)
+            {
+                DisposeBuckets(previousBuckets);
+            }
+            else
+            {
+                _ = Task.Delay(BucketDisposalDelayMs).ContinueWith(_ => DisposeBuckets(previousBuckets), TaskScheduler.Default);
+            }
 
             LastGlobalSpeedLimit = effectiveGlobalUploadSpeedLimit;
             LastOptionsHash = optionsHash;
+        }
+
+        private static void DisposeBuckets(Dictionary<string, ITokenBucket> buckets)
+        {
+            foreach (var bucket in buckets.Values)
+            {
+                if (bucket is IDisposable disposableBucket)
+                {
+                    disposableBucket.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    DisposeBuckets(TokenBuckets);
+                    TokenBuckets = new Dictionary<string, ITokenBucket>();
+                }
+
+                Disposed = true;
+            }
         }
     }
 }

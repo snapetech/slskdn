@@ -357,12 +357,12 @@ namespace slskd.Shares
                                 Log.Warning("Failed to scan files in directory {Directory}: {Message}", directory, ex.Message);
                             }
 
-                            current++;
-                            filtered += filteredFiles;
-                            cached += addedFiles;
+                            var currentSnapshot = Interlocked.Increment(ref current);
+                            Interlocked.Add(ref filtered, filteredFiles);
+                            var cachedSnapshot = Interlocked.Add(ref cached, addedFiles);
 
                             Log.Debug("Finished scanning {Directory}: {Added} files added and {Filtered} filtered", directory, addedFiles, filteredFiles);
-                            State.SetValue(state => state with { FillProgress = current / (double)unmaskedDirectories.Count, Files = cached });
+                            State.SetValue(state => state with { FillProgress = currentSnapshot / (double)unmaskedDirectories.Count, Files = cachedSnapshot });
                         }));
                 }
 

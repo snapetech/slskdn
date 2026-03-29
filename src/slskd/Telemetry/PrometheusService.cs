@@ -18,6 +18,7 @@
 namespace slskd.Telemetry;
 
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -95,7 +96,12 @@ public class PrometheusService
 
         foreach (var (startIndex, endIndex) in offsets)
         {
-            var header = lines[startIndex].Substring(7).Split(' ', 2);
+            var header = lines[startIndex].Substring(7).Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (header.Length < 2)
+            {
+                continue;
+            }
+
             var name = header[0];
             var help = header[1];
 
@@ -110,7 +116,18 @@ public class PrometheusService
                 continue;
             }
 
-            var type = lines[startIndex + 1].Substring(7).Split(' ', 2)[1];
+            if (startIndex + 1 >= lines.Length)
+            {
+                continue;
+            }
+
+            var typeParts = lines[startIndex + 1].Substring(7).Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (typeParts.Length < 2)
+            {
+                continue;
+            }
+
+            var type = typeParts[1];
             var metric = new PrometheusMetric() { Name = name, Help = help, Type = type };
 
             for (int i = startIndex + 2; i <= endIndex; i++)
@@ -122,7 +139,11 @@ public class PrometheusService
                     var groups = match.Groups;
                     var sampleName = groups[1].Value;
                     var sampleLabels = groups[2].Value;
-                    var sampleValue = double.Parse(groups[3].Value);
+                    if (!double.TryParse(groups[3].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var sampleValue))
+                    {
+                        continue;
+                    }
+
                     var labels = ParseLabels(sampleLabels);
 
                     if (type.Equals("counter") || type.Equals("gauge"))

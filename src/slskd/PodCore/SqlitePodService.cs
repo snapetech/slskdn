@@ -69,8 +69,10 @@ namespace slskd.PodCore
 
             // SECURITY: Sanitize inputs
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+            pod.Description = string.IsNullOrWhiteSpace(pod.Description) ? null : pod.Description.Trim();
             var normalizedFocusContentId = pod.FocusContentId ?? string.Empty;
             pod.FocusContentId = normalizedFocusContentId;
+            pod.UpdatedAt = pod.UpdatedAt == default ? DateTimeOffset.UtcNow : pod.UpdatedAt;
 
             // SECURITY: Use transaction for atomicity
             await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -81,7 +83,13 @@ namespace slskd.PodCore
                 {
                     PodId = pod.PodId,
                     Name = pod.Name,
+                    Description = pod.Description,
                     Visibility = pod.Visibility,
+                    IsPublic = pod.IsPublic,
+                    MaxMembers = pod.MaxMembers,
+                    AllowGuests = pod.AllowGuests,
+                    RequireApproval = pod.RequireApproval,
+                    UpdatedAt = pod.UpdatedAt,
                     FocusContentId = normalizedFocusContentId,
                     Tags = System.Text.Json.JsonSerializer.Serialize(pod.Tags ?? new List<string>()),
                     Channels = System.Text.Json.JsonSerializer.Serialize(pod.Channels ?? new List<PodChannel>()),
@@ -104,13 +112,13 @@ namespace slskd.PodCore
                     {
                         try
                         {
-                            await podPublisher.PublishPodAsync(pod, ct);
+                            await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                         }
                         catch (Exception ex)
                         {
                             logger.LogWarning(ex, "Failed to publish pod to DHT");
                         }
-                    }, ct);
+                    }, CancellationToken.None);
                 }
 
                 return pod;
@@ -140,7 +148,9 @@ namespace slskd.PodCore
 
             // SECURITY: Sanitize inputs
             pod.Name = PodValidation.Sanitize(pod.Name, PodValidation.MaxPodNameLength);
+            pod.Description = string.IsNullOrWhiteSpace(pod.Description) ? null : pod.Description.Trim();
             pod.FocusContentId ??= string.Empty;
+            pod.UpdatedAt = DateTimeOffset.UtcNow;
 
             // SECURITY: Use transaction for atomicity
             await using var db = await dbFactory.CreateDbContextAsync(ct);
@@ -248,6 +258,14 @@ namespace slskd.PodCore
             var entities = await db.Members
                 .Where(m => m.PodId == podId && !m.IsBanned)
                 .ToListAsync(ct);
+            var membershipHistory = await db.MembershipRecords
+                .Where(r => r.PodId == podId)
+                .ToListAsync(ct);
+
+            var historyByPeer = membershipHistory
+                .Where(r => !string.IsNullOrWhiteSpace(r.PeerId))
+                .GroupBy(r => r.PeerId.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
             return entities.Select(e => new PodMember
             {
@@ -255,6 +273,17 @@ namespace slskd.PodCore
                 Role = e.Role,
                 PublicKey = e.PublicKey,
                 IsBanned = e.IsBanned,
+                JoinedAt = historyByPeer.TryGetValue(e.PeerId, out var records)
+                    ? records.Where(record => string.Equals(record.Action, "join", StringComparison.OrdinalIgnoreCase))
+                        .Select(record => DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampUnixMs))
+                        .OrderBy(timestamp => timestamp)
+                        .FirstOrDefault()
+                    : null,
+                LastSeen = historyByPeer.TryGetValue(e.PeerId, out records)
+                    ? records.Select(record => DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampUnixMs))
+                        .OrderByDescending(timestamp => timestamp)
+                        .FirstOrDefault()
+                    : null,
             }).ToList();
         }
 
@@ -443,7 +472,13 @@ namespace slskd.PodCore
                 {
                     PodId = entity.PodId,
                     Name = entity.Name,
+                    Description = entity.Description,
                     Visibility = entity.Visibility,
+                    IsPublic = entity.IsPublic,
+                    MaxMembers = entity.MaxMembers,
+                    AllowGuests = entity.AllowGuests,
+                    RequireApproval = entity.RequireApproval,
+                    UpdatedAt = entity.UpdatedAt,
                     FocusContentId = entity.FocusContentId ?? string.Empty,
                     Tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(entity.Tags ?? "[]") ?? new List<string>(),
                     Channels = System.Text.Json.JsonSerializer.Deserialize<List<PodChannel>>(entity.Channels ?? "[]") ?? new List<PodChannel>(),
@@ -460,7 +495,13 @@ namespace slskd.PodCore
                 {
                     PodId = entity.PodId,
                     Name = entity.Name,
+                    Description = entity.Description,
                     Visibility = entity.Visibility,
+                    IsPublic = entity.IsPublic,
+                    MaxMembers = entity.MaxMembers,
+                    AllowGuests = entity.AllowGuests,
+                    RequireApproval = entity.RequireApproval,
+                    UpdatedAt = entity.UpdatedAt,
                     FocusContentId = entity.FocusContentId ?? string.Empty,
                     Tags = new List<string>(),
                     Channels = new List<PodChannel>(),
@@ -516,13 +557,13 @@ namespace slskd.PodCore
                 {
                     try
                     {
-                        await podPublisher.PublishPodAsync(pod, ct);
+                        await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                }, ct);
+                }, CancellationToken.None);
             }
 
             logger.LogInformation("Created channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);
@@ -573,13 +614,13 @@ namespace slskd.PodCore
                 {
                     try
                     {
-                        await podPublisher.PublishPodAsync(pod, ct);
+                        await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                }, ct);
+                }, CancellationToken.None);
             }
 
             logger.LogInformation("Deleted channel {ChannelId} from pod {PodId}", channelId, podId);
@@ -650,13 +691,13 @@ namespace slskd.PodCore
                 {
                     try
                     {
-                        await podPublisher.PublishPodAsync(pod, ct);
+                        await podPublisher.PublishPodAsync(pod, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to publish pod update to DHT");
                     }
-                }, ct);
+                }, CancellationToken.None);
             }
 
             logger.LogInformation("Updated channel {ChannelId} in pod {PodId}", channel.ChannelId, podId);

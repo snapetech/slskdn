@@ -19,15 +19,18 @@ namespace slskd.MediaCore;
 public class MetadataPortability : IMetadataPortability
 {
     private readonly IContentIdRegistry _registry;
+    private readonly IDescriptorRetriever _descriptorRetriever;
     private readonly IIpldMapper _ipldMapper;
     private readonly ILogger<MetadataPortability> _logger;
 
     public MetadataPortability(
         IContentIdRegistry registry,
+        IDescriptorRetriever descriptorRetriever,
         IIpldMapper ipldMapper,
         ILogger<MetadataPortability> logger)
     {
         _registry = registry;
+        _descriptorRetriever = descriptorRetriever;
         _ipldMapper = ipldMapper;
         _logger = logger;
     }
@@ -42,26 +45,43 @@ public class MetadataPortability : IMetadataPortability
         var allLinks = new List<IpldLink>();
         var entriesByDomain = new Dictionary<string, int>();
 
-        foreach (var contentId in contentIds.Distinct())
+        foreach (var contentId in contentIds
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Select(contentId => contentId.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
             try
             {
-                // In a real implementation, we'd retrieve the actual ContentDescriptor
-                // For now, we'll create a mock descriptor
-                var descriptor = await CreateMockDescriptorAsync(contentId, cancellationToken);
+                var retrieval = await _descriptorRetriever.RetrieveAsync(contentId, cancellationToken: cancellationToken);
+                if (!retrieval.Found || retrieval.Descriptor == null)
+                {
+                    _logger.LogWarning(
+                        "[MetadataPortability] Skipping export for {ContentId}: descriptor not found",
+                        contentId);
+                    continue;
+                }
+
+                var descriptor = retrieval.Descriptor;
                 var sourceInfo = new MetadataSourceInfo(
                     Name: "slskdN",
                     Timestamp: DateTimeOffset.UtcNow,
                     Version: "1.0.0",
-                    Properties: new Dictionary<string, string> { ["exported"] = "true" });
+                    Properties: new Dictionary<string, string>
+                    {
+                        ["exported"] = "true",
+                        ["from_cache"] = retrieval.FromCache ? "true" : "false"
+                    });
 
                 entries.Add(new MetadataEntry(contentId, descriptor, sourceInfo));
 
                 // Track domain statistics
-                var domain = ContentIdParser.GetDomain(contentId) ?? "unknown";
+                var parsed = ContentIdParser.Parse(contentId);
+                var domain = parsed == null
+                    ? "unknown"
+                    : ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
                 entriesByDomain.TryGetValue(domain, out var count);
                 entriesByDomain[domain] = count + 1;
 
@@ -91,7 +111,10 @@ public class MetadataPortability : IMetadataPortability
             ExportedAt: DateTimeOffset.UtcNow,
             Source: "slskdN",
             Entries: entries,
-            Links: allLinks.Distinct().ToArray(),
+            Links: allLinks
+                .Where(link => !string.IsNullOrWhiteSpace(link.Target))
+                .Distinct()
+                .ToArray(),
             Metadata: packageMetadata);
 
         _logger.LogInformation(
@@ -122,6 +145,14 @@ public class MetadataPortability : IMetadataPortability
                 break;
 
             entriesProcessed++;
+            if (!ContentIdParser.IsValid(entry.ContentId))
+            {
+                entriesSkipped++;
+                _logger.LogWarning(
+                    "[MetadataPortability] Skipping invalid ContentID during import: {ContentId}",
+                    entry.ContentId);
+                continue;
+            }
 
             try
             {
@@ -156,14 +187,21 @@ public class MetadataPortability : IMetadataPortability
                     // New entry - import directly
                     if (!dryRun)
                     {
-                        await ImportNewEntryAsync(entry, cancellationToken);
-                        entriesImported++;
+                        var imported = await ImportNewEntryAsync(entry, cancellationToken);
+                        if (imported)
+                        {
+                            entriesImported++;
+                        }
+                        else
+                        {
+                            entriesSkipped++;
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                var error = $"Failed to import {entry.ContentId}: {ex.Message}";
+                var error = $"Failed to import {entry.ContentId}";
                 errors.Add(error);
                 _logger.LogError(ex, "[MetadataPortability] {Error}", error);
             }
@@ -267,32 +305,11 @@ public class MetadataPortability : IMetadataPortability
         return result;
     }
 
-    private Task<ContentDescriptor> CreateMockDescriptorAsync(string contentId, CancellationToken cancellationToken)
-    {
-        // In a real implementation, this would retrieve the actual descriptor
-        // For now, create a mock descriptor
-        return Task.FromResult(new ContentDescriptor
-        {
-            ContentId = contentId,
-            SizeBytes = 1024 * 1024, // 1MB mock
-            Codec = "mock",
-            Confidence = 0.8
-        });
-    }
-
     private async Task<MetadataConflict?> AnalyzeConflictAsync(
         string contentId,
         MetadataEntry newEntry,
         CancellationToken cancellationToken)
     {
-        // In a real implementation, we'd compare the existing descriptor with the new one
-        // For now, we'll simulate a basic conflict analysis
-        var mergedDescriptor = await MergeMetadataAsync(contentId, new[]
-        {
-            new MetadataSource("existing", new ContentDescriptor { ContentId = contentId }, DateTimeOffset.UtcNow.AddDays(-1), 1),
-            new MetadataSource("imported", newEntry.Descriptor, newEntry.SourceInfo.Timestamp, 2),
-        }, cancellationToken: cancellationToken);
-
         var resolutions = new List<MetadataConflictResolution>
         {
             new MetadataConflictResolution(
@@ -306,15 +323,25 @@ public class MetadataPortability : IMetadataPortability
                 newEntry.Descriptor),
 
             new MetadataConflictResolution(
-                ConflictResolutionStrategy.Merge,
-                "Merge existing and imported metadata",
-                mergedDescriptor),
-
-            new MetadataConflictResolution(
                 ConflictResolutionStrategy.KeepExisting,
                 "Keep existing metadata unchanged",
                 null)
         };
+
+        var existing = await _descriptorRetriever.RetrieveAsync(contentId, cancellationToken: cancellationToken);
+        if (existing.Found && existing.Descriptor != null)
+        {
+            var mergedDescriptor = await MergeMetadataAsync(contentId, new[]
+            {
+                new MetadataSource("existing", existing.Descriptor, existing.RetrievedAt, 1),
+                new MetadataSource("imported", newEntry.Descriptor, newEntry.SourceInfo.Timestamp, 2),
+            }, cancellationToken: cancellationToken);
+
+            resolutions.Insert(2, new MetadataConflictResolution(
+                ConflictResolutionStrategy.Merge,
+                "Merge existing and imported metadata",
+                mergedDescriptor));
+        }
 
         return new MetadataConflict(
             ContentId: contentId,
@@ -337,18 +364,25 @@ public class MetadataPortability : IMetadataPortability
         await Task.CompletedTask;
     }
 
-    private async Task ImportNewEntryAsync(MetadataEntry entry, CancellationToken cancellationToken)
+    private async Task<bool> ImportNewEntryAsync(MetadataEntry entry, CancellationToken cancellationToken)
     {
         var parsed = ContentIdParser.Parse(entry.ContentId);
         if (parsed != null)
         {
-            var externalId = $"{parsed.Domain}:{parsed.Type}:{parsed.Id}";
+            var normalizedDomain = ContentIdParser.NormalizeDomain(parsed.Domain, parsed.Type);
+            var externalId = $"{normalizedDomain}:{parsed.Type}:{parsed.Id}";
             await _registry.RegisterAsync(externalId, entry.ContentId, cancellationToken);
+
+            _logger.LogInformation(
+                "[MetadataPortability] Imported new entry for {ContentId}",
+                entry.ContentId);
+            return true;
         }
 
-        _logger.LogInformation(
-            "[MetadataPortability] Imported new entry for {ContentId}",
+        _logger.LogWarning(
+            "[MetadataPortability] Skipping new entry with invalid ContentID: {ContentId}",
             entry.ContentId);
+        return false;
     }
 
     private async Task<ContentDescriptor> CombineAllMetadataAsync(

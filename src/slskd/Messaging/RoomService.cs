@@ -35,7 +35,7 @@ namespace slskd.Messaging
     /// <summary>
     ///     Chat room management and event handling.
     /// </summary>
-    public interface IRoomService
+    public interface IRoomService : IDisposable
     {
         /// <summary>
         ///     Joins the specified <paramref name="roomName"/>.
@@ -102,12 +102,22 @@ namespace slskd.Messaging
         }
 
         private ISoulseekClient Client { get; }
+        private bool Disposed { get; set; }
         private ILogger Logger { get; set; } = Log.ForContext<RoomService>();
         private IStateMutator<State> StateMutator { get; }
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private IRoomTracker RoomTracker { get; set; }
         private IUserService Users { get; set; }
         private EventBus EventBus { get; }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Joins the specified <paramref name="roomName"/>.
@@ -249,6 +259,26 @@ namespace slskd.Messaging
             {
                 Message = message,
             });
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    Client.LoggedIn -= Client_LoggedIn;
+                    Client.RoomJoined -= Client_RoomJoined;
+                    Client.RoomLeft -= Client_RoomLeft;
+                    Client.RoomMessageReceived -= Client_RoomMessageReceived;
+                }
+
+                Disposed = true;
+            }
         }
     }
 }

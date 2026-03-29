@@ -16,7 +16,9 @@
 // </copyright>
 
 using System;
+using System.Threading;
 using System.Timers;
+using Serilog;
 
 namespace slskd
 {
@@ -42,11 +44,12 @@ namespace slskd
         /// <summary>
         ///     Gets the current count.
         /// </summary>
-        public long Count { get; private set; } = 0;
+        public long Count => Interlocked.Read(ref count);
 
         private System.Timers.Timer Timer { get; }
         private Action<long> OnElapsed { get; }
         private bool Disposed { get; set; }
+        private long count;
 
         /// <summary>
         ///     Counts up by the specified <paramref name="count"/>.
@@ -54,7 +57,7 @@ namespace slskd
         /// <param name="count">The number to add to the count.</param>
         public void CountUp(long count = 1)
         {
-            Count += count;
+            Interlocked.Add(ref this.count, count);
         }
 
         /// <summary>
@@ -72,7 +75,7 @@ namespace slskd
             {
                 if (disposing)
                 {
-                    Timer.Dispose();
+                    Common.TimerDisposer.DisposeWithWait(Timer);
                 }
 
                 Disposed = true;
@@ -81,9 +84,16 @@ namespace slskd
 
         private void Elapsed(object? sender, ElapsedEventArgs args)
         {
-            var count = Count;
-            Count = 0;
-            OnElapsed?.Invoke(count);
+            var count = Interlocked.Exchange(ref this.count, 0);
+
+            try
+            {
+                OnElapsed?.Invoke(count);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "TimedCounter elapsed callback failed");
+            }
         }
     }
 }

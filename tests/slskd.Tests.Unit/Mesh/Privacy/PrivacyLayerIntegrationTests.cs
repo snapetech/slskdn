@@ -8,6 +8,10 @@ using Moq;
 using slskd.Common.Security;
 using slskd.Mesh.Privacy;
 using PrivacyLayer = slskd.Mesh.Privacy.PrivacyLayer;
+using MeshBucketPadder = slskd.Mesh.Privacy.BucketPadder;
+using MeshCoverTrafficGenerator = slskd.Mesh.Privacy.CoverTrafficGenerator;
+using MeshRandomJitterObfuscator = slskd.Mesh.Privacy.RandomJitterObfuscator;
+using MeshTimedBatcher = slskd.Mesh.Privacy.TimedBatcher;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh.Privacy;
@@ -278,6 +282,41 @@ public class PrivacyLayerIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void UpdateConfiguration_DisposesReplacedPrivacyComponents()
+    {
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
+        var oldPadder = Assert.IsType<MeshBucketPadder>(privacyLayer.MessagePadder);
+        var oldTimingObfuscator = Assert.IsType<MeshRandomJitterObfuscator>(privacyLayer.TimingObfuscator);
+        var oldMessageBatcher = Assert.IsType<MeshTimedBatcher>(privacyLayer.MessageBatcher);
+        var oldCoverTrafficGenerator = Assert.IsType<MeshCoverTrafficGenerator>(privacyLayer.CoverTrafficGenerator);
+
+        privacyLayer.UpdateConfiguration(new PrivacyLayerOptions { Enabled = false });
+
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => oldPadder.Pad(new byte[] { 1 })));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => oldTimingObfuscator.GetDelay()));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => oldMessageBatcher.AddMessage(new byte[] { 1 })));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => oldCoverTrafficGenerator.RecordActivity()));
+    }
+
+    [Fact]
+    public void Dispose_DisposesCurrentPrivacyComponents()
+    {
+        var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
+        var padder = Assert.IsType<MeshBucketPadder>(privacyLayer.MessagePadder);
+        var timingObfuscator = Assert.IsType<MeshRandomJitterObfuscator>(privacyLayer.TimingObfuscator);
+        var messageBatcher = Assert.IsType<MeshTimedBatcher>(privacyLayer.MessageBatcher);
+        var coverTrafficGenerator = Assert.IsType<MeshCoverTrafficGenerator>(privacyLayer.CoverTrafficGenerator);
+
+        privacyLayer.Dispose();
+
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => privacyLayer.GetOutboundDelay()));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => padder.Pad(new byte[] { 1 })));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => timingObfuscator.GetDelay()));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => messageBatcher.AddMessage(new byte[] { 1 })));
+        Assert.IsType<ObjectDisposedException>(Record.Exception(() => coverTrafficGenerator.RecordActivity()));
+    }
+
+    [Fact]
     public async Task EndToEndMessageFlow_WithAllFeaturesEnabled_ProcessesCorrectly()
     {
         // Arrange
@@ -322,4 +361,3 @@ public class PrivacyLayerIntegrationTests : IDisposable
         Assert.NotNull(privacyLayer);
     }
 }
-

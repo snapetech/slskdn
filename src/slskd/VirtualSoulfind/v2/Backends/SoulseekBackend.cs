@@ -27,6 +27,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     using Soulseek;
     using slskd.Common.Security;
     using slskd.VirtualSoulfind.Core;
+    using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.v2.Matching;
     using slskd.VirtualSoulfind.v2.Sources;
 
@@ -52,6 +53,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     {
         private readonly ISoulseekClient _soulseekClient;
         private readonly ISoulseekSafetyLimiter _safetyLimiter;
+        private readonly ICatalogueStore _catalogueStore;
         private readonly ILogger<SoulseekBackend> _logger;
         private readonly IOptionsMonitor<SoulseekBackendOptions> _options;
 
@@ -60,16 +62,19 @@ namespace slskd.VirtualSoulfind.v2.Backends
         /// </summary>
         /// <param name="soulseekClient">The Soulseek client.</param>
         /// <param name="safetyLimiter">The safety limiter (H-08).</param>
+        /// <param name="catalogueStore">The catalogue store.</param>
         /// <param name="options">Backend options.</param>
         /// <param name="logger">Logger instance.</param>
         public SoulseekBackend(
             ISoulseekClient soulseekClient,
             ISoulseekSafetyLimiter safetyLimiter,
+            ICatalogueStore catalogueStore,
             IOptionsMonitor<SoulseekBackendOptions> options,
             ILogger<SoulseekBackend> logger)
         {
             _soulseekClient = soulseekClient ?? throw new ArgumentNullException(nameof(soulseekClient));
             _safetyLimiter = safetyLimiter ?? throw new ArgumentNullException(nameof(safetyLimiter));
+            _catalogueStore = catalogueStore ?? throw new ArgumentNullException(nameof(catalogueStore));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -100,14 +105,11 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 return Array.Empty<SourceCandidate>();
             }
 
-            // Build search query from itemId
-            // For now, use the itemId string as the search term
-            // In production, this would parse the itemId to extract artist/track info
-            var searchQuery = BuildSearchQuery(itemId);
+            var searchQuery = await BuildSearchQueryAsync(itemId, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(searchQuery))
             {
-                _logger.LogWarning("Could not build search query for {ItemId}", itemId);
+                _logger.LogDebug("Could not build metadata-backed Soulseek query for {ItemId}", itemId);
                 return Array.Empty<SourceCandidate>();
             }
 
@@ -249,31 +251,69 @@ namespace slskd.VirtualSoulfind.v2.Backends
         }
 
         /// <summary>
-        ///     Builds a search query from the content item ID.
+        ///     Builds a search query from catalogue metadata for the content item.
         /// </summary>
         /// <remarks>
-        ///     In a full implementation, this would parse the ContentItemId
-        ///     and extract metadata (artist, track, album) to build an optimal query.
-        ///     For Phase 1, we use the string representation.
+        ///     Soulseek text search should never issue opaque GUIDs when local metadata exists.
         /// </remarks>
-        private string BuildSearchQuery(ContentItemId itemId)
+        private async Task<string> BuildSearchQueryAsync(ContentItemId itemId, CancellationToken cancellationToken)
         {
-            // TODO: Parse itemId to extract structured search terms
-            // For now, use the string representation
-            var idStr = itemId.ToString();
-
-            // Strip GUID prefix if present (format: "music:track:guid")
-            if (idStr.Contains(':'))
+            var track = await _catalogueStore.FindTrackByIdAsync(itemId.ToString(), cancellationToken);
+            if (track == null)
             {
-                var parts = idStr.Split(':');
-                if (parts.Length >= 3)
-                {
-                    // This is a placeholder - in production we'd look up metadata
-                    return idStr; // Return full ID for now
-                }
+                return string.Empty;
             }
 
-            return idStr;
+            Release? release = null;
+            ReleaseGroup? releaseGroup = null;
+            Artist? artist = null;
+
+            if (!string.IsNullOrWhiteSpace(track.ReleaseId))
+            {
+                release = await _catalogueStore.FindReleaseByIdAsync(track.ReleaseId, cancellationToken);
+            }
+
+            if (release != null && !string.IsNullOrWhiteSpace(release.ReleaseGroupId))
+            {
+                releaseGroup = await _catalogueStore.FindReleaseGroupByIdAsync(release.ReleaseGroupId, cancellationToken);
+            }
+
+            if (releaseGroup != null && !string.IsNullOrWhiteSpace(releaseGroup.ArtistId))
+            {
+                artist = await _catalogueStore.FindArtistByIdAsync(releaseGroup.ArtistId, cancellationToken);
+            }
+
+            var terms = new List<string>();
+            AddSearchTerm(terms, artist?.Name);
+            AddSearchTerm(terms, track.Title);
+
+            if (terms.Count < 2)
+            {
+                AddSearchTerm(terms, release?.Title);
+                AddSearchTerm(terms, releaseGroup?.Title);
+            }
+
+            return string.Join(" ", terms);
+        }
+
+        private static void AddSearchTerm(ICollection<string> terms, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            var cleaned = value
+                .Replace("/", " ", StringComparison.Ordinal)
+                .Replace("\\", " ", StringComparison.Ordinal)
+                .Replace("\"", " ", StringComparison.Ordinal)
+                .Trim();
+
+            if (!string.IsNullOrWhiteSpace(cleaned) &&
+                !terms.Contains(cleaned, StringComparer.OrdinalIgnoreCase))
+            {
+                terms.Add(cleaned);
+            }
         }
 
         /// <summary>

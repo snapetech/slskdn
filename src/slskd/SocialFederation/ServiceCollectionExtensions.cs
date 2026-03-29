@@ -37,6 +37,10 @@ namespace slskd.SocialFederation
                 return new ActivityPubKeyStore(dataProtector, keyPairGenerator, logger);
             });
 
+            services.AddSingleton<IActivityPubInboxStore, ActivityPubInboxStore>();
+            services.AddSingleton<IActivityPubOutboxStore, ActivityPubOutboxStore>();
+            services.AddSingleton<IActivityPubRelationshipStore, ActivityPubRelationshipStore>();
+
             // Register activity delivery service
             services.AddSingleton<ActivityDeliveryService>(sp =>
             {
@@ -93,21 +97,29 @@ namespace slskd.SocialFederation
                 var federationOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<SocialFederationOptions>>();
                 var publishingOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<FederationPublishingOptions>>();
                 var libraryActorService = sp.GetRequiredService<LibraryActorService>();
+                var relationshipStore = sp.GetRequiredService<IActivityPubRelationshipStore>();
                 var keyStore = sp.GetRequiredService<IActivityPubKeyStore>();
                 var deliveryService = sp.GetRequiredService<ActivityDeliveryService>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<FederationService>>();
 
-                return new FederationService(federationOptions, publishingOptions, libraryActorService, keyStore, deliveryService, logger);
+                return new FederationService(federationOptions, publishingOptions, libraryActorService, relationshipStore, keyStore, deliveryService, logger);
             });
 
             // Register VirtualSoulfind federation integration
             services.AddSingleton<VirtualSoulfindFederationIntegration>(sp =>
             {
+                var federationOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<SocialFederationOptions>>();
                 var publishingOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<FederationPublishingOptions>>();
                 var federationService = sp.GetRequiredService<FederationService>();
+                var libraryActorService = sp.GetRequiredService<LibraryActorService>();
                 var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<VirtualSoulfindFederationIntegration>>();
 
-                return new VirtualSoulfindFederationIntegration(publishingOptions, federationService, logger);
+                return new VirtualSoulfindFederationIntegration(
+                    federationOptions,
+                    publishingOptions,
+                    federationService,
+                    libraryActorService,
+                    logger);
             });
 
             // Register controllers (ASP.NET Core will auto-discover them)

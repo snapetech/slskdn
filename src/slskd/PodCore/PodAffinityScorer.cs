@@ -39,6 +39,7 @@ public class PodAffinityScorer : IPodAffinityScorer
     private readonly ILogger<PodAffinityScorer> logger;
     private readonly IPodService podService;
     private readonly IPodMessaging podMessaging;
+    private static readonly TimeSpan StableMembershipThreshold = TimeSpan.FromDays(7);
 
     public PodAffinityScorer(
         ILogger<PodAffinityScorer> logger,
@@ -138,31 +139,78 @@ public class PodAffinityScorer : IPodAffinityScorer
     /// <summary>
     /// Trust score based on known/trusted members in the pod.
     /// </summary>
-    private Task<double> ComputeTrustScoreAsync(
+    private async Task<double> ComputeTrustScoreAsync(
         string podId,
         string userId,
         IReadOnlyList<PodMember> members,
         CancellationToken ct)
     {
-        _ = podId;
-        _ = ct;
-
-        // TODO: Integrate with SecurityCore PeerReputation system
-        // For now, use simple heuristics:
+        var normalizedUserId = userId?.Trim() ?? string.Empty;
 
         // 1. Is user already a member? → high trust
-        if (members.Any(m => m.PeerId == userId))
-            return Task.FromResult(1.0);
+        if (members.Any(m => string.Equals(m.PeerId?.Trim(), normalizedUserId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return 1.0;
+        }
 
-        // 2. Are there verified/trusted peers? (placeholder)
+        var membershipHistory = await podService.GetMembershipHistoryAsync(podId, ct) ?? Array.Empty<SignedMembershipRecord>();
+        var historyByPeer = membershipHistory
+            .Where(record => !string.IsNullOrWhiteSpace(record.PeerId))
+            .GroupBy(record => record.PeerId.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<SignedMembershipRecord>)group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        // 2. Verified members provide a base trust signal.
         var verifiedCount = members.Count(m => !string.IsNullOrEmpty(m.PublicKey));
         var verifiedRatio = members.Count > 0 ? (double)verifiedCount / members.Count : 0.0;
 
-        // 3. No banned members? (placeholder)
-        var bannedCount = members.Count(m => m.IsBanned);
-        var bannedPenalty = bannedCount > 0 ? 0.5 : 1.0;
+        // 3. Stable membership is derived from actual membership history.
+        var stableCount = members.Count(member => IsStableMember(member, historyByPeer));
+        var stableRatio = members.Count > 0 ? (double)stableCount / members.Count : 0.0;
 
-        return Task.FromResult(verifiedRatio * bannedPenalty);
+        // 4. Bans and recent churn reduce trust.
+        var bannedCount = members.Count(m => m.IsBanned);
+        var bannedPenalty = members.Count > 0
+            ? Math.Max(0.25, 1.0 - ((double)bannedCount / members.Count))
+            : 1.0;
+
+        var recentChurnCount = historyByPeer.Values.Count(HasRecentLeaveOrBan);
+        var churnPenalty = members.Count > 0
+            ? Math.Max(0.4, 1.0 - ((double)recentChurnCount / members.Count))
+            : 1.0;
+
+        return Math.Clamp(((verifiedRatio * 0.35) + (stableRatio * 0.65)) * bannedPenalty * churnPenalty, 0.0, 1.0);
+    }
+
+    private static bool IsStableMember(PodMember member, IReadOnlyDictionary<string, IReadOnlyList<SignedMembershipRecord>> historyByPeer)
+    {
+        var normalizedPeerId = member.PeerId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedPeerId) || !historyByPeer.TryGetValue(normalizedPeerId, out var records))
+        {
+            return false;
+        }
+
+        var joinedAt = records
+            .Where(record => string.Equals(record.Action, "join", StringComparison.OrdinalIgnoreCase))
+            .Select(record => DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampUnixMs))
+            .OrderBy(timestamp => timestamp)
+            .FirstOrDefault();
+
+        if (joinedAt == default)
+        {
+            return false;
+        }
+
+        return DateTimeOffset.UtcNow - joinedAt >= StableMembershipThreshold &&
+            !HasRecentLeaveOrBan(records);
+    }
+
+    private static bool HasRecentLeaveOrBan(IReadOnlyList<SignedMembershipRecord> records)
+    {
+        var cutoff = DateTimeOffset.UtcNow - StableMembershipThreshold;
+        return records.Any(record =>
+            (string.Equals(record.Action, "leave", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(record.Action, "ban", StringComparison.OrdinalIgnoreCase)) &&
+            DateTimeOffset.FromUnixTimeMilliseconds(record.TimestampUnixMs) >= cutoff);
     }
 
     /// <summary>

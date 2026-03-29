@@ -28,6 +28,8 @@ namespace slskd.Relay
     using System.Diagnostics;
     using System.IO;
     using System.Net.Http;
+    using System.Security.Cryptography;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.SignalR.Client;
@@ -61,7 +63,7 @@ namespace slskd.Relay
             StateMonitor = State;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(options => Configure(options));
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
 
             Configure(OptionsMonitor.CurrentValue);
         }
@@ -79,13 +81,20 @@ namespace slskd.Relay
         private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<RelayClient>();
         private bool LoggedIn { get; set; }
-        private TaskCompletionSource LoggedInTaskCompletionSource { get; set; } = new();
+        private TaskCompletionSource LoggedInTaskCompletionSource { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private IShareService Shares { get; }
         private CancellationTokenSource? StartCancellationTokenSource { get; set; }
         private bool StartRequested { get; set; }
         private ManagedState<RelayClientState> State { get; } = new();
         private SemaphoreSlim StateSyncRoot { get; } = new SemaphoreSlim(1, 1);
+
+        private static string GetRelayTokenLogId(Guid token)
+        {
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(token.ToString()));
+            return $"relay-token:{Convert.ToHexString(digest.AsSpan(0, 6)).ToLowerInvariant()}";
+        }
 
         /// <summary>
         ///     Disposes this instance.
@@ -118,7 +127,9 @@ namespace slskd.Relay
                     throw new InvalidOperationException($"Relay client can only be started when operation mode is {RelayMode.Agent}");
                 }
 
-                StartCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                StartCancellationTokenSource?.Cancel();
+                StartCancellationTokenSource?.Dispose();
+                StartCancellationTokenSource = new CancellationTokenSource();
                 StartRequested = true;
 
                 // retry indefinitely
@@ -187,6 +198,9 @@ namespace slskd.Relay
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
             StartRequested = false;
+            var startCancellationTokenSource = StartCancellationTokenSource;
+            StartCancellationTokenSource = null;
+            startCancellationTokenSource?.Cancel();
 
             if (HubConnection != null)
             {
@@ -197,6 +211,8 @@ namespace slskd.Relay
 
                 Log.Information("Relay controller connection disconnected");
             }
+
+            startCancellationTokenSource?.Dispose();
         }
 
         /// <summary>
@@ -219,7 +235,15 @@ namespace slskd.Relay
             {
                 if (disposing)
                 {
-                    _ = HubConnection?.DisposeAsync().AsTask();
+                    var hubConnection = HubConnection;
+                    HubConnection = null;
+
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    StartCancellationTokenSource?.Cancel();
+                    StartCancellationTokenSource?.Dispose();
+
+                    DisposeHubConnection(hubConnection, "[RelayClient] Failed to dispose HubConnection");
                 }
 
                 Disposed = true;
@@ -262,7 +286,12 @@ namespace slskd.Relay
 
                 // if the client is attempting a connection, cancel it it's going to be dropped when we create a new instance, but
                 // we need the retry loop around connection to stop.
+                var previousHubConnection = HubConnection;
+                HubConnection = null;
                 StartCancellationTokenSource?.Cancel();
+                StartCancellationTokenSource?.Dispose();
+                StartCancellationTokenSource = null;
+                DisposeHubConnection(previousHubConnection, "[RelayClient] Failed to dispose previous HubConnection during reconfiguration");
 
                 if (options.Relay.Controller.IgnoreCertificateErrors)
                 {
@@ -313,6 +342,23 @@ namespace slskd.Relay
             finally
             {
                 ConfigurationSyncRoot.Release();
+            }
+        }
+
+        private void DisposeHubConnection(HubConnection? hubConnection, string failureMessage)
+        {
+            try
+            {
+                using var disposeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                hubConnection?.DisposeAsync().AsTask().WaitAsync(disposeTimeout.Token).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("[RelayClient] Timed out while disposing HubConnection");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, failureMessage);
             }
         }
 
@@ -382,7 +428,7 @@ namespace slskd.Relay
 
         private async Task HandleFileInfoRequest(string filename, Guid id)
         {
-            Log.Information("Relay controller requested file info for {Filename} with ID {Id}", filename, id);
+            Log.Information("Relay controller requested file info for {Filename} with ID {Id}", filename, GetRelayTokenLogId(id));
 
             try
             {
@@ -407,7 +453,7 @@ namespace slskd.Relay
         {
             _ = Task.Run(async () =>
             {
-                Log.Information("Relay controller requested file {Filename} with ID {Id}", filename, token);
+                Log.Information("Relay controller requested file {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
 
                 try
                 {
@@ -438,16 +484,17 @@ namespace slskd.Relay
 
                     request.Content = content;
 
-                    Log.Information("Beginning upload of file {Filename} with ID {Id}", filename, token);
-                    var response = await CreateHttpClient().SendAsync(request);
+                    Log.Information("Beginning upload of file {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
+                    using var client = CreateHttpClient();
+                    using var response = await client.SendAsync(request);
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        Log.Error("Upload of file {Filename} with ID {Id} failed: {StatusCode}", filename, token, response.StatusCode);
+                        Log.Error("Upload of file {Filename} with ID {Id} failed: {StatusCode}", filename, GetRelayTokenLogId(token), response.StatusCode);
                     }
                     else
                     {
-                        Log.Information("Upload of file {Filename} with ID {Id} succeeded.", filename, token);
+                        Log.Information("Upload of file {Filename} with ID {Id} succeeded.", filename, GetRelayTokenLogId(token));
                     }
                 }
                 catch (Exception ex)
@@ -457,7 +504,14 @@ namespace slskd.Relay
                     // report the failure to the controller. this avoids a failure due to timeout.
                     if (HubConnection != null)
                     {
-                        await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token);
+                        try
+                        {
+                            await HubConnection.InvokeAsync(nameof(RelayHub.NotifyFileUploadFailed), token, ex);
+                        }
+                        catch (Exception notifyEx)
+                        {
+                            Log.Error(notifyEx, "Failed to report relay upload failure for {Filename} with ID {Id}", filename, GetRelayTokenLogId(token));
+                        }
                     }
                 }
             });
@@ -472,51 +526,58 @@ namespace slskd.Relay
                 return Task.CompletedTask;
             }
 
-            Log.Information("Relay controller sent a download notification for {Filename} ({Token})", filename, token);
+            Log.Information("Relay controller sent a download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token));
 
             _ = Task.Run(async () =>
             {
-                var destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
-
-                if (OptionsMonitor.CurrentValue.Relay.Mode.ToEnum<RelayMode>() == RelayMode.Debug)
+                try
                 {
-                    // if we're debugging, we're referencing the same file for both the controller and agent which will lead to an
-                    // access violation. prefix the destination file to avoid this.
-                    destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, $"{filename}.relayed");
+                    var destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, filename);
+
+                    if (OptionsMonitor.CurrentValue.Relay.Mode.ToEnum<RelayMode>() == RelayMode.Debug)
+                    {
+                        // if we're debugging, we're referencing the same file for both the controller and agent which will lead to an
+                        // access violation. prefix the destination file to avoid this.
+                        destinationFile = Path.Combine(OptionsMonitor.CurrentValue.Directories.Downloads, $"{filename}.relayed");
+                    }
+
+                    // if the controller is Windows and the agent is Linux or vice versa, we need to translate the filename to the
+                    // local OS or we're going to get funny results when we go to write the file
+                    destinationFile = destinationFile.LocalizePath();
+
+                    await Retry.Do(task: async () =>
+                    {
+                        using var request = new HttpRequestMessage(HttpMethod.Get, $"api/v0/relay/controller/downloads/{token}");
+
+                        request.Headers.Add("X-API-Key", OptionsMonitor.CurrentValue.Relay.Controller.ApiKey);
+                        request.Headers.Add("X-Relay-Agent", OptionsMonitor.CurrentValue.InstanceName);
+                        request.Headers.Add("X-Relay-Credential", ComputeCredential(token));
+                        request.Headers.Add("X-Relay-Filename-Base64", filename.ToBase64());
+
+                        using var client = CreateHttpClient();
+                        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                        response.EnsureSuccessStatusCode();
+
+                        using var remoteStream = await response.Content.ReadAsStreamAsync();
+
+                        var destinationDirectory = Path.GetDirectoryName(destinationFile)
+                            ?? throw new IOException($"Failed to determine destination directory for download {destinationFile}");
+                        Directory.CreateDirectory(destinationDirectory);
+                        using var localStream = new FileStream(destinationFile, FileMode.Create);
+                        await remoteStream.CopyToAsync(localStream);
+                    },
+                    isRetryable: (_, _) => true,
+                    onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token)),
+                    maxAttempts: 3,
+                    maxDelayInMilliseconds: 60000);
+
+                    Log.Information("File {Filename} successfully downloaded to {Destination}", filename, destinationFile);
                 }
-
-                // if the controller is Windows and the agent is Linux or vice versa, we need to translate the filename to the
-                // local OS or we're going to get funny results when we go to write the file
-                destinationFile = destinationFile.LocalizePath();
-
-                await Retry.Do(task: async () =>
+                catch (Exception ex)
                 {
-                    using var request = new HttpRequestMessage(HttpMethod.Get, $"api/v0/relay/controller/downloads/{token}");
-
-                    request.Headers.Add("X-API-Key", OptionsMonitor.CurrentValue.Relay.Controller.ApiKey);
-                    request.Headers.Add("X-Relay-Agent", OptionsMonitor.CurrentValue.InstanceName);
-                    request.Headers.Add("X-Relay-Credential", ComputeCredential(token));
-                    request.Headers.Add("X-Relay-Filename-Base64", filename.ToBase64());
-
-                    using var client = CreateHttpClient();
-                    using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-
-                    response.EnsureSuccessStatusCode();
-
-                    using var remoteStream = await response.Content.ReadAsStreamAsync();
-
-                    var destinationDirectory = Path.GetDirectoryName(destinationFile)
-                        ?? throw new IOException($"Failed to determine destination directory for download {destinationFile}");
-                    Directory.CreateDirectory(destinationDirectory);
-                    using var localStream = new FileStream(destinationFile, FileMode.Create);
-                    await remoteStream.CopyToAsync(localStream);
-                },
-                isRetryable: (_, _) => true,
-                onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, token),
-                maxAttempts: 3,
-                maxDelayInMilliseconds: 60000);
-
-                Log.Information("File {Filename} successfully downloaded to {Destination}", filename, destinationFile);
+                    Log.Error(ex, "Relay download notification handling failed for {Filename} ({Token})", filename, GetRelayTokenLogId(token));
+                }
             });
 
             return Task.CompletedTask;
@@ -532,11 +593,6 @@ namespace slskd.Relay
 
         private async Task HubConnection_Reconnected(string? arg)
         {
-            // upon reconnection, the authentication flow is started again. this may happen before the client
-            // realizes the connection has been closed, so reset everything as though we're just learning that
-            // there has been a disconnect
-            ResetLoggedInState();
-
             Log.Warning("Relay controller connection reconnected");
 
             try
@@ -576,7 +632,7 @@ namespace slskd.Relay
 
             var old = LoggedInTaskCompletionSource;
 
-            LoggedInTaskCompletionSource = new TaskCompletionSource();
+            LoggedInTaskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // in case someone was waiting on this, cancel it
             // _very important_ to avoid deadlocks
@@ -629,7 +685,7 @@ namespace slskd.Relay
                     maxDelayInMilliseconds: 5000,
                     cancellationToken);
 
-                Log.Debug("Share upload token {Token}", token);
+                Log.Debug("Received share upload token {Token}", GetRelayTokenLogId(token));
 
                 using var stream = new FileStream(temp, FileMode.Open, FileAccess.Read);
 

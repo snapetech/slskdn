@@ -260,11 +260,17 @@ public class FuzzyMatcher : IFuzzyMatcher
             if (parsedA == null || parsedB == null)
                 return 0.0;
 
-            if (!string.Equals(parsedA.Domain, parsedB.Domain, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(
+                ContentIdParser.NormalizeDomain(parsedA.Domain, parsedA.Type),
+                ContentIdParser.NormalizeDomain(parsedB.Domain, parsedB.Type),
+                StringComparison.OrdinalIgnoreCase))
                 return 0.0;
 
             var resultA = await _descriptorRetriever.RetrieveAsync(contentIdA, bypassCache: false, cancellationToken);
             var resultB = await _descriptorRetriever.RetrieveAsync(contentIdB, bypassCache: false, cancellationToken);
+
+            if (!resultA.Found || !resultB.Found || resultA.Descriptor == null || resultB.Descriptor == null)
+                return 0.0;
 
             var hashA = GetBestNumericHash(resultA.Descriptor);
             var hashB = GetBestNumericHash(resultB.Descriptor);
@@ -272,7 +278,7 @@ public class FuzzyMatcher : IFuzzyMatcher
             if (hashA.HasValue && hashB.HasValue)
                 return _perceptualHasher.Similarity(hashA.Value, hashB.Value);
 
-            return await ComputeSimulatedPerceptualSimilarityAsync(contentIdA, contentIdB, parsedA.Domain, cancellationToken);
+            return 0.0;
         }
         catch (Exception ex)
         {
@@ -337,33 +343,6 @@ public class FuzzyMatcher : IFuzzyMatcher
 
         // Sort by confidence descending
         return results.OrderByDescending(r => r.Confidence).ToArray();
-    }
-
-    /// <summary>
-    /// Simulates perceptual hash similarity computation.
-    /// In a real implementation, this would retrieve stored perceptual hashes
-    /// from ContentDescriptors and compare them.
-    /// </summary>
-    private async Task<double> ComputeSimulatedPerceptualSimilarityAsync(
-        string contentIdA,
-        string contentIdB,
-        string domain,
-        CancellationToken cancellationToken)
-    {
-        // This is a simulation - in practice, perceptual hashes would be stored
-        // with ContentDescriptors and retrieved for comparison
-
-        // Simulate different similarity levels based on content IDs
-        var similarity = contentIdA.Contains(contentIdB.Split(':').Last()) ||
-                        contentIdB.Contains(contentIdA.Split(':').Last())
-                       ? 0.9 : 0.3; // High similarity if IDs share common elements
-
-        // Add some randomness for realism
-        var randomFactor = new Random(contentIdA.GetHashCode() ^ contentIdB.GetHashCode()).NextDouble() * 0.2;
-        similarity = Math.Max(0.0, Math.Min(1.0, similarity + randomFactor - 0.1));
-
-        await Task.CompletedTask;
-        return similarity;
     }
 
     /// <summary>

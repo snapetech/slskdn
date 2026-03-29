@@ -25,6 +25,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     using System.Net.Http.Headers;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Sources;
@@ -41,15 +42,18 @@ namespace slskd.VirtualSoulfind.v2.Backends
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IOptionsMonitor<WebDavBackendOptions> _options;
         private readonly ISourceRegistry _sourceRegistry;
+        private readonly ILogger<WebDavBackend>? _logger;
 
         public WebDavBackend(
             IHttpClientFactory httpClientFactory,
             IOptionsMonitor<WebDavBackendOptions> options,
-            ISourceRegistry sourceRegistry)
+            ISourceRegistry sourceRegistry,
+            ILogger<WebDavBackend>? logger = null)
         {
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _sourceRegistry = sourceRegistry ?? throw new ArgumentNullException(nameof(sourceRegistry));
+            _logger = logger;
         }
 
         public ContentBackendType Type => ContentBackendType.WebDav;
@@ -165,7 +169,8 @@ namespace slskd.VirtualSoulfind.v2.Backends
             }
             catch (HttpRequestException ex)
             {
-                return SourceCandidateValidationResult.Invalid($"HTTP error: {ex.Message}");
+                _logger?.LogWarning(ex, "WebDAV validation request failed for {CandidateId}", candidate.Id);
+                return SourceCandidateValidationResult.Invalid("WebDAV validation failed");
             }
         }
 

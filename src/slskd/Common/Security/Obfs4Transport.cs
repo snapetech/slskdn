@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -87,7 +88,7 @@ public class Obfs4Transport : IAnonymityTransport
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "Obfs4 transport unavailable";
             }
 
             _logger.LogWarning(ex, "Obfs4 transport not available");
@@ -170,7 +171,7 @@ public class Obfs4Transport : IAnonymityTransport
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "Obfs4 connection failed";
             }
 
             client?.Dispose();
@@ -231,13 +232,27 @@ public class Obfs4Transport : IAnonymityTransport
             return null;
         }
 
+        if (!int.TryParse(match.Groups[2].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var bridgePort) ||
+            bridgePort is <= 0 or > ushort.MaxValue)
+        {
+            _logger.LogWarning("Invalid obfs4 bridge port: {Line}", bridgeLine);
+            return null;
+        }
+
+        if (!int.TryParse(match.Groups[5].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var iatMode) ||
+            iatMode is < 0 or > ushort.MaxValue)
+        {
+            _logger.LogWarning("Invalid obfs4 bridge iat-mode: {Line}", bridgeLine);
+            return null;
+        }
+
         return new Obfs4Bridge
         {
             Address = match.Groups[1].Value,
-            Port = int.Parse(match.Groups[2].Value),
+            Port = bridgePort,
             Fingerprint = match.Groups[3].Value,
             Cert = match.Groups[4].Value,
-            IatMode = int.Parse(match.Groups[5].Value)
+            IatMode = iatMode
         };
     }
 
@@ -427,7 +442,14 @@ public class Obfs4Transport : IAnonymityTransport
                     // Ignore process cleanup errors
                 }
 
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

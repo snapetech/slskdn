@@ -59,11 +59,31 @@ namespace slskd.LibraryHealth
 
         public async Task<string> StartScanAsync(LibraryHealthScanRequest request, CancellationToken ct = default)
         {
+            request ??= new LibraryHealthScanRequest();
+
+            var requestedExtensions = request.FileExtensions?.Count > 0
+                ? request.FileExtensions
+                    .Where(ext => !string.IsNullOrWhiteSpace(ext))
+                    .Select(ext => ext.Trim())
+                    .Select(ext => ext.StartsWith('.') ? ext.ToLowerInvariant() : $".{ext.ToLowerInvariant()}")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+                : new List<string> { ".flac", ".mp3", ".m4a", ".ogg" };
+
+            if (requestedExtensions.Count == 0)
+            {
+                requestedExtensions = new List<string> { ".flac", ".mp3", ".m4a", ".ogg" };
+            }
+
             var libraryPath = ResolveLibraryPath(request.LibraryPath);
             if (libraryPath == null)
             {
                 throw new UnauthorizedException("Library Health scans must target a configured share directory");
             }
+
+            var maxConcurrentFiles = request.MaxConcurrentFiles > 0
+                ? request.MaxConcurrentFiles
+                : 4;
 
             var scanId = Guid.NewGuid().ToString();
             var scan = new LibraryHealthScan
@@ -83,23 +103,23 @@ namespace slskd.LibraryHealth
             {
                 LibraryPath = libraryPath,
                 IncludeSubdirectories = request.IncludeSubdirectories,
-                FileExtensions = request.FileExtensions,
+                FileExtensions = requestedExtensions,
                 SkipPreviouslyScanned = request.SkipPreviouslyScanned,
-                MaxConcurrentFiles = request.MaxConcurrentFiles,
+                MaxConcurrentFiles = maxConcurrentFiles,
             };
 
-            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, ct), ct);
+            _ = Task.Run(() => PerformScanAsync(scanId, normalizedRequest, CancellationToken.None), CancellationToken.None);
             return scanId;
         }
 
-        public async Task<LibraryHealthScan> GetScanStatusAsync(string scanId, CancellationToken ct = default)
+        public async Task<LibraryHealthScan?> GetScanStatusAsync(string scanId, CancellationToken ct = default)
         {
             if (activeScans.TryGetValue(scanId, out var active))
             {
                 return active;
             }
 
-            return await hashDb.GetLibraryHealthScanAsync(scanId, ct).ConfigureAwait(false) ?? null!;
+            return await hashDb.GetLibraryHealthScanAsync(scanId, ct).ConfigureAwait(false);
         }
 
         public Task<List<LibraryIssue>> GetIssuesAsync(LibraryHealthIssueFilter filter, CancellationToken ct = default)
@@ -196,7 +216,7 @@ namespace slskd.LibraryHealth
             catch (Exception ex)
             {
                 scan.Status = ScanStatus.Failed;
-                scan.ErrorMessage = ex.Message;
+                scan.ErrorMessage = "Library health scan failed";
                 scan.CompletedAt = DateTimeOffset.UtcNow;
                 await hashDb.UpsertLibraryHealthScanAsync(scan, ct).ConfigureAwait(false);
                 activeScans.TryRemove(scanId, out _);
@@ -261,7 +281,7 @@ namespace slskd.LibraryHealth
                     variant.TranscodeSuspect = isSuspect;
                     variant.TranscodeReason = reason;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Issue: Corrupted file
                     await EmitIssueAsync(new LibraryIssue
@@ -271,7 +291,7 @@ namespace slskd.LibraryHealth
                         Severity = LibraryIssueSeverity.Critical,
                         FilePath = filePath,
                         MusicBrainzRecordingId = recordingId,
-                        Reason = $"File cannot be read: {ex.Message}",
+                        Reason = "File cannot be read",
                         CanAutoFix = true,
                         SuggestedAction = "Re-download from Soulseek or mesh overlay",
                         Status = LibraryIssueStatus.Detected,
@@ -361,7 +381,7 @@ namespace slskd.LibraryHealth
                     Type = LibraryIssueType.CorruptedFile,
                     Severity = LibraryIssueSeverity.Critical,
                     FilePath = filePath,
-                    Reason = $"File scan failed: {ex.Message}",
+                    Reason = "File scan failed",
                     CanAutoFix = true,
                     SuggestedAction = "Re-download from Soulseek or mesh overlay",
                     Status = LibraryIssueStatus.Detected,

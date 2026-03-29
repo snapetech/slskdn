@@ -5,6 +5,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,9 +49,15 @@ public class PodDhtController : ControllerBase
             return BadRequest(new { error = "Pod data is required" });
         }
 
+        var normalizedRequest = request with { Pod = NormalizePod(request.Pod) };
+        if (string.IsNullOrWhiteSpace(normalizedRequest.Pod.PodId))
+        {
+            return BadRequest(new { error = "Pod ID is required" });
+        }
+
         try
         {
-            var result = await _podPublisher.PublishAsync(request.Pod, cancellationToken);
+            var result = await _podPublisher.PublishAsync(normalizedRequest.Pod, cancellationToken);
 
             if (result.Success)
             {
@@ -58,7 +67,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to publish pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to publish pod" });
             }
         }
         catch (Exception ex)
@@ -82,9 +91,15 @@ public class PodDhtController : ControllerBase
             return BadRequest(new { error = "Pod data is required" });
         }
 
+        var normalizedRequest = request with { Pod = NormalizePod(request.Pod) };
+        if (string.IsNullOrWhiteSpace(normalizedRequest.Pod.PodId))
+        {
+            return BadRequest(new { error = "Pod ID is required" });
+        }
+
         try
         {
-            var result = await _podPublisher.UpdateAsync(request.Pod, cancellationToken);
+            var result = await _podPublisher.UpdateAsync(normalizedRequest.Pod, cancellationToken);
 
             if (result.Success)
             {
@@ -94,7 +109,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to update pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to update pod" });
             }
         }
         catch (Exception ex)
@@ -113,6 +128,7 @@ public class PodDhtController : ControllerBase
     [HttpDelete("unpublish/{*podId}")]
     public async Task<IActionResult> UnpublishPod(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "Pod ID is required" });
@@ -130,7 +146,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to unpublish pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to unpublish pod" });
             }
         }
         catch (Exception ex)
@@ -150,6 +166,7 @@ public class PodDhtController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetPodMetadata(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "Pod ID is required" });
@@ -165,7 +182,7 @@ public class PodDhtController : ControllerBase
             }
             else
             {
-                return NotFound(new { podId, found = false, error = result.ErrorMessage ?? "Pod not found" });
+                return NotFound(new { found = false, error = "Pod not found" });
             }
         }
         catch (Exception ex)
@@ -184,6 +201,7 @@ public class PodDhtController : ControllerBase
     [HttpPost("refresh/{*podId}")]
     public async Task<IActionResult> RefreshPod(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "Pod ID is required" });
@@ -201,7 +219,7 @@ public class PodDhtController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodDht] Failed to refresh pod {PodId}: {Error}", result.PodId, result.ErrorMessage);
-                return StatusCode(500, new { error = result.ErrorMessage });
+                return StatusCode(500, new { error = "Failed to refresh pod" });
             }
         }
         catch (Exception ex)
@@ -229,6 +247,103 @@ public class PodDhtController : ControllerBase
             _logger.LogError(ex, "[PodDht] Error getting publishing stats");
             return StatusCode(500, new { error = "Failed to get publishing statistics" });
         }
+    }
+
+    private static Pod NormalizePod(Pod pod)
+    {
+        ArgumentNullException.ThrowIfNull(pod);
+
+        return new Pod
+        {
+            PodId = pod.PodId?.Trim() ?? string.Empty,
+            Name = pod.Name?.Trim() ?? string.Empty,
+            Description = string.IsNullOrWhiteSpace(pod.Description) ? null : pod.Description.Trim(),
+            Visibility = pod.Visibility,
+            IsPublic = pod.IsPublic,
+            MaxMembers = pod.MaxMembers,
+            AllowGuests = pod.AllowGuests,
+            RequireApproval = pod.RequireApproval,
+            UpdatedAt = pod.UpdatedAt,
+            FocusContentId = string.IsNullOrWhiteSpace(pod.FocusContentId) ? null : pod.FocusContentId.Trim(),
+            Tags = pod.Tags?
+                .Select(tag => tag?.Trim() ?? string.Empty)
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.Ordinal)
+                .ToList()
+                ?? new List<string>(),
+            Channels = pod.Channels?
+                .Select(channel => new PodChannel
+                {
+                    ChannelId = channel.ChannelId?.Trim() ?? string.Empty,
+                    Kind = channel.Kind,
+                    Name = channel.Name?.Trim() ?? string.Empty,
+                    BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim(),
+                    Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim(),
+                })
+                .ToList()
+                ?? new List<PodChannel>(),
+            Members = pod.Members?
+                .Select(member => new PodMember
+                {
+                    PeerId = member.PeerId?.Trim() ?? string.Empty,
+                    Role = member.Role?.Trim() ?? string.Empty,
+                    IsBanned = member.IsBanned,
+                    PublicKey = string.IsNullOrWhiteSpace(member.PublicKey) ? null : member.PublicKey.Trim(),
+                    JoinedAt = member.JoinedAt,
+                    LastSeen = member.LastSeen,
+                })
+                .ToList(),
+            ExternalBindings = pod.ExternalBindings?
+                .Select(binding => new ExternalBinding
+                {
+                    Kind = binding.Kind?.Trim() ?? string.Empty,
+                    Mode = binding.Mode?.Trim() ?? string.Empty,
+                    Identifier = binding.Identifier?.Trim() ?? string.Empty,
+                })
+                .ToList()
+                ?? new List<ExternalBinding>(),
+            Capabilities = pod.Capabilities,
+            PrivateServicePolicy = pod.PrivateServicePolicy == null ? null : new PodPrivateServicePolicy
+            {
+                Enabled = pod.PrivateServicePolicy.Enabled,
+                MaxMembers = pod.PrivateServicePolicy.MaxMembers,
+                GatewayPeerId = pod.PrivateServicePolicy.GatewayPeerId?.Trim() ?? string.Empty,
+                RegisteredServices = pod.PrivateServicePolicy.RegisteredServices?
+                    .Select(service => new RegisteredService
+                    {
+                        Name = service.Name?.Trim() ?? string.Empty,
+                        Description = service.Description?.Trim() ?? string.Empty,
+                        Host = service.Host?.Trim() ?? string.Empty,
+                        Port = service.Port,
+                        Protocol = service.Protocol?.Trim() ?? string.Empty,
+                        Kind = service.Kind,
+                    })
+                    .ToList()
+                    ?? new List<RegisteredService>(),
+                AllowedDestinations = pod.PrivateServicePolicy.AllowedDestinations?
+                    .Select(destination => new AllowedDestination
+                    {
+                        HostPattern = destination.HostPattern?.Trim() ?? string.Empty,
+                        Port = destination.Port,
+                        Protocol = destination.Protocol?.Trim() ?? string.Empty,
+                        AllowPublic = destination.AllowPublic,
+                        Kind = destination.Kind,
+                    })
+                    .ToList()
+                    ?? new List<AllowedDestination>(),
+                AllowPrivateRanges = pod.PrivateServicePolicy.AllowPrivateRanges,
+                AllowPublicDestinations = pod.PrivateServicePolicy.AllowPublicDestinations,
+                MaxConcurrentTunnelsPerPeer = pod.PrivateServicePolicy.MaxConcurrentTunnelsPerPeer,
+                MaxConcurrentTunnelsPod = pod.PrivateServicePolicy.MaxConcurrentTunnelsPod,
+                MaxNewTunnelsPerMinutePerPeer = pod.PrivateServicePolicy.MaxNewTunnelsPerMinutePerPeer,
+                MaxBytesPerDayPerPeer = pod.PrivateServicePolicy.MaxBytesPerDayPerPeer,
+                IdleTimeout = pod.PrivateServicePolicy.IdleTimeout,
+                MaxLifetime = pod.PrivateServicePolicy.MaxLifetime,
+                DialTimeout = pod.PrivateServicePolicy.DialTimeout,
+                MaxBufferedBytesPerTunnel = pod.PrivateServicePolicy.MaxBufferedBytesPerTunnel,
+                MaxFrameSize = pod.PrivateServicePolicy.MaxFrameSize,
+            },
+        };
     }
 }
 

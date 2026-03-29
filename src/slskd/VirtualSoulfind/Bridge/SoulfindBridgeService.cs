@@ -5,6 +5,7 @@
 namespace slskd.VirtualSoulfind.Bridge;
 
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using slskd;
@@ -34,6 +35,16 @@ public interface ISoulfindBridgeService
     /// Get bridge health status.
     /// </summary>
     Task<BridgeHealthStatus> GetHealthAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Record a live client connection for bridge health reporting.
+    /// </summary>
+    void RecordClientConnection(string clientId);
+
+    /// <summary>
+    /// Record a live client disconnection for bridge health reporting.
+    /// </summary>
+    void RecordClientDisconnection(string clientId);
 }
 
 /// <summary>
@@ -55,6 +66,7 @@ public class SoulfindBridgeService : ISoulfindBridgeService
 {
     private readonly ILogger<SoulfindBridgeService> logger;
     private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
+    private readonly ConcurrentDictionary<string, byte> connectedClients = new();
     private bool isRunning;
     private DateTimeOffset? startedAt;
     private Process? soulfindProcess;
@@ -150,6 +162,7 @@ public class SoulfindBridgeService : ISoulfindBridgeService
                 await soulfindProcess.WaitForExitAsync(ct);
             }
 
+            connectedClients.Clear();
             isRunning = false;
             startedAt = null;
 
@@ -167,11 +180,31 @@ public class SoulfindBridgeService : ISoulfindBridgeService
         {
             IsHealthy = isRunning && (soulfindProcess?.HasExited == false),
             Version = "1.0.0-proxy",
-            ActiveConnections = 0, // TODO: Query Soulfind for active connections
+            ActiveConnections = connectedClients.Count,
             StartedAt = startedAt ?? DateTimeOffset.MinValue
         };
 
         return Task.FromResult(health);
+    }
+
+    public void RecordClientConnection(string clientId)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return;
+        }
+
+        connectedClients.TryAdd(clientId, 0);
+    }
+
+    public void RecordClientDisconnection(string clientId)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return;
+        }
+
+        connectedClients.TryRemove(clientId, out _);
     }
 }
 

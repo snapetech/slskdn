@@ -166,11 +166,8 @@ public class SwarmDownloadOrchestrator : BackgroundService
                                 // Cancel active download task if exists
                                 if (activeDownloadTasks.TryRemove(chunkIndex, out var downloadTask))
                                 {
-                                    try
-                                    {
-                                        // Task will handle cancellation and re-queue the chunk
-                                    }
-                                    catch { }
+                                    // Task will handle cancellation and re-queue the chunk.
+                                    _ = downloadTask;
                                 }
 
                                 // Re-queue chunk for reassignment
@@ -327,7 +324,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
         {
             logger.LogError(ex, "[SwarmOrchestrator] Job {JobId}: Failed with exception", job.JobId);
             status.State = SwarmJobState.Failed;
-            status.Error = ex.Message;
+            status.Error = "Swarm download failed";
         }
         finally
         {
@@ -375,7 +372,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Source not found for peer {peerId}",
+                    Error = "Chunk source not found",
                 };
             }
 
@@ -441,13 +438,20 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 else
                 {
                     // Clean up partial file
-                    try { IOFile.Delete(tempFile); } catch { }
+                    try
+                    {
+                        IOFile.Delete(tempFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogDebug(ex, "[SwarmOrchestrator] Failed to delete partial chunk file {Path}", tempFile);
+                    }
 
                     return new ChunkResult
                     {
                         ChunkIndex = chunk.Index,
                         Success = false,
-                        Error = $"Incomplete chunk: got {bytesDownloaded}/{chunkSize} bytes",
+                        Error = "Incomplete chunk download",
                     };
                 }
             }
@@ -460,7 +464,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Mesh transport chunk download not yet implemented",
+                    Error = "Mesh transport chunk download is unavailable",
                 };
             }
             else
@@ -469,7 +473,7 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 {
                     ChunkIndex = chunk.Index,
                     Success = false,
-                    Error = $"Unsupported transport: {source.Transport}",
+                    Error = "Unsupported chunk transport",
                 };
             }
         }
@@ -480,13 +484,23 @@ public class SwarmDownloadOrchestrator : BackgroundService
                 chunk.Index, peerId);
 
             // Clean up on error
-            try { if (IOFile.Exists(tempFile)) IOFile.Delete(tempFile); } catch { }
+            try
+            {
+                if (IOFile.Exists(tempFile))
+                {
+                    IOFile.Delete(tempFile);
+                }
+            }
+            catch (Exception cleanupEx)
+            {
+                logger.LogDebug(cleanupEx, "[SwarmOrchestrator] Failed to cleanup chunk file {Path}", tempFile);
+            }
 
             return new ChunkResult
             {
                 ChunkIndex = chunk.Index,
                 Success = false,
-                Error = ex.Message,
+                Error = "Chunk download failed",
             };
         }
     }

@@ -142,7 +142,7 @@ public sealed class SongIdService : ISongIdService
         if (enableBackgroundWorkers)
         {
             StartWorkers();
-            _ = RecoverQueuedRunsAsync();
+            _ = ObserveBackgroundTaskAsync(RecoverQueuedRunsAsync(), "Failed to recover queued SongID runs");
         }
     }
 
@@ -154,18 +154,19 @@ public sealed class SongIdService : ISongIdService
         }
 
         var normalizedSource = source.Trim();
+        var runId = Guid.NewGuid();
         var run = new SongIdRun
         {
             Source = normalizedSource,
             SourceType = DetectSourceType(normalizedSource),
             Status = "queued",
             CreatedAt = DateTimeOffset.UtcNow,
-            ArtifactDirectory = GetWorkspaceDirectory(Guid.NewGuid()),
+            ArtifactDirectory = GetWorkspaceDirectory(runId),
+            Id = runId,
             Summary = "Queued for SongID analysis.",
             CurrentStage = "queued",
             PercentComplete = 0.05,
         };
-        run.Id = Guid.Parse(Path.GetFileName(run.ArtifactDirectory));
 
         _store.Upsert(run);
         await _songIdHub.BroadcastCreateAsync(run).ConfigureAwait(false);
@@ -267,10 +268,10 @@ public sealed class SongIdService : ISongIdService
             _logger.LogWarning(ex, "SongID analysis failed for source {Source}", run.Source);
             run.Status = "failed";
             run.CompletedAt = DateTimeOffset.UtcNow;
-            run.Summary = ex.Message;
+            run.Summary = "SongID analysis failed.";
             run.CurrentStage = "failed";
             run.QueuePosition = null;
-            run.Evidence.Add($"Analysis failed: {ex.Message}");
+            run.Evidence.Add("Analysis failed.");
             await PublishRunAsync(run).ConfigureAwait(false);
         }
     }
@@ -294,7 +295,10 @@ public sealed class SongIdService : ISongIdService
     {
         foreach (var workerSlot in Enumerable.Range(1, GetMaxConcurrentRuns()))
         {
-            _ = Task.Run(() => StartWorkerAsync(workerSlot));
+            _ = ObserveBackgroundTaskAsync(
+                Task.Run(() => StartWorkerAsync(workerSlot), CancellationToken.None),
+                "SongID worker {WorkerSlot} stopped unexpectedly",
+                workerSlot);
         }
     }
 
@@ -328,6 +332,18 @@ public sealed class SongIdService : ISongIdService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to recover queued SongID runs from the run store");
+        }
+    }
+
+    private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate, params object[] propertyValues)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, messageTemplate, propertyValues);
         }
     }
 
@@ -414,12 +430,17 @@ public sealed class SongIdService : ISongIdService
                 analysis.Evidence.Add($"Chromaprint extracted for local file ({fingerprint.Length} chars).");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            analysis.Evidence.Add($"Chromaprint extraction failed for local file: {ex.Message}");
+            analysis.Evidence.Add("Chromaprint extraction failed for local file.");
         }
 
         var metadata = await _metadataFacade.GetByFileAsync(source, cancellationToken).ConfigureAwait(false);
+        if (metadata == null)
+        {
+            metadata = await _metadataFacade.GetBySoulseekFilenameAsync(string.Empty, fileName, cancellationToken).ConfigureAwait(false);
+        }
+
         if (metadata == null)
         {
             analysis.Query = Path.GetFileNameWithoutExtension(source);
@@ -500,10 +521,10 @@ public sealed class SongIdService : ISongIdService
 
             return analysis;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             analysis.Query = source;
-            analysis.Evidence.Add($"yt-dlp unavailable or failed; falling back to raw URL query. {ex.Message}");
+            analysis.Evidence.Add("yt-dlp unavailable or failed; falling back to raw URL query.");
             return analysis;
         }
     }
@@ -570,18 +591,18 @@ public sealed class SongIdService : ISongIdService
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    analysis.Evidence.Add($"Spotify YouTube candidate search skipped: {ex.Message}");
+                    analysis.Evidence.Add("Spotify YouTube candidate search skipped.");
                 }
             }
 
             return analysis;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             analysis.Query = source;
-            analysis.Evidence.Add($"Spotify metadata fetch failed; falling back to raw source query. {ex.Message}");
+            analysis.Evidence.Add("Spotify metadata fetch failed; falling back to raw source query.");
             return analysis;
         }
     }
@@ -604,18 +625,27 @@ public sealed class SongIdService : ISongIdService
 
     private async Task AddSearchCandidatesAsync(SongIdRun run, string query, CancellationToken cancellationToken)
     {
+        var addedCount = 0;
+        var seenRecordingIds = new HashSet<string>(
+            run.Tracks
+                .Select(candidate => candidate.RecordingId)
+                .Where(value => !string.IsNullOrWhiteSpace(value)),
+            StringComparer.OrdinalIgnoreCase);
+
         await foreach (var hit in _metadataFacade.SearchAsync(query, 8, cancellationToken).ConfigureAwait(false))
         {
-            if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId) ||
-                run.Tracks.Any(candidate => string.Equals(candidate.RecordingId, hit.MusicBrainzRecordingId, StringComparison.OrdinalIgnoreCase)))
+            var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
+                ? hit.MusicBrainzRecordingId
+                : BuildSyntheticMetadataRecordingId(hit);
+            if (string.IsNullOrWhiteSpace(recordingId) || !seenRecordingIds.Add(recordingId))
             {
                 continue;
             }
 
             run.Tracks.Add(new SongIdTrackCandidate
             {
-                CandidateId = hit.MusicBrainzRecordingId,
-                RecordingId = hit.MusicBrainzRecordingId,
+                CandidateId = recordingId,
+                RecordingId = recordingId,
                 Title = hit.Title ?? string.Empty,
                 Artist = hit.Artist ?? string.Empty,
                 MusicBrainzArtistId = hit.MusicBrainzArtistId,
@@ -624,12 +654,19 @@ public sealed class SongIdService : ISongIdService
                 ByzantineScore = 0.58,
                 ActionScore = 0.67,
             });
+            addedCount++;
         }
 
-        if (run.Tracks.Count > 0)
+        if (addedCount > 0)
         {
-            run.Evidence.Add($"MusicBrainz search produced {run.Tracks.Count} track candidate(s) for query `{query}`.");
+            run.Evidence.Add($"MusicBrainz search produced {addedCount} track candidate(s) for query `{query}`.");
         }
+    }
+
+    private static string? BuildSyntheticMetadataRecordingId(MetadataResult hit)
+    {
+        var normalized = NormalizeSegmentQuery(BuildBestQuery(hit.Artist, hit.Title));
+        return string.IsNullOrWhiteSpace(normalized) ? null : $"metadata:{normalized}";
     }
 
     private async Task AddArtistCandidatesAsync(SongIdRun run, CancellationToken cancellationToken)
@@ -1222,6 +1259,48 @@ public sealed class SongIdService : ISongIdService
             }
         }
 
+        foreach (var transcript in run.Transcripts)
+        {
+            var startSeconds = Math.Max(0, transcript.ExcerptStartSeconds);
+            foreach (var phrase in transcript.MusicBrainzQueries.Take(3))
+            {
+                var cleaned = CleanSegmentTitle(phrase);
+                if (string.IsNullOrWhiteSpace(cleaned))
+                {
+                    continue;
+                }
+
+                var query = BuildBestQuery(artistContext, cleaned);
+                TryAddSegmentQuery(
+                    segments,
+                    seenQueries,
+                    query,
+                    $"Transcript {FormatTimestamp(startSeconds)}",
+                    $"transcript from {transcript.Source}",
+                    startSeconds,
+                    0.44);
+            }
+        }
+
+        foreach (var ocr in run.Ocr)
+        {
+            var cleaned = CleanSegmentTitle(ocr.Text);
+            if (string.IsNullOrWhiteSpace(cleaned))
+            {
+                continue;
+            }
+
+            var query = BuildBestQuery(artistContext, cleaned);
+            TryAddSegmentQuery(
+                segments,
+                seenQueries,
+                query,
+                $"OCR {FormatTimestamp(ocr.TimestampSeconds)}",
+                "frame text",
+                ocr.TimestampSeconds,
+                0.40);
+        }
+
         foreach (var comment in run.Comments.Where(comment => comment.TimestampSeconds.HasValue))
         {
             var cleaned = CleanSegmentTitle(RemoveTimestampText(comment.Text));
@@ -1281,15 +1360,20 @@ public sealed class SongIdService : ISongIdService
 
     private static SongIdTrackCandidate? CreateSegmentCandidateFromMetadata(MetadataResult hit, SongIdSegmentQuery segmentQuery, int rank)
     {
-        if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId))
+        if (string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId) &&
+            (string.IsNullOrWhiteSpace(hit.Title) || string.IsNullOrWhiteSpace(hit.Artist)))
         {
             return null;
         }
 
+        var recordingId = !string.IsNullOrWhiteSpace(hit.MusicBrainzRecordingId)
+            ? hit.MusicBrainzRecordingId
+            : $"metadata:{NormalizeSegmentQuery(BuildBestQuery(hit.Artist, hit.Title))}";
+
         return new SongIdTrackCandidate
         {
-            CandidateId = $"{segmentQuery.Id}:{hit.MusicBrainzRecordingId}",
-            RecordingId = hit.MusicBrainzRecordingId,
+            CandidateId = $"{segmentQuery.Id}:{recordingId}",
+            RecordingId = recordingId,
             Title = hit.Title ?? string.Empty,
             Artist = hit.Artist ?? string.Empty,
             MusicBrainzArtistId = hit.MusicBrainzArtistId,
@@ -1757,9 +1841,9 @@ public sealed class SongIdService : ISongIdService
                 cancellationToken).ConfigureAwait(false);
             videoPath = ResolveDownloadedFile(videoDir, "source-video");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            run.Evidence.Add($"Video capture skipped for OCR: {ex.Message}");
+            run.Evidence.Add("Video capture skipped for OCR.");
         }
 
         string? commentsPath = null;
@@ -1784,9 +1868,9 @@ public sealed class SongIdService : ISongIdService
                 cancellationToken).ConfigureAwait(false);
             commentsPath = Directory.EnumerateFiles(commentsDir, "*.info.json").FirstOrDefault();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            run.Evidence.Add($"Comment harvesting skipped: {ex.Message}");
+            run.Evidence.Add("Comment harvesting skipped.");
         }
 
         return new PreparedAnalysisAssets
@@ -1894,9 +1978,9 @@ public sealed class SongIdService : ISongIdService
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    run.Evidence.Add($"Clip fingerprint lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"Clip fingerprint lookup failed for {finding.ClipId}.");
                 }
 
                 try
@@ -1907,18 +1991,18 @@ public sealed class SongIdService : ISongIdService
                         finding.SongRec = ParseSongRecFinding(songrec.StandardOutput);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    run.Evidence.Add($"SongRec lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"SongRec lookup failed for {finding.ClipId}.");
                 }
 
                 try
                 {
                     finding.AiHeuristics = await ScoreAiAudioArtifactsAsync(clipPath, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    run.Evidence.Add($"AI artifact heuristic skipped for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"AI artifact heuristic skipped for {finding.ClipId}.");
                 }
 
                 try
@@ -1928,9 +2012,9 @@ public sealed class SongIdService : ISongIdService
                         finding.Panako = await QueryPanakoClipAsync(run, panakoJarPath, clipPath, cancellationToken).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    run.Evidence.Add($"Panako lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"Panako lookup failed for {finding.ClipId}.");
                 }
 
                 try
@@ -1940,9 +2024,9 @@ public sealed class SongIdService : ISongIdService
                         finding.Audfprint = await QueryAudfprintAsync(audfprintScriptPath, audfprintDatabasePath, clipPath, cancellationToken).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    run.Evidence.Add($"Audfprint lookup failed for {finding.ClipId}: {ex.Message}");
+                    run.Evidence.Add($"Audfprint lookup failed for {finding.ClipId}.");
                 }
 
                 run.Clips.Add(finding);
@@ -2008,9 +2092,9 @@ public sealed class SongIdService : ISongIdService
                 await AddSearchCandidatesAsync(run, phrase, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            run.Evidence.Add($"Transcript extraction skipped: {ex.Message}");
+            run.Evidence.Add("Transcript extraction skipped.");
         }
     }
 
@@ -2052,9 +2136,9 @@ public sealed class SongIdService : ISongIdService
                     });
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                run.Evidence.Add($"OCR skipped at {timestamp}s: {ex.Message}");
+                run.Evidence.Add($"OCR skipped at {timestamp}s.");
             }
         }
     }
@@ -2120,30 +2204,43 @@ public sealed class SongIdService : ISongIdService
             return null;
         }
 
-        using var doc = JsonDocument.Parse(stdout);
-        var root = doc.RootElement;
-        if (!root.TryGetProperty("track", out var track) || track.ValueKind != JsonValueKind.Object)
+        try
+        {
+            using var doc = JsonDocument.Parse(stdout);
+            var root = doc.RootElement;
+            var track = GetSongRecTrack(root);
+            if (!track.HasValue || track.Value.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var matchCount = root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array
+                ? matches.GetArrayLength()
+                : 1;
+            var title = TryGetString(track.Value, "title") ?? TryGetString(track.Value, "name");
+            var artist = TryGetString(track.Value, "subtitle") ??
+                TryGetString(track.Value, "artist") ??
+                TryGetSongRecArtist(track.Value);
+            var externalId = TryGetString(track.Value, "key") ?? TryGetString(track.Value, "id");
+            if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(artist))
+            {
+                return TryCreateRecognizerFindingFromText(externalId, matchCount, "SongRec recognition hit", externalId);
+            }
+
+            return new SongIdRecognizerFinding
+            {
+                Title = title ?? string.Empty,
+                Artist = artist ?? string.Empty,
+                ExternalId = externalId,
+                MatchCount = matchCount,
+                Score = matchCount > 0 ? Math.Min(0.98, 0.78 + (matchCount * 0.03)) : 0.85,
+                Summary = "SongRec recognition hit",
+            };
+        }
+        catch (JsonException)
         {
             return null;
         }
-
-        var title = TryGetString(track, "title");
-        var artist = TryGetString(track, "subtitle");
-        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(artist))
-        {
-            return null;
-        }
-
-        var matchCount = root.TryGetProperty("matches", out var matches) && matches.ValueKind == JsonValueKind.Array ? matches.GetArrayLength() : 0;
-        return new SongIdRecognizerFinding
-        {
-            Title = title ?? string.Empty,
-            Artist = artist ?? string.Empty,
-            ExternalId = TryGetString(track, "key"),
-            MatchCount = matchCount,
-            Score = matchCount > 0 ? Math.Min(0.98, 0.78 + (matchCount * 0.03)) : 0.85,
-            Summary = "SongRec recognition hit",
-        };
     }
 
     private static SongIdRecognizerFinding? ParsePanakoFinding(string stdout)
@@ -2151,29 +2248,63 @@ public sealed class SongIdService : ISongIdService
         foreach (var raw in stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var line = raw.Trim();
-            if (!Regex.IsMatch(line, @"^\d+\s*;\s*\d+\s*;"))
+            if (string.IsNullOrWhiteSpace(line) ||
+                line.StartsWith('#') ||
+                line.StartsWith("query", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            var parts = line.Split(';', StringSplitOptions.TrimEntries);
-            if (parts.Length < 13)
+            var parts = line.Contains(';', StringComparison.Ordinal)
+                ? line.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                : line.Split('\t', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var path = parts
+                .FirstOrDefault(part => Regex.IsMatch(part, @"\.(wav|flac|mp3|m4a|aac|ogg|opus)\b", RegexOptions.IgnoreCase));
+            if (string.IsNullOrWhiteSpace(path))
             {
-                continue;
+                var pathMatch = Regex.Match(line, @"(?<path>[^\s,;]+?\.(wav|flac|mp3|m4a|aac|ogg|opus))", RegexOptions.IgnoreCase);
+                path = pathMatch.Success ? pathMatch.Groups["path"].Value : null;
             }
 
-            if (!double.TryParse(parts[9], NumberStyles.Any, CultureInfo.InvariantCulture, out var matchScore))
+            var score = 0.75;
+            for (var i = parts.Length - 1; i >= 0; i--)
             {
+                if (!double.TryParse(parts[i], NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    continue;
+                }
+
+                score = parsed > 1
+                    ? Math.Min(0.99, parsed / 100.0)
+                    : Math.Min(0.99, Math.Max(0.0, parsed));
+                break;
+            }
+
+            var externalId = parts.FirstOrDefault(part =>
+                !string.Equals(part, path, StringComparison.OrdinalIgnoreCase) &&
+                !Regex.IsMatch(part, @"^\d+(\.\d+)?$", RegexOptions.CultureInvariant) &&
+                !part.Contains(Path.DirectorySeparatorChar) &&
+                !part.Contains(Path.AltDirectorySeparatorChar));
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                var fallback = TryCreateRecognizerFindingFromText(externalId ?? line, 1, $"Panako score {(score * 100.0).ToString("F2", CultureInfo.InvariantCulture)}", externalId);
+                if (fallback != null)
+                {
+                    fallback.Score = score;
+                    return fallback;
+                }
+
                 continue;
             }
 
             return new SongIdRecognizerFinding
             {
-                Title = Path.GetFileNameWithoutExtension(parts[5]),
-                SourcePath = parts[5],
-                ExternalId = parts[6],
-                Score = Math.Min(0.99, matchScore / 100.0),
-                Summary = $"Panako score {matchScore.ToString("F2", CultureInfo.InvariantCulture)}",
+                Title = Path.GetFileNameWithoutExtension(path),
+                SourcePath = path,
+                ExternalId = externalId,
+                Score = score,
+                Summary = $"Panako score {(score * 100.0).ToString("F2", CultureInfo.InvariantCulture)}",
             };
         }
 
@@ -2196,28 +2327,180 @@ public sealed class SongIdService : ISongIdService
 
         var scoreMatch = Regex.Match(bestLine, @"(?<score>\d+(\.\d+)?)");
         var score = scoreMatch.Success && double.TryParse(scoreMatch.Groups["score"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedScore)
-            ? Math.Min(0.99, parsedScore / 100.0)
+            ? parsedScore > 1
+                ? Math.Min(0.99, parsedScore / 100.0)
+                : Math.Min(0.99, Math.Max(0.0, parsedScore))
             : 0.55;
+        var pathMatch = Regex.Match(bestLine, @"(?<path>[^\s,;]+\.(wav|flac|mp3|m4a|aac|ogg|opus))", RegexOptions.IgnoreCase);
+        var sourcePath = pathMatch.Success ? pathMatch.Groups["path"].Value : null;
+        var fallback = string.IsNullOrWhiteSpace(sourcePath)
+            ? TryCreateRecognizerFindingFromText(bestLine, 1, "Audfprint fingerprint match")
+            : null;
         return new SongIdRecognizerFinding
         {
-            Title = bestLine,
+            Title = !string.IsNullOrWhiteSpace(sourcePath)
+                ? Path.GetFileNameWithoutExtension(sourcePath)
+                : fallback?.Title ?? bestLine,
+            Artist = fallback?.Artist ?? string.Empty,
+            ExternalId = fallback?.ExternalId,
+            SourcePath = sourcePath,
             Score = score,
             Summary = "Audfprint fingerprint match",
         };
     }
 
+    private static JsonElement? GetSongRecTrack(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Object)
+        {
+            if (root.TryGetProperty("track", out var nestedTrack) && nestedTrack.ValueKind == JsonValueKind.Object)
+            {
+                return nestedTrack;
+            }
+
+            if (root.TryGetProperty("matches", out var matches) &&
+                matches.ValueKind == JsonValueKind.Array &&
+                matches.GetArrayLength() > 0)
+            {
+                var first = matches[0];
+                if (first.ValueKind == JsonValueKind.Object)
+                {
+                    if (first.TryGetProperty("track", out var matchTrack) && matchTrack.ValueKind == JsonValueKind.Object)
+                    {
+                        return matchTrack;
+                    }
+
+                    return first;
+                }
+            }
+
+            if (TryGetString(root, "title") != null || TryGetString(root, "subtitle") != null || TryGetString(root, "artist") != null)
+            {
+                return root;
+            }
+        }
+
+        if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
+        {
+            var first = root[0];
+            if (first.ValueKind == JsonValueKind.Object)
+            {
+                return first;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryGetSongRecArtist(JsonElement track)
+    {
+        if (track.TryGetProperty("artists", out var artists) &&
+            artists.ValueKind == JsonValueKind.Array &&
+            artists.GetArrayLength() > 0)
+        {
+            var first = artists[0];
+            if (first.ValueKind == JsonValueKind.Object)
+            {
+                return TryGetString(first, "name");
+            }
+
+            if (first.ValueKind == JsonValueKind.String)
+            {
+                return first.GetString();
+            }
+        }
+
+        return null;
+    }
+
+    private static SongIdRecognizerFinding? TryCreateRecognizerFindingFromText(string? rawText, int matchCount, string summary, string? externalId = null)
+    {
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            return null;
+        }
+
+        var text = rawText.Trim().Trim('"', '\'');
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var fileLikeText = Path.GetFileNameWithoutExtension(text);
+        var label = string.IsNullOrWhiteSpace(fileLikeText) ? text : fileLikeText;
+        label = Regex.Replace(label, @"[_\.]+", " ").Trim();
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return null;
+        }
+
+        var artist = string.Empty;
+        var title = label;
+        foreach (var separator in new[] { " - ", " – ", " — " })
+        {
+            if (!label.Contains(separator, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var parts = label.Split(new[] { separator }, 2, StringSplitOptions.TrimEntries);
+            if (parts.Length == 2)
+            {
+                artist = parts[0];
+                title = parts[1];
+            }
+
+            break;
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        return new SongIdRecognizerFinding
+        {
+            Title = title,
+            Artist = artist,
+            ExternalId = externalId,
+            MatchCount = Math.Max(1, matchCount),
+            Score = Math.Min(0.9, 0.52 + (Math.Max(1, matchCount) * 0.03)),
+            Summary = summary,
+        };
+    }
+
     private static List<(int ClipLength, int Step)> ParseProfiles(string spec)
     {
-        return spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(value => value.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            .Where(parts => parts.Length == 2 && int.TryParse(parts[0], out _) && int.TryParse(parts[1], out _))
-            .Select(parts => (int.Parse(parts[0], CultureInfo.InvariantCulture), int.Parse(parts[1], CultureInfo.InvariantCulture)))
-            .ToList();
+        var profiles = new List<(int ClipLength, int Step)>();
+
+        foreach (var value in spec.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = value.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length != 2)
+            {
+                continue;
+            }
+
+            if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var clipLength)
+                || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var step))
+            {
+                continue;
+            }
+
+            if (clipLength <= 0 || step <= 0)
+            {
+                continue;
+            }
+
+            profiles.Add((clipLength, step));
+        }
+
+        return profiles;
     }
 
     private static IEnumerable<int> BuildClipStarts(int durationSeconds, int clipLength, int step)
     {
-        if (durationSeconds <= 0)
+        if (durationSeconds <= 0 || clipLength <= 0 || step <= 0)
         {
             yield break;
         }
@@ -2318,48 +2601,26 @@ public sealed class SongIdService : ISongIdService
 
     private async Task<List<SongIdCorpusMatch>> FindCorpusMatchesAsync(SongIdRun run, CancellationToken cancellationToken)
     {
-        if (run.FullSourceFingerprint == null ||
-            string.IsNullOrWhiteSpace(run.FullSourceFingerprint.Path) ||
-            !File.Exists(run.FullSourceFingerprint.Path))
-        {
-            return new List<SongIdCorpusMatch>();
-        }
-
-        var currentFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(run.FullSourceFingerprint.Path, cancellationToken).ConfigureAwait(false));
-        if (string.IsNullOrWhiteSpace(currentFingerprint))
-        {
-            return new List<SongIdCorpusMatch>();
-        }
-
         var corpusDir = GetCorpusDirectory();
         if (!Directory.Exists(corpusDir))
         {
             return new List<SongIdCorpusMatch>();
         }
 
+        var currentFingerprint = await TryLoadCurrentFingerprintAsync(run, cancellationToken).ConfigureAwait(false);
         var matches = new List<SongIdCorpusMatch>();
         foreach (var metadataPath in Directory.EnumerateFiles(corpusDir, "*.json"))
         {
-            SongIdCorpusEntry? entry;
-            try
-            {
-                entry = JsonSerializer.Deserialize<SongIdCorpusEntry>(await File.ReadAllTextAsync(metadataPath, cancellationToken).ConfigureAwait(false));
-            }
-            catch
-            {
-                continue;
-            }
+            var entry = await LoadCorpusEntryAsync(metadataPath, cancellationToken).ConfigureAwait(false);
+            var fingerprintPath = ResolveCorpusFingerprintPath(metadataPath, entry);
 
             if (entry == null ||
-                string.Equals(entry.RunId, run.Id.ToString("D"), StringComparison.OrdinalIgnoreCase) ||
-                string.IsNullOrWhiteSpace(entry.FingerprintPath) ||
-                !File.Exists(entry.FingerprintPath))
+                string.Equals(entry.RunId, run.Id.ToString("D"), StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            var otherFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(entry.FingerprintPath, cancellationToken).ConfigureAwait(false));
-            var similarity = CompareFingerprints(currentFingerprint, otherFingerprint);
+            var similarity = await ComputeCorpusSimilarityAsync(currentFingerprint, fingerprintPath, entry, run, cancellationToken).ConfigureAwait(false);
             if (similarity < 0.18)
             {
                 continue;
@@ -2371,7 +2632,7 @@ public sealed class SongIdService : ISongIdService
                 Label = entry.Label ?? entry.Source ?? "songid-corpus",
                 Source = entry.Source ?? string.Empty,
                 SimilarityScore = Math.Round(similarity, 4),
-                FingerprintPath = entry.FingerprintPath,
+                FingerprintPath = fingerprintPath ?? string.Empty,
                 RecordingId = entry.RecordingId,
                 Artist = entry.Artist,
                 Title = entry.Title,
@@ -2384,6 +2645,121 @@ public sealed class SongIdService : ISongIdService
             .OrderByDescending(match => match.SimilarityScore)
             .Take(5)
             .ToList();
+    }
+
+    private static async Task<string?> TryLoadCurrentFingerprintAsync(SongIdRun run, CancellationToken cancellationToken)
+    {
+        if (run.FullSourceFingerprint == null ||
+            string.IsNullOrWhiteSpace(run.FullSourceFingerprint.Path) ||
+            !File.Exists(run.FullSourceFingerprint.Path))
+        {
+            return null;
+        }
+
+        var currentFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(run.FullSourceFingerprint.Path, cancellationToken).ConfigureAwait(false));
+        return string.IsNullOrWhiteSpace(currentFingerprint) ? null : currentFingerprint;
+    }
+
+    private static async Task<double> ComputeCorpusSimilarityAsync(
+        string? currentFingerprint,
+        string? fingerprintPath,
+        SongIdCorpusEntry entry,
+        SongIdRun run,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(currentFingerprint) && !string.IsNullOrWhiteSpace(fingerprintPath))
+        {
+            var otherFingerprint = ParseFpcalcFingerprint(await File.ReadAllTextAsync(fingerprintPath, cancellationToken).ConfigureAwait(false));
+            return CompareFingerprints(currentFingerprint, otherFingerprint);
+        }
+
+        return ComputeCorpusMetadataSimilarity(entry, run);
+    }
+
+    private static double ComputeCorpusMetadataSimilarity(SongIdCorpusEntry entry, SongIdRun run)
+    {
+        var realRecordingIds = run.Tracks
+            .Select(track => track.RecordingId?.Trim())
+            .Where(id => !string.IsNullOrWhiteSpace(id) && !id.StartsWith("metadata:", StringComparison.OrdinalIgnoreCase))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(entry.RecordingId) && realRecordingIds.Contains(entry.RecordingId.Trim()))
+        {
+            return 0.93;
+        }
+
+        var runArtist = NormalizeSegmentQuery(run.Metadata.Artist);
+        var runTitle = NormalizeSegmentQuery(run.Metadata.Title);
+        var entryArtist = NormalizeSegmentQuery(entry.Artist);
+        var entryTitle = NormalizeSegmentQuery(entry.Title);
+        if (!string.IsNullOrWhiteSpace(runArtist) &&
+            !string.IsNullOrWhiteSpace(runTitle) &&
+            string.Equals(runArtist, entryArtist, StringComparison.Ordinal) &&
+            string.Equals(runTitle, entryTitle, StringComparison.Ordinal))
+        {
+            return 0.72;
+        }
+
+        var trackMetadataMatch = run.Tracks.Any(track =>
+            string.Equals(NormalizeSegmentQuery(track.Artist), entryArtist, StringComparison.Ordinal) &&
+            string.Equals(NormalizeSegmentQuery(track.Title), entryTitle, StringComparison.Ordinal));
+        if (trackMetadataMatch)
+        {
+            return 0.64;
+        }
+
+        var runLabel = NormalizeSegmentQuery(BuildBestQuery(run.Metadata.Artist, run.Metadata.Title));
+        var entryLabel = NormalizeSegmentQuery(entry.Label ?? entry.Source);
+        if (!string.IsNullOrWhiteSpace(runLabel) &&
+            !string.IsNullOrWhiteSpace(entryLabel) &&
+            string.Equals(runLabel, entryLabel, StringComparison.Ordinal))
+        {
+            return 0.41;
+        }
+
+        return 0.0;
+    }
+
+    private static async Task<SongIdCorpusEntry?> LoadCorpusEntryAsync(string metadataPath, CancellationToken cancellationToken)
+    {
+        var json = await File.ReadAllTextAsync(metadataPath, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<SongIdCorpusEntry>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+        });
+    }
+
+    private static string? ResolveCorpusFingerprintPath(string metadataPath, SongIdCorpusEntry? entry)
+    {
+        if (entry == null || string.IsNullOrWhiteSpace(entry.FingerprintPath))
+        {
+            return null;
+        }
+
+        metadataPath = metadataPath.Trim();
+        var fingerprintPath = entry.FingerprintPath.Trim();
+
+        if (Path.IsPathRooted(fingerprintPath))
+        {
+            return File.Exists(fingerprintPath) ? fingerprintPath : null;
+        }
+
+        var metadataDirectory = Path.GetDirectoryName(metadataPath) ?? string.Empty;
+        var metadataRoot = Path.GetFullPath(metadataDirectory);
+        var relativeToMetadata = Path.GetFullPath(Path.Combine(metadataRoot, fingerprintPath));
+        if (!relativeToMetadata.StartsWith(metadataRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(relativeToMetadata, metadataRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return File.Exists(relativeToMetadata) ? relativeToMetadata : null;
     }
 
     private async Task RegisterCorpusEntryAsync(SongIdRun run, CancellationToken cancellationToken)
@@ -2404,7 +2780,9 @@ public sealed class SongIdService : ISongIdService
             Source = run.Source,
             Label = BuildBestQuery(run.Metadata.Artist, run.Metadata.Title),
             FingerprintPath = run.FullSourceFingerprint.Path,
-            RecordingId = topTrack?.RecordingId,
+            RecordingId = topTrack != null && !topTrack.RecordingId.StartsWith("metadata:", StringComparison.OrdinalIgnoreCase)
+                ? topTrack.RecordingId
+                : null,
             Artist = topTrack?.Artist ?? run.Metadata.Artist,
             Title = topTrack?.Title ?? run.Metadata.Title,
             FamilyLabel = run.ForensicMatrix?.FamilyLabel,
@@ -2444,7 +2822,11 @@ public sealed class SongIdService : ISongIdService
     {
         if (commentTimestamps.Count > 0)
         {
-            var target = Math.Max(0, commentTimestamps.First() - Math.Min(20, excerptSeconds / 4));
+            var earliestTimestamp = commentTimestamps
+                .Where(timestamp => timestamp >= 0)
+                .DefaultIfEmpty(0)
+                .Min();
+            var target = Math.Max(0, earliestTimestamp - Math.Min(20, excerptSeconds / 4));
             return Math.Min(target, Math.Max(0, durationSeconds - excerptSeconds));
         }
 
@@ -2609,19 +2991,52 @@ public sealed class SongIdService : ISongIdService
 
     private string? LocatePanakoJar()
     {
+        var configuredJar = Environment.GetEnvironmentVariable("PANAKO_JAR")?.Trim();
+        if (!string.IsNullOrWhiteSpace(configuredJar) && File.Exists(configuredJar))
+        {
+            return configuredJar;
+        }
+
+        foreach (var candidate in new[]
+        {
+            "/usr/share/java/panako.jar",
+            "/usr/local/share/java/panako.jar",
+            "/usr/share/panako/panako.jar",
+            "/usr/local/share/panako/panako.jar",
+        })
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
         foreach (var root in GetSiblingSearchRoots())
         {
-            var libsDir = Path.Combine(root, "external", "Panako", "build", "libs");
-            if (!Directory.Exists(libsDir))
+            foreach (var libsDir in new[]
             {
-                continue;
-            }
+                Path.Combine(root, "external", "Panako", "build", "libs"),
+                Path.Combine(root, "Panako", "build", "libs"),
+                Path.Combine(root, "build", "libs"),
+            })
+            {
+                if (!Directory.Exists(libsDir))
+                {
+                    continue;
+                }
 
-            var jar = Directory.EnumerateFiles(libsDir, "*.jar").OrderBy(path => path, StringComparer.OrdinalIgnoreCase).LastOrDefault();
-            if (!string.IsNullOrWhiteSpace(jar))
-            {
-                return jar;
+                var jar = Directory.EnumerateFiles(libsDir, "*.jar").OrderBy(path => path, StringComparer.OrdinalIgnoreCase).LastOrDefault();
+                if (!string.IsNullOrWhiteSpace(jar))
+                {
+                    return jar;
+                }
             }
+        }
+
+        var pathJar = FindNewestFileOnPath("panako.jar");
+        if (!string.IsNullOrWhiteSpace(pathJar))
+        {
+            return pathJar;
         }
 
         return null;
@@ -2655,13 +3070,45 @@ public sealed class SongIdService : ISongIdService
 
     private string? LocateAudfprintScript()
     {
+        var configuredScript = Environment.GetEnvironmentVariable("AUDFPRINT_SCRIPT")?.Trim();
+        if (!string.IsNullOrWhiteSpace(configuredScript) && File.Exists(configuredScript))
+        {
+            return configuredScript;
+        }
+
+        foreach (var candidate in new[]
+        {
+            "/usr/share/audfprint/audfprint.py",
+            "/usr/local/share/audfprint/audfprint.py",
+            "/opt/audfprint/audfprint.py",
+        })
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
         foreach (var root in GetSiblingSearchRoots())
         {
-            var script = Path.Combine(root, "external", "audfprint", "audfprint.py");
-            if (File.Exists(script))
+            foreach (var script in new[]
             {
-                return script;
+                Path.Combine(root, "external", "audfprint", "audfprint.py"),
+                Path.Combine(root, "audfprint", "audfprint.py"),
+                Path.Combine(root, "audfprint.py"),
+            })
+            {
+                if (File.Exists(script))
+                {
+                    return script;
+                }
             }
+        }
+
+        var pathScript = FindNewestFileOnPath("audfprint.py");
+        if (!string.IsNullOrWhiteSpace(pathScript))
+        {
+            return pathScript;
         }
 
         return null;
@@ -2682,10 +3129,20 @@ public sealed class SongIdService : ISongIdService
             {
                 var direct = current.FullName;
                 roots.Add(direct);
-                var sibling = Path.Combine(current.FullName, "ytdlpchop");
-                if (Directory.Exists(sibling))
+
+                foreach (var sibling in new[]
                 {
-                    roots.Add(sibling);
+                    Path.Combine(current.FullName, "ytdlpchop"),
+                    Path.Combine(current.FullName, "Panako"),
+                    Path.Combine(current.FullName, "audfprint"),
+                    Path.Combine(current.FullName, "external", "Panako"),
+                    Path.Combine(current.FullName, "external", "audfprint"),
+                })
+                {
+                    if (Directory.Exists(sibling))
+                    {
+                        roots.Add(sibling);
+                    }
                 }
 
                 current = current.Parent;
@@ -2693,6 +3150,46 @@ public sealed class SongIdService : ISongIdService
         }
 
         return roots;
+    }
+
+    private static string? FindNewestFileOnPath(string fileName)
+    {
+        var pathValue = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrWhiteSpace(pathValue))
+        {
+            return null;
+        }
+
+        string? newest = null;
+        DateTime newestWriteTime = DateTime.MinValue;
+        foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            try
+            {
+                if (!Directory.Exists(directory))
+                {
+                    continue;
+                }
+
+                foreach (var candidate in Directory.EnumerateFiles(directory, fileName, SearchOption.TopDirectoryOnly))
+                {
+                    var writeTime = File.GetLastWriteTimeUtc(candidate);
+                    if (newest == null || writeTime > newestWriteTime)
+                    {
+                        newest = candidate;
+                        newestWriteTime = writeTime;
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (IOException)
+            {
+            }
+        }
+
+        return newest;
     }
 
     private static IEnumerable<string> BuildPanakoArguments(string jarPath, string reportsDir)
@@ -2946,9 +3443,9 @@ public sealed class SongIdService : ISongIdService
                     Heuristics = heuristics,
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                run.Evidence.Add($"Perturbation probe {probe.Id} skipped: {ex.Message}");
+                run.Evidence.Add($"Perturbation probe {probe.Id} skipped.");
             }
         }
 
@@ -3127,6 +3624,11 @@ public sealed class SongIdService : ISongIdService
         var lowered = text.ToLowerInvariant();
         return lowered.Contains("track") ||
             lowered.Contains("song") ||
+            lowered.Contains("artist") ||
+            lowered.Contains("sample") ||
+            lowered.Contains("version") ||
+            lowered.Contains("unreleased") ||
+            lowered.Contains("id this") ||
             lowered.Contains("what is") ||
             lowered.Contains("name of") ||
             lowered.Contains("playlist") ||
@@ -3169,7 +3671,7 @@ public sealed class SongIdService : ISongIdService
 
     private static string? ExtractSpotifyTrackId(string source)
     {
-        var match = Regex.Match(source, @"track/(?<id>[A-Za-z0-9]+)", RegexOptions.IgnoreCase);
+        var match = Regex.Match(source, @"(?:track/|spotify:track:)(?<id>[A-Za-z0-9]+)", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups["id"].Value : null;
     }
 
@@ -3233,13 +3735,19 @@ public sealed class SongIdService : ISongIdService
     private static string? TryGetString(JsonElement element, string propertyName)
     {
         if (element.ValueKind != JsonValueKind.Object ||
-            !element.TryGetProperty(propertyName, out var property) ||
-            property.ValueKind != JsonValueKind.String)
+            !element.TryGetProperty(propertyName, out var property))
         {
             return null;
         }
 
-        return property.GetString();
+        return property.ValueKind switch
+        {
+            JsonValueKind.String => property.GetString()?.Trim(),
+            JsonValueKind.Number => property.GetRawText(),
+            JsonValueKind.True => bool.TrueString,
+            JsonValueKind.False => bool.FalseString,
+            _ => null,
+        };
     }
 
     private static Dictionary<string, string> ExtractOgMeta(string html)
@@ -3327,6 +3835,8 @@ public sealed class SongIdService : ISongIdService
         {
             JsonValueKind.Number when property.TryGetInt32(out var intValue) => intValue,
             JsonValueKind.Number when property.TryGetDouble(out var doubleValue) => (int)Math.Round(doubleValue),
+            JsonValueKind.String when int.TryParse(property.GetString()?.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var stringIntValue) => stringIntValue,
+            JsonValueKind.String when double.TryParse(property.GetString()?.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var stringDoubleValue) => (int)Math.Round(stringDoubleValue),
             _ => null,
         };
     }
@@ -3361,7 +3871,7 @@ public sealed class SongIdService : ISongIdService
         return TimestampRegex.Replace(value ?? string.Empty, " ").Trim();
     }
 
-    private static string NormalizeSegmentQuery(string value)
+    private static string NormalizeSegmentQuery(string? value)
     {
         return Regex.Replace((value ?? string.Empty).ToLowerInvariant(), @"[^a-z0-9]+", " ").Trim();
     }

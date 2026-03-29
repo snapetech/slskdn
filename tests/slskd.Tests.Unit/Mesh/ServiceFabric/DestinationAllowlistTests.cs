@@ -78,14 +78,13 @@ public class DestinationAllowlistTests
         var pod = CreatePodWithPolicy(policy);
         SetupPodAndMembers(pod, policy);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
         var result = await service.HandleCallAsync(Call(Req(PodId, "www.example.com", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
         Assert.True(result.IsSuccess);
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
-        using (await acceptTask) { }
+        // Sync connect already put the connection in the kernel backlog; accept it synchronously.
+        listener.AcceptTcpClient().Dispose();
         listener.Stop();
     }
 
@@ -101,7 +100,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("not allowed", result.ErrorMessage);
+        Assert.Equal("Destination not allowed by pod policy", result.ErrorMessage);
     }
 
     [Fact]
@@ -117,7 +116,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("not allowed", result.ErrorMessage);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
     }
 
     [Fact]
@@ -132,14 +131,13 @@ public class DestinationAllowlistTests
         var pod = CreatePodWithPolicy(policy);
         SetupPodAndMembers(pod, policy);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
         var result = await service.HandleCallAsync(Call(Req(PodId, "192.168.1.100", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
         Assert.True(result.IsSuccess);
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
-        using (await acceptTask) { }
+        // Sync connect already put the connection in the kernel backlog; accept it synchronously.
+        listener.AcceptTcpClient().Dispose();
         listener.Stop();
     }
 
@@ -180,9 +178,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.True(
-            result.ErrorMessage.Contains("not allowed", StringComparison.OrdinalIgnoreCase) || result.ErrorMessage.Contains("blocked", StringComparison.OrdinalIgnoreCase),
-            "Expected 'not allowed' or 'blocked'; actual: " + result.ErrorMessage);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
     }
 
     [Fact]
@@ -191,7 +187,11 @@ public class DestinationAllowlistTests
         var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
-        var service = CreateService(new TestTunnelConnectivity(port));
+        // Mock DNS to avoid real network resolution which is slow/flaky under parallel load.
+        var dnsMock = new Mock<IDnsSecurityService>();
+        dnsMock.Setup(x => x.ResolveAndValidateAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(DnsResolutionResult.Success(new List<string> { "93.184.216.34" }));
+        var service = CreateService(new TestTunnelConnectivity(port), dnsMock.Object);
         var policy = new PodPrivateServicePolicy
         {
             Enabled = true,
@@ -208,14 +208,13 @@ public class DestinationAllowlistTests
         var pod = CreatePodWithPolicy(policy);
         SetupPodAndMembers(pod, policy);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
         var result = await service.HandleCallAsync(Call(Req(PodId, "example.com", 5432, "Test DB")), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
         Assert.True(result.IsSuccess);
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
-        using (await acceptTask) { }
+        // Sync connect already put the connection in the kernel backlog; accept it synchronously.
+        listener.AcceptTcpClient().Dispose();
         listener.Stop();
     }
 
@@ -291,7 +290,7 @@ public class DestinationAllowlistTests
 
         Assert.False(result.IsSuccess);
         Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("blocked", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
     }
 
     [Fact]
@@ -314,14 +313,13 @@ public class DestinationAllowlistTests
         var pod = CreatePodWithPolicy(policy);
         SetupPodAndMembers(pod, policy);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var acceptTask = listener.AcceptTcpClientAsync(cts.Token);
         var result = await service.HandleCallAsync(Call(Req(PodId, "192.168.1.100", 80)), new MeshServiceContext { RemotePeerId = RemotePeerId });
 
         Assert.True(result.IsSuccess);
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
-        using (await acceptTask) { }
+        // Sync connect already put the connection in the kernel backlog; accept it synchronously.
+        listener.AcceptTcpClient().Dispose();
         listener.Stop();
     }
 
@@ -399,12 +397,16 @@ public class DestinationAllowlistTests
     {
         private readonly int _port;
         public TestTunnelConnectivity(int port) => _port = port;
-        public async Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
+        public Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var c = new TcpClient();
-            await c.ConnectAsync("127.0.0.1", _port, cancellationToken);
+            // Use synchronous connect to bypass the async I/O subsystem. Under heavy parallel
+            // test load, async TCP completions can be delayed 10+ seconds even for loopback;
+            // synchronous Socket.Connect returns as soon as the kernel accepts the SYN.
+            c.Client.Connect("127.0.0.1", _port);
             var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
-            return (c.GetStream(), ip);
+            return Task.FromResult<(NetworkStream, string?)>((c.GetStream(), ip));
         }
     }
 }

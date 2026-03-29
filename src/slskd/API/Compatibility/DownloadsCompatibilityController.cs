@@ -55,11 +55,24 @@ public class DownloadsCompatibilityController : ControllerBase
             return BadRequest(new { error = "Items are required" });
         }
 
+        var items = request.Items
+            .Select(item => new DownloadItem(
+                item.User?.Trim() ?? string.Empty,
+                item.RemotePath?.Trim() ?? string.Empty,
+                item.TargetDir?.Trim() ?? string.Empty,
+                string.IsNullOrWhiteSpace(item.TargetFilename) ? null : item.TargetFilename.Trim()))
+            .ToList();
+
+        if (items.Any(item => string.IsNullOrWhiteSpace(item.User) || string.IsNullOrWhiteSpace(item.RemotePath)))
+        {
+            return BadRequest(new { error = "Each item requires a non-empty user and remotePath" });
+        }
+
         var downloadIds = new List<string>();
         var enqueued = new List<slskd.Transfers.Transfer>();
         var failed = new List<string>();
 
-        foreach (var item in request.Items)
+        foreach (var item in items)
         {
             try
             {
@@ -88,7 +101,7 @@ public class DownloadsCompatibilityController : ControllerBase
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to enqueue download for {User}/{Path}", item.User, item.RemotePath);
-                failed.Add($"{item.User}/{item.RemotePath}: {ex.Message}");
+                failed.Add($"{item.User}/{item.RemotePath}: Failed to enqueue download");
             }
         }
 
@@ -110,6 +123,7 @@ public class DownloadsCompatibilityController : ControllerBase
         [FromQuery] string? status,
         CancellationToken cancellationToken)
     {
+        status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
         logger.LogDebug("Getting downloads list with status filter: {Status}", status);
 
         // Get all downloads from IDownloadService
@@ -161,6 +175,7 @@ public class DownloadsCompatibilityController : ControllerBase
             string id,
             CancellationToken cancellationToken)
     {
+        id = id?.Trim() ?? string.Empty;
         logger.LogDebug("Getting download: {Id}", id);
 
         if (!Guid.TryParse(id, out var downloadGuid))

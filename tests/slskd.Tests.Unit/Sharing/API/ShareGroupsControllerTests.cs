@@ -99,6 +99,17 @@ public class ShareGroupsControllerTests
     }
 
     [Fact]
+    public async Task Create_NullRequest_ReturnsBadRequest()
+    {
+        var c = CreateController();
+
+        var r = await c.Create(null!, CancellationToken.None);
+
+        var objResult = Assert.IsType<ObjectResult>(r);
+        Assert.Equal(400, objResult.StatusCode);
+    }
+
+    [Fact]
     public async Task Create_Success_ReturnsCreated()
     {
         var c = CreateController();
@@ -198,5 +209,19 @@ public class ShareGroupsControllerTests
 
         Assert.IsType<NoContentResult>(r);
         _sharingMock.Verify(x => x.AddShareGroupMemberAsync(id, "bob", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddMember_TrimsPeerIdBeforePassingToService()
+    {
+        var c = CreateController();
+        var id = Guid.NewGuid();
+        _sharingMock.Setup(x => x.GetShareGroupAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShareGroup { Id = id, OwnerUserId = "alice" });
+
+        var r = await c.AddMember(id, new AddMemberRequest { PeerId = " peer123 " }, CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(r);
+        _sharingMock.Verify(x => x.AddShareGroupMemberByPeerIdAsync(id, "peer123", It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -143,6 +143,11 @@ namespace slskd.HashDb
         Task<IEnumerable<HashDbEntry>> LookupHashesBySizeAsync(long size, CancellationToken cancellationToken = default);
 
         /// <summary>
+        ///     Looks up hashes by stored audio fingerprint.
+        /// </summary>
+        Task<IEnumerable<HashDbEntry>> LookupHashesByAudioFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default);
+
+        /// <summary>
         ///     Stores a hash entry.
         /// </summary>
         Task StoreHashAsync(HashDbEntry entry, CancellationToken cancellationToken = default);
@@ -362,7 +367,7 @@ namespace slskd.HashDb
         Task InsertLibraryIssueAsync(LibraryHealth.LibraryIssue issue, CancellationToken cancellationToken = default);
 
         // Peer metrics
-        Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default);
+        Task<Transfers.MultiSource.Metrics.PeerPerformanceMetrics?> GetPeerMetricsAsync(string peerId, CancellationToken cancellationToken = default);
         Task UpsertPeerMetricsAsync(Transfers.MultiSource.Metrics.PeerPerformanceMetrics metrics, CancellationToken cancellationToken = default);
         Task<List<Transfers.MultiSource.Metrics.PeerPerformanceMetrics>> GetAllPeerMetricsAsync(CancellationToken cancellationToken = default);
     }

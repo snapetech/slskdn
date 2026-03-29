@@ -9,6 +9,8 @@ using slskd.Mesh.ServiceFabric;
 using slskd.Mesh.ServiceFabric.Services;
 using slskd.PodCore;
 using System.Net;
+using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -17,6 +19,14 @@ namespace slskd.Tests.Unit.PodCore;
 
 public class PrivateGatewayMeshServiceTests
 {
+    private sealed class ThrowingTunnelConnectivity : ITunnelConnectivity
+    {
+        public Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
+        {
+            throw new InvalidOperationException("sensitive detail");
+        }
+    }
+
     private readonly Mock<ILogger<PrivateGatewayMeshService>> _loggerMock;
     private readonly Mock<IPodService> _podServiceMock;
     private readonly PrivateGatewayMeshService _service;
@@ -79,7 +89,8 @@ public class PrivateGatewayMeshServiceTests
 
         // Assert
         Assert.Equal(ServiceStatusCodes.MethodNotFound, result.StatusCode);
-        Assert.Contains("Unknown method", result.ErrorMessage);
+        Assert.Equal("Unknown method", result.ErrorMessage);
+        Assert.DoesNotContain("UnknownMethod", result.ErrorMessage);
     }
 
     [Fact]
@@ -209,6 +220,59 @@ public class PrivateGatewayMeshServiceTests
     }
 
     [Fact]
+    public async Task HandleCallAsync_OpenTunnel_WhenConnectivityThrows_ReturnsSanitizedError()
+    {
+        var podId = "pod:00000000000000000000000000000040";
+        var pod = new Pod
+        {
+            PodId = podId,
+            Name = "VPN Pod",
+            Capabilities = new List<PodCapability> { PodCapability.PrivateServiceGateway },
+            PrivateServicePolicy = new PodPrivateServicePolicy
+            {
+                Enabled = true,
+                GatewayPeerId = "peer:mesh:self",
+                AllowPrivateRanges = true,
+                AllowedDestinations = new List<AllowedDestination>
+                {
+                    new AllowedDestination { HostPattern = "192.168.1.100", Port = 80, Protocol = "tcp" }
+                }
+            }
+        };
+
+        var serviceProviderMock = new Mock<IServiceProvider>();
+        var dnsSecurity = new DnsSecurityService(Mock.Of<ILogger<DnsSecurityService>>());
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(IPodService))).Returns(_podServiceMock.Object);
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(DnsSecurityService))).Returns(dnsSecurity);
+
+        var service = new PrivateGatewayMeshService(
+            _loggerMock.Object,
+            _podServiceMock.Object,
+            serviceProviderMock.Object,
+            tunnelConnectivity: new ThrowingTunnelConnectivity(),
+            dnsSecurity: dnsSecurity);
+
+        var request = Req(podId, "192.168.1.100", 80);
+        var call = new ServiceCall
+        {
+            CorrelationId = "test-connect-throw",
+            Method = "OpenTunnel",
+            Payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))
+        };
+        var context = new MeshServiceContext { RemotePeerId = "peer-member" };
+
+        _podServiceMock.Setup(x => x.GetPodAsync(podId, It.IsAny<CancellationToken>())).ReturnsAsync(pod);
+        _podServiceMock.Setup(x => x.GetMembersAsync(podId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember> { new PodMember { PeerId = "peer-member", Role = "member" } });
+
+        var result = await service.HandleCallAsync(call, context);
+
+        Assert.Equal(ServiceStatusCodes.ServiceUnavailable, result.StatusCode);
+        Assert.Equal("Failed to connect to destination", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+    }
+
+    [Fact]
     public async Task HandleCallAsync_OpenTunnel_InvalidHostname_ReturnsInvalidPayload()
     {
         var request = new slskd.Mesh.ServiceFabric.Services.OpenTunnelRequest
@@ -316,7 +380,8 @@ public class PrivateGatewayMeshServiceTests
 
         // ResolveAndValidate rejects private IP when AllowPrivateRanges=false -> ServiceUnavailable
         Assert.Equal(ServiceStatusCodes.ServiceUnavailable, result.StatusCode);
-        Assert.Contains("not allowed", result.ErrorMessage);
+        Assert.Equal("DNS validation failed", result.ErrorMessage);
+        Assert.DoesNotContain("192.168.1.100", result.ErrorMessage);
     }
 
     [Fact]
@@ -395,8 +460,11 @@ public class PrivateGatewayMeshServiceTests
         var result = await _service.HandleCallAsync(call, context);
 
         Assert.Equal(ServiceStatusCodes.ServiceUnavailable, result.StatusCode);
-        Assert.True(result.ErrorMessage?.Contains("rate limit") == true || result.ErrorMessage?.Contains("blocked") == true || result.ErrorMessage?.Contains("Destination not allowed") == true,
-            "Expected rate limit, blocked, or policy message; got: " + (result.ErrorMessage ?? ""));
+        Assert.True(result.ErrorMessage?.Contains("rate limit") == true ||
+                    result.ErrorMessage?.Contains("blocked") == true ||
+                    result.ErrorMessage?.Contains("Destination not allowed") == true ||
+                    result.ErrorMessage?.Contains("DNS validation failed") == true,
+            "Expected rate limit, blocked, policy, or DNS-validation message; got: " + (result.ErrorMessage ?? ""));
     }
 
     [Fact]
@@ -549,5 +617,17 @@ public class PrivateGatewayMeshServiceTests
 
         Assert.Equal(ServiceStatusCodes.InvalidPayload, result.StatusCode);
         Assert.Contains("Invalid DestinationHost format", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Dispose_ShouldCancelCleanupTask()
+    {
+        var cleanupTaskField = typeof(PrivateGatewayMeshService).GetField("_cleanupTask", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(cleanupTaskField);
+
+        _service.Dispose();
+
+        var cleanupTask = Assert.IsAssignableFrom<Task>(cleanupTaskField!.GetValue(_service));
+        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(30)));
     }
 }

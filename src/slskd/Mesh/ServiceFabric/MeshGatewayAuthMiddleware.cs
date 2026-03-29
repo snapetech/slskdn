@@ -175,9 +175,10 @@ public class MeshGatewayAuthMiddleware
         try
         {
             var uri = new Uri(origin);
-            return uri.Host == "localhost" ||
-                   uri.Host == "127.0.0.1" ||
-                   uri.Host == "::1";
+            var host = uri.Host.Trim('[', ']');
+            return host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                   host.Equals("127.0.0.1", StringComparison.Ordinal) ||
+                   host.Equals("::1", StringComparison.OrdinalIgnoreCase);
         }
         catch (UriFormatException)
         {

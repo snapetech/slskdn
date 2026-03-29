@@ -13,6 +13,9 @@ license=('AGPL-3.0-or-later')
 depends=()  # Self-contained build, no runtime deps
 optdepends=(
     'docker: for containerized deployment'
+    'ffmpeg: for audio decoding and SongID media handling'
+    'python: for SongID Python tooling'
+    'python-torchaudio: optional enhancement for advanced Python-based fingerprint and analysis workflows in SongID'
 )
 provides=('slskd' 'slskdn')
 conflicts=('slskd' 'slskd-bin' 'slskdn' 'slskdn-bin')
@@ -58,4 +61,3 @@ package() {
     install -dm755 "${pkgdir}/var/lib/${_pkgname}/downloads"
     install -dm755 "${pkgdir}/var/lib/${_pkgname}/incomplete"
 }
-

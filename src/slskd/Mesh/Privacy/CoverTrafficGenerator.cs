@@ -11,7 +11,7 @@ namespace slskd.Mesh.Privacy;
 /// Generates cover traffic to maintain constant communication patterns and prevent traffic analysis.
 /// Sends dummy messages at regular intervals when no real traffic is present.
 /// </summary>
-public class CoverTrafficGenerator : ICoverTrafficGenerator
+public sealed class CoverTrafficGenerator : ICoverTrafficGenerator, IDisposable
 {
     private readonly ILogger<CoverTrafficGenerator> _logger;
     private readonly RandomNumberGenerator _rng;
@@ -20,6 +20,7 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
     private readonly int _messageSize;
     private DateTimeOffset _lastActivity;
     private DateTimeOffset _lastCoverTraffic;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CoverTrafficGenerator"/> class.
@@ -69,6 +70,7 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
     /// <returns>An enumerable of cover traffic messages to send.</returns>
     public async IAsyncEnumerable<byte[]> GenerateCoverTrafficAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ThrowIfDisposed();
         _logger.LogDebug("Starting cover traffic generation");
 
         while (!cancellationToken.IsCancellationRequested)
@@ -105,6 +107,7 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
     /// </summary>
     public void RecordActivity()
     {
+        ThrowIfDisposed();
         _lastActivity = DateTimeOffset.UtcNow;
         _logger.LogTrace("Recorded real message activity");
     }
@@ -114,6 +117,8 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
     /// </summary>
     public TimeSpan TimeUntilNextCoverTraffic()
     {
+        ThrowIfDisposed();
+
         var now = DateTimeOffset.UtcNow;
         var timeSinceLastActivity = now - _lastActivity;
 
@@ -139,6 +144,8 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
     /// </summary>
     public bool ShouldGenerateCoverTraffic()
     {
+        ThrowIfDisposed();
+
         var now = DateTimeOffset.UtcNow;
         var timeSinceLastActivity = now - _lastActivity;
         var timeSinceLastCover = now - _lastCoverTraffic;
@@ -209,5 +216,22 @@ public class CoverTrafficGenerator : ICoverTrafficGenerator
         /// </summary>
         public static CoverTrafficGenerator Maximum(ILogger<CoverTrafficGenerator> logger)
             => new(logger, 5.0, 1.0, 256);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _rng.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

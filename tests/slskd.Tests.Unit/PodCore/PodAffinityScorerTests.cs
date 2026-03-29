@@ -240,6 +240,44 @@ public class PodAffinityScorerTests
             $"Expected banned pod ({bannedAffinity:F3}) to be at least 0.1 lower than clean pod ({cleanAffinity:F3})");
     }
 
+    [Fact]
+    public async Task ComputeAffinityAsync_StableMembershipHistory_BeatsRecentChurn()
+    {
+        var stablePod = CreatePod("pod:stable", "Stable Pod");
+        var churnPod = CreatePod("pod:churn", "Churn Pod");
+        var members = CreateMembers(6, allVerified: true);
+        var messages = CreateRecentMessages(12, 1);
+        var oldJoin = DateTimeOffset.UtcNow.AddDays(-30).ToUnixTimeMilliseconds();
+        var recentLeave = DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeMilliseconds();
+
+        mockPodService.Setup(s => s.GetPodAsync("pod:stable", It.IsAny<CancellationToken>())).ReturnsAsync(stablePod);
+        mockPodService.Setup(s => s.GetMembersAsync("pod:stable", It.IsAny<CancellationToken>())).ReturnsAsync(members);
+        mockPodService.Setup(s => s.GetMembershipHistoryAsync("pod:stable", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(members.Select(m => new SignedMembershipRecord
+            {
+                PodId = "pod:stable",
+                PeerId = m.PeerId,
+                Action = "join",
+                TimestampUnixMs = oldJoin
+            }).ToList());
+        mockPodMessaging.Setup(s => s.GetMessagesAsync("pod:stable", "general", null, It.IsAny<CancellationToken>())).ReturnsAsync(messages);
+
+        mockPodService.Setup(s => s.GetPodAsync("pod:churn", It.IsAny<CancellationToken>())).ReturnsAsync(churnPod);
+        mockPodService.Setup(s => s.GetMembersAsync("pod:churn", It.IsAny<CancellationToken>())).ReturnsAsync(members);
+        mockPodService.Setup(s => s.GetMembershipHistoryAsync("pod:churn", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(members.SelectMany(m => new[]
+            {
+                new SignedMembershipRecord { PodId = "pod:churn", PeerId = m.PeerId, Action = "join", TimestampUnixMs = oldJoin },
+                new SignedMembershipRecord { PodId = "pod:churn", PeerId = m.PeerId, Action = "leave", TimestampUnixMs = recentLeave }
+            }).ToList());
+        mockPodMessaging.Setup(s => s.GetMessagesAsync("pod:churn", "general", null, It.IsAny<CancellationToken>())).ReturnsAsync(messages);
+
+        var stableAffinity = await scorer.ComputeAffinityAsync("pod:stable", "outsider");
+        var churnAffinity = await scorer.ComputeAffinityAsync("pod:churn", "outsider");
+
+        Assert.True(stableAffinity > churnAffinity, $"Stable membership ({stableAffinity:F3}) should beat churn ({churnAffinity:F3})");
+    }
+
     // Helper methods
     private static Pod CreatePod(string podId, string name)
     {

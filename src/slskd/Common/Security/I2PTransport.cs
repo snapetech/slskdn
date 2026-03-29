@@ -47,11 +47,9 @@ public class I2PTransport : IAnonymityTransport
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
 
             // Connect to SAM bridge
-            var parts = _options.SamAddress.Split(':');
-            var host = parts[0];
-            var port = int.Parse(parts[1]);
+            var (samHost, samPort) = ParseSamAddress(_options.SamAddress);
 
-            await client.ConnectAsync(host, port, linkedCts.Token);
+            await client.ConnectAsync(samHost, samPort, linkedCts.Token);
 
             if (client.Connected)
             {
@@ -103,7 +101,7 @@ public class I2PTransport : IAnonymityTransport
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "I2P SAM bridge unavailable";
             }
 
             _logger.LogWarning(ex, "I2P SAM bridge not available at {Address}", _options.SamAddress);
@@ -149,9 +147,7 @@ public class I2PTransport : IAnonymityTransport
 #pragma warning restore CA2000
             var tcpClient = client;
 
-            var parts = _options.SamAddress.Split(':');
-            var samHost = parts[0];
-            var samPort = int.Parse(parts[1]);
+            var (samHost, samPort) = ParseSamAddress(_options.SamAddress);
 
             await tcpClient.ConnectAsync(samHost, samPort, cancellationToken);
             var stream = tcpClient.GetStream();
@@ -206,13 +202,65 @@ public class I2PTransport : IAnonymityTransport
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "I2P connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish I2P connection to destination {Host}", host);
             client?.Dispose();
             throw;
         }
+    }
+
+    private static (string Host, int Port) ParseSamAddress(string samAddress)
+    {
+        if (string.IsNullOrWhiteSpace(samAddress))
+        {
+            throw new InvalidOperationException("I2P SAM address is not configured");
+        }
+
+        if (!TryParseHostAndPort(samAddress, out var host, out var samPort))
+        {
+            throw new InvalidOperationException($"Invalid I2P SAM address format: {samAddress}");
+        }
+
+        return (host, samPort);
+    }
+
+    private static bool TryParseHostAndPort(string address, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (address.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = address.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= address.Length - 2 || address[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = address[1..closingBracketIndex];
+            portPart = address[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = address.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == address.Length - 1)
+            {
+                return false;
+            }
+
+            host = address[..separatorIndex];
+            portPart = address[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     /// <summary>
@@ -251,14 +299,59 @@ public class I2PTransport : IAnonymityTransport
 
         protected override void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (_disposed)
             {
-                _disposed = true;
-                _onDispose();
-                _innerStream.Dispose();
+                return;
             }
 
-            base.Dispose(disposing);
+            _disposed = true;
+            try
+            {
+                if (disposing)
+                {
+                    _innerStream.Dispose();
+                }
+            }
+            finally
+            {
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
+
+                base.Dispose(disposing);
+            }
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            try
+            {
+                await _innerStream.DisposeAsync();
+            }
+            finally
+            {
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
+
+                await base.DisposeAsync();
+            }
         }
 
         // Delegate all other methods to inner stream
@@ -268,15 +361,19 @@ public class I2PTransport : IAnonymityTransport
         public override long Length => _innerStream.Length;
         public override long Position { get => _innerStream.Position; set => _innerStream.Position = value; }
         public override void Flush() => _innerStream.Flush();
+        public override Task FlushAsync(CancellationToken cancellationToken) => _innerStream.FlushAsync(cancellationToken);
         public override int Read(byte[] buffer, int offset, int count) => _innerStream.Read(buffer, offset, count);
+        public override int Read(Span<byte> buffer) => _innerStream.Read(buffer);
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => _innerStream.ReadAsync(buffer, cancellationToken);
         public override long Seek(long offset, SeekOrigin origin) => _innerStream.Seek(offset, origin);
         public override void SetLength(long value) => _innerStream.SetLength(value);
         public override void Write(byte[] buffer, int offset, int count) => _innerStream.Write(buffer, offset, count);
+        public override void Write(ReadOnlySpan<byte> buffer) => _innerStream.Write(buffer);
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
             _innerStream.ReadAsync(buffer, offset, count, cancellationToken);
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
             _innerStream.WriteAsync(buffer, offset, count, cancellationToken);
-        public override Task FlushAsync(CancellationToken cancellationToken) =>
-            _innerStream.FlushAsync(cancellationToken);
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
+            _innerStream.WriteAsync(buffer, cancellationToken);
     }
 }

@@ -100,6 +100,12 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            roomName = NormalizeRequiredValue(roomName);
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
             if (Tracker.TryGet(roomName, out var room) && room is not null)
             {
                 return Ok(MapRoomToRoomResponse(room));
@@ -125,6 +131,19 @@ namespace slskd.Messaging.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            roomName = NormalizeRequiredValue(roomName);
+            message = NormalizeRequiredValue(message);
+
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return BadRequest("message is required");
             }
 
             if (Tracker.TryGet(roomName, out var _))
@@ -155,6 +174,19 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            roomName = NormalizeRequiredValue(roomName);
+            message = NormalizeRequiredValue(message);
+
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return BadRequest("message is required");
+            }
+
             if (Tracker.TryGet(roomName, out var _))
             {
                 await Client.SetRoomTickerAsync(roomName, message);
@@ -181,6 +213,19 @@ namespace slskd.Messaging.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            roomName = NormalizeRequiredValue(roomName);
+            username = NormalizeRequiredValue(username);
+
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("username is required");
             }
 
             if (Tracker.TryGet(roomName, out var _))
@@ -210,6 +255,12 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            roomName = NormalizeRequiredValue(roomName);
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
             if (Tracker.TryGet(roomName, out var room) && room is not null)
             {
                 var response = room.Users
@@ -237,6 +288,12 @@ namespace slskd.Messaging.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            roomName = NormalizeRequiredValue(roomName);
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
             }
 
             if (Tracker.TryGet(roomName, out var room) && room is not null)
@@ -298,6 +355,12 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            roomName = NormalizeRequiredValue(roomName);
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
             if (Tracker.Rooms.ContainsKey(roomName))
             {
                 return Ok();
@@ -339,6 +402,12 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            roomName = NormalizeRequiredValue(roomName);
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                return BadRequest("roomName is required");
+            }
+
             if (!Tracker.Rooms.ContainsKey(roomName))
             {
                 return StatusCode(StatusCodes.Status404NotFound);
@@ -364,6 +433,11 @@ namespace slskd.Messaging.API
                 .Select(message => RoomMessageResponse.FromRoomMessage(message, self: IsSelf(message.Username)));
 
             return response;
+        }
+
+        private static string NormalizeRequiredValue(string? value)
+        {
+            return value?.Trim() ?? string.Empty;
         }
     }
 }

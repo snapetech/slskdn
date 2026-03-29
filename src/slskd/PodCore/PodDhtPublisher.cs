@@ -22,6 +22,7 @@ public class PodDhtPublisher : IPodDhtPublisher
     private readonly ILogger<PodDhtPublisher> _logger;
     private readonly IMeshDhtClient _dhtClient;
     private readonly IControlSigner _signer;
+    private readonly IPodService _podService;
 
     // Statistics tracking
     private readonly ConcurrentDictionary<string, PublishedPodInfo> _publishedPods = new();
@@ -38,11 +39,13 @@ public class PodDhtPublisher : IPodDhtPublisher
     public PodDhtPublisher(
         ILogger<PodDhtPublisher> logger,
         IMeshDhtClient dhtClient,
-        IControlSigner signer)
+        IControlSigner signer,
+        IPodService podService)
     {
         _logger = logger;
         _dhtClient = dhtClient;
         _signer = signer;
+        _podService = podService;
     }
 
     /// <inheritdoc/>
@@ -114,7 +117,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 DhtKey: dhtKey,
                 PublishedAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to publish pod");
         }
     }
 
@@ -162,7 +165,7 @@ public class PodDhtPublisher : IPodDhtPublisher
                 Success: false,
                 PodId: podId,
                 DhtKey: dhtKey,
-                ErrorMessage: ex.Message));
+                ErrorMessage: "Failed to unpublish pod"));
         }
     }
 
@@ -219,23 +222,23 @@ public class PodDhtPublisher : IPodDhtPublisher
                 RetrievedAt: DateTimeOffset.UtcNow,
                 ExpiresAt: DateTimeOffset.MinValue,
                 IsValidSignature: false,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to retrieve pod metadata");
         }
     }
 
     /// <inheritdoc/>
-    public Task<PodRefreshResult> RefreshAsync(string podId, CancellationToken cancellationToken = default)
+    public async Task<PodRefreshResult> RefreshAsync(string podId, CancellationToken cancellationToken = default)
     {
         try
         {
             if (!_publishedPods.TryGetValue(podId, out var publishInfo))
             {
-                return Task.FromResult(new PodRefreshResult(
+                return new PodRefreshResult(
                     Success: false,
                     PodId: podId,
                     WasRepublished: false,
                     NextRefresh: DateTimeOffset.MinValue,
-                    ErrorMessage: "Pod not found in local tracking"));
+                    ErrorMessage: "Pod not found in local tracking");
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -245,33 +248,53 @@ public class PodDhtPublisher : IPodDhtPublisher
             if (!needsRefresh)
             {
                 var nextRefresh = publishInfo.ExpiresAt.AddHours(-6);
-                return Task.FromResult(new PodRefreshResult(
+                return new PodRefreshResult(
                     Success: true,
                     PodId: podId,
                     WasRepublished: false,
-                    NextRefresh: nextRefresh));
+                    NextRefresh: nextRefresh);
             }
 
-            // Get current pod metadata (would need to be provided or retrieved from storage)
-            // For now, return success without actual republishing
-            // In a real implementation, this would fetch the current pod and republish it
-            _logger.LogInformation("[PodDhtPublisher] Pod {PodId} refreshed (placeholder implementation)", podId);
+            var pod = await _podService.GetPodAsync(podId, cancellationToken).ConfigureAwait(false);
+            if (pod == null)
+            {
+                return new PodRefreshResult(
+                    Success: false,
+                    PodId: podId,
+                    WasRepublished: false,
+                    NextRefresh: DateTimeOffset.MinValue,
+                    ErrorMessage: "Pod not found in pod service");
+            }
 
-            return Task.FromResult(new PodRefreshResult(
+            var dhtKey = GetDhtKey(podId);
+            var refreshedPod = CreateSignedPod(pod);
+            await _dhtClient.PutAsync(dhtKey, refreshedPod, ttlSeconds: 24 * 60 * 60, cancellationToken).ConfigureAwait(false);
+
+            var refreshedAt = DateTimeOffset.UtcNow;
+            var expiresAt = refreshedAt.AddHours(24);
+            _publishedPods[podId] = new PublishedPodInfo(
+                PodId: pod.PodId,
+                DhtKey: dhtKey,
+                PublishedAt: refreshedAt,
+                ExpiresAt: expiresAt,
+                OwnerSignature: refreshedPod.Signature);
+            _lastPublishOperation = refreshedAt;
+
+            return new PodRefreshResult(
                 Success: true,
                 PodId: podId,
                 WasRepublished: true,
-                NextRefresh: now.AddHours(18))); // Next refresh in 18 hours
+                NextRefresh: expiresAt.AddHours(-6));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PodDhtPublisher] Error refreshing pod {PodId}", podId);
-            return Task.FromResult(new PodRefreshResult(
+            return new PodRefreshResult(
                 Success: false,
                 PodId: podId,
                 WasRepublished: false,
                 NextRefresh: DateTimeOffset.MinValue,
-                ErrorMessage: ex.Message));
+                ErrorMessage: "Failed to refresh pod publication");
         }
     }
 
@@ -323,10 +346,13 @@ public class PodDhtPublisher : IPodDhtPublisher
         // Sign the envelope
         var signedEnvelope = _signer.Sign(envelope);
 
-        return new SignedPod(
-            Pod: pod,
-            SignedAt: signedAt,
-            Signature: signedEnvelope.Signature);
+        return new SignedPod
+        {
+            Pod = pod,
+            SignedAt = signedAt,
+            Signature = signedEnvelope.Signature,
+            PublicKey = signedEnvelope.PublicKey
+        };
     }
 
     private bool VerifyPodSignature(SignedPod signedPod)
@@ -339,11 +365,10 @@ public class PodDhtPublisher : IPodDhtPublisher
                 Type = "pod-metadata",
                 Payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(signedPod.Pod),
                 TimestampUnixMs = signedPod.SignedAt.ToUnixTimeMilliseconds(),
-                Signature = signedPod.Signature
+                Signature = signedPod.Signature,
+                PublicKey = signedPod.PublicKey
             };
 
-            // Note: We'd need the public key from the signed pod to verify properly
-            // For now, return true as placeholder
             return _signer.Verify(envelope);
         }
         catch
@@ -355,10 +380,13 @@ public class PodDhtPublisher : IPodDhtPublisher
     /// <summary>
     /// Signed pod metadata for DHT storage.
     /// </summary>
-    private record SignedPod(
-        Pod Pod,
-        DateTimeOffset SignedAt,
-        string Signature);
+    private sealed class SignedPod
+    {
+        public Pod Pod { get; set; } = new();
+        public DateTimeOffset SignedAt { get; set; }
+        public string Signature { get; set; } = string.Empty;
+        public string PublicKey { get; set; } = string.Empty;
+    }
 
     /// <summary>
     /// Information about a published pod.

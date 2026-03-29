@@ -99,10 +99,16 @@ namespace slskd.Capabilities.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetPeer(string username)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest(new { error = "Username is required" });
+            }
+
             var caps = Capabilities.GetPeerCapabilities(username);
             if (caps == null)
             {
-                return NotFound(new { error = $"No capabilities known for {username}" });
+                return NotFound(new { error = "No capabilities known for peer" });
             }
 
             return Ok(new
@@ -128,16 +134,18 @@ namespace slskd.Capabilities.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult ParseCapabilities([FromBody] ParseRequest request)
         {
+            var description = request?.Description?.Trim();
+            var versionString = request?.VersionString?.Trim();
             PeerCapabilities? caps = null;
 
-            if (!string.IsNullOrWhiteSpace(request?.Description))
+            if (!string.IsNullOrWhiteSpace(description))
             {
-                caps = Capabilities.ParseCapabilityTag(request.Description);
+                caps = Capabilities.ParseCapabilityTag(description);
             }
 
-            if (caps == null && !string.IsNullOrWhiteSpace(request?.VersionString))
+            if (caps == null && !string.IsNullOrWhiteSpace(versionString))
             {
-                caps = Capabilities.ParseVersionString(request.VersionString);
+                caps = Capabilities.ParseVersionString(versionString);
             }
 
             if (caps == null)

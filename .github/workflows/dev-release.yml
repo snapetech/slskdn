@@ -14,7 +14,6 @@ on:
 
 env:
   DOTNET_VERSION: '8'
-  BASE_VERSION: '0.24.1'
 
 permissions: {}
 jobs:
@@ -52,11 +51,22 @@ jobs:
       - name: Set Version
         id: version
         run: |
+          BASE_VERSION=$(git tag --sort=-version:refname | grep -E '^([0-9]+\.[0-9]+\.[0-9]+)-slskdn\.[0-9]+$' | head -n1 | sed 's/-slskdn\.[0-9]\+$//')
+          if [ -z "$BASE_VERSION" ]; then
+            BASE_VERSION=$(sed -n 's#<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n 1 | sed 's/-slskdn\.[0-9]\+$//')
+          fi
+          if [ -z "$BASE_VERSION" ]; then
+            BASE_VERSION=$(sed -n 's#^slskdn (\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.slskdn\.[0-9]\+.*#\1#p' packaging/debian/changelog | head -n1)
+          fi
+          if [ -z "$BASE_VERSION" ]; then
+            BASE_VERSION='0.24.0'
+          fi
+
           SHORT_SHA=$(git rev-parse --short HEAD)
           # Use epoch prefixed with '9' for correct lexicographic sorting
           EPOCH=$(date +%s)
           TIMESTAMP="9${EPOCH}"
-          # Version format: 0.24.1-dev-9EPOCH (prefixed with 9 for proper versioning)
+          # Version format: <base>-dev-9EPOCH (prefixed with 9 for proper versioning)
           DEV_VERSION="${BASE_VERSION}-dev-${TIMESTAMP}"
           
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
@@ -373,17 +383,26 @@ jobs:
           # Copy the dev PKGBUILD template and install file
           cp ../packaging/aur/PKGBUILD-dev PKGBUILD
           cp ../packaging/aur/slskd.install slskd.install
+
+          SVC_SUM=$(sha256sum ../packaging/aur/slskd.service | awk '{print $1}')
+          YML_SUM=$(sha256sum ../packaging/aur/slskd.yml | awk '{print $1}')
+          SYS_SUM=$(sha256sum ../packaging/aur/slskd.sysusers | awk '{print $1}')
           
           # Convert version for Arch (replace ALL hyphens with dots)
           # 0.24.1-dev-20251209-203936 → 0.24.1.dev.20251209.203936
           ARCH_VERSION=$(echo "${{ needs.build.outputs.dev_version }}" | sed 's/-/./g')
           
-          # Update version and commit (keep sha256sums as-is with SKIP for the zip)
+          # Update version, commit, release tag, and checksums (zip checksum stays SKIP)
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
           sed -i "s/^_commit=.*/_commit=${{ needs.build.outputs.short_sha }}/" PKGBUILD
+          sed -i "s/SHA256_SERVICE_PLACEHOLDER/${SVC_SUM}/g" PKGBUILD
+          sed -i "s/SHA256_YML_PLACEHOLDER/${YML_SUM}/g" PKGBUILD
+          sed -i "s/SHA256_SYSUSERS_PLACEHOLDER/${SYS_SUM}/g" PKGBUILD
           
           # Update release URL to use timestamped release tag instead of 'dev'
           sed -i "s|RELEASE_TAG_PLACEHOLDER|${{ github.ref_name }}|g" PKGBUILD
+
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "

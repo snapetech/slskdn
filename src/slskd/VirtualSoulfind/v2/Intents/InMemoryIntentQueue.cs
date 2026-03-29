@@ -103,6 +103,7 @@ namespace slskd.VirtualSoulfind.v2.Intents
             {
                 var updated = new DesiredTrack
                 {
+                    Domain = track.Domain,
                     DesiredTrackId = track.DesiredTrackId,
                     TrackId = track.TrackId,
                     ParentDesiredReleaseId = track.ParentDesiredReleaseId,
@@ -125,6 +126,14 @@ namespace slskd.VirtualSoulfind.v2.Intents
         {
             _tracks.TryGetValue(desiredTrackId, out var track);
             return Task.FromResult(track);
+        }
+
+        public Task<DesiredRelease?> GetReleaseIntentAsync(
+            string desiredReleaseId,
+            CancellationToken cancellationToken = default)
+        {
+            _releases.TryGetValue(desiredReleaseId, out var release);
+            return Task.FromResult(release);
         }
 
         public Task<int> CountTracksByStatusAsync(

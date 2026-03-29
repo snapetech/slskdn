@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,7 +43,14 @@ public class MetadataPortabilityController : ControllerBase
     [HttpPost("export")]
     public async Task<IActionResult> Export([FromBody] MetadataExportRequest request, CancellationToken cancellationToken = default)
     {
-        if (request?.ContentIds == null || !request.ContentIds.Any())
+        var contentIds = request?.ContentIds?
+            .Select(contentId => contentId?.Trim() ?? string.Empty)
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Distinct(System.StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var includeLinks = request?.IncludeLinks ?? true;
+
+        if (contentIds == null || contentIds.Length == 0)
         {
             return BadRequest("At least one ContentID is required for export");
         }
@@ -50,8 +58,8 @@ public class MetadataPortabilityController : ControllerBase
         try
         {
             var package = await _portability.ExportAsync(
-                request.ContentIds,
-                request.IncludeLinks ?? true,
+                contentIds,
+                includeLinks,
                 cancellationToken);
 
             _logger.LogInformation(

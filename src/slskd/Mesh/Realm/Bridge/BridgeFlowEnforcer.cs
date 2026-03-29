@@ -131,7 +131,7 @@ namespace slskd.Mesh.Realm.Bridge
                 _logger.LogError(ex,
                     "[BridgeFlow] ActivityPub read failed from realm '{RemoteRealm}' to '{LocalRealm}'",
                     remoteRealmId, localRealmId);
-                return BridgeOperationResult.Failed(ex.Message);
+                return BridgeOperationResult.Failed("ActivityPub read failed");
             }
         }
 
@@ -178,7 +178,7 @@ namespace slskd.Mesh.Realm.Bridge
                 _logger.LogError(ex,
                     "[BridgeFlow] ActivityPub write failed from realm '{LocalRealm}' to '{RemoteRealm}'",
                     localRealmId, remoteRealmId);
-                return BridgeOperationResult.Failed(ex.Message);
+                return BridgeOperationResult.Failed("ActivityPub write failed");
             }
         }
 
@@ -220,7 +220,7 @@ namespace slskd.Mesh.Realm.Bridge
                 _logger.LogWarning(ex,
                     "[BridgeFlow] Metadata read failed from realm '{RemoteRealm}' to '{LocalRealm}'",
                     remoteRealmId, localRealmId);
-                return BridgeOperationResult.Failed(ex.Message);
+                return BridgeOperationResult.Failed("Metadata read failed");
             }
         }
 

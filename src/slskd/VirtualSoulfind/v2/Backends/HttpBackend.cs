@@ -24,6 +24,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Sources;
@@ -41,15 +42,18 @@ namespace slskd.VirtualSoulfind.v2.Backends
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IOptionsMonitor<HttpBackendOptions> _options;
         private readonly ISourceRegistry _sourceRegistry;
+        private readonly ILogger<HttpBackend>? _logger;
 
         public HttpBackend(
             IHttpClientFactory httpClientFactory,
             IOptionsMonitor<HttpBackendOptions> options,
-            ISourceRegistry sourceRegistry)
+            ISourceRegistry sourceRegistry,
+            ILogger<HttpBackend>? logger = null)
         {
             _httpClientFactory = httpClientFactory;
             _options = options;
             _sourceRegistry = sourceRegistry;
+            _logger = logger;
         }
 
         public ContentBackendType Type => ContentBackendType.Http;
@@ -177,7 +181,8 @@ namespace slskd.VirtualSoulfind.v2.Backends
             }
             catch (HttpRequestException ex)
             {
-                return SourceCandidateValidationResult.Invalid($"HTTP error: {ex.Message}");
+                _logger?.LogWarning(ex, "HTTP validation request failed for {CandidateId}", candidate.Id);
+                return SourceCandidateValidationResult.Invalid("HTTP validation failed");
             }
         }
 

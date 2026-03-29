@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Overlay;
+using slskd.Mesh.Privacy;
 using slskd.PodCore;
 using Xunit;
 
@@ -43,7 +44,8 @@ public class PodMessageRouterTests
         var message = new PodMessage
         {
             MessageId = "msg-1",
-            ChannelId = "pod1:general",
+            PodId = "pod1",
+            ChannelId = "general",
             SenderPeerId = "peer-sender",
             Body = "hi",
             TimestampUnixMs = 1
@@ -88,7 +90,8 @@ public class PodMessageRouterTests
         var message = new PodMessage
         {
             MessageId = "msg-2",
-            ChannelId = "pod1:general",
+            PodId = "pod1",
+            ChannelId = "general",
             SenderPeerId = "peer-sender",
             Body = "hi",
             TimestampUnixMs = 1
@@ -100,5 +103,176 @@ public class PodMessageRouterTests
         Assert.Equal(0, result.FailedRoutingCount);
         overlayClient.Verify(o => o.SendAsync(It.IsAny<ControlEnvelope>(), resolvedEp, It.IsAny<CancellationToken>()), Times.Once);
         controlSigner.Verify(c => c.Sign(It.Is<ControlEnvelope>(e => e.Type == "pod_message")), Times.Once);
+    }
+
+    [Fact]
+    public async Task RouteMessageAsync_WhenDependencyThrows_ReturnsSanitizedError()
+    {
+        var logger = new Mock<ILogger<PodMessageRouter>>();
+        var podService = new Mock<IPodService>();
+        var overlayClient = new Mock<IOverlayClient>();
+        var controlSigner = new Mock<IControlSigner>();
+        var peerResolution = new Mock<IPeerResolutionService>();
+
+        podService
+            .Setup(s => s.GetChannelAsync("pod1", "general", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var router = new PodMessageRouter(
+            logger.Object,
+            podService.Object,
+            overlayClient.Object,
+            controlSigner.Object,
+            peerResolution.Object,
+            privacyLayer: null);
+
+        var message = new PodMessage
+        {
+            MessageId = "msg-3",
+            PodId = "pod1",
+            ChannelId = "general",
+            SenderPeerId = "peer-sender",
+            Body = "hi",
+            TimestampUnixMs = 1
+        };
+
+        var result = await router.RouteMessageAsync(message);
+
+        Assert.False(result.Success);
+        Assert.Equal("Failed to route message", result.ErrorMessage);
+        Assert.DoesNotContain("sensitive detail", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task RouteMessageToPeersAsync_TrimsAndDeduplicatesTargetPeers()
+    {
+        var logger = new Mock<ILogger<PodMessageRouter>>();
+        var podService = new Mock<IPodService>();
+        var overlayClient = new Mock<IOverlayClient>();
+        var controlSigner = new Mock<IControlSigner>();
+        var peerResolution = new Mock<IPeerResolutionService>();
+
+        var resolvedEp = new IPEndPoint(IPAddress.Loopback, 9001);
+        controlSigner.Setup(c => c.Sign(It.IsAny<ControlEnvelope>())).Returns<ControlEnvelope>(e => e);
+        peerResolution.Setup(r => r.ResolvePeerIdToEndpointAsync("peer-other", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resolvedEp);
+        overlayClient.Setup(o => o.SendAsync(It.IsAny<ControlEnvelope>(), It.IsAny<IPEndPoint>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var router = new PodMessageRouter(
+            logger.Object,
+            podService.Object,
+            overlayClient.Object,
+            controlSigner.Object,
+            peerResolution.Object,
+            privacyLayer: null);
+
+        var message = new PodMessage
+        {
+            MessageId = "msg-4",
+            PodId = "pod1",
+            ChannelId = "general",
+            SenderPeerId = "peer-sender",
+            Body = "hi",
+            TimestampUnixMs = 1
+        };
+
+        var result = await router.RouteMessageToPeersAsync(message, new[] { " peer-other ", "peer-other", "PEER-OTHER", " " });
+
+        Assert.Equal(1, result.TargetPeerCount);
+        Assert.Equal(1, result.SuccessfullyRoutedCount);
+        overlayClient.Verify(o => o.SendAsync(It.IsAny<ControlEnvelope>(), resolvedEp, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RouteMessageToPeersAsync_WhenPrivacyQueuesPayload_DoesNotReportSuccess()
+    {
+        var logger = new Mock<ILogger<PodMessageRouter>>();
+        var podService = new Mock<IPodService>();
+        var overlayClient = new Mock<IOverlayClient>();
+        var controlSigner = new Mock<IControlSigner>();
+        var peerResolution = new Mock<IPeerResolutionService>();
+        var privacyLayer = new Mock<IPrivacyLayer>();
+
+        privacyLayer.SetupGet(p => p.IsEnabled).Returns(true);
+        privacyLayer
+            .Setup(p => p.ProcessOutboundMessageAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<byte>());
+
+        var router = new PodMessageRouter(
+            logger.Object,
+            podService.Object,
+            overlayClient.Object,
+            controlSigner.Object,
+            peerResolution.Object,
+            privacyLayer.Object);
+
+        var message = new PodMessage
+        {
+            MessageId = "msg-5",
+            PodId = "pod1",
+            ChannelId = "general",
+            SenderPeerId = "peer-sender",
+            Body = "hi",
+            TimestampUnixMs = 1
+        };
+
+        var result = await router.RouteMessageToPeersAsync(message, new[] { "peer-other" });
+
+        Assert.False(result.Success);
+        Assert.Equal(0, result.SuccessfullyRoutedCount);
+        Assert.Equal(1, result.FailedRoutingCount);
+        overlayClient.Verify(o => o.SendAsync(It.IsAny<ControlEnvelope>(), It.IsAny<IPEndPoint>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RouteMessageAsync_UsesSeparatePodIdAndChannelIdFields()
+    {
+        var logger = new Mock<ILogger<PodMessageRouter>>();
+        var podService = new Mock<IPodService>();
+        var overlayClient = new Mock<IOverlayClient>();
+        var controlSigner = new Mock<IControlSigner>();
+        var peerResolution = new Mock<IPeerResolutionService>();
+
+        var resolvedEp = new IPEndPoint(IPAddress.Loopback, 9002);
+        controlSigner.Setup(c => c.Sign(It.IsAny<ControlEnvelope>())).Returns<ControlEnvelope>(e => e);
+        podService.Setup(s => s.GetChannelAsync("pod1", "general", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodChannel { ChannelId = "general", Name = "General" });
+        podService.Setup(s => s.GetMembersAsync("pod1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember>
+            {
+                new() { PeerId = "peer-sender", Role = "member" },
+                new() { PeerId = "peer-other", Role = "member" }
+            });
+        peerResolution.Setup(r => r.ResolvePeerIdToEndpointAsync("peer-other", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resolvedEp);
+        overlayClient.Setup(o => o.SendAsync(It.IsAny<ControlEnvelope>(), resolvedEp, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var router = new PodMessageRouter(
+            logger.Object,
+            podService.Object,
+            overlayClient.Object,
+            controlSigner.Object,
+            peerResolution.Object,
+            privacyLayer: null);
+
+        var message = new PodMessage
+        {
+            MessageId = "msg-6",
+            PodId = " pod1 ",
+            ChannelId = " general ",
+            SenderPeerId = "peer-sender",
+            Body = "hi",
+            TimestampUnixMs = 1
+        };
+
+        var result = await router.RouteMessageAsync(message);
+
+        Assert.True(result.Success);
+        Assert.Equal("pod1", result.PodId);
+        Assert.Equal(1, result.SuccessfullyRoutedCount);
+        podService.Verify(s => s.GetChannelAsync("pod1", "general", It.IsAny<CancellationToken>()), Times.Once);
+        overlayClient.Verify(o => o.SendAsync(It.IsAny<ControlEnvelope>(), resolvedEp, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

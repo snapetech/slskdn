@@ -66,6 +66,12 @@ namespace slskd.Users.Notes.API
         [HttpGet("{username}")]
         public async Task<ActionResult<UserNote>> Get(string username, CancellationToken cancellationToken)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required.");
+            }
+
             var note = await userNoteService.GetNoteAsync(username, cancellationToken);
             if (note == null)
             {
@@ -84,6 +90,7 @@ namespace slskd.Users.Notes.API
         [HttpPost]
         public async Task<ActionResult<UserNote>> Set([FromBody] UserNote note, CancellationToken cancellationToken)
         {
+            note.Username = note.Username?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(note.Username))
             {
                 return BadRequest("Username is required.");
@@ -102,6 +109,12 @@ namespace slskd.Users.Notes.API
         [HttpDelete("{username}")]
         public async Task<ActionResult> Delete(string username, CancellationToken cancellationToken)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required.");
+            }
+
             await userNoteService.DeleteNoteAsync(username, cancellationToken);
             return NoContent();
         }

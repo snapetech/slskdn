@@ -36,10 +36,40 @@ public sealed class ReleaseOnDisposeStream : Stream
 
     protected override void Dispose(bool disposing)
     {
-        if (_disposed) return;
+        if (!disposing)
+        {
+            base.Dispose(disposing);
+            return;
+        }
+
+        DisposeCore();
+        base.Dispose(disposing);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            await base.DisposeAsync().ConfigureAwait(false);
+            return;
+        }
+
+        _disposed = true;
+
+        try { _onDispose(); } catch { /* best-effort */ }
+        await _inner.DisposeAsync().ConfigureAwait(false);
+        await base.DisposeAsync().ConfigureAwait(false);
+    }
+
+    private void DisposeCore()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
         try { _onDispose(); } catch { /* best-effort */ }
         _inner.Dispose();
-        base.Dispose(disposing);
     }
 }

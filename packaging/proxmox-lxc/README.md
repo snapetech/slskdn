@@ -63,6 +63,14 @@ The script will:
 - Install a systemd unit and minimal config
 - **Not** start the service (you edit config first)
 
+You can pin a specific release tag with `SLSKDN_VERSION`:
+
+```bash
+SLSKDN_VERSION=0.24.5-slskdn.97 ./setup-inside-ct.sh
+```
+
+If `SLSKDN_VERSION` is not set, the script resolves the latest release tag from GitHub automatically.
+
 ## 3. Configure and start
 
 ```bash

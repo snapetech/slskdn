@@ -149,6 +149,17 @@ namespace slskd.Destinations.API
         [ProducesResponseType(typeof(ValidateDestinationResponse), 200)]
         public IActionResult Validate([FromBody] ValidateDestinationRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("Path is required");
+            }
+
+            request.Path = request.Path?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(request.Path))
+            {
+                return BadRequest("Path is required");
+            }
+
             var normalizedPath = PathGuard.NormalizeAbsolutePathWithinRoots(request.Path, GetAllowedDestinationRoots());
             if (normalizedPath == null)
             {

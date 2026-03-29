@@ -15,7 +15,7 @@ namespace slskd.SocialFederation
     ///     T-FED01: Keypair management for ActivityPub actors.
     ///     Manages Ed25519/RSA keypairs for HTTP signature verification.
     /// </remarks>
-    public interface IActivityPubKeyStore
+    public interface IActivityPubKeyStore : IDisposable
     {
         /// <summary>
         ///     Gets the public key for the specified actor.

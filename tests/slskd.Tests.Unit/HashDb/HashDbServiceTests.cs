@@ -22,9 +22,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using slskd.Audio;
 using slskd.HashDb;
 using slskd.HashDb.Models;
 using slskd.Integrations.MusicBrainz.Models;
+using slskd.Jobs;
 using Xunit;
 
 public class HashDbServiceTests : IDisposable
@@ -227,6 +229,86 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpsertAlbumTargetAsync_TrimsStoredAlbumAndTrackFields()
+    {
+        var target = new AlbumTarget
+        {
+            MusicBrainzReleaseId = " mb:release-1 ",
+            DiscogsReleaseId = " discogs-1 ",
+            Title = " Test Album ",
+            Artist = " Test Artist ",
+            Metadata = new ReleaseMetadata
+            {
+                Country = " US ",
+                Label = " Test Label ",
+                Status = " Official ",
+            },
+            Tracks = new[]
+            {
+                new TrackTarget
+                {
+                    MusicBrainzRecordingId = " rec:1 ",
+                    Position = 1,
+                    Title = " Track One ",
+                    Artist = " Test Artist ",
+                    Isrc = " US-AAA-01 ",
+                }
+            }
+        };
+
+        await service.UpsertAlbumTargetAsync(target);
+
+        var album = await service.GetAlbumTargetAsync("mb:release-1");
+        var track = (await service.GetAlbumTracksAsync("mb:release-1")).Single();
+
+        Assert.NotNull(album);
+        Assert.Equal("mb:release-1", album!.ReleaseId);
+        Assert.Equal("discogs-1", album.DiscogsReleaseId);
+        Assert.Equal("Test Album", album.Title);
+        Assert.Equal("Test Artist", album.Artist);
+        Assert.Equal("US", album.Country);
+        Assert.Equal("Test Label", album.Label);
+        Assert.Equal("Official", album.Status);
+        Assert.Equal("mb:release-1", track.ReleaseId);
+        Assert.Equal("rec:1", track.RecordingId);
+        Assert.Equal("Track One", track.Title);
+        Assert.Equal("Test Artist", track.Artist);
+        Assert.Equal("US-AAA-01", track.Isrc);
+    }
+
+    [Fact]
+    public async Task UpsertCanonicalStatsAsync_TrimsKeysBeforePersisting()
+    {
+        var stats = new CanonicalStats
+        {
+            Id = " stats-1 ",
+            MusicBrainzRecordingId = " rec-1 ",
+            CodecProfileKey = " FLAC_44100_16_2 ",
+            BestVariantId = " variant-1 ",
+            VariantCount = 2,
+            TotalSeenCount = 3,
+            AvgQualityScore = 0.8,
+            MaxQualityScore = 0.9,
+            PercentTranscodeSuspect = 0.1,
+            CodecDistribution = new Dictionary<string, int> { ["FLAC"] = 2 },
+            BitrateDistribution = new Dictionary<int, int> { [1000] = 2 },
+            SampleRateDistribution = new Dictionary<int, int> { [44100] = 2 },
+            CanonicalityScore = 0.85,
+            LastUpdated = DateTimeOffset.UtcNow,
+        };
+
+        await service.UpsertCanonicalStatsAsync(stats);
+
+        var stored = await service.GetCanonicalStatsAsync("rec-1", "FLAC_44100_16_2");
+
+        Assert.NotNull(stored);
+        Assert.Equal("stats-1", stored!.Id);
+        Assert.Equal("rec-1", stored.MusicBrainzRecordingId);
+        Assert.Equal("FLAC_44100_16_2", stored.CodecProfileKey);
+        Assert.Equal("variant-1", stored.BestVariantId);
+    }
+
+    [Fact]
     public async Task LookupHashesByRecordingIdAsync_ReturnsMatches()
     {
         var entry = new HashDbEntry
@@ -246,6 +328,174 @@ public class HashDbServiceTests : IDisposable
         var matches = await service.LookupHashesByRecordingIdAsync("mb:rec1");
         var match = Assert.Single(matches);
         Assert.Equal(entry.FlacKey, match.FlacKey);
+    }
+
+    [Fact]
+    public async Task LookupHashesByRecordingIdAsync_TrimsInput()
+    {
+        var entry = new HashDbEntry
+        {
+            FlacKey = HashDbEntry.GenerateFlacKey("test.flac", 123456),
+            ByteHash = "abcdef",
+            Size = 123456,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+        };
+
+        await service.StoreHashAsync(entry);
+        await service.UpdateHashRecordingIdAsync($" {entry.FlacKey} ", " mb:trimmed ", CancellationToken.None);
+
+        var matches = await service.LookupHashesByRecordingIdAsync("  mb:trimmed  ");
+
+        var match = Assert.Single(matches);
+        Assert.Equal(entry.FlacKey, match.FlacKey);
+    }
+
+    [Fact]
+    public async Task GetDiscographyJobAsync_TrimsStoredAndLookupJobId()
+    {
+        await service.UpsertDiscographyJobAsync(new slskd.Jobs.DiscographyJob
+        {
+            JobId = "  job-1  ",
+            ArtistId = " artist-1 ",
+            ArtistName = " Artist ",
+            TargetDirectory = " /tmp/test ",
+        });
+
+        var job = await service.GetDiscographyJobAsync(" job-1 ");
+
+        Assert.NotNull(job);
+        Assert.Equal("job-1", job!.JobId);
+        Assert.Equal("artist-1", job.ArtistId);
+        Assert.Equal("Artist", job.ArtistName);
+        Assert.Equal("/tmp/test", job.TargetDirectory);
+    }
+
+    [Fact]
+    public async Task GetDiscographyJobAsync_NormalizesDeserializedJsonPayload()
+    {
+        await using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={Path.Combine(testDir, "hashdb.db")}");
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO DiscographyJobs (job_id, artist_id, artist_name, profile, target_directory, total_releases, completed_releases, failed_releases, status, created_at, json_data)
+            VALUES (@job_id, @artist_id, @artist_name, @profile, @target_directory, @total_releases, @completed_releases, @failed_releases, @status, @created_at, @json_data)";
+        cmd.Parameters.AddWithValue("@job_id", "job-json");
+        cmd.Parameters.AddWithValue("@artist_id", "artist-json");
+        cmd.Parameters.AddWithValue("@artist_name", "Artist Json");
+        cmd.Parameters.AddWithValue("@profile", "CoreDiscography");
+        cmd.Parameters.AddWithValue("@target_directory", "/tmp/json");
+        cmd.Parameters.AddWithValue("@total_releases", 0);
+        cmd.Parameters.AddWithValue("@completed_releases", 0);
+        cmd.Parameters.AddWithValue("@failed_releases", 0);
+        cmd.Parameters.AddWithValue("@status", "Pending");
+        cmd.Parameters.AddWithValue("@created_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("@json_data", "{\"JobId\":\" job-json \",\"ArtistId\":\" artist-json \",\"ArtistName\":\" Artist Json \",\"TargetDirectory\":\" /tmp/json \",\"Status\":\"Pending\"}");
+        await cmd.ExecuteNonQueryAsync();
+
+        var job = await service.GetDiscographyJobAsync("job-json");
+
+        Assert.NotNull(job);
+        Assert.Equal("job-json", job!.JobId);
+        Assert.Equal("artist-json", job.ArtistId);
+        Assert.Equal("Artist Json", job.ArtistName);
+        Assert.Equal("/tmp/json", job.TargetDirectory);
+    }
+
+    [Fact]
+    public async Task GetWarmCacheEntryAndJobFallbacks_ReturnTrimmedValues()
+    {
+        await service.UpsertWarmCacheEntryAsync(new slskd.HashDb.Models.WarmCacheEntry
+        {
+            ContentId = "  content:mb:recording:1  ",
+            Path = "  /tmp/media.flac  ",
+            SizeBytes = 123,
+            Pinned = true,
+            LastAccessed = 456,
+        });
+
+        var warmEntry = await service.GetWarmCacheEntryAsync(" content:mb:recording:1 ");
+        Assert.NotNull(warmEntry);
+        Assert.Equal("content:mb:recording:1", warmEntry!.ContentId);
+        Assert.Equal("/tmp/media.flac", warmEntry.Path);
+
+        await service.UpsertDiscographyJobAsync(new slskd.Jobs.DiscographyJob
+        {
+            JobId = "  job-row  ",
+            ArtistId = " artist-row ",
+            ArtistName = " Artist Row ",
+            TargetDirectory = " /tmp/row ",
+        });
+        var discographyJob = await service.GetDiscographyJobAsync(" job-row ");
+        Assert.NotNull(discographyJob);
+        Assert.Equal("job-row", discographyJob!.JobId);
+        Assert.Equal("artist-row", discographyJob.ArtistId);
+        Assert.Equal("Artist Row", discographyJob.ArtistName);
+        Assert.Equal("/tmp/row", discographyJob.TargetDirectory);
+
+        await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob
+        {
+            JobId = "  label-row  ",
+            LabelId = " label-row-id ",
+            LabelName = " Label Row ",
+        });
+        var labelJob = await service.GetLabelCrateJobAsync(" label-row ");
+        Assert.NotNull(labelJob);
+        Assert.Equal("label-row", labelJob!.JobId);
+        Assert.Equal("label-row-id", labelJob.LabelId);
+        Assert.Equal("Label Row", labelJob.LabelName);
+    }
+
+    [Fact]
+    public async Task GetLabelCrateJobAsync_NormalizesDeserializedJsonPayload()
+    {
+        await using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={Path.Combine(testDir, "hashdb.db")}");
+        await conn.OpenAsync();
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO LabelCrateJobs (job_id, label_id, label_name, limit_count, total_releases, completed_releases, failed_releases, status, created_at, json_data)
+            VALUES (@job_id, @label_id, @label_name, @limit_count, @total_releases, @completed_releases, @failed_releases, @status, @created_at, @json_data)";
+        cmd.Parameters.AddWithValue("@job_id", "label-json");
+        cmd.Parameters.AddWithValue("@label_id", "label-id");
+        cmd.Parameters.AddWithValue("@label_name", "Label Json");
+        cmd.Parameters.AddWithValue("@limit_count", 0);
+        cmd.Parameters.AddWithValue("@total_releases", 0);
+        cmd.Parameters.AddWithValue("@completed_releases", 0);
+        cmd.Parameters.AddWithValue("@failed_releases", 0);
+        cmd.Parameters.AddWithValue("@status", "Pending");
+        cmd.Parameters.AddWithValue("@created_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        cmd.Parameters.AddWithValue("@json_data", "{\"JobId\":\" label-json \",\"LabelId\":\" label-id \",\"LabelName\":\" Label Json \",\"Status\":\"Pending\"}");
+        await cmd.ExecuteNonQueryAsync();
+
+        var job = await service.GetLabelCrateJobAsync("label-json");
+
+        Assert.NotNull(job);
+        Assert.Equal("label-json", job!.JobId);
+        Assert.Equal("label-id", job.LabelId);
+        Assert.Equal("Label Json", job.LabelName);
+    }
+
+    [Fact]
+    public async Task GetLabelCrateJobAsync_TrimsStoredAndLookupJobId()
+    {
+        await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob
+        {
+            JobId = "  label-job  ",
+            LabelId = " label-1 ",
+            LabelName = " Label Name ",
+            ReleaseIds = new List<string> { " rel-1 ", "rel-1", "  " },
+        });
+
+        var job = await service.GetLabelCrateJobAsync(" label-job ");
+
+        Assert.NotNull(job);
+        Assert.Equal("label-job", job!.JobId);
+        Assert.Equal("label-1", job.LabelId);
+        Assert.Equal("Label Name", job.LabelName);
+        Assert.Single(job.ReleaseIds);
+        Assert.Equal("rel-1", job.ReleaseIds[0]);
     }
 
     [Fact]
@@ -331,6 +581,25 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateFlacHashAsync_TrimsFileIdAndHashValue()
+    {
+        var entry = new FlacInventoryEntry
+        {
+            PeerId = "testuser",
+            Path = "/music/test.flac",
+            Size = 50000000,
+            HashStatusStr = "none",
+        };
+        await service.UpsertFlacEntryAsync(entry);
+
+        await service.UpdateFlacHashAsync($" {entry.FileId} ", " trimmedhash ", HashSource.LocalScan);
+
+        var updated = await service.GetFlacEntryAsync(entry.FileId);
+        Assert.Equal("known", updated.HashStatusStr);
+        Assert.Equal("trimmedhash", updated.HashValue);
+    }
+
+    [Fact]
     public async Task MarkFlacHashFailedAsync_SetsFailedStatus()
     {
         // Arrange
@@ -349,6 +618,91 @@ public class HashDbServiceTests : IDisposable
         // Assert
         var updated = await service.GetFlacEntryAsync(entry.FileId);
         Assert.Equal("failed", updated.HashStatusStr);
+    }
+
+    [Fact]
+    public async Task GetRecordingIdsWithVariantsAsync_TrimsAndDeduplicatesIds()
+    {
+        var entry1 = new HashDbEntry
+        {
+            FlacKey = "flac-key-1",
+            ByteHash = "hash-1",
+            Size = 123,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+        };
+
+        var entry2 = new HashDbEntry
+        {
+            FlacKey = "flac-key-2",
+            ByteHash = "hash-2",
+            Size = 456,
+            FirstSeenAt = 2,
+            LastUpdatedAt = 2,
+            SeqId = 2,
+            UseCount = 1,
+        };
+
+        await service.StoreHashAsync(entry1);
+        await service.StoreHashAsync(entry2);
+        await service.UpdateHashRecordingIdAsync(entry1.FlacKey, " mb:rec1 ");
+        await service.UpdateHashRecordingIdAsync(entry2.FlacKey, "mb:rec1");
+
+        var ids = await service.GetRecordingIdsWithVariantsAsync();
+
+        var id = Assert.Single(ids);
+        Assert.Equal("mb:rec1", id);
+    }
+
+    [Fact]
+    public async Task GetCodecProfilesForRecordingAsync_TrimsRecordingId()
+    {
+        var entry = new HashDbEntry
+        {
+            FlacKey = "flac-key-codec",
+            ByteHash = "hash-codec",
+            Size = 321,
+            FirstSeenAt = 1,
+            LastUpdatedAt = 1,
+            SeqId = 1,
+            UseCount = 1,
+            Codec = "flac",
+            SampleRateHz = 44100,
+            BitDepth = 16,
+            Channels = 2,
+        };
+
+        await service.StoreHashAsync(entry);
+        await service.UpdateHashRecordingIdAsync(entry.FlacKey, "mb:codec1");
+
+        var profiles = await service.GetCodecProfilesForRecordingAsync(" mb:codec1 ");
+
+        Assert.Single(profiles);
+    }
+
+    [Fact]
+    public async Task GetLabelCrateReleaseJobsAsync_SkipsBlankReleaseIds()
+    {
+        await service.UpsertLabelCrateJobAsync(new slskd.Jobs.LabelCrateJob
+        {
+            JobId = "job-1",
+            LabelId = "label-1",
+            LabelName = "Label",
+            Status = JobStatus.Pending
+        });
+
+        await service.UpsertLabelCrateReleaseJobsAsync("job-1", new[]
+        {
+            new DiscographyReleaseJobStatus { ReleaseId = " rel-1 ", Status = JobStatus.Pending },
+            new DiscographyReleaseJobStatus { ReleaseId = "   ", Status = JobStatus.Failed },
+        });
+
+        var jobs = await service.GetLabelCrateReleaseJobsAsync(" job-1 ");
+
+        var job = Assert.Single(jobs);
+        Assert.Equal("rel-1", job.ReleaseId);
     }
 
     // ========== Hash Database Tests ==========
@@ -466,6 +820,23 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal(3, found.UseCount); // Initial 1 + 2 increments
     }
 
+    [Fact]
+    public async Task IncrementHashUseCountAsync_TrimsKeyAndIgnoresBlank()
+    {
+        await service.StoreHashAsync(new HashDbEntry
+        {
+            FlacKey = "trim-key",
+            ByteHash = "trim-hash",
+            Size = 123,
+        });
+
+        await service.IncrementHashUseCountAsync(" trim-key ");
+        await service.IncrementHashUseCountAsync("   ");
+
+        var found = await service.LookupHashAsync("trim-key");
+        Assert.Equal(2, found!.UseCount);
+    }
+
     // ========== Mesh Sync Tests ==========
 
     [Fact]
@@ -536,6 +907,15 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal(200, await service.GetPeerLastSeqSeenAsync("peer2"));
     }
 
+    [Fact]
+    public async Task UpdatePeerLastSeqSeenAsync_TrimsPeerIdAndBlankLookupsReturnZero()
+    {
+        await service.UpdatePeerLastSeqSeenAsync(" peer-trim ", 321);
+
+        Assert.Equal(321, await service.GetPeerLastSeqSeenAsync(" peer-trim "));
+        Assert.Equal(0, await service.GetPeerLastSeqSeenAsync("   "));
+    }
+
     // ========== Backfill Tests ==========
 
     [Fact]
@@ -559,6 +939,14 @@ public class HashDbServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetBackfillCandidatesAsync_NonPositiveLimitReturnsEmpty()
+    {
+        var candidates = await service.GetBackfillCandidatesAsync(0);
+
+        Assert.Empty(candidates);
+    }
+
+    [Fact]
     public async Task IncrementPeerBackfillCountAsync_IncrementsCount()
     {
         // Arrange
@@ -571,6 +959,83 @@ public class HashDbServiceTests : IDisposable
         // Assert
         var count = await service.GetPeerBackfillCountTodayAsync("testuser");
         Assert.Equal(2, count);
+    }
+
+    [Fact]
+    public async Task IncrementPeerBackfillCountAsync_TrimsPeerId()
+    {
+        await service.GetOrCreatePeerAsync("testuser");
+
+        await service.IncrementPeerBackfillCountAsync(" testuser ");
+
+        var count = await service.GetPeerBackfillCountTodayAsync(" testuser ");
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public async Task GetLabelPresenceAndReleaseIds_NormalizeTrimAndDeduplicate()
+    {
+        await service.UpsertAlbumTargetAsync(new AlbumTarget
+        {
+            MusicBrainzReleaseId = " release-1 ",
+            DiscogsReleaseId = " discogs-1 ",
+            Title = "Album 1",
+            Artist = "Artist 1",
+            Metadata = new ReleaseMetadata
+            {
+                Label = " Label One ",
+            },
+        });
+
+        await service.UpsertAlbumTargetAsync(new AlbumTarget
+        {
+            MusicBrainzReleaseId = "release-1",
+            DiscogsReleaseId = "discogs-1",
+            Title = "Album 1 Dup",
+            Artist = "Artist 1",
+            Metadata = new ReleaseMetadata
+            {
+                Label = "label one",
+            },
+        });
+
+        var labels = await service.GetLabelPresenceAsync();
+        var releasesByLabel = await service.GetReleaseIdsByLabelAsync("  LABEL ONE  ", 10);
+
+        Assert.Single(labels);
+        Assert.Equal("label one", labels[0].Label, ignoreCase: true);
+        Assert.Single(releasesByLabel);
+        Assert.Equal("release-1", releasesByLabel[0]);
+    }
+
+    [Fact]
+    public async Task GetEntriesSinceSeqAsync_NonPositiveLimitReturnsEmpty()
+    {
+        await service.StoreHashAsync(new HashDbEntry { FlacKey = "seq-key", ByteHash = "seq-hash", Size = 1 });
+
+        var entries = await service.GetEntriesSinceSeqAsync(0, 0);
+
+        Assert.Empty(entries);
+    }
+
+    [Fact]
+    public async Task PeerMetrics_NormalizePeerIdOnWriteAndRead()
+    {
+        await service.UpsertPeerMetricsAsync(new slskd.Transfers.MultiSource.Metrics.PeerPerformanceMetrics
+        {
+            PeerId = " peer-metrics ",
+            Source = slskd.Transfers.MultiSource.Metrics.PeerSource.Soulseek,
+            FirstSeen = DateTimeOffset.UtcNow,
+            LastUpdated = DateTimeOffset.UtcNow,
+        });
+
+        var metric = await service.GetPeerMetricsAsync(" peer-metrics ");
+        var all = await service.GetAllPeerMetricsAsync();
+
+        Assert.NotNull(metric);
+        Assert.Equal("peer-metrics", metric!.PeerId);
+        var single = Assert.Single(all);
+        Assert.Equal("peer-metrics", single.PeerId);
     }
 
     // ========== FlacInventoryEntry Tests ==========
@@ -632,4 +1097,3 @@ public class HashDbServiceTests : IDisposable
         Assert.Equal(bitDepth, unpackedDepth);
     }
 }
-

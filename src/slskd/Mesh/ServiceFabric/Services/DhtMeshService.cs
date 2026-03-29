@@ -51,7 +51,8 @@ public class DhtMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not implemented for DHT service");
+        _logger.LogWarning("[DHT] Streaming requested by {PeerId}, but DHT streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     public async Task<ServiceReply> HandleCallAsync(
@@ -75,7 +76,7 @@ public class DhtMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown DHT method: {call.Method}",
+                    ErrorMessage = "Unknown method",
                     Payload = Array.Empty<byte>()
                 }
             };
@@ -87,7 +88,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"Internal error: {ex.Message}",
+                ErrorMessage = "Internal DHT service error",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -105,13 +106,14 @@ public class DhtMeshService : IMeshService
         {
             var (request, err) = ServicePayloadParser.TryParseJson<FindNodeRequest>(call, _maxPayload);
             if (err != null) return err;
-            if (request?.TargetId == null || request.TargetId.Length != 20)
+            if (request?.TargetId == null || request.TargetId.Length != 20 ||
+                request.RequesterId == null || request.RequesterId.Length != 20)
             {
                 return new ServiceReply
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid FindNode request: target ID must be 20 bytes",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -153,7 +155,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"FindNode error: {ex.Message}",
+                ErrorMessage = "FindNode failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -171,13 +173,14 @@ public class DhtMeshService : IMeshService
         {
             var (request, err) = ServicePayloadParser.TryParseJson<FindValueRequest>(call, _maxPayload);
             if (err != null) return err;
-            if (request?.Key == null)
+            if (request?.Key == null || request.Key.Length != 20 ||
+                request.RequesterId == null || request.RequesterId.Length != 20)
             {
                 return new ServiceReply
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid FindValue request: key required",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -246,7 +249,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"FindValue error: {ex.Message}",
+                ErrorMessage = "FindValue failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -264,13 +267,15 @@ public class DhtMeshService : IMeshService
         {
             var (request, err) = ServicePayloadParser.TryParseJson<StoreRequest>(call, _maxPayload);
             if (err != null) return err;
-            if (request?.Key == null || request.Value == null || request.PublicKeyBase64 == null || request.SignatureBase64 == null)
+            if (request?.Key == null || request.Key.Length != 20 ||
+                request.RequesterId == null || request.RequesterId.Length != 20 ||
+                request.Value == null || request.PublicKeyBase64 == null || request.SignatureBase64 == null)
             {
                 return new ServiceReply
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid Store request: key, value, public key, and signature required",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -333,7 +338,7 @@ public class DhtMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"Store error: {ex.Message}",
+                ErrorMessage = "Store failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -378,11 +383,26 @@ public class DhtMeshService : IMeshService
         var (pingReq, pingErr) = ServicePayloadParser.TryParseJson<PingRequest>(call, _maxPayload);
         if (pingErr != null)
             return Task.FromResult(pingErr);
+        if (pingReq?.RequesterId == null || pingReq.RequesterId.Length != 20)
+        {
+            return Task.FromResult(new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "Invalid request payload",
+                Payload = Array.Empty<byte>()
+            });
+        }
 
         // Update routing table with the pinging peer
-        _ = Task.Run(() => _routingTable.TouchAsync(
-            pingReq?.RequesterId ?? Array.Empty<byte>(),
-            context.RemotePeerId), cancellationToken);
+        _ = ObserveBackgroundTaskAsync(
+            Task.Run(
+                () => _routingTable.TouchAsync(
+                    pingReq.RequesterId,
+                    context.RemotePeerId),
+                CancellationToken.None),
+            "[DHT] Failed to update routing table for ping from {PeerId}",
+            context.RemotePeerId);
 
         var response = new PingResponse
         {
@@ -399,6 +419,18 @@ public class DhtMeshService : IMeshService
             StatusCode = ServiceStatusCodes.OK,
             Payload = payload
         });
+    }
+
+    private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate, params object[] propertyValues)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, messageTemplate, propertyValues);
+        }
     }
 }
 

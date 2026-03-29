@@ -20,6 +20,7 @@ namespace slskd.Transfers.MultiSource.API
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
@@ -83,10 +84,13 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> GetTopUsers([FromQuery] string searchText)
         {
+            searchText = searchText?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(searchText))
             {
                 return BadRequest("Search text is required");
             }
+
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
 
             Log.Information("[MultiSource] Searching for users: {SearchText}", searchText);
 
@@ -105,12 +109,13 @@ namespace slskd.Transfers.MultiSource.API
                 await Client.SearchAsync(
                     SearchQuery.FromText(searchText),
                     responseHandler: (response) => searchResults.Add(response),
-                    options: searchOptions);
+                    options: searchOptions,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[MultiSource] Search failed: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Store for drill-down
@@ -167,6 +172,14 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetUserFiles(string username, [FromQuery] string? filter = null)
         {
+            username = username?.Trim() ?? string.Empty;
+            filter = string.IsNullOrWhiteSpace(filter) ? null : filter.Trim();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             if (LastSearchResults == null || LastSearchResults.Count == 0)
             {
                 return BadRequest("No search results. Call /users?searchText=... first");
@@ -176,7 +189,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (userResponses.Count == 0)
             {
-                return NotFound($"User '{username}' not found in last search results");
+                return NotFound("User not found in last search results");
             }
 
             var files = userResponses
@@ -235,6 +248,10 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Filename is required");
             }
 
+            request.Filename = request.Filename.Trim();
+
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+
             var searchTerm = IOPath.GetFileNameWithoutExtension(request.Filename);
             Log.Information("[MultiSource] Searching for file sources: {Filename} ({Size} bytes)", request.Filename, request.Size);
 
@@ -253,12 +270,13 @@ namespace slskd.Transfers.MultiSource.API
                 await Client.SearchAsync(
                     SearchQuery.FromText(searchTerm),
                     responseHandler: (response) => searchResults.Add(response),
-                    options: searchOptions);
+                    options: searchOptions,
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[MultiSource] Search failed: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Find exact matches
@@ -340,6 +358,10 @@ namespace slskd.Transfers.MultiSource.API
                 return BadRequest("Filename and size are required");
             }
 
+            request.Filename = request.Filename.Trim();
+
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+
             // First find sources with wide search
             var searchTerm = IOPath.GetFileNameWithoutExtension(request.Filename);
             var searchResults = new List<SearchResponse>();
@@ -354,11 +376,13 @@ namespace slskd.Transfers.MultiSource.API
                         responseLimit: 1000,
                         fileLimit: 100000,
                         filterResponses: true,
-                        minimumResponseFileCount: 1));
+                        minimumResponseFileCount: 1),
+                    cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Download search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Find exact matches with same size
@@ -379,7 +403,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (sources.Count < 2)
             {
-                return BadRequest($"Not enough sources ({sources.Count}). Need at least 2 for multi-source download.");
+                return BadRequest("Not enough sources for multi-source download");
             }
 
             // Verify sources
@@ -388,15 +412,15 @@ namespace slskd.Transfers.MultiSource.API
             var verificationResult = await MultiSource.FindVerifiedSourcesAsync(
                 sources.First().FullPath,
                 request.Size,
-                cancellationToken: HttpContext.RequestAborted);
+                cancellationToken: cancellationToken);
 
-            var chosenSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
+            var chosenSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, cancellationToken);
             var targetFingerprint = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
             var targetSemanticKey = verificationResult.BestSemanticKey;
 
             if (chosenSources.Count < 2)
             {
-                return BadRequest($"Not enough verified sources ({chosenSources.Count}). Verification may have failed.");
+                return BadRequest("Not enough verified sources for multi-source download");
             }
 
             // Download
@@ -414,7 +438,7 @@ namespace slskd.Transfers.MultiSource.API
                     TargetFingerprint = targetFingerprint,
                     TargetSemanticKey = targetSemanticKey,
                 },
-                HttpContext.RequestAborted);
+                cancellationToken);
 
             return Ok(downloadResult);
         }
@@ -429,10 +453,19 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> SwarmDownload([FromBody] SwarmDownloadRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("Size is required (exact file size in bytes).");
+            }
+
+            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? string.Empty : request.Filename.Trim();
+
             if (request.Size == 0)
             {
                 return BadRequest("Size is required (exact file size in bytes).");
             }
+
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
 
             Log.Information("[SWARM] Starting swarm download: {Filename} ({Size} bytes, useDb={UseDb})", request.Filename, request.Size, request.UseDiscoveryDb);
 
@@ -472,11 +505,13 @@ namespace slskd.Transfers.MultiSource.API
                             responseLimit: 2000,
                             fileLimit: 100000,
                             filterResponses: true,
-                            minimumResponseFileCount: 1));
+                            minimumResponseFileCount: 1),
+                        cancellationToken: cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    return StatusCode(500, new { error = $"Search failed: {ex.Message}" });
+                    Log.Warning(ex, "[MultiSource] Swarm search failed");
+                    return StatusCode(500, new { error = "Search failed" });
                 }
 
                 Log.Information("[SWARM] Search complete: {Count} responses", searchResults.Count);
@@ -503,11 +538,13 @@ namespace slskd.Transfers.MultiSource.API
 
             if (allSources.Count < 2)
             {
-                return BadRequest($"Not enough sources ({allSources.Count}). Need at least 2.");
+                return BadRequest("Not enough sources for swarm download");
             }
 
+            var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
+
             Log.Information("[SWARM] Starting REAL swarm with {Count} sources, {ChunkSize} byte chunks, skipVerification={Skip}",
-                allSources.Count, request.ChunkSize, request.SkipVerification);
+                allSources.Count, chunkSize, request.SkipVerification);
 
             List<VerifiedSource> verifiedSources;
             string? expectedHash = null;
@@ -536,19 +573,19 @@ namespace slskd.Transfers.MultiSource.API
                         CandidateSources = allSources.ToDictionary(s => s.Username, s => s.FullPath),
                         TimeoutMs = 30000,
                     },
-                    HttpContext.RequestAborted);
+                    cancellationToken);
 
                 if (verificationResult.BestSources.Count < 2)
                 {
                     return BadRequest(new
                     {
-                        error = $"Not enough verified sources ({verificationResult.BestSources.Count}). Need at least 2 with matching FLAC hash.",
+                        error = "Not enough verified sources for swarm download",
                         hashGroups = verificationResult.SourcesByHash.Count,
                         failedSources = verificationResult.FailedSources.Count,
                     });
                 }
 
-                verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
+                verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, cancellationToken);
                 expectedHash = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
 
                 Log.Information("[SWARM] Verified {Count} sources with matching hash {Hash}",
@@ -556,7 +593,7 @@ namespace slskd.Transfers.MultiSource.API
             }
 
             // Calculate chunks for display
-            var numChunks = (int)Math.Ceiling((double)request.Size / request.ChunkSize);
+            var numChunks = (int)Math.Ceiling((double)request.Size / chunkSize);
 
             // Call the REAL swarm download service
             var targetFilename = IOPath.GetFileName(verifiedSources.First().FullPath);
@@ -569,12 +606,17 @@ namespace slskd.Transfers.MultiSource.API
                     FileSize = request.Size,
                     OutputPath = outputPath,
                     Sources = verifiedSources,
-                    ChunkSize = request.ChunkSize,
+                    ChunkSize = chunkSize,
                     TargetMusicBrainzRecordingId = verificationResult?.BestSemanticRecordingId,
                     TargetFingerprint = verificationResult?.BestSemanticFingerprint ?? expectedHash,
                     TargetSemanticKey = verificationResult?.BestSemanticKey,
                 },
-                HttpContext.RequestAborted);
+                cancellationToken);
+
+            if (!downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.Error))
+            {
+                Log.Warning("Swarm download failed for {Filename}: {Error}", request.Filename, downloadResult.Error);
+            }
 
             return Ok(new
             {
@@ -583,8 +625,8 @@ namespace slskd.Transfers.MultiSource.API
                 success = downloadResult.Success,
                 fileSize = request.Size,
                 fileSizeMB = $"{request.Size / 1024.0 / 1024.0:F1} MB",
-                chunkSize = request.ChunkSize,
-                chunkSizeKB = request.ChunkSize / 1024,
+                chunkSize = chunkSize,
+                chunkSizeKB = chunkSize / 1024,
                 totalChunks = numChunks,
                 totalSources = allSources.Count,
                 sourcesUsed = downloadResult.SourcesUsed,
@@ -595,7 +637,7 @@ namespace slskd.Transfers.MultiSource.API
                     : "N/A",
                 outputPath = downloadResult.OutputPath,
                 finalHash = downloadResult.FinalHash,
-                error = downloadResult.Error,
+                error = downloadResult.Success ? null : "Swarm download failed",
                 chunks = downloadResult.Chunks?.GroupBy(c => c.Username)
                     .Select(g => new { User = g.Key, ChunksCompleted = g.Count(c => c.Success), ChunksFailed = g.Count(c => !c.Success) })
                     .OrderByDescending(g => g.ChunksCompleted),
@@ -611,12 +653,20 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> SwarmDownloadAsync([FromBody] SwarmDownloadRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("Size is required (exact file size in bytes).");
+            }
+
+            request.Filename = string.IsNullOrWhiteSpace(request.Filename) ? string.Empty : request.Filename.Trim();
+
             if (request.Size == 0)
             {
                 return BadRequest("Size is required (exact file size in bytes).");
             }
 
             var allSources = new List<(string Username, string FullPath, int Speed)>();
+            var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
 
             if (request.UseDiscoveryDb)
             {
@@ -632,7 +682,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (allSources.Count < 2)
             {
-                return BadRequest($"Not enough sources ({allSources.Count}). Need at least 2.");
+                return BadRequest("Not enough sources for swarm download");
             }
 
             List<VerifiedSource> verifiedSources;
@@ -667,7 +717,7 @@ namespace slskd.Transfers.MultiSource.API
                 {
                     return BadRequest(new
                     {
-                        error = $"Not enough verified sources ({verificationResult.BestSources.Count}). Need at least 2 with matching FLAC hash.",
+                        error = "Not enough verified sources for swarm download",
                         hashGroups = verificationResult.SourcesByHash.Count,
                         failedSources = verificationResult.FailedSources.Count,
                     });
@@ -690,21 +740,13 @@ namespace slskd.Transfers.MultiSource.API
                 ExpectedHash = expectedHash,
                 OutputPath = outputPath,
                 Sources = verifiedSources,
-                ChunkSize = request.ChunkSize,
+                ChunkSize = chunkSize,
             };
 
             // Start in background - don't await
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await MultiSource.DownloadAsync(downloadRequest, System.Threading.CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "[SWARM ASYNC] Background download failed: {Message}", ex.Message);
-                }
-            });
+            _ = ObserveBackgroundTaskAsync(
+                Task.Run(() => MultiSource.DownloadAsync(downloadRequest, System.Threading.CancellationToken.None), System.Threading.CancellationToken.None),
+                "[SWARM ASYNC] Background download failed: {Message}");
 
             // Give it a moment to start
             await Task.Delay(500);
@@ -716,7 +758,7 @@ namespace slskd.Transfers.MultiSource.API
                 message = "Swarm download started in background. Poll /api/v0/multisource/jobs/{jobId} for status.",
                 totalSources = verifiedSources.Count,
                 verifiedSources = verifiedSources.Count,
-                totalChunks = (int)Math.Ceiling((double)request.Size / request.ChunkSize),
+                totalChunks = (int)Math.Ceiling((double)request.Size / chunkSize),
                 verificationEnabled = !request.SkipVerification,
                 expectedHash = expectedHash?.Substring(0, 16) + "...",
             });
@@ -781,6 +823,7 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> Search([FromQuery] string searchText)
         {
+            searchText = searchText?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(searchText))
             {
                 return BadRequest("Search text is required");
@@ -803,8 +846,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "[MultiSource] Search failed: {Message}", ex.Message);
-                return StatusCode(500, new { error = ex.Message });
+                Log.Warning(ex, "[MultiSource] Search failed");
+                return StatusCode(500, new { error = "Search failed" });
             }
 
             // Group files by filename + size (potential multi-source candidates)
@@ -880,10 +923,17 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> VerifySources([FromBody] VerifyRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.Filename))
+            if (request == null || string.IsNullOrWhiteSpace(request.Filename))
             {
                 return BadRequest("Filename is required");
             }
+
+            request.Filename = request.Filename.Trim();
+            request.Usernames = request.Usernames?
+                .Select(username => username?.Trim() ?? string.Empty)
+                .Where(username => !string.IsNullOrWhiteSpace(username))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? new List<string>();
 
             if (request.Usernames == null || request.Usernames.Count == 0)
             {
@@ -912,12 +962,31 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> Download([FromBody] DownloadRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.Filename))
+            if (request == null || string.IsNullOrWhiteSpace(request.Filename))
             {
                 return BadRequest("Filename is required");
             }
 
+            request.Filename = request.Filename.Trim();
+            request.ExpectedHash = string.IsNullOrWhiteSpace(request.ExpectedHash) ? null : request.ExpectedHash.Trim();
+
             if (request.Sources == null || request.Sources.Count < 2)
+            {
+                return BadRequest("At least 2 verified sources are required");
+            }
+
+            request.Sources = request.Sources
+                .Select(source => new SourceRequest
+                {
+                    Username = source.Username?.Trim() ?? string.Empty,
+                    FullPath = string.IsNullOrWhiteSpace(source.FullPath) ? request.Filename : source.FullPath.Trim(),
+                    ContentHash = string.IsNullOrWhiteSpace(source.ContentHash) ? string.Empty : source.ContentHash.Trim(),
+                    Method = source.Method,
+                })
+                .Where(source => !string.IsNullOrWhiteSpace(source.Username))
+                .ToList();
+
+            if (request.Sources.Count < 2)
             {
                 return BadRequest("At least 2 verified sources are required");
             }
@@ -926,6 +995,7 @@ namespace slskd.Transfers.MultiSource.API
                 IOPath.GetTempPath(),
                 "slskdn-test",
                 IOPath.GetFileName(request.Filename));
+            var chunkSize = request.ChunkSize > 0 ? request.ChunkSize : 512 * 1024;
 
             Log.Information(
                 "[MultiSource] Starting download of {Filename} from {Count} sources",
@@ -938,7 +1008,7 @@ namespace slskd.Transfers.MultiSource.API
                 FileSize = request.FileSize,
                 ExpectedHash = request.ExpectedHash,
                 OutputPath = outputPath,
-                ChunkSize = request.ChunkSize,
+                ChunkSize = chunkSize,
                 Sources = request.Sources.Select(s => new VerifiedSource
                 {
                     Username = s.Username,
@@ -949,7 +1019,7 @@ namespace slskd.Transfers.MultiSource.API
             };
 
             Log.Information("[SWARM] Starting with {Sources} sources, {ChunkSize}KB chunks",
-                request.Sources.Count, request.ChunkSize / 1024);
+                request.Sources.Count, chunkSize / 1024);
 
             var result = await MultiSource.DownloadAsync(downloadRequest, HttpContext.RequestAborted);
 
@@ -965,10 +1035,12 @@ namespace slskd.Transfers.MultiSource.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> RunTest([FromBody] TestRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request?.SearchText))
+            if (request == null || string.IsNullOrWhiteSpace(request.SearchText))
             {
                 return BadRequest("Search text is required");
             }
+
+            request.SearchText = request.SearchText.Trim();
 
             var testResult = new TestResult
             {
@@ -996,7 +1068,8 @@ namespace slskd.Transfers.MultiSource.API
             }
             catch (Exception ex)
             {
-                testResult.Error = $"Search failed: {ex.Message}";
+                Log.Warning(ex, "[MultiSource] Search test failed");
+                testResult.Error = "Search failed";
                 return Ok(testResult);
             }
 
@@ -1057,7 +1130,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (verificationResult.BestSources.Count < 2)
             {
-                testResult.Error = $"Not enough verified sources (got {verificationResult.BestSources.Count})";
+                testResult.Error = "Not enough verified sources for multi-source test";
                 return Ok(testResult);
             }
 
@@ -1093,7 +1166,7 @@ namespace slskd.Transfers.MultiSource.API
 
             if (!downloadResult.Success)
             {
-                testResult.Error = downloadResult.Error;
+                testResult.Error = "Multi-source test download failed";
             }
 
             Log.Information(
@@ -1104,6 +1177,18 @@ namespace slskd.Transfers.MultiSource.API
                 testResult.AverageSpeedMBps);
 
             return Ok(testResult);
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, messageTemplate, ex.Message);
+            }
         }
     }
 

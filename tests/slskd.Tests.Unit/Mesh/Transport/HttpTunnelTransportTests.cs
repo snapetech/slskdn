@@ -120,6 +120,22 @@ public class HttpTunnelTransportTests : IDisposable
         Assert.NotNull(status.LastError);
     }
 
+    [Fact]
+    public async Task IsAvailableAsync_WhenConnectionThrows_SetsSanitizedLastError()
+    {
+        var options = new HttpTunnelTransportOptions
+        {
+            ProxyUrl = "http://127.0.0.1:1/tunnel"
+        };
+
+        var transport = new HttpTunnelTransport(options, _loggerMock.Object);
+
+        var isAvailable = await transport.IsAvailableAsync();
+
+        Assert.False(isAvailable);
+        Assert.Equal("HTTP tunnel transport unavailable", transport.GetStatus().LastError);
+    }
+
     [Theory]
     [InlineData("https://proxy.example.com/tunnel")]
     [InlineData("http://localhost:8080/proxy")]
@@ -198,6 +214,16 @@ public class HttpTunnelTransportTests : IDisposable
         Assert.Equal(3, status.TotalConnectionsAttempted);
         Assert.Equal(0, status.TotalConnectionsSuccessful); // No successful connections
     }
+
+    [Fact]
+    public async Task ConnectAsync_WhenConnectionFails_StoresSanitizedStatusError()
+    {
+        var transport = new HttpTunnelTransport(_defaultOptions, _loggerMock.Object);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+
+        var status = transport.GetStatus();
+        Assert.Equal("HTTP tunnel connection failed", status.LastError);
+        Assert.DoesNotContain("Name or service", status.LastError ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
 }
-
-

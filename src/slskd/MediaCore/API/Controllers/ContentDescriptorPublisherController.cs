@@ -47,6 +47,14 @@ public class ContentDescriptorPublisherController : ControllerBase
             return BadRequest("Descriptor is required");
         }
 
+        request.Descriptor.ContentId = request.Descriptor.ContentId?.Trim() ?? string.Empty;
+        request.Descriptor.Codec = string.IsNullOrWhiteSpace(request.Descriptor.Codec) ? null : request.Descriptor.Codec.Trim();
+
+        if (string.IsNullOrWhiteSpace(request.Descriptor.ContentId))
+        {
+            return BadRequest("Descriptor ContentID is required");
+        }
+
         try
         {
             var result = await _publisher.PublishAsync(request.Descriptor, request.ForceUpdate ?? false, cancellationToken);
@@ -63,7 +71,7 @@ public class ContentDescriptorPublisherController : ControllerBase
                 _logger.LogWarning(
                     "[ContentDescriptorPublisher] Failed to publish {ContentId}: {Error}",
                     result.ContentId, result.ErrorMessage);
-                return BadRequest(result);
+                return BadRequest(new { error = "Failed to publish descriptor" });
             }
         }
         catch (Exception ex)
@@ -87,9 +95,24 @@ public class ContentDescriptorPublisherController : ControllerBase
             return BadRequest("At least one descriptor is required");
         }
 
+        var descriptors = request.Descriptors
+            .Where(descriptor => descriptor != null)
+            .Select(descriptor =>
+            {
+                descriptor.ContentId = descriptor.ContentId?.Trim() ?? string.Empty;
+                descriptor.Codec = string.IsNullOrWhiteSpace(descriptor.Codec) ? null : descriptor.Codec.Trim();
+                return descriptor;
+            })
+            .ToList();
+
+        if (descriptors.Count == 0 || descriptors.Any(descriptor => string.IsNullOrWhiteSpace(descriptor.ContentId)))
+        {
+            return BadRequest("Each descriptor requires a ContentID");
+        }
+
         try
         {
-            var result = await _publisher.PublishBatchAsync(request.Descriptors, cancellationToken);
+            var result = await _publisher.PublishBatchAsync(descriptors, cancellationToken);
 
             _logger.LogInformation(
                 "[ContentDescriptorPublisher] Batch publish completed: {Successful}/{Total} successful",
@@ -114,6 +137,7 @@ public class ContentDescriptorPublisherController : ControllerBase
     [HttpPut("descriptor/{*contentId}")]
     public async Task<IActionResult> UpdateDescriptor(string contentId, [FromBody] UpdateDescriptorRequest request, CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("ContentID is required");
@@ -140,7 +164,7 @@ public class ContentDescriptorPublisherController : ControllerBase
                 _logger.LogWarning(
                     "[ContentDescriptorPublisher] Failed to update {ContentId}: {Error}",
                     contentId, result.ErrorMessage);
-                return BadRequest(result);
+                return BadRequest(new { error = "Failed to update descriptor" });
             }
         }
         catch (Exception ex)
@@ -159,9 +183,20 @@ public class ContentDescriptorPublisherController : ControllerBase
     [HttpPost("republish")]
     public async Task<IActionResult> RepublishExpiring([FromBody] RepublishRequest? request = null, CancellationToken cancellationToken = default)
     {
+        var contentIds = request?.ContentIds?
+            .Select(contentId => contentId?.Trim() ?? string.Empty)
+            .Where(contentId => !string.IsNullOrWhiteSpace(contentId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (request?.ContentIds != null && (contentIds == null || contentIds.Count == 0))
+        {
+            return BadRequest("At least one non-empty ContentID is required");
+        }
+
         try
         {
-            var result = await _publisher.RepublishExpiringAsync(request?.ContentIds, cancellationToken);
+            var result = await _publisher.RepublishExpiringAsync(contentIds, cancellationToken);
 
             _logger.LogInformation(
                 "[ContentDescriptorPublisher] Republish completed: {Republished}/{Checked} republished",
@@ -185,6 +220,7 @@ public class ContentDescriptorPublisherController : ControllerBase
     [HttpDelete("descriptor/{*contentId}")]
     public async Task<IActionResult> UnpublishDescriptor(string contentId, CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(contentId))
         {
             return BadRequest("ContentID is required");

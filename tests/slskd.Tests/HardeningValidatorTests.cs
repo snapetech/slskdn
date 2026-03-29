@@ -108,7 +108,14 @@ public class HardeningValidatorTests
             {
                 EnforceSecurity = true,
                 AllowRemoteNoAuth = true,
-                Authentication = new Options.WebOptions.WebAuthenticationOptions { Disabled = true },
+                Authentication = new Options.WebOptions.WebAuthenticationOptions
+                {
+                    Disabled = true,
+                    Passthrough = new Options.WebOptions.WebAuthenticationOptions.PassthroughOptions
+                    {
+                        AllowedCidrs = "127.0.0.1/32,::1/128",
+                    },
+                },
                 Cors = new Options.WebOptions.CorsOptions { Enabled = true, AllowCredentials = false },
             },
             Diagnostics = new Options.DiagnosticsOptions { AllowMemoryDump = true },

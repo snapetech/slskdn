@@ -66,6 +66,23 @@ public class TorSocksTransportTests : IDisposable
     }
 
     [Fact]
+    public async Task IsAvailableAsync_WhenProxyCheckThrows_SetsSanitizedLastError()
+    {
+        var options = new TorOptions
+        {
+            SocksAddress = "127.0.0.1:1",
+            IsolateStreams = false
+        };
+
+        using var transport = new TorSocksTransport(options, _loggerMock.Object);
+
+        var isAvailable = await transport.IsAvailableAsync();
+
+        Assert.False(isAvailable);
+        Assert.Equal("Tor SOCKS proxy unavailable", transport.GetStatus().LastError);
+    }
+
+    [Fact]
     public void GetStatus_ReturnsValidStatusObject()
     {
         // Arrange

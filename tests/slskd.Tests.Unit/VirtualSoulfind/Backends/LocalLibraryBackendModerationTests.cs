@@ -7,6 +7,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
     using System.Threading;
     using System.Threading.Tasks;
     using Moq;
+    using slskd.MediaCore;
     using slskd.Shares;
     using slskd.VirtualSoulfind.Core;
     using slskd.VirtualSoulfind.v2.Backends;
@@ -24,7 +25,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
         public async Task FindCandidatesAsync_WithAdvertisableContent_ReturnsCandidates()
         {
             // Arrange
-            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object);
+            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object, new ContentIdRegistry());
             var itemId = ContentItemId.Parse("550e8400-e29b-41d4-a716-446655440000");
 
             _shareRepositoryMock
@@ -44,7 +45,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
         public async Task FindCandidatesAsync_WithNonAdvertisableContent_ReturnsEmpty()
         {
             // Arrange
-            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object);
+            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object, new ContentIdRegistry());
             var itemId = ContentItemId.Parse("550e8400-e29b-41d4-a716-446655440000");
 
             _shareRepositoryMock
@@ -62,7 +63,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
         public async Task FindCandidatesAsync_WithNoLocalContent_ReturnsEmpty()
         {
             // Arrange
-            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object);
+            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object, new ContentIdRegistry());
             var itemId = ContentItemId.Parse("550e8400-e29b-41d4-a716-446655440000");
 
             _shareRepositoryMock
@@ -80,7 +81,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
         public async Task FindCandidatesAsync_CreatesProperSourceCandidate()
         {
             // Arrange
-            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object);
+            var backend = new LocalLibraryBackend(_shareRepositoryMock.Object, new ContentIdRegistry());
             var itemId = ContentItemId.Parse("550e8400-e29b-41d4-a716-446655440000");
 
             _shareRepositoryMock
@@ -93,12 +94,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Backends
             // Assert: SourceCandidate has Id, ItemId, Backend, BackendRef, ExpectedQuality, TrustScore, LastValidatedAt, LastSeenAt, IsPreferred (no Filename/SizeBytes/PeerId/Uri)
             var candidate = Assert.Single(candidates);
             Assert.Equal(ContentBackendType.LocalLibrary, candidate.Backend);
-            Assert.Equal(100f, candidate.ExpectedQuality);
+            Assert.Equal(1.0f, candidate.ExpectedQuality);
             Assert.Equal(1.0f, candidate.TrustScore);
             Assert.True(candidate.IsPreferred);
             Assert.StartsWith("local:", candidate.Id);
-            Assert.Equal(itemId.ToString(), candidate.BackendRef);
+            Assert.StartsWith("content:audio:track:", candidate.BackendRef);
         }
     }
 }
-

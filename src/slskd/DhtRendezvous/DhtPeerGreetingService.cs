@@ -24,6 +24,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
     private readonly MeshNeighborRegistry _neighborRegistry;
     private readonly ISoulseekClient _soulseekClient;
     private readonly ConcurrentDictionary<string, DateTimeOffset> _greetedPeers = new(StringComparer.OrdinalIgnoreCase);
+    private int _subscriptionsAttached;
 
     private static readonly string[] FirstConnectionMessages = new[]
     {
@@ -61,23 +62,38 @@ public sealed class DhtPeerGreetingService : BackgroundService
         _soulseekClient = soulseekClient;
     }
 
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        AttachNeighborSubscriptions();
+        return base.StartAsync(cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
         await Task.Yield();
 
-        _neighborRegistry.NeighborAdded += OnNeighborAdded;
-        _neighborRegistry.FirstNeighborConnected += OnFirstNeighborConnected;
-
         _logger.LogInformation("DHT Peer Greeting Service started (max greetings: {Max})", MaxAutoGreetings);
+
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-        _neighborRegistry.NeighborAdded -= OnNeighborAdded;
-        _neighborRegistry.FirstNeighborConnected -= OnFirstNeighborConnected;
-
+        DetachNeighborSubscriptions();
         return base.StopAsync(cancellationToken);
+    }
+
+    public override void Dispose()
+    {
+        DetachNeighborSubscriptions();
+        base.Dispose();
     }
 
     private void OnFirstNeighborConnected(object? sender, MeshNeighborEventArgs e)
@@ -88,7 +104,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
         }
 
         // Special message for the very first mesh peer ever!
-        _ = SendGreetingAsync(e.Username, isFirstEver: true);
+        QueueGreeting(e.Username, isFirstEver: true);
     }
 
     private void OnNeighborAdded(object? sender, MeshNeighborEventArgs e)
@@ -118,7 +134,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
             return;
         }
 
-        _ = SendGreetingAsync(e.Username, isFirstEver: false);
+        QueueGreeting(e.Username, isFirstEver: false);
     }
 
     private async Task SendGreetingAsync(string username, bool isFirstEver)
@@ -126,15 +142,15 @@ public sealed class DhtPeerGreetingService : BackgroundService
         if (!_soulseekClient.State.HasFlag(SoulseekClientStates.Connected))
         {
             _logger.LogDebug("Not connected to Soulseek, skipping greeting to {Username}", username);
+            _greetedPeers.TryRemove(username, out _);
             return;
         }
 
         try
         {
             // Pick a random message
-            var random = new Random();
             var messages = isFirstEver ? FirstConnectionMessages : RegularGreetings;
-            var message = messages[random.Next(messages.Length)];
+            var message = messages[Random.Shared.Next(messages.Length)];
 
             _logger.LogInformation("Sending mesh greeting to {Username}: {Message}", username, message);
 
@@ -148,8 +164,42 @@ public sealed class DhtPeerGreetingService : BackgroundService
         }
         catch (Exception ex)
         {
+            _greetedPeers.TryRemove(username, out _);
             _logger.LogWarning(ex, "Failed to send greeting to {Username}", username);
         }
+    }
+
+    private void QueueGreeting(string username, bool isFirstEver)
+    {
+        if (!_greetedPeers.TryAdd(username, DateTimeOffset.MinValue))
+        {
+            _logger.LogDebug("Already greeted {Username}, skipping", username);
+            return;
+        }
+
+        _ = SendGreetingAsync(username, isFirstEver);
+    }
+
+    private void AttachNeighborSubscriptions()
+    {
+        if (Interlocked.Exchange(ref _subscriptionsAttached, 1) == 1)
+        {
+            return;
+        }
+
+        _neighborRegistry.NeighborAdded += OnNeighborAdded;
+        _neighborRegistry.FirstNeighborConnected += OnFirstNeighborConnected;
+    }
+
+    private void DetachNeighborSubscriptions()
+    {
+        if (Interlocked.Exchange(ref _subscriptionsAttached, 0) == 0)
+        {
+            return;
+        }
+
+        _neighborRegistry.NeighborAdded -= OnNeighborAdded;
+        _neighborRegistry.FirstNeighborConnected -= OnFirstNeighborConnected;
     }
 
     /// <summary>

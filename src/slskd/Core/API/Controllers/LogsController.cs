@@ -20,6 +20,7 @@
 // </copyright>
 namespace slskd.Core.API
 {
+    using System.Linq;
     using Asp.Versioning;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -44,7 +45,7 @@ namespace slskd.Core.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult Logs()
         {
-            return Ok(Program.LogBuffer);
+            return Ok(Program.LogBuffer.ToArray());
         }
     }
 }

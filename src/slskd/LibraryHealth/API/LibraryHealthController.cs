@@ -45,6 +45,11 @@ namespace slskd.LibraryHealth.API
             [FromBody] LibraryHealthScanRequest request,
             CancellationToken ct)
         {
+            if (request == null)
+            {
+                return BadRequest(new { message = "request body is required" });
+            }
+
             log.LogInformation("Starting library health scan for path: {Path}", request.LibraryPath);
 
             var scanId = await libraryHealth.StartScanAsync(request, ct);
@@ -72,7 +77,7 @@ namespace slskd.LibraryHealth.API
 
             if (scan == null)
             {
-                return NotFound(new { message = $"Scan {scanId} not found" });
+                return NotFound(new { message = "Scan not found" });
             }
 
             return Ok(scan);
@@ -321,7 +326,7 @@ namespace slskd.LibraryHealth.API
             return Ok(new RemediationResponse
             {
                 JobId = jobId,
-                Message = $"Remediation job created for {request.IssueIds.Count} issue(s)",
+                Message = "Remediation job created",
             });
         }
     }

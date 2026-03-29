@@ -59,7 +59,7 @@ public class VPNService : IDisposable
                 AutoReset = true,
             };
 
-            Timer.Elapsed += async (_, _) => await CheckConnection();
+            Timer.Elapsed += (_, _) => _ = ObserveCheckConnectionAsync();
 
             // detect VPN based on the configuration provided; this logic will determine the order
             // we can revisit this if/when we add other options besides gluetun
@@ -140,7 +140,10 @@ public class VPNService : IDisposable
         {
             if (disposing)
             {
-                Timer?.Dispose();
+                if (Timer is not null)
+                {
+                    Common.TimerDisposer.DisposeWithWait(Timer);
+                }
             }
 
             Disposed = true;
@@ -273,6 +276,18 @@ public class VPNService : IDisposable
         finally
         {
             TimerElapsedLock.Release();
+        }
+    }
+
+    private async Task ObserveCheckConnectionAsync()
+    {
+        try
+        {
+            await CheckConnection().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "VPN status polling failed: {Message}", ex.Message);
         }
     }
 }

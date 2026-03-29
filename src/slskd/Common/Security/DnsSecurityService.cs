@@ -19,6 +19,7 @@ namespace slskd.Common.Security;
 public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
 {
     private readonly ILogger<DnsSecurityService> _logger;
+    private readonly object _dnsCacheLock = new();
 
     // DNS cache: hostname -> (resolved IPs, expiry time, tunnel IDs using this entry)
     private readonly ConcurrentDictionary<string, (List<string> IPs, DateTimeOffset Expires, HashSet<string> TunnelIds)> _dnsCache = new();
@@ -39,7 +40,7 @@ public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
 
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
         GC.SuppressFinalize(this);
     }
 
@@ -137,7 +138,10 @@ public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
         }
 
         // Cache the result
-        _dnsCache[hostname] = (allowedIPs, DateTimeOffset.UtcNow.AddMinutes(5), new HashSet<string>());
+        _dnsCache[hostname] = (
+            new List<string>(allowedIPs),
+            DateTimeOffset.UtcNow.AddMinutes(5),
+            new HashSet<string>(StringComparer.Ordinal));
 
         _logger.LogInformation(
             "[DnsSecurity] Resolved and validated {Hostname}: {AllowedCount} allowed, {BlockedCount} blocked",
@@ -154,18 +158,23 @@ public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
     /// <param name="resolvedIPs">The resolved and validated IPs.</param>
     public void PinTunnelIPs(string tunnelId, string hostname, List<string> resolvedIPs)
     {
+        var pinnedIps = new List<string>(resolvedIPs);
+
         // Pin the IPs for the tunnel lifetime to prevent rebinding
-        _tunnelIpPins[tunnelId] = (hostname, resolvedIPs, DateTimeOffset.UtcNow.AddHours(24)); // 24 hour max lifetime
+        _tunnelIpPins[tunnelId] = (hostname, pinnedIps, DateTimeOffset.UtcNow.AddHours(24)); // 24 hour max lifetime
 
         // Add tunnel ID to DNS cache entry for cleanup tracking
         if (_dnsCache.TryGetValue(hostname, out var cacheEntry))
         {
-            cacheEntry.TunnelIds.Add(tunnelId);
+            lock (_dnsCacheLock)
+            {
+                cacheEntry.TunnelIds.Add(tunnelId);
+            }
         }
 
         _logger.LogDebug(
             "[DnsSecurity] Pinned IPs for tunnel {TunnelId}: {Hostname} -> {IPs}",
-            tunnelId, hostname, string.Join(", ", resolvedIPs));
+            tunnelId, hostname, string.Join(", ", pinnedIps));
     }
 
     /// <summary>
@@ -212,7 +221,10 @@ public sealed class DnsSecurityService : IDnsSecurityService, IDisposable
             // Remove from DNS cache tracking if present
             if (_dnsCache.TryGetValue(pinEntry.Hostname, out var cacheEntry))
             {
-                cacheEntry.TunnelIds.Remove(tunnelId);
+                lock (_dnsCacheLock)
+                {
+                    cacheEntry.TunnelIds.Remove(tunnelId);
+                }
             }
         }
     }

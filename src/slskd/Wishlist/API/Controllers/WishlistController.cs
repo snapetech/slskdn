@@ -96,9 +96,21 @@ namespace slskd.Wishlist.API
         [ProducesResponseType(400)]
         public async Task<IActionResult> Create([FromBody, Required] CreateWishlistRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("SearchText is required");
+            }
+
+            request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+            request.Filter = string.IsNullOrWhiteSpace(request.Filter) ? string.Empty : request.Filter.Trim();
             if (string.IsNullOrWhiteSpace(request.SearchText))
             {
                 return BadRequest("SearchText is required");
+            }
+
+            if (request.MaxResults.HasValue && request.MaxResults.Value <= 0)
+            {
+                return BadRequest("MaxResults must be greater than 0");
             }
 
             var item = new WishlistItem
@@ -130,8 +142,25 @@ namespace slskd.Wishlist.API
         [FromRoute, Required] Guid id,
         [FromBody, Required] UpdateWishlistRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest("SearchText is required");
+            }
+
             try
             {
+                request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+                request.Filter = string.IsNullOrWhiteSpace(request.Filter) ? string.Empty : request.Filter.Trim();
+                if (string.IsNullOrWhiteSpace(request.SearchText))
+                {
+                    return BadRequest("SearchText is required");
+                }
+
+                if (request.MaxResults.HasValue && request.MaxResults.Value <= 0)
+                {
+                    return BadRequest("MaxResults must be greater than 0");
+                }
+
                 var item = new WishlistItem
                 {
                     Id = id,

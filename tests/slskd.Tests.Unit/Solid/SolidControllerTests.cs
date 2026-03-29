@@ -99,6 +99,31 @@ public class SolidControllerTests
     }
 
     [Fact]
+    public async Task ResolveWebId_TrimsWebIdBeforeDispatch()
+    {
+        var c = CreateController();
+        var webId = new Uri("https://example.com/profile#me");
+        var profile = new SolidWebIdProfile(webId, new[] { new Uri("https://issuer.example") });
+        _resolverMock.Setup(x => x.ResolveAsync(webId, It.IsAny<CancellationToken>())).ReturnsAsync(profile);
+
+        var r = await c.ResolveWebId(new SolidController.ResolveWebIdRequest { WebId = $" {webId} " }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(r);
+        _resolverMock.Verify(x => x.ResolveAsync(webId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResolveWebId_WithNullRequest_ReturnsBadRequest()
+    {
+        var c = CreateController();
+
+        var r = await c.ResolveWebId(null!, CancellationToken.None);
+
+        var problem = Assert.IsType<ObjectResult>(r);
+        Assert.Equal(400, problem.StatusCode);
+    }
+
+    [Fact]
     public async Task ResolveWebId_SSRFBlocked_ReturnsBadRequest()
     {
         var c = CreateController();
@@ -111,6 +136,7 @@ public class SolidControllerTests
         Assert.Equal(400, problem.StatusCode);
         var problemDetails = problem.Value as Microsoft.AspNetCore.Mvc.ProblemDetails;
         Assert.Contains("Solid fetch blocked", problemDetails?.Title);
+        Assert.DoesNotContain("example.com", problemDetails?.Detail ?? string.Empty);
     }
 
     [Fact]
@@ -145,5 +171,6 @@ public class SolidControllerTests
         Assert.Equal(500, problem.StatusCode);
         var problemDetails = problem.Value as Microsoft.AspNetCore.Mvc.ProblemDetails;
         Assert.Contains("Failed to resolve WebID", problemDetails?.Title);
+        Assert.DoesNotContain("Network error", problemDetails?.Detail ?? string.Empty);
     }
 }

@@ -80,6 +80,12 @@ public sealed class SolidController : ControllerBase
     {
         if (!Enabled) return NotFound();
 
+        if (req == null)
+        {
+            return Problem(title: "Invalid WebID", detail: "WebId must be an absolute URI.", statusCode: 400);
+        }
+
+        req.WebId = req.WebId?.Trim() ?? string.Empty;
         if (!Uri.TryCreate(req.WebId, UriKind.Absolute, out var webId))
         {
             return Problem(title: "Invalid WebID", detail: "WebId must be an absolute URI.", statusCode: 400);
@@ -90,13 +96,13 @@ public sealed class SolidController : ControllerBase
             var p = await _resolver.ResolveAsync(webId, ct).ConfigureAwait(false);
             return Ok(new { webId = p.WebId.ToString(), oidcIssuers = Array.ConvertAll(p.OidcIssuers, u => u.ToString()) });
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return Problem(title: "Solid fetch blocked", detail: ex.Message, statusCode: 400);
+            return Problem(title: "Solid fetch blocked", detail: "WebID resolution was blocked by policy.", statusCode: 400);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return Problem(title: "Failed to resolve WebID", detail: ex.Message, statusCode: 500);
+            return Problem(title: "Failed to resolve WebID", detail: "WebID resolution failed.", statusCode: 500);
         }
     }
 }

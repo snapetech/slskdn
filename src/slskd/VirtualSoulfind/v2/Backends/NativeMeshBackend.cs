@@ -36,7 +36,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
     ///     Find candidates via mesh/DHT only (IMeshDirectory.FindPeersByContentAsync).
     ///     Fetch is done by the resolver; the mesh "get content by ContentId / hash" RPC
     ///     and resolver support for BackendRef "mesh:{peerId}:{contentId}" are follow-ups.
-    ///     Use case: mesh-only, disaster mode, closed communities.
+    ///     Use case: mesh-only deployments, legacy fallback, closed communities.
     /// </remarks>
     public sealed class NativeMeshBackend : IContentBackend
     {

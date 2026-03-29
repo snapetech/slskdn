@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -6,7 +7,7 @@ namespace slskd.Tests.Unit
 {
     public class TestOptionsMonitor<TOptions> : IOptionsMonitor<TOptions>
     {
-        private Action<TOptions, string> _listener;
+        private readonly List<Action<TOptions, string>> _listeners = new();
 
         public TestOptionsMonitor(TOptions currentValue)
         {
@@ -14,6 +15,7 @@ namespace slskd.Tests.Unit
         }
 
         public TOptions CurrentValue { get; private set; }
+        public int ListenerCount => _listeners.Count;
 
         public TOptions Get(string name)
         {
@@ -23,18 +25,26 @@ namespace slskd.Tests.Unit
         public void Set(TOptions value)
         {
             CurrentValue = value;
-            _listener.Invoke(value, null);
+            foreach (var listener in _listeners.ToArray())
+            {
+                listener.Invoke(value, null);
+            }
         }
 
         public IDisposable OnChange(Action<TOptions, string> listener)
         {
-            _listener = listener;
-            return new Mock<IDisposable>().Object;
+            _listeners.Add(listener);
+            var registration = new Mock<IDisposable>();
+            registration.Setup(x => x.Dispose()).Callback(() => _listeners.Remove(listener));
+            return registration.Object;
         }
 
         public void RaiseOnChange(TOptions options)
         {
-            _listener(options, null);
+            foreach (var listener in _listeners.ToArray())
+            {
+                listener(options, null);
+            }
         }
     }
 }

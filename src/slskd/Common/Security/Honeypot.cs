@@ -134,7 +134,7 @@ public sealed class Honeypot : IDisposable
             "HONEYPOT TRIGGERED: {Action} on {File} from {Ip} ({Username})",
             action, filename, ip, username ?? "(unknown)");
 
-        HoneypotTriggered?.Invoke(this, new HoneypotEventArgs(evt));
+        RaiseHoneypotTriggered(evt);
 
         return interaction;
     }
@@ -265,7 +265,29 @@ public sealed class Honeypot : IDisposable
             return ThreatLevel.Low;
         }
 
-        return CalculateThreatLevel(profile);
+        // Return the stored threat level (already computed under lock in UpdateThreatProfile)
+        // rather than re-reading the mutable HashSet fields without the lock.
+        return profile.ThreatLevel;
+    }
+
+    private void RaiseHoneypotTriggered(HoneypotEvent evt)
+    {
+        if (HoneypotTriggered is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<HoneypotEventArgs> handler in HoneypotTriggered.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, new HoneypotEventArgs(evt));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Honeypot subscriber failed");
+            }
+        }
     }
 
     private static ThreatLevel CalculateThreatLevel(ThreatProfile profile)
@@ -316,7 +338,7 @@ public sealed class Honeypot : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
     }
 }
 

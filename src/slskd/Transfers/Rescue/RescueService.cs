@@ -202,11 +202,10 @@ namespace slskd.Transfers.Rescue
                         missingRanges.Count, missingRanges.Sum(r => r.Length));
 
                     // Start the download asynchronously (fire and forget for now)
-                    _ = Task.Run(async () =>
-                    {
-                        try
+                    _ = ObserveBackgroundTaskAsync(
+                        Task.Run(async () =>
                         {
-                            var result = await multiSource.DownloadAsync(multiSourceRequest, ct);
+                            var result = await multiSource.DownloadAsync(multiSourceRequest, CancellationToken.None).ConfigureAwait(false);
                             if (result.Success)
                             {
                                 log.Information("[RESCUE] Multi-source download completed successfully: {File}, {Bytes} bytes in {TimeMs}ms",
@@ -219,12 +218,8 @@ namespace slskd.Transfers.Rescue
                                 log.Warning("[RESCUE] Multi-source download failed: {File}, error: {Error}",
                                     result.Filename, result.Error);
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            log.Error(ex, "[RESCUE] Multi-source download threw exception: {Message}", ex.Message);
-                        }
-                    }, ct);
+                        }, CancellationToken.None),
+                        "[RESCUE] Multi-source download threw exception: {Message}");
 
                     log.Information("[RESCUE] Rescue mode activated: job {JobId}, {PeerCount} overlay peers, multi-source download started",
                         rescueJob.RescueJobId, overlayPeers.Count);
@@ -518,6 +513,18 @@ namespace slskd.Transfers.Rescue
             }
 
             return null;
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string messageTemplate)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex, messageTemplate, ex.Message);
+            }
         }
     }
 

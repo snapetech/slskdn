@@ -97,10 +97,16 @@ namespace slskd.HashDb.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> LookupHash(string flacKey)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return BadRequest(new { error = "flacKey is required" });
+            }
+
             var entry = await HashDb.LookupHashAsync(flacKey);
             if (entry == null)
             {
-                return NotFound(new { error = "No hash found for key " + flacKey });
+                return NotFound(new { error = "No hash found for key" });
             }
 
             return Ok(entry);
@@ -116,7 +122,6 @@ namespace slskd.HashDb.API
             var entries = await HashDb.LookupHashesBySizeAsync(size);
             return Ok(new
             {
-                size,
                 count = entries.Count(),
                 entries,
             });
@@ -129,13 +134,14 @@ namespace slskd.HashDb.API
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GenerateKey([FromQuery] string filename, [FromQuery] long size)
         {
-            if (string.IsNullOrEmpty(filename) || size <= 0)
+            filename = filename?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(filename) || size <= 0)
             {
                 return BadRequest(new { error = "filename and size are required" });
             }
 
             var key = HashDbEntry.GenerateFlacKey(filename, size);
-            return Ok(new { filename, size, flacKey = key });
+            return Ok(new { flacKey = key });
         }
 
         /// <summary>
@@ -148,7 +154,6 @@ namespace slskd.HashDb.API
             var entries = await HashDb.GetFlacEntriesBySizeAsync(size, limit);
             return Ok(new
             {
-                size,
                 count = entries.Count(),
                 entries,
             });
@@ -219,7 +224,6 @@ namespace slskd.HashDb.API
 
             return Ok(new
             {
-                sinceSeq,
                 latestSeq,
                 count = entries.Count(),
                 entries,
@@ -256,7 +260,15 @@ namespace slskd.HashDb.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> StoreHash([FromBody] StoreHashRequest request)
         {
-            if (string.IsNullOrEmpty(request?.Filename) || request.Size <= 0 || string.IsNullOrEmpty(request.ByteHash))
+            if (request == null)
+            {
+                return BadRequest(new { error = "filename, size, and byteHash are required" });
+            }
+
+            request.Filename = request.Filename?.Trim() ?? string.Empty;
+            request.ByteHash = request.ByteHash?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(request.Filename) || request.Size <= 0 || string.IsNullOrWhiteSpace(request.ByteHash))
             {
                 return BadRequest(new { error = "filename, size, and byteHash are required" });
             }
@@ -270,7 +282,7 @@ namespace slskd.HashDb.API
                 request.BitDepth);
 
             var key = HashDbEntry.GenerateFlacKey(request.Filename, request.Size);
-            return Ok(new { flacKey = key, stored = true });
+            return Ok(new { stored = true });
         }
 
         /// <summary>
@@ -385,7 +397,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error optimizing indexes");
-                return StatusCode(500, new { error = "Failed to optimize indexes", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to optimize indexes" });
             }
         }
 
@@ -409,7 +421,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error analyzing database");
-                return StatusCode(500, new { error = "Failed to analyze database", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to analyze database" });
             }
         }
 
@@ -433,7 +445,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error running VACUUM/ANALYZE");
-                return StatusCode(500, new { error = "Failed to run VACUUM/ANALYZE", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to run VACUUM/ANALYZE" });
             }
         }
 
@@ -456,7 +468,8 @@ namespace slskd.HashDb.API
 
             if (!Optimization.HashDbOptimizationService.TryNormalizeProfileQuery(request.Query, out var normalizedQuery, out var validationError))
             {
-                return BadRequest(new { error = validationError });
+                Log.Warning("[HashDb] Rejected profiling query: {ValidationError}", validationError);
+                return BadRequest(new { error = "Query is not allowed for profiling" });
             }
 
             try
@@ -477,7 +490,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error profiling query");
-                return StatusCode(500, new { error = "Failed to profile query", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to profile query" });
             }
         }
 
@@ -501,7 +514,7 @@ namespace slskd.HashDb.API
             catch (Exception ex)
             {
                 Log.Error(ex, "[HashDb] Error getting slow query stats");
-                return StatusCode(500, new { error = "Failed to get slow query stats", message = ex.Message });
+                return StatusCode(500, new { error = "Failed to get slow query stats" });
             }
         }
     }

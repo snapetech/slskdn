@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using System.Threading;
 using System.Threading.Tasks;
 
-public interface IDisasterModeRecovery
+public interface IDisasterModeRecovery : IDisposable
 {
     Task AttemptRecoveryAsync(CancellationToken ct = default);
     bool ShouldAttemptRecovery();
@@ -19,7 +19,7 @@ public interface IDisasterModeRecovery
 /// Recovery logic for disaster mode (re-enable Soulseek when healthy).
 /// Phase 6D: T-830 - Real implementation.
 /// </summary>
-public class DisasterModeRecovery : IDisasterModeRecovery
+public sealed class DisasterModeRecovery : IDisasterModeRecovery
 {
     private readonly ILogger<DisasterModeRecovery> logger;
     private readonly ISoulseekHealthMonitor healthMonitor;
@@ -27,6 +27,7 @@ public class DisasterModeRecovery : IDisasterModeRecovery
     private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
     private DateTimeOffset? lastRecoveryAttempt;
     private int consecutiveHealthyChecks;
+    private bool disposed;
 
     public DisasterModeRecovery(
         ILogger<DisasterModeRecovery> logger,
@@ -41,6 +42,18 @@ public class DisasterModeRecovery : IDisasterModeRecovery
 
         // Subscribe to health changes
         healthMonitor.HealthChanged += OnHealthChanged;
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        healthMonitor.HealthChanged -= OnHealthChanged;
+        disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     public async Task AttemptRecoveryAsync(CancellationToken ct = default)
@@ -76,29 +89,29 @@ public class DisasterModeRecovery : IDisasterModeRecovery
 
         if (health == SoulseekHealth.Healthy)
         {
-            consecutiveHealthyChecks++;
+            var checks = Interlocked.Increment(ref consecutiveHealthyChecks);
 
             // Require multiple consecutive healthy checks before recovery
             var requiredChecks = recoveryOptions?.RecoveryHealthyChecksRequired ?? 3;
 
-            if (consecutiveHealthyChecks >= requiredChecks)
+            if (checks >= requiredChecks)
             {
                 logger.LogInformation("[VSF-RECOVERY] Soulseek healthy for {Checks} checks, deactivating disaster mode",
-                    consecutiveHealthyChecks);
+                    checks);
 
                 await disasterMode.DeactivateDisasterModeAsync(ct);
-                consecutiveHealthyChecks = 0;
+                Interlocked.Exchange(ref consecutiveHealthyChecks, 0);
             }
             else
             {
                 logger.LogDebug("[VSF-RECOVERY] Soulseek healthy but need {Required} consecutive checks (have {Current})",
-                    requiredChecks, consecutiveHealthyChecks);
+                    requiredChecks, checks);
             }
         }
         else
         {
             // Reset counter if health is not healthy
-            consecutiveHealthyChecks = 0;
+            Interlocked.Exchange(ref consecutiveHealthyChecks, 0);
             logger.LogDebug("[VSF-RECOVERY] Soulseek not healthy ({Health}), recovery not possible", health);
         }
     }
@@ -116,15 +129,26 @@ public class DisasterModeRecovery : IDisasterModeRecovery
 
     private async void OnHealthChanged(object? sender, SoulseekHealthChangedEventArgs e)
     {
-        if (e.NewHealth == SoulseekHealth.Healthy && disasterMode.IsDisasterModeActive)
+        try
         {
-            // Health improved, attempt recovery
-            await AttemptRecoveryAsync(CancellationToken.None);
+            if (e.NewHealth == SoulseekHealth.Healthy && disasterMode.IsDisasterModeActive)
+            {
+                // Health improved, attempt recovery
+                await AttemptRecoveryAsync(CancellationToken.None);
+            }
+            else if (e.NewHealth != SoulseekHealth.Healthy)
+            {
+                // Health degraded, reset recovery counter
+                Interlocked.Exchange(ref consecutiveHealthyChecks, 0);
+            }
         }
-        else if (e.NewHealth != SoulseekHealth.Healthy)
+        catch (OperationCanceledException)
         {
-            // Health degraded, reset recovery counter
-            consecutiveHealthyChecks = 0;
+            logger.LogDebug("[VSF-RECOVERY] Health-change recovery processing cancelled");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "[VSF-RECOVERY] Unhandled exception while processing health change");
         }
     }
 }

@@ -152,20 +152,31 @@ public class SearchAggregator
         }
 
         var sink = new CollectingSearchResultSink();
-        var tasks = providersList.Select(provider =>
-            provider.StartSearchAsync(request, sink, ct)
-                .ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        _logger.Debug(t.Exception?.GetBaseException(), "[SearchAggregator] Provider {Provider} failed: {Message}",
-                            provider.Name, t.Exception?.GetBaseException()?.Message);
-                    }
-                }, ct));
+        var tasks = providersList.Select(provider => RunProviderSearchAsync(provider, request, sink, ct));
 
         await Task.WhenAll(tasks);
 
         return MergeResults(sink.Results);
+    }
+
+    private async Task RunProviderSearchAsync(
+        ISearchProvider provider,
+        SearchRequest request,
+        CollectingSearchResultSink sink,
+        CancellationToken ct)
+    {
+        try
+        {
+            await provider.StartSearchAsync(request, sink, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "[SearchAggregator] Provider {Provider} failed: {Message}", provider.Name, ex.Message);
+        }
     }
 
     /// <summary>
@@ -177,7 +188,12 @@ public class SearchAggregator
 
         public void AddResult(SearchResult result)
         {
-            _results.Add(result);
+            // Multiple providers run concurrently via Task.WhenAll; lock to prevent
+            // concurrent List<T> mutations from corrupting the results list.
+            lock (_results)
+            {
+                _results.Add(result);
+            }
         }
 
         public List<SearchResult> Results => _results;

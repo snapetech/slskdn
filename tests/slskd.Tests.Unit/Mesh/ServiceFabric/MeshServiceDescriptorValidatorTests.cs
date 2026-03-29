@@ -160,6 +160,26 @@ public class MeshServiceDescriptorValidatorTests
         Assert.Contains("Too many metadata", reason);
     }
 
+    [Fact]
+    public async Task Validate_WhenSerializationThrows_ReturnsSanitizedReason()
+    {
+        // Arrange
+        var descriptor = CreateValidDescriptor() with
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                { "type", "\ud800" }
+            }
+        };
+
+        // Act
+        var (isValid, reason) = await _validator.ValidateAsync(descriptor);
+
+        // Assert
+        Assert.True(isValid);
+        Assert.Equal(string.Empty, reason);
+    }
+
     [Theory]
     [InlineData("username")]
     [InlineData("Username")]

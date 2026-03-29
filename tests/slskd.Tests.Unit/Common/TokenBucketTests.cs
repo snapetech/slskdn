@@ -205,5 +205,19 @@ namespace slskd.Tests.Unit.Common
                 Assert.Equal(10, t.GetProperty<long>("CurrentCount"));
             }
         }
+
+        [Trait("Category", "Dispose")]
+        [Fact(DisplayName = "Dispose faults waiters blocked on reset")]
+        public async Task Dispose_Faults_Waiters_Blocked_On_Reset()
+        {
+            var t = new TokenBucket(1, 1000000);
+
+            await t.GetAsync(1);
+            var pendingGet = t.GetAsync(1);
+
+            t.Dispose();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => pendingGet);
+        }
     }
 }

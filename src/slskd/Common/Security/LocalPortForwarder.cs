@@ -57,16 +57,7 @@ public class LocalPortForwarder : IDisposable
         int destinationPort,
         string? serviceName = null)
     {
-        if (_activeForwarders.ContainsKey(localPort))
-        {
-            throw new InvalidOperationException($"Port {localPort} is already being forwarded");
-        }
-
-        ForwarderInstance? forwarder = null;
-
-        try
-        {
-            forwarder = new ForwarderInstance(
+        var forwarder = new ForwarderInstance(
             localPort,
             podId,
             destinationHost,
@@ -75,10 +66,18 @@ public class LocalPortForwarder : IDisposable
             this,
             _logger);
 
-            _activeForwarders[localPort] = forwarder;
+        // TryAdd is atomic — prevents two concurrent calls for the same port from both
+        // succeeding (non-atomic ContainsKey+assign would allow the second store to
+        // overwrite the first, leaking the first ForwarderInstance's socket).
+        if (!_activeForwarders.TryAdd(localPort, forwarder))
+        {
+            forwarder.Dispose();
+            throw new InvalidOperationException($"Port {localPort} is already being forwarded");
+        }
 
+        try
+        {
             await forwarder.StartAsync();
-            forwarder = null;
             _logger.LogInformation(
                 "[PortForward] Started forwarding local port {LocalPort} to {Host}:{Port} via pod {PodId}",
                 localPort, destinationHost, destinationPort, podId);
@@ -86,7 +85,7 @@ public class LocalPortForwarder : IDisposable
         catch (Exception ex)
         {
             _activeForwarders.TryRemove(localPort, out _);
-            forwarder?.Dispose();
+            forwarder.Dispose();
             _logger.LogError(ex,
                 "[PortForward] Failed to start forwarding on port {LocalPort}", localPort);
             throw;
@@ -429,9 +428,17 @@ internal class ForwarderInstance : IDisposable
             {
                 await _listenTask.WaitAsync(TimeSpan.FromSeconds(5));
             }
+            catch (OperationCanceledException)
+            {
+                // Expected if the cancellation token was already triggered.
+            }
             catch (TimeoutException)
             {
                 // Task didn't complete in time, continue with cleanup
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[PortForward] Error while stopping listener on port {LocalPort}", _localPort);
             }
         }
 
@@ -470,7 +477,14 @@ internal class ForwarderInstance : IDisposable
 
     public void Dispose()
     {
-        StopAsync().GetAwaiter().GetResult();
+        try
+        {
+            StopAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PortForward] Error disposing forwarder on port {LocalPort}", _localPort);
+        }
     }
 
     private async Task ListenForConnectionsAsync(CancellationToken cancellationToken)
@@ -521,9 +535,8 @@ internal class ForwarderInstance : IDisposable
             // Map streams for efficient bidirectional data transfer
             tunnelConnection.MapToStream(localStream, cancellationToken);
 
-            // Wait for the stream mapping to complete (connection closes)
-            // The mapping handles all data transfer internally
-            await Task.Delay(-1, cancellationToken); // Wait indefinitely until cancelled
+            // Wait for the stream mapping to complete (connection closes).
+            await tunnelConnection.WaitForStreamMappingAsync(cancellationToken);
 
             _logger.LogDebug("[PortForward] Stream mapping completed for local port {LocalPort}", _localPort);
         }
@@ -597,6 +610,8 @@ internal class ForwarderConnection : IDisposable
     private readonly Queue<byte[]> _sendQueue = new();
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private CancellationTokenSource? _streamMappingCts;
+    private TaskCompletionSource _streamMappingCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private bool _disposed;
 
     public ForwarderConnection(
         string tunnelId,
@@ -627,12 +642,43 @@ internal class ForwarderConnection : IDisposable
                 throw new InvalidOperationException("Connection is already mapped to a stream");
             }
 
+            _streamMappingCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _isStreamMapped = false;
+                _streamMappingCompletion.TrySetResult();
+                return;
+            }
+
             _isStreamMapped = true;
-            _streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _streamMappingCts?.Cancel();
+            _streamMappingCts?.Dispose();
+            var streamMappingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _streamMappingCts = streamMappingCts;
 
             // Start background stream mapping tasks
-            _ = Task.Run(() => MapStreamsAsync(localStream, _streamMappingCts.Token), _streamMappingCts.Token);
+            _ = Task.Run(() => MapStreamsAsync(localStream, streamMappingCts), CancellationToken.None);
+            _ = Task.Run(() => ProcessSendQueueAsync(streamMappingCts.Token), CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// Waits for the stream mapping tasks to finish.
+    /// </summary>
+    public Task WaitForStreamMappingAsync(CancellationToken cancellationToken = default)
+    {
+        if (_streamMappingCts == null || _streamMappingCompletion.Task.IsCompleted)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            return _streamMappingCompletion.Task;
+        }
+
+        return _streamMappingCompletion.Task.WaitAsync(cancellationToken);
     }
 
     /// <summary>
@@ -640,6 +686,11 @@ internal class ForwarderConnection : IDisposable
     /// </summary>
     public async Task SendDataAsync(byte[] data)
     {
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(ForwarderConnection));
+        }
+
         await _sendSemaphore.WaitAsync();
         try
         {
@@ -712,11 +763,12 @@ internal class ForwarderConnection : IDisposable
     /// <summary>
     /// Efficiently maps local and remote streams for bidirectional data transfer.
     /// </summary>
-    private async Task MapStreamsAsync(NetworkStream localStream, CancellationToken cancellationToken)
+    private async Task MapStreamsAsync(NetworkStream localStream, CancellationTokenSource streamMappingCts)
     {
         try
         {
             _logger.LogDebug("[PortForward] Starting stream mapping for tunnel {TunnelId}", _tunnelId);
+            var cancellationToken = streamMappingCts.Token;
 
             // Create tasks for bidirectional data transfer
             var localToRemote = MapLocalToRemoteAsync(localStream, cancellationToken);
@@ -724,6 +776,16 @@ internal class ForwarderConnection : IDisposable
 
             // Wait for either direction to complete (indicating connection closure)
             await Task.WhenAny(localToRemote, remoteToLocal);
+            streamMappingCts.Cancel();
+
+            try
+            {
+                await Task.WhenAll(localToRemote, remoteToLocal);
+            }
+            catch (OperationCanceledException)
+            {
+                // expected when token is cancelled
+            }
 
             _logger.LogDebug("[PortForward] Stream mapping completed for tunnel {TunnelId}", _tunnelId);
         }
@@ -736,7 +798,15 @@ internal class ForwarderConnection : IDisposable
             lock (_streamLock)
             {
                 _isStreamMapped = false;
+
+                if (ReferenceEquals(_streamMappingCts, streamMappingCts))
+                {
+                    _streamMappingCts = null;
+                }
             }
+
+            streamMappingCts.Dispose();
+            _streamMappingCompletion.TrySetResult();
         }
     }
 
@@ -838,30 +908,57 @@ internal class ForwarderConnection : IDisposable
                 }
             }
 
-            if (dataToSend != null)
+            try
             {
-                await _parent.SendTunnelDataAsync(_tunnelId, dataToSend);
+                if (dataToSend != null)
+                {
+                    await _parent.SendTunnelDataAsync(_tunnelId, dataToSend);
+                }
+                else
+                {
+                    // No data to send, wait briefly
+                    await Task.Delay(1, cancellationToken);
+                }
             }
-            else
+            catch (OperationCanceledException)
             {
-                // No data to send, wait briefly
-                await Task.Delay(1, cancellationToken);
+                // expected when mapping is cancelled
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[PortForward] Error processing send queue for tunnel {TunnelId}", _tunnelId);
             }
         }
+
+        // Do NOT signal completion here. MapStreamsAsync's finally block sets _streamMappingCts = null
+        // before calling TrySetResult; signalling here races with that cleanup and can cause callers
+        // of WaitForStreamMappingAsync to observe a non-null _streamMappingCts.
     }
 
     public async Task CloseAsync()
     {
-        _streamMappingCts?.Cancel();
-
-        // Wait for stream mapping to complete
-        if (_streamMappingCts != null)
+        var streamMappingCts = _streamMappingCts;
+        if (streamMappingCts != null)
         {
+            streamMappingCts.Cancel();
             try
             {
-                await Task.Delay(100); // Brief wait for cleanup
+                using var closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                await WaitForStreamMappingAsync(closeTimeout.Token);
             }
-            catch { }
+            catch (OperationCanceledException)
+            {
+                _streamMappingCompletion.TrySetResult();
+            }
+            finally
+            {
+                if (ReferenceEquals(_streamMappingCts, streamMappingCts))
+                {
+                    _streamMappingCts = null;
+                }
+
+                streamMappingCts.Dispose();
+            }
         }
 
         await _parent.CloseTunnelAsync(_tunnelId);
@@ -869,9 +966,14 @@ internal class ForwarderConnection : IDisposable
 
     public void Dispose()
     {
-        _streamMappingCts?.Cancel();
-        _sendSemaphore.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         CloseAsync().GetAwaiter().GetResult();
+        _sendSemaphore.Dispose();
     }
 }
 

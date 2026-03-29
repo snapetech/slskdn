@@ -26,7 +26,7 @@ namespace slskd.Mesh
     /// <summary>
     ///     Service for epidemic mesh synchronization of hash databases.
     /// </summary>
-    public interface IMeshSyncService
+    public interface IMeshSyncService : IDisposable
     {
         /// <summary>
         ///     Gets statistics about mesh sync operations.

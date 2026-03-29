@@ -48,6 +48,7 @@ public class PodMembershipService : IPodMembershipService
     {
         var dhtKey = GetMembershipDhtKey(podId, member.PeerId);
         var startTime = DateTimeOffset.UtcNow;
+        var membershipKey = $"{podId}:{member.PeerId}";
 
         try
         {
@@ -70,22 +71,16 @@ public class PodMembershipService : IPodMembershipService
                 IsBanned: member.IsBanned,
                 PublishedAt: publishedAt,
                 ExpiresAt: expiresAt,
-                Signature: signedRecord.Signature);
+                Signature: signedRecord.Signature,
+                PublicKey: signedRecord.PublicKey);
 
-            var membershipKey = $"{podId}:{member.PeerId}";
+            var previousMembership = _activeMemberships.TryGetValue(membershipKey, out var existingMembership)
+                ? existingMembership
+                : null;
+
             _activeMemberships[membershipKey] = membershipInfo;
-
-            // Update statistics
-            Interlocked.Increment(ref _totalMemberships);
-            Interlocked.Increment(ref _activeMembershipsCount);
-            _membershipsByRole.AddOrUpdate(member.Role, 1, (_, count) => count + 1);
-            _membershipsByPod.AddOrUpdate(podId, 1, (_, count) => count + 1);
+            UpdateTrackedMembershipCounts(previousMembership, membershipInfo);
             _lastOperation = publishedAt;
-
-            if (member.IsBanned)
-            {
-                Interlocked.Increment(ref _bannedMemberships);
-            }
 
             _logger.LogInformation(
                 "[PodMembership] Published membership for {PeerId} in {PodId}, role: {Role}, expires: {ExpiresAt}",
@@ -109,7 +104,7 @@ public class PodMembershipService : IPodMembershipService
                 DhtKey: dhtKey,
                 PublishedAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to publish membership");
         }
     }
 
@@ -173,7 +168,7 @@ public class PodMembershipService : IPodMembershipService
                 DhtKey: dhtKey,
                 PublishedAt: startTime,
                 ExpiresAt: startTime,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to remove membership");
         }
     }
 
@@ -233,21 +228,39 @@ public class PodMembershipService : IPodMembershipService
                 RetrievedAt: DateTimeOffset.UtcNow,
                 ExpiresAt: DateTimeOffset.MinValue,
                 IsValidSignature: false,
-                ErrorMessage: ex.Message);
+                ErrorMessage: "Failed to retrieve membership");
         }
     }
 
     /// <inheritdoc/>
     public Task<IReadOnlyList<MembershipRetrievalResult>> ListPodMembershipsAsync(string podId, CancellationToken cancellationToken = default)
     {
-        _ = podId;
         _ = cancellationToken;
 
-        // Note: DHT doesn't support efficient listing of all records for a pod
-        // In a real implementation, this would require maintaining an index or
-        // using a different approach. For now, return empty list.
-        _logger.LogWarning("[PodMembership] ListPodMembershipsAsync not efficiently supported by DHT - requires index");
-        return Task.FromResult<IReadOnlyList<MembershipRetrievalResult>>(Array.Empty<MembershipRetrievalResult>());
+        var now = DateTimeOffset.UtcNow;
+        var memberships = _activeMemberships.Values
+            .Where(membership => membership.PodId == podId && membership.ExpiresAt > now)
+            .OrderBy(membership => membership.PeerId, StringComparer.Ordinal)
+            .Select(membership => new MembershipRetrievalResult(
+                Found: true,
+                PodId: membership.PodId,
+                PeerId: membership.PeerId,
+                SignedRecord: new SignedMembershipRecord
+                {
+                    PodId = membership.PodId,
+                    PeerId = membership.PeerId,
+                    Role = membership.Role,
+                    Action = membership.IsBanned ? "ban" : "join",
+                    TimestampUnixMs = membership.PublishedAt.ToUnixTimeMilliseconds(),
+                    PublicKey = membership.PublicKey,
+                    Signature = membership.Signature,
+                },
+                RetrievedAt: now,
+                ExpiresAt: membership.ExpiresAt,
+                IsValidSignature: true))
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<MembershipRetrievalResult>>(memberships);
     }
 
     /// <inheritdoc/>
@@ -324,11 +337,6 @@ public class PodMembershipService : IPodMembershipService
                 ExpiresAt: DateTimeOffset.MinValue,
                 ErrorMessage: "Member not found");
         }
-
-        // Update role counters
-        var oldRole = currentResult.SignedRecord.Role;
-        _membershipsByRole.AddOrUpdate(oldRole, 0, (_, count) => Math.Max(0, count - 1));
-        _membershipsByRole.AddOrUpdate(newRole, 1, (_, count) => count + 1);
 
         // Create updated member record
         var updatedMember = new PodMember
@@ -513,6 +521,42 @@ public class PodMembershipService : IPodMembershipService
         }
     }
 
+    private void UpdateTrackedMembershipCounts(MembershipInfo? previousMembership, MembershipInfo currentMembership)
+    {
+        if (previousMembership == null)
+        {
+            Interlocked.Increment(ref _totalMemberships);
+            Interlocked.Increment(ref _activeMembershipsCount);
+            _membershipsByRole.AddOrUpdate(currentMembership.Role, 1, static (_, count) => count + 1);
+            _membershipsByPod.AddOrUpdate(currentMembership.PodId, 1, static (_, count) => count + 1);
+
+            if (currentMembership.IsBanned)
+            {
+                Interlocked.Increment(ref _bannedMemberships);
+            }
+
+            return;
+        }
+
+        if (!string.Equals(previousMembership.Role, currentMembership.Role, StringComparison.Ordinal))
+        {
+            _membershipsByRole.AddOrUpdate(previousMembership.Role, 0, static (_, count) => Math.Max(0, count - 1));
+            _membershipsByRole.AddOrUpdate(currentMembership.Role, 1, static (_, count) => count + 1);
+        }
+
+        if (previousMembership.IsBanned != currentMembership.IsBanned)
+        {
+            if (currentMembership.IsBanned)
+            {
+                Interlocked.Increment(ref _bannedMemberships);
+            }
+            else
+            {
+                Interlocked.Decrement(ref _bannedMemberships);
+            }
+        }
+    }
+
     /// <summary>
     /// Information about an active membership.
     /// </summary>
@@ -523,5 +567,6 @@ public class PodMembershipService : IPodMembershipService
         bool IsBanned,
         DateTimeOffset PublishedAt,
         DateTimeOffset ExpiresAt,
-        string Signature);
+        string Signature,
+        string PublicKey);
 }

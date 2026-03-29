@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Soulseek;
 using slskd;
+using Serilog;
 
 public enum SoulseekHealth
 {
@@ -28,25 +29,60 @@ public class SoulseekHealthChangedEventArgs : EventArgs
     public string? Reason { get; set; }
 }
 
-public interface ISoulseekClient
+public interface ISoulseekClient : IDisposable
 {
     event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
 }
 
-public class SoulseekClientWrapper : ISoulseekClient
+public sealed class SoulseekClientWrapper : ISoulseekClient
 {
     private readonly Soulseek.ISoulseekClient client;
+    private readonly EventHandler<RoomMessageReceivedEventArgs> roomMessageReceivedHandler;
+    private bool disposed;
 
     public event EventHandler<RoomMessageReceivedEventArgs>? RoomMessageReceived;
 
     public SoulseekClientWrapper(Soulseek.ISoulseekClient client)
     {
         this.client = client;
-        this.client.RoomMessageReceived += (sender, e) => RoomMessageReceived?.Invoke(sender, e);
+        roomMessageReceivedHandler = (sender, e) => RaiseRoomMessageReceived(sender, e);
+        this.client.RoomMessageReceived += roomMessageReceivedHandler;
+    }
+
+    private void RaiseRoomMessageReceived(object? sender, RoomMessageReceivedEventArgs args)
+    {
+        if (RoomMessageReceived is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<RoomMessageReceivedEventArgs> handler in RoomMessageReceived.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(sender, args);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[VSF-DISCO] RoomMessageReceived subscriber failed");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        client.RoomMessageReceived -= roomMessageReceivedHandler;
+        disposed = true;
+        GC.SuppressFinalize(this);
     }
 }
 
-public interface ISoulseekHealthMonitor
+public interface ISoulseekHealthMonitor : IDisposable
 {
     SoulseekHealth CurrentHealth { get; }
     event EventHandler<SoulseekHealthChangedEventArgs>? HealthChanged;
@@ -54,10 +90,10 @@ public interface ISoulseekHealthMonitor
 }
 
 /// <summary>
-/// Monitors Soulseek server health and triggers disaster mode when unavailable.
+/// Monitors Soulseek server health and can trigger the opt-in legacy fallback when unavailable.
 /// Phase 6D: T-821 - Real implementation.
 /// </summary>
-public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
+public sealed class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService, IDisposable
 {
     private readonly ILogger<SoulseekHealthMonitor> logger;
     private readonly Soulseek.ISoulseekClient soulseekClient;
@@ -89,7 +125,7 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
                 logger.LogWarning("[VSF-HEALTH] Soulseek health changed: {Old} → {New}",
                     oldHealth, value);
 
-                HealthChanged?.Invoke(this, new SoulseekHealthChangedEventArgs
+                RaiseHealthChanged(new SoulseekHealthChangedEventArgs
                 {
                     OldHealth = oldHealth,
                     NewHealth = value,
@@ -102,6 +138,26 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
 
     public event EventHandler<SoulseekHealthChangedEventArgs>? HealthChanged;
 
+    private void RaiseHealthChanged(SoulseekHealthChangedEventArgs args)
+    {
+        if (HealthChanged is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<SoulseekHealthChangedEventArgs> handler in HealthChanged.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-HEALTH] HealthChanged subscriber failed");
+            }
+        }
+    }
+
     public Task StartMonitoringAsync(CancellationToken ct = default)
     {
         if (monitoringTask != null && !monitoringTask.IsCompleted)
@@ -110,8 +166,10 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
             return monitoringTask;
         }
 
-        monitoringCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        monitoringTask = Task.Run(async () => await MonitorLoopAsync(monitoringCts.Token), ct);
+        monitoringCts?.Cancel();
+        monitoringCts?.Dispose();
+        monitoringCts = new CancellationTokenSource();
+        monitoringTask = Task.Run(() => MonitorLoopAsync(monitoringCts.Token), CancellationToken.None);
 
         logger.LogInformation("[VSF-HEALTH] Health monitoring started");
         return Task.CompletedTask;
@@ -122,10 +180,32 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
         return StartMonitoringAsync(cancellationToken);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         monitoringCts?.Cancel();
-        return Task.CompletedTask;
+
+        if (monitoringTask != null)
+        {
+            try
+            {
+                await monitoringTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+        }
+
+        monitoringTask = null;
+        monitoringCts?.Dispose();
+        monitoringCts = null;
+    }
+
+    public void Dispose()
+    {
+        monitoringCts?.Cancel();
+        monitoringCts?.Dispose();
+        monitoringCts = null;
     }
 
     private async Task MonitorLoopAsync(CancellationToken ct)
@@ -139,13 +219,24 @@ public class SoulseekHealthMonitor : ISoulseekHealthMonitor, IHostedService
                 var health = await CheckHealthAsync(ct);
                 CurrentHealth = health;
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "[VSF-HEALTH] Health check failed");
                 CurrentHealth = SoulseekHealth.Unavailable;
             }
 
-            await Task.Delay(checkInterval, ct);
+            try
+            {
+                await Task.Delay(checkInterval, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
         }
 
         logger.LogInformation("[VSF-HEALTH] Health monitoring stopped");

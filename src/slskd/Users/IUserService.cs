@@ -20,6 +20,7 @@
 // </copyright>
 namespace slskd.Users
 {
+    using System;
     using System.Collections.Generic;
     using System.Net;
     using System.Threading.Tasks;
@@ -59,7 +60,7 @@ namespace slskd.Users
     ///         and can afford to wait for it.
     ///     </para>
     /// </remarks>
-    public interface IUserService
+    public interface IUserService : IDisposable
     {
         /// <summary>
         ///     Gets the list of tracked users.

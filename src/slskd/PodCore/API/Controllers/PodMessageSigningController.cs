@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,16 +42,25 @@ public class PodMessageSigningController : ControllerBase
     [HttpPost("sign")]
     public async Task<IActionResult> SignMessage([FromBody] MessageSigningRequest request, CancellationToken cancellationToken = default)
     {
-        if (request?.Message == null || string.IsNullOrWhiteSpace(request.PrivateKey))
+        if (request?.Message == null)
+        {
+            return BadRequest(new { error = "Valid message and private key are required" });
+        }
+
+        var normalizedRequest = request with
+        {
+            PrivateKey = request.PrivateKey?.Trim() ?? string.Empty,
+            Message = NormalizeMessage(request.Message),
+        };
+
+        if (string.IsNullOrWhiteSpace(normalizedRequest.PrivateKey))
         {
             return BadRequest(new { error = "Valid message and private key are required" });
         }
 
         try
         {
-            var signedMessage = await _messageSigner.SignMessageAsync(request.Message, request.PrivateKey, cancellationToken);
-
-            _logger.LogInformation("[PodMessageSigning] Signed message {MessageId}", signedMessage.MessageId);
+            var signedMessage = await _messageSigner.SignMessageAsync(normalizedRequest.Message, normalizedRequest.PrivateKey, cancellationToken);
 
             return Ok(signedMessage);
         }
@@ -70,22 +80,21 @@ public class PodMessageSigningController : ControllerBase
     [HttpPost("verify")]
     public async Task<IActionResult> VerifyMessage([FromBody] PodMessage message, CancellationToken cancellationToken = default)
     {
-        if (message == null || string.IsNullOrWhiteSpace(message.MessageId))
+        var normalizedMessage = message == null ? null : NormalizeMessage(message);
+        if (normalizedMessage == null || string.IsNullOrWhiteSpace(normalizedMessage.MessageId))
         {
             return BadRequest(new { error = "Valid message is required" });
         }
 
         try
         {
-            var isValid = await _messageSigner.VerifyMessageAsync(message, cancellationToken);
+            var isValid = await _messageSigner.VerifyMessageAsync(normalizedMessage, cancellationToken);
 
-            _logger.LogInformation("[PodMessageSigning] Verified message {MessageId}: {IsValid}", message.MessageId, isValid);
-
-            return Ok(new { messageId = message.MessageId, isValid });
+            return Ok(new { isValid });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[PodMessageSigning] Error verifying message {MessageId}", message?.MessageId);
+            _logger.LogError(ex, "[PodMessageSigning] Error verifying message {MessageId}", normalizedMessage?.MessageId);
             return StatusCode(500, new { error = "Failed to verify message" });
         }
     }
@@ -101,8 +110,6 @@ public class PodMessageSigningController : ControllerBase
         try
         {
             var keyPair = await _messageSigner.GenerateKeyPairAsync(cancellationToken);
-
-            _logger.LogInformation("[PodMessageSigning] Generated new key pair");
 
             return Ok(keyPair);
         }
@@ -131,6 +138,23 @@ public class PodMessageSigningController : ControllerBase
             _logger.LogError(ex, "[PodMessageSigning] Error getting signing stats");
             return StatusCode(500, new { error = "Failed to get signing statistics" });
         }
+    }
+
+    private static PodMessage NormalizeMessage(PodMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        return new PodMessage
+        {
+            MessageId = message.MessageId?.Trim() ?? string.Empty,
+            PodId = message.PodId?.Trim() ?? string.Empty,
+            ChannelId = message.ChannelId?.Trim() ?? string.Empty,
+            SenderPeerId = message.SenderPeerId?.Trim() ?? string.Empty,
+            Body = message.Body?.Trim() ?? string.Empty,
+            TimestampUnixMs = message.TimestampUnixMs,
+            Signature = message.Signature?.Trim() ?? string.Empty,
+            SigVersion = message.SigVersion,
+        };
     }
 }
 

@@ -17,6 +17,7 @@ public class SqlitePodMessagingTests : IDisposable
     private readonly DbConnection _connection;
     private readonly DbContextOptions<PodDbContext> _contextOptions;
     private readonly Mock<ILogger<SqlitePodMessaging>> _loggerMock;
+    private readonly Mock<IPodMessageRouter> _routerMock;
     private readonly PodDbContext _dbContext;
     private readonly SqlitePodMessaging _messaging;
 
@@ -34,11 +35,22 @@ public class SqlitePodMessagingTests : IDisposable
             .Options;
 
         _loggerMock = new Mock<ILogger<SqlitePodMessaging>>();
+        _routerMock = new Mock<IPodMessageRouter>();
+        _routerMock
+            .Setup(r => r.RouteMessageAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PodMessage message, CancellationToken _) => new PodMessageRoutingResult(
+                Success: true,
+                MessageId: message.MessageId,
+                PodId: message.PodId,
+                TargetPeerCount: 1,
+                SuccessfullyRoutedCount: 1,
+                FailedRoutingCount: 0,
+                RoutingDuration: TimeSpan.Zero));
         _dbContext = new PodDbContext(_contextOptions);
         _dbContext.Database.EnsureCreated();
         SeedPodAndMember(_dbContext, PodId1, SenderPeer);
         SeedPodAndMember(_dbContext, PodId2, SenderPeer);
-        _messaging = new SqlitePodMessaging(_dbContext, _loggerMock.Object);
+        _messaging = new SqlitePodMessaging(_dbContext, _loggerMock.Object, _routerMock.Object);
     }
 
     public void Dispose()
@@ -103,6 +115,7 @@ public class SqlitePodMessagingTests : IDisposable
         Assert.Equal(SenderPeer, stored.SenderPeerId);
         Assert.Equal("Hello world!", stored.Body);
         Assert.Equal("sig", stored.Signature);
+        _routerMock.Verify(r => r.RouteMessageAsync(It.Is<PodMessage>(m => m.MessageId == message.MessageId), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -189,5 +202,29 @@ public class SqlitePodMessagingTests : IDisposable
         var msg = NewMessage("pod:00000000000000000000000000000099", ChannelGeneral, SenderPeer, "x", 1);
         var ok = await _messaging.SendAsync(msg);
         Assert.False(ok);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenRoutingFails_ReturnsFalseAfterPersisting()
+    {
+        _routerMock
+            .Setup(r => r.RouteMessageAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PodMessage message, CancellationToken _) => new PodMessageRoutingResult(
+                Success: false,
+                MessageId: message.MessageId,
+                PodId: message.PodId,
+                TargetPeerCount: 1,
+                SuccessfullyRoutedCount: 0,
+                FailedRoutingCount: 1,
+                RoutingDuration: TimeSpan.Zero,
+                ErrorMessage: "Routing failed"));
+
+        var message = NewMessage(PodId1, ChannelGeneral, SenderPeer, "Hello route failure", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        var ok = await _messaging.SendAsync(message);
+
+        Assert.False(ok);
+        var stored = await _dbContext.Messages.FirstOrDefaultAsync(m => m.PodId == PodId1 && m.Body == "Hello route failure");
+        Assert.NotNull(stored);
     }
 }

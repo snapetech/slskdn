@@ -24,7 +24,7 @@ namespace slskd.Transfers.MultiSource.Discovery
     /// <summary>
     ///     Service for continuous background discovery of file sources.
     /// </summary>
-    public interface ISourceDiscoveryService
+    public interface ISourceDiscoveryService : IDisposable
     {
         /// <summary>
         ///     Gets a value indicating whether discovery is currently running.

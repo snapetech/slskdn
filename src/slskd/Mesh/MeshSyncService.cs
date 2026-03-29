@@ -76,6 +76,7 @@ namespace slskd.Mesh
 
         private readonly ConcurrentDictionary<string, MeshPeerState> peerStates = new(StringComparer.OrdinalIgnoreCase);
         private readonly MeshSyncStats stats = new();
+        private readonly object statsLock = new();
         private readonly SemaphoreSlim syncLock = new(1, 1);
 
         // Pending requests: requestId -> TaskCompletionSource
@@ -127,6 +128,8 @@ namespace slskd.Mesh
 
         private void SoulseekClient_PrivateMessageReceived(object? sender, PrivateMessageReceivedEventArgs e)
         {
+            var normalizedUsername = (e.Username ?? string.Empty).Trim();
+
             // Check if this is a mesh message
             if (!e.Message.StartsWith(MeshMessagePrefix, StringComparison.OrdinalIgnoreCase))
             {
@@ -151,14 +154,17 @@ namespace slskd.Mesh
                 try
                 {
                     var response = JsonSerializer.Deserialize<MeshRespKeyMessage>(payload);
-                    if (response != null && !string.IsNullOrEmpty(response.FlacKey))
+                    if (response != null && messageSigner.VerifyMessage(response) && !string.IsNullOrEmpty(response.FlacKey))
                     {
-                        // Find pending request by FlacKey (simplified - in production would use request IDs)
-                        var requestId = response.FlacKey;
+                        var requestId = $"{normalizedUsername}:{(response.FlacKey ?? string.Empty).Trim()}";
                         if (pendingRequests.TryRemove(requestId, out var tcs))
                         {
                             tcs.SetResult(response);
                         }
+                    }
+                    else
+                    {
+                        log.Warning("[MESH] Rejected RESPKEY from {Peer}: invalid signature or missing key", e.Username);
                     }
                 }
                 catch (Exception ex)
@@ -166,7 +172,30 @@ namespace slskd.Mesh
                     log.Warning(ex, "[MESH] Failed to deserialize RESPKEY message from {Peer}", e.Username);
                 }
             }
-            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO")
+            else if (messageType == "RESPCHUNK")
+            {
+                try
+                {
+                    var response = JsonSerializer.Deserialize<MeshRespChunkMessage>(payload);
+                    if (response != null && messageSigner.VerifyMessage(response) && !string.IsNullOrEmpty(response.FlacKey))
+                    {
+                        var requestId = $"{normalizedUsername}:{(response.FlacKey ?? string.Empty).Trim()}:{response.Offset}";
+                        if (pendingChunkRequests.TryRemove(requestId, out var tcs))
+                        {
+                            tcs.SetResult(response);
+                        }
+                    }
+                    else
+                    {
+                        log.Warning("[MESH] Rejected RESPCHUNK from {Peer}: invalid signature or missing key", e.Username);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    log.Warning(ex, "[MESH] Failed to deserialize RESPCHUNK message from {Peer}", e.Username);
+                }
+            }
+            else if (messageType == "REQKEY" || messageType == "REQDELTA" || messageType == "PUSHDELTA" || messageType == "HELLO" || messageType == "REQCHUNK")
             {
                 // Handle incoming requests by routing to HandleMessageAsync
                 _ = Task.Run(async () =>
@@ -185,11 +214,11 @@ namespace slskd.Mesh
 
                         if (message != null)
                         {
-                            var response = await HandleMessageAsync(e.Username, message);
+                            var response = await HandleMessageAsync(normalizedUsername, message);
                             if (response != null)
                             {
                                 // Send response back
-                                await SendMeshMessageAsync(e.Username, response);
+                                await SendMeshMessageAsync(normalizedUsername, response);
                             }
                         }
                     }
@@ -214,12 +243,26 @@ namespace slskd.Mesh
                 return;
             }
 
+            if (soulseekClient != null)
+            {
+                soulseekClient.PrivateMessageReceived -= SoulseekClient_PrivateMessageReceived;
+            }
+
+            CancelPendingRequests(pendingRequests);
+            CancelPendingRequests(pendingChunkRequests);
             syncLock.Dispose();
             _disposed = true;
         }
 
         private async Task SendMeshMessageAsync(string username, MeshMessage message)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                log.Debug("[MESH] Cannot send mesh message - peer username is invalid");
+                return;
+            }
+
             if (soulseekClient == null)
             {
                 log.Warning("[MESH] Cannot send mesh message - Soulseek client not available");
@@ -259,6 +302,14 @@ namespace slskd.Mesh
         /// <inheritdoc cref="IChunkRequestSender.RequestChunkAsync"/>
         public async Task<(string? DataBase64, bool Success)> RequestChunkAsync(string peer, string flacKey, long offset, int length, CancellationToken cancellationToken = default)
         {
+            peer = peer?.Trim() ?? string.Empty;
+            flacKey = flacKey?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(peer) || string.IsNullOrWhiteSpace(flacKey))
+            {
+                return (null, false);
+            }
+
             if (soulseekClient == null)
             {
                 log.Debug("[MESH] Cannot request chunk - Soulseek client not available");
@@ -267,16 +318,24 @@ namespace slskd.Mesh
 
             var req = new MeshReqChunkMessage { FlacKey = flacKey, Offset = offset, Length = length };
             var key = $"{peer}:{flacKey}:{offset}";
-            var tcs = new TaskCompletionSource<MeshRespChunkMessage>();
-            if (!pendingChunkRequests.TryAdd(key, tcs))
+            var tcs = new TaskCompletionSource<MeshRespChunkMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var createdRequest = pendingChunkRequests.TryAdd(key, tcs);
+            if (!createdRequest)
             {
-                log.Warning("[MESH] Duplicate chunk request for {Key} from {Peer}", key, peer);
-                return (null, false);
+                log.Debug("[MESH] Reusing pending chunk request for {Key} from {Peer}", key, peer);
+                if (!pendingChunkRequests.TryGetValue(key, out tcs))
+                {
+                    return (null, false);
+                }
             }
 
             try
             {
-                await SendMeshMessageAsync(peer, req);
+                if (createdRequest)
+                {
+                    await SendMeshMessageAsync(peer, req);
+                }
+
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(15));
                 var resp = await tcs.Task.WaitAsync(timeoutCts.Token);
@@ -365,25 +424,9 @@ namespace slskd.Mesh
                 await syncLock.WaitAsync(cancellationToken);
                 try
                 {
-                    // Generate HELLO
-                    var hello = GenerateHelloMessage();
-                    log.Information("[MESH] Initiating sync with {Peer}, our seq={SeqId}", username, hello.LatestSeqId);
-
-                    // In a real implementation, we'd send this over a Soulseek connection
-                    // For now, we simulate with local state and API calls
-
-                    // Get entries we need from them (since their last known seq)
-                    var theirLastSeq = state.LastSeqSeen;
-                    var ourEntries = await hashDb.GetEntriesSinceSeqAsync(theirLastSeq, MaxEntriesPerSync, cancellationToken);
-                    result.EntriesSent = ourEntries.Count();
-
-                    // Update stats
-                    stats.TotalEntriesSent += result.EntriesSent;
-                    state.LastSyncTime = DateTime.UtcNow;
-                    state.IsMeshCapable = true;
-
-                    result.Success = true;
-                    log.Information("[MESH] Sync with {Peer} complete: sent={Sent}", username, result.EntriesSent);
+                    _ = GenerateHelloMessage();
+                    result.Error = "Mesh sync transport is not implemented";
+                    log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is not implemented", username);
                 }
                 finally
                 {
@@ -392,17 +435,20 @@ namespace slskd.Mesh
             }
             catch (Exception ex)
             {
-                result.Error = ex.Message;
-                stats.FailedSyncs++;
+                result.Error = "Mesh sync failed";
+                lock (statsLock) { stats.FailedSyncs++; }
                 log.Warning(ex, "[MESH] Sync with {Peer} failed", username);
             }
 
             result.DurationMs = sw.ElapsedMilliseconds;
-            stats.TotalSyncs++;
-            if (result.Success)
+            lock (statsLock)
             {
-                stats.SuccessfulSyncs++;
-                stats.LastSyncTime = DateTime.UtcNow;
+                stats.TotalSyncs++;
+                if (result.Success)
+                {
+                    stats.SuccessfulSyncs++;
+                    stats.LastSyncTime = DateTime.UtcNow;
+                }
             }
 
             return result;
@@ -411,12 +457,14 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<MeshMessage?> HandleMessageAsync(string fromUser, MeshMessage message, CancellationToken cancellationToken = default)
         {
+            fromUser = fromUser?.Trim() ?? string.Empty;
+
             // SECURITY: Validate username before any processing
             var usernameValidation = MessageValidator.ValidateUsername(fromUser);
             if (!usernameValidation.IsValid)
             {
                 log.Warning("[MESH] Rejecting message from invalid username: {Error}", usernameValidation.Error);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
                 return null;
             }
 
@@ -424,7 +472,7 @@ namespace slskd.Mesh
             if (message == null)
             {
                 log.Warning("[MESH] Rejecting null message from {Peer}", fromUser);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
                 return null;
             }
 
@@ -432,7 +480,7 @@ namespace slskd.Mesh
             if (IsQuarantined(fromUser))
             {
                 log.Warning("[MESH] Rejecting message from quarantined peer {Peer}", fromUser);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
 
                 // Note: QuarantinedPeers count is updated in Stats getter
                 return null;
@@ -442,8 +490,12 @@ namespace slskd.Mesh
             if (!messageSigner.VerifyMessage(message))
             {
                 log.Warning("[MESH] Rejecting message with invalid signature from {Peer}", fromUser);
-                stats.RejectedMessages++;
-                stats.SignatureVerificationFailures++; // T-1436
+                lock (statsLock)
+                {
+                    stats.RejectedMessages++;
+                    stats.SignatureVerificationFailures++; // T-1436
+                }
+
                 return null;
             }
 
@@ -452,7 +504,7 @@ namespace slskd.Mesh
             if (!messageValidation.IsValid)
             {
                 log.Warning("[MESH] Rejecting invalid message from {Peer}: {Error}", fromUser, messageValidation.Error);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
 
                 // SECURITY: Track invalid message for rate limiting (T-1432)
                 RecordInvalidMessage(fromUser);
@@ -461,7 +513,7 @@ namespace slskd.Mesh
                 if (IsRateLimited(fromUser, isMessage: true))
                 {
                     log.Warning("[MESH] Peer {Peer} exceeded invalid message rate limit, rejecting", fromUser);
-                    stats.RateLimitViolations++; // T-1436
+                    lock (statsLock) { stats.RateLimitViolations++; } // T-1436
 
                     if (peerReputation != null)
                     {
@@ -593,14 +645,20 @@ namespace slskd.Mesh
         /// <inheritdoc/>
         public async Task<MeshHashEntry?> LookupHashAsync(string flacKey, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey))
+            {
+                return null;
+            }
+
             // First check local DB
             var local = await hashDb.LookupHashAsync(flacKey, cancellationToken);
             if (local != null)
             {
                 return new MeshHashEntry
                 {
-                    FlacKey = local.FlacKey,
-                    ByteHash = local.ByteHash,
+                    FlacKey = local.FlacKey?.Trim() ?? flacKey,
+                    ByteHash = local.ByteHash?.Trim() ?? string.Empty,
                     Size = local.Size,
                     MetaFlags = local.MetaFlags,
                     SeqId = local.SeqId,
@@ -623,7 +681,8 @@ namespace slskd.Mesh
                 return null;
             }
 
-            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key} (consensus: minAgreements={Min})", meshPeers.Count, flacKey, minAgreements);
+            var requiredAgreements = Math.Max(1, Math.Min(minAgreements, meshPeers.Count));
+            log.Debug("[MESH] Querying {Count} mesh peers for hash: {Key} (consensus: requiredAgreements={Min})", meshPeers.Count, flacKey, requiredAgreements);
 
             // Query peers in parallel
             var queryTasks = meshPeers.Select(async peer =>
@@ -643,11 +702,11 @@ namespace slskd.Mesh
 
             // T-1435: Group by (FlacKey, ByteHash, Size); only accept if >= ConsensusMinAgreements
             var groups = results
-                .Where(r => r != null && !string.IsNullOrEmpty(r.ByteHash))
+                .Where(r => r != null && !string.IsNullOrWhiteSpace(r.ByteHash))
                 .Select(r => r!)
-                .GroupBy(r => (r.FlacKey ?? string.Empty, r.ByteHash ?? string.Empty, r.Size))
+                .GroupBy(r => ((r.FlacKey ?? string.Empty).Trim(), (r.ByteHash ?? string.Empty).Trim(), r.Size))
                 .ToList();
-            var agreed = groups.FirstOrDefault(g => g.Count() >= minAgreements);
+            var agreed = groups.FirstOrDefault(g => g.Count() >= requiredAgreements);
             var foundEntry = agreed?.FirstOrDefault();
 
             if (foundEntry != null)
@@ -687,6 +746,13 @@ namespace slskd.Mesh
         /// </summary>
         protected virtual async Task<MeshHashEntry?> QueryPeerForHashAsync(string username, string flacKey, CancellationToken cancellationToken)
         {
+            username = username?.Trim() ?? string.Empty;
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(flacKey))
+            {
+                return null;
+            }
+
             // Check if peer supports mesh sync
             var peerCaps = capabilities.GetPeerCapabilities(username);
             if (peerCaps == null || !peerCaps.CanMeshSync)
@@ -708,20 +774,27 @@ namespace slskd.Mesh
             };
 
             // Create TaskCompletionSource to wait for response
-            var tcs = new TaskCompletionSource<MeshRespKeyMessage>();
-            var requestId = flacKey; // Use FlacKey as request ID for simplicity
+            var tcs = new TaskCompletionSource<MeshRespKeyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var requestId = $"{username}:{flacKey}";
 
             // Register pending request
-            if (!pendingRequests.TryAdd(requestId, tcs))
+            var createdRequest = pendingRequests.TryAdd(requestId, tcs);
+            if (!createdRequest)
             {
-                log.Warning("[MESH] Duplicate request for key {Key} to peer {Peer}", flacKey, username);
-                return null;
+                log.Debug("[MESH] Reusing pending request for key {Key} to peer {Peer}", flacKey, username);
+                if (!pendingRequests.TryGetValue(requestId, out tcs))
+                {
+                    return null;
+                }
             }
 
             try
             {
                 // Send request message
-                await SendMeshMessageAsync(username, request);
+                if (createdRequest)
+                {
+                    await SendMeshMessageAsync(username, request);
+                }
 
                 log.Debug("[MESH] Sent REQKEY message to {Peer} for key {Key}", username, flacKey);
 
@@ -733,6 +806,8 @@ namespace slskd.Mesh
 
                 if (response.Found && response.Entry != null)
                 {
+                    response.Entry.FlacKey = response.Entry.FlacKey?.Trim() ?? flacKey;
+                    response.Entry.ByteHash = response.Entry.ByteHash?.Trim() ?? string.Empty;
                     log.Debug("[MESH] Peer {Peer} found key {Key}", username, flacKey);
                     return response.Entry;
                 }
@@ -745,20 +820,44 @@ namespace slskd.Mesh
             catch (OperationCanceledException)
             {
                 log.Debug("[MESH] Request timeout for key {Key} from peer {Peer}", flacKey, username);
-                pendingRequests.TryRemove(requestId, out _);
+                if (createdRequest)
+                {
+                    pendingRequests.TryRemove(requestId, out _);
+                }
+
                 return null;
             }
             catch (Exception ex)
             {
                 log.Warning(ex, "[MESH] Error querying peer {Peer} for key {Key}", username, flacKey);
-                pendingRequests.TryRemove(requestId, out _);
+                if (createdRequest)
+                {
+                    pendingRequests.TryRemove(requestId, out _);
+                }
+
                 return null;
+            }
+        }
+
+        private static void CancelPendingRequests<TResponse>(ConcurrentDictionary<string, TaskCompletionSource<TResponse>> pending)
+        {
+            foreach (var (key, tcs) in pending)
+            {
+                pending.TryRemove(key, out _);
+                tcs.TrySetCanceled();
             }
         }
 
         /// <inheritdoc/>
         public async Task PublishHashAsync(string flacKey, string byteHash, long size, int? metaFlags = null, CancellationToken cancellationToken = default)
         {
+            flacKey = flacKey?.Trim() ?? string.Empty;
+            byteHash = byteHash?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(flacKey) || string.IsNullOrWhiteSpace(byteHash))
+            {
+                return;
+            }
+
             // Store locally (will get new seq_id)
             await hashDb.StoreHashAsync(new HashDbEntry
             {
@@ -849,7 +948,7 @@ namespace slskd.Mesh
             if (IsQuarantined(fromUser))
             {
                 log.Warning("[MESH] Rejecting entries from quarantined peer {Peer}", fromUser);
-                stats.RejectedMessages++;
+                lock (statsLock) { stats.RejectedMessages++; }
                 return 0;
             }
 
@@ -858,8 +957,11 @@ namespace slskd.Mesh
             {
                 var score = peerReputation.GetScore(fromUser);
                 log.Warning("[MESH] Rejecting entries from untrusted peer {Peer} (score={Score})", fromUser, score);
-                stats.RejectedMessages++;
-                stats.ReputationBasedRejections++; // T-1436
+                lock (statsLock)
+                {
+                    stats.RejectedMessages++;
+                    stats.ReputationBasedRejections++; // T-1436
+                }
 
                 // Record protocol violation for attempting to sync with low reputation
                 peerReputation.RecordProtocolViolation(fromUser, "Attempted mesh sync with untrusted reputation");
@@ -920,7 +1022,7 @@ namespace slskd.Mesh
             if (skipped > 0)
             {
                 log.Warning("[MESH] Skipped {Skipped}/{Total} invalid entries from {Peer}", skipped, entryList.Count, fromUser);
-                stats.SkippedEntries += skipped;
+                lock (statsLock) { stats.SkippedEntries += skipped; }
 
                 // SECURITY: Track invalid entries for rate limiting (T-1432)
                 RecordInvalidEntries(fromUser, skipped);
@@ -929,7 +1031,7 @@ namespace slskd.Mesh
                 if (IsRateLimited(fromUser, isMessage: false))
                 {
                     log.Warning("[MESH] Peer {Peer} exceeded invalid entry rate limit, rejecting remaining entries", fromUser);
-                    stats.RateLimitViolations++; // T-1436
+                    lock (statsLock) { stats.RateLimitViolations++; } // T-1436
 
                     if (peerReputation != null)
                     {
@@ -974,7 +1076,7 @@ namespace slskd.Mesh
                         popCache[key] = ok;
                         if (!ok)
                         {
-                            stats.ProofOfPossessionFailures++;
+                            lock (statsLock) { stats.ProofOfPossessionFailures++; }
                             log.Debug("[MESH] Proof-of-possession failed for {Key} from {Peer}", entry.FlacKey, fromUser);
                         }
                     }
@@ -995,8 +1097,11 @@ namespace slskd.Mesh
 
             var merged = await hashDb.MergeEntriesFromMeshAsync(validatedEntries, cancellationToken);
 
-            stats.TotalEntriesReceived += entryList.Count;
-            stats.TotalEntriesMerged += merged;
+            lock (statsLock)
+            {
+                stats.TotalEntriesReceived += entryList.Count;
+                stats.TotalEntriesMerged += merged;
+            }
 
             // Update peer state - only consider validated entries for max seq
             var state = GetOrCreatePeerState(fromUser);
@@ -1034,7 +1139,7 @@ namespace slskd.Mesh
             log.Debug("[MESH] {Peer} requested delta since seq={SeqId}, max={Max}", fromUser, req.SinceSeqId, req.MaxEntries);
 
             var response = await GenerateDeltaResponseAsync(req.SinceSeqId, Math.Min(req.MaxEntries, MaxEntriesPerSync), cancellationToken);
-            stats.TotalEntriesSent += response.Entries.Count;
+            lock (statsLock) { stats.TotalEntriesSent += response.Entries.Count; }
 
             log.Information("[MESH] Sending {Count} entries to {Peer} (hasMore={HasMore})", response.Entries.Count, fromUser, response.HasMore);
             return response;
@@ -1118,6 +1223,7 @@ namespace slskd.Mesh
 
         private MeshPeerState GetOrCreatePeerState(string username)
         {
+            username = username?.Trim() ?? string.Empty;
             return peerStates.GetOrAdd(username, u => new MeshPeerState
             {
                 Username = u,
@@ -1272,7 +1378,7 @@ namespace slskd.Mesh
                     log.Warning("[MESH] Quarantined peer {Peer} until {Until} (reason: {Reason}, violations: {Count})",
                         username, state.QuarantinedUntil, reason, state.RateLimitViolationCount);
 
-                    stats.QuarantineEvents++; // T-1436
+                    lock (statsLock) { stats.QuarantineEvents++; } // T-1436
 
                     // Reset violation count after quarantine
                     state.RateLimitViolationCount = 0;

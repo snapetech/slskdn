@@ -31,7 +31,7 @@ namespace slskd.Transfers.MultiSource.Discovery
     /// <summary>
     ///     Service for continuous background discovery of file sources.
     /// </summary>
-    public class SourceDiscoveryService : IHostedService, ISourceDiscoveryService
+    public sealed class SourceDiscoveryService : IHostedService, ISourceDiscoveryService, IDisposable
     {
         /// <summary>
         ///     Search window duration in milliseconds (4 minutes 30 seconds).
@@ -115,12 +115,13 @@ namespace slskd.Transfers.MultiSource.Discovery
             searchCycles = 0;
             lastCycleNewFiles = 0;
 
-            cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts?.Dispose();
+            cts = new CancellationTokenSource();
 
             log.Information("[Discovery] Starting continuous discovery for: {SearchTerm} (hash verification: {HashEnabled})",
                 searchTerm, enableHashVerification);
 
-            discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), cts.Token);
+            discoveryTask = Task.Run(() => DiscoveryLoopAsync(cts.Token), CancellationToken.None);
 
             await Task.CompletedTask;
         }
@@ -148,7 +149,18 @@ namespace slskd.Transfers.MultiSource.Discovery
                 }
             }
 
+            discoveryTask = null;
+            cts?.Dispose();
+            cts = null;
             log.Information("[Discovery] Stopped. Total cycles: {Cycles}", searchCycles);
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            cts?.Cancel();
+            cts?.Dispose();
+            cts = null;
         }
 
         /// <inheritdoc/>
@@ -350,8 +362,8 @@ namespace slskd.Transfers.MultiSource.Discovery
             {
                 try
                 {
-                    searchCycles++;
-                    log.Information("[Discovery] Starting search cycle #{Cycle} for: {Term}", searchCycles, CurrentSearchTerm);
+                    var cycle = Interlocked.Increment(ref searchCycles);
+                    log.Information("[Discovery] Starting search cycle #{Cycle} for: {Term}", cycle, CurrentSearchTerm);
 
                     // Collect responses during the search window
                     var responses = new List<SearchResponse>();
@@ -377,13 +389,14 @@ namespace slskd.Transfers.MultiSource.Discovery
 
                     var searchDuration = DateTime.UtcNow - searchStarted;
                     log.Information("[Discovery] Search cycle #{Cycle} collected {Count} responses in {Duration:F1}s",
-                        searchCycles, responses.Count, searchDuration.TotalSeconds);
+                        cycle, responses.Count, searchDuration.TotalSeconds);
 
                     // Process responses and store in DB
-                    lastCycleNewFiles = await ProcessResponsesAsync(responses, cancellationToken);
+                    var newFiles = await ProcessResponsesAsync(responses, cancellationToken);
+                    Interlocked.Exchange(ref lastCycleNewFiles, newFiles);
 
                     log.Information("[Discovery] Cycle #{Cycle} complete. New files: {New}. Total in DB: {Total}",
-                        searchCycles, lastCycleNewFiles, GetStats().TotalFiles);
+                        cycle, newFiles, GetStats().TotalFiles);
 
                     // Small pause before next cycle
                     await Task.Delay(CyclePauseMs, cancellationToken);

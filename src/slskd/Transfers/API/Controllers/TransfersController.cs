@@ -84,18 +84,27 @@ namespace slskd.Transfers.API
         [ProducesResponseType(404)]
         public IActionResult CancelDownloadAsync([FromRoute, Required] string username, [FromRoute, Required] string id, [FromQuery] bool remove = false, [FromQuery] bool deleteFile = false)
         {
+            username = username?.Trim() ?? string.Empty;
+            id = id?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
             }
 
-            if (!Guid.TryParse(id, out var guid))
+            if (string.IsNullOrWhiteSpace(username) || !Guid.TryParse(id, out var guid))
             {
                 return BadRequest();
             }
 
             try
             {
+                var download = Transfers.Downloads.Find(t => t.Id == guid);
+                if (download == default || !string.Equals(download.Username, username, StringComparison.Ordinal))
+                {
+                    return NotFound();
+                }
+
                 Transfers.Downloads.TryCancel(guid);
 
                 if (remove)
@@ -151,18 +160,27 @@ namespace slskd.Transfers.API
         [ProducesResponseType(404)]
         public IActionResult CancelUpload([FromRoute, Required] string username, [FromRoute, Required] string id, [FromQuery] bool remove = false)
         {
+            username = username?.Trim() ?? string.Empty;
+            id = id?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
             }
 
-            if (!Guid.TryParse(id, out var guid))
+            if (string.IsNullOrWhiteSpace(username) || !Guid.TryParse(id, out var guid))
             {
                 return BadRequest();
             }
 
             try
             {
+                var upload = Transfers.Uploads.Find(t => t.Id == guid);
+                if (upload == default || !string.Equals(upload.Username, username, StringComparison.Ordinal))
+                {
+                    return NotFound();
+                }
+
                 Transfers.Uploads.TryCancel(guid);
 
                 if (remove)
@@ -221,6 +239,8 @@ namespace slskd.Transfers.API
         [ProducesResponseType(typeof(string), 500)]
         public async Task<IActionResult> EnqueueAsync([FromRoute, Required] string username, [FromBody, Required] IEnumerable<QueueDownloadRequest> requests)
         {
+            username = username?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
@@ -243,6 +263,24 @@ namespace slskd.Transfers.API
                 return BadRequest("One or more records in the request are null");
             }
 
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
+            var normalizedRequests = requestList
+                .Select(r => new QueueDownloadRequest
+                {
+                    Filename = r!.Filename?.Trim() ?? string.Empty,
+                    Size = r.Size
+                })
+                .ToList();
+
+            if (normalizedRequests.Any(r => string.IsNullOrWhiteSpace(r.Filename)))
+            {
+                return BadRequest("Each file requires a non-empty filename");
+            }
+
             if (!DownloadRequestLimiter.Wait(0))
             {
                 return StatusCode(429, "Only one concurrent operation is permitted. Wait until the previous request completes");
@@ -250,14 +288,14 @@ namespace slskd.Transfers.API
 
             try
             {
-                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, requestList.Select(r => (r!.Filename, r!.Size)));
+                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, normalizedRequests.Select(r => (r.Filename, r.Size)));
 
                 return StatusCode(201, new { Enqueued = enqueued, Failed = failed });
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to enqueue {Count} files for {Username}: {Message}", requestList.Count, username, ex.Message);
-                return StatusCode(500, ex.Message);
+                Log.Error(ex, "Failed to enqueue {Count} files for {Username}", requestList.Count, username);
+                return StatusCode(500, "Failed to enqueue downloads");
             }
             finally
             {
@@ -307,9 +345,16 @@ namespace slskd.Transfers.API
         [ProducesResponseType(200)]
         public IActionResult GetDownloadsAsync([FromRoute, Required] string username)
         {
+            username = username?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest();
             }
 
             var downloads = Transfers.Downloads.List(d => d.Username == username);
@@ -339,19 +384,22 @@ namespace slskd.Transfers.API
         [ProducesResponseType(404)]
         public IActionResult GetDownload([FromRoute, Required] string username, [FromRoute, Required] string id)
         {
+            username = username?.Trim() ?? string.Empty;
+            id = id?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
             }
 
-            if (!Guid.TryParse(id, out var guid))
+            if (string.IsNullOrWhiteSpace(username) || !Guid.TryParse(id, out var guid))
             {
                 return BadRequest();
             }
 
             var download = Transfers.Downloads.Find(t => t.Id == guid);
 
-            if (download == default)
+            if (download == default || !string.Equals(download.Username, username, StringComparison.Ordinal))
             {
                 return NotFound();
             }
@@ -374,18 +422,27 @@ namespace slskd.Transfers.API
         [ProducesResponseType(404)]
         public async Task<IActionResult> GetPlaceInQueueAsync([FromRoute, Required] string username, [FromRoute, Required] string id)
         {
+            username = username?.Trim() ?? string.Empty;
+            id = id?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
             }
 
-            if (!Guid.TryParse(id, out var guid))
+            if (string.IsNullOrWhiteSpace(username) || !Guid.TryParse(id, out var guid))
             {
                 return BadRequest();
             }
 
             try
             {
+                var download = Transfers.Downloads.Find(t => t.Id == guid);
+                if (download == default || !string.Equals(download.Username, username, StringComparison.Ordinal))
+                {
+                    return NotFound();
+                }
+
                 var place = await Transfers.Downloads.GetPlaceInQueueAsync(guid);
                 return Ok(place);
             }
@@ -395,7 +452,8 @@ namespace slskd.Transfers.API
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                Log.Error(ex, "Failed to get place in queue for {Username}/{TransferId}", username, guid);
+                return StatusCode(500, "Failed to get queue position");
             }
         }
 
@@ -478,9 +536,16 @@ namespace slskd.Transfers.API
         [ProducesResponseType(200)]
         public IActionResult GetUploads([FromRoute, Required] string username)
         {
+            username = username?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest();
             }
 
             var uploads = Transfers.Uploads.List(d => d.Username == username, includeRemoved: false);
@@ -516,19 +581,22 @@ namespace slskd.Transfers.API
         [ProducesResponseType(200)]
         public IActionResult GetUploads([FromRoute, Required] string username, [FromRoute, Required] string id)
         {
+            username = username?.Trim() ?? string.Empty;
+            id = id?.Trim() ?? string.Empty;
+
             if (Program.IsRelayAgent)
             {
                 return Forbid();
             }
 
-            if (!Guid.TryParse(id, out var guid))
+            if (string.IsNullOrWhiteSpace(username) || !Guid.TryParse(id, out var guid))
             {
                 return BadRequest();
             }
 
             var upload = Transfers.Uploads.Find(t => t.Id == guid);
 
-            if (upload == default)
+            if (upload == default || !string.Equals(upload.Username, username, StringComparison.Ordinal))
             {
                 return NotFound();
             }
@@ -574,6 +642,11 @@ namespace slskd.Transfers.API
                 return Forbid();
             }
 
+            if (request == null)
+            {
+                return BadRequest();
+            }
+
             var alternatives = await AutoReplace.FindAlternativesAsync(request, cancellationToken);
             return Ok(alternatives);
         }
@@ -597,6 +670,11 @@ namespace slskd.Transfers.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            if (request == null)
+            {
+                return BadRequest();
             }
 
             var success = await AutoReplace.ReplaceDownloadAsync(request, cancellationToken);
@@ -625,6 +703,11 @@ namespace slskd.Transfers.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            if (request == null)
+            {
+                return BadRequest();
             }
 
             var result = await AutoReplace.ProcessStuckDownloadsAsync(request, cancellationToken);

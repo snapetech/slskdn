@@ -11,11 +11,12 @@ namespace slskd.Mesh.Privacy;
 /// Implements message padding to fixed bucket sizes to prevent traffic analysis attacks.
 /// Pads messages to predefined bucket sizes using random fill bytes to prevent compression analysis.
 /// </summary>
-public class BucketPadder : IMessagePadder
+public sealed class BucketPadder : IMessagePadder, IDisposable
 {
     private readonly ILogger<BucketPadder> _logger;
     private readonly RandomNumberGenerator _rng;
     private int _bucketSize;
+    private bool _disposed;
 
     // Standard bucket sizes that provide good privacy vs overhead balance
     public static readonly int[] StandardBucketSizes = { 512, 1024, 2048, 4096, 8192, 16384 };
@@ -53,6 +54,8 @@ public class BucketPadder : IMessagePadder
     /// <exception cref="ArgumentException">Thrown when an invalid bucket size is specified.</exception>
     public void SetBucketSize(int size)
     {
+        ThrowIfDisposed();
+
         if (!StandardBucketSizes.Contains(size))
         {
             throw new ArgumentException($"Bucket size must be one of: {string.Join(", ", StandardBucketSizes)}", nameof(size));
@@ -71,6 +74,8 @@ public class BucketPadder : IMessagePadder
     /// <exception cref="ArgumentException">Thrown when message is larger than bucket size.</exception>
     public byte[] Pad(byte[] message)
     {
+        ThrowIfDisposed();
+
         if (message == null)
         {
             throw new ArgumentNullException(nameof(message));
@@ -117,6 +122,8 @@ public class BucketPadder : IMessagePadder
     /// <exception cref="ArgumentException">Thrown when paddedMessage has invalid format or size.</exception>
     public byte[] Unpad(byte[] paddedMessage)
     {
+        ThrowIfDisposed();
+
         if (paddedMessage == null)
         {
             throw new ArgumentNullException(nameof(paddedMessage));
@@ -190,5 +197,22 @@ public class BucketPadder : IMessagePadder
         }
 
         return bucketSize - messageSize;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _rng.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

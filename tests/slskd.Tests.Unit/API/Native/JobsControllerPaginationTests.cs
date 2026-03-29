@@ -118,6 +118,38 @@ public class JobsControllerPaginationTests
     }
 
     [Fact]
+    public async Task GetJobs_Should_Clamp_Oversized_Limit()
+    {
+        var jobs = Enumerable.Range(1, 150).Select(i => new DiscographyJob
+        {
+            JobId = $"job{i}",
+            Status = JobStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-i)
+        }).ToList();
+
+        jobServiceList.Setup(x => x.GetAllDiscographyJobs()).Returns(jobs);
+        jobServiceList.Setup(x => x.GetAllLabelCrateJobs()).Returns(new List<LabelCrateJob>());
+
+        var result = await controller.GetJobs(
+            type: null,
+            status: null,
+            limit: 500,
+            offset: 0,
+            sortBy: null,
+            sortOrder: null,
+            CancellationToken.None).ConfigureAwait(true);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var responseType = okResult.Value.GetType();
+        var limitProp = responseType.GetProperty("limit");
+        var jobsProp = responseType.GetProperty("jobs");
+
+        Assert.Equal(100, (int)limitProp.GetValue(okResult.Value));
+        var jobsList = (jobsProp.GetValue(okResult.Value) as IEnumerable).Cast<object>().ToList();
+        Assert.Equal(100, jobsList.Count);
+    }
+
+    [Fact]
     public async Task GetJobs_Should_Apply_Offset_Correctly()
     {
         // Arrange

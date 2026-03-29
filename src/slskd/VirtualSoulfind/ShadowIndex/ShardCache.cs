@@ -15,6 +15,13 @@ public interface IShardCache
     Task<ShadowIndexShard?> GetAsync(string mbid, CancellationToken ct = default);
     Task SetAsync(string mbid, ShadowIndexShard shard, TimeSpan ttl, CancellationToken ct = default);
     void Remove(string mbid);
+    ShardCacheStats GetStats();
+}
+
+public class ShardCacheStats
+{
+    public int EntryCount { get; set; }
+    public long ApproximateTotalSizeBytes { get; set; }
 }
 
 /// <summary>
@@ -24,6 +31,7 @@ public class ShardCache : IShardCache
 {
     private readonly IMemoryCache cache;
     private readonly ILogger<ShardCache> logger;
+    private readonly ConcurrentDictionary<string, CacheEntryMetadata> entries = new();
 
     public ShardCache(
         IMemoryCache cache,
@@ -46,6 +54,7 @@ public class ShardCache : IShardCache
 
             // Expired, remove from cache
             cache.Remove(GetCacheKey(mbid));
+            entries.TryRemove(mbid, out _);
         }
 
         logger.LogDebug("[VSF-CACHE] Cache miss for {MBID}", mbid);
@@ -60,6 +69,11 @@ public class ShardCache : IShardCache
         {
             AbsoluteExpirationRelativeToNow = ttl
         });
+        entries[mbid] = new CacheEntryMetadata
+        {
+            ExpiresAt = DateTimeOffset.UtcNow.Add(ttl),
+            ApproximateSizeBytes = ShardSerializer.EstimateSize(shard)
+        };
 
         return Task.CompletedTask;
     }
@@ -67,7 +81,32 @@ public class ShardCache : IShardCache
     public void Remove(string mbid)
     {
         cache.Remove(GetCacheKey(mbid));
+        entries.TryRemove(mbid, out _);
+    }
+
+    public ShardCacheStats GetStats()
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var (mbid, metadata) in entries)
+        {
+            if (metadata.ExpiresAt <= now)
+            {
+                entries.TryRemove(mbid, out _);
+            }
+        }
+
+        return new ShardCacheStats
+        {
+            EntryCount = entries.Count,
+            ApproximateTotalSizeBytes = entries.Values.Sum(value => value.ApproximateSizeBytes)
+        };
     }
 
     private static string GetCacheKey(string mbid) => $"vsf:shard:{mbid}";
+
+    private sealed class CacheEntryMetadata
+    {
+        public DateTimeOffset ExpiresAt { get; init; }
+        public long ApproximateSizeBytes { get; init; }
+    }
 }

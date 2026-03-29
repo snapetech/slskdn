@@ -85,7 +85,9 @@ public class UrlEncodingModelBinder : IModelBinder
             // a value that's already had one pass of url decoding applied
             var rawUrl = bindingContext.HttpContext.Features.Get<IHttpRequestFeature>()?.RawTarget ?? string.Empty;
 
-            var rawValue = new Uri($"{request.Scheme}://{request.Host}{rawUrl}").AbsolutePath // discard query string
+            var rawPath = rawUrl.Split('?', 2)[0];
+
+            var rawValue = rawPath
                 .Split('/', StringSplitOptions.RemoveEmptyEntries)
                 .ElementAtOrDefault(index);
 

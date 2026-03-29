@@ -50,7 +50,7 @@ namespace slskd.Validation
                 {
                     if (!File.Exists(file))
                     {
-                        return new ValidationResult($"The {validationContext.DisplayName} field specifies a non-existent file '{file}'.");
+                        return new ValidationResult($"The {validationContext.DisplayName} field specifies a non-existent file.");
                     }
 
                     if (FileAccess is not null)
@@ -62,7 +62,7 @@ namespace slskd.Validation
                         }
                         catch (IOException)
                         {
-                            return new ValidationResult($"The {validationContext.DisplayName} field specifies a file '{file}' that cannot be opened for required access '{FileAccess}'");
+                            return new ValidationResult($"The {validationContext.DisplayName} field specifies a file that cannot be opened for required access '{FileAccess}'");
                         }
                     }
                 }

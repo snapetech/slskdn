@@ -27,13 +27,18 @@ namespace slskd.Common.Moderation
     /// </remarks>
     public sealed class PeerReputationStore : IPeerReputationStore, IDisposable
     {
+        private static readonly JsonSerializerOptions PersistenceJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+        };
+
         private readonly ILogger<PeerReputationStore> _logger;
         private readonly IDataProtector _dataProtector;
         private readonly string _storagePath;
         private readonly ConcurrentDictionary<string, List<PeerReputationEvent>> _eventCache = new();
         private readonly SemaphoreSlim _fileLock = new(1, 1);
         private readonly SemaphoreSlim _loadLock = new(1, 1);
-        private bool _dataLoaded;
+        private volatile bool _dataLoaded;
 
         // Configuration constants
         private const int BanThreshold = 10; // 10 negative events = ban
@@ -141,24 +146,26 @@ namespace slskd.Common.Moderation
         }
 
         /// <inheritdoc/>
-        public Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(string peerId, int maxEvents = 50, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<PeerReputationEvent>> GetRecentEventsAsync(string peerId, int maxEvents = 50, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(peerId))
             {
-                return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
+                return Array.Empty<PeerReputationEvent>();
             }
+
+            await EnsureDataLoadedAsync(cancellationToken);
 
             if (!_eventCache.TryGetValue(peerId, out var events))
             {
-                return Task.FromResult<IEnumerable<PeerReputationEvent>>(Array.Empty<PeerReputationEvent>());
+                return Array.Empty<PeerReputationEvent>();
             }
 
             lock (events)
             {
-                return Task.FromResult<IEnumerable<PeerReputationEvent>>(events
+                return events
                     .OrderByDescending(e => e.Timestamp)
                     .Take(maxEvents)
-                    .ToList());
+                    .ToList();
             }
         }
 
@@ -232,6 +239,7 @@ namespace slskd.Common.Moderation
         public void Dispose()
         {
             _fileLock.Dispose();
+            _loadLock.Dispose();
         }
 
         /// <summary>
@@ -311,12 +319,14 @@ namespace slskd.Common.Moderation
                 var decryptedData = _dataProtector.Unprotect(encryptedData);
                 var json = Encoding.UTF8.GetString(decryptedData);
 
-                var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PeerReputationEvent>>>(json);
+                var deserialized = JsonSerializer.Deserialize<Dictionary<string, List<PersistedPeerReputationEvent>>>(json, PersistenceJsonOptions);
                 if (deserialized != null)
                 {
                     foreach (var kvp in deserialized)
                     {
-                        _eventCache[kvp.Key] = kvp.Value;
+                        _eventCache[kvp.Key] = kvp.Value
+                            .Select(e => e.ToRuntimeEvent())
+                            .ToList();
                     }
                 }
 
@@ -337,17 +347,19 @@ namespace slskd.Common.Moderation
         /// </summary>
         private async Task SaveToDiskAsync(CancellationToken cancellationToken = default)
         {
-            var data = new Dictionary<string, List<PeerReputationEvent>>();
+            var data = new Dictionary<string, List<PersistedPeerReputationEvent>>();
 
             foreach (var kvp in _eventCache)
             {
                 lock (kvp.Value)
                 {
-                    data[kvp.Key] = new List<PeerReputationEvent>(kvp.Value);
+                    data[kvp.Key] = kvp.Value
+                        .Select(PersistedPeerReputationEvent.FromRuntimeEvent)
+                        .ToList();
                 }
             }
 
-            var json = JsonSerializer.Serialize(data);
+            var json = JsonSerializer.Serialize(data, PersistenceJsonOptions);
             var jsonBytes = Encoding.UTF8.GetBytes(json);
             var encryptedData = _dataProtector.Protect(jsonBytes);
 
@@ -359,6 +371,41 @@ namespace slskd.Common.Moderation
             finally
             {
                 _fileLock.Release();
+            }
+        }
+
+        private sealed class PersistedPeerReputationEvent
+        {
+            public string PeerId { get; set; } = string.Empty;
+
+            public PeerReputationEventType EventType { get; set; }
+
+            public string? ContentId { get; set; }
+
+            public DateTimeOffset Timestamp { get; set; }
+
+            public string? Metadata { get; set; }
+
+            public PeerReputationEvent ToRuntimeEvent()
+            {
+                return new PeerReputationEvent(
+                    peerId: PeerId,
+                    eventType: EventType,
+                    contentId: ContentId,
+                    timestamp: Timestamp,
+                    metadata: Metadata);
+            }
+
+            public static PersistedPeerReputationEvent FromRuntimeEvent(PeerReputationEvent @event)
+            {
+                return new PersistedPeerReputationEvent
+                {
+                    PeerId = @event.PeerId,
+                    EventType = @event.EventType,
+                    ContentId = @event.ContentId,
+                    Timestamp = @event.Timestamp,
+                    Metadata = @event.Metadata,
+                };
             }
         }
     }

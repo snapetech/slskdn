@@ -94,8 +94,8 @@ public class EventsController : ControllerBase
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to list events: {Message}", ex.Message);
-            throw;
+            Log.Error(ex, "Failed to list events");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to list events");
         }
     }
 
@@ -119,17 +119,17 @@ public class EventsController : ControllerBase
     [ProducesResponseType(typeof(Event), 201)]
     public IActionResult RaiseEvent([FromRoute] string type, [FromBody] string disambiguator)
     {
+        type = type?.Trim() ?? string.Empty;
+        disambiguator = disambiguator?.Trim() ?? string.Empty;
+
         if (!Enum.TryParse<EventType>(type, ignoreCase: true, out var eventType))
         {
-            var names = Enum.GetNames(typeof(EventType))
-                .Where(n => n != EventType.Any.ToString() && n != EventType.None.ToString());
-
-            return BadRequest($"Unknown event type '{type}'; must be one of {string.Join(", ", names)}");
+            return BadRequest("Unknown event type");
         }
 
         if (eventType is EventType.None || eventType is EventType.Any)
         {
-            return BadRequest($"Event type '{type}' can not be raised");
+            return BadRequest("Event type cannot be raised");
         }
 
         try
@@ -152,8 +152,8 @@ public class EventsController : ControllerBase
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to raise event {Type}: {Message}", eventType, ex.Message);
-            throw;
+            Log.Error(ex, "Failed to raise event {Type}", eventType);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to raise event");
         }
     }
 }

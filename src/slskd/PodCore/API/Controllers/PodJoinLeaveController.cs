@@ -41,7 +41,23 @@ public class PodJoinLeaveController : ControllerBase
     [HttpPost("join")]
     public async Task<IActionResult> RequestJoin([FromBody] PodJoinRequest joinRequest, CancellationToken cancellationToken = default)
     {
-        if (joinRequest == null || string.IsNullOrWhiteSpace(joinRequest.PodId) || string.IsNullOrWhiteSpace(joinRequest.PeerId))
+        if (joinRequest == null)
+        {
+            return BadRequest(new { error = "Valid join request with PodId and PeerId is required" });
+        }
+
+        joinRequest = joinRequest with
+        {
+            PodId = joinRequest.PodId?.Trim() ?? string.Empty,
+            PeerId = joinRequest.PeerId?.Trim() ?? string.Empty,
+            RequestedRole = joinRequest.RequestedRole?.Trim() ?? string.Empty,
+            PublicKey = joinRequest.PublicKey?.Trim() ?? string.Empty,
+            Signature = joinRequest.Signature?.Trim() ?? string.Empty,
+            Message = string.IsNullOrWhiteSpace(joinRequest.Message) ? null : joinRequest.Message.Trim(),
+            Nonce = string.IsNullOrWhiteSpace(joinRequest.Nonce) ? null : joinRequest.Nonce.Trim()
+        };
+
+        if (string.IsNullOrWhiteSpace(joinRequest.PodId) || string.IsNullOrWhiteSpace(joinRequest.PeerId))
         {
             return BadRequest(new { error = "Valid join request with PodId and PeerId is required" });
         }
@@ -58,7 +74,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Join request failed for {PeerId} to {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Join request could not be processed" });
             }
         }
         catch (Exception ex)
@@ -77,7 +93,23 @@ public class PodJoinLeaveController : ControllerBase
     [HttpPost("join/accept")]
     public async Task<IActionResult> AcceptJoin([FromBody] PodJoinAcceptance acceptance, CancellationToken cancellationToken = default)
     {
-        if (acceptance == null || string.IsNullOrWhiteSpace(acceptance.PodId) || string.IsNullOrWhiteSpace(acceptance.PeerId))
+        if (acceptance == null)
+        {
+            return BadRequest(new { error = "Valid acceptance with PodId and PeerId is required" });
+        }
+
+        acceptance = acceptance with
+        {
+            PodId = acceptance.PodId?.Trim() ?? string.Empty,
+            PeerId = acceptance.PeerId?.Trim() ?? string.Empty,
+            AcceptedRole = acceptance.AcceptedRole?.Trim() ?? string.Empty,
+            AcceptorPeerId = acceptance.AcceptorPeerId?.Trim() ?? string.Empty,
+            AcceptorPublicKey = acceptance.AcceptorPublicKey?.Trim() ?? string.Empty,
+            Signature = acceptance.Signature?.Trim() ?? string.Empty,
+            Message = string.IsNullOrWhiteSpace(acceptance.Message) ? null : acceptance.Message.Trim()
+        };
+
+        if (string.IsNullOrWhiteSpace(acceptance.PodId) || string.IsNullOrWhiteSpace(acceptance.PeerId))
         {
             return BadRequest(new { error = "Valid acceptance with PodId and PeerId is required" });
         }
@@ -94,7 +126,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Join acceptance failed for {PeerId} in {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Join acceptance could not be processed" });
             }
         }
         catch (Exception ex)
@@ -113,7 +145,21 @@ public class PodJoinLeaveController : ControllerBase
     [HttpPost("leave")]
     public async Task<IActionResult> RequestLeave([FromBody] PodLeaveRequest leaveRequest, CancellationToken cancellationToken = default)
     {
-        if (leaveRequest == null || string.IsNullOrWhiteSpace(leaveRequest.PodId) || string.IsNullOrWhiteSpace(leaveRequest.PeerId))
+        if (leaveRequest == null)
+        {
+            return BadRequest(new { error = "Valid leave request with PodId and PeerId is required" });
+        }
+
+        leaveRequest = leaveRequest with
+        {
+            PodId = leaveRequest.PodId?.Trim() ?? string.Empty,
+            PeerId = leaveRequest.PeerId?.Trim() ?? string.Empty,
+            PublicKey = leaveRequest.PublicKey?.Trim() ?? string.Empty,
+            Signature = leaveRequest.Signature?.Trim() ?? string.Empty,
+            Message = string.IsNullOrWhiteSpace(leaveRequest.Message) ? null : leaveRequest.Message.Trim()
+        };
+
+        if (string.IsNullOrWhiteSpace(leaveRequest.PodId) || string.IsNullOrWhiteSpace(leaveRequest.PeerId))
         {
             return BadRequest(new { error = "Valid leave request with PodId and PeerId is required" });
         }
@@ -130,7 +176,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Leave request failed for {PeerId} from {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Leave request could not be processed" });
             }
         }
         catch (Exception ex)
@@ -149,7 +195,22 @@ public class PodJoinLeaveController : ControllerBase
     [HttpPost("leave/accept")]
     public async Task<IActionResult> AcceptLeave([FromBody] PodLeaveAcceptance acceptance, CancellationToken cancellationToken = default)
     {
-        if (acceptance == null || string.IsNullOrWhiteSpace(acceptance.PodId) || string.IsNullOrWhiteSpace(acceptance.PeerId))
+        if (acceptance == null)
+        {
+            return BadRequest(new { error = "Valid acceptance with PodId and PeerId is required" });
+        }
+
+        acceptance = acceptance with
+        {
+            PodId = acceptance.PodId?.Trim() ?? string.Empty,
+            PeerId = acceptance.PeerId?.Trim() ?? string.Empty,
+            AcceptorPeerId = acceptance.AcceptorPeerId?.Trim() ?? string.Empty,
+            AcceptorPublicKey = acceptance.AcceptorPublicKey?.Trim() ?? string.Empty,
+            Signature = acceptance.Signature?.Trim() ?? string.Empty,
+            Message = string.IsNullOrWhiteSpace(acceptance.Message) ? null : acceptance.Message.Trim()
+        };
+
+        if (string.IsNullOrWhiteSpace(acceptance.PodId) || string.IsNullOrWhiteSpace(acceptance.PeerId))
         {
             return BadRequest(new { error = "Valid acceptance with PodId and PeerId is required" });
         }
@@ -166,7 +227,7 @@ public class PodJoinLeaveController : ControllerBase
             else
             {
                 _logger.LogWarning("[PodJoinLeave] Leave acceptance failed for {PeerId} from {PodId}: {Error}", result.PeerId, result.PodId, result.ErrorMessage);
-                return BadRequest(new { error = result.ErrorMessage });
+                return BadRequest(new { error = "Leave acceptance could not be processed" });
             }
         }
         catch (Exception ex)
@@ -185,6 +246,7 @@ public class PodJoinLeaveController : ControllerBase
     [HttpGet("join/pending/{podId}")]
     public async Task<IActionResult> GetPendingJoinRequests(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "PodId is required" });
@@ -193,7 +255,7 @@ public class PodJoinLeaveController : ControllerBase
         try
         {
             var requests = await _joinLeaveService.GetPendingJoinRequestsAsync(podId, cancellationToken);
-            return Ok(new { podId, pendingJoinRequests = requests });
+            return Ok(new { pendingJoinRequests = requests });
         }
         catch (Exception ex)
         {
@@ -211,6 +273,7 @@ public class PodJoinLeaveController : ControllerBase
     [HttpGet("leave/pending/{podId}")]
     public async Task<IActionResult> GetPendingLeaveRequests(string podId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest(new { error = "PodId is required" });
@@ -219,7 +282,7 @@ public class PodJoinLeaveController : ControllerBase
         try
         {
             var requests = await _joinLeaveService.GetPendingLeaveRequestsAsync(podId, cancellationToken);
-            return Ok(new { podId, pendingLeaveRequests = requests });
+            return Ok(new { pendingLeaveRequests = requests });
         }
         catch (Exception ex)
         {
@@ -238,6 +301,8 @@ public class PodJoinLeaveController : ControllerBase
     [HttpDelete("join/{podId}/{peerId}")]
     public async Task<IActionResult> CancelJoinRequest(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });
@@ -274,6 +339,8 @@ public class PodJoinLeaveController : ControllerBase
     [HttpDelete("leave/{podId}/{peerId}")]
     public async Task<IActionResult> CancelLeaveRequest(string podId, string peerId, CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        peerId = peerId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(peerId))
         {
             return BadRequest(new { error = "PodId and PeerId are required" });

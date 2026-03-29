@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>Service for LAN discovery via mDNS.</summary>
-public interface ILanDiscoveryService
+public interface ILanDiscoveryService : IDisposable
 {
     /// <summary>Start advertising this peer via mDNS.</summary>
     Task StartAdvertisingAsync(CancellationToken ct = default);

@@ -57,7 +57,12 @@ public class PrivacyControls
     public static AnonymizationLevel GetAnonymizationLevel(Options options)
     {
         var level = options.VirtualSoulfind?.Privacy?.AnonymizationLevel ?? "Pseudonymized";
-        return Enum.Parse<AnonymizationLevel>(level, ignoreCase: true);
+        if (Enum.TryParse(level, ignoreCase: true, out AnonymizationLevel parsed))
+        {
+            return parsed;
+        }
+
+        return AnonymizationLevel.Pseudonymized;
     }
 
     /// <summary>

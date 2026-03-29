@@ -7,6 +7,7 @@ namespace slskd.API.Compatibility;
 using slskd.Core.Security;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
@@ -34,33 +35,46 @@ public class RoomsCompatibilityController : ControllerBase
         [FromBody] JoinRoomRequest? request,
         CancellationToken cancellationToken = default)
     {
-        var roomName = request?.Room;
+        var roomName = request?.Room?.Trim();
         if (string.IsNullOrWhiteSpace(roomName))
         {
             // Try to read from body if not bound
-            if (Request.HasJsonContentType() && Request.Body.CanSeek)
+            if (Request.HasJsonContentType())
             {
+                if (!Request.Body.CanSeek)
+                {
+                    Request.EnableBuffering();
+                }
+
                 Request.Body.Position = 0;
                 using var reader = new System.IO.StreamReader(Request.Body);
                 var body = await reader.ReadToEndAsync(cancellationToken);
+                Request.Body.Position = 0;
                 if (!string.IsNullOrEmpty(body))
                 {
                     try
                     {
                         var json = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(body);
                         if (json.TryGetProperty("room", out var roomProp))
-                            roomName = roomProp.GetString();
+                            roomName = roomProp.GetString()?.Trim();
                     }
-                    catch { }
+                    catch (System.Text.Json.JsonException ex)
+                    {
+                        logger.LogDebug(ex, "Failed to parse RoomsCompatibility join room request payload");
+                    }
                 }
             }
         }
 
-        roomName ??= "default";
+        if (string.IsNullOrWhiteSpace(roomName))
+        {
+            return BadRequest(new { error = "Room is required" });
+        }
+
         logger.LogInformation("Join room requested: {Room}", roomName);
 
         await Task.CompletedTask;
-        return Ok(new { room = roomName, joined = true });
+        return Ok(new { joined = true });
     }
 
     /// <summary>
@@ -72,10 +86,16 @@ public class RoomsCompatibilityController : ControllerBase
             string roomName,
             CancellationToken cancellationToken = default)
     {
+        roomName = roomName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(roomName))
+        {
+            return BadRequest(new { error = "Room is required" });
+        }
+
         logger.LogInformation("Leave room requested: {Room}", roomName);
 
         await Task.CompletedTask;
-        return Ok(new { room = roomName, left = true });
+        return Ok(new { left = true });
     }
 }
 

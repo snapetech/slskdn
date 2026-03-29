@@ -47,7 +47,21 @@ public class NowPlayingController : ControllerBase
     [Authorize(Policy = AuthPolicy.Any)]
     public IActionResult Put([FromBody] NowPlayingRequest request)
     {
-        NowPlaying.SetTrack(request.Artist, request.Title, request.Album);
+        if (request == null)
+        {
+            return BadRequest("Track data is required");
+        }
+
+        var artist = request.Artist?.Trim() ?? string.Empty;
+        var title = request.Title?.Trim() ?? string.Empty;
+        var album = string.IsNullOrWhiteSpace(request.Album) ? null : request.Album.Trim();
+
+        if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(title))
+        {
+            return BadRequest("Artist and title are required");
+        }
+
+        NowPlaying.SetTrack(artist, title, album);
         return NoContent();
     }
 
@@ -71,7 +85,7 @@ public class NowPlayingController : ControllerBase
     [HttpPost("webhook")]
     [Authorize(Policy = AuthPolicy.Any)]
     [Consumes("application/json", "multipart/form-data", "application/x-www-form-urlencoded")]
-    public IActionResult Webhook()
+    public async Task<IActionResult> Webhook()
     {
         string json = string.Empty;
 
@@ -83,7 +97,7 @@ public class NowPlayingController : ControllerBase
         else
         {
             using var reader = new System.IO.StreamReader(Request.Body);
-            json = reader.ReadToEndAsync().GetAwaiter().GetResult();
+            json = await reader.ReadToEndAsync(HttpContext.RequestAborted);
         }
 
         if (string.IsNullOrWhiteSpace(json))
@@ -91,23 +105,23 @@ public class NowPlayingController : ControllerBase
 
         try
         {
-            var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
             // Detect Plex: has "event" and "Metadata" fields
             if (root.TryGetProperty("event", out var plexEvent) &&
                 root.TryGetProperty("Metadata", out var meta))
             {
-                var ev = plexEvent.GetString();
+                var ev = plexEvent.GetString()?.Trim();
 
                 // Only handle play/resume events; clear on stop/pause
                 if (ev is "media.play" or "media.resume" or "media.scrobble")
                 {
-                    var title = meta.TryGetProperty("title", out var t) ? t.GetString() : null;
-                    var artist = meta.TryGetProperty("grandparentTitle", out var gp) ? gp.GetString()
-                               : meta.TryGetProperty("originalTitle", out var ot) ? ot.GetString()
+                    var title = meta.TryGetProperty("title", out var t) ? t.GetString()?.Trim() : null;
+                    var artist = meta.TryGetProperty("grandparentTitle", out var gp) ? gp.GetString()?.Trim()
+                               : meta.TryGetProperty("originalTitle", out var ot) ? ot.GetString()?.Trim()
                                : null;
-                    var album = meta.TryGetProperty("parentTitle", out var pt) ? pt.GetString() : null;
+                    var album = meta.TryGetProperty("parentTitle", out var pt) ? pt.GetString()?.Trim() : null;
 
                     if (!string.IsNullOrEmpty(artist) && !string.IsNullOrEmpty(title))
                         NowPlaying.SetTrack(artist, title, album);
@@ -123,12 +137,12 @@ public class NowPlayingController : ControllerBase
             // Detect Jellyfin/Emby: has "NotificationType" or "ItemType"
             if (root.TryGetProperty("NotificationType", out var jellyType))
             {
-                var type = jellyType.GetString();
+                var type = jellyType.GetString()?.Trim();
                 if (type is "PlaybackStart" or "PlaybackProgress")
                 {
-                    var title = root.TryGetProperty("Name", out var n) ? n.GetString() : null;
-                    var artist = root.TryGetProperty("Artist", out var a) ? a.GetString() : null;
-                    var album = root.TryGetProperty("Album", out var alb) ? alb.GetString() : null;
+                    var title = root.TryGetProperty("Name", out var n) ? n.GetString()?.Trim() : null;
+                    var artist = root.TryGetProperty("Artist", out var a) ? a.GetString()?.Trim() : null;
+                    var album = root.TryGetProperty("Album", out var alb) ? alb.GetString()?.Trim() : null;
 
                     if (!string.IsNullOrEmpty(artist) && !string.IsNullOrEmpty(title))
                         NowPlaying.SetTrack(artist, title, album);
@@ -143,10 +157,10 @@ public class NowPlayingController : ControllerBase
 
             // Generic fallback: { "artist": "...", "title": "...", "album": "...", "event": "play|stop" }
             {
-                var evt = root.TryGetProperty("event", out var e) ? e.GetString() : "play";
-                var title = root.TryGetProperty("title", out var t) ? t.GetString() : null;
-                var artist = root.TryGetProperty("artist", out var a) ? a.GetString() : null;
-                var album = root.TryGetProperty("album", out var alb) ? alb.GetString() : null;
+                var evt = root.TryGetProperty("event", out var e) ? e.GetString()?.Trim() : "play";
+                var title = root.TryGetProperty("title", out var t) ? t.GetString()?.Trim() : null;
+                var artist = root.TryGetProperty("artist", out var a) ? a.GetString()?.Trim() : null;
+                var album = root.TryGetProperty("album", out var alb) ? alb.GetString()?.Trim() : null;
 
                 if (evt is "stop" or "pause")
                 {

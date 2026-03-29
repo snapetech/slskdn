@@ -23,6 +23,7 @@ namespace slskd
     using System;
     using System.Threading.Tasks;
     using System.Timers;
+    using Serilog;
 
     /// <summary>
     ///     The application clock, used for time based events.
@@ -104,7 +105,26 @@ namespace slskd
         }
 
         private static Timer CreateTimer(double interval) => new() { AutoReset = true, Interval = interval, Enabled = false };
-        private static void Fire(EventHandler<ClockEventArgs>? e, ClockEventArgs? args = null) => e?.Invoke(null, args ?? new ClockEventArgs());
+
+        private static void Fire(EventHandler<ClockEventArgs>? e, ClockEventArgs? args = null)
+        {
+            if (e is null)
+            {
+                return;
+            }
+
+            foreach (EventHandler<ClockEventArgs> handler in e.GetInvocationList())
+            {
+                try
+                {
+                    handler.Invoke(null, args ?? new ClockEventArgs());
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Clock subscriber failed");
+                }
+            }
+        }
     }
 
     /// <summary>

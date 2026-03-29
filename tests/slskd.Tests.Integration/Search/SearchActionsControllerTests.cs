@@ -76,6 +76,82 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
         Assert.Equal("invalid_item_id", problemDetails.Type);
     }
 
+    [Fact]
+    public async Task DownloadItem_NegativeResponseIndex_ReturnsBadRequest()
+    {
+        var searchId = Guid.NewGuid();
+        var searchService = factory.Services.GetRequiredService<ISearchService>() as StubSearchService;
+        var search = new Search
+        {
+            Id = searchId,
+            SearchText = "test",
+            State = Soulseek.SearchStates.Completed,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Token = 0,
+            Responses = new List<Response>
+            {
+                new Response
+                {
+                    Username = "test-user",
+                    Files = new List<slskd.Search.File>
+                    {
+                        new slskd.Search.File { Filename = "test.mp3", Size = 1024 }
+                    }
+                }
+            }
+        };
+        searchService?.SeedSearch(search);
+
+        var downloadResponse = await client.PostAsync(
+            $"/api/v0/searches/{searchId}/items/-1/download",
+            null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, downloadResponse.StatusCode);
+
+        var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+        Assert.NotNull(problemDetails);
+        Assert.Equal("invalid_item_id", problemDetails.Type);
+    }
+
+    [Fact]
+    public async Task DownloadItem_NegativeFileIndex_ReturnsBadRequest()
+    {
+        var searchId = Guid.NewGuid();
+        var searchService = factory.Services.GetRequiredService<ISearchService>() as StubSearchService;
+        var search = new Search
+        {
+            Id = searchId,
+            SearchText = "test",
+            State = Soulseek.SearchStates.Completed,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Token = 0,
+            Responses = new List<Response>
+            {
+                new Response
+                {
+                    Username = "test-user",
+                    Files = new List<slskd.Search.File>
+                    {
+                        new slskd.Search.File { Filename = "test.mp3", Size = 1024 }
+                    }
+                }
+            }
+        };
+        searchService?.SeedSearch(search);
+
+        var downloadResponse = await client.PostAsync(
+            $"/api/v0/searches/{searchId}/items/0:-1/download",
+            null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, downloadResponse.StatusCode);
+
+        var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+        Assert.NotNull(problemDetails);
+        Assert.Equal("invalid_item_id", problemDetails.Type);
+    }
+
 
     [Fact]
     public async Task DownloadItem_SearchNotFound_ReturnsNotFound()
@@ -171,6 +247,44 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
         {
             System.IO.File.Delete(result.Path);
         }
+    }
+
+    [Fact]
+    public async Task DownloadItem_ExplicitOutOfRangeFileIndex_ReturnsNotFound()
+    {
+        var searchId = Guid.NewGuid();
+        var searchService = factory.Services.GetRequiredService<ISearchService>() as StubSearchService;
+        var search = new Search
+        {
+            Id = searchId,
+            SearchText = "test",
+            State = Soulseek.SearchStates.Completed,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Token = 0,
+            Responses = new List<Response>
+            {
+                new Response
+                {
+                    Username = "test-user",
+                    Files = new List<slskd.Search.File>
+                    {
+                        new slskd.Search.File { Filename = "only.mp3", Size = 1024 }
+                    }
+                }
+            }
+        };
+        searchService?.SeedSearch(search);
+
+        var downloadResponse = await client.PostAsync(
+            $"/api/v0/searches/{searchId}/items/0:5/download",
+            null);
+
+        Assert.Equal(HttpStatusCode.NotFound, downloadResponse.StatusCode);
+
+        var problemDetails = await downloadResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+        Assert.NotNull(problemDetails);
+        Assert.Equal("file_not_found", problemDetails.Type);
     }
 
     [Fact]
@@ -419,6 +533,56 @@ public class SearchActionsControllerTests : IClassFixture<slskd.Tests.Integratio
         Assert.Equal(contentId, result.content_id);
         Assert.Equal("pod", result.source);
         Assert.Contains("/api/v0/streams/", result.stream_url);
+    }
+
+    [Fact]
+    public async Task StreamItem_NegativeFileIndex_ReturnsBadRequest()
+    {
+        var searchId = Guid.NewGuid();
+        var contentId = "content:mb:recording:test-neg";
+
+        var searchService = factory.Services.GetRequiredService<ISearchService>() as StubSearchService;
+        var search = new Search
+        {
+            Id = searchId,
+            SearchText = "test",
+            State = Soulseek.SearchStates.Completed,
+            StartedAt = DateTime.UtcNow,
+            EndedAt = DateTime.UtcNow,
+            Token = 0,
+            Responses = new List<Response>
+            {
+                new Response
+                {
+                    Username = "peer:stream-peer",
+                    Files = new List<File>
+                    {
+                        new File
+                        {
+                            Filename = "stream-test.mp3",
+                            Size = 1024
+                        }
+                    },
+                    PrimarySource = "pod",
+                    SourceProviders = new List<string> { "pod" },
+                    PodContentRef = new PodContentRef
+                    {
+                        ContentId = contentId
+                    }
+                }
+            }
+        };
+        searchService?.SeedSearch(search);
+
+        var streamResponse = await client.PostAsync(
+            $"/api/v0/searches/{searchId}/items/0:-1/stream",
+            null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, streamResponse.StatusCode);
+
+        var problemDetails = await streamResponse.Content.ReadFromJsonAsync<ProblemDetailsResponse>();
+        Assert.NotNull(problemDetails);
+        Assert.Equal("invalid_item_id", problemDetails.Type);
     }
 
     [Fact]

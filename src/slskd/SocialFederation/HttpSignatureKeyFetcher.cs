@@ -35,6 +35,7 @@ namespace slskd.SocialFederation
         /// <inheritdoc/>
         public async Task<byte[]?> FetchPublicKeyPkixAsync(string keyId, CancellationToken cancellationToken = default)
         {
+            keyId = keyId?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(keyId))
                 return null;
 
@@ -45,21 +46,9 @@ namespace slskd.SocialFederation
             }
 
             // Resolve host to IP and reject forbidden ranges
-            try
+            if (!await IsSafeHostAsync(uri, cancellationToken))
             {
-                var addrs = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);
-                foreach (var a in addrs)
-                {
-                    if (IPAddress.IsLoopback(a) || IsLinkLocal(a) || IsPrivate(a) || IsMulticast(a))
-                    {
-                        _logger.LogDebug("[HttpSignatureKeyFetcher] keyId host resolves to forbidden IP: {Host} -> {Ip}", uri.Host, a);
-                        return null;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "[HttpSignatureKeyFetcher] DNS resolution failed for {Host}", uri.Host);
+                _logger.LogDebug("[HttpSignatureKeyFetcher] keyId host resolves to forbidden or unreadable IP: {Host}", uri.Host);
                 return null;
             }
 
@@ -68,36 +57,94 @@ namespace slskd.SocialFederation
             cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
             using var req = new HttpRequestMessage(HttpMethod.Get, uri);
             req.Headers.Add("Accept", "application/activity+json");
+            req.Headers.Add("Accept", "application/ld+json");
 
-            HttpResponseMessage? res = null;
             try
             {
-                res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                using var res = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 res.EnsureSuccessStatusCode();
+
+                if (res.Content.Headers.ContentLength is long contentLength && contentLength > MaxResponseBytes)
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
+                    return null;
+                }
+
+                var finalUri = res.RequestMessage?.RequestUri;
+                if (finalUri == null ||
+                    !string.Equals(finalUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Final fetch URI was not HTTPS for {KeyId}", keyId);
+                    return null;
+                }
+
+                if (!await IsSafeHostAsync(finalUri, cts.Token))
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Final fetch URI resolved to forbidden host for {KeyId}", keyId);
+                    return null;
+                }
+
+                await using var stream = await res.Content.ReadAsStreamAsync(cts.Token);
+                var buf = new byte[MaxResponseBytes];
+                var total = 0;
+                int n;
+                while (total < buf.Length && (n = await stream.ReadAsync(buf.AsMemory(total, buf.Length - total), cts.Token)) > 0)
+                {
+                    total += n;
+                }
+
+                if (total >= MaxResponseBytes)
+                {
+                    _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
+                    return null;
+                }
+
+                var json = Encoding.UTF8.GetString(buf.AsSpan(0, total));
+                return ExtractPublicKeyPkixFromActorJson(json, keyId);
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "[HttpSignatureKeyFetcher] Fetch failed for {KeyId}", keyId);
                 return null;
             }
+        }
 
-            await using var stream = await res.Content.ReadAsStreamAsync(cts.Token);
-            var buf = new byte[MaxResponseBytes];
-            var total = 0;
-            int n;
-            while (total < buf.Length && (n = await stream.ReadAsync(buf.AsMemory(total, buf.Length - total), cts.Token)) > 0)
+        private async Task<bool> IsSafeHostAsync(Uri uri, CancellationToken cancellationToken)
+        {
+            var host = uri.DnsSafeHost?.Trim();
+            if (string.IsNullOrWhiteSpace(host))
             {
-                total += n;
+                return false;
             }
 
-            if (total >= MaxResponseBytes)
+            if (IPAddress.TryParse(host, out var parsedAddress))
             {
-                _logger.LogDebug("[HttpSignatureKeyFetcher] Response too large from {KeyId}", keyId);
-                return null;
+                return !(IPAddress.IsLoopback(parsedAddress) || IsLinkLocal(parsedAddress) || IsPrivate(parsedAddress) || IsMulticast(parsedAddress));
             }
 
-            var json = Encoding.UTF8.GetString(buf.AsSpan(0, total));
-            return ExtractPublicKeyPkixFromActorJson(json, keyId);
+            try
+            {
+                var addrs = await Dns.GetHostAddressesAsync(host, cancellationToken);
+                if (addrs.Length == 0)
+                {
+                    return false;
+                }
+
+                foreach (var a in addrs)
+                {
+                    if (IPAddress.IsLoopback(a) || IsLinkLocal(a) || IsPrivate(a) || IsMulticast(a))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[HttpSignatureKeyFetcher] DNS resolution failed for {Host}", uri.Host);
+                return false;
+            }
         }
 
         private static bool IsLinkLocal(IPAddress a)
@@ -133,23 +180,90 @@ namespace slskd.SocialFederation
             try
             {
                 using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                if (!root.TryGetProperty("publicKey", out var pk) || pk.ValueKind != JsonValueKind.Object)
-                    return null;
-                var id = pk.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
-                if (string.IsNullOrEmpty(id) || !string.Equals(id, keyId, StringComparison.Ordinal))
-                    return null;
-                if (!pk.TryGetProperty("publicKeyPem", out var pemEl))
-                    return null;
-                var pem = pemEl.GetString();
-                if (string.IsNullOrWhiteSpace(pem))
-                    return null;
-                return PemToBytes(pem);
+                return ExtractPublicKeyPkix(doc.RootElement, keyId);
             }
             catch
             {
                 return null;
             }
+        }
+
+        private static byte[]? ExtractPublicKeyPkix(JsonElement element, string keyId)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    if (TryExtractPkixFromKeyObject(element, keyId, out var pkix))
+                    {
+                        return pkix;
+                    }
+
+                    if (element.TryGetProperty("publicKey", out var publicKey))
+                    {
+                        return ExtractPublicKeyPkix(publicKey, keyId);
+                    }
+
+                    return null;
+
+                case JsonValueKind.Array:
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        var nestedPkix = ExtractPublicKeyPkix(item, keyId);
+                        if (nestedPkix != null)
+                        {
+                            return nestedPkix;
+                        }
+                    }
+
+                    return null;
+
+                default:
+                    return null;
+            }
+        }
+
+        private static bool TryExtractPkixFromKeyObject(JsonElement element, string keyId, out byte[]? pkix)
+        {
+            pkix = null;
+
+            if (!TryGetStringProperty(element, "publicKeyPem", out var pem))
+            {
+                return false;
+            }
+
+            if (!TryGetStringProperty(element, "id", out var id) || !KeyIdsMatch(id, keyId))
+            {
+                return false;
+            }
+
+            pkix = PemToBytes(pem);
+            return true;
+        }
+
+        private static bool TryGetStringProperty(JsonElement element, string propertyName, out string value)
+        {
+            value = string.Empty;
+            if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            value = property.GetString()?.Trim() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
+        private static bool KeyIdsMatch(string actual, string expected)
+        {
+            actual = actual.Trim();
+            expected = expected.Trim();
+
+            if (Uri.TryCreate(actual, UriKind.Absolute, out var actualUri) &&
+                Uri.TryCreate(expected, UriKind.Absolute, out var expectedUri))
+            {
+                return Uri.Compare(actualUri, expectedUri, UriComponents.AbsoluteUri, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
+            }
+
+            return string.Equals(actual, expected, StringComparison.Ordinal);
         }
 
         private static byte[] PemToBytes(string pem)

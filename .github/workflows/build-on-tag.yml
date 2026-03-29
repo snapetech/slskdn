@@ -85,9 +85,27 @@ jobs:
           path: src/web/build
           retention-days: 7
 
+  nix-smoke:
+    name: Nix Package Smoke
+    needs: parse
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run Nix package smoke
+        run: bash packaging/scripts/run-nix-package-smoke.sh
+
   publish:
     name: Publish ${{ matrix.runtime }}
-    needs: [parse, build]
+    needs: [parse, build, nix-smoke]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -134,12 +152,17 @@ jobs:
         run: |
           cd publish-${{ matrix.runtime }}
           zip -r ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip .
+          if [[ "${{ needs.parse.outputs.channel }}" == "main" ]]; then
+            RELEASE_VERSION="${{ needs.parse.outputs.version }}"
+            RELEASE_VERSION="${RELEASE_VERSION//-/.}"
+            zip -r ../slskdn-${RELEASE_VERSION}-${{ matrix.runtime }}.zip .
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
           name: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}
-          path: slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip
+          path: slskdn*.zip
           retention-days: 30
 
   release-dev:
@@ -457,7 +480,8 @@ jobs:
       - name: Prepare Source Structure
         run: |
           # PPA requires version to always increase. Use epoch-based version (do NOT use tag version or date+time — PPA rejects "older").
-          DEB_VERSION="0.24.1.dev.9$(date +%s)"
+          DEB_BASE="${{ needs.parse.outputs.version }}"
+          DEB_VERSION="${DEB_BASE%%.dev*}.dev.9$(date +%s)"
           echo "DEB_VERSION=$DEB_VERSION" >> $GITHUB_ENV
           
           # Create proper directory structure for debian packaging
@@ -919,9 +943,10 @@ jobs:
           set -euo pipefail
           # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          for attempt in $(seq 1 6); do
+          MAX_ATTEMPTS=12
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "Upload attempt $attempt/6 started at $STARTED_AT: $SNAP_PATH"
+            echo "Upload attempt $attempt/$MAX_ATTEMPTS started at $STARTED_AT: $SNAP_PATH"
             set +e
             OUT="$(timeout --signal=TERM 10m snapcraft upload --release=edge "$SNAP_PATH" 2>&1)"
             CODE=$?
@@ -931,19 +956,23 @@ jobs:
               echo "✅ Published to Snap (edge channel)"
               exit 0
             fi
+            SLEEP_SECONDS=$((attempt * 30))
+            if [ "$SLEEP_SECONDS" -gt 300 ]; then
+              SLEEP_SECONDS=300
+            fi
             if [ $CODE -eq 124 ]; then
-              echo "Upload attempt $attempt/6 timed out after 10 minutes."
-              sleep 30
+              echo "Upload attempt $attempt/$MAX_ATTEMPTS timed out after 10 minutes. Retrying in ${SLEEP_SECONDS}s."
+              sleep "$SLEEP_SECONDS"
               continue
             fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out"; then
-              echo "Retrying in 30s (transient Snap Store error)..."
-              sleep 30
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out|binary_sha3_384: Error checking upload uniqueness"; then
+              echo "Retrying in ${SLEEP_SECONDS}s (transient Snap Store error)..."
+              sleep "$SLEEP_SECONDS"
               continue
             fi
             exit $CODE
           done
-          echo "❌ Snap Store upload failed after 6 attempts."
+          echo "❌ Snap Store upload failed after $MAX_ATTEMPTS attempts."
           exit 1
 
       - name: Skip if no credentials
@@ -1216,6 +1245,7 @@ jobs:
           # source=() order: tarball slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
@@ -1265,12 +1295,11 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
 
-          # Compute sha256 of the downloaded zip (used as index 0 in sha256sums)
-          ZIP_SUM=$(sha256sum slskdn-main-linux-x64.zip | awk '{print $1}')
+          # Keep the release zip on SKIP for AUR. GitHub release assets are mutable on reruns,
+          # and pinning a binary checksum here makes installs brittle across replaced assets/caches.
           SVC_SUM=$(sha256sum packaging/aur/slskd.service  | awk '{print $1}')
           YML_SUM=$(sha256sum packaging/aur/slskd.yml      | awk '{print $1}')
           SYS_SUM=$(sha256sum packaging/aur/slskd.sysusers | awk '{print $1}')
-          echo "zip         : $ZIP_SUM"
           echo "slskd.service: $SVC_SUM"
           echo "slskd.yml    : $YML_SUM"
           echo "slskd.sysusers: $SYS_SUM"
@@ -1287,10 +1316,11 @@ jobs:
           # Version for main
           ARCH_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
 
-          # Update version and all sha256sums
+          # Update version and static file hashes only.
           # source=() order: zip slskd.service slskd.yml slskd.sysusers
           sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION}/" PKGBUILD
-          sed -i "s/^sha256sums=.*/sha256sums=('${ZIP_SUM}' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('SKIP' '${SVC_SUM}' '${YML_SUM}' '${SYS_SUM}')/" PKGBUILD
+          bash ../packaging/scripts/validate-aur-pkgbuild-hashes.sh PKGBUILD
           
           # Generate .SRCINFO
           docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:base-devel bash -c "
@@ -1786,6 +1816,9 @@ jobs:
         run: |
           nix flake check --no-build --no-write-lock-file || echo "⚠️ Flake check failed (non-fatal)"
 
+      - name: Run Nix package smoke
+        run: bash packaging/scripts/run-nix-package-smoke.sh
+
       - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
@@ -1909,9 +1942,10 @@ jobs:
           set -euo pipefail
           # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
           SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          for attempt in $(seq 1 6); do
+          MAX_ATTEMPTS=12
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "Upload attempt $attempt/6 started at $STARTED_AT: $SNAP_PATH"
+            echo "Upload attempt $attempt/$MAX_ATTEMPTS started at $STARTED_AT: $SNAP_PATH"
             set +e
             OUT="$(timeout --signal=TERM 10m snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
             CODE=$?
@@ -1921,19 +1955,23 @@ jobs:
               echo "✅ Published to Snap (stable channel)"
               exit 0
             fi
+            SLEEP_SECONDS=$((attempt * 30))
+            if [ "$SLEEP_SECONDS" -gt 300 ]; then
+              SLEEP_SECONDS=300
+            fi
             if [ $CODE -eq 124 ]; then
-              echo "Upload attempt $attempt/6 timed out after 10 minutes."
-              sleep 30
+              echo "Upload attempt $attempt/$MAX_ATTEMPTS timed out after 10 minutes. Retrying in ${SLEEP_SECONDS}s."
+              sleep "$SLEEP_SECONDS"
               continue
             fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out"; then
-              echo "Retrying in 30s (transient Snap Store error)..."
-              sleep 30
+            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out|binary_sha3_384: Error checking upload uniqueness"; then
+              echo "Retrying in ${SLEEP_SECONDS}s (transient Snap Store error)..."
+              sleep "$SLEEP_SECONDS"
               continue
             fi
             exit $CODE
           done
-          echo "❌ Snap Store upload failed after 6 attempts."
+          echo "❌ Snap Store upload failed after $MAX_ATTEMPTS attempts."
           exit 1
 
       - name: Skip if no credentials

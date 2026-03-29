@@ -15,11 +15,13 @@ namespace slskd.Mesh.Realm
     /// <remarks>
     ///     T-REALM-02: Ensures multi-realm service is initialized during application startup.
     /// </remarks>
-    public sealed class MultiRealmHostedService : IHostedService
+    public sealed class MultiRealmHostedService : IHostedService, IDisposable
     {
         private readonly MultiRealmService _multiRealmService;
         private readonly Microsoft.Extensions.Options.IOptionsMonitor<MultiRealmConfig> _config;
         private readonly Microsoft.Extensions.Logging.ILogger<MultiRealmHostedService> _logger;
+        private CancellationTokenSource? _initializationCts;
+        private Task? _initializationTask;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MultiRealmHostedService"/> class.
@@ -49,28 +51,59 @@ namespace slskd.Mesh.Realm
             }
 
             // Initialize in background to avoid blocking other hosted services
-            _ = Task.Run(async () =>
+            _initializationCts?.Cancel();
+            _initializationCts?.Dispose();
+            var initializationCts = new CancellationTokenSource();
+            _initializationCts = initializationCts;
+            _initializationTask = Task.Run(async () =>
             {
                 try
                 {
                     _logger.LogInformation("[MultiRealmHostedService] Initializing multi-realm service with {Count} realms", realms.Length);
-                    await _multiRealmService.InitializeAsync(cancellationToken);
+                    await _multiRealmService.InitializeAsync(initializationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization complete.");
+                }
+                catch (OperationCanceledException) when (initializationCts.IsCancellationRequested)
+                {
+                    _logger.LogInformation("[MultiRealmHostedService] Multi-realm initialization cancelled");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "[MultiRealmHostedService] FAILED to initialize multi-realm service");
                 }
-            }, cancellationToken);
+            }, CancellationToken.None);
 
             return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            // Nothing to stop
-            return Task.CompletedTask;
+            _initializationCts?.Cancel();
+
+            if (_initializationTask != null)
+            {
+                try
+                {
+                    await _initializationTask.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected during shutdown.
+                }
+            }
+
+            _initializationTask = null;
+            _initializationCts?.Dispose();
+            _initializationCts = null;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _initializationCts?.Cancel();
+            _initializationCts?.Dispose();
+            _initializationCts = null;
         }
     }
 }

@@ -102,6 +102,14 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateShareGroupRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null)
+        {
+            return Problem(
+                title: "Request is required.",
+                detail: "Request is required.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
         if (string.IsNullOrWhiteSpace(req.Name))
         {
             return Problem(
@@ -130,10 +138,24 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateShareGroupRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null) return BadRequest();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
         if (g == null || g.OwnerUserId != currentUserId) return NotFound();
-        g.Name = req.Name?.Trim() ?? g.Name;
+        if (req.Name != null)
+        {
+            var name = req.Name.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return Problem(
+                    title: "Name is required.",
+                    detail: "Name is required.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            g.Name = name;
+        }
+
         await _sharing.UpdateShareGroupAsync(g, ct);
         return Ok(g);
     }
@@ -181,6 +203,8 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> AddMember([FromRoute] Guid id, [FromBody] AddMemberRequest req, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        if (req == null)
+            return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "Request is required.", Detail = "Request is required." });
         var currentUserId = await GetCurrentUserIdAsync(ct);
         if (string.IsNullOrWhiteSpace(currentUserId))
             return BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Title = "User identity not available", Detail = "Cannot add member: user identity not available. Please configure Soulseek username or enable Identity & Friends." });
@@ -188,13 +212,16 @@ public class ShareGroupsController : ControllerBase
         if (g == null || g.OwnerUserId != currentUserId) return NotFound();
 
         // Support both UserId (legacy) and PeerId/ContactId (Identity & Friends)
-        if (!string.IsNullOrWhiteSpace(req.PeerId))
+        var peerId = req.PeerId?.Trim();
+        var userId = req.UserId?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(peerId))
         {
-            await _sharing.AddShareGroupMemberByPeerIdAsync(id, req.PeerId!.Trim(), ct);
+            await _sharing.AddShareGroupMemberByPeerIdAsync(id, peerId, ct);
         }
-        else if (!string.IsNullOrWhiteSpace(req.UserId))
+        else if (!string.IsNullOrWhiteSpace(userId))
         {
-            await _sharing.AddShareGroupMemberAsync(id, req.UserId!.Trim(), ct);
+            await _sharing.AddShareGroupMemberAsync(id, userId, ct);
         }
         else
         {
@@ -210,6 +237,8 @@ public class ShareGroupsController : ControllerBase
     public async Task<IActionResult> RemoveMember([FromRoute] Guid id, [FromRoute] string userId, CancellationToken ct)
     {
         if (!Enabled) return NotFound();
+        userId = userId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(userId)) return BadRequest();
         var currentUserId = await GetCurrentUserIdAsync(ct);
         var g = await _sharing.GetShareGroupAsync(id, ct);
         if (g == null || g.OwnerUserId != currentUserId) return NotFound();

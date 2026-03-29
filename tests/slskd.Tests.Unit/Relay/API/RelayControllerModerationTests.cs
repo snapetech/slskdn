@@ -16,6 +16,7 @@ namespace slskd.Tests.Unit.Relay.API
     using slskd;
     using slskd.Relay;
     using slskd.Shares;
+    using slskd.Streaming;
     using Xunit;
 
     /// <summary>
@@ -179,6 +180,54 @@ namespace slskd.Tests.Unit.Relay.API
 
             // Assert
             Assert.IsType<UnauthorizedResult>(result);
+        }
+
+        [Fact]
+        public async Task DownloadFile_InvalidFilenameHeader_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var token = Guid.NewGuid().ToString();
+
+            controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+            controller.HttpContext.Request.Headers["X-Relay-Agent"] = "test-agent";
+            controller.HttpContext.Request.Headers["X-Relay-Credential"] = "test-credential";
+            controller.HttpContext.Request.Headers["X-Relay-Filename-Base64"] = "not-valid-base64!!!";
+
+            var result = await controller.DownloadFile(token);
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Filename is not in a valid format", badRequest.Value);
+        }
+
+        [Fact]
+        public async Task StreamContent_WithUnknownAgent_ReturnsSanitizedNotFound()
+        {
+            var contentLocator = new Mock<IContentLocator>();
+            contentLocator
+                .Setup(locator => locator.Resolve("content-1", It.IsAny<CancellationToken>()))
+                .Returns(new ResolvedContent("/tmp/test.mp3", 1234, "audio/mpeg"));
+
+            _optionsMonitorMock
+                .Setup(x => x.CurrentValue)
+                .Returns(new slskd.Options
+                {
+                    Feature = new slskd.Options.FeatureOptions { StreamingRelayFallback = true },
+                });
+
+            var controller = new RelayController(
+                _relayServiceMock.Object,
+                _shareRepositoryMock.Object,
+                _optionsMonitorMock.Object,
+                _optionsAtStartup,
+                contentLocator.Object)
+            {
+                ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+            };
+
+            var result = await controller.StreamContent(" content-1 ", " missing-agent ", null);
+
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("Agent is not registered", notFound.Value);
         }
     }
 }

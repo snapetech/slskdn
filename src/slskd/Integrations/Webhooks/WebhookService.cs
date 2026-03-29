@@ -93,13 +93,10 @@ public class WebhookService
                     http.DefaultRequestHeaders.TryAddWithoutValidation(header.Name, header.Value);
                 }
 
-                var content = new StringContent(
-                    content: JsonSerializer.Serialize(
-                        value: data,
-                        inputType: data.GetType(), // if omitted object is serialized as EventType, losing everything else
-                        options: JsonSerializerOptions),
-                    encoding: Encoding.UTF8,
-                    mediaType: "application/json");
+                var payloadJson = JsonSerializer.Serialize(
+                    value: data,
+                    inputType: data.GetType(), // if omitted object is serialized as EventType, losing everything else
+                    options: JsonSerializerOptions);
 
                 HttpStatusCode? statusCode = null;
 
@@ -112,6 +109,10 @@ public class WebhookService
                     await Retry.Do(
                         task: async () =>
                         {
+                            using var content = new StringContent(
+                                content: payloadJson,
+                                encoding: Encoding.UTF8,
+                                mediaType: "application/json");
                             using var response = await http.PostAsync(call.Url, content);
                             response.EnsureSuccessStatusCode();
                             statusCode = response.StatusCode;

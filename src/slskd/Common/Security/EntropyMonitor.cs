@@ -99,14 +99,14 @@ public sealed class EntropyMonitor : IDisposable
             _logger.LogCritical(
                 "CRITICAL: Low entropy detected! Entropy: {Entropy:F3} bits/byte (min: {Min}). Cryptographic security may be compromised!",
                 entropy, MinAcceptableEntropy);
-            EntropyAlert?.Invoke(this, new EntropyAlertEventArgs(check));
+            RaiseEntropyAlert(check);
         }
         else if (check.Status == EntropyStatus.Warning)
         {
             _logger.LogWarning(
                 "Warning: Entropy below optimal level. Entropy: {Entropy:F3} bits/byte (warning: {Warning})",
                 entropy, WarningEntropy);
-            EntropyAlert?.Invoke(this, new EntropyAlertEventArgs(check));
+            RaiseEntropyAlert(check);
         }
         else
         {
@@ -197,7 +197,7 @@ public sealed class EntropyMonitor : IDisposable
 
         // Test 5: Runs test (check for too many/few runs)
         var runs = CountRuns(largeSample);
-        var expectedRuns = (largeSample.Length - 1) / 2.0; // Approximate
+        var expectedRuns = (2.0 * largeSample.Length - 1) / 3.0; // Correct formula for up-down runs
         if (runs < expectedRuns * 0.8 || runs > expectedRuns * 1.2)
         {
             issues.Add($"Runs test suspicious: {runs} runs (expected ~{expectedRuns:F0})");
@@ -223,6 +223,26 @@ public sealed class EntropyMonitor : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Entropy check failed");
+        }
+    }
+
+    private void RaiseEntropyAlert(EntropyCheck check)
+    {
+        if (EntropyAlert is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<EntropyAlertEventArgs> handler in EntropyAlert.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, new EntropyAlertEventArgs(check));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Entropy alert subscriber failed");
+            }
         }
     }
 
@@ -346,7 +366,7 @@ public sealed class EntropyMonitor : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _checkTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_checkTimer);
     }
 }
 

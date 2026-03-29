@@ -17,10 +17,12 @@ public class SignalBus : ISignalBus, IDisposable
     private readonly ILogger<SignalBus> logger;
     private readonly SignalSystemOptions options;
     private readonly ConcurrentDictionary<SignalChannel, ISignalChannelHandler> channelHandlers = new();
+    private readonly CancellationTokenSource cleanupCancellationTokenSource = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> seenSignalIds = new(); // LRU cache for deduplication
     private readonly SemaphoreSlim seenSignalIdsLock = new(1, 1);
     private readonly List<Func<Signal, CancellationToken, Task>> subscribers = new();
     private readonly SemaphoreSlim subscribersLock = new(1, 1);
+    private readonly Task cleanupTask;
     private bool disposed;
 
     // Statistics
@@ -36,8 +38,9 @@ public class SignalBus : ISignalBus, IDisposable
         this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         options = optionsMonitor?.CurrentValue ?? throw new ArgumentNullException(nameof(optionsMonitor));
 
-        // Start cleanup task for expired signal IDs
-        _ = Task.Run(CleanupExpiredSignalIdsAsync);
+        // LongRunning ensures a dedicated OS thread starts immediately, avoiding thread-pool
+        // saturation delays that would prevent the cleanup task from starting in tests.
+        cleanupTask = Task.Factory.StartNew(CleanupExpiredSignalIds, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
     /// <inheritdoc />
@@ -46,7 +49,13 @@ public class SignalBus : ISignalBus, IDisposable
         if (handler == null)
             throw new ArgumentNullException(nameof(handler));
 
-        channelHandlers[channel] = handler;
+        if (!channelHandlers.TryAdd(channel, handler))
+        {
+            handler.Dispose();
+            logger.LogDebug("Signal channel {Channel} is already registered; ignoring duplicate handler registration", channel);
+            return;
+        }
+
         logger.LogInformation("Registered signal channel handler: {Channel}", channel);
 
         // Start receiving from this channel
@@ -172,22 +181,43 @@ public class SignalBus : ISignalBus, IDisposable
         logger.LogDebug("Forwarding signal {SignalId} ({Type}) to {Count} subscribers",
             signal.SignalId, signal.Type, currentSubscribers.Count);
 
-        var tasks = currentSubscribers.Select(sub => sub(signal, cancellationToken));
+        var tasks = currentSubscribers.Select(subscriber => InvokeSubscriberAsync(subscriber, signal, cancellationToken));
         await Task.WhenAll(tasks);
+    }
+
+    private async Task InvokeSubscriberAsync(
+        Func<Signal, CancellationToken, Task> subscriber,
+        Signal signal,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await subscriber(signal, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Signal subscriber failed for {SignalId}: {Message}", signal.SignalId, ex.Message);
+        }
     }
 
     /// <summary>
     /// Cleanup expired signal IDs from the deduplication cache.
+    /// Runs entirely on the dedicated LongRunning OS thread so that cancellation
+    /// via WaitHandle.WaitOne wakes up synchronously without requiring a thread-pool
+    /// continuation, making Dispose() reliably fast under thread-pool saturation.
     /// </summary>
-    private async Task CleanupExpiredSignalIdsAsync()
+    private void CleanupExpiredSignalIds()
     {
-        while (!disposed)
+        while (!cleanupCancellationTokenSource.IsCancellationRequested)
         {
+            // Block the dedicated thread until cancelled or 5 minutes elapses.
+            // WaitHandle.WaitOne returns immediately (synchronously) when Cancel() is called.
+            cleanupCancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMinutes(5));
+            if (cleanupCancellationTokenSource.IsCancellationRequested) break;
+
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(5), CancellationToken.None);
-
-                await seenSignalIdsLock.WaitAsync();
+                seenSignalIdsLock.Wait();
                 try
                 {
                     var now = DateTimeOffset.UtcNow;
@@ -263,6 +293,23 @@ public class SignalBus : ISignalBus, IDisposable
 
         if (disposing)
         {
+            foreach (var handler in channelHandlers.Values)
+            {
+                handler.Dispose();
+            }
+
+            channelHandlers.Clear();
+            cleanupCancellationTokenSource.Cancel();
+
+            try
+            {
+                cleanupTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.All(inner => inner is OperationCanceledException))
+            {
+            }
+
+            cleanupCancellationTokenSource.Dispose();
             seenSignalIdsLock.Dispose();
             subscribersLock.Dispose();
         }

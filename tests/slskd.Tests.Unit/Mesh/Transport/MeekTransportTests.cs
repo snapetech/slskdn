@@ -120,6 +120,23 @@ public class MeekTransportTests : IDisposable
         Assert.NotNull(status.LastError);
     }
 
+    [Fact]
+    public async Task IsAvailableAsync_WhenConnectionThrows_SetsSanitizedLastError()
+    {
+        var options = new MeekTransportOptions
+        {
+            BridgeUrl = "http://127.0.0.1:1/connect",
+            FrontDomain = "www.example.com"
+        };
+
+        var transport = new MeekTransport(options, _loggerMock.Object);
+
+        var isAvailable = await transport.IsAvailableAsync();
+
+        Assert.False(isAvailable);
+        Assert.Equal("Meek transport unavailable", transport.GetStatus().LastError);
+    }
+
     [Theory]
     [InlineData("https://meek-bridge.example.com/connect")]
     [InlineData("http://localhost:8080/meek")]
@@ -243,5 +260,16 @@ public class MeekTransportTests : IDisposable
         Assert.NotNull(decrypted);
         Assert.Equal(originalPayload, decrypted); // Should round-trip correctly
     }
-}
 
+    [Fact]
+    public async Task ConnectAsync_WhenConnectionFails_StoresSanitizedStatusError()
+    {
+        var transport = new MeekTransport(_defaultOptions, _loggerMock.Object);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80));
+
+        var status = transport.GetStatus();
+        Assert.Equal("Meek connection failed", status.LastError);
+        Assert.DoesNotContain("Name or service", status.LastError ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+}

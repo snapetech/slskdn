@@ -23,8 +23,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Moq;
     using slskd.VirtualSoulfind.Core;
+    using slskd.VirtualSoulfind.v2;
     using slskd.VirtualSoulfind.v2.API;
     using slskd.VirtualSoulfind.v2.Catalogue;
     using slskd.VirtualSoulfind.v2.Execution;
@@ -44,6 +47,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         private readonly Mock<IPlanner> _mockPlanner;
         private readonly Mock<IResolver> _mockResolver;
         private readonly Mock<IIntentQueueProcessor> _mockProcessor;
+        private readonly Mock<IOptionsMonitor<VirtualSoulfindV2Options>> _mockOptions;
+        private readonly Mock<ILogger<VirtualSoulfindV2Controller>> _mockLogger;
         private readonly VirtualSoulfindV2Controller _controller;
 
         public VirtualSoulfindV2ControllerTests()
@@ -53,13 +58,18 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
             _mockPlanner = new Mock<IPlanner>();
             _mockResolver = new Mock<IResolver>();
             _mockProcessor = new Mock<IIntentQueueProcessor>();
+            _mockOptions = new Mock<IOptionsMonitor<VirtualSoulfindV2Options>>();
+            _mockLogger = new Mock<ILogger<VirtualSoulfindV2Controller>>();
+            _mockOptions.Setup(x => x.CurrentValue).Returns(new VirtualSoulfindV2Options { Enabled = true });
 
             _controller = new VirtualSoulfindV2Controller(
                 _mockIntentQueue.Object,
                 _mockCatalogueStore.Object,
                 _mockPlanner.Object,
                 _mockResolver.Object,
-                _mockProcessor.Object);
+                _mockProcessor.Object,
+                _mockOptions.Object,
+                _mockLogger.Object);
         }
 
         #region Intent Endpoints
@@ -100,6 +110,29 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         }
 
         [Fact]
+        public async Task EnqueueTrack_TrimsTrackAndParentReleaseIdsBeforeDispatch()
+        {
+            var trackId = ContentItemId.NewId().ToString();
+            var request = new EnqueueTrackRequest
+            {
+                Domain = ContentDomain.Music,
+                TrackId = $" {trackId} ",
+                ParentDesiredReleaseId = " release-1 ",
+            };
+
+            _mockIntentQueue
+                .Setup(q => q.EnqueueTrackAsync(ContentDomain.Music, trackId, request.Priority, "release-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredTrack { DesiredTrackId = Guid.NewGuid().ToString(), TrackId = trackId });
+
+            var result = await _controller.EnqueueTrack(request, CancellationToken.None);
+
+            Assert.IsType<CreatedAtActionResult>(result);
+            _mockIntentQueue.Verify(
+                q => q.EnqueueTrackAsync(ContentDomain.Music, trackId, request.Priority, "release-1", It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task EnqueueRelease_ValidRequest_ReturnsCreated()
         {
             // Arrange
@@ -134,6 +167,27 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
             Assert.Equal(nameof(_controller.GetReleaseIntent), createdResult.ActionName);
             var returnedIntent = Assert.IsType<DesiredRelease>(createdResult.Value);
             Assert.Equal(expectedIntent.DesiredReleaseId, returnedIntent.DesiredReleaseId);
+        }
+
+        [Fact]
+        public async Task EnqueueRelease_TrimsReleaseIdAndNotesBeforeDispatch()
+        {
+            var request = new EnqueueReleaseRequest
+            {
+                ReleaseId = " release:test ",
+                Notes = " note ",
+            };
+
+            _mockIntentQueue
+                .Setup(q => q.EnqueueReleaseAsync("release:test", request.Priority, request.Mode, "note", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredRelease { DesiredReleaseId = Guid.NewGuid().ToString(), ReleaseId = "release:test" });
+
+            var result = await _controller.EnqueueRelease(request, CancellationToken.None);
+
+            Assert.IsType<CreatedAtActionResult>(result);
+            _mockIntentQueue.Verify(
+                q => q.EnqueueReleaseAsync("release:test", request.Priority, request.Mode, "note", It.IsAny<CancellationToken>()),
+                Times.Once);
         }
 
         [Fact]
@@ -177,6 +231,51 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
 
             // Act
             var result = await _controller.GetTrackIntent(intentId, CancellationToken.None);
+
+            // Assert
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task GetReleaseIntent_ExistingIntent_ReturnsOk()
+        {
+            // Arrange
+            var intentId = Guid.NewGuid().ToString();
+            var intent = new DesiredRelease
+            {
+                DesiredReleaseId = intentId,
+                ReleaseId = "release:one",
+                Priority = IntentPriority.High,
+                Status = IntentStatus.Completed,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            };
+
+            _mockIntentQueue
+                .Setup(q => q.GetReleaseIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(intent);
+
+            // Act
+            var result = await _controller.GetReleaseIntent(intentId, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedIntent = Assert.IsType<DesiredRelease>(okResult.Value);
+            Assert.Equal(intentId, returnedIntent.DesiredReleaseId);
+        }
+
+        [Fact]
+        public async Task GetReleaseIntent_NonExistingIntent_ReturnsNotFound()
+        {
+            // Arrange
+            var intentId = Guid.NewGuid().ToString();
+
+            _mockIntentQueue
+                .Setup(q => q.GetReleaseIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((DesiredRelease)null);
+
+            // Act
+            var result = await _controller.GetReleaseIntent(intentId, CancellationToken.None);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
@@ -260,6 +359,20 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         }
 
         [Fact]
+        public async Task GetTrackIntent_TrimsIntentIdBeforeLookup()
+        {
+            var intentId = Guid.NewGuid().ToString();
+            _mockIntentQueue
+                .Setup(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredTrack { DesiredTrackId = intentId, TrackId = ContentItemId.NewId().ToString() });
+
+            var result = await _controller.GetTrackIntent($" {intentId} ", CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            _mockIntentQueue.Verify(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
         public async Task UpdateTrackIntent_NonExistingIntent_ReturnsNotFound()
         {
             // Arrange
@@ -278,6 +391,37 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task SearchArtists_TrimsQueryBeforeDispatch()
+        {
+            _mockCatalogueStore
+                .Setup(store => store.SearchArtistsAsync("hello", 50, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<Artist>());
+
+            var result = await _controller.SearchArtists(" hello ", 50, CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            _mockCatalogueStore.Verify(store => store.SearchArtistsAsync("hello", 50, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task ProcessIntent_TrimsIntentIdBeforeDispatch()
+        {
+            var intentId = Guid.NewGuid().ToString();
+            _mockIntentQueue
+                .Setup(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DesiredTrack { DesiredTrackId = intentId, TrackId = ContentItemId.NewId().ToString() });
+            _mockProcessor
+                .Setup(processor => processor.ProcessIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var result = await _controller.ProcessIntent($" {intentId} ", CancellationToken.None);
+
+            var accepted = Assert.IsType<AcceptedResult>(result);
+            Assert.Contains(intentId, accepted.Value?.ToString() ?? string.Empty);
+            _mockIntentQueue.Verify(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         #endregion
@@ -544,6 +688,52 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
         }
 
         [Fact]
+        public async Task ProcessIntent_WhenBackgroundProcessingThrows_LogsWarning()
+        {
+            var intentId = Guid.NewGuid().ToString();
+            var intent = new DesiredTrack
+            {
+                DesiredTrackId = intentId,
+                TrackId = ContentItemId.NewId().ToString(),
+                Priority = IntentPriority.Normal,
+                Status = IntentStatus.Pending,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            };
+            var invoked = new TaskCompletionSource();
+
+            _mockIntentQueue
+                .Setup(q => q.GetTrackIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(intent);
+
+            _mockProcessor
+                .Setup(p => p.ProcessIntentAsync(intentId, It.IsAny<CancellationToken>()))
+                .Returns(async () =>
+                {
+                    invoked.TrySetResult();
+                    await Task.Yield();
+                    throw new InvalidOperationException("boom");
+                });
+
+            var result = await _controller.ProcessIntent(intentId, CancellationToken.None);
+            await invoked.Task.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+            var deadline = DateTime.UtcNow.AddSeconds(30);
+            while (_mockLogger.Invocations.Count == 0 && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(20).ConfigureAwait(false);
+            }
+
+            Assert.IsType<AcceptedResult>(result);
+            Assert.Contains(
+                _mockLogger.Invocations,
+                invocation => invocation.Method.Name == nameof(ILogger.Log)
+                    && invocation.Arguments.Count >= 3
+                    && invocation.Arguments[0] is LogLevel level
+                    && level == LogLevel.Warning
+                    && invocation.Arguments[2]?.ToString()?.Contains("Failed to process intent") == true);
+        }
+
+        [Fact]
         public async Task GetStats_ReturnsProcessorStats()
         {
             // Arrange
@@ -583,7 +773,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                     _mockCatalogueStore.Object,
                     _mockPlanner.Object,
                     _mockResolver.Object,
-                    _mockProcessor.Object));
+                    _mockProcessor.Object,
+                    _mockOptions.Object,
+                    _mockLogger.Object));
         }
 
         [Fact]
@@ -595,7 +787,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                     null,
                     _mockPlanner.Object,
                     _mockResolver.Object,
-                    _mockProcessor.Object));
+                    _mockProcessor.Object,
+                    _mockOptions.Object,
+                    _mockLogger.Object));
         }
 
         [Fact]
@@ -607,7 +801,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                     _mockCatalogueStore.Object,
                     null,
                     _mockResolver.Object,
-                    _mockProcessor.Object));
+                    _mockProcessor.Object,
+                    _mockOptions.Object,
+                    _mockLogger.Object));
         }
 
         [Fact]
@@ -619,7 +815,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                     _mockCatalogueStore.Object,
                     _mockPlanner.Object,
                     null,
-                    _mockProcessor.Object));
+                    _mockProcessor.Object,
+                    _mockOptions.Object,
+                    _mockLogger.Object));
         }
 
         [Fact]
@@ -631,6 +829,22 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.API
                     _mockCatalogueStore.Object,
                     _mockPlanner.Object,
                     _mockResolver.Object,
+                    null,
+                    _mockOptions.Object,
+                    _mockLogger.Object));
+        }
+
+        [Fact]
+        public void Constructor_NullLogger_ThrowsArgumentNullException()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                new VirtualSoulfindV2Controller(
+                    _mockIntentQueue.Object,
+                    _mockCatalogueStore.Object,
+                    _mockPlanner.Object,
+                    _mockResolver.Object,
+                    _mockProcessor.Object,
+                    _mockOptions.Object,
                     null));
         }
 

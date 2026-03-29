@@ -25,18 +25,18 @@ public static class SecurityUtils
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     public static bool ConstantTimeEquals(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
-        // Constant-time comparison prevents timing attacks
-        if (a.Length != b.Length)
+        // Compare all bytes over the same loop length to avoid early-exit timing differences.
+        var maxLength = Math.Max(a.Length, b.Length);
+        var result = 0;
+
+        for (var i = 0; i < maxLength; i++)
         {
-            return false;
+            var aByte = i < a.Length ? a[i] : (byte)0;
+            var bByte = i < b.Length ? b[i] : (byte)0;
+            result |= aByte ^ bByte;
         }
 
-        int result = 0;
-        for (int i = 0; i < a.Length; i++)
-        {
-            result |= a[i] ^ b[i];
-        }
-
+        result |= a.Length ^ b.Length;
         return result == 0;
     }
 

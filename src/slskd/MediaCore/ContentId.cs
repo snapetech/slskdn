@@ -20,27 +20,27 @@ public record ContentId(string Domain, string Type, string Id)
     /// <summary>
     /// Gets whether this ContentID represents audio content.
     /// </summary>
-    public bool IsAudio => Domain.Equals("audio", StringComparison.OrdinalIgnoreCase);
+    public bool IsAudio => ContentIdParser.NormalizeDomain(Domain, Type).Equals("audio", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets whether this ContentID represents video content.
     /// </summary>
-    public bool IsVideo => Domain.Equals("video", StringComparison.OrdinalIgnoreCase);
+    public bool IsVideo => ContentIdParser.NormalizeDomain(Domain, Type).Equals("video", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets whether this ContentID represents image content.
     /// </summary>
-    public bool IsImage => Domain.Equals("image", StringComparison.OrdinalIgnoreCase);
+    public bool IsImage => ContentIdParser.NormalizeDomain(Domain, Type).Equals("image", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets whether this ContentID represents text content.
     /// </summary>
-    public bool IsText => Domain.Equals("text", StringComparison.OrdinalIgnoreCase);
+    public bool IsText => ContentIdParser.NormalizeDomain(Domain, Type).Equals("text", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets whether this ContentID represents application/binary content.
     /// </summary>
-    public bool IsApplication => Domain.Equals("application", StringComparison.OrdinalIgnoreCase);
+    public bool IsApplication => ContentIdParser.NormalizeDomain(Domain, Type).Equals("application", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -114,7 +114,8 @@ public static class ContentIdParser
     /// <returns>The domain, or null if parsing fails.</returns>
     public static string? GetDomain(string contentId)
     {
-        return Parse(contentId)?.Domain;
+        var parsed = Parse(contentId);
+        return parsed == null ? null : NormalizeDomain(parsed.Domain, parsed.Type);
     }
 
     /// <summary>
@@ -124,7 +125,8 @@ public static class ContentIdParser
     /// <returns>The type, or null if parsing fails.</returns>
     public static string? GetType(string contentId)
     {
-        return Parse(contentId)?.Type;
+        var parsed = Parse(contentId);
+        return parsed == null ? null : NormalizeType(parsed.Domain, parsed.Type);
     }
 
     /// <summary>
@@ -135,6 +137,38 @@ public static class ContentIdParser
     public static string? GetId(string contentId)
     {
         return Parse(contentId)?.Id;
+    }
+
+    public static string NormalizeDomain(string domain, string type)
+    {
+        if (domain.Equals("mb", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.IsNullOrWhiteSpace(type)
+                ? ContentDomains.Audio
+                : type.ToLowerInvariant() switch
+                {
+                    "recording" or "release" or "artist" => ContentDomains.Audio,
+                    _ => domain.ToLowerInvariant(),
+                };
+        }
+
+        return domain.ToLowerInvariant();
+    }
+
+    public static string NormalizeType(string domain, string type)
+    {
+        if (domain.Equals("mb", StringComparison.OrdinalIgnoreCase))
+        {
+            return type.ToLowerInvariant() switch
+            {
+                "recording" => ContentDomains.AudioTrack,
+                "release" => ContentDomains.AudioAlbum,
+                "artist" => ContentDomains.AudioArtist,
+                _ => type.ToLowerInvariant(),
+            };
+        }
+
+        return type.ToLowerInvariant();
     }
 }
 

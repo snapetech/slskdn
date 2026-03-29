@@ -39,7 +39,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     /// </summary>
     public const int MaxConcurrentAttempts = 3;
 
-    private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
+    private string LocalUsername => (_optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown").Trim();
 
     public MeshOverlayConnector(
         ILogger<MeshOverlayConnector> logger,
@@ -70,7 +70,9 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         CancellationToken cancellationToken = default)
     {
         var successCount = 0;
-        var shuffled = candidates.ToList();
+        var shuffled = candidates
+            .Distinct(IPEndPointComparer.Instance)
+            .ToList();
 
         // SECURITY: Use cryptographic RNG for peer selection to prevent prediction attacks
         for (var i = shuffled.Count - 1; i > 0; i--)
@@ -235,7 +237,6 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     endpoint,
                     string.Join(", ", (IEnumerable<string>?)ack.Features ?? Array.Empty<string>()));
 
-                connection = null;
                 return connection;
             }
             catch (Exception ex)
@@ -272,5 +273,30 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             SuccessfulConnections = _successfulConnections,
             FailedConnections = _failedConnections,
         };
+    }
+
+    private sealed class IPEndPointComparer : IEqualityComparer<IPEndPoint>
+    {
+        public static readonly IPEndPointComparer Instance = new();
+
+        public bool Equals(IPEndPoint? x, IPEndPoint? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return true;
+            }
+
+            if (x is null || y is null)
+            {
+                return false;
+            }
+
+            return Equals(x.Address, y.Address) && x.Port == y.Port;
+        }
+
+        public int GetHashCode(IPEndPoint obj)
+        {
+            return HashCode.Combine(obj.Address, obj.Port);
+        }
     }
 }

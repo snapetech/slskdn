@@ -66,11 +66,11 @@ namespace slskd.Authentication
             var remote = Context.Connection.RemoteIpAddress;
             var isLoopback = remote != null && IPAddress.IsLoopback(remote);
 
-            if (!isLoopback && !Options.AllowRemoteNoAuth)
+            if (!isLoopback)
             {
-                if (string.IsNullOrWhiteSpace(Options.AllowedCidrs) || remote == null)
+                if (!Options.AllowRemoteNoAuth || string.IsNullOrWhiteSpace(Options.AllowedCidrs) || remote == null)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback"));
+                    return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback or explicitly allowed CIDRs"));
                 }
 
                 var allowed = false;
@@ -85,16 +85,13 @@ namespace slskd.Authentication
 
                 if (!allowed)
                 {
-                    return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback, AllowRemoteNoAuth, or AllowedCidrs"));
+                    return Task.FromResult(AuthenticateResult.Fail("No-auth mode only allowed from loopback or explicitly allowed CIDRs"));
                 }
             }
 
-            if (Options.AllowRemoteNoAuth)
+            if (!isLoopback && Options.AllowRemoteNoAuth)
             {
-                // MED-09: remote no-auth is active; any non-loopback client gets Administrator without credentials
-                Logger.LogWarning("[Passthrough] MED-09: AllowRemoteNoAuth is enabled — " +
-                    "granting {Role} to unauthenticated remote request from {RemoteIp}. " +
-                    "Disable web.allow_remote_no_auth to require credentials from non-loopback clients.",
+                Logger.LogWarning("[Passthrough] AllowRemoteNoAuth granted {Role} to unauthenticated remote request from {RemoteIp} because the address matched AllowedCidrs.",
                     Options.Role, remote);
             }
 

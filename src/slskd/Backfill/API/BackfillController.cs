@@ -72,6 +72,7 @@ namespace slskd.Backfill.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> GetCandidates([FromQuery] int limit = 10)
         {
+            limit = limit <= 0 ? 10 : limit;
             var candidates = await Backfill.GetCandidatesAsync(limit);
             return Ok(new
             {
@@ -109,7 +110,15 @@ namespace slskd.Backfill.API
         [Authorize(Policy = AuthPolicy.Any)]
         public async Task<IActionResult> BackfillFile([FromBody] BackfillFileRequest request)
         {
-            if (string.IsNullOrEmpty(request?.PeerId) || string.IsNullOrEmpty(request.Path) || request.Size <= 0)
+            if (request == null)
+            {
+                return BadRequest(new { error = "peerId, path, and size are required" });
+            }
+
+            request.PeerId = request.PeerId?.Trim() ?? string.Empty;
+            request.Path = request.Path?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(request.PeerId) || string.IsNullOrWhiteSpace(request.Path) || request.Size <= 0)
             {
                 return BadRequest(new { error = "peerId, path, and size are required" });
             }

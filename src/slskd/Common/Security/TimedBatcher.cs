@@ -13,6 +13,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
     private readonly List<BatchedMessage> _currentBatch = new();
     private readonly SemaphoreSlim _batchLock = new(1, 1);
     private readonly ILogger<TimedBatcher> _logger;
+    private static readonly TimeSpan BatchPollInterval = TimeSpan.FromMilliseconds(50);
 
     private CancellationTokenSource? _currentBatchTimer;
 
@@ -48,8 +49,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             // If we've reached the maximum batch size, cancel the current timer
             if (_currentBatch.Count >= _options.MaxBatchSize)
             {
-                _currentBatchTimer?.Cancel();
-                _currentBatchTimer = null;
+                CancelAndDisposeCurrentBatchTimer();
             }
             else if (_currentBatch.Count == 1)
             {
@@ -84,16 +84,17 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             _logger.LogDebug("Batch retrieval cancelled, returning current batch");
         }
 
-        // Extract the current batch
-        await _batchLock.WaitAsync(cancellationToken);
+        // Extract the current batch.
+        // Use CancellationToken.None: if cancellationToken was already cancelled (the reason we
+        // fell through the catch above), passing it here would throw immediately and lose the batch.
+        await _batchLock.WaitAsync(CancellationToken.None);
         try
         {
             var batch = _currentBatch.ToList();
             _currentBatch.Clear();
 
             // Cancel any existing timer
-            _currentBatchTimer?.Cancel();
-            _currentBatchTimer = null;
+            CancelAndDisposeCurrentBatchTimer();
 
             _logger.LogDebug("Returning batch with {Count} messages", batch.Count);
             return batch;
@@ -117,8 +118,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             _currentBatch.Clear();
 
             // Cancel any existing timer
-            _currentBatchTimer?.Cancel();
-            _currentBatchTimer = null;
+            CancelAndDisposeCurrentBatchTimer();
 
             _logger.LogDebug("Flushed batch with {Count} messages", batch.Count);
             return batch;
@@ -131,18 +131,19 @@ public class TimedBatcher : IMessageBatcher, IDisposable
 
     private void StartBatchTimer()
     {
-        _currentBatchTimer?.Cancel();
-        _currentBatchTimer?.Dispose();
+        CancelAndDisposeCurrentBatchTimer();
         _currentBatchTimer = new CancellationTokenSource();
 
-        Task.Delay(_options.BatchWindowMs, _currentBatchTimer.Token)
-            .ContinueWith(t =>
-            {
-                if (!t.IsCanceled)
-                {
-                    _logger.LogDebug("Batch timer expired, batch ready for processing");
-                }
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+        _ = LogBatchTimerExpiryAsync(_currentBatchTimer.Token);
+    }
+
+    private void CancelAndDisposeCurrentBatchTimer()
+    {
+        var currentBatchTimer = _currentBatchTimer;
+        _currentBatchTimer = null;
+
+        currentBatchTimer?.Cancel();
+        currentBatchTimer?.Dispose();
     }
 
     private async Task WaitForBatchAsync(CancellationToken cancellationToken)
@@ -158,7 +159,8 @@ public class TimedBatcher : IMessageBatcher, IDisposable
                     return;
                 }
 
-                if (_currentBatch.Count > 0 && _currentBatchTimer?.IsCancellationRequested == true)
+                if (_currentBatch.Count > 0
+                    && DateTimeOffset.UtcNow - _currentBatch[0].Timestamp >= TimeSpan.FromMilliseconds(_options.BatchWindowMs))
                 {
                     // Timer has expired
                     return;
@@ -170,7 +172,7 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             }
 
             // Wait a bit before checking again
-            await Task.Delay(50, cancellationToken);
+            await Task.Delay(BatchPollInterval, cancellationToken);
         }
     }
 
@@ -187,8 +189,19 @@ public class TimedBatcher : IMessageBatcher, IDisposable
             return;
         }
 
-        _currentBatchTimer?.Cancel();
-        _currentBatchTimer?.Dispose();
+        CancelAndDisposeCurrentBatchTimer();
         _batchLock.Dispose();
+    }
+
+    private async Task LogBatchTimerExpiryAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(_options.BatchWindowMs, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("Batch timer expired, batch ready for processing");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 }

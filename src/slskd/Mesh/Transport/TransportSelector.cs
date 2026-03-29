@@ -332,13 +332,13 @@ public class TransportSelector
         // For now, assume QUIC endpoints are DirectQuic
         if (endpointStr.StartsWith("quic://"))
         {
-            var parts = endpointStr.Substring(7).Split(':');
-            if (parts.Length == 2 && int.TryParse(parts[1], out var port))
+            var address = endpointStr.Substring(7);
+            if (TryParseLegacyHostAndPort(address, out var host, out var port))
             {
                 return new TransportEndpoint
                 {
                     TransportType = TransportType.DirectQuic,
-                    Host = parts[0],
+                    Host = host,
                     Port = port,
                     Scope = TransportScope.ControlAndData,
                     Preference = 0,
@@ -348,6 +348,41 @@ public class TransportSelector
         }
 
         return null;
+    }
+
+    private static bool TryParseLegacyHostAndPort(string address, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return false;
+        }
+
+        if (address.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = address.IndexOf(']');
+            if (closingBracketIndex <= 1 ||
+                closingBracketIndex + 2 >= address.Length ||
+                address[closingBracketIndex + 1] != ':' ||
+                !int.TryParse(address[(closingBracketIndex + 2)..], out port))
+            {
+                return false;
+            }
+
+            host = address[1..closingBracketIndex];
+            return port is > 0 and <= ushort.MaxValue;
+        }
+
+        var separatorIndex = address.LastIndexOf(':');
+        if (separatorIndex <= 0 || separatorIndex == address.Length - 1)
+        {
+            return false;
+        }
+
+        host = address[..separatorIndex];
+        return int.TryParse(address[(separatorIndex + 1)..], out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     private ITransportDialer? GetDialerForEndpoint(TransportEndpoint endpoint)

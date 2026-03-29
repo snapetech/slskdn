@@ -29,7 +29,7 @@ namespace slskd.Mesh.ServiceFabric.Services;
 /// Mesh service for private VPN gateway functionality.
 /// Provides secure TCP tunneling to pod-approved destinations.
 /// </summary>
-public class PrivateGatewayMeshService : IMeshService
+public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
 {
     private readonly ILogger<PrivateGatewayMeshService> _logger;
     private readonly IPodService _podService;
@@ -37,6 +37,9 @@ public class PrivateGatewayMeshService : IMeshService
     private readonly IDnsSecurityService _dnsSecurity;
     private readonly ITunnelConnectivity _tunnelConnectivity;
     private readonly int _maxPayload;
+    private readonly CancellationTokenSource _cleanupCancellationTokenSource = new();
+    private readonly Task _cleanupTask;
+    private bool _disposed;
 
     // Active tunnels: tunnelId -> TunnelSession
     private readonly ConcurrentDictionary<string, TunnelSession> _activeTunnels = new();
@@ -68,8 +71,9 @@ public class PrivateGatewayMeshService : IMeshService
         _tunnelConnectivity = tunnelConnectivity ?? new DefaultTunnelConnectivity();
         _maxPayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? slskd.Mesh.Transport.SecurityUtils.MaxRemotePayloadSize;
 
-        // Start cleanup task
-        _ = Task.Run(CleanupExpiredTunnelsAsync);
+        // LongRunning ensures a dedicated OS thread starts immediately, avoiding thread-pool
+        // saturation delays that would prevent the cleanup task from starting in tests.
+        _cleanupTask = Task.Factory.StartNew(CleanupExpiredTunnelsAsync, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
     }
 
     public string ServiceName => "private-gateway";
@@ -95,7 +99,7 @@ public class PrivateGatewayMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}"
+                    ErrorMessage = "Unknown method"
                 }
             };
         }
@@ -116,9 +120,8 @@ public class PrivateGatewayMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        // For MVP, we'll use framed messages over calls rather than raw streaming
-        // This can be upgraded to true streaming later for better performance
-        throw new NotSupportedException("Streaming not yet implemented for private-gateway service. Use TunnelData calls instead.");
+        _logger.LogWarning("[PrivateGateway] Streaming requested by {PeerId}, but private gateway streaming is not implemented. Use TunnelData calls instead.", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     private async Task<ServiceReply> HandleOpenTunnelAsync(
@@ -340,7 +343,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = dnsResult.ErrorMessage
+                ErrorMessage = "DNS validation failed"
             };
         }
 
@@ -362,7 +365,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Too many active tunnels per peer (max {policy.MaxConcurrentTunnelsPerPeer})"
+                ErrorMessage = "Too many active tunnels per peer"
             };
         }
 
@@ -376,7 +379,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Too many active tunnels for pod (max {policy.MaxConcurrentTunnelsPod})"
+                ErrorMessage = "Too many active tunnels for pod"
             };
         }
 
@@ -395,7 +398,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Tunnel creation rate limit exceeded (max {policy.MaxNewTunnelsPerMinutePerPeer} per minute)"
+                ErrorMessage = "Tunnel creation rate limit exceeded"
             };
         }
 
@@ -451,7 +454,9 @@ public class PrivateGatewayMeshService : IMeshService
             _tunnelStreams[tunnelId] = stream;
 
             // Start forwarding task (bidirectional)
-            _ = Task.Run(() => ForwardTunnelDataAsync(tunnelId, stream, cancellationToken), cancellationToken);
+            _ = Task.Run(
+                () => ForwardTunnelDataAsync(tunnelId, stream, _cleanupCancellationTokenSource.Token),
+                CancellationToken.None);
 
             _logger.LogInformation(
                 "[PrivateGateway] AUDIT: Tunnel opened - TunnelId:{TunnelId}, PeerId:{PeerId}, PodId:{PodId}, Host:{Host}, Port:{Port}, Service:{ServiceName}",
@@ -481,7 +486,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Failed to connect to destination: {ex.Message}"
+                ErrorMessage = "Failed to connect to destination"
             };
         }
     }
@@ -565,7 +570,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Tunnel error: {ex.Message}"
+                ErrorMessage = "Tunnel error"
             };
         }
     }
@@ -671,7 +676,7 @@ public class PrivateGatewayMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = $"Tunnel error: {ex.Message}"
+                ErrorMessage = "Tunnel error"
             };
         }
     }
@@ -843,11 +848,40 @@ public class PrivateGatewayMeshService : IMeshService
 
     private async Task CleanupExpiredTunnelsAsync()
     {
-        while (true)
+        while (!_cleanupCancellationTokenSource.IsCancellationRequested)
         {
-            await RunOneCleanupIterationAsync();
-            await Task.Delay(TimeSpan.FromMinutes(5));
+            try
+            {
+                await RunOneCleanupIterationAsync();
+                await Task.Delay(TimeSpan.FromMinutes(5), _cleanupCancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException) when (_cleanupCancellationTokenSource.IsCancellationRequested)
+            {
+                break;
+            }
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _cleanupCancellationTokenSource.Cancel();
+
+        try
+        {
+            _cleanupTask.Wait(TimeSpan.FromSeconds(1));
+        }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(inner => inner is OperationCanceledException))
+        {
+        }
+
+        _cleanupCancellationTokenSource.Dispose();
+        _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>

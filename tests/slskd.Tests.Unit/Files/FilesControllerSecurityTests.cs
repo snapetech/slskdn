@@ -33,6 +33,7 @@ namespace slskd.Tests.Unit.Files
 
             var options = new slskd.Options
             {
+                RemoteFileManagement = true,
                 Directories = new slskd.Options.DirectoriesOptions
                 {
                     Downloads = "/test/downloads",
@@ -88,9 +89,8 @@ namespace slskd.Tests.Unit.Files
             var result = await controller.DeleteDownloadFileAsync(invalidBase64);
 
             // Assert
-            // Should handle gracefully, not crash
-            Assert.NotNull(result);
-            // May return BadRequest or handle via exception
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Invalid file path", badRequest.Value);
         }
 
         [Fact]
@@ -112,8 +112,25 @@ namespace slskd.Tests.Unit.Files
             var result = await controller.DeleteDownloadFileAsync(base64Path);
 
             // Assert
-            Assert.NotNull(result);
-            // Should succeed for valid paths
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Fact]
+        public async Task GetDownloadSubdirectoryContentsAsync_ShouldTrimDecodedBase64Path()
+        {
+            var encodedPath = Convert.ToBase64String(Encoding.UTF8.GetBytes(" subdir "));
+            var expectedPath = Path.GetFullPath(Path.Combine("/test/downloads", "subdir"));
+
+            mockFileService.Setup(s => s.ListContentsAsync(
+                    It.Is<string>(path => path == expectedPath),
+                    It.IsAny<EnumerationOptions>()))
+                .ReturnsAsync(new FilesystemDirectory())
+                .Verifiable();
+
+            var result = await controller.GetDownloadSubdirectoryContentsAsync(encodedPath);
+
+            Assert.IsType<OkObjectResult>(result);
+            mockFileService.Verify();
         }
 
         [Theory]
@@ -134,4 +151,3 @@ namespace slskd.Tests.Unit.Files
         }
     }
 }
-

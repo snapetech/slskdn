@@ -17,8 +17,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd;
+using slskd.Shares;
 using slskd.Sharing;
 using slskd.Sharing.API;
+using slskd.Transfers.Downloads;
 using Xunit;
 using TestOptionsMonitor = slskd.Tests.Unit.TestOptionsMonitor<slskd.Options>;
 
@@ -87,6 +89,16 @@ public class SharesControllerTests
         var badRequest = Assert.IsType<BadRequestObjectResult>(r);
         var problemDetails = Assert.IsType<Microsoft.AspNetCore.Mvc.ProblemDetails>(badRequest.Value);
         Assert.Equal("CollectionId is required.", problemDetails.Detail);
+    }
+
+    [Fact]
+    public async Task Create_NullRequest_ReturnsBadRequest()
+    {
+        var c = CreateController();
+
+        var r = await c.Create(null!, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(r);
     }
 
     [Fact]
@@ -226,5 +238,186 @@ public class SharesControllerTests
         var createdResult = Assert.IsType<CreatedAtActionResult>(r);
         var grant = Assert.IsType<ShareGrant>(createdResult.Value);
         Assert.Equal("peer123", grant.AudiencePeerId);
+    }
+
+    [Fact]
+    public async Task Create_TrimsAudienceFieldsBeforePersisting()
+    {
+        var c = CreateController();
+        var collectionId = Guid.NewGuid();
+        _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
+        _sharingMock.Setup(x => x.CreateShareGrantAsync(It.IsAny<ShareGrant>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShareGrant { Id = Guid.NewGuid(), CollectionId = collectionId });
+
+        var r = await c.Create(new CreateShareGrantRequest
+        {
+            CollectionId = collectionId,
+            AudienceType = " User ",
+            AudienceId = " bob ",
+            AudiencePeerId = " peer123 "
+        }, CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(r);
+        _sharingMock.Verify(x => x.CreateShareGrantAsync(
+            It.Is<ShareGrant>(g =>
+                g.AudienceType == "User" &&
+                g.AudienceId == "bob" &&
+                g.AudiencePeerId == "peer123"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Update_WithNonPositiveMaxConcurrentStreams_ClampsToOne()
+    {
+        var c = CreateController();
+        var shareId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        var grant = new ShareGrant { Id = shareId, CollectionId = collectionId, MaxConcurrentStreams = 4 };
+
+        _sharingMock.Setup(x => x.GetShareGrantAsync(shareId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(grant);
+        _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
+        _sharingMock.Setup(x => x.UpdateShareGrantAsync(It.IsAny<ShareGrant>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await c.Update(shareId, new UpdateShareGrantRequest { MaxConcurrentStreams = 0 }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var updated = Assert.IsType<ShareGrant>(ok.Value);
+        Assert.Equal(1, updated.MaxConcurrentStreams);
+    }
+
+    [Fact]
+    public async Task Backfill_WhenDownloadEnqueueThrows_DoesNotLeakExceptionMessage()
+    {
+        var grantId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+
+        var downloadService = new Mock<IDownloadService>();
+        downloadService
+            .Setup(x => x.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var shareRepo = new Mock<IShareRepository>();
+        shareRepo
+            .Setup(x => x.FindContentItem("sha256:test"))
+            .Returns(("audio", "work-1", "Music/song.flac", true, string.Empty, 0L));
+        shareRepo
+            .Setup(x => x.FindFileInfo("Music/song.flac"))
+            .Returns(("Music/song.flac", 1234L));
+
+        var shareService = new Mock<slskd.Shares.IShareService>();
+        shareService.Setup(x => x.GetLocalRepository()).Returns(shareRepo.Object);
+
+        _sharingMock
+            .Setup(x => x.GetShareGrantsAccessibleByUserAsync("alice", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ShareGrant>
+            {
+                new()
+                {
+                    Id = grantId,
+                    CollectionId = collectionId,
+                    AllowDownload = true,
+                    ShareToken = "token"
+                }
+            });
+        _sharingMock
+            .Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "owner" });
+        _sharingMock
+            .Setup(x => x.GetManifestAsync(grantId, "token", "alice", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShareManifestDto
+            {
+                Items = new List<ShareManifestItemDto>
+                {
+                    new() { ContentId = "sha256:test", MediaKind = "audio" }
+                }
+            });
+
+        var loggerMock = new Mock<ILogger<SharesController>>();
+        var controller = new SharesController(
+            _sharingMock.Object,
+            _tokensMock.Object,
+            loggerMock.Object,
+            _options,
+            _serviceProviderMock.Object,
+            soulseekClient: null,
+            shareService: shareService.Object,
+            downloadService: downloadService.Object);
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "u") }, "Test"));
+
+        var result = await controller.Backfill(grantId, CancellationToken.None);
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(500, error.StatusCode);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Equal("Failed to enqueue downloads", error.Value);
+    }
+
+    [Fact]
+    public async Task Backfill_WhenRepositoryResolutionThrows_DoesNotLeakExceptionMessageInErrors()
+    {
+        var grantId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+
+        var shareRepo = new Mock<IShareRepository>();
+        shareRepo
+            .Setup(x => x.FindContentItem("sha256:test"))
+            .Throws(new InvalidOperationException("sensitive detail"));
+
+        var shareService = new Mock<slskd.Shares.IShareService>();
+        shareService.Setup(x => x.GetLocalRepository()).Returns(shareRepo.Object);
+
+        _sharingMock
+            .Setup(x => x.GetShareGrantsAccessibleByUserAsync("alice", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ShareGrant>
+            {
+                new()
+                {
+                    Id = grantId,
+                    CollectionId = collectionId,
+                    AllowDownload = true,
+                    ShareToken = "token"
+                }
+            });
+        _sharingMock
+            .Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "owner" });
+        _sharingMock
+            .Setup(x => x.GetManifestAsync(grantId, "token", "alice", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ShareManifestDto
+            {
+                Items = new List<ShareManifestItemDto>
+                {
+                    new() { ContentId = "sha256:test", MediaKind = "audio" }
+                }
+            });
+
+        var loggerMock = new Mock<ILogger<SharesController>>();
+        var controller = new SharesController(
+            _sharingMock.Object,
+            _tokensMock.Object,
+            loggerMock.Object,
+            _options,
+            _serviceProviderMock.Object,
+            soulseekClient: null,
+            shareService: shareService.Object,
+            downloadService: Mock.Of<IDownloadService>());
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "u") }, "Test"));
+
+        var result = await controller.Backfill(grantId, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<BackfillResponse>(ok.Value);
+        Assert.Single(response.Errors!);
+        Assert.DoesNotContain("sensitive detail", response.Errors[0]);
+        Assert.Contains("Error resolving", response.Errors[0]);
     }
 }

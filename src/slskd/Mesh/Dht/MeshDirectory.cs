@@ -72,7 +72,9 @@ public class MeshDirectory : IMeshDirectory
 
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var fresh = hints.Peers
-            .Where(p => now - p.TimestampUnixMs < 3600_000) // 1h freshness
+            .Where(p => !string.IsNullOrWhiteSpace(p.PeerId) && now - p.TimestampUnixMs < 3600_000) // 1h freshness
+            .GroupBy(p => p.PeerId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(peer => peer.TimestampUnixMs).First())
             .Select(p =>
             {
                 var endpoint = p.Endpoints?.FirstOrDefault();
@@ -91,7 +93,7 @@ public class MeshDirectory : IMeshDirectory
         if (contentList == null || contentList.Count == 0) return Array.Empty<slskd.Mesh.MeshContentDescriptor>();
 
         var results = new List<slskd.Mesh.MeshContentDescriptor>();
-        foreach (var cid in contentList)
+        foreach (var cid in contentList.Where(cid => !string.IsNullOrWhiteSpace(cid)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var contentDescriptor = await dht.GetAsync<MediaCore.ContentDescriptor>($"mesh:content:{cid}", ct);
             if (contentDescriptor == null) continue;
@@ -116,13 +118,60 @@ public class MeshDirectory : IMeshDirectory
     /// </summary>
     private (string? Address, int? Port) ParseEndpoint(string? endpoint)
     {
-        if (string.IsNullOrEmpty(endpoint)) return (null, null);
+        if (string.IsNullOrEmpty(endpoint))
+        {
+            return (null, null);
+        }
 
-        var parts = endpoint.Split(':');
-        if (parts.Length != 2) return (endpoint, null);
+        var normalized = endpoint;
+        var schemeSeparatorIndex = normalized.IndexOf("://", StringComparison.Ordinal);
+        if (schemeSeparatorIndex >= 0)
+        {
+            normalized = normalized[(schemeSeparatorIndex + 3)..];
+        }
 
-        var address = parts[0];
-        var port = int.TryParse(parts[1], out var p) ? p : (int?)null;
+        if (!TryParseHostAndPort(normalized, out var address, out var port))
+        {
+            return (normalized, null);
+        }
+
         return (address, port);
+    }
+
+    private static bool TryParseHostAndPort(string endpoint, out string address, out int port)
+    {
+        address = endpoint;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (endpoint.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = endpoint.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= endpoint.Length - 2 || endpoint[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            address = endpoint[1..closingBracketIndex];
+            portPart = endpoint[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = endpoint.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == endpoint.Length - 1)
+            {
+                return false;
+            }
+
+            address = endpoint[..separatorIndex];
+            portPart = endpoint[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 }

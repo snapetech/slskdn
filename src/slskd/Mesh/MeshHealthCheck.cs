@@ -113,7 +113,7 @@ public class MeshHealthCheck : IHealthCheck
             _logger.LogWarning(ex, "[MeshHealth] Health check encountered an error - mesh services may not be initialized");
             return new HealthCheckResult(
                 HealthStatus.Degraded,
-                $"Mesh health check error: {ex.Message} (services may still be initializing)",
+                "Mesh health check encountered an error (services may still be initializing)",
                 ex,
                 data: new Dictionary<string, object> { ["error"] = ex.GetType().Name });
         }

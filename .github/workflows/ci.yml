@@ -37,11 +37,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Verify .NET (self-hosted)
+      - name: Set up .NET (self-hosted)
         if: ${{ contains(runner.name, 'keith') }}
         run: |
-          echo "Using pre-installed .NET SDK"
-          dotnet --version
+          # Pre-installed at /usr/share/dotnet by myoung34/github-runner image
+          echo "/usr/share/dotnet" >> $GITHUB_PATH
+          /usr/share/dotnet/dotnet --version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
 
       - name: Setup Soulfind (Docker)
         if: ${{ !contains(runner.name, 'keith') }}
@@ -56,7 +64,12 @@ jobs:
         run: |
           # Get the latest slskdn release tag only (not build-trigger tags like build-main-*)
           LATEST_TAG=$(git tag --sort=-version:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' | head -n1)
-          LATEST_TAG=${LATEST_TAG:-0.24.5-slskdn.1}
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n1)
+          fi
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG='0.24.0-slskdn.1'
+          fi
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             PATCH=0
           else
@@ -83,34 +96,10 @@ jobs:
 
       - name: AUR sha256sum Consistency Check
         run: |
-          aur_dir="packaging/aur"
-          fail=0
-          for pkgbuild in PKGBUILD PKGBUILD-bin; do
-            pb="$aur_dir/$pkgbuild"
-            [[ -f "$pb" ]] || continue
-            sums_line=$(grep '^sha256sums=' "$pb" | head -1)
-            sums=( $(echo "$sums_line" | grep -oP "(?<=')[^']+(?=')" ) )
-            declare -A files=( [1]="slskd.service" [2]="slskd.yml" [3]="slskd.sysusers" )
-            for idx in "${!files[@]}"; do
-              fname="${files[$idx]}"
-              fpath="$aur_dir/$fname"
-              expected="${sums[$idx]:-}"
-              [[ "$expected" == "SKIP" || -z "$expected" ]] && continue
-              [[ -f "$fpath" ]] || continue
-              actual=$(sha256sum "$fpath" | awk '{print $1}')
-              if [[ "$actual" != "$expected" ]]; then
-                echo "::error::AUR hash mismatch in $pkgbuild for $fname"
-                echo "  $pkgbuild has: $expected"
-                echo "  Actual is:     $actual"
-                fail=1
-              fi
-            done
-          done
-          if [[ "$fail" -eq 1 ]]; then
-            echo "::error::packaging/aur sha256sums are out of sync. Update before merging."
-            exit 1
-          fi
-          echo "AUR sha256sums OK"
+          bash packaging/scripts/validate-aur-pkgbuild-hashes.sh \
+            packaging/aur/PKGBUILD \
+            packaging/aur/PKGBUILD-bin \
+            packaging/aur/PKGBUILD-dev
 
       - name: Changelog Discipline Check
         if: github.event_name == 'pull_request'
@@ -129,6 +118,23 @@ jobs:
         with:
           name: web-content
           path: src/web/build
+
+  nix-smoke:
+    name: Nix Package Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Run Nix package smoke
+        run: bash packaging/scripts/run-nix-package-smoke.sh
   
   publish:
     name: Publish
@@ -160,9 +166,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Verify .NET (self-hosted)
+      - name: Set up .NET (self-hosted)
         if: ${{ contains(runner.name, 'keith') }}
-        run: dotnet --version
+        run: echo "/usr/share/dotnet" >> $GITHUB_PATH
 
       - name: Set Environment Variables
         run: |
@@ -206,7 +212,10 @@ jobs:
           # Get the latest slskdn tag only
           TAG=$(git tag --sort=-version:refname | grep -E '^\d+\.\d+\.\d+-slskdn\.\d+$' | head -n1)
           if [ -z "$TAG" ]; then
-            TAG="0.24.1-slskdn.19"
+            TAG=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n1)
+          fi
+          if [ -z "$TAG" ]; then
+            TAG='0.24.0-slskdn.1'
           fi
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "CONTAINER_VERSION=${TAG}.$([[ $GITHUB_REF = refs/tags/* ]] && echo 0 || echo 65534)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV

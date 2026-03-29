@@ -170,7 +170,10 @@ namespace slskd
 
             foreach (var key in keys)
             {
-                Cancel(key);
+                while (IsWaitingFor(key))
+                {
+                    Cancel(key);
+                }
             }
         }
 
@@ -329,7 +332,36 @@ namespace slskd
         /// <returns>A Task representing the wait.</returns>
         public Task<T> WaitIndefinitely<T>(WaitKey key, CancellationToken? cancellationToken = null)
         {
-            return Wait<T>(key, int.MaxValue, cancellationToken);
+            cancellationToken ??= CancellationToken.None;
+
+            var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var wait = new PendingWait(
+                taskCompletionSource,
+                timeout: null,
+                cancelAction: () => Cancel(key),
+                timeoutAction: () => Timeout(key),
+                cancellationToken.Value);
+
+            var recordLock = Locks.GetOrAdd(key, new ReaderWriterLockSlim());
+
+            recordLock.EnterReadLock();
+
+            try
+            {
+                Waits.AddOrUpdate(key, new ConcurrentQueue<PendingWait>(new[] { wait }), (_, queue) =>
+                {
+                    queue.Enqueue(wait);
+                    return queue;
+                });
+            }
+            finally
+            {
+                recordLock.ExitReadLock();
+            }
+
+            wait.Register();
+            return ((TaskCompletionSource<T>)wait.TaskCompletionSource).Task;
         }
 
         private void Disposition(WaitKey key, Action<PendingWait> action)
@@ -395,7 +427,7 @@ namespace slskd
             /// <param name="cancelAction">The action to invoke when the task is cancelled.</param>
             /// <param name="timeoutAction">The action to invoke when the task times out.</param>
             /// <param name="cancellationToken">The cancellation token for the wait.</param>
-            public PendingWait(dynamic taskCompletionSource, int timeout, Action cancelAction, Action timeoutAction, CancellationToken cancellationToken)
+            public PendingWait(dynamic taskCompletionSource, int? timeout, Action cancelAction, Action timeoutAction, CancellationToken cancellationToken)
             {
                 TaskCompletionSource = taskCompletionSource;
                 Timeout = timeout;
@@ -412,7 +444,7 @@ namespace slskd
             /// <summary>
             ///     Gets the number of milliseconds after which the wait is to time out.
             /// </summary>
-            public int Timeout { get; }
+            public int? Timeout { get; }
 
             private Action CancelAction { get; set; }
             private CancellationToken CancellationToken { get; set; }
@@ -438,8 +470,11 @@ namespace slskd
             {
                 CancellationTokenRegistration = CancellationToken.Register(() => CancelAction());
 
-                TimeoutTokenSource = new CancellationTokenSource(Timeout);
-                TimeoutTokenRegistration = TimeoutTokenSource.Token.Register(() => TimeoutAction());
+                if (Timeout.HasValue)
+                {
+                    TimeoutTokenSource = new CancellationTokenSource(Timeout.Value);
+                    TimeoutTokenRegistration = TimeoutTokenSource.Token.Register(() => TimeoutAction());
+                }
             }
 
             /// <summary>

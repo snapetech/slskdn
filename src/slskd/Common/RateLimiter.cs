@@ -23,6 +23,7 @@ namespace slskd
     using System;
     using System.ComponentModel;
     using System.Threading;
+    using Serilog;
 
     /// <summary>
     ///     Ensures a minimum interval between successive invocations of a delegate.
@@ -97,16 +98,33 @@ namespace slskd
             {
                 if (disposing)
                 {
-                    Timer.Elapsed -= Timer_Elapsed;
+                    Exception? flushException = null;
 
-                    // if an action is staged, invoke it to 'flush'
-                    if (FlushOnDispose)
+                    try
                     {
-                        Staged?.Invoke();
+                        // if an action is staged, invoke it to 'flush'
+                        if (FlushOnDispose)
+                        {
+                            var staged = Staged;
+                            Staged = null;
+                            staged?.Invoke();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        flushException = ex;
+                    }
+                    finally
+                    {
+                        Timer.Elapsed -= Timer_Elapsed;
+                        Common.TimerDisposer.DisposeWithWait(Timer);
+                        ConcurrentExecutionPreventionSemaphore?.Dispose();
                     }
 
-                    Staged = null;
-                    Timer.Dispose();
+                    if (flushException is not null)
+                    {
+                        throw flushException;
+                    }
                 }
 
                 Disposed = true;
@@ -119,8 +137,16 @@ namespace slskd
             {
                 try
                 {
-                    Staged?.Invoke();
+                    var staged = Staged;
                     Staged = null;
+                    try
+                    {
+                        staged?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "RateLimiter staged callback failed");
+                    }
                 }
                 finally
                 {

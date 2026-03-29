@@ -82,6 +82,17 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            username = NormalizeRequiredValue(username);
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("username is required");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("id must be positive");
+            }
+
             var message = await Messages.Conversations.FindMessageAsync(username, id);
 
             if (message == default)
@@ -112,6 +123,12 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            username = NormalizeRequiredValue(username);
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("username is required");
+            }
+
             var conversation = await Messages.Conversations.FindAsync(username);
 
             if (conversation == default)
@@ -139,6 +156,12 @@ namespace slskd.Messaging.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            username = NormalizeRequiredValue(username);
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("username is required");
             }
 
             var conversation = await Messages.Conversations.FindAsync(username, includeInactive: false);
@@ -197,6 +220,12 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
+            username = NormalizeRequiredValue(username);
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("username is required");
+            }
+
             var conversation = await Messages.Conversations.FindAsync(username, includeMessages: includeMessages);
 
             if (conversation == default)
@@ -216,6 +245,12 @@ namespace slskd.Messaging.API
             if (Program.IsRelayAgent)
             {
                 return Forbid();
+            }
+
+            username = NormalizeRequiredValue(username);
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("username is required");
             }
 
             var conversation = await Messages.Conversations.FindAsync(username, includeMessages: true);
@@ -254,14 +289,27 @@ namespace slskd.Messaging.API
                 return Forbid();
             }
 
-            if (string.IsNullOrEmpty(message))
+            username = NormalizeRequiredValue(username);
+            message = NormalizeRequiredValue(message);
+
+            if (string.IsNullOrWhiteSpace(username))
             {
-                return BadRequest();
+                return BadRequest("username is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return BadRequest("message is required");
             }
 
             await Messages.Conversations.SendMessageAsync(username, message);
 
             return StatusCode(201);
+        }
+
+        private static string NormalizeRequiredValue(string? value)
+        {
+            return value?.Trim() ?? string.Empty;
         }
     }
 }

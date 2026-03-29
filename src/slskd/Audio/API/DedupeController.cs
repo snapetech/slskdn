@@ -29,6 +29,12 @@ namespace slskd.Audio.API
         [HttpGet("{recordingId}")]
         public async Task<ActionResult<DedupeResult>> Get(string recordingId, CancellationToken ct)
         {
+            recordingId = recordingId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(recordingId))
+            {
+                return BadRequest("RecordingId is required.");
+            }
+
             var result = await dedupeService.GetDedupeAsync(recordingId, ct).ConfigureAwait(false);
             return Ok(result);
         }

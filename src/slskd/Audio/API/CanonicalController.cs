@@ -30,6 +30,12 @@ namespace slskd.Audio.API
         [HttpGet("{recordingId}")]
         public async Task<ActionResult<IEnumerable<CanonicalStats>>> Get(string recordingId, CancellationToken ct)
         {
+            recordingId = recordingId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(recordingId))
+            {
+                return BadRequest("RecordingId is required.");
+            }
+
             var candidates = await canonicalStats.GetCanonicalVariantCandidatesAsync(recordingId, ct).ConfigureAwait(false);
             return Ok(new { recordingId, candidates });
         }

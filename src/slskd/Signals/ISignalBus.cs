@@ -7,7 +7,7 @@ namespace slskd.Signals;
 /// <summary>
 /// Central signal routing and deduplication service.
 /// </summary>
-public interface ISignalBus
+public interface ISignalBus : IDisposable
 {
     /// <summary>
     /// Send a signal to the target peer via preferred channels.

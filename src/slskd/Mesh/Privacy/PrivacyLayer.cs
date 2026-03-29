@@ -12,7 +12,7 @@ namespace slskd.Mesh.Privacy;
 /// Main implementation of the privacy layer that composes all privacy protection components.
 /// Provides comprehensive traffic analysis protection by orchestrating padding, timing, batching, and cover traffic.
 /// </summary>
-public class PrivacyLayer : IPrivacyLayer
+public sealed class PrivacyLayer : IPrivacyLayer
 {
     private readonly ILogger<PrivacyLayer> _logger;
     private readonly ILoggerFactory _loggerFactory;
@@ -24,6 +24,7 @@ public class PrivacyLayer : IPrivacyLayer
     private ITimingObfuscator? _timingObfuscator;
     private IMessageBatcher? _messageBatcher;
     private ICoverTrafficGenerator? _coverTrafficGenerator;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PrivacyLayer"/> class.
@@ -74,6 +75,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>The transformed message bytes.</returns>
     public Task<byte[]> ProcessOutboundMessageAsync(byte[] message, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         _ = cancellationToken;
 
         if (!IsEnabled || message == null)
@@ -124,6 +126,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>The original message bytes.</returns>
     public Task<byte[]> ProcessInboundMessageAsync(byte[] message, CancellationToken cancellationToken = default)
     {
+        ThrowIfDisposed();
         _ = cancellationToken;
 
         if (!IsEnabled || message == null || message.Length == 0)
@@ -160,6 +163,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>The delay as a TimeSpan.</returns>
     public TimeSpan GetOutboundDelay()
     {
+        ThrowIfDisposed();
+
         if (!IsEnabled || _timingObfuscator == null)
         {
             return TimeSpan.Zero;
@@ -175,6 +180,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// </summary>
     public void RecordOutboundMessage()
     {
+        ThrowIfDisposed();
         _timingObfuscator?.RecordSend();
         _coverTrafficGenerator?.RecordActivity();
     }
@@ -185,6 +191,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>Collection of batched messages, or null if none ready.</returns>
     public IReadOnlyList<byte[]>? GetPendingBatches()
     {
+        ThrowIfDisposed();
         return _messageBatcher?.GetBatch();
     }
 
@@ -193,6 +200,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// </summary>
     public void FlushBatches()
     {
+        ThrowIfDisposed();
         _messageBatcher?.Flush();
     }
 
@@ -203,6 +211,8 @@ public class PrivacyLayer : IPrivacyLayer
     /// <returns>An async enumerable of cover traffic messages.</returns>
     public async IAsyncEnumerable<byte[]> GetCoverTrafficAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        ThrowIfDisposed();
+
         if (!IsEnabled || _coverTrafficGenerator == null)
         {
             yield break;
@@ -219,6 +229,7 @@ public class PrivacyLayer : IPrivacyLayer
     /// </summary>
     public void RecordActivity()
     {
+        ThrowIfDisposed();
         _coverTrafficGenerator?.RecordActivity();
     }
 
@@ -228,12 +239,61 @@ public class PrivacyLayer : IPrivacyLayer
     /// <param name="options">The new privacy layer options.</param>
     public void UpdateConfiguration(PrivacyLayerOptions options)
     {
+        ThrowIfDisposed();
+
         lock (_configLock)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
+            var oldMessagePadder = _messagePadder;
+            var oldTimingObfuscator = _timingObfuscator;
+            var oldMessageBatcher = _messageBatcher;
+            var oldCoverTrafficGenerator = _coverTrafficGenerator;
+
             InitializeComponents();
+
+            DisposeComponent(oldCoverTrafficGenerator);
+            DisposeComponent(oldMessageBatcher);
+            DisposeComponent(oldTimingObfuscator);
+            DisposeComponent(oldMessagePadder);
             _logger.LogInformation("PrivacyLayer configuration updated: Enabled={Enabled}", options.Enabled);
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        IMessagePadder? messagePadder;
+        ITimingObfuscator? timingObfuscator;
+        IMessageBatcher? messageBatcher;
+        ICoverTrafficGenerator? coverTrafficGenerator;
+
+        lock (_configLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            messagePadder = _messagePadder;
+            timingObfuscator = _timingObfuscator;
+            messageBatcher = _messageBatcher;
+            coverTrafficGenerator = _coverTrafficGenerator;
+            _messagePadder = null;
+            _timingObfuscator = null;
+            _messageBatcher = null;
+            _coverTrafficGenerator = null;
+        }
+
+        DisposeComponent(coverTrafficGenerator);
+        DisposeComponent(messageBatcher);
+        DisposeComponent(timingObfuscator);
+        DisposeComponent(messagePadder);
+        GC.SuppressFinalize(this);
     }
 
     private void InitializeComponents()
@@ -288,5 +348,15 @@ public class PrivacyLayer : IPrivacyLayer
         {
             _coverTrafficGenerator = null;
         }
+    }
+
+    private static void DisposeComponent(object? component)
+    {
+        (component as IDisposable)?.Dispose();
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

@@ -159,6 +159,28 @@ public class BridgeProtocolValidationTests
     }
 
     [Fact]
+    public async Task ReadMessageAsync_Should_Handle_Partial_Reads()
+    {
+        // Arrange
+        var stream = new MemoryStream();
+        var payload = BuildLoginPayload("testuser", "password");
+        await parser.WriteMessageAsync(stream, SoulseekProtocolParser.MessageType.Login, payload);
+
+        var fragmented = new FragmentedReadStream(stream.ToArray(), 2);
+
+        // Act
+        var result = await parser.ReadMessageAsync(fragmented);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(SoulseekProtocolParser.MessageType.Login, result.Type);
+        var login = parser.ParseLoginRequest(result.Payload);
+        Assert.NotNull(login);
+        Assert.Equal("testuser", login.Username);
+        Assert.Equal("password", login.Password);
+    }
+
+    [Fact]
     public async Task WriteMessageAsync_ReadMessageAsync_Should_Roundtrip()
     {
         // Arrange
@@ -444,5 +466,22 @@ public class BridgeProtocolValidationTests
         writer.Write(filenameBytes);
         writer.Write(token);
         return stream.ToArray();
+    }
+
+    private sealed class FragmentedReadStream : MemoryStream
+    {
+        private readonly int maxReadSize;
+
+        public FragmentedReadStream(byte[] buffer, int maxReadSize)
+            : base(buffer)
+        {
+            this.maxReadSize = Math.Max(1, maxReadSize);
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            var readSize = Math.Min(count, maxReadSize);
+            return base.ReadAsync(buffer, offset, readSize, cancellationToken);
+        }
     }
 }

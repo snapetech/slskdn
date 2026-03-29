@@ -202,6 +202,23 @@ public class TorSocksDialerTests
     }
 
     [Fact]
+    public async Task IsAvailableAsync_WhenProxyCheckThrows_SetsSanitizedLastError()
+    {
+        var options = new TorTransportOptions
+        {
+            Enabled = true,
+            SocksHost = "127.0.0.1",
+            SocksPort = 1
+        };
+        var dialer = new TorSocksDialer(options, Mock.Of<ILogger<TorSocksDialer>>());
+
+        var result = await dialer.IsAvailableAsync();
+
+        Assert.False(result);
+        Assert.Equal("Tor SOCKS dialer unavailable", dialer.GetStatistics().LastError);
+    }
+
+    [Fact]
     public void GetStatistics_ReturnsValidStatistics()
     {
         // Arrange
@@ -282,6 +299,23 @@ public class I2pSocksDialerTests
     }
 
     [Fact]
+    public async Task IsAvailableAsync_WhenProxyCheckThrows_SetsSanitizedLastError()
+    {
+        var options = new I2PTransportOptions
+        {
+            Enabled = true,
+            SocksHost = "127.0.0.1",
+            SocksPort = 1
+        };
+        var dialer = new I2pSocksDialer(options, Mock.Of<ILogger<I2pSocksDialer>>());
+
+        var result = await dialer.IsAvailableAsync();
+
+        Assert.False(result);
+        Assert.Equal("I2P SOCKS dialer unavailable", dialer.GetStatistics().LastError);
+    }
+
+    [Fact]
     public void GetStatistics_ReturnsValidStatistics()
     {
         // Arrange
@@ -296,5 +330,4 @@ public class I2pSocksDialerTests
         Assert.True(stats.TotalAttempts >= 0);
     }
 }
-
 

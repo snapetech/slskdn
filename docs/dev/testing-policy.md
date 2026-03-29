@@ -21,8 +21,17 @@ This is the minimum bar for code that is about to ship or gate CI:
 - frontend unit tests (`vitest`)
 - frontend production build
 - built-web output verification for subpath-safe relative assets
+- served-under-subpath web smoke for `web.url_base` deployments
 - backend unit tests
 - backend smoke/regression tests in `tests/slskd.Tests`
+- targeted backend integration smoke in `tests/slskd.Tests.Integration`:
+  - `LoadTests`
+  - `DisasterModeIntegrationTests`
+  - `SoulbeetAdvancedModeTests`
+  - `CanonicalSelectionTests`
+  - `LibraryHealthTests`
+
+See [release-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/release-checklist.md) for the operator-facing release steps and what this gate does or does not prove.
 
 ### 2. Focused Regression Tests
 
@@ -43,10 +52,24 @@ Use the existing integration and Playwright layers for broader end-to-end covera
 
 These are important, but they should complement the release gate rather than replace it.
 
+### 4. Packaging-Specific Smokes
+
+Run targeted package/channel smokes when the change touches packaging:
+
+- `bash packaging/scripts/run-nix-package-smoke.sh`
+
+This validates the current flake package by:
+
+- building `.#default`
+- launching the packaged `bin/slskd`
+- evaluating a minimal NixOS `services.slskd` configuration with the required `domain`, `environmentFile`, and `settings.shares.directories = [ ]` inputs
+
 ## CI Expectations
 
 - `ci.yml` should run the release gate on pull requests.
+- `ci.yml` should also run the Nix package smoke on pull requests.
 - `build-on-tag.yml` should run the same gate before packaging/publishing artifacts.
+- `build-on-tag.yml` should also run the Nix package smoke before publish, and again after stable flake metadata updates when the main-channel package pins change.
 - E2E remains separate because it is slower and more environment-sensitive.
 
 ## Coverage Priorities

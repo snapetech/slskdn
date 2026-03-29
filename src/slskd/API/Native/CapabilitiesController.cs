@@ -64,6 +64,7 @@ public class CapabilitiesController : ControllerBase
         return Ok(new
         {
             impl = "slskdn",
+            compat = "slskd",
             version,
             features
         });

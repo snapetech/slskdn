@@ -472,7 +472,13 @@ internal static class SongIdScoring
             return string.Empty;
         }
 
-        return Regex.Replace(value.ToLowerInvariant(), @"[^a-z0-9]+", " ").Trim();
+        var normalized = value.ToLowerInvariant()
+            .Replace("&", " and ", StringComparison.Ordinal)
+            .Replace(" feat. ", " featuring ", StringComparison.Ordinal)
+            .Replace(" feat ", " featuring ", StringComparison.Ordinal)
+            .Replace(" ft. ", " featuring ", StringComparison.Ordinal)
+            .Replace(" ft ", " featuring ", StringComparison.Ordinal);
+        return Regex.Replace(normalized, @"[^a-z0-9]+", " ").Trim();
     }
 
     private static bool IsLossless(string? codec)

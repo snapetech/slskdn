@@ -14,7 +14,7 @@ namespace slskd.Common.Moderation
     ///     T-MCP-LM01 LLM Moderation Abstractions and Config.
     ///     Provides AI-powered content analysis for enhanced moderation decisions.
     /// </remarks>
-    public interface ILlmModerationProvider
+    public interface ILlmModerationProvider : IDisposable
     {
         /// <summary>
         ///     Gets a value indicating whether this provider is available and configured.

@@ -88,6 +88,39 @@ public class ProfileControllerTests
     }
 
     [Fact]
+    public async Task UpdateMyProfile_TrimsNestedFieldsAndDropsBlankEndpoints()
+    {
+        var c = CreateController();
+        var profile = new PeerProfile { PeerId = "p1", DisplayName = "NewName" };
+        _profileMock
+            .Setup(x => x.UpdateMyProfileAsync(
+                "NewName",
+                "https://example.com/avatar.png",
+                7,
+                It.Is<List<PeerEndpoint>>(endpoints =>
+                    endpoints.Count == 1 &&
+                    endpoints[0].Type == "Direct" &&
+                    endpoints[0].Address == "https://peer.example"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+
+        var r = await c.UpdateMyProfile(new UpdateProfileRequest
+        {
+            DisplayName = " NewName ",
+            Avatar = " https://example.com/avatar.png ",
+            Capabilities = 7,
+            Endpoints = new List<PeerEndpoint>
+            {
+                new() { Type = " Direct ", Address = " https://peer.example ", Priority = 1 },
+                new() { Type = "   ", Address = "   ", Priority = 2 },
+            },
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(r);
+        Assert.Equal(profile, ok.Value);
+    }
+
+    [Fact]
     public async Task GetProfile_NotFound_ReturnsNotFound()
     {
         var c = CreateController();
@@ -96,6 +129,17 @@ public class ProfileControllerTests
         var r = await c.GetProfile("p1", CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(r);
+    }
+
+    [Fact]
+    public async Task GetProfile_WithBlankPeerId_ReturnsBadRequest()
+    {
+        var c = CreateController();
+
+        var r = await c.GetProfile("   ", CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(r);
+        Assert.Equal("PeerId is required.", bad.Value);
     }
 
     [Fact]
@@ -112,5 +156,19 @@ public class ProfileControllerTests
         var resp = Assert.IsType<InviteResponse>(ok.Value);
         Assert.StartsWith("slskdn://invite/", resp.InviteLink);
         Assert.Equal("ABCD-EFGH-IJKL-MNOP", resp.FriendCode);
+    }
+
+    [Fact]
+    public async Task CreateInvite_WhenProfileLookupThrows_DoesNotLeakExceptionMessage()
+    {
+        var c = CreateController();
+        _profileMock.Setup(x => x.GetMyProfileAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("sensitive detail"));
+
+        var r = await c.CreateInvite(new CreateInviteRequest(), CancellationToken.None);
+
+        var problem = Assert.IsType<ObjectResult>(r);
+        var problemDetails = Assert.IsType<ProblemDetails>(problem.Value);
+        Assert.DoesNotContain("sensitive detail", problemDetails.Detail ?? string.Empty);
+        Assert.Equal("Cannot create invite.", problemDetails.Detail);
     }
 }

@@ -264,7 +264,7 @@ public sealed class SecurityMiddleware
             _eventSink?.Report(SecurityEvent.Create(
                 SecurityEventType.Other,
                 SecuritySeverity.Medium,
-                $"Request processing error: {ex.Message}",
+                "Request processing error",
                 remoteIp.ToString()));
 
             throw;

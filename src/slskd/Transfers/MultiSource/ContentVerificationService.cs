@@ -385,7 +385,7 @@ namespace slskd.Transfers.MultiSource
             {
                 stopwatch.Stop();
                 Log.Warning(ex, "Verification failed for {Username} on {Filename}: {Message}", username, filename, ex.Message);
-                return (username, null, default, stopwatch.ElapsedMilliseconds, ex.Message);
+                return (username, null, default, stopwatch.ElapsedMilliseconds, "Verification failed");
             }
         }
 

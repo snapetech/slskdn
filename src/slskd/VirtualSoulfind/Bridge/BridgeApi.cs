@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public interface IBridgeApi
     Task<BridgeSearchResult> SearchAsync(string query, CancellationToken ct = default);
     Task<string> DownloadAsync(string username, string filename, string? targetPath, CancellationToken ct = default);
     Task<List<BridgeRoom>> GetRoomsAsync(CancellationToken ct = default);
+    Task<LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default);
 }
 
 public class BridgeSearchResult
@@ -60,6 +62,17 @@ public class BridgeFile
 /// </summary>
 public class BridgeApi : IBridgeApi
 {
+    private static readonly Regex FilenameHashRegex = new(
+        @"(?<![0-9a-fA-F])([0-9a-fA-F]{32,128})(?![0-9a-fA-F])",
+        RegexOptions.Compiled);
+    private static readonly Regex FilenameBracketedSizeRegex = new(
+        @"[\[\(](\d{1,3}(?:[,_ ]\d{3})+|\d{6,})[\]\)]",
+        RegexOptions.Compiled);
+    private static readonly Regex FilenameByteSizeRegex = new(
+        @"(?<!\d)(\d{1,3}(?:[,_ ]\d{3})+|\d{6,})\s*(?:bytes?|b)(?![a-z])",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private readonly ConcurrentDictionary<string, BridgeFileMetadata> searchFileMetadata = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, BridgeTransferMetadata> transferMetadata = new();
     private readonly ILogger<BridgeApi> logger;
     private readonly IOptionsMonitor<slskd.Options> optionsMonitor;
     private readonly IShadowIndexQuery shadowIndex;
@@ -70,8 +83,6 @@ public class BridgeApi : IBridgeApi
     private readonly IPeerIdAnonymizer peerAnonymizer;
     private readonly IFilenameGenerator filenameGenerator;
     private readonly IRoomSceneMapper roomSceneMapper;
-    private readonly ITransferProgressProxy progressProxy;
-    private readonly ConcurrentDictionary<string, string> transferIdToProxyId = new(); // Map mesh transfer ID to proxy ID
 
     public BridgeApi(
         ILogger<BridgeApi> logger,
@@ -83,8 +94,7 @@ public class BridgeApi : IBridgeApi
         ISceneService sceneService,
         IPeerIdAnonymizer peerAnonymizer,
         IFilenameGenerator filenameGenerator,
-        IRoomSceneMapper roomSceneMapper,
-        ITransferProgressProxy progressProxy)
+        IRoomSceneMapper roomSceneMapper)
     {
         this.logger = logger;
         this.optionsMonitor = optionsMonitor;
@@ -96,7 +106,6 @@ public class BridgeApi : IBridgeApi
         this.peerAnonymizer = peerAnonymizer;
         this.filenameGenerator = filenameGenerator;
         this.roomSceneMapper = roomSceneMapper;
-        this.progressProxy = progressProxy;
     }
 
     /// <summary>
@@ -156,15 +165,18 @@ public class BridgeApi : IBridgeApi
                                 variant,
                                 ct);
 
-                            user.Files.Add(new BridgeFile
-                            {
-                                Path = filename,
-                                SizeBytes = variant.SizeBytes,
-                                MbRecordingId = mbid,
-                                BitrateKbps = variant.BitrateKbps,
-                                Codec = variant.Codec,
-                                IsCanonical = true
-                            });
+                            UpsertBridgeFile(
+                                user.Files,
+                                new BridgeFile
+                                {
+                                    Path = filename,
+                                    SizeBytes = variant.SizeBytes,
+                                    MbRecordingId = mbid,
+                                    BitrateKbps = variant.BitrateKbps,
+                                    Codec = variant.Codec,
+                                    IsCanonical = true
+                                });
+                            CacheBridgeFileMetadata(username, filename, variant.SizeBytes, mbid, variant.Codec, isCanonical: true);
                         }
                     }
                 }
@@ -192,15 +204,19 @@ public class BridgeApi : IBridgeApi
 
                     foreach (var file in peerResult.Files)
                     {
-                        user.Files.Add(new BridgeFile
-                        {
-                            Path = file.Filename,
-                            SizeBytes = file.Size,
-                            MbRecordingId = file.MbRecordingId,
-                            BitrateKbps = file.BitrateKbps,
-                            Codec = file.Codec,
-                            IsCanonical = file.QualityScore > 0.8 // High quality = likely canonical
-                        });
+                        var isCanonical = file.QualityScore > 0.8;
+                        UpsertBridgeFile(
+                            user.Files,
+                            new BridgeFile
+                            {
+                                Path = file.Filename,
+                                SizeBytes = file.Size,
+                                MbRecordingId = file.MbRecordingId,
+                                BitrateKbps = file.BitrateKbps,
+                                Codec = file.Codec,
+                                IsCanonical = isCanonical
+                            });
+                        CacheBridgeFileMetadata(username, file.Filename, file.Size, file.MbRecordingId, file.Codec, isCanonical);
                     }
                 }
             }
@@ -237,20 +253,19 @@ public class BridgeApi : IBridgeApi
             // Extract file hash from filename or metadata
             // For now, we'll need to query the shadow index to find the file hash
             // This is a simplified implementation - in practice, we'd need more metadata
+            var cachedFile = GetCachedBridgeFileMetadata(username, filename);
             var fileHash = ExtractHashFromFilename(filename);
             if (fileHash == null)
             {
-                // Try to get file size from shadow index or mesh search
-                // For now, use a placeholder
-                fileHash = Guid.NewGuid().ToString("N");
+                // Without a parsed hash, don't force integrity failures by inventing a value.
+                // Verification step will skip hash comparison when empty.
+                fileHash = string.Empty;
             }
 
-            var fileSize = ExtractSizeFromFilename(filename) ?? 0;
+            var fileSize = cachedFile?.SizeBytes ?? ExtractSizeFromFilename(filename) ?? 0;
 
             // Determine target path
-            var finalTargetPath = targetPath ?? Path.Combine(
-                optionsMonitor.CurrentValue.Directories.Downloads,
-                PathGuard.SanitizeFilename(filename));
+            var finalTargetPath = ResolveTargetPath(filename, targetPath);
 
             // Start mesh transfer
             var transferId = await meshTransfer.StartTransferAsync(
@@ -260,18 +275,78 @@ public class BridgeApi : IBridgeApi
                 finalTargetPath,
                 ct);
 
-            // Start progress proxy for legacy client (T-857)
-            var legacyClientId = username; // Use username as client identifier
-            var proxyId = await progressProxy.StartProxyAsync(transferId, legacyClientId, ct);
-            transferIdToProxyId[transferId] = proxyId;
+            transferMetadata[transferId] = new BridgeTransferMetadata
+            {
+                RequestedFilename = filename,
+                TargetPath = finalTargetPath,
+                PeerId = peerId,
+                SizeBytes = fileSize,
+            };
 
-            logger.LogInformation("[VSF-BRIDGE] Download started: transfer {TransferId}, proxy {ProxyId}", transferId, proxyId);
+            logger.LogInformation("[VSF-BRIDGE] Download started: transfer {TransferId}", transferId);
             return transferId; // Return transfer ID (could also return proxy ID)
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "[VSF-BRIDGE] Download failed: {Message}", ex.Message);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// T-857: Return mesh transfer status using legacy progress format.
+    /// </summary>
+    public async Task<LegacyTransferProgress?> GetTransferProgressAsync(string transferId, CancellationToken ct = default)
+    {
+        try
+        {
+            transferMetadata.TryGetValue(transferId, out var metadata);
+            var status = await meshTransfer.GetTransferStatusAsync(transferId, ct);
+            if (status == null)
+            {
+                return metadata?.LastProgress;
+            }
+
+            var username = await peerAnonymizer.GetAnonymizedUsernameAsync(status.PeerId, ct);
+            var filename = Path.GetFileName(status.TargetPath);
+            if (string.IsNullOrWhiteSpace(filename) && metadata != null)
+            {
+                filename = metadata.RequestedFilename;
+            }
+
+            var fileSize = status.FileSize > 0
+                ? status.FileSize
+                : metadata?.SizeBytes ?? 0;
+            var percentComplete = fileSize > 0
+                ? (int)Math.Clamp((status.BytesTransferred * 100.0) / fileSize, 0, 100)
+                : (int)Math.Clamp(status.ProgressPercent, 0, 100);
+
+            var progress = new LegacyTransferProgress
+            {
+                ProxyId = transferId,
+                Username = username,
+                Filename = string.IsNullOrWhiteSpace(filename) ? transferId : filename,
+                BytesTransferred = status.BytesTransferred,
+                FileSize = fileSize,
+                PercentComplete = percentComplete,
+                AverageSpeed = status.TransferRateBps,
+                State = MapMeshStateToLegacy(status.State),
+                QueuePosition = 0
+            };
+
+            if (metadata != null)
+            {
+                metadata.LastProgress = progress;
+            }
+
+            return progress;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[VSF-BRIDGE] Failed to load transfer progress for {TransferId}", transferId);
+            return transferMetadata.TryGetValue(transferId, out var metadata)
+                ? metadata.LastProgress
+                : null;
         }
     }
 
@@ -323,7 +398,11 @@ public class BridgeApi : IBridgeApi
         try
         {
             var recordings = await musicBrainz.SearchRecordingsAsync(query, limit: 10, ct);
-            return recordings.Select(r => r.RecordingId).ToList();
+            return recordings
+                .Select(r => r.RecordingId)
+                .Where(recordingId => !string.IsNullOrWhiteSpace(recordingId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -334,15 +413,152 @@ public class BridgeApi : IBridgeApi
 
     private string? ExtractHashFromFilename(string filename)
     {
-        // Heuristic: look for hash-like patterns in filename
-        // In practice, this would come from metadata or shadow index lookup
-        return null;
+        var fileNameOnly = Path.GetFileNameWithoutExtension(filename);
+        if (string.IsNullOrWhiteSpace(fileNameOnly))
+        {
+            return null;
+        }
+
+        var match = FilenameHashRegex.Matches(fileNameOnly)
+            .Select(candidate => candidate.Groups[1].Value)
+            .OrderByDescending(candidate => candidate.Length)
+            .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(match) ? null : match;
     }
 
     private long? ExtractSizeFromFilename(string filename)
     {
-        // Heuristic: try to extract size from filename patterns
-        // In practice, this would come from metadata or shadow index lookup
+        var fileNameOnly = Path.GetFileNameWithoutExtension(filename);
+        if (string.IsNullOrWhiteSpace(fileNameOnly))
+        {
+            return null;
+        }
+
+        var candidate = FilenameBracketedSizeRegex.Match(fileNameOnly);
+        if (!candidate.Success)
+        {
+            candidate = FilenameByteSizeRegex.Match(fileNameOnly);
+        }
+
+        if (!candidate.Success)
+        {
+            return null;
+        }
+
+        var normalized = candidate.Groups[1].Value
+            .Replace("_", string.Empty, StringComparison.Ordinal)
+            .Replace(",", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        if (long.TryParse(normalized, out var sizeBytes) && sizeBytes > 0)
+        {
+            return sizeBytes;
+        }
+
         return null;
+    }
+
+    private void CacheBridgeFileMetadata(string username, string filename, long sizeBytes, string? mbRecordingId, string? codec, bool isCanonical)
+    {
+        searchFileMetadata.AddOrUpdate(
+            GetBridgeFileKey(username, filename),
+            _ => new BridgeFileMetadata
+            {
+                Username = username,
+                Filename = filename,
+                SizeBytes = sizeBytes,
+                MbRecordingId = mbRecordingId,
+                Codec = codec,
+                IsCanonical = isCanonical,
+            },
+            (_, existing) => new BridgeFileMetadata
+            {
+                Username = existing.Username,
+                Filename = existing.Filename,
+                SizeBytes = Math.Max(existing.SizeBytes, sizeBytes),
+                MbRecordingId = existing.MbRecordingId ?? mbRecordingId,
+                Codec = existing.Codec ?? codec,
+                IsCanonical = existing.IsCanonical || isCanonical,
+            });
+    }
+
+    private BridgeFileMetadata? GetCachedBridgeFileMetadata(string username, string filename)
+    {
+        searchFileMetadata.TryGetValue(GetBridgeFileKey(username, filename), out var metadata);
+        return metadata;
+    }
+
+    private static string GetBridgeFileKey(string username, string filename)
+    {
+        return $"{username}\u001f{filename}";
+    }
+
+    private static void UpsertBridgeFile(List<BridgeFile> files, BridgeFile candidate)
+    {
+        var existing = files.FirstOrDefault(file => string.Equals(file.Path, candidate.Path, StringComparison.OrdinalIgnoreCase));
+        if (existing == null)
+        {
+            files.Add(candidate);
+            return;
+        }
+
+        existing.SizeBytes = Math.Max(existing.SizeBytes, candidate.SizeBytes);
+        existing.MbRecordingId ??= candidate.MbRecordingId;
+        existing.BitrateKbps ??= candidate.BitrateKbps;
+        existing.Codec ??= candidate.Codec;
+        existing.IsCanonical |= candidate.IsCanonical;
+    }
+
+    private string ResolveTargetPath(string filename, string? targetPath)
+    {
+        var sanitizedFilename = PathGuard.SanitizeFilename(filename);
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            return Path.Combine(optionsMonitor.CurrentValue.Directories.Downloads, sanitizedFilename);
+        }
+
+        if (Directory.Exists(targetPath) ||
+            targetPath.EndsWith(Path.DirectorySeparatorChar) ||
+            targetPath.EndsWith(Path.AltDirectorySeparatorChar))
+        {
+            return Path.Combine(targetPath, sanitizedFilename);
+        }
+
+        return targetPath;
+    }
+
+    private static string MapMeshStateToLegacy(MeshTransferState meshState)
+    {
+        return meshState switch
+        {
+            MeshTransferState.Initializing => "Queued",
+            MeshTransferState.DiscoveringPeers => "Connecting",
+            MeshTransferState.Transferring => "Downloading",
+            MeshTransferState.Verifying => "Downloading",
+            MeshTransferState.Completed => "Complete",
+            MeshTransferState.Failed => "Errored",
+            MeshTransferState.Cancelled => "Cancelled",
+            _ => "Unknown"
+        };
+    }
+
+    private sealed class BridgeTransferMetadata
+    {
+        public string RequestedFilename { get; init; } = string.Empty;
+        public string TargetPath { get; init; } = string.Empty;
+        public string PeerId { get; init; } = string.Empty;
+        public long SizeBytes { get; init; }
+        public LegacyTransferProgress? LastProgress { get; set; }
+    }
+
+    private sealed class BridgeFileMetadata
+    {
+        public string Username { get; init; } = string.Empty;
+        public string Filename { get; init; } = string.Empty;
+        public long SizeBytes { get; init; }
+        public string? MbRecordingId { get; init; }
+        public string? Codec { get; init; }
+        public bool IsCanonical { get; init; }
     }
 }

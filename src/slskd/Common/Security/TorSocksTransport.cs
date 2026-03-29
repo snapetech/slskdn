@@ -51,13 +51,14 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
     {
         try
         {
+            var (socksHost, socksPort) = ParseSocksAddress(_options.SocksAddress);
+
             // Try to connect to the SOCKS proxy and perform a basic handshake
             using var client = new TcpClient();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
 
-            var connectTask = client.ConnectAsync(_options.SocksAddress.Split(':')[0],
-                                                int.Parse(_options.SocksAddress.Split(':')[1]));
+            var connectTask = client.ConnectAsync(socksHost, socksPort);
             await connectTask.WaitAsync(linkedCts.Token);
 
             if (client.Connected)
@@ -68,9 +69,9 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await stream.WriteAsync(handshake, 0, handshake.Length, linkedCts.Token);
 
                 var response = new byte[2];
-                var bytesRead = await stream.ReadAsync(response, 0, 2, linkedCts.Token);
+                await ReadExactlyAsync(stream, response, 0, 2, linkedCts.Token);
 
-                if (bytesRead == 2 && response[0] == 0x05 && response[1] == 0x00)
+                if (response[0] == 0x05 && response[1] == 0x00)
                 {
                     // SOCKS5 handshake successful
                     lock (_statusLock)
@@ -99,7 +100,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "Tor SOCKS proxy unavailable";
             }
 
             _logger.LogWarning(ex, "Tor SOCKS proxy not available at {Address}", _options.SocksAddress);
@@ -170,7 +171,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await stream.WriteAsync(handshake, 0, handshake.Length, effectiveToken);
 
                 var handshakeResponse = new byte[2];
-                await stream.ReadAsync(handshakeResponse, 0, 2, effectiveToken);
+                await ReadExactlyAsync(stream, handshakeResponse, 0, 2, effectiveToken);
 
                 if (handshakeResponse[0] != 0x05 || handshakeResponse[1] != 0x02)
                 {
@@ -181,7 +182,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await SendSocks5AuthAsync(stream, leasedCircuit.Username, leasedCircuit.Password, effectiveToken);
 
                 var authResponse = new byte[2];
-                await stream.ReadAsync(authResponse, 0, 2, effectiveToken);
+                await ReadExactlyAsync(stream, authResponse, 0, 2, effectiveToken);
 
                 if (authResponse[0] != 0x01 || authResponse[1] != 0x00)
                 {
@@ -195,7 +196,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
                 await stream.WriteAsync(handshake, 0, handshake.Length, effectiveToken);
 
                 var handshakeResponse = new byte[2];
-                await stream.ReadAsync(handshakeResponse, 0, 2, effectiveToken);
+                await ReadExactlyAsync(stream, handshakeResponse, 0, 2, effectiveToken);
 
                 if (handshakeResponse[0] != 0x05 || handshakeResponse[1] != 0x00)
                 {
@@ -207,13 +208,7 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             var connectRequest = CreateSocks5ConnectRequest(host, port);
             await stream.WriteAsync(connectRequest, 0, connectRequest.Length, effectiveToken);
 
-            var connectResponse = new byte[10]; // Minimum response size
-            var responseLength = await stream.ReadAsync(connectResponse, 0, connectResponse.Length, effectiveToken);
-
-            if (responseLength < 10 || connectResponse[0] != 0x05 || connectResponse[1] != 0x00)
-            {
-                throw new Exception($"SOCKS5 connect failed with response code {connectResponse[1]:X2}");
-            }
+            await ReadSocks5ConnectResponseAsync(stream, effectiveToken);
 
             lock (_statusLock)
             {
@@ -259,12 +254,50 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
 
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "Tor connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish Tor connection to {Host}:{Port} via circuit {CircuitKey}", host, port, circuitKey);
             throw;
         }
+    }
+
+    private static async Task ReadSocks5ConnectResponseAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var header = new byte[4];
+        await ReadExactlyAsync(stream, header, 0, header.Length, cancellationToken);
+
+        if (header[0] != 0x05)
+        {
+            throw new Exception($"Invalid SOCKS5 response version: {header[0]:X2}");
+        }
+
+        if (header[1] != 0x00)
+        {
+            throw new Exception($"SOCKS5 connect failed with response code {header[1]:X2}");
+        }
+
+        int bytesToRead;
+        var addressType = header[3];
+        switch (addressType)
+        {
+            case 0x01:
+                bytesToRead = 4 + 2;
+                break;
+            case 0x03:
+                var length = new byte[1];
+                await ReadExactlyAsync(stream, length, 0, 1, cancellationToken);
+                bytesToRead = length[0] + 2;
+                break;
+            case 0x04:
+                bytesToRead = 16 + 2;
+                break;
+            default:
+                throw new Exception($"Unsupported SOCKS5 address type: {addressType:X2}");
+        }
+
+        var tail = new byte[bytesToRead];
+        await ReadExactlyAsync(stream, tail, 0, tail.Length, cancellationToken);
     }
 
     /// <summary>
@@ -325,6 +358,11 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
         {
             addressType = 0x03; // Domain name
             var hostBytes = System.Text.Encoding.UTF8.GetBytes(host);
+            if (hostBytes.Length is 0 or > 255)
+            {
+                throw new ArgumentException("SOCKS5 host name must be between 1 and 255 bytes", nameof(host));
+            }
+
             addressBytes = new byte[1 + hostBytes.Length];
             addressBytes[0] = (byte)hostBytes.Length;
             Array.Copy(hostBytes, 0, addressBytes, 1, hostBytes.Length);
@@ -350,6 +388,15 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
     {
         var usernameBytes = System.Text.Encoding.UTF8.GetBytes(username);
         var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
+        if (usernameBytes.Length is 0 or > 255)
+        {
+            throw new ArgumentException("SOCKS5 username must be between 1 and 255 bytes", nameof(username));
+        }
+
+        if (passwordBytes.Length is 0 or > 255)
+        {
+            throw new ArgumentException("SOCKS5 password must be between 1 and 255 bytes", nameof(password));
+        }
 
         var authRequest = new List<byte>
         {
@@ -381,6 +428,26 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
         var keyBytes = System.Text.Encoding.UTF8.GetBytes(isolationKey + "-password");
         var hash = sha256.ComputeHash(keyBytes);
         return BitConverter.ToString(hash).Replace("-", string.Empty).Substring(0, 16).ToLower();
+    }
+
+    private static async Task ReadExactlyAsync(
+        Stream stream,
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        var remaining = count;
+        while (remaining > 0)
+        {
+            var read = await stream.ReadAsync(buffer.AsMemory(offset + (count - remaining), remaining), cancellationToken);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("Unexpected end of stream while reading SOCKS5 response");
+            }
+
+            remaining -= read;
+        }
     }
 
     /// <summary>
@@ -422,6 +489,8 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
     /// </summary>
     private Task<IsolationCircuit> CreateIsolationCircuitAsync(string circuitKey, CancellationToken cancellationToken)
     {
+        var (socksHost, socksPort) = ParseSocksAddress(_options.SocksAddress);
+
         if (_options.IsolateStreams)
         {
             // For stream isolation, we create circuits with different credentials
@@ -434,8 +503,8 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             // For now, use the same SOCKS port but with authentication
             // In production, this would use separate Tor instances or control port circuit isolation
             return Task.FromResult(new IsolationCircuit(
-                _options.SocksAddress.Split(':')[0],
-                int.Parse(_options.SocksAddress.Split(':')[1]),
+                socksHost,
+                socksPort,
                 username,
                 password,
                 circuitKey));
@@ -444,12 +513,64 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
         {
             // No isolation - use shared circuit
             return Task.FromResult(new IsolationCircuit(
-                _options.SocksAddress.Split(':')[0],
-                int.Parse(_options.SocksAddress.Split(':')[1]),
+                socksHost,
+                socksPort,
                 null,
                 null,
                 circuitKey));
         }
+    }
+
+    private static (string Host, int Port) ParseSocksAddress(string socksAddress)
+    {
+        if (string.IsNullOrWhiteSpace(socksAddress))
+        {
+            throw new InvalidOperationException("Tor SOCKS address is not configured");
+        }
+
+        if (!TryParseHostAndPort(socksAddress, out var host, out var socksPort))
+        {
+            throw new InvalidOperationException($"Invalid Tor SOCKS address format: {socksAddress}");
+        }
+
+        return (host, socksPort);
+    }
+
+    private static bool TryParseHostAndPort(string address, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (address.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = address.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= address.Length - 2 || address[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = address[1..closingBracketIndex];
+            portPart = address[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = address.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == address.Length - 1)
+            {
+                return false;
+            }
+
+            host = address[..separatorIndex];
+            portPart = address[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     /// <summary>
@@ -596,7 +717,15 @@ public sealed class TorSocksTransport : IAnonymityTransport, IDisposable
             if (!_disposed)
             {
                 _disposed = true;
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
+
                 _innerStream.Dispose();
             }
 

@@ -839,9 +839,9 @@ namespace slskd
 
                             _ = IPAddressRange.Parse(cidr);
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            results.Add(new ValidationResult($"CIDR {cidr} is invalid: {ex.Message}"));
+                            results.Add(new ValidationResult($"CIDR {cidr} is invalid"));
                         }
                     }
 
@@ -1359,9 +1359,9 @@ namespace slskd
 
                             _ = IPAddressRange.Parse(cidr);
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            results.Add(new ValidationResult($"CIDR {cidr} is invalid: {ex.Message}"));
+                            results.Add(new ValidationResult($"CIDR {cidr} is invalid"));
                         }
                     }
 
@@ -2771,9 +2771,9 @@ namespace slskd
 
                                 _ = IPAddressRange.Parse(cidr);
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
-                                results.Add(new ValidationResult($"CIDR {cidr} is invalid: {ex.Message}"));
+                                results.Add(new ValidationResult($"CIDR {cidr} is invalid"));
                             }
                         }
 

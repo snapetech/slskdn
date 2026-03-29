@@ -42,11 +42,7 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
     }
 
-    public event EventHandler<DiscoveredPeer>? PeerDiscovered
-    {
-        add { }
-        remove { }
-    }
+    public event EventHandler<DiscoveredPeer>? PeerDiscovered;
 
     public async Task StartAdvertisingAsync(CancellationToken ct = default)
     {
@@ -140,6 +136,7 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
                         }
 
                         peers.Add(peer);
+                        RaisePeerDiscovered(peer);
                     }
                 }
                 catch (Exception ex)
@@ -165,5 +162,25 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
         _cts.Dispose();
         _advertiser?.Dispose();
         _advertiser = null;
+    }
+
+    private void RaisePeerDiscovered(DiscoveredPeer peer)
+    {
+        if (PeerDiscovered is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<DiscoveredPeer> handler in PeerDiscovered.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, peer);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "[LanDiscovery] PeerDiscovered subscriber failed");
+            }
+        }
     }
 }

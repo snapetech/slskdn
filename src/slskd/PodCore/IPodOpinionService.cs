@@ -67,6 +67,14 @@ public interface IPodOpinionService
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The refresh result.</returns>
     Task<OpinionRefreshResult> RefreshOpinionsAsync(string podId, CancellationToken ct = default);
+
+    /// <summary>
+    ///     Gets the known content IDs that currently have cached or published opinions for the pod.
+    /// </summary>
+    /// <param name="podId">The pod ID.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The known content IDs.</returns>
+    Task<IReadOnlyList<string>> GetKnownContentIdsAsync(string podId, CancellationToken ct = default);
 }
 
 /// <summary>

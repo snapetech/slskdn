@@ -1,0 +1,146 @@
+// <copyright file="PodJoinLeaveControllerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+namespace slskd.Tests.Unit.PodCore;
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using slskd.PodCore;
+using slskd.PodCore.API.Controllers;
+using Xunit;
+
+public class PodJoinLeaveControllerTests
+{
+    [Fact]
+    public async Task RequestJoin_TrimsPodPeerAndRoleBeforeDispatch()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.RequestJoinAsync(It.IsAny<PodJoinRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodJoinResult(true, "pod-1", "peer-1"));
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.RequestJoin(
+            new PodJoinRequest(" pod-1 ", " peer-1 ", " member ", " pub ", 1, " sig ", " hi ", " nonce "),
+            CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        joinLeaveService.Verify(
+            service => service.RequestJoinAsync(
+                It.Is<PodJoinRequest>(request =>
+                    request.PodId == "pod-1" &&
+                    request.PeerId == "peer-1" &&
+                    request.RequestedRole == "member" &&
+                    request.PublicKey == "pub" &&
+                    request.Signature == "sig" &&
+                    request.Message == "hi" &&
+                    request.Nonce == "nonce"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelJoinRequest_TrimsPodAndPeerIdsBeforeDispatch()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.CancelJoinRequestAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.CancelJoinRequest(" pod-1 ", " peer-1 ", CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        joinLeaveService.Verify(
+            service => service.CancelJoinRequestAsync("pod-1", "peer-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RequestJoin_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.RequestJoinAsync(It.IsAny<PodJoinRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodJoinResult(false, "pod-1", "peer-1", "sensitive detail"));
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.RequestJoin(
+            new PodJoinRequest("pod-1", "peer-1", "member", "pub", 1, "sig", "hi", "nonce"),
+            CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Join request could not be processed", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task RequestLeave_WhenServiceReturnsFailure_DoesNotLeakErrorMessage()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.RequestLeaveAsync(It.IsAny<PodLeaveRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodLeaveResult(false, "pod-1", "peer-1", "sensitive detail"));
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.RequestLeave(
+            new PodLeaveRequest("pod-1", "peer-1", "pub", 1, "sig"),
+            CancellationToken.None);
+
+        var error = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.DoesNotContain("sensitive detail", error.Value?.ToString() ?? string.Empty);
+        Assert.Contains("Leave request could not be processed", error.Value?.ToString() ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task GetPendingJoinRequests_ReturnsSanitizedSuccessPayload()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.GetPendingJoinRequestsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodJoinRequest>());
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.GetPendingJoinRequests(" pod-1 ", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("pendingJoinRequests", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("pod-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetPendingLeaveRequests_ReturnsSanitizedSuccessPayload()
+    {
+        var joinLeaveService = new Mock<IPodJoinLeaveService>();
+        joinLeaveService
+            .Setup(service => service.GetPendingLeaveRequestsAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodLeaveRequest>());
+
+        var controller = new PodJoinLeaveController(
+            NullLogger<PodJoinLeaveController>.Instance,
+            joinLeaveService.Object);
+
+        var result = await controller.GetPendingLeaveRequests(" pod-1 ", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Contains("pendingLeaveRequests", ok.Value?.ToString() ?? string.Empty);
+        Assert.DoesNotContain("pod-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+}

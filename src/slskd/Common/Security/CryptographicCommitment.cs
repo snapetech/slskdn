@@ -45,7 +45,7 @@ public sealed class CryptographicCommitment : IDisposable
     /// </summary>
     public void Dispose()
     {
-        _cleanupTimer.Dispose();
+        Common.TimerDisposer.DisposeWithWait(_cleanupTimer);
         GC.SuppressFinalize(this);
     }
 
@@ -121,42 +121,46 @@ public sealed class CryptographicCommitment : IDisposable
             return CommitmentVerification.Failed("Commitment not found");
         }
 
-        if (commitment.State != CommitmentState.Pending)
+        // Lock to prevent concurrent double-verification of the same one-time commitment
+        lock (commitment)
         {
-            return CommitmentVerification.Failed($"Commitment already {commitment.State}");
+            if (commitment.State != CommitmentState.Pending)
+            {
+                return CommitmentVerification.Failed($"Commitment already {commitment.State}");
+            }
+
+            if (commitment.ExpiresAt < DateTimeOffset.UtcNow)
+            {
+                commitment.State = CommitmentState.Expired;
+                return CommitmentVerification.Failed("Commitment expired");
+            }
+
+            // Recompute commitment hash
+            var dataToHash = revealedHash.ToLowerInvariant() + nonce;
+            var computedCommitment = ComputeSha256(dataToHash);
+
+            if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(computedCommitment),
+                Encoding.UTF8.GetBytes(commitment.CommitmentHash)))
+            {
+                commitment.State = CommitmentState.Failed;
+                return CommitmentVerification.Failed("Commitment hash mismatch - possible bait-and-switch!");
+            }
+
+            // Verify the revealed hash matches what was originally committed
+            if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(revealedHash.ToLowerInvariant()),
+                Encoding.UTF8.GetBytes(commitment.ActualHash)))
+            {
+                commitment.State = CommitmentState.Failed;
+                return CommitmentVerification.Failed("Revealed hash doesn't match original commitment");
+            }
+
+            commitment.State = CommitmentState.Verified;
+            commitment.VerifiedAt = DateTimeOffset.UtcNow;
+
+            return CommitmentVerification.Succeeded(commitment.ActualHash);
         }
-
-        if (commitment.ExpiresAt < DateTimeOffset.UtcNow)
-        {
-            commitment.State = CommitmentState.Expired;
-            return CommitmentVerification.Failed("Commitment expired");
-        }
-
-        // Recompute commitment hash
-        var dataToHash = revealedHash.ToLowerInvariant() + nonce;
-        var computedCommitment = ComputeSha256(dataToHash);
-
-        if (!CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(computedCommitment),
-            Encoding.UTF8.GetBytes(commitment.CommitmentHash)))
-        {
-            commitment.State = CommitmentState.Failed;
-            return CommitmentVerification.Failed("Commitment hash mismatch - possible bait-and-switch!");
-        }
-
-        // Verify the revealed hash matches what was originally committed
-        if (!CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(revealedHash.ToLowerInvariant()),
-            Encoding.UTF8.GetBytes(commitment.ActualHash)))
-        {
-            commitment.State = CommitmentState.Failed;
-            return CommitmentVerification.Failed("Revealed hash doesn't match original commitment");
-        }
-
-        commitment.State = CommitmentState.Verified;
-        commitment.VerifiedAt = DateTimeOffset.UtcNow;
-
-        return CommitmentVerification.Succeeded(commitment.ActualHash);
     }
 
     /// <summary>

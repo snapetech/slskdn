@@ -39,6 +39,16 @@ public sealed class DiscoveryGraphController : ControllerBase
             return BadRequest("Discovery Graph request is required.");
         }
 
+        request.Scope = string.IsNullOrWhiteSpace(request.Scope) ? "songid_run" : request.Scope.Trim();
+        request.RecordingId = string.IsNullOrWhiteSpace(request.RecordingId) ? null : request.RecordingId.Trim();
+        request.ReleaseId = string.IsNullOrWhiteSpace(request.ReleaseId) ? null : request.ReleaseId.Trim();
+        request.ArtistId = string.IsNullOrWhiteSpace(request.ArtistId) ? null : request.ArtistId.Trim();
+        request.Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
+        request.Artist = string.IsNullOrWhiteSpace(request.Artist) ? null : request.Artist.Trim();
+        request.Album = string.IsNullOrWhiteSpace(request.Album) ? null : request.Album.Trim();
+        request.CompareNodeId = string.IsNullOrWhiteSpace(request.CompareNodeId) ? null : request.CompareNodeId.Trim();
+        request.CompareLabel = string.IsNullOrWhiteSpace(request.CompareLabel) ? null : request.CompareLabel.Trim();
+
         var graph = await _discoveryGraphService.BuildAsync(request, cancellationToken).ConfigureAwait(false);
         return Ok(graph);
     }

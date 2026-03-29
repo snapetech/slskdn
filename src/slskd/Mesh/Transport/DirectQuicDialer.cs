@@ -90,10 +90,22 @@ public class DirectQuicDialer : ITransportDialer
         _statistics.TotalAttempts++;
 
         var startTime = DateTimeOffset.UtcNow;
-        var ipEndpoint = new IPEndPoint(IPAddress.Parse(endpoint.Host), endpoint.Port);
+        IPEndPoint? ipEndpoint = null;
 
         try
         {
+            if (endpoint.Port is <= 0 or > ushort.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(endpoint.Port), endpoint.Port, "Port must be between 1 and 65535");
+            }
+
+            if (!IPAddress.TryParse(endpoint.Host, out var ipAddress))
+            {
+                throw new ArgumentException($"Endpoint host '{endpoint.Host}' is not a valid IP address.", nameof(endpoint.Host));
+            }
+
+            ipEndpoint = new IPEndPoint(ipAddress, endpoint.Port);
+
             _logger.LogDebugSafe("Establishing direct QUIC connection to {Endpoint} for peer {PeerId}",
                 LoggingUtils.SafeEndpoint(ipEndpoint.ToString()), LoggingUtils.SafePeerId(peerId));
 
@@ -107,13 +119,21 @@ public class DirectQuicDialer : ITransportDialer
             _statistics.ActiveConnections++;
 
             LoggingUtils.LogConnectionEstablished(_logger, peerId, ipEndpoint.ToString(), TransportType.DirectQuic);
-            return new QuicStreamWrapper(stream, connection, () => _statistics.ActiveConnections--);
+            return new QuicStreamWrapper(
+                stream,
+                connection,
+                () => _statistics.ActiveConnections--,
+                ex => _logger.LogWarning(ex, "[DirectQuicDialer] Failed to dispose stream wrapper"));
         }
         catch (Exception ex)
         {
             _statistics.FailedConnections++;
             _statistics.LastError = LoggingUtils.SafeException(ex);
-            LoggingUtils.LogConnectionFailed(_logger, peerId, ipEndpoint.ToString(), ex.Message);
+            LoggingUtils.LogConnectionFailed(
+                _logger,
+                peerId,
+                ipEndpoint?.ToString() ?? $"{endpoint.Host}:{endpoint.Port}",
+                ex.Message);
             throw;
         }
     }
@@ -223,13 +243,19 @@ public class DirectQuicDialer : ITransportDialer
         private readonly QuicStream _stream;
         private readonly QuicConnection _connection;
         private readonly Action _onDispose;
+        private readonly Action<Exception> _onDisposeError;
         private bool _disposed;
 
-        public QuicStreamWrapper(QuicStream stream, QuicConnection connection, Action onDispose)
+        public QuicStreamWrapper(
+            QuicStream stream,
+            QuicConnection connection,
+            Action onDispose,
+            Action<Exception>? onDisposeError = null)
         {
             _stream = stream;
             _connection = connection;
             _onDispose = onDispose;
+            _onDisposeError = onDisposeError ?? (_ => { });
         }
 
         public override bool CanRead => _stream.CanRead;
@@ -265,8 +291,23 @@ public class DirectQuicDialer : ITransportDialer
                 if (disposing)
                 {
                     _stream.Dispose();
-                    _connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
-                    _onDispose?.Invoke();
+                    try
+                    {
+                        _connection.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        _onDisposeError(ex);
+                    }
+
+                    try
+                    {
+                        _onDispose?.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        _onDisposeError(ex);
+                    }
                 }
             }
 

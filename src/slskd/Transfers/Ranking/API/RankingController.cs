@@ -45,6 +45,12 @@ namespace slskd.Transfers.Ranking.API
         [ProducesResponseType(typeof(UserDownloadHistory), 200)]
         public async Task<IActionResult> GetHistory([FromRoute] string username)
         {
+            username = username?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return BadRequest("Username is required");
+            }
+
             var history = await rankingService.GetHistoryAsync(username);
             return Ok(history);
         }
@@ -59,7 +65,23 @@ namespace slskd.Transfers.Ranking.API
         [ProducesResponseType(typeof(IDictionary<string, UserDownloadHistory>), 200)]
         public async Task<IActionResult> GetHistories([FromBody] List<string> usernames)
         {
-            var histories = await rankingService.GetHistoriesAsync(usernames);
+            if (usernames == null || usernames.Count == 0)
+            {
+                return BadRequest("At least one username is required");
+            }
+
+            var normalizedUsernames = usernames
+                .Select(username => username?.Trim() ?? string.Empty)
+                .Where(username => !string.IsNullOrWhiteSpace(username))
+                .Distinct(System.StringComparer.Ordinal)
+                .ToList();
+
+            if (normalizedUsernames.Count == 0)
+            {
+                return BadRequest("Each username must be non-empty");
+            }
+
+            var histories = await rankingService.GetHistoriesAsync(normalizedUsernames);
             return Ok(histories);
         }
 
@@ -73,7 +95,34 @@ namespace slskd.Transfers.Ranking.API
         [ProducesResponseType(typeof(IEnumerable<RankedSource>), 200)]
         public async Task<IActionResult> RankSources([FromBody] List<SourceCandidate> candidates)
         {
-            var ranked = await rankingService.RankSourcesAsync(candidates);
+            if (candidates == null || candidates.Count == 0)
+            {
+                return BadRequest("At least one source candidate is required");
+            }
+
+            var normalizedCandidates = candidates
+                .Where(candidate => candidate != null)
+                .Select(candidate => new SourceCandidate
+                {
+                    Username = candidate.Username?.Trim() ?? string.Empty,
+                    Filename = candidate.Filename?.Trim() ?? string.Empty,
+                    Size = candidate.Size,
+                    HasFreeUploadSlot = candidate.HasFreeUploadSlot,
+                    QueueLength = candidate.QueueLength,
+                    UploadSpeed = candidate.UploadSpeed,
+                    SizeDiffPercent = candidate.SizeDiffPercent
+                })
+                .DistinctBy(candidate => (candidate.Username, candidate.Filename, candidate.Size))
+                .ToList();
+
+            if (normalizedCandidates.Count == 0 || normalizedCandidates.Any(candidate =>
+                    string.IsNullOrWhiteSpace(candidate.Username) ||
+                    string.IsNullOrWhiteSpace(candidate.Filename)))
+            {
+                return BadRequest("Each source candidate requires a non-empty username and filename");
+            }
+
+            var ranked = await rankingService.RankSourcesAsync(normalizedCandidates);
             return Ok(ranked);
         }
     }

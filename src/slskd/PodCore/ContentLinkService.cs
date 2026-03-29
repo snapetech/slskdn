@@ -36,34 +36,42 @@ public class ContentLinkService : IContentLinkService
             return new ContentValidationResult(false, contentId, "Content ID cannot be empty");
         }
 
+        var normalizedContentId = contentId.Trim();
+
         // Parse the content ID
-        var parsed = ContentIdParser.Parse(contentId);
+        var parsed = ContentIdParser.Parse(normalizedContentId);
         if (parsed == null)
         {
-            return new ContentValidationResult(false, contentId, "Invalid content ID format. Expected: content:<domain>:<type>:<id>");
+            return new ContentValidationResult(false, normalizedContentId, "Invalid content ID format. Expected: content:<domain>:<type>:<id>");
         }
 
         try
         {
             // Validate based on domain and type
-            var metadata = await GetContentMetadataAsync(contentId, ct);
+            var metadata = await GetContentMetadataAsync(normalizedContentId, ct);
             if (metadata == null)
             {
-                return new ContentValidationResult(false, contentId, "Content not found or inaccessible");
+                return new ContentValidationResult(false, normalizedContentId, "Content not found or inaccessible");
             }
 
-            return new ContentValidationResult(true, contentId, Metadata: metadata);
+            return new ContentValidationResult(true, normalizedContentId, Metadata: metadata);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error validating content ID {ContentId}", contentId);
-            return new ContentValidationResult(false, contentId, $"Validation error: {ex.Message}");
+            _logger.LogWarning(ex, "Error validating content ID {ContentId}", normalizedContentId);
+            return new ContentValidationResult(false, normalizedContentId, "Validation failed");
         }
     }
 
     public async Task<ContentMetadata?> GetContentMetadataAsync(string contentId, CancellationToken ct = default)
     {
-        var parsed = ContentIdParser.Parse(contentId);
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return null;
+        }
+
+        var normalizedContentId = contentId.Trim();
+        var parsed = ContentIdParser.Parse(normalizedContentId);
         if (parsed == null)
         {
             return null;
@@ -80,65 +88,63 @@ public class ContentLinkService : IContentLinkService
                     return await GetVideoMetadataAsync(parsed, ct);
 
                 default:
-                    // For other domains, return basic metadata without external validation
-                    return new ContentMetadata(
-                        ContentId: contentId,
-                        Title: $"{parsed.Type}: {parsed.Id}",
-                        Artist: "Unknown",
-                        Type: parsed.Type,
-                        Domain: parsed.Domain,
-                        AdditionalInfo: new Dictionary<string, string>
-                        {
-                            ["id"] = parsed.Id,
-                            ["domain"] = parsed.Domain,
-                            ["type"] = parsed.Type
-                        });
+                    return CreateBasicMetadata(parsed);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error fetching metadata for content ID {ContentId}", contentId);
+            _logger.LogWarning(ex, "Error fetching metadata for content ID {ContentId}", normalizedContentId);
             return null;
         }
     }
 
-    public Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ContentSearchResult>> SearchContentAsync(string query, string? domain = null, int limit = 20, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
+            return Array.Empty<ContentSearchResult>();
         }
 
-        var results = new List<ContentSearchResult>();
+        if (limit <= 0)
+        {
+            return Array.Empty<ContentSearchResult>();
+        }
 
         try
         {
-            // Search MusicBrainz for audio content
-            if (domain == null || domain.Equals(ContentDomains.Audio, StringComparison.OrdinalIgnoreCase))
+            var normalizedQuery = query.Trim();
+            var normalizedDomain = domain?.Trim();
+            var effectiveLimit = Math.Min(limit, 100);
+
+            if (!string.IsNullOrWhiteSpace(normalizedDomain) &&
+                !string.Equals(normalizedDomain, ContentDomains.Audio, StringComparison.OrdinalIgnoreCase))
             {
-                // For now, return placeholder results since we don't have a search API
-                // In a full implementation, this would search MusicBrainz, Discogs, etc.
-                results.AddRange(new[]
-                {
-                    new ContentSearchResult(
-                        ContentId: ContentIdParser.Create(ContentDomains.Audio, ContentDomains.AudioArtist, "search-placeholder"),
-                        Title: $"Search results for: {query}",
-                        Subtitle: "MusicBrainz integration pending",
-                        Type: ContentDomains.AudioArtist,
-                        Domain: ContentDomains.Audio,
-                        Metadata: new Dictionary<string, string>
-                        {
-["note"] = "Search integration requires additional API endpoints"
-                        })
-                });
+                _logger.LogWarning("Content search requested for unsupported domain '{Domain}'", normalizedDomain);
+                return Array.Empty<ContentSearchResult>();
             }
 
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(results.Take(limit).ToList());
+            var hits = await _musicBrainzClient.SearchRecordingsAsync(normalizedQuery, effectiveLimit, ct);
+            return hits
+                .Where(hit => !string.IsNullOrWhiteSpace(hit.RecordingId))
+                .Select(hit => new ContentSearchResult(
+                    ContentId: $"content:{ContentDomains.Audio}:{ContentDomains.AudioTrack}:{hit.RecordingId.Trim()}",
+                    Title: hit.Title,
+                    Subtitle: hit.Artist,
+                    Type: ContentDomains.AudioTrack,
+                    Domain: ContentDomains.Audio,
+                    Metadata: new Dictionary<string, string>
+                    {
+                        ["musicbrainz_recording_id"] = hit.RecordingId.Trim(),
+                        ["artist"] = hit.Artist,
+                        ["title"] = hit.Title,
+                        ["musicbrainz_artist_id"] = hit.MusicBrainzArtistId ?? string.Empty,
+                    }))
+                .ToList();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching content with query '{Query}'", query);
-            return Task.FromResult<IReadOnlyList<ContentSearchResult>>(Array.Empty<ContentSearchResult>());
+            return Array.Empty<ContentSearchResult>();
         }
     }
 
@@ -147,17 +153,21 @@ public class ContentLinkService : IContentLinkService
         switch (parsed.Type.ToLowerInvariant())
         {
             case ContentDomains.AudioArtist:
-                // MusicBrainz artist lookup would go here
-                return new ContentMetadata(
-                    ContentId: parsed.FullId,
-                    Title: parsed.Id, // Would be actual artist name
-                    Artist: parsed.Id,
-                    Type: ContentDomains.AudioArtist,
-                    Domain: ContentDomains.Audio,
-                    AdditionalInfo: new Dictionary<string, string>
+                var artistHits = await _musicBrainzClient.SearchRecordingsAsync(parsed.Id, 10, ct);
+                var matchingArtist = artistHits.FirstOrDefault(hit =>
+                    string.Equals(hit.MusicBrainzArtistId?.Trim(), parsed.Id, StringComparison.OrdinalIgnoreCase))
+                    ?? artistHits.FirstOrDefault(hit =>
+                        string.Equals(hit.Artist?.Trim(), parsed.Id, StringComparison.OrdinalIgnoreCase));
+
+                return CreateBasicMetadata(
+                    parsed,
+                    titleOverride: matchingArtist?.Artist ?? parsed.Id,
+                    artistOverride: matchingArtist?.Artist ?? parsed.Id,
+                    new Dictionary<string, string>
                     {
                         ["musicbrainz_id"] = parsed.Id,
-                        ["type"] = "artist"
+                        ["type"] = "artist",
+                        ["musicbrainz_artist_id"] = matchingArtist?.MusicBrainzArtistId?.Trim() ?? parsed.Id,
                     });
 
             case ContentDomains.AudioAlbum:
@@ -197,32 +207,39 @@ public class ContentLinkService : IContentLinkService
                         {
                             ["musicbrainz_id"] = parsed.Id,
                             ["duration_ms"] = ((int)recording.Duration.TotalMilliseconds).ToString(),
-                            ["album"] = "Unknown" // TrackTarget doesn't have album info
+                            ["album"] = "Unknown",
+                            ["position"] = recording.Position.ToString()
                         });
                 }
 
                 break;
         }
 
-        return null;
+        return CreateBasicMetadata(parsed);
     }
 
     private Task<ContentMetadata?> GetVideoMetadataAsync(ContentId parsed, CancellationToken ct)
     {
-        // Placeholder for video content (IMDb, TMDB, etc.)
-        // For now, return basic metadata without external validation
-        return Task.FromResult<ContentMetadata?>(new ContentMetadata(
+        return Task.FromResult<ContentMetadata?>(CreateBasicMetadata(parsed, titleOverride: parsed.Id));
+    }
+
+    private static ContentMetadata CreateBasicMetadata(
+        ContentId parsed,
+        string? titleOverride = null,
+        string? artistOverride = null,
+        Dictionary<string, string>? additionalInfo = null)
+    {
+        var metadata = additionalInfo ?? new Dictionary<string, string>();
+        metadata["id"] = parsed.Id;
+        metadata["domain"] = parsed.Domain;
+        metadata["type"] = parsed.Type;
+
+        return new ContentMetadata(
             ContentId: parsed.FullId,
-            Title: $"{parsed.Type}: {parsed.Id}",
-            Artist: "Unknown",
+            Title: titleOverride ?? $"{parsed.Type}: {parsed.Id}",
+            Artist: artistOverride ?? "Unknown",
             Type: parsed.Type,
-            Domain: ContentDomains.Video,
-            AdditionalInfo: new Dictionary<string, string>
-            {
-                ["id"] = parsed.Id,
-                ["domain"] = ContentDomains.Video,
-                ["type"] = parsed.Type,
-                ["note"] = "Video metadata integration pending"
-            }));
+            Domain: parsed.Domain,
+            AdditionalInfo: metadata);
     }
 }

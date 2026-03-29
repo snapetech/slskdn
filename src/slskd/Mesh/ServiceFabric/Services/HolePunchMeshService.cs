@@ -50,7 +50,8 @@ public class HolePunchMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not implemented for hole punch service");
+        _logger.LogWarning("[HolePunch] Streaming requested by {PeerId}, but hole punch streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     public async Task<ServiceReply> HandleCallAsync(
@@ -73,7 +74,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown hole punch method: {call.Method}",
+                    ErrorMessage = "Unknown hole punch method",
                     Payload = Array.Empty<byte>()
                 }
             };
@@ -85,7 +86,7 @@ public class HolePunchMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"Internal error: {ex.Message}",
+                ErrorMessage = "Internal hole punch service error",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -109,7 +110,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid HolePunchRequest: targetPeerId and localEndpoints required",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -184,7 +185,7 @@ public class HolePunchMeshService : IMeshService
                     {
                         CorrelationId = call.CorrelationId,
                         StatusCode = ServiceStatusCodes.UnknownError,
-                        ErrorMessage = $"Failed to contact target peer: {reply.ErrorMessage}",
+                        ErrorMessage = "Failed to contact target peer",
                         Payload = Array.Empty<byte>()
                     };
                 }
@@ -197,7 +198,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.UnknownError,
-                    ErrorMessage = $"Failed to contact target peer: {ex.Message}",
+                    ErrorMessage = "Failed to contact target peer",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -209,7 +210,7 @@ public class HolePunchMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"RequestPunch error: {ex.Message}",
+                ErrorMessage = "RequestPunch failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -233,7 +234,7 @@ public class HolePunchMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
-                    ErrorMessage = "Invalid HolePunchForwardRequest",
+                    ErrorMessage = "Invalid request payload",
                     Payload = Array.Empty<byte>()
                 };
             }
@@ -290,7 +291,7 @@ public class HolePunchMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"ConfirmPunch error: {ex.Message}",
+                ErrorMessage = "ConfirmPunch failed",
                 Payload = Array.Empty<byte>()
             };
         }
@@ -329,7 +330,7 @@ public class HolePunchMeshService : IMeshService
             {
                 CorrelationId = call.CorrelationId,
                 StatusCode = ServiceStatusCodes.UnknownError,
-                ErrorMessage = $"CancelPunch error: {ex.Message}",
+                ErrorMessage = "CancelPunch failed",
                 Payload = Array.Empty<byte>()
             });
         }

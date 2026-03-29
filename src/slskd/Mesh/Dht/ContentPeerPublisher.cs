@@ -10,16 +10,17 @@ namespace slskd.Mesh.Dht;
 /// <summary>
 /// Publishes content->peer hints for this node.
 /// </summary>
-public interface IContentPeerPublisher
+public interface IContentPeerPublisher : IDisposable
 {
     Task PublishAsync(string contentId, CancellationToken ct = default);
 }
 
-public class ContentPeerPublisher : IContentPeerPublisher
+public sealed class ContentPeerPublisher : IContentPeerPublisher, IDisposable
 {
     private readonly ILogger<ContentPeerPublisher> logger;
     private readonly IMeshDhtClient dht;
     private readonly MeshOptions options;
+    private readonly SemaphoreSlim peerContentIndexLock = new(1, 1);
 
     public ContentPeerPublisher(
         ILogger<ContentPeerPublisher> logger,
@@ -54,12 +55,25 @@ public class ContentPeerPublisher : IContentPeerPublisher
 
         // Reverse mapping: peer -> content list
         var peerKey = $"mesh:peer-content:{options.SelfPeerId}";
-        var existing = await dht.GetAsync<List<string>>(peerKey, ct) ?? new List<string>();
-        if (!existing.Contains(contentId))
+        await peerContentIndexLock.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            existing.Add(contentId);
-        }
+            var existing = await dht.GetAsync<List<string>>(peerKey, ct) ?? new List<string>();
+            if (!existing.Contains(contentId))
+            {
+                existing.Add(contentId);
+            }
 
-        await dht.PutAsync(peerKey, existing, ttlSeconds: 1800, ct: ct);
+            await dht.PutAsync(peerKey, existing, ttlSeconds: 1800, ct: ct);
+        }
+        finally
+        {
+            peerContentIndexLock.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        peerContentIndexLock.Dispose();
     }
 }

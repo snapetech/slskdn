@@ -62,13 +62,19 @@ public class StreamsController : ControllerBase
     {
         if (!StreamingEnabled) return NotFound();
 
+        contentId = contentId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return BadRequest("ContentId is required.");
+        }
+
         // Reject multi-range before any File/range handling
         var rangeHeader = Request.Headers.Range.FirstOrDefault();
         if (!string.IsNullOrEmpty(rangeHeader) && rangeHeader.IndexOf(',') >= 0)
             return BadRequest("Multiple byte ranges are not supported.");
 
         ShareTokenClaims? claims = null;
-        var tokenRaw = token;
+        var tokenRaw = token?.Trim();
         if (string.IsNullOrEmpty(tokenRaw))
         {
             var auth = Request.Headers.Authorization.FirstOrDefault();

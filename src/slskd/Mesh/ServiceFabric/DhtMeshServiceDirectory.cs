@@ -60,26 +60,29 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
         string? requestPeerId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(serviceName))
+        var normalizedServiceName = NormalizeKey(serviceName);
+        var normalizedRequestPeerId = NormalizeKey(requestPeerId);
+
+        if (string.IsNullOrWhiteSpace(normalizedServiceName))
         {
             _logger.LogWarning("[ServiceDirectory] FindByName called with empty service name");
             return Array.Empty<MeshServiceDescriptor>();
         }
 
         // Track discovery metrics if peer ID provided
-        if (!string.IsNullOrWhiteSpace(requestPeerId))
+        if (!string.IsNullOrWhiteSpace(normalizedRequestPeerId))
         {
-            TrackDiscoveryQuery(requestPeerId, serviceName);
+            TrackDiscoveryQuery(normalizedRequestPeerId, normalizedServiceName);
         }
 
         try
         {
-            var dhtKey = $"svc:{serviceName}";
+            var dhtKey = $"svc:{normalizedServiceName}";
             var rawValue = await _dhtClient.GetRawAsync(dhtKey, cancellationToken);
 
             if (rawValue == null || rawValue.Length == 0)
             {
-                _logger.LogDebug("[ServiceDirectory] No DHT value found for service: {ServiceName}", serviceName);
+                _logger.LogDebug("[ServiceDirectory] No DHT value found for service: {ServiceName}", normalizedServiceName);
                 return Array.Empty<MeshServiceDescriptor>();
             }
 
@@ -88,7 +91,7 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             {
                 _logger.LogWarning(
                     "[ServiceDirectory] DHT value too large for {ServiceName}: {Size} > {Max}",
-                    serviceName, rawValue.Length, _options.MaxDhtValueBytes);
+                    normalizedServiceName, rawValue.Length, _options.MaxDhtValueBytes);
                 return Array.Empty<MeshServiceDescriptor>();
             }
 
@@ -100,12 +103,12 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning(ex, "[ServiceDirectory] Payload too large or invalid for {ServiceName}", serviceName);
+                _logger.LogWarning(ex, "[ServiceDirectory] Payload too large or invalid for {ServiceName}", normalizedServiceName);
                 return Array.Empty<MeshServiceDescriptor>();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[ServiceDirectory] Failed to deserialize descriptors for {ServiceName}", serviceName);
+                _logger.LogWarning(ex, "[ServiceDirectory] Failed to deserialize descriptors for {ServiceName}", normalizedServiceName);
                 return Array.Empty<MeshServiceDescriptor>();
             }
 
@@ -116,18 +119,31 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
 
             // Validate and filter descriptors
             var validated = new List<MeshServiceDescriptor>();
+            var seenServiceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var descriptor in descriptors)
             {
-                var (isValid, reason) = await _validator.ValidateAsync(descriptor);
+                var normalizedDescriptor = NormalizeDescriptor(descriptor);
+                if (normalizedDescriptor == null ||
+                    !string.Equals(normalizedDescriptor.ServiceName, normalizedServiceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var (isValid, reason) = await _validator.ValidateAsync(normalizedDescriptor);
                 if (!isValid)
                 {
                     _logger.LogDebug(
                         "[ServiceDirectory] Invalid descriptor for {ServiceName}: {Reason}",
-                        serviceName, reason);
+                        normalizedServiceName, reason);
                     continue;
                 }
 
-                validated.Add(descriptor);
+                if (!seenServiceIds.Add(normalizedDescriptor.ServiceId))
+                {
+                    continue;
+                }
+
+                validated.Add(normalizedDescriptor);
 
                 // Stop at max limit
                 if (validated.Count >= _options.MaxDescriptorsPerLookup)
@@ -138,62 +154,152 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
 
             _logger.LogInformation(
                 "[ServiceDirectory] Found {Count} valid descriptors for service: {ServiceName}",
-                validated.Count, serviceName);
+                validated.Count, normalizedServiceName);
 
             return validated;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[ServiceDirectory] Error finding service by name: {ServiceName}", serviceName);
+            _logger.LogError(ex, "[ServiceDirectory] Error finding service by name: {ServiceName}", normalizedServiceName);
             return Array.Empty<MeshServiceDescriptor>();
         }
     }
 
-    public Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
+    public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
         string serviceId,
         CancellationToken cancellationToken = default)
     {
-        return FindByIdAsync(serviceId, requestPeerId: null, cancellationToken);
+        return await FindByIdAsync(serviceId, requestPeerId: null, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
+    public async Task<IReadOnlyList<MeshServiceDescriptor>> FindByIdAsync(
         string serviceId,
         string? requestPeerId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(serviceId))
+        var normalizedServiceId = NormalizeKey(serviceId);
+        var normalizedRequestPeerId = NormalizeKey(requestPeerId);
+
+        if (string.IsNullOrWhiteSpace(normalizedServiceId))
         {
             _logger.LogWarning("[ServiceDirectory] FindById called with empty service ID");
-            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+            return Array.Empty<MeshServiceDescriptor>();
         }
 
         // Track discovery metrics if peer ID provided
-        if (!string.IsNullOrWhiteSpace(requestPeerId))
+        if (!string.IsNullOrWhiteSpace(normalizedRequestPeerId))
         {
-            TrackDiscoveryQuery(requestPeerId, $"id:{serviceId}");
+            TrackDiscoveryQuery(normalizedRequestPeerId, $"id:{normalizedServiceId}");
         }
 
         try
         {
-            // Service ID format: hash("svc:" + ServiceName + ":" + OwnerPeerId)
-            // We need to query DHT by scanning service names or use a reverse index
-            // For now, this is a stub - full implementation would require additional DHT structures
-            _logger.LogDebug("[ServiceDirectory] FindById not yet fully implemented: {ServiceId}", serviceId);
+            var rawValue = await _dhtClient.GetRawAsync($"svcid:{normalizedServiceId}", cancellationToken).ConfigureAwait(false);
+            if (rawValue == null || rawValue.Length == 0)
+            {
+                _logger.LogDebug("[ServiceDirectory] No DHT value found for service ID: {ServiceId}", normalizedServiceId);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
 
-            // Deferred: Implement efficient FindById
-            // See memory-bank/triage-todo-fixme.md (defer section) for details
-            // Options:
-            // 1. Maintain a separate DHT key: svcid:<ServiceId> -> descriptor
-            // 2. Scan known service names (inefficient but works for now)
-            // 3. Use DHT FindValue with serviceId directly
-            // Current implementation returns empty array (service not found)
-            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+            if (rawValue.Length > _options.MaxDhtValueBytes)
+            {
+                _logger.LogWarning(
+                    "[ServiceDirectory] DHT value too large for service ID {ServiceId}: {Size} > {Max}",
+                    normalizedServiceId,
+                    rawValue.Length,
+                    _options.MaxDhtValueBytes);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            MeshServiceDescriptor? descriptor;
+            try
+            {
+                descriptor = SecurityUtils.ParseMessagePackSafely<MeshServiceDescriptor>(rawValue, _maxPayload);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "[ServiceDirectory] Payload too large or invalid for service ID {ServiceId}", normalizedServiceId);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[ServiceDirectory] Failed to deserialize descriptor for service ID {ServiceId}", normalizedServiceId);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            descriptor = NormalizeDescriptor(descriptor);
+            if (descriptor == null ||
+                !string.Equals(descriptor.ServiceId, normalizedServiceId, StringComparison.OrdinalIgnoreCase))
+            {
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            var (isValid, reason) = await _validator.ValidateAsync(descriptor).ConfigureAwait(false);
+            if (!isValid)
+            {
+                _logger.LogDebug(
+                    "[ServiceDirectory] Invalid descriptor for service ID {ServiceId}: {Reason}",
+                    normalizedServiceId,
+                    reason);
+                return Array.Empty<MeshServiceDescriptor>();
+            }
+
+            return new[] { descriptor };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[ServiceDirectory] Error finding service by ID: {ServiceId}", serviceId);
-            return Task.FromResult<IReadOnlyList<MeshServiceDescriptor>>(Array.Empty<MeshServiceDescriptor>());
+            _logger.LogError(ex, "[ServiceDirectory] Error finding service by ID: {ServiceId}", normalizedServiceId);
+            return Array.Empty<MeshServiceDescriptor>();
         }
+    }
+
+    private static string NormalizeKey(string? value)
+    {
+        return value?.Trim() ?? string.Empty;
+    }
+
+    private static MeshServiceDescriptor? NormalizeDescriptor(MeshServiceDescriptor? descriptor)
+    {
+        if (descriptor == null)
+        {
+            return null;
+        }
+
+        var normalizedServiceId = NormalizeKey(descriptor.ServiceId);
+        var normalizedServiceName = NormalizeKey(descriptor.ServiceName);
+        var normalizedOwnerPeerId = NormalizeKey(descriptor.OwnerPeerId);
+        if (string.IsNullOrWhiteSpace(normalizedServiceId) ||
+            string.IsNullOrWhiteSpace(normalizedServiceName) ||
+            string.IsNullOrWhiteSpace(normalizedOwnerPeerId) ||
+            descriptor.Endpoint == null)
+        {
+            return null;
+        }
+
+        var normalizedMetadata = descriptor.Metadata != null && descriptor.Metadata.Count > 0
+            ? descriptor.Metadata
+                .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Key))
+                .GroupBy(kvp => NormalizeKey(kvp.Key), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => NormalizeKey(group.Last().Value),
+                    StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>();
+
+        return descriptor with
+        {
+            ServiceId = normalizedServiceId,
+            ServiceName = normalizedServiceName,
+            OwnerPeerId = normalizedOwnerPeerId,
+            Version = NormalizeKey(descriptor.Version),
+            Endpoint = descriptor.Endpoint with
+            {
+                Protocol = NormalizeKey(descriptor.Endpoint.Protocol),
+                Host = NormalizeKey(descriptor.Endpoint.Host),
+                Path = NormalizeKey(descriptor.Endpoint.Path),
+            },
+            Metadata = normalizedMetadata,
+        };
     }
 
     /// <summary>
@@ -225,10 +331,15 @@ public class DhtMeshServiceDirectory : IMeshServiceDirectory
                     };
                 }
 
-                // Increment count and add service name
-                existing.ServiceNamesQueried.Add(serviceName);
-                existing.QueryCount++;
-                return existing;
+                // Return a new object rather than mutating in place: AddOrUpdate may call
+                // the update delegate multiple times on CAS collision, so in-place mutation
+                // would over-count QueryCount and duplicate-insert ServiceNamesQueried.
+                return new DiscoveryStats
+                {
+                    QueryCount = existing.QueryCount + 1,
+                    ServiceNamesQueried = new HashSet<string>(existing.ServiceNamesQueried) { serviceName },
+                    WindowStart = existing.WindowStart,
+                };
             });
 
         // Check for suspicious patterns

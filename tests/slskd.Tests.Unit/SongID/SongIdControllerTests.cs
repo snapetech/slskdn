@@ -49,6 +49,27 @@ public sealed class SongIdControllerTests
     }
 
     [Fact]
+    public async Task CreateRun_TrimsSourceBeforeDispatch()
+    {
+        var expectedRun = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Source = "https://youtu.be/example",
+            Status = "queued",
+        };
+        var service = new Mock<ISongIdService>();
+        service
+            .Setup(instance => instance.QueueAnalyzeAsync(expectedRun.Source, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedRun);
+
+        var controller = new SongIdController(service.Object);
+
+        await controller.CreateRun(new SongIdRunRequest { Source = " https://youtu.be/example " }, CancellationToken.None);
+
+        service.Verify(instance => instance.QueueAnalyzeAsync(expectedRun.Source, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public void ListRuns_ReturnsOkWithRequestedLimit()
     {
         var runs = new List<SongIdRun>
@@ -66,6 +87,20 @@ public sealed class SongIdControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var payload = Assert.IsAssignableFrom<IReadOnlyList<SongIdRun>>(ok.Value);
         Assert.Equal(2, payload.Count);
+    }
+
+    [Fact]
+    public void ListRuns_WithNonPositiveLimit_UsesDefault()
+    {
+        var service = new Mock<ISongIdService>();
+        service.Setup(instance => instance.List(10)).Returns(Array.Empty<SongIdRun>());
+
+        var controller = new SongIdController(service.Object);
+
+        var result = controller.ListRuns(0);
+
+        Assert.IsType<OkObjectResult>(result);
+        service.Verify(instance => instance.List(10), Times.Once);
     }
 
     [Fact]

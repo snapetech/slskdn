@@ -35,7 +35,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Orchestrates uploads.
     /// </summary>
-    public interface IUploadQueue
+    public interface IUploadQueue : IDisposable
     {
         /// <summary>
         ///     Awaits the start of an upload.
@@ -98,7 +98,7 @@ namespace slskd.Transfers
     /// <summary>
     ///     Orchestrates uploads.
     /// </summary>
-    public class UploadQueue : IUploadQueue
+    public class UploadQueue : IUploadQueue, IDisposable
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="UploadQueue"/> class.
@@ -112,20 +112,31 @@ namespace slskd.Transfers
             Users = userService;
 
             OptionsMonitor = optionsMonitor;
-            OptionsMonitor.OnChange(Configure);
+            OptionsMonitorRegistration = OptionsMonitor.OnChange(Configure);
 
             Configure(OptionsMonitor.CurrentValue);
         }
 
+        private bool Disposed { get; set; }
         private int GlobalSlots { get; set; } = 0;
         private Dictionary<string, UploadGroup> Groups { get; set; } = new Dictionary<string, UploadGroup>();
         private int LastGlobalSlots { get; set; }
         private string LastOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; } = Serilog.Log.ForContext<UploadQueue>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IDisposable? OptionsMonitorRegistration { get; set; }
         private SemaphoreSlim SyncRoot { get; } = new SemaphoreSlim(1, 1);
         private ConcurrentDictionary<string, List<Upload>> Uploads { get; set; } = new ConcurrentDictionary<string, List<Upload>>();
         private IUserService Users { get; }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         ///     Awaits the start of an upload.
@@ -289,80 +300,89 @@ namespace slskd.Transfers
         /// <exception cref="NotFoundException">Thrown if the specified filename is not enqueued.</exception>
         public int EstimatePosition(string username, string filename)
         {
-            var groupName = Users.GetGroup(username);
-            if (!Groups.TryGetValue(groupName, out var groupRecord))
-            {
-                throw new NotFoundException($"A group with the name {groupName} could not be found");
-            }
+            SyncRoot.Wait();
 
-            // the Uploads dictionary is keyed by username; gather all of the users that belong to the same group as the requested user
-            var uploadsForGroup = Uploads.Where(kvp => Users.GetGroup(kvp.Key) == groupName);
-
-            // the RoundRobin queue implementation is not strictly fair to all users; only uploads that are ready are candidates
-            // for selection. this means that if Bob downloads files twice as fast as Alice, Bob is going to advance through the
-            // queue twice as fast, too. assume everyone downloads at equal speed for this estimate. also assume that all files
-            // are of equal length.
-            if (groupRecord.Strategy == QueueStrategy.RoundRobin)
+            try
             {
-                // find this user's uploads
-                if (!Uploads.TryGetValue(username, out var uploadsForUser))
+                var groupName = Users.GetGroup(username);
+                if (!Groups.TryGetValue(groupName, out var groupRecord))
                 {
-                    throw new NotFoundException($"File {filename} is not enqueued for user {username}");
+                    throw new NotFoundException($"A group with the name {groupName} could not be found");
                 }
 
-                // find the position of the requested file in the user's queue
-                var localPosition = uploadsForUser
+                // the Uploads dictionary is keyed by username; gather all of the users that belong to the same group as the requested user
+                var uploadsForGroup = Uploads.Where(kvp => Users.GetGroup(kvp.Key) == groupName);
+
+                // the RoundRobin queue implementation is not strictly fair to all users; only uploads that are ready are candidates
+                // for selection. this means that if Bob downloads files twice as fast as Alice, Bob is going to advance through the
+                // queue twice as fast, too. assume everyone downloads at equal speed for this estimate. also assume that all files
+                // are of equal length.
+                if (groupRecord.Strategy == QueueStrategy.RoundRobin)
+                {
+                    // find this user's uploads
+                    if (!Uploads.TryGetValue(username, out var uploadsForUser))
+                    {
+                        throw new NotFoundException($"File {filename} is not enqueued for user {username}");
+                    }
+
+                    // find the position of the requested file in the user's queue
+                    var localPosition = uploadsForUser
+                        .OrderBy(upload => upload.Enqueued)
+                        .ToList()
+                        .FindIndex(upload => upload.Username == username && upload.Filename == filename);
+
+                    if (localPosition < 0)
+                    {
+                        throw new NotFoundException($"File {filename} is not enqueued for user {username}");
+                    }
+
+                    // start the position to the local position within this user's queue; the user's own files must be completed
+                    // before this one can start.
+                    var position = localPosition;
+
+                    // for each other user, add either localPosition or the count of that user's uploads, whichever is less
+                    // example:
+                    //
+                    // aaaaa
+                    // bb
+                    // cccccccccccc
+                    // ddddddd
+                    //     ^
+                    //
+                    // if we want the position of the file over the carat above, first find the position of it
+                    // within its own queue (= 5). assume uploads will process top down, left to right until reaching
+                    // this one.  that's 5 files from a, 2 from b, 5 from c, and the other 4 from d, putting the file over
+                    // the carat at position 16. the actual number will vary due to many factors, including where in the
+                    // round-robin ordering d is actually positioned (so +/- number of users downloading).
+                    foreach (var group in uploadsForGroup.Where(group => group.Key != username))
+                    {
+                        position += Math.Min(localPosition, group.Value.Count);
+                    }
+
+                    return position;
+                }
+
+                // for FIFO queues, files are uploaded in the order they are enqueued, so the position should be pretty good estimate.
+                // List ordering is guaranteed, so we are getting an accurate portrayal of where this file is in the queue by order of
+                // time enqueued. this includes uploads that are in progress.
+                var flattenedSortedUploadsForGroup = uploadsForGroup
+                    .SelectMany(group => group.Value)
                     .OrderBy(upload => upload.Enqueued)
-                    .ToList()
-                    .FindIndex(upload => upload.Username == username && upload.Filename == filename);
+                    .ToList();
 
-                if (localPosition < 0)
+                var globalPosition = flattenedSortedUploadsForGroup.FindIndex(upload => upload.Username == username && upload.Filename == filename);
+
+                if (globalPosition < 0)
                 {
                     throw new NotFoundException($"File {filename} is not enqueued for user {username}");
                 }
 
-                // start the position to the local position within this user's queue; the user's own files must be completed
-                // before this one can start.
-                var position = localPosition;
-
-                // for each other user, add either localPosition or the count of that user's uploads, whichever is less
-                // example:
-                //
-                // aaaaa
-                // bb
-                // cccccccccccc
-                // ddddddd
-                //     ^
-                //
-                // if we want the position of the file over the carat above, first find the position of it
-                // within its own queue (= 5). assume uploads will process top down, left to right until reaching
-                // this one.  that's 5 files from a, 2 from b, 5 from c, and the other 4 from d, putting the file over
-                // the carat at position 16. the actual number will vary due to many factors, including where in the
-                // round-robin ordering d is actually positioned (so +/- number of users downloading).
-                foreach (var group in uploadsForGroup.Where(group => group.Key != username))
-                {
-                    position += Math.Min(localPosition, group.Value.Count);
-                }
-
-                return position;
+                return globalPosition;
             }
-
-            // for FIFO queues, files are uploaded in the order they are enqueued, so the position should be pretty good estimate.
-            // List ordering is guaranteed, so we are getting an accurate portrayal of where this file is in the queue by order of
-            // time enqueued. this includes uploads that are in progress.
-            var flattenedSortedUploadsForGroup = uploadsForGroup
-                .SelectMany(group => group.Value)
-                .OrderBy(upload => upload.Enqueued)
-                .ToList();
-
-            var globalPosition = flattenedSortedUploadsForGroup.FindIndex(upload => upload.Username == username && upload.Filename == filename);
-
-            if (globalPosition < 0)
+            finally
             {
-                throw new NotFoundException($"File {filename} is not enqueued for user {username}");
+                SyncRoot.Release();
             }
-
-            return globalPosition;
         }
 
         /// <summary>
@@ -375,34 +395,43 @@ namespace slskd.Transfers
         /// </returns>
         public int ForecastPosition(string username)
         {
-            var groupName = Users.GetGroup(username);
+            SyncRoot.Wait();
 
-            // if there's a slot available, the user will enter the queue at position 0 (will start immediately)
-            if (Groups.TryGetValue(groupName, out var groupRecord) && groupRecord.SlotAvailable)
+            try
             {
-                return 0;
-            }
+                var groupName = Users.GetGroup(username);
 
-            if (groupRecord == null)
+                // if there's a slot available, the user will enter the queue at position 0 (will start immediately)
+                if (Groups.TryGetValue(groupName, out var groupRecord) && groupRecord.SlotAvailable)
+                {
+                    return 0;
+                }
+
+                if (groupRecord == null)
+                {
+                    throw new NotFoundException($"A group with the name {groupName} could not be found");
+                }
+
+                // the Uploads dictionary is keyed by username; gather all of the users that belong to the same group as the requested user
+                var uploadsForGroup = Uploads.Where(kvp => Users.GetGroup(kvp.Key) == groupName);
+
+                // assuming that the queue will be processed in a true round-robin fashion and that the user will be the last in the
+                // rotation (worst case), the user's start position will be equal to the number of users downloading or waiting, + 1.
+                if (groupRecord.Strategy == QueueStrategy.RoundRobin)
+                {
+                    return uploadsForGroup.Count() + 1;
+                }
+
+                // for FIFO queues, the user will enter the queue at the very back. return the total number of uploads in progress and
+                // enqueued, + 1.
+                return uploadsForGroup
+                    .SelectMany(group => group.Value)
+                    .Count() + 1;
+            }
+            finally
             {
-                throw new NotFoundException($"A group with the name {groupName} could not be found");
+                SyncRoot.Release();
             }
-
-            // the Uploads dictionary is keyed by username; gather all of the users that belong to the same group as the requested user
-            var uploadsForGroup = Uploads.Where(kvp => Users.GetGroup(kvp.Key) == groupName);
-
-            // assuming that the queue will be processed in a true round-robin fashion and that the user will be the last in the
-            // rotation (worst case), the user's start position will be equal to the number of users downloading or waiting, + 1.
-            if (groupRecord.Strategy == QueueStrategy.RoundRobin)
-            {
-                return uploadsForGroup.Count() + 1;
-            }
-
-            // for FIFO queues, the user will enter the queue at the very back. return the total number of uploads in progress and
-            // enqueued, + 1.
-            return uploadsForGroup
-                .SelectMany(group => group.Value)
-                .Count() + 1;
         }
 
         private void Configure(Options options)
@@ -551,6 +580,25 @@ namespace slskd.Transfers
             finally
             {
                 SyncRoot.Release();
+            }
+        }
+
+        /// <summary>
+        ///     Disposes this instance.
+        /// </summary>
+        /// <param name="disposing">A value indicating whether disposal is in progress.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!Disposed)
+            {
+                if (disposing)
+                {
+                    OptionsMonitorRegistration?.Dispose();
+                    OptionsMonitorRegistration = null;
+                    SyncRoot.Dispose();
+                }
+
+                Disposed = true;
             }
         }
     }

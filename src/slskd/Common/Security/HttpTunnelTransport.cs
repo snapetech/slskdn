@@ -97,7 +97,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "HTTP tunnel transport unavailable";
             }
 
             _logger.LogWarning(ex, "HTTP tunnel transport not available at {Url}", _options.ProxyUrl);
@@ -176,6 +176,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
+                response.Dispose();
                 throw new Exception($"HTTP tunnel request failed: {response.StatusCode}");
             }
 
@@ -199,7 +200,7 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "HTTP tunnel connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish HTTP tunnel to {Host}:{Port}", host, port);
@@ -329,10 +330,10 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
         public override void Flush() { }
 
         public override int Read(byte[] buffer, int offset, int count) =>
-            ReadAsync(buffer, offset, count).GetAwaiter().GetResult();
+            ReadAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override void Write(byte[] buffer, int offset, int count) =>
-            WriteAsync(buffer, offset, count).GetAwaiter().GetResult();
+            WriteAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
@@ -346,7 +347,14 @@ public class HttpTunnelTransport : IAnonymityTransport, IDisposable
             {
                 _responseStream?.Dispose();
                 _initialResponse.Dispose();
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

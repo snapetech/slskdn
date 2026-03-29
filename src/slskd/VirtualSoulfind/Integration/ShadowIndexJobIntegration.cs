@@ -58,9 +58,14 @@ public class ShadowIndexJobIntegration : IShadowIndexJobIntegration
             var result = await shadowIndex.QueryAsync(mbRecordingId, ct);
             if (result != null && result.PeerIds.Count > 0)
             {
+                var peerHints = result.PeerIds
+                    .Where(peerId => !string.IsNullOrWhiteSpace(peerId))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+
                 logger.LogInformation("[VSF-INTEGRATION] Found {PeerCount} peers for recording {RecordingId}",
-                    result.PeerIds.Count, mbRecordingId);
-                return result.PeerIds;
+                    peerHints.Count, mbRecordingId);
+                return peerHints;
             }
         }
         catch (Exception ex)
@@ -76,11 +81,16 @@ public class ShadowIndexJobIntegration : IShadowIndexJobIntegration
         List<string> mbRecordingIds,
         CancellationToken ct)
     {
-        logger.LogDebug("[VSF-INTEGRATION] Getting peer hints for {Count} recordings", mbRecordingIds.Count);
+        var uniqueRecordingIds = mbRecordingIds
+            .Where(recordingId => !string.IsNullOrWhiteSpace(recordingId))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        logger.LogDebug("[VSF-INTEGRATION] Getting peer hints for {Count} recordings", uniqueRecordingIds.Count);
 
         var results = new Dictionary<string, List<string>>();
 
-        foreach (var recordingId in mbRecordingIds)
+        foreach (var recordingId in uniqueRecordingIds)
         {
             var peers = await GetPeerHintsAsync(recordingId, ct);
             if (peers.Count > 0)
@@ -90,7 +100,7 @@ public class ShadowIndexJobIntegration : IShadowIndexJobIntegration
         }
 
         logger.LogInformation("[VSF-INTEGRATION] Found peer hints for {Count}/{Total} recordings",
-            results.Count, mbRecordingIds.Count);
+            results.Count, uniqueRecordingIds.Count);
 
         return results;
     }

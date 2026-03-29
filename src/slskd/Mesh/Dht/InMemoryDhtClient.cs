@@ -5,6 +5,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Linq;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using slskd.VirtualSoulfind.ShadowIndex;
 
@@ -127,9 +128,10 @@ public class InMemoryDhtClient : IDhtClient
     /// <summary>
     /// Add a known peer to the routing table (best effort).
     /// </summary>
-    public async Task AddNodeAsync(byte[] nodeId, string address)
+    public Task AddNodeAsync(byte[] nodeId, string address)
     {
-        await routing.TouchAsync(nodeId, address);
+        routing.Touch(nodeId, address);
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -137,8 +139,7 @@ public class InMemoryDhtClient : IDhtClient
     /// </summary>
     public void AddNode(byte[] nodeId, string address)
     {
-        var task = AddNodeAsync(nodeId, address);
-        task.GetAwaiter().GetResult();
+        routing.Touch(nodeId, address);
     }
 
     /// <summary>
@@ -152,9 +153,29 @@ public class InMemoryDhtClient : IDhtClient
     /// </summary>
     public (int TotalKeys, int ContentHintKeys) GetStoreStats()
     {
-        var keys = store.Keys.ToList();
-        var total = keys.Count;
-        var content = keys.Count(k => k.StartsWith("mesh:content-peers:", StringComparison.Ordinal));
+        var total = 0;
+        var content = 0;
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var list in store.Values)
+        {
+            lock (list)
+            {
+                list.RemoveAll(v => v.ExpiresAt <= now);
+                if (list.Count == 0)
+                {
+                    continue;
+                }
+
+                total++;
+
+                if (ContainsContentPeerHints(list))
+                {
+                    content++;
+                }
+            }
+        }
+
         return (total, content);
     }
 
@@ -178,6 +199,27 @@ public class InMemoryDhtClient : IDhtClient
     }
 
     private static string ToHex(byte[] data) => Convert.ToHexString(data).ToLowerInvariant();
+
+    private static bool ContainsContentPeerHints(List<DhtValue> values)
+    {
+        foreach (var value in values)
+        {
+            try
+            {
+                var hints = MessagePackSerializer.Deserialize<ContentPeerHints>(value.Data);
+                if (hints?.Peers?.Count > 0)
+                {
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                // Most DHT values are not content peer hints.
+            }
+        }
+
+        return false;
+    }
 
     private static byte[] RandomNodeId()
     {

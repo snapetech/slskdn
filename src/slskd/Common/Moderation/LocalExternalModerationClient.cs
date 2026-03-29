@@ -240,7 +240,7 @@ namespace slskd.Common.Moderation
                 MaxResponseLength = 500
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
+            using var response = await _httpClient.PostAsJsonAsync(
                 opts.Endpoint!.TrimEnd('/') + "/moderate",
                 localRequest,
                 cancellationToken);
@@ -257,7 +257,9 @@ namespace slskd.Common.Moderation
 
             return new LlmApiResponse
             {
-                Verdict = Enum.Parse<ModerationVerdict>(apiResponse.Verdict ?? "Unknown"),
+                Verdict = Enum.TryParse<ModerationVerdict>(apiResponse.Verdict, ignoreCase: true, out var verdict)
+                    ? verdict
+                    : ModerationVerdict.Unknown,
                 Confidence = apiResponse.Confidence,
                 Reasoning = apiResponse.Reasoning ?? "Local LLM analysis",
                 Categories = ParseCategories(apiResponse.Categories),

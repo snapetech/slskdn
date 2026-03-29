@@ -46,7 +46,18 @@ namespace slskd
                     throw new GitHubException("GitHub returned a release without a tag_name");
                 }
 
-                return Version.Parse(tagName);
+                var normalizedTag = tagName.Trim();
+                if (normalizedTag.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedTag = normalizedTag[1..];
+                }
+
+                if (!Version.TryParse(normalizedTag, out var version))
+                {
+                    throw new GitHubException($"GitHub returned an unparsable tag '{tagName}'");
+                }
+
+                return version;
             }
             catch (Exception ex)
             {

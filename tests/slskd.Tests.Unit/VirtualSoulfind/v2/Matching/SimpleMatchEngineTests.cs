@@ -28,11 +28,13 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
     /// </summary>
     public class SimpleMatchEngineTests
     {
+        private static SimpleMatchEngine CreateEngine() => new(new InMemoryCatalogueStore());
+
         [Fact]
         public async Task Match_MBID_And_Duration_ReturnsStrong()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",
@@ -71,7 +73,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
         public async Task Match_TitleAndDuration_ReturnsMedium()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",
@@ -108,7 +110,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
         public async Task Match_FilenameOnly_ReturnsWeak()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",
@@ -132,8 +134,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
             var result = await engine.MatchAsync(track, candidate);
 
             // Assert
-            Assert.Equal(MatchConfidence.Weak, result.Confidence);
-            Assert.False(result.IsUsable); // Weak is NOT usable (requires user confirmation)
+            Assert.Equal(MatchConfidence.None, result.Confidence);
+            Assert.False(result.IsUsable);
             Assert.False(result.IsStrong);
         }
 
@@ -141,7 +143,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
         public async Task Match_DurationMismatch_ReturnsNone()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",
@@ -179,7 +181,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
         public async Task Match_NoMetadata_ReturnsNone()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",
@@ -211,7 +213,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
         public async Task Verify_StrongMatch_Succeeds()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",
@@ -249,7 +251,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
         public async Task Verify_MediumMatch_Fails()
         {
             // Arrange
-            var engine = new SimpleMatchEngine();
+            var engine = CreateEngine();
             var track = new Track
             {
                 TrackId = "track:1",

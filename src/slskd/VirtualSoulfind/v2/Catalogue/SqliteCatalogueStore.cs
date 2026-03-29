@@ -20,6 +20,7 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
     using System;
     using System.Collections.Generic;
     using System.Data;
+    using System.Globalization;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -315,6 +316,15 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
                 release);
         }
 
+        public async Task<IReadOnlyList<Release>> ListReleasesAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<Release>(
+                "SELECT * FROM Releases ORDER BY Year DESC, Title LIMIT @Limit OFFSET @Offset",
+                new { Limit = limit, Offset = offset });
+            return results.ToList();
+        }
+
         public async Task<IReadOnlyList<Release>> ListReleasesForReleaseGroupAsync(string releaseGroupId, CancellationToken ct = default)
         {
             using var connection = CreateConnection();
@@ -369,6 +379,15 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
                 track);
         }
 
+        public async Task<IReadOnlyList<Track>> ListTracksAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<Track>(
+                "SELECT * FROM Tracks ORDER BY ReleaseId, DiscNumber, TrackNumber, Title LIMIT @Limit OFFSET @Offset",
+                new { Limit = limit, Offset = offset });
+            return results.ToList();
+        }
+
         public async Task<IReadOnlyList<Track>> ListTracksForReleaseAsync(string releaseId, CancellationToken ct = default)
         {
             using var connection = CreateConnection();
@@ -418,7 +437,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
         {
             using var connection = CreateConnection();
             var results = await connection.QueryAsync<LocalFile>(
-                "SELECT * FROM LocalFiles WHERE InferredTrackId = @TrackId",
+                @"SELECT DISTINCT lf.*
+                  FROM LocalFiles lf
+                  LEFT JOIN VerifiedCopies vc ON vc.LocalFileId = lf.LocalFileId
+                  WHERE lf.InferredTrackId = @TrackId OR vc.TrackId = @TrackId
+                  ORDER BY lf.UpdatedAt DESC, lf.Path",
                 new { TrackId = trackId });
             return results.ToList();
         }
@@ -461,6 +484,15 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
                 localFile);
         }
 
+        public async Task<IReadOnlyList<LocalFile>> ListLocalFilesAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<LocalFile>(
+                "SELECT * FROM LocalFiles ORDER BY UpdatedAt DESC, Path LIMIT @Limit OFFSET @Offset",
+                new { Limit = limit, Offset = offset });
+            return results.ToList();
+        }
+
         public async Task<int> CountLocalFilesAsync(CancellationToken ct = default)
         {
             using var connection = CreateConnection();
@@ -482,6 +514,15 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             var results = await connection.QueryAsync<VerifiedCopy>(
                 "SELECT * FROM VerifiedCopies WHERE TrackId = @TrackId ORDER BY VerifiedAt DESC",
                 new { TrackId = trackId });
+            return results.ToList();
+        }
+
+        public async Task<IReadOnlyList<VerifiedCopy>> ListVerifiedCopiesAsync(int offset = 0, int limit = 100, CancellationToken ct = default)
+        {
+            using var connection = CreateConnection();
+            var results = await connection.QueryAsync<VerifiedCopy>(
+                "SELECT * FROM VerifiedCopies ORDER BY VerifiedAt DESC LIMIT @Limit OFFSET @Offset",
+                new { Limit = limit, Offset = offset });
             return results.ToList();
         }
 
@@ -539,7 +580,11 @@ namespace slskd.VirtualSoulfind.v2.Catalogue
             {
                 if (value is string str)
                 {
-                    return DateTimeOffset.Parse(str);
+                    return DateTimeOffset.TryParse(
+                        str,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.RoundtripKind,
+                        out var parsed) ? parsed : DateTimeOffset.MinValue;
                 }
 
                 return DateTimeOffset.MinValue;

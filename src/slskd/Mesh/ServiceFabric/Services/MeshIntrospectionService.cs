@@ -54,7 +54,7 @@ public class MeshIntrospectionService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}"
+                    ErrorMessage = "Unknown method"
                 }
             };
         }
@@ -75,7 +75,8 @@ public class MeshIntrospectionService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not implemented for mesh-introspect service");
+        _logger.LogWarning("[MeshIntrospect] Streaming requested by {PeerId}, but mesh introspection streaming is not implemented", context.RemotePeerId);
+        return stream.CloseAsync(cancellationToken);
     }
 
     private ServiceReply HandleGetStatus(ServiceCall call, MeshServiceContext context)
@@ -149,9 +150,10 @@ public class MeshIntrospectionService : IMeshService
 
     private ServiceReply HandleGetCapabilities(ServiceCall call, MeshServiceContext context)
     {
+        var serviceNames = _router.GetRegisteredServiceNames();
         var capabilities = new
         {
-            Services = new[] { "pods", "mesh-introspect" },
+            Services = serviceNames,
             Protocols = new[] { "service-call", "service-reply" },
             Features = new[] { "service-fabric", "dht-discovery" }
         };
@@ -171,9 +173,7 @@ public class MeshIntrospectionService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken)
     {
-        // Return list of services available on this node
-        // This is safe to expose as it only reveals service names, not content
-        var serviceNames = new[] { "pods", "mesh-introspect" }; // TODO: Get from router
+        var serviceNames = _router.GetRegisteredServiceNames();
 
         var services = new System.Collections.Generic.List<object>();
         foreach (var serviceName in serviceNames)

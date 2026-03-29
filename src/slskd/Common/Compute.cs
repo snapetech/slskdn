@@ -36,7 +36,7 @@ namespace slskd
             var computedDelay = Math.Floor((Math.Pow(2, iteration) - 1) / 2) * 1000;
             var clampedDelay = (int)Math.Min(computedDelay, maxDelayInMilliseconds);
 
-            var jitter = new Random().Next(1000);
+            var jitter = Random.Shared.Next(1000);
 
             return (clampedDelay, jitter);
         }

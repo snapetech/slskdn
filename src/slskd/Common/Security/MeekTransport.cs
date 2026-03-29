@@ -100,7 +100,7 @@ public class MeekTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "Meek transport unavailable";
             }
 
             _logger.LogWarning(ex, "Meek transport not available");
@@ -173,6 +173,7 @@ public class MeekTransport : IAnonymityTransport, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
+                response.Dispose();
                 throw new Exception($"Meek tunnel request failed: {response.StatusCode}");
             }
 
@@ -197,7 +198,7 @@ public class MeekTransport : IAnonymityTransport, IDisposable
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                _status.LastError = "Meek connection failed";
             }
 
             _logger.LogError(ex, "Failed to establish meek connection to {Host}:{Port}", host, port);
@@ -336,10 +337,10 @@ public class MeekTransport : IAnonymityTransport, IDisposable
         public override void Flush() { }
 
         public override int Read(byte[] buffer, int offset, int count) =>
-            ReadAsync(buffer, offset, count).GetAwaiter().GetResult();
+            ReadAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override void Write(byte[] buffer, int offset, int count) =>
-            WriteAsync(buffer, offset, count).GetAwaiter().GetResult();
+            WriteAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
@@ -353,7 +354,14 @@ public class MeekTransport : IAnonymityTransport, IDisposable
             {
                 _responseStream?.Dispose();
                 _initialResponse.Dispose();
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

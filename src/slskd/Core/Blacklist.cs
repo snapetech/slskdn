@@ -129,7 +129,7 @@ public class Blacklist
             try
             {
                 // P2P format: China Internet Information Center (CNNIC):1.2.4.0-1.2.4.255
-                if (IPAddressRange.TryParse(line.Split(':')[1], out _))
+                if (TryGetP2PRange(line, out var p2pRange) && IPAddressRange.TryParse(p2pRange, out _))
                 {
                     return BlacklistFormat.P2P;
                 }
@@ -227,7 +227,12 @@ public class Blacklist
                 // P2P format: China Internet Information Center (CNNIC):1.2.4.0-1.2.4.255
                 else if (format == BlacklistFormat.P2P)
                 {
-                    cidr = IPAddressRange.Parse(line.Split(':').Last());
+                    if (!TryGetP2PRange(line, out var p2pRange))
+                    {
+                        throw new FormatException($"Invalid P2P blacklist line: {line}");
+                    }
+
+                    cidr = IPAddressRange.Parse(p2pRange);
                 }
 
                 // DAT format: 001.002.004.000 - 001.002.004.255 , 000 , China Internet Information Center (CNNIC)
@@ -253,8 +258,16 @@ public class Blacklist
             }
 
             // grab the first octet of the first and last addresses in the range
-            var first = int.Parse(cidr!.Begin.ToString().Split('.')[0]);
-            var last = int.Parse(cidr.End.ToString().Split('.')[0]);
+            var firstBytes = cidr!.Begin.GetAddressBytes();
+            var lastBytes = cidr.End.GetAddressBytes();
+
+            if (firstBytes.Length != 4 || lastBytes.Length != 4)
+            {
+                throw new FormatException("Blacklist format only supports IPv4 CIDRs");
+            }
+
+            var first = firstBytes[0];
+            var last = lastBytes[0];
 
             var entry = (ToUint32(cidr.Begin), ToUint32(cidr.End));
 
@@ -300,8 +313,14 @@ public class Blacklist
     /// <returns>A value indicating whether the specified IP is contained within the blacklist.</returns>
     public virtual bool Contains(IPAddress ip)
     {
+        var addressBytes = ip.GetAddressBytes();
+        if (addressBytes.Length != 4)
+        {
+            return false;
+        }
+
         // grab the first octet
-        int first = ip.GetAddressBytes()[0];
+        int first = addressBytes[0];
 
         // check to see if *any* CIDRs covering this offset are in the blacklist
         // best case scenario for performance if not, roughly O(1)
@@ -337,5 +356,24 @@ public class Blacklist
         }
 
         return BitConverter.ToUInt32(bytes, 0);
+    }
+
+    private static bool TryGetP2PRange(string line, out string range)
+    {
+        range = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return false;
+        }
+
+        var separatorIndex = line.LastIndexOf(':');
+        if (separatorIndex <= 0 || separatorIndex == line.Length - 1)
+        {
+            return false;
+        }
+
+        range = line[(separatorIndex + 1)..].Trim();
+        return !string.IsNullOrWhiteSpace(range);
     }
 }

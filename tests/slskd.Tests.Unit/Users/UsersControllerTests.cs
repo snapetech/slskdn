@@ -37,5 +37,58 @@ namespace slskd.Tests.Unit.Users
             var okResult = result as OkObjectResult;
             Assert.Equal("privileged", okResult.Value);
         }
+
+        [Fact]
+        public void Group_Trims_User_Group_Username()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock.Setup(x => x.GetGroup("testuser")).Returns("privileged");
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = controller.Group(" testuser ");
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal("privileged", okResult.Value);
+        }
+
+        [Fact]
+        public void Group_With_Blank_Username_Returns_BadRequest()
+        {
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: Mock.Of<IUserService>(),
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = controller.Group("   ");
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task Info_WhenUserOffline_DoesNotLeakExceptionMessage()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock.Setup(x => x.GetInfoAsync("testuser")).ThrowsAsync(new UserOfflineException("sensitive detail"));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser");
+
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("User is offline", notFound.Value);
+        }
     }
 }

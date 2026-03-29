@@ -82,6 +82,26 @@ public class LoggingUtilsTests
     }
 
     [Fact]
+    public void SafeEndpoint_Ipv6Loopback_ReturnsFullEndpoint()
+    {
+        var endpoint = "[::1]:8080";
+
+        var result = LoggingUtils.SafeEndpoint(endpoint);
+
+        Assert.Equal(endpoint, result);
+    }
+
+    [Fact]
+    public void SafeEndpoint_PublicIpv6_ReturnsRedacted()
+    {
+        var endpoint = "[2001:db8::abcd]:8080";
+
+        var result = LoggingUtils.SafeEndpoint(endpoint);
+
+        Assert.Equal("xxxx:xxxx:xxxx:abcd:8080", result);
+    }
+
+    [Fact]
     public void SafeEndpoint_OnionAddress_ReturnsRedactedForm()
     {
         // Arrange
@@ -107,6 +127,26 @@ public class LoggingUtilsTests
         // Assert - hostname logic shortens to prefix...suffix (e.g. abc...i2p:8080)
         Assert.Contains("i2p", result);
         Assert.Contains("...", result);
+    }
+
+    [Fact]
+    public void SafeEndpoint_HostnameWithPort_PreservesPortAndRedactsHost()
+    {
+        var endpoint = "example.remote.host:4040";
+
+        var result = LoggingUtils.SafeEndpoint(endpoint);
+
+        Assert.Equal("rem...host:4040", result);
+    }
+
+    [Fact]
+    public void SafeEndpoint_HostnameContainingPrivateIpPrefix_IsNotTreatedAsLocal()
+    {
+        var endpoint = "172.example.com:8080";
+
+        var result = LoggingUtils.SafeEndpoint(endpoint);
+
+        Assert.Equal("exa...com:8080", result);
     }
 
     [Fact]
@@ -265,5 +305,3 @@ public class LoggingUtilsTests
     // Test class for logger mock (public so Moq can create ILogger<TestClass>)
     public class TestClass { }
 }
-
-

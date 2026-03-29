@@ -49,5 +49,20 @@ namespace slskd.Tests.Unit.Audio
             Assert.Equal(3, candidates.Count);
             Assert.Equal("v1", candidates[0].VariantId); // Lossless preferred, then quality
         }
+
+        [Fact]
+        public async Task AggregateStats_WithNoVariants_ReturnsNull()
+        {
+            var mockDb = new Mock<IHashDbService>();
+            mockDb.Setup(m => m.GetVariantsByRecordingAndProfileAsync("rec-empty", "FLAC", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<AudioVariant>());
+
+            var svc = new CanonicalStatsService(mockDb.Object, Mock.Of<Microsoft.Extensions.Logging.ILogger<CanonicalStatsService>>());
+
+            var stats = await svc.AggregateStatsAsync("rec-empty", "FLAC");
+
+            Assert.Null(stats);
+            mockDb.Verify(m => m.UpsertCanonicalStatsAsync(It.IsAny<CanonicalStats>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
     }
 }

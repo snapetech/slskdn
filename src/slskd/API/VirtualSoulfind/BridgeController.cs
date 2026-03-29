@@ -21,18 +21,18 @@ public class BridgeController : ControllerBase
     private readonly ILogger<BridgeController> logger;
     private readonly IBridgeApi bridgeApi;
     private readonly ISoulfindBridgeService bridgeService;
-    private readonly ITransferProgressProxy progressProxy;
+    private readonly IBridgeDashboard bridgeDashboard;
 
     public BridgeController(
         ILogger<BridgeController> logger,
         IBridgeApi bridgeApi,
         ISoulfindBridgeService bridgeService,
-        ITransferProgressProxy progressProxy)
+        IBridgeDashboard bridgeDashboard)
     {
         this.logger = logger;
         this.bridgeApi = bridgeApi;
         this.bridgeService = bridgeService;
-        this.progressProxy = progressProxy;
+        this.bridgeDashboard = bridgeDashboard;
     }
 
     /// <summary>
@@ -42,17 +42,23 @@ public class BridgeController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Search([FromBody] BridgeSearchRequest request, CancellationToken ct)
     {
-        logger.LogDebug("Bridge search: {Query}", request.Query);
+        if (request == null || string.IsNullOrWhiteSpace(request.Query))
+        {
+            return BadRequest(new { error = "Query is required" });
+        }
+
+        var query = request.Query.Trim();
+        logger.LogDebug("Bridge search: {Query}", query);
 
         try
         {
-            var result = await bridgeApi.SearchAsync(request.Query, ct);
+            var result = await bridgeApi.SearchAsync(query, ct);
             return Ok(result);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge search failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge search failed");
+            return StatusCode(500, new { error = "Bridge search failed" });
         }
     }
 
@@ -63,22 +69,36 @@ public class BridgeController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Download([FromBody] BridgeDownloadRequest request, CancellationToken ct)
     {
-        logger.LogDebug("Bridge download: {Username}/{Filename}", request.Username, request.Filename);
+        if (request == null)
+        {
+            return BadRequest(new { error = "Request is required" });
+        }
+
+        var username = request.Username?.Trim() ?? string.Empty;
+        var filename = request.Filename?.Trim() ?? string.Empty;
+        var targetPath = request.TargetPath?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(filename) || string.IsNullOrWhiteSpace(targetPath))
+        {
+            return BadRequest(new { error = "Username, filename, and targetPath are required" });
+        }
+
+        logger.LogDebug("Bridge download: {Username}/{Filename}", username, filename);
 
         try
         {
             var transferId = await bridgeApi.DownloadAsync(
-                request.Username,
-                request.Filename,
-                request.TargetPath,
+                username,
+                filename,
+                targetPath,
                 ct);
 
             return Ok(new { transfer_id = transferId });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge download failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge download failed");
+            return StatusCode(500, new { error = "Bridge download failed" });
         }
     }
 
@@ -98,8 +118,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge get rooms failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge get rooms failed");
+            return StatusCode(500, new { error = "Bridge get rooms failed" });
         }
     }
 
@@ -115,12 +135,14 @@ public class BridgeController : ControllerBase
         try
         {
             var health = await bridgeService.GetHealthAsync(ct);
+            var stats = await bridgeDashboard.GetStatsAsync(ct);
+            health.ActiveConnections = stats.CurrentConnections;
             return Ok(health);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge get status failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge get status failed");
+            return StatusCode(500, new { error = "Bridge get status failed" });
         }
     }
 
@@ -140,8 +162,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge start failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge start failed");
+            return StatusCode(500, new { error = "Bridge start failed" });
         }
     }
 
@@ -161,8 +183,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge stop failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge stop failed");
+            return StatusCode(500, new { error = "Bridge stop failed" });
         }
     }
 
@@ -173,13 +195,17 @@ public class BridgeController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetTransferProgress(string transferId, CancellationToken ct)
     {
+        transferId = transferId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(transferId))
+        {
+            return BadRequest(new { error = "TransferId is required" });
+        }
+
         logger.LogDebug("Bridge transfer progress: {TransferId}", transferId);
 
         try
         {
-            // Try to find proxy ID from transfer ID
-            // In practice, we'd maintain a mapping, but for now we'll use transfer ID as proxy ID
-            var progress = await progressProxy.GetLegacyProgressAsync(transferId, ct);
+            var progress = await bridgeApi.GetTransferProgressAsync(transferId, ct);
 
             if (progress == null)
             {
@@ -190,8 +216,8 @@ public class BridgeController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Bridge transfer progress failed: {Message}", ex.Message);
-            return StatusCode(500, new { error = ex.Message });
+            logger.LogError(ex, "Bridge transfer progress failed");
+            return StatusCode(500, new { error = "Bridge transfer progress failed" });
         }
     }
 }

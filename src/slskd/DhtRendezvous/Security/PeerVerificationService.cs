@@ -134,10 +134,15 @@ public sealed class PeerVerificationService
             _logger.LogWarning("Verification timed out for {Username}", claimedUsername);
             return VerificationResult.Failed("Verification timed out");
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Verification timed out for {Username}", claimedUsername);
+            return VerificationResult.Failed("Verification timed out");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying username {Username}", claimedUsername);
-            return VerificationResult.Failed($"Error: {ex.Message}");
+            return VerificationResult.Failed("Verification failed");
         }
     }
 

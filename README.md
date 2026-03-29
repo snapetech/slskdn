@@ -346,6 +346,12 @@ sudo systemctl enable --now slskd
 ```
 Access at http://localhost:5030
 
+If an Arch upgrade fails on `python-torchaudio` with `Cannot resume`, slskdn itself is fine — it was blocked only by an optional dependency workflow in AUR. Use the package helper documented at:
+- [packaging/aur/README.md#optional-fix-for-pythontorchaudio-download-failures](packaging/aur/README.md#optional-fix-for-python-torchaudio-download-failures)
+- `bash ./scripts/fix-python-torchaudio-no-resume.sh`
+
+This issue is **Arch/AUR-only**; other platforms are unaffected by this script.
+
 ### Development Builds
 For latest experimental features:
 

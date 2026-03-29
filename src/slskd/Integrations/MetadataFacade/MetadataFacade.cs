@@ -59,6 +59,7 @@ namespace slskd.Integrations.MetadataFacade
                 return null;
             }
 
+            recordingId = recordingId.Trim();
             var key = "mf:rec:" + recordingId;
             if (_cache?.TryGetValue(key, out MetadataResult? cached) == true && cached != null)
             {
@@ -95,6 +96,7 @@ namespace slskd.Integrations.MetadataFacade
                 return null;
             }
 
+            fingerprint = fingerprint.Trim();
             var cacheKey = $"mf:fp:{fingerprint}:{sampleRate}:{durationSeconds}";
             if (_cache?.TryGetValue(cacheKey, out MetadataResult? cached) == true && cached != null)
             {
@@ -118,7 +120,7 @@ namespace slskd.Integrations.MetadataFacade
             var fromMb = await GetByRecordingIdAsync(recordingId, cancellationToken).ConfigureAwait(false);
             if (fromMb is null)
             {
-                return new MetadataResult(
+                var fallback = new MetadataResult(
                     rec?.Artists?.FirstOrDefault()?.Name,
                     rec?.Title,
                     Album: null,
@@ -129,6 +131,8 @@ namespace slskd.Integrations.MetadataFacade
                     Year: null,
                     Genre: null,
                     MetadataResult.SourceAcoustId);
+                _cache?.Set(cacheKey, fallback, TimeSpan.FromSeconds(CacheFingerprintSeconds));
+                return fallback;
             }
 
             var combined = fromMb with { Source = MetadataResult.SourceAcoustId };
@@ -139,7 +143,13 @@ namespace slskd.Integrations.MetadataFacade
         /// <inheritdoc />
         public async Task<MetadataResult?> GetByFileAsync(string filePath, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(filePath) || !System.IO.File.Exists(filePath))
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return null;
+            }
+
+            filePath = filePath.Trim();
+            if (!System.IO.File.Exists(filePath))
             {
                 return null;
             }
@@ -208,6 +218,22 @@ namespace slskd.Integrations.MetadataFacade
                 _log.LogDebug(ex, "TagLib failed for {File}", filePath);
             }
 
+            var (parsedArtist, parsedTitle, parsedAlbum) = ParseSoulseekFilename(System.IO.Path.GetFileName(filePath));
+            if (!string.IsNullOrWhiteSpace(parsedArtist) || !string.IsNullOrWhiteSpace(parsedTitle))
+            {
+                return new MetadataResult(
+                    parsedArtist,
+                    parsedTitle,
+                    parsedAlbum,
+                    MusicBrainzRecordingId: null,
+                    MusicBrainzReleaseId: null,
+                    MusicBrainzArtistId: null,
+                    Isrc: null,
+                    Year: null,
+                    Genre: null,
+                    MetadataResult.SourceFileTags);
+            }
+
             return null;
         }
 
@@ -219,6 +245,7 @@ namespace slskd.Integrations.MetadataFacade
                 yield break;
             }
 
+            query = query.Trim();
             var hits = await _mb.SearchRecordingsAsync(query, limit, cancellationToken).ConfigureAwait(false);
             if (hits is null)
             {
@@ -227,11 +254,19 @@ namespace slskd.Integrations.MetadataFacade
 
             foreach (var h in hits)
             {
+                if (string.IsNullOrWhiteSpace(h.RecordingId) &&
+                    string.IsNullOrWhiteSpace(h.Title) &&
+                    string.IsNullOrWhiteSpace(h.Artist))
+                {
+                    _log.LogDebug("Skipping metadata search hit without recording ID or artist/title for query {Query}", query);
+                    continue;
+                }
+
                 yield return new MetadataResult(
                     h.Artist,
                     h.Title,
                     Album: null,
-                    h.RecordingId,
+                    string.IsNullOrWhiteSpace(h.RecordingId) ? null : h.RecordingId,
                     MusicBrainzReleaseId: null,
                     h.MusicBrainzArtistId,
                     Isrc: null,
@@ -246,6 +281,7 @@ namespace slskd.Integrations.MetadataFacade
         {
             if (string.IsNullOrWhiteSpace(filename))
                 return Task.FromResult<MetadataResult?>(null);
+            filename = filename.Trim();
             var (artist, title, album) = ParseSoulseekFilename(filename);
             if (string.IsNullOrWhiteSpace(artist) && string.IsNullOrWhiteSpace(title))
                 return Task.FromResult<MetadataResult?>(null);

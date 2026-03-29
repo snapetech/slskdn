@@ -71,9 +71,9 @@ namespace slskd.Cryptography
                 using var certificate = new X509Certificate2(fileName, password);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                result = ex.Message;
+                result = "Invalid certificate";
                 return false;
             }
         }

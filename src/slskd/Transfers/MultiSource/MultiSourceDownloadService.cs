@@ -776,7 +776,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             activity?.SetTag("swarm.download.error", ex.Message);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             _logger.LogError(ex, "SWARM DOWNLOAD FAILED: {Message}", ex.Message);
-            result.Error = ex.Message;
+            result.Error = "Multi-source download failed";
             result.Success = false;
             status.State = MultiSourceDownloadState.Failed;
             return result;
@@ -1204,14 +1204,12 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             // Speed monitor - cancel if too slow for too long
             var slowSince = (DateTime?)null;
             var lastBytes = 0L;
-            var random = new Random();
-
             var speedMonitorTask = Task.Run(async () =>
             {
                 while (!cts.Token.IsCancellationRequested && !limitedStream.LimitReached)
                 {
                     // Randomize check interval to prevent simultaneous cancellations
-                    await Task.Delay(2000 + random.Next(1000), cts.Token).ConfigureAwait(false);
+                    await Task.Delay(2000 + Random.Shared.Next(1000), cts.Token).ConfigureAwait(false);
 
                     var currentBytes = limitedStream.BytesWritten;
                     var bytesInInterval = currentBytes - lastBytes;
@@ -1253,7 +1251,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                             {
                                 _logger.LogWarning("[SWARM] {Username} too slow ({Speed:F1} KB/s < {Threshold:F1} KB/s for {Duration:F0}s) - timeout {Timeout}s",
                                     username, speedBps / 1024.0, dynamicMinSpeed / 1024.0, slowDuration / 1000.0, peerTimeoutSeconds);
-                                result.Error = $"Too slow: {speedBps / 1024.0:F1} KB/s for {slowDuration / 1000.0:F0}s";
+                                result.Error = "Chunk download timed out due to low throughput";
 
                                 // Set timeout instead of blacklist - peer can retry later
                                 status.SetPeerTimeout(username, TimeSpan.FromSeconds(peerTimeoutSeconds));
@@ -1350,7 +1348,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             }
             else
             {
-                result.Error = $"Only got {limitedStream.BytesWritten}/{chunkSize} bytes";
+                result.Error = "Incomplete chunk download";
             }
 
             return result;
@@ -1359,7 +1357,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         {
             stopwatch.Stop();
             result.TimeMs = stopwatch.ElapsedMilliseconds;
-            result.Error = ex.Message;
+            result.Error = "Chunk download failed";
             result.Success = false;
 
             _logger.LogWarning(ex, "Chunk download failed from {Username}: {Message}", username, ex.Message);

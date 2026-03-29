@@ -92,7 +92,7 @@ namespace slskd.Shares
         private Channel<T> Channel { get; }
         private Action<T> Handler { get; }
         private Action<Exception>? ExceptionHandler { get; }
-        private TaskCompletionSource TaskCompletionSource { get; } = new TaskCompletionSource();
+        private TaskCompletionSource TaskCompletionSource { get; } = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         private CancellationToken CancellationToken { get; }
         private object SyncRoot { get; } = new object();
 
@@ -127,9 +127,15 @@ namespace slskd.Shares
             }
             catch (Exception ex)
             {
-                ExceptionHandler?.Invoke(ex);
-                TaskCompletionSource.SetException(ex);
-                throw;
+                try
+                {
+                    ExceptionHandler?.Invoke(ex);
+                    TaskCompletionSource.TrySetException(ex);
+                }
+                catch (Exception exceptionHandlerException)
+                {
+                    TaskCompletionSource.TrySetException(new AggregateException(ex, exceptionHandlerException));
+                }
             }
             finally
             {

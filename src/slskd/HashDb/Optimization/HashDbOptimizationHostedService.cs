@@ -14,11 +14,13 @@ using Microsoft.Extensions.Options;
 /// <summary>
 ///     Hosted service that runs HashDb optimization tasks on startup and periodically.
 /// </summary>
-public class HashDbOptimizationHostedService : IHostedService
+public sealed class HashDbOptimizationHostedService : IHostedService, IDisposable
 {
     private readonly IHashDbOptimizationService _optimizationService;
     private readonly ILogger<HashDbOptimizationHostedService> _logger;
     private readonly HashDbOptimizationOptions _options;
+    private CancellationTokenSource? _startupOptimizationCts;
+    private Task? _startupOptimizationTask;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="HashDbOptimizationHostedService"/> class.
@@ -45,20 +47,28 @@ public class HashDbOptimizationHostedService : IHostedService
         try
         {
             _logger.LogInformation("[HashDbOptimization] Running automatic index optimization on startup");
+            _startupOptimizationCts?.Cancel();
+            _startupOptimizationCts?.Dispose();
+            var startupOptimizationCts = new CancellationTokenSource();
+            _startupOptimizationCts = startupOptimizationCts;
 
             // Run index optimization (non-blocking, fire-and-forget)
-            _ = Task.Run(async () =>
+            _startupOptimizationTask = Task.Run(async () =>
             {
                 try
                 {
-                    await _optimizationService.OptimizeIndexesAsync(cancellationToken).ConfigureAwait(false);
+                    await _optimizationService.OptimizeIndexesAsync(startupOptimizationCts.Token).ConfigureAwait(false);
                     _logger.LogInformation("[HashDbOptimization] Automatic index optimization completed");
+                }
+                catch (OperationCanceledException) when (startupOptimizationCts.IsCancellationRequested)
+                {
+                    _logger.LogInformation("[HashDbOptimization] Automatic index optimization cancelled");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "[HashDbOptimization] Automatic index optimization failed (non-critical)");
                 }
-            }, cancellationToken);
+            }, CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -69,10 +79,33 @@ public class HashDbOptimizationHostedService : IHostedService
     }
 
     /// <inheritdoc/>
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        // Nothing to clean up
-        return Task.CompletedTask;
+        _startupOptimizationCts?.Cancel();
+
+        if (_startupOptimizationTask != null)
+        {
+            try
+            {
+                await _startupOptimizationTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+        }
+
+        _startupOptimizationTask = null;
+        _startupOptimizationCts?.Dispose();
+        _startupOptimizationCts = null;
+    }
+
+    public void Dispose()
+    {
+        _startupOptimizationCts?.Cancel();
+        _startupOptimizationCts?.Dispose();
+        _startupOptimizationCts = null;
+        GC.SuppressFinalize(this);
     }
 }
 

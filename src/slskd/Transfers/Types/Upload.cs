@@ -30,7 +30,7 @@ namespace slskd.Transfers
         public string Group { get; set; } = string.Empty;
         public DateTime? Ready { get; set; } = null;
         public DateTime? Started { get; set; } = null;
-        public TaskCompletionSource TaskCompletionSource { get; set; } = new TaskCompletionSource();
+        public TaskCompletionSource TaskCompletionSource { get; set; } = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         public string Username { get; set; } = string.Empty;
     }
 }

@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -303,9 +304,10 @@ public sealed class NatDetectionService : IAsyncDisposable
         {
             try
             {
-                var parts = stunServer.Split(':');
-                var host = parts[0];
-                var port = int.Parse(parts[1]);
+                if (!TryParseHostAndPort(stunServer, out var host, out var port))
+                {
+                    throw new FormatException($"Invalid STUN server format: {stunServer}");
+                }
 
                 var ip = await StunQueryAsync(host, port, cancellationToken);
                 if (ip is not null && !IsPrivateIp(ip))
@@ -320,6 +322,43 @@ public sealed class NatDetectionService : IAsyncDisposable
                 _logger.LogDebug(ex, "STUN query to {Server} failed", stunServer);
             }
         }
+    }
+
+    private static bool TryParseHostAndPort(string endpoint, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 0;
+
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return false;
+        }
+
+        string portPart;
+        if (endpoint.StartsWith("[", StringComparison.Ordinal))
+        {
+            var closingBracketIndex = endpoint.IndexOf(']');
+            if (closingBracketIndex <= 1 || closingBracketIndex >= endpoint.Length - 2 || endpoint[closingBracketIndex + 1] != ':')
+            {
+                return false;
+            }
+
+            host = endpoint[1..closingBracketIndex];
+            portPart = endpoint[(closingBracketIndex + 2)..];
+        }
+        else
+        {
+            var separatorIndex = endpoint.LastIndexOf(':');
+            if (separatorIndex <= 0 || separatorIndex == endpoint.Length - 1)
+            {
+                return false;
+            }
+
+            host = endpoint[..separatorIndex];
+            portPart = endpoint[(separatorIndex + 1)..];
+        }
+
+        return int.TryParse(portPart, out port) && port is > 0 and <= ushort.MaxValue;
     }
 
     private async Task<IPAddress?> StunQueryAsync(string host, int port, CancellationToken cancellationToken)
@@ -342,10 +381,13 @@ public sealed class NatDetectionService : IAsyncDisposable
         request[7] = 0x42;
 
         // Transaction ID (random)
-        new Random().NextBytes(request.AsSpan(8, 12));
+        RandomNumberGenerator.Fill(request.AsSpan(8, 12));
 
         var hostAddresses = await Dns.GetHostAddressesAsync(host, cancellationToken);
-        var endpoint = new IPEndPoint(hostAddresses.First(), port);
+        var endpointAddress = hostAddresses
+            .OrderBy(address => address.AddressFamily == AddressFamily.InterNetwork ? 0 : 1)
+            .First();
+        var endpoint = new IPEndPoint(endpointAddress, port);
 
         await udp.SendAsync(request, request.Length, endpoint);
 
@@ -367,11 +409,16 @@ public sealed class NatDetectionService : IAsyncDisposable
 
         // Skip header, parse attributes
         var offset = 20;
-        while (offset + 4 < response.Length)
+        while (offset + 4 <= response.Length)
         {
             var attrType = (response[offset] << 8) | response[offset + 1];
             var attrLen = (response[offset + 2] << 8) | response[offset + 3];
             offset += 4;
+
+            if (offset + attrLen > response.Length)
+            {
+                break;
+            }
 
             // XOR-MAPPED-ADDRESS (0x0020) or MAPPED-ADDRESS (0x0001).
             if ((attrType == 0x0020 || attrType == 0x0001) && attrLen >= 8)
@@ -480,7 +527,7 @@ public sealed class NatDetectionService : IAsyncDisposable
 
         try
         {
-            using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            using var socket = new Socket(_publicIp.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             socket.Bind(new IPEndPoint(_publicIp, 0));
             return true;
         }
@@ -492,10 +539,21 @@ public sealed class NatDetectionService : IAsyncDisposable
 
     private static bool IsPrivateIp(IPAddress ip)
     {
+        if (IPAddress.IsLoopback(ip))
+        {
+            return true;
+        }
+
         var bytes = ip.GetAddressBytes();
+        if (ip.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            var isUniqueLocal = bytes.Length > 0 && (bytes[0] & 0xFE) == 0xFC;
+            return ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || isUniqueLocal;
+        }
+
         if (bytes.Length != 4)
         {
-            return false; // IPv6 - assume not private for simplicity
+            return false;
         }
 
         // 10.0.0.0/8
@@ -518,6 +576,12 @@ public sealed class NatDetectionService : IAsyncDisposable
 
         // 127.0.0.0/8
         if (bytes[0] == 127)
+        {
+            return true;
+        }
+
+        // 169.254.0.0/16
+        if (bytes[0] == 169 && bytes[1] == 254)
         {
             return true;
         }

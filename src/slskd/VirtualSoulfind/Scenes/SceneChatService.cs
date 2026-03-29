@@ -12,7 +12,7 @@ using OptionsModel = slskd.Options;
 /// <summary>
 /// Interface for scene chat.
 /// </summary>
-public interface ISceneChatService
+public interface ISceneChatService : IDisposable
 {
     /// <summary>
     /// Send a chat message to a scene.
@@ -37,30 +37,43 @@ public interface ISceneChatService
 /// Optional scene chat service (overlay pubsub-based).
 /// Phase 6C: T-819 - Real implementation with MessagePack serialization.
 /// </summary>
-public class SceneChatService : ISceneChatService
+public sealed class SceneChatService : ISceneChatService
 {
     private readonly ILogger<SceneChatService> logger;
     private readonly IScenePubSubService pubsub;
     private readonly IOptionsMonitor<OptionsModel> optionsMonitor;
-    private readonly Identity.IProfileService? profileService;
+    private readonly Identity.IProfileService profileService;
     private readonly ConcurrentDictionary<string, List<SceneChatMessage>> messageCache = new();
+    private bool disposed;
 
     public SceneChatService(
         ILogger<SceneChatService> logger,
         IScenePubSubService pubsub,
         IOptionsMonitor<OptionsModel> optionsMonitor,
-        Identity.IProfileService? profileService = null)
+        Identity.IProfileService profileService)
     {
         this.logger = logger;
         this.pubsub = pubsub;
         this.optionsMonitor = optionsMonitor;
-        this.profileService = profileService;
+        this.profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
 
         // Subscribe to pubsub messages
         pubsub.MessageReceived += OnPubSubMessageReceived;
     }
 
     public event EventHandler<SceneChatMessage>? MessageReceived;
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        pubsub.MessageReceived -= OnPubSubMessageReceived;
+        disposed = true;
+        GC.SuppressFinalize(this);
+    }
 
     public async Task SendMessageAsync(string sceneId, string content, CancellationToken ct)
     {
@@ -73,19 +86,10 @@ public class SceneChatService : ISceneChatService
         logger.LogDebug("[VSF-SCENE-CHAT] Sending message to scene {SceneId}: {Content}",
             sceneId, content);
 
-        // Get actual peer ID
-        string peerId = "local";
-        if (profileService != null)
+        var profile = await profileService.GetMyProfileAsync(ct);
+        if (string.IsNullOrWhiteSpace(profile.PeerId))
         {
-            try
-            {
-                var profile = await profileService.GetMyProfileAsync(ct);
-                peerId = profile.PeerId;
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "[VSF-SCENE-CHAT] Failed to get peer ID, using placeholder");
-            }
+            throw new InvalidOperationException("Local peer profile does not have a peer ID.");
         }
 
         // Create chat message
@@ -93,7 +97,7 @@ public class SceneChatService : ISceneChatService
         {
             MessageId = Ulid.NewUlid().ToString(),
             SceneId = sceneId,
-            PeerId = peerId,
+            PeerId = profile.PeerId,
             Timestamp = DateTimeOffset.UtcNow,
             Content = content
         };
@@ -114,12 +118,20 @@ public class SceneChatService : ISceneChatService
         int limit,
         CancellationToken ct)
     {
+        if (limit <= 0)
+        {
+            return Task.FromResult(new List<SceneChatMessage>());
+        }
+
         logger.LogDebug("[VSF-SCENE-CHAT] Getting messages for scene {SceneId}, limit={Limit}",
             sceneId, limit);
 
         if (messageCache.TryGetValue(sceneId, out var messages))
         {
-            return Task.FromResult(messages.TakeLast(limit).ToList());
+            lock (messages)
+            {
+                return Task.FromResult(messages.TakeLast(limit).ToList());
+            }
         }
 
         return Task.FromResult(new List<SceneChatMessage>());
@@ -132,8 +144,18 @@ public class SceneChatService : ISceneChatService
             var message = DeserializeMessage(e.Message);
             if (message != null)
             {
+                if (string.IsNullOrWhiteSpace(message.SceneId))
+                {
+                    message.SceneId = e.SceneId;
+                }
+
+                if (string.IsNullOrWhiteSpace(message.PeerId) && !string.IsNullOrWhiteSpace(e.PeerId))
+                {
+                    message.PeerId = e.PeerId;
+                }
+
                 StoreMessage(message);
-                MessageReceived?.Invoke(this, message);
+                RaiseMessageReceived(message);
 
                 logger.LogDebug("[VSF-SCENE-CHAT] Received message {MessageId} in scene {SceneId}",
                     message.MessageId, message.SceneId);
@@ -145,13 +167,40 @@ public class SceneChatService : ISceneChatService
         }
     }
 
+    private void RaiseMessageReceived(SceneChatMessage message)
+    {
+        if (MessageReceived is null)
+        {
+            return;
+        }
+
+        foreach (EventHandler<SceneChatMessage> handler in MessageReceived.GetInvocationList())
+        {
+            try
+            {
+                handler.Invoke(this, message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "[VSF-SCENE-CHAT] MessageReceived subscriber failed");
+            }
+        }
+    }
+
     private void StoreMessage(SceneChatMessage message)
     {
         var messages = messageCache.GetOrAdd(message.SceneId, _ => new List<SceneChatMessage>());
 
         lock (messages)
         {
+            if (!string.IsNullOrWhiteSpace(message.MessageId) &&
+                messages.Any(existing => existing.MessageId == message.MessageId))
+            {
+                return;
+            }
+
             messages.Add(message);
+            messages.Sort((left, right) => left.Timestamp.CompareTo(right.Timestamp));
 
             // Keep only last 1000 messages per scene
             if (messages.Count > 1000)
@@ -193,6 +242,8 @@ public class SceneChatService : ISceneChatService
                 return new SceneChatMessage
                 {
                     MessageId = Ulid.NewUlid().ToString(),
+                    SceneId = string.Empty,
+                    PeerId = string.Empty,
                     Content = content,
                     Timestamp = DateTimeOffset.UtcNow
                 };

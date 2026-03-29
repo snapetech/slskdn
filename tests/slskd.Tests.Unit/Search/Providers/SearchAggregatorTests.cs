@@ -164,6 +164,44 @@ public class SearchAggregatorTests
         Assert.Equal("scene", result.PrimarySource);
     }
 
+    [Fact]
+    public async Task AggregateAsync_Continues_WhenAProviderFails()
+    {
+        // Arrange
+        var aggregator = CreateAggregator();
+        var successfulProvider = CreateMockProvider("pod", new List<SearchResult>
+        {
+            CreateSearchResult("pod", "test.flac", 1000, "pod", "same-user")
+        });
+
+        var failingProvider = new Mock<ISearchProvider>();
+        failingProvider.Setup(p => p.Name).Returns("scene");
+        failingProvider.Setup(p => p.StartSearchAsync(
+                It.IsAny<SearchRequest>(),
+                It.IsAny<ISearchResultSink>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("provider failed"));
+
+        var request = new SearchRequest
+        {
+            SearchText = "test",
+            TimeoutSeconds = 5,
+            ResponseLimit = 100,
+            FileLimit = 10000
+        };
+
+        // Act
+        var results = await aggregator.AggregateAsync(
+            new[] { successfulProvider, failingProvider.Object },
+            request,
+            CancellationToken.None);
+
+        // Assert
+        var result = Assert.Single(results);
+        Assert.Equal("pod", result.PrimarySource);
+        Assert.Equal(new[] { "pod" }, result.SourceProviders);
+    }
+
     private ISearchProvider CreateMockProvider(string name, List<SearchResult> results)
     {
         var mock = new Mock<ISearchProvider>();

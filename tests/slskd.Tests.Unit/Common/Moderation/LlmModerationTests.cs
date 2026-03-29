@@ -232,7 +232,46 @@ namespace slskd.Tests.Unit.Common.Moderation
             Assert.Equal(LlmModeration.SeverityLevel.Safe, response.Severity);
             Assert.Equal(0.0, response.Confidence);
             Assert.NotNull(response.Error);
-            Assert.Contains("Internal Server Error", response.Error);
+            Assert.Equal("LLM moderation request failed", response.Error);
+            Assert.Equal("LLM service error", response.Reasoning);
+            Assert.DoesNotContain("Internal Server Error", response.Error);
+            var health = await provider.GetHealthStatusAsync();
+            Assert.Equal("LLM moderation request failed", health.LastErrorMessage);
+        }
+
+        [Fact]
+        public async Task HttpLlmModerationProvider_ParseFailure_DoesNotLeakParserDetails()
+        {
+            var handler = new MockHttpMessageHandler();
+            handler.SetupResponse(
+                req => req.RequestUri?.ToString().Contains("/chat/completions") == true,
+                HttpStatusCode.OK,
+                "{\"choices\":[{\"message\":{\"content\":\"not-json\"}}]}");
+
+            var httpClient = new HttpClient(handler);
+            var optionsMock = new Mock<IOptionsMonitor<LlmModerationOptions>>();
+            optionsMock.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions
+            {
+                Endpoint = "https://api.example.com",
+                ApiKey = "test-key",
+                Timeout = TimeSpan.FromSeconds(1)
+            });
+            var loggerMock = new Mock<ILogger<HttpLlmModerationProvider>>();
+
+            var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
+
+            var response = await provider.ModerateAsync(new LlmModerationRequest
+            {
+                ContentType = LlmModeration.ContentType.Text,
+                Content = "Test content"
+            });
+
+            Assert.Equal(ModerationVerdict.Unknown, response.Verdict);
+            Assert.Equal("Failed to parse LLM response", response.Reasoning);
+            Assert.True(response.Details.TryGetValue("parse_error", out var parseError));
+            Assert.Equal("LLM response parsing failed", parseError);
+            Assert.DoesNotContain("invalid", parseError, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("json", parseError, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -362,5 +401,3 @@ namespace slskd.Tests.Unit.Common.Moderation
         }
     }
 }
-
-

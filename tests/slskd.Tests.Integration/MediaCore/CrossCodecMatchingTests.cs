@@ -5,6 +5,7 @@
 namespace slskd.Tests.Integration.MediaCore;
 
 using slskd.MediaCore;
+using slskd.Mesh.Dht;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;
@@ -224,7 +225,17 @@ public class CrossCodecMatchingTests : IDisposable
 
         var contentIds = new[] { artistId, albumId, trackId };
         var portabilityLogger = new Mock<ILogger<MetadataPortability>>();
-        var metadataPortability = new MetadataPortability(_registry, _ipldMapper, portabilityLogger.Object);
+        var descriptorRetriever = new Mock<IDescriptorRetriever>();
+        descriptorRetriever
+            .Setup(d => d.RetrieveAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string contentId, bool _, CancellationToken _) => new DescriptorRetrievalResult(
+                Found: true,
+                Descriptor: new ContentDescriptor { ContentId = contentId },
+                RetrievedAt: DateTimeOffset.UtcNow,
+                RetrievalDuration: TimeSpan.Zero,
+                FromCache: false,
+                Verification: null));
+        var metadataPortability = new MetadataPortability(_registry, descriptorRetriever.Object, _ipldMapper, portabilityLogger.Object);
 
         // Act - Export metadata
         var exportedPackage = await metadataPortability.ExportAsync(contentIds, includeLinks: true);
@@ -234,7 +245,7 @@ public class CrossCodecMatchingTests : IDisposable
         var freshIpldLogger = new Mock<ILogger<IpldMapper>>();
         var freshIpldMapper = new IpldMapper(freshRegistry, freshIpldLogger.Object);
         var freshPortabilityLogger = new Mock<ILogger<MetadataPortability>>();
-        var freshMetadataPortability = new MetadataPortability(freshRegistry, freshIpldMapper, freshPortabilityLogger.Object);
+        var freshMetadataPortability = new MetadataPortability(freshRegistry, Mock.Of<IDescriptorRetriever>(), freshIpldMapper, freshPortabilityLogger.Object);
 
         // Act - Import metadata
         var importResult = await freshMetadataPortability.ImportAsync(exportedPackage);
@@ -368,4 +379,3 @@ public class CrossCodecMatchingTests : IDisposable
         return noisySamples;
     }
 }
-

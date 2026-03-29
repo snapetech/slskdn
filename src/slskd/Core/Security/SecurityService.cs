@@ -80,9 +80,18 @@ namespace slskd
                 throw new NotFoundException($"The provided API key does not match an existing key");
             }
 
-            if (!record.Value.Cidr.Split(',')
-                .Select(cidr => IPAddressRange.Parse(cidr))
-                .Any(range => range.Contains(callerIpAddress)))
+            var isCallerInRange = false;
+
+            foreach (var cidr in record.Value.Cidr.Split(','))
+            {
+                if (!string.IsNullOrWhiteSpace(cidr) && IPAddressRange.TryParse(cidr, out var range) && range.Contains(callerIpAddress))
+                {
+                    isCallerInRange = true;
+                    break;
+                }
+            }
+
+            if (!isCallerInRange)
             {
                 throw new OutOfRangeException("The remote IP address is not within the range specified for the key");
             }

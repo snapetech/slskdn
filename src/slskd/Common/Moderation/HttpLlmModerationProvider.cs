@@ -131,7 +131,7 @@ namespace slskd.Common.Moderation
             {
                 var processingTime = _requestTimer.Elapsed;
                 _lastError = DateTimeOffset.UtcNow;
-                _lastErrorMessage = ex.Message;
+                _lastErrorMessage = "LLM moderation request failed";
 
                 _logger.LogError(ex,
                     "[HttpLlm] Moderation failed | RequestId={RequestId} | Time={TimeMs}ms | Error={Message}",
@@ -146,8 +146,8 @@ namespace slskd.Common.Moderation
                     Severity = LlmModeration.SeverityLevel.Safe,
                     Categories = LlmModeration.ContentCategory.None,
                     Confidence = 0.0,
-                    Reasoning = $"LLM service error: {ex.Message}",
-                    Error = ex.Message,
+                    Reasoning = "LLM service error",
+                    Error = "LLM moderation request failed",
                     ProcessingTime = processingTime,
                     Timestamp = DateTimeOffset.UtcNow
                 };
@@ -229,7 +229,7 @@ namespace slskd.Common.Moderation
                 MaxTokens = 500
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
+            using var response = await _httpClient.PostAsJsonAsync(
                 _options.CurrentValue.Endpoint.TrimEnd('/') + "/chat/completions",
                 openAiRequest,
                 cancellationToken);
@@ -335,8 +335,12 @@ Respond with JSON as described above.",
 
                 return new ModerationAnalysis
                 {
-                    Verdict = Enum.Parse<ModerationVerdict>(verdictStr),
-                    Severity = Enum.Parse<LlmModeration.SeverityLevel>(severityStr),
+                    Verdict = Enum.TryParse(verdictStr, ignoreCase: true, out ModerationVerdict verdict)
+                        ? verdict
+                        : ModerationVerdict.Unknown,
+                    Severity = Enum.TryParse(severityStr, ignoreCase: true, out LlmModeration.SeverityLevel severity)
+                        ? severity
+                        : LlmModeration.SeverityLevel.Safe,
                     Categories = categories,
                     Confidence = Math.Clamp(confidence, 0.0, 1.0),
                     Reasoning = reasoning,
@@ -355,7 +359,7 @@ Respond with JSON as described above.",
                     Categories = LlmModeration.ContentCategory.None,
                     Confidence = 0.0,
                     Reasoning = "Failed to parse LLM response",
-                    Details = new Dictionary<string, string> { ["parse_error"] = ex.Message }
+                    Details = new Dictionary<string, string> { ["parse_error"] = "LLM response parsing failed" }
                 };
             }
         }

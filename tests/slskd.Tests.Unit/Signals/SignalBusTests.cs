@@ -3,6 +3,7 @@ namespace slskd.Tests.Unit.Signals;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -237,6 +238,50 @@ public class SignalBusTests
     }
 
     [Fact]
+    public async Task OnSignalReceived_WhenOneSubscriberThrows_StillInvokesRemainingSubscribers()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+        var receivedSignals = new List<Signal>();
+
+        await signalBus.SubscribeAsync((signal, ct) => throw new InvalidOperationException("boom"));
+        await signalBus.SubscribeAsync((signal, ct) =>
+        {
+            receivedSignals.Add(signal);
+            return Task.CompletedTask;
+        });
+
+        var testSignal = CreateTestSignal(SignalChannel.Mesh);
+
+        await signalBus.OnSignalReceivedAsync(testSignal, CancellationToken.None);
+
+        Assert.Single(receivedSignals);
+        Assert.Equal(testSignal.SignalId, receivedSignals[0].SignalId);
+    }
+
+    [Fact]
+    public void Dispose_DisposesRegisteredChannelHandlers()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+        var meshHandlerMock = new Mock<ISignalChannelHandler>();
+        var btHandlerMock = new Mock<ISignalChannelHandler>();
+
+        meshHandlerMock
+            .Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        btHandlerMock
+            .Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        signalBus.RegisterChannelHandler(SignalChannel.Mesh, meshHandlerMock.Object);
+        signalBus.RegisterChannelHandler(SignalChannel.BtExtension, btHandlerMock.Object);
+
+        signalBus.Dispose();
+
+        meshHandlerMock.Verify(x => x.Dispose(), Times.Once);
+        btHandlerMock.Verify(x => x.Dispose(), Times.Once);
+    }
+
+    [Fact]
     public void RegisterChannelHandler_ShouldStartReceiving()
     {
         // Arrange
@@ -250,6 +295,39 @@ public class SignalBusTests
 
         // Assert
         channelHandlerMock.Verify(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void RegisterChannelHandler_WhenChannelAlreadyRegistered_IgnoresDuplicateHandler()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+
+        var firstHandlerMock = new Mock<ISignalChannelHandler>();
+        firstHandlerMock.Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var secondHandlerMock = new Mock<ISignalChannelHandler>();
+        secondHandlerMock.Setup(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        signalBus.RegisterChannelHandler(SignalChannel.Mesh, firstHandlerMock.Object);
+        signalBus.RegisterChannelHandler(SignalChannel.Mesh, secondHandlerMock.Object);
+
+        firstHandlerMock.Verify(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Once);
+        secondHandlerMock.Verify(x => x.StartReceivingAsync(It.IsAny<Func<Signal, CancellationToken, Task>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void Dispose_ShouldCancelCleanupTask()
+    {
+        var signalBus = new SignalBus(loggerMock.Object, optionsMonitorMock.Object);
+        var cleanupTaskField = typeof(SignalBus).GetField("cleanupTask", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(cleanupTaskField);
+
+        signalBus.Dispose();
+
+        var cleanupTask = Assert.IsAssignableFrom<Task>(cleanupTaskField!.GetValue(signalBus));
+        Assert.True(cleanupTask.Wait(TimeSpan.FromSeconds(30)));
     }
 
     private static Signal CreateTestSignal(params SignalChannel[] channels)
@@ -266,4 +344,3 @@ public class SignalBusTests
         );
     }
 }
-

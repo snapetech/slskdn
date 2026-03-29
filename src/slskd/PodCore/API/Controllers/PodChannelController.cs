@@ -57,6 +57,7 @@ public class PodChannelController : ControllerBase
         [FromBody] PodChannel channel,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -67,13 +68,27 @@ public class PodChannelController : ControllerBase
             return BadRequest("Channel data is required");
         }
 
+        channel.ChannelId = channel.ChannelId?.Trim() ?? string.Empty;
+        channel.Name = channel.Name?.Trim() ?? string.Empty;
+        channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim();
+        channel.Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim();
+        if (string.IsNullOrWhiteSpace(channel.ChannelId))
+        {
+            return BadRequest("Channel ID is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            return BadRequest("Channel name is required");
+        }
+
         try
         {
             // Verify pod exists
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             var createdChannel = await _podService.CreateChannelAsync(podId, channel, cancellationToken);
@@ -81,11 +96,13 @@ public class PodChannelController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Invalid create channel request for pod {PodId}", podId);
+            return BadRequest("Invalid channel request");
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Create channel operation rejected for pod {PodId}", podId);
+            return BadRequest("Invalid channel request");
         }
         catch (Exception ex)
         {
@@ -111,6 +128,7 @@ public class PodChannelController : ControllerBase
         [FromRoute] string podId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -122,7 +140,7 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             var channels = await _podService.GetChannelsAsync(podId, cancellationToken);
@@ -154,6 +172,8 @@ public class PodChannelController : ControllerBase
         [FromRoute] string channelId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -170,13 +190,13 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             var channel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
             if (channel == null)
             {
-                return NotFound($"Channel {channelId} does not exist in pod {podId}");
+                return NotFound("Channel not found");
             }
 
             return Ok(channel);
@@ -211,6 +231,8 @@ public class PodChannelController : ControllerBase
         [FromBody] PodChannel channel,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -226,6 +248,15 @@ public class PodChannelController : ControllerBase
             return BadRequest("Channel data is required");
         }
 
+        channel.ChannelId = channel.ChannelId?.Trim() ?? string.Empty;
+        channel.Name = channel.Name?.Trim() ?? string.Empty;
+        channel.BindingInfo = string.IsNullOrWhiteSpace(channel.BindingInfo) ? null : channel.BindingInfo.Trim();
+        channel.Description = string.IsNullOrWhiteSpace(channel.Description) ? null : channel.Description.Trim();
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            return BadRequest("Channel name is required");
+        }
+
         // Ensure channel ID matches route parameter
         if (channel.ChannelId != channelId)
         {
@@ -238,14 +269,14 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             // Verify channel exists
             var existingChannel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
             if (existingChannel == null)
             {
-                return NotFound($"Channel {channelId} does not exist in pod {podId}");
+                return NotFound("Channel not found");
             }
 
             var success = await _podService.UpdateChannelAsync(podId, channel, cancellationToken);
@@ -258,11 +289,13 @@ public class PodChannelController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Invalid update channel request for pod {PodId}/{ChannelId}", podId, channelId);
+            return BadRequest("Invalid channel request");
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Update channel operation rejected for pod {PodId}/{ChannelId}", podId, channelId);
+            return BadRequest("Invalid channel request");
         }
         catch (Exception ex)
         {
@@ -292,6 +325,8 @@ public class PodChannelController : ControllerBase
         [FromRoute] string channelId,
         CancellationToken cancellationToken = default)
     {
+        podId = podId?.Trim() ?? string.Empty;
+        channelId = channelId?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(podId))
         {
             return BadRequest("Pod ID is required");
@@ -308,14 +343,14 @@ public class PodChannelController : ControllerBase
             var pod = await _podService.GetPodAsync(podId, cancellationToken);
             if (pod == null)
             {
-                return NotFound($"Pod {podId} does not exist");
+                return NotFound("Pod not found");
             }
 
             // Verify channel exists
             var channel = await _podService.GetChannelAsync(podId, channelId, cancellationToken);
             if (channel == null)
             {
-                return NotFound($"Channel {channelId} does not exist in pod {podId}");
+                return NotFound("Channel not found");
             }
 
             var success = await _podService.DeleteChannelAsync(podId, channelId, cancellationToken);
@@ -328,7 +363,8 @@ public class PodChannelController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            _logger.LogWarning(ex, "Delete channel operation rejected for pod {PodId}/{ChannelId}", podId, channelId);
+            return BadRequest("Invalid channel request");
         }
         catch (Exception ex)
         {

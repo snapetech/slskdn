@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Soulseek;
+using slskd.Transfers.MultiSource;
 
 /// <summary>
 /// Service for sharing and requesting capability files via Soulseek.
@@ -57,30 +58,7 @@ public sealed class CapabilityFileService
     /// </summary>
     public byte[] GenerateCapabilityFile()
     {
-        var caps = new CapabilityFileContent
-        {
-            Client = "slskdn",
-            Version = Program.SemanticVersion,
-            ProtocolVersion = 1,
-            Capabilities = PeerCapabilityFlags.SupportsDHT | PeerCapabilityFlags.SupportsMeshSync | PeerCapabilityFlags.SupportsSwarm | PeerCapabilityFlags.SupportsFlacHashDb,
-            Features = new[]
-            {
-                "dht",
-                "mesh_sync",
-                "swarm_download",
-                "flac_hash_db",
-                "multipart",
-            },
-            OverlayPort = 50305, // TODO: Get from config
-            Timestamp = DateTimeOffset.UtcNow,
-        };
-
-        var json = JsonSerializer.Serialize(caps, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-
+        var json = _capabilityService.GetCapabilityFileContent();
         return Encoding.UTF8.GetBytes(json);
     }
 
@@ -89,6 +67,12 @@ public sealed class CapabilityFileService
     /// </summary>
     public bool IsCapabilityFileRequest(string filename)
     {
+        if (string.IsNullOrWhiteSpace(filename))
+        {
+            return false;
+        }
+
+        filename = NormalizeCapabilityPath(filename);
         if (string.Equals(filename, CapabilityFilePath, StringComparison.OrdinalIgnoreCase))
         {
             return true;
@@ -115,6 +99,13 @@ public sealed class CapabilityFileService
         string username,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return null;
+        }
+
+        username = username.Trim();
+
         // Check cache first
         if (_cache.TryGetValue(username, out var cached))
         {
@@ -137,11 +128,7 @@ public sealed class CapabilityFileService
             {
                 _logger.LogDebug("Requesting capability file from {Username} at {Path}", username, path);
 
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(TimeSpan.FromSeconds(30));
-
-                // Try to download the file
-                var data = await DownloadSmallFileAsync(username, path, maxBytes: 4096, cts.Token);
+                var data = await DownloadSmallFileWithTimeoutAsync(username, path, 4096, TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
 
                 if (data is not null && data.Length > 0)
                 {
@@ -178,8 +165,55 @@ public sealed class CapabilityFileService
             }
         }
 
+        try
+        {
+            var userInfo = await GetUserInfoWithTimeoutAsync(username, TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
+            var parsedCaps = _capabilityService.ParseCapabilityTag(userInfo?.Description ?? string.Empty);
+            if (parsedCaps != null)
+            {
+                parsedCaps.Username = username;
+                _capabilityService.SetPeerCapabilities(username, parsedCaps);
+
+                var fallback = BuildCapabilityFileFromPeerCapabilities(parsedCaps);
+                _cache[username] = new CachedCapabilityFile
+                {
+                    Content = fallback,
+                    FetchedAt = DateTimeOffset.UtcNow,
+                };
+
+                _logger.LogInformation("Recovered capabilities for {Username} from UserInfo description tags", username);
+                return fallback;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Failed to recover capabilities from UserInfo for {Username}", username);
+        }
+
         _logger.LogDebug("No capability file available from {Username}", username);
         return null;
+    }
+
+    private async Task<byte[]?> DownloadSmallFileWithTimeoutAsync(
+        string username,
+        string filename,
+        int maxBytes,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout);
+        return await DownloadSmallFileAsync(username, filename, maxBytes, cts.Token).ConfigureAwait(false);
+    }
+
+    private async Task<UserInfo?> GetUserInfoWithTimeoutAsync(
+        string username,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout);
+        return await _soulseekClient.GetUserInfoAsync(username, cts.Token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -190,10 +224,42 @@ public sealed class CapabilityFileService
         try
         {
             var json = Encoding.UTF8.GetString(data);
-            return JsonSerializer.Deserialize<CapabilityFileContent>(json, new JsonSerializerOptions
+            var content = JsonSerializer.Deserialize<CapabilityFileContent>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
             });
+
+            if (content != null)
+            {
+                content.Client = content.Client?.Trim() ?? string.Empty;
+                content.Version = content.Version?.Trim() ?? string.Empty;
+                content.Features = content.Features?
+                    .Where(feature => !string.IsNullOrWhiteSpace(feature))
+                    .Select(feature => feature.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray() ?? Array.Empty<string>();
+                if (content.Capabilities == PeerCapabilityFlags.None && content.Features.Length > 0)
+                {
+                    content.Capabilities = ParseCapabilitiesFromFeatures(content.Features);
+                }
+            }
+
+            if (content == null ||
+                string.IsNullOrWhiteSpace(content.Client) ||
+                string.IsNullOrWhiteSpace(content.Version) ||
+                content.ProtocolVersion <= 0)
+            {
+                _logger.LogDebug("Rejected malformed capability file");
+                return null;
+            }
+
+            if (content.OverlayPort < 0 || content.OverlayPort > 65535)
+            {
+                _logger.LogDebug("Rejected capability file with invalid overlay port {Port}", content.OverlayPort);
+                return null;
+            }
+
+            return content;
         }
         catch (Exception ex)
         {
@@ -218,29 +284,106 @@ public sealed class CapabilityFileService
         _cache.Clear();
     }
 
-    private Task<byte[]?> DownloadSmallFileAsync(
+    private static CapabilityFileContent BuildCapabilityFileFromPeerCapabilities(PeerCapabilities capabilities)
+    {
+        var (client, version) = ParseClientIdentity(capabilities.ClientVersion);
+        return new CapabilityFileContent
+        {
+            Client = client,
+            Version = version,
+            ProtocolVersion = capabilities.ProtocolVersion,
+            Capabilities = capabilities.Flags,
+            Features = GetFeatures(capabilities.Flags),
+            OverlayPort = 0,
+            Timestamp = DateTimeOffset.UtcNow,
+        };
+    }
+
+    private static string[] GetFeatures(PeerCapabilityFlags flags)
+    {
+        var features = new List<string>();
+
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsDHT))
+            features.Add("dht");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsHashExchange))
+            features.Add("hash_exchange");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsPartialDownload))
+            features.Add("partial_download");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsMeshSync))
+            features.Add("mesh_sync");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsFlacHashDb))
+            features.Add("flac_hash_db");
+        if (flags.HasFlag(PeerCapabilityFlags.SupportsSwarm))
+            features.Add("swarm_download");
+
+        return features.ToArray();
+    }
+
+    private async Task<byte[]?> DownloadSmallFileAsync(
         string username,
         string filename,
         int maxBytes,
         CancellationToken cancellationToken)
     {
-        // Note: This is a simplified implementation
-        // In practice, you'd use the Soulseek client's download functionality
-        // with a limited byte count
         try
         {
-            // Queue a download request for the capability file
-            // The actual implementation would need to hook into the Soulseek download flow
-            // For now, we return null to indicate not implemented
-            // TODO: Implement via ISoulseekClient download APIs
-            _logger.LogDebug("Capability file download not yet implemented for {Username}/{Path}",
-                username, filename);
-            return Task.FromResult<byte[]?>(null);
+            var browseResult = await _soulseekClient.BrowseAsync(username, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var normalizedFilename = NormalizeCapabilityPath(filename);
+            var remoteFile = browseResult.Directories
+                .SelectMany(directory => directory.Files.Select(file => new
+                {
+                    RemoteFilename = string.IsNullOrWhiteSpace(directory.Name)
+                        ? file.Filename
+                        : $"{directory.Name}\\{file.Filename}",
+                    NormalizedRemoteFilename = NormalizeCapabilityPath(string.IsNullOrWhiteSpace(directory.Name)
+                        ? file.Filename
+                        : $"{directory.Name}\\{file.Filename}"),
+                    file.Size,
+                }))
+                .FirstOrDefault(file =>
+                    string.Equals(file.NormalizedRemoteFilename, normalizedFilename, StringComparison.OrdinalIgnoreCase) ||
+                    file.NormalizedRemoteFilename.EndsWith(normalizedFilename, StringComparison.OrdinalIgnoreCase));
+            if (remoteFile == null)
+            {
+                _logger.LogDebug("Capability file {Path} not exposed by {Username} browse result", filename, username);
+                return null;
+            }
+
+            if (remoteFile.Size <= 0 || remoteFile.Size > maxBytes)
+            {
+                _logger.LogDebug("Capability file {Path} from {Username} has unsupported size {Size}", filename, username, remoteFile.Size);
+                return null;
+            }
+
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            using var memoryStream = new MemoryStream((int)remoteFile.Size);
+            using var limitedStream = new LimitedWriteStream(memoryStream, maxBytes, linkedCts);
+
+            try
+            {
+                await _soulseekClient.DownloadAsync(
+                    username: username,
+                    remoteFilename: remoteFile.RemoteFilename,
+                    outputStreamFactory: () => Task.FromResult<Stream>(limitedStream),
+                    size: remoteFile.Size,
+                    startOffset: 0,
+                    cancellationToken: linkedCts.Token,
+                    options: new TransferOptions(
+                        maximumLingerTime: 1000,
+                        disposeOutputStreamOnCompletion: false)).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (limitedStream.LimitReached)
+            {
+                _logger.LogDebug("Capability file download from {Username} reached size limit after {Bytes} bytes", username, limitedStream.BytesWritten);
+            }
+
+            var bytes = memoryStream.ToArray();
+            return bytes.Length == 0 ? null : bytes;
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Error downloading capability file");
-            return Task.FromResult<byte[]?>(null);
+            return null;
         }
     }
 
@@ -248,6 +391,59 @@ public sealed class CapabilityFileService
     {
         public required CapabilityFileContent Content { get; init; }
         public required DateTimeOffset FetchedAt { get; init; }
+    }
+
+    private static PeerCapabilityFlags ParseCapabilitiesFromFeatures(IEnumerable<string> features)
+    {
+        var flags = PeerCapabilityFlags.None;
+        foreach (var feature in features)
+        {
+            switch (feature.Trim().ToLowerInvariant())
+            {
+                case "dht":
+                    flags |= PeerCapabilityFlags.SupportsDHT;
+                    break;
+                case "hash_exchange":
+                    flags |= PeerCapabilityFlags.SupportsHashExchange;
+                    break;
+                case "partial_download":
+                    flags |= PeerCapabilityFlags.SupportsPartialDownload;
+                    break;
+                case "mesh_sync":
+                    flags |= PeerCapabilityFlags.SupportsMeshSync;
+                    break;
+                case "flac_hash_db":
+                    flags |= PeerCapabilityFlags.SupportsFlacHashDb;
+                    break;
+                case "swarm_download":
+                    flags |= PeerCapabilityFlags.SupportsSwarm;
+                    break;
+            }
+        }
+
+        return flags;
+    }
+
+    private static string NormalizeCapabilityPath(string path)
+    {
+        return path.Trim().Replace('\\', '/');
+    }
+
+    private static (string Client, string Version) ParseClientIdentity(string? clientVersion)
+    {
+        if (string.IsNullOrWhiteSpace(clientVersion))
+        {
+            return ("slskdn", "unknown");
+        }
+
+        clientVersion = clientVersion.Trim();
+        var separator = clientVersion.IndexOf('/');
+        if (separator > 0 && separator < clientVersion.Length - 1)
+        {
+            return (clientVersion[..separator].Trim(), clientVersion[(separator + 1)..].Trim());
+        }
+
+        return ("slskdn", clientVersion);
     }
 }
 

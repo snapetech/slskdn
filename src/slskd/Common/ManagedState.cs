@@ -21,6 +21,7 @@
 namespace slskd
 {
     using System;
+    using System.Threading;
     using System.Text.Json;
     using Microsoft.Extensions.DependencyInjection;
 
@@ -185,14 +186,43 @@ namespace slskd
         /// <returns>The updated state.</returns>
         public T SetValue(Func<T, T> setter)
         {
+            Action<(T? Previous, T Current)>? changed;
+            (T? Previous, T Current) args;
+
             lock (Lock)
             {
                 var previous = CurrentValue!.ToJson().FromJson<T>();
                 CurrentValue = setter(CurrentValue);
+                args = (previous, CurrentValue);
+                changed = Changed;
+            }
 
-                Changed?.Invoke((previous, CurrentValue));
+            if (changed is null)
+            {
                 return CurrentValue;
             }
+
+            List<Exception>? exceptions = null;
+
+            foreach (Action<(T? Previous, T Current)> handler in changed.GetInvocationList())
+            {
+                try
+                {
+                    handler.Invoke(args);
+                }
+                catch (Exception ex)
+                {
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(ex);
+                }
+            }
+
+            if (exceptions is not null)
+            {
+                throw new AggregateException(exceptions);
+            }
+
+            return CurrentValue;
         }
 
 #pragma warning disable CS0693 // Type parameter has the same name as the type parameter from outer type
@@ -207,7 +237,7 @@ namespace slskd
                 Listener = listener;
             }
 
-            private bool Disposed { get; set; }
+            private int disposed;
             private Action<(T Previous, T Current)> Listener { get; }
             private ManagedState<T> StateMonitor { get; }
 
@@ -217,18 +247,44 @@ namespace slskd
                 GC.SuppressFinalize(this);
             }
 
-            public void OnChange((T? Previous, T Current) args) => Listener.Invoke((args.Previous!, args.Current));
+            public void OnChange((T? Previous, T Current) args)
+            {
+                if (Volatile.Read(ref disposed) != 0)
+                {
+                    return;
+                }
+
+                List<Exception>? exceptions = null;
+
+                try
+                {
+                    Listener.Invoke((args.Previous!, args.Current));
+                }
+                catch (Exception ex)
+                {
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(ex);
+                }
+
+                if (exceptions is not null)
+                {
+                    if (exceptions.Count == 1)
+                    {
+                        throw exceptions[0];
+                    }
+
+                    throw new AggregateException(exceptions);
+                }
+            }
 
             protected virtual void Dispose(bool disposing)
             {
-                if (!Disposed)
+                if (Interlocked.Exchange(ref disposed, 1) == 0)
                 {
                     if (disposing)
                     {
                         StateMonitor.Changed -= OnChange;
                     }
-
-                    Disposed = true;
                 }
             }
         }

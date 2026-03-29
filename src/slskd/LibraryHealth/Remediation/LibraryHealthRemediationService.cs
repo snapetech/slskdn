@@ -295,17 +295,9 @@ namespace slskd.LibraryHealth.Remediation
                     };
 
                     // Start download asynchronously (fire and forget for now)
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await multiSourceDownloads.DownloadAsync(downloadRequest, ct).ConfigureAwait(false);
-                        }
-                        catch (Exception ex)
-                        {
-                            log.LogError(ex, "[LH-Remediation] Download failed for recording {RecordingId}", recordingId);
-                        }
-                    }, ct);
+                    _ = ObserveBackgroundTaskAsync(
+                        Task.Run(() => multiSourceDownloads.DownloadAsync(downloadRequest, CancellationToken.None), CancellationToken.None),
+                        recordingId);
 
                     downloadJobs.Add(downloadRequest.Id);
                     log.LogInformation(
@@ -408,6 +400,18 @@ namespace slskd.LibraryHealth.Remediation
             log.LogInformation("[LH-Remediation] Creating canonical replacement job for {Count} files", issues.Count);
 
             return await CreateTrackRedownloadJobAsync(issues, ct).ConfigureAwait(false);
+        }
+
+        private async Task ObserveBackgroundTaskAsync(Task task, string recordingId)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex, "[LH-Remediation] Download failed for recording {RecordingId}", recordingId);
+            }
         }
     }
 }

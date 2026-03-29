@@ -45,6 +45,12 @@ public class LibraryHealthController : ControllerBase
         [FromQuery] int limit = 100,
         CancellationToken cancellationToken = default)
     {
+        path = string.IsNullOrWhiteSpace(path) ? null : path.Trim();
+        if (limit <= 0)
+        {
+            return BadRequest(new { error = "limit must be greater than 0" });
+        }
+
         logger.LogInformation("Library health check requested for path: {Path}", path ?? "(all)");
 
         var summary = await healthService.GetSummaryAsync(path ?? string.Empty, cancellationToken);
@@ -87,12 +93,17 @@ public class LibraryHealthController : ControllerBase
     {
         logger.LogInformation("Remediation job requested for {IssueCount} issues", request?.IssueIds?.Count ?? 0);
 
-        if (request?.IssueIds == null || request.IssueIds.Count == 0)
+        var issueIds = request?.IssueIds?
+            .Where(issueId => !string.IsNullOrWhiteSpace(issueId))
+            .Select(issueId => issueId.Trim())
+            .ToList();
+
+        if (issueIds == null || issueIds.Count == 0)
         {
             return BadRequest(new { error = "issue_ids is required" });
         }
 
-        var jobId = await healthService.CreateRemediationJobAsync(request.IssueIds, cancellationToken);
+        var jobId = await healthService.CreateRemediationJobAsync(issueIds, cancellationToken);
 
         return Ok(new { job_id = jobId });
     }

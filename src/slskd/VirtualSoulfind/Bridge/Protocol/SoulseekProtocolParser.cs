@@ -5,7 +5,6 @@
 namespace slskd.VirtualSoulfind.Bridge.Protocol;
 
 using System;
-using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -57,8 +56,7 @@ public class SoulseekProtocolParser
         {
             // Read message length (4 bytes, little-endian)
             var lengthBuffer = new byte[4];
-            var bytesRead = await stream.ReadAsync(lengthBuffer, 0, 4, ct);
-            if (bytesRead != 4)
+            if (!await ReadExactlyAsync(stream, lengthBuffer, 0, lengthBuffer.Length, ct))
             {
                 return null; // Connection closed
             }
@@ -74,8 +72,7 @@ public class SoulseekProtocolParser
 
             // Read message type (4 bytes, little-endian)
             var typeBuffer = new byte[4];
-            bytesRead = await stream.ReadAsync(typeBuffer, 0, 4, ct);
-            if (bytesRead != 4)
+            if (!await ReadExactlyAsync(stream, typeBuffer, 0, typeBuffer.Length, ct))
             {
                 return null;
             }
@@ -93,11 +90,10 @@ public class SoulseekProtocolParser
             var payload = new byte[payloadLength];
             if (payloadLength > 0)
             {
-                bytesRead = await stream.ReadAsync(payload, 0, payloadLength, ct);
-                if (bytesRead != payloadLength)
+                if (!await ReadExactlyAsync(stream, payload, 0, payload.Length, ct))
                 {
-                    logger.LogWarning("[SOULSEEK-PROTO] Incomplete payload: expected {Expected}, got {Actual}",
-                        payloadLength, bytesRead);
+                    logger.LogWarning("[SOULSEEK-PROTO] Incomplete payload: expected {Expected} bytes",
+                        payloadLength);
                     return null;
                 }
             }
@@ -108,11 +104,37 @@ public class SoulseekProtocolParser
                 Payload = payload
             };
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "[SOULSEEK-PROTO] Error reading message");
             return null;
         }
+    }
+
+    private static async Task<bool> ReadExactlyAsync(Stream stream, byte[] buffer, int offset, int count, CancellationToken ct)
+    {
+        var totalRead = 0;
+        while (totalRead < count)
+        {
+            var bytesRead = await stream.ReadAsync(
+                buffer,
+                offset + totalRead,
+                count - totalRead,
+                ct);
+
+            if (bytesRead == 0)
+            {
+                return false;
+            }
+
+            totalRead += bytesRead;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -139,6 +161,10 @@ public class SoulseekProtocolParser
             }
 
             await stream.FlushAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

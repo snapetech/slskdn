@@ -127,4 +127,34 @@ public class BlacklistTests
             }
         }
     }
+
+    [Fact]
+    public async Task Load_P2PWithAdditionalColonInLabel_LoadsSuccessfully()
+    {
+        var tempFile = Path.GetTempFileName();
+
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "Example: Internal Feed:1.2.4.0-1.2.4.255" + Environment.NewLine);
+
+            var bl = new Blacklist();
+            await bl.Load(tempFile, BlacklistFormat.P2P);
+
+            Assert.True(bl.Contains(IPAddress.Parse("1.2.4.42")));
+            Assert.False(bl.Contains(IPAddress.Parse("2.2.2.2")));
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task Contains_Ipv6Address_ReturnsFalse()
+    {
+        var bl = new Blacklist();
+        await bl.Load("Data/Blacklist/cidr.txt", BlacklistFormat.CIDR);
+
+        Assert.False(bl.Contains(IPAddress.IPv6Loopback));
+    }
 }

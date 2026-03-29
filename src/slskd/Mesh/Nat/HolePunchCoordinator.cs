@@ -86,7 +86,7 @@ public class HolePunchCoordinator : IHolePunchCoordinator
                     false,
                     null,
                     null,
-                    reply.ErrorMessage ?? "Unknown error");
+                    "Hole punch request failed");
             }
 
             var response = JsonSerializer.Deserialize<HolePunchResponse>(reply.Payload);
@@ -119,7 +119,7 @@ public class HolePunchCoordinator : IHolePunchCoordinator
         catch (Exception ex)
         {
             _logger.LogError(ex, "[HolePunchCoord] Exception during hole punch request to {TargetPeerId}", targetPeerId);
-            return new HolePunchResult(false, null, null, $"Exception: {ex.Message}");
+            return new HolePunchResult(false, null, null, "Hole punch request failed");
         }
     }
 }

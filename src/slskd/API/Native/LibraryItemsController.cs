@@ -67,6 +67,8 @@ public class LibraryItemsController : ControllerBase
         [FromQuery] int limit = 100,
         CancellationToken cancellationToken = default)
     {
+        query = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
+        kinds = string.IsNullOrWhiteSpace(kinds) ? null : kinds.Trim();
         logger?.LogInformation("Library items search: query={Query}, kinds={Kinds}, limit={Limit}", query, kinds, limit);
 
         try
@@ -137,7 +139,7 @@ public class LibraryItemsController : ControllerBase
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error searching library items");
-            return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            return StatusCode(500, new { error = "Internal server error" });
         }
     }
 
@@ -147,6 +149,8 @@ public class LibraryItemsController : ControllerBase
         int limit,
         CancellationToken cancellationToken)
     {
+        query = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
+        kinds = string.IsNullOrWhiteSpace(kinds) ? null : kinds.Trim();
         if (options == null)
         {
             return new List<LibraryItemResponse>();
@@ -301,6 +305,12 @@ public class LibraryItemsController : ControllerBase
             string contentId,
             CancellationToken cancellationToken = default)
     {
+        contentId = contentId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return BadRequest(new { error = "ContentId is required" });
+        }
+
         logger?.LogInformation("Get library item: contentId={ContentId}", contentId);
 
         try
@@ -334,7 +344,7 @@ public class LibraryItemsController : ControllerBase
 
             if (foundFile == null)
             {
-                return NotFound(new { error = "Item not found", contentId });
+                return NotFound(new { error = "Item not found" });
             }
 
             var foundItem = await ConvertToLibraryItemAsync(
@@ -346,7 +356,7 @@ public class LibraryItemsController : ControllerBase
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error getting library item");
-            return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            return StatusCode(500, new { error = "Internal server error" });
         }
     }
 

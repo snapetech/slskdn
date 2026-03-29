@@ -111,7 +111,9 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.False(result.Success);
-            Assert.True(result.Errors.Any(e => e.Contains("does not exist", StringComparison.Ordinal)));
+            var error = Assert.Single(result.Errors);
+            Assert.Equal("Import path does not exist", error);
+            Assert.DoesNotContain(nonexistentPath, error, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -126,6 +128,35 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
 
             // Assert
             Assert.True(result.Warnings.Any(w => w.Contains("Cross-realm data import", StringComparison.Ordinal)));
+        }
+
+        [Fact]
+        public async Task ExportPodDataAsync_WhenExportThrows_ReturnsSanitizedError()
+        {
+            var exportPath = Path.Combine(_tempDirectory, "bad\0path");
+
+            var result = await _tool.ExportPodDataAsync(exportPath);
+
+            Assert.False(result.Success);
+            Assert.Equal("Migration export failed", result.ErrorMessage);
+            Assert.DoesNotContain("null", result.ErrorMessage ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task ImportPodDataAsync_WhenManifestReadThrows_ReturnsSanitizedError()
+        {
+            var importPath = Path.Combine(_tempDirectory, "invalid-manifest");
+            Directory.CreateDirectory(importPath);
+            await File.WriteAllTextAsync(
+                Path.Combine(importPath, "migration-manifest.json"),
+                "{ invalid json");
+
+            var result = await _tool.ImportPodDataAsync(importPath, "target-realm");
+
+            Assert.False(result.Success);
+            var error = Assert.Single(result.Errors);
+            Assert.Equal("Import failed", error);
+            Assert.DoesNotContain("invalid", error, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -221,5 +252,3 @@ namespace slskd.Tests.Unit.Mesh.Realm.Migration
         }
     }
 }
-
-

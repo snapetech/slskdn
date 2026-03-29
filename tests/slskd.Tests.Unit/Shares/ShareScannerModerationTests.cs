@@ -156,6 +156,96 @@ public class ShareRepositoryModerationTests : IDisposable
     }
 
     [Fact]
+    public void TryValidate_OnFreshRepository_ReturnsTrue()
+    {
+        var isValid = _repository.TryValidate(out var problems);
+
+        Assert.True(isValid);
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public void Create_WithDiscardExisting_ClearsContentItems()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        _repository.InsertFile(
+            maskedFilename: "allowed.mp3",
+            originalFilename: "/tmp/allowed.mp3",
+            touchedAt: DateTime.UtcNow,
+            file: new Soulseek.File(1, "allowed.mp3", 1000, "mp3"),
+            timestamp: timestamp,
+            isBlocked: false,
+            isQuarantined: false);
+
+        _repository.UpsertContentItem(
+            contentId: "cid:1",
+            domain: "audio",
+            workId: "work:1",
+            maskedFilename: "allowed.mp3",
+            isAdvertisable: true,
+            moderationReason: null,
+            checkedAt: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+        Assert.Equal(1, _repository.CountAdvertisableItems());
+
+        _repository.Create(discardExisting: true);
+
+        Assert.Equal(0, _repository.CountAdvertisableItems());
+    }
+
+    [Fact]
+    public void TryValidate_WhenContentItemsTableIsMissing_MigratesItInPlace()
+    {
+        using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_databasePath}"))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DROP TABLE IF EXISTS content_items;";
+            command.ExecuteNonQuery();
+        }
+
+        var isValid = _repository.TryValidate(out var problems);
+
+        Assert.True(isValid);
+        Assert.Empty(problems);
+        Assert.Equal(0, _repository.CountAdvertisableItems());
+    }
+
+    [Fact]
+    public void Dispose_DisposesKeepaliveTimer()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ShareRepositoryDisposeTest_{Guid.NewGuid()}.db");
+        var repository = new SqliteShareRepository($"Data Source={path}");
+
+        repository.Dispose();
+
+        try
+        {
+            Assert.Throws<ObjectDisposedException>(() => repository.EnableKeepalive(true));
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
+    {
+        using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");
+
+        var backingField = typeof(SqliteShareRepository).GetField("<ConnectionString>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        backingField!.SetValue(repository, "Data Source=/definitely/missing/share-validation/path/db.sqlite;Mode=ReadOnly");
+
+        var isValid = repository.TryValidate(out var problems);
+
+        Assert.False(isValid);
+        var problem = Assert.Single(problems);
+        Assert.Equal("Failed to validate database", problem);
+    }
+
+    [Fact]
     public void ListFiles_ShouldExcludeBlockedFiles()
     {
         // Arrange - Insert both blocked and allowed files
@@ -315,4 +405,3 @@ public class McpSecurityComplianceTests
         }
     }
 }
-

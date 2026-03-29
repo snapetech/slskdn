@@ -30,6 +30,7 @@ using MonoTorrent.Dht;
 /// </summary>
 public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousService
 {
+    private readonly object _lifecycleSync = new();
     private readonly ILogger<DhtRendezvousService> _logger;
     private readonly IMeshOverlayServer _overlayServer;
     private readonly IMeshOverlayConnector _overlayConnector;
@@ -49,6 +50,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private long _totalPeersDiscovered;
     private long _totalConnectionsAttempted;
     private long _totalConnectionsSucceeded;
+    private CancellationTokenSource? _backgroundInitializationCts;
+    private Task? _backgroundInitializationTask;
+    private bool _backgroundServiceStarted;
 
     // Rendezvous infohashes (SHA1 of key strings)
     private static readonly InfoHash MainInfohash = InfoHash.FromMemory(SHA1.HashData(Encoding.UTF8.GetBytes("slskdn-mesh-v1")));
@@ -75,91 +79,139 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     public int DiscoveredPeerCount => _discoveredPeers.Values.Count;
     public int ActiveMeshConnections => _registry.Count;
 
-    public override Task StartAsync(CancellationToken cancellationToken)
+    public override async Task StartAsync(CancellationToken cancellationToken)
     {
+        var shouldStartBackgroundService = false;
+
+        lock (_lifecycleSync)
+        {
+            if (!_backgroundServiceStarted)
+            {
+                _backgroundServiceStarted = true;
+                shouldStartBackgroundService = true;
+            }
+        }
+
+        if (shouldStartBackgroundService)
+        {
+            await base.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         if (!_options.Enabled)
         {
             _logger.LogInformation("DHT rendezvous is disabled");
-            return base.StartAsync(cancellationToken);
+            return;
         }
 
         _logger.LogInformation("Starting DHT rendezvous service with MonoTorrent DHT");
 
-        // Start the background service immediately to avoid blocking other hosted services
-        _ = base.StartAsync(cancellationToken).ContinueWith(startTask =>
+        lock (_lifecycleSync)
         {
-            if (startTask.IsFaulted)
+            if (_dhtEngine is not null)
             {
-                _logger.LogError(startTask.Exception?.GetBaseException(), "Failed to start base DHT rendezvous service");
                 return;
             }
 
-            // Initialize DHT in the background (non-blocking)
-            _ = Task.Run(async () =>
+            CancelBackgroundInitializationNoLock();
+
+            var backgroundInitializationCts = new CancellationTokenSource();
+            _backgroundInitializationCts = backgroundInitializationCts;
+            _backgroundInitializationTask = StartBackgroundInitializationAsync(backgroundInitializationCts.Token);
+        }
+    }
+
+    private async Task StartBackgroundInitializationAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Run(async () =>
             {
-                try
-                {
-                    // Initialize MonoTorrent DHT
-                    await InitializeDhtAsync(cancellationToken);
+                // Initialize MonoTorrent DHT
+                await InitializeDhtAsync(cancellationToken).ConfigureAwait(false);
 
-                    // Detect beacon capability
-                    IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken);
+                // Detect beacon capability
+                IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken).ConfigureAwait(false);
 
-                    if (IsBeaconCapable)
-                    {
-                        _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
-                        await _overlayServer.StartAsync(cancellationToken);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
-                    }
+                if (IsBeaconCapable)
+                {
+                    _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
+                    await _overlayServer.StartAsync(cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
+                }
 
-                    _startedAt = DateTimeOffset.UtcNow;
-                    _logger.LogInformation("DHT rendezvous service initialization complete");
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogInformation("DHT rendezvous service initialization cancelled");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to initialize DHT rendezvous service in background");
-                }
-            }, cancellationToken).ContinueWith(initTask =>
-            {
-                if (initTask.IsFaulted)
-                {
-                    _logger.LogError(initTask.Exception?.GetBaseException(), "DHT initialization task failed");
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
-        }, TaskContinuationOptions.OnlyOnRanToCompletion);
-
-        return Task.CompletedTask;
+                _startedAt = DateTimeOffset.UtcNow;
+                _logger.LogInformation("DHT rendezvous service initialization complete");
+            }, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("DHT rendezvous service initialization cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize DHT rendezvous service in background");
+        }
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken = default)
     {
+        CancellationTokenSource? backgroundInitializationCts;
+        Task? backgroundInitializationTask;
+        DhtEngine? dhtEngine;
+        IDhtListener? dhtListener;
+        var shouldStopBackgroundService = false;
+
+        lock (_lifecycleSync)
+        {
+            shouldStopBackgroundService = _backgroundServiceStarted;
+            _backgroundServiceStarted = false;
+            backgroundInitializationCts = _backgroundInitializationCts;
+            _backgroundInitializationCts = null;
+            backgroundInitializationTask = _backgroundInitializationTask;
+            _backgroundInitializationTask = null;
+            dhtEngine = DetachDhtEngineNoLock();
+            dhtListener = DetachDhtListenerNoLock();
+        }
+
+        backgroundInitializationCts?.Cancel();
+
+        if (backgroundInitializationTask != null)
+        {
+            try
+            {
+                await backgroundInitializationTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown.
+            }
+        }
+
+        backgroundInitializationCts?.Dispose();
+
         _logger.LogInformation("Stopping DHT rendezvous service");
 
         try
         {
             // Save DHT state for faster restart
-            if (_dhtEngine is not null)
+            if (dhtEngine is not null)
             {
                 var dhtStatePath = Path.Combine(Program.AppDirectory, "dht_nodes.bin");
-                var nodes = await _dhtEngine.SaveNodesAsync();
+                var nodes = await dhtEngine.SaveNodesAsync();
                 if (nodes.Length > 0)
                 {
                     await File.WriteAllBytesAsync(dhtStatePath, nodes.ToArray(), cancellationToken);
                     _logger.LogDebug("Saved {Count} bytes of DHT state", nodes.Length);
                 }
 
-                await _dhtEngine.StopAsync();
-                _dhtEngine.Dispose();
-                _dhtEngine = null;
+                await dhtEngine.StopAsync();
+                dhtEngine.Dispose();
             }
 
+            dhtListener?.Stop();
             await _overlayServer.StopAsync();
         }
         catch (Exception ex)
@@ -167,7 +219,10 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             _logger.LogWarning(ex, "Error during DHT shutdown");
         }
 
-        await base.StopAsync(cancellationToken);
+        if (shouldStopBackgroundService)
+        {
+            await base.StopAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     Task IDhtRendezvousService.StopAsync(CancellationToken cancellationToken)
@@ -249,72 +304,129 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         }
     }
 
+    public override void Dispose()
+    {
+        CancellationTokenSource? backgroundInitializationCts;
+        DhtEngine? dhtEngine;
+        IDhtListener? dhtListener;
+
+        lock (_lifecycleSync)
+        {
+            _backgroundServiceStarted = false;
+            backgroundInitializationCts = _backgroundInitializationCts;
+            _backgroundInitializationCts = null;
+            _backgroundInitializationTask = null;
+            dhtEngine = DetachDhtEngineNoLock();
+            dhtListener = DetachDhtListenerNoLock();
+        }
+
+        backgroundInitializationCts?.Cancel();
+        backgroundInitializationCts?.Dispose();
+        dhtListener?.Stop();
+        dhtEngine?.Dispose();
+
+        base.Dispose();
+    }
+
     private async Task InitializeDhtAsync(CancellationToken cancellationToken)
     {
         _logger.LogDebug("Initializing MonoTorrent DHT engine");
 
-        // Create DHT engine
-        _dhtEngine = new DhtEngine();
+        DhtEngine? dhtEngine = null;
+        IDhtListener? dhtListener = null;
 
-        // Subscribe to peer discovery events
-        _dhtEngine.PeersFound += OnPeersFound;
-        _dhtEngine.StateChanged += OnDhtStateChanged;
-
-        // Create UDP listener for DHT on a random port (standard DHT port range)
-        // SECURITY: Use cryptographic RNG for port selection
-        var dhtPort = _options.DhtPort > 0 ? _options.DhtPort : System.Security.Cryptography.RandomNumberGenerator.GetInt32(6881, 7000);
-        _dhtListener = MonoTorrent.Factories.Default.CreateDhtListener(new IPEndPoint(IPAddress.Any, dhtPort));
-
-        if (_dhtListener is null)
+        try
         {
-            throw new InvalidOperationException("Failed to create DHT listener");
-        }
+            // Create DHT engine
+            dhtEngine = new DhtEngine();
 
-        _logger.LogDebug("Created DHT listener for port {Port}", dhtPort);
+            // Subscribe to peer discovery events
+            dhtEngine.PeersFound += OnPeersFound;
+            dhtEngine.StateChanged += OnDhtStateChanged;
 
-        // Attach listener to engine
-        await _dhtEngine.SetListenerAsync(_dhtListener);
+            // Create UDP listener for DHT on a random port (standard DHT port range)
+            // SECURITY: Use cryptographic RNG for port selection
+            var dhtPort = _options.DhtPort > 0 ? _options.DhtPort : System.Security.Cryptography.RandomNumberGenerator.GetInt32(6881, 7000);
+            dhtListener = MonoTorrent.Factories.Default.CreateDhtListener(new IPEndPoint(IPAddress.Any, dhtPort));
 
-        // Try to load saved DHT state
-        var dhtStatePath = Path.Combine(Program.AppDirectory, "dht_nodes.bin");
-        ReadOnlyMemory<byte> initialNodes = default;
-
-        if (File.Exists(dhtStatePath))
-        {
-            try
+            if (dhtListener is null)
             {
-                initialNodes = await File.ReadAllBytesAsync(dhtStatePath, cancellationToken);
-                _logger.LogDebug("Loaded {Bytes} bytes of saved DHT state", initialNodes.Length);
+                throw new InvalidOperationException("Failed to create DHT listener");
             }
-            catch (Exception ex)
+
+            _logger.LogDebug("Created DHT listener for port {Port}", dhtPort);
+
+            // Attach listener to engine
+            await dhtEngine.SetListenerAsync(dhtListener);
+
+            // Try to load saved DHT state
+            var dhtStatePath = Path.Combine(Program.AppDirectory, "dht_nodes.bin");
+            ReadOnlyMemory<byte> initialNodes = default;
+
+            if (File.Exists(dhtStatePath))
             {
-                _logger.LogWarning(ex, "Failed to load saved DHT state");
+                try
+                {
+                    initialNodes = await File.ReadAllBytesAsync(dhtStatePath, cancellationToken);
+                    _logger.LogDebug("Loaded {Bytes} bytes of saved DHT state", initialNodes.Length);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load saved DHT state");
+                }
+            }
+
+            // Start DHT engine (will bootstrap from saved nodes or public bootstrap nodes)
+            if (initialNodes.Length > 0)
+            {
+                await dhtEngine.StartAsync(initialNodes);
+            }
+            else
+            {
+                await dhtEngine.StartAsync();
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // SECURITY: Verify we actually bound to the expected port after startup
+            // Note: LocalEndPoint may not be available until after engine starts
+            var actualEndpoint = dhtListener.LocalEndPoint;
+            if (actualEndpoint is not null && actualEndpoint.Port != dhtPort)
+            {
+                _logger.LogWarning(
+                    "DHT listener bound to unexpected port! Expected {Expected}, got {Actual}. Possible local attack.",
+                    dhtPort,
+                    actualEndpoint.Port);
+            }
+
+            _logger.LogInformation("DHT engine started on port {Port}, state: {State}",
+                actualEndpoint?.Port ?? dhtPort, dhtEngine.State);
+
+            lock (_lifecycleSync)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+
+                _dhtEngine = dhtEngine;
+                _dhtListener = dhtListener;
+                dhtEngine = null;
+                dhtListener = null;
             }
         }
-
-        // Start DHT engine (will bootstrap from saved nodes or public bootstrap nodes)
-        if (initialNodes.Length > 0)
+        catch
         {
-            await _dhtEngine.StartAsync(initialNodes);
-        }
-        else
-        {
-            await _dhtEngine.StartAsync();
-        }
+            if (dhtEngine is not null)
+            {
+                dhtEngine.PeersFound -= OnPeersFound;
+                dhtEngine.StateChanged -= OnDhtStateChanged;
+                dhtEngine.Dispose();
+            }
 
-        // SECURITY: Verify we actually bound to the expected port after startup
-        // Note: LocalEndPoint may not be available until after engine starts
-        var actualEndpoint = _dhtListener.LocalEndPoint;
-        if (actualEndpoint is not null && actualEndpoint.Port != dhtPort)
-        {
-            _logger.LogWarning(
-                "DHT listener bound to unexpected port! Expected {Expected}, got {Actual}. Possible local attack.",
-                dhtPort,
-                actualEndpoint.Port);
+            dhtListener?.Stop();
+            throw;
         }
-
-        _logger.LogInformation("DHT engine started on port {Port}, state: {State}",
-            actualEndpoint?.Port ?? dhtPort, _dhtEngine.State);
     }
 
     private void OnPeersFound(object? sender, PeersFoundEventArgs e)
@@ -395,8 +507,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
     private void OnDhtStateChanged(object? sender, EventArgs e)
     {
+        var dhtEngine = sender as DhtEngine;
         _logger.LogInformation("DHT state changed to: {State}, nodes: {NodeCount}",
-            _dhtEngine?.State, _dhtEngine?.NodeCount ?? 0);
+            dhtEngine?.State ?? _dhtEngine?.State, dhtEngine?.NodeCount ?? _dhtEngine?.NodeCount ?? 0);
     }
 
     private bool IsOurRendezvousHash(InfoHash hash)
@@ -557,6 +670,36 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             _logger.LogDebug(ex, "Could not bind to overlay port {Port}", _options.OverlayPort);
             return Task.FromResult(false);
         }
+    }
+
+    private void CancelBackgroundInitializationNoLock()
+    {
+        _backgroundInitializationCts?.Cancel();
+        _backgroundInitializationCts?.Dispose();
+        _backgroundInitializationCts = null;
+        _backgroundInitializationTask = null;
+    }
+
+    private DhtEngine? DetachDhtEngineNoLock()
+    {
+        var dhtEngine = _dhtEngine;
+        if (dhtEngine is null)
+        {
+            return null;
+        }
+
+        dhtEngine.PeersFound -= OnPeersFound;
+        dhtEngine.StateChanged -= OnDhtStateChanged;
+        _dhtEngine = null;
+
+        return dhtEngine;
+    }
+
+    private IDhtListener? DetachDhtListenerNoLock()
+    {
+        var dhtListener = _dhtListener;
+        _dhtListener = null;
+        return dhtListener;
     }
 }
 

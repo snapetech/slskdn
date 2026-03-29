@@ -71,6 +71,19 @@ public class StreamsControllerTests
     }
 
     [Fact]
+    public async Task Get_WithBlankContentId_ReturnsBadRequest()
+    {
+        var controller = CreateController();
+        SetContext(controller, authenticated: true);
+
+        var r = await controller.Get("   ", null, CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(r);
+        Assert.Equal("ContentId is required.", bad.Value);
+        _locatorMock.Verify(x => x.Resolve(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Get_MultiRange_ReturnsBadRequest()
     {
         var controller = CreateController();
@@ -223,5 +236,19 @@ public class StreamsControllerTests
         {
             try { File.Delete(path); } catch { }
         }
+    }
+
+    [Fact]
+    public async Task Get_QueryToken_IsTrimmedBeforeValidation()
+    {
+        var controller = CreateController();
+        SetContext(controller);
+        _tokensMock.Setup(x => x.ValidateAsync("tok", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ShareTokenClaims?)null);
+
+        var r = await controller.Get("c1", " tok ", CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(r);
+        _tokensMock.Verify(x => x.ValidateAsync("tok", It.IsAny<CancellationToken>()), Times.Once);
     }
 }

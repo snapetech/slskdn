@@ -56,6 +56,18 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
     {
         try
         {
+            if (!TryGetServerUri(out var uri, out var validationError))
+            {
+                lock (_statusLock)
+                {
+                    _status.IsAvailable = false;
+                    _status.LastError = validationError;
+                }
+
+                _logger.LogWarning("WebSocket transport not available: {Error}", validationError);
+                return false;
+            }
+
             using var client = new ClientWebSocket();
             AddSubProtocolIfConfigured(client);
 
@@ -64,7 +76,6 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
                 client.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true; // Trust server cert for testing
             }
 
-            var uri = new Uri(_options.ServerUrl);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5)); // Quick connectivity test
 
@@ -85,7 +96,7 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
             lock (_statusLock)
             {
                 _status.IsAvailable = false;
-                _status.LastError = ex.Message;
+                _status.LastError = "WebSocket transport unavailable";
             }
 
             _logger.LogWarning(ex, "WebSocket transport not available at {Url}", _options.ServerUrl);
@@ -115,6 +126,8 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
     /// <returns>A stream for the tunneled connection.</returns>
     public async Task<Stream> ConnectAsync(string host, int port, string? isolationKey, CancellationToken cancellationToken = default)
     {
+        var validationFailure = false;
+
         lock (_statusLock)
         {
             _status.TotalConnectionsAttempted++;
@@ -122,6 +135,17 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
 
         try
         {
+            if (!TryGetServerUri(out var uri, out var validationError))
+            {
+                lock (_statusLock)
+                {
+                    _status.LastError = validationError;
+                }
+
+                validationFailure = true;
+                throw new InvalidOperationException(validationError);
+            }
+
             // Try to reuse existing connection from pool
             var connectionKey = $"{host}:{port}:{isolationKey ?? "default"}";
             WebSocketConnection? pooledConnection = null;
@@ -164,7 +188,6 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
                 client.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
             }
 
-            var uri = new Uri(_options.ServerUrl);
             await client.ConnectAsync(uri, cancellationToken);
 
             // Send tunnel request
@@ -222,7 +245,10 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
         {
             lock (_statusLock)
             {
-                _status.LastError = ex.Message;
+                if (!validationFailure)
+                {
+                    _status.LastError = "WebSocket tunnel connection failed";
+                }
             }
 
             _logger.LogError(ex, "Failed to establish WebSocket tunnel to {Host}:{Port}", host, port);
@@ -296,6 +322,25 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
         {
             client.Options.AddSubProtocol(_options.SubProtocol);
         }
+    }
+
+    private bool TryGetServerUri(out Uri uri, out string validationError)
+    {
+        if (!Uri.TryCreate(_options.ServerUrl, UriKind.Absolute, out uri!))
+        {
+            validationError = "WebSocket server URL is not a valid absolute URI";
+            return false;
+        }
+
+        if (!string.Equals(uri.Scheme, "ws", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(uri.Scheme, "wss", StringComparison.OrdinalIgnoreCase))
+        {
+            validationError = "WebSocket server URL must use ws:// or wss://";
+            return false;
+        }
+
+        validationError = string.Empty;
+        return true;
     }
 
     /// <summary>
@@ -400,10 +445,10 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
         public override void Flush() { }
 
         public override int Read(byte[] buffer, int offset, int count) =>
-            ReadAsync(buffer, offset, count).GetAwaiter().GetResult();
+            ReadAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override void Write(byte[] buffer, int offset, int count) =>
-            WriteAsync(buffer, offset, count).GetAwaiter().GetResult();
+            WriteAsync(buffer, offset, count).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
@@ -415,7 +460,14 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
 
             if (disposing)
             {
-                _onDispose();
+                try
+                {
+                    _onDispose();
+                }
+                catch
+                {
+                    // noop
+                }
             }
 
             base.Dispose(disposing);

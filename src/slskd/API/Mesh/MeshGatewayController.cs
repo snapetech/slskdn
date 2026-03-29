@@ -75,11 +75,23 @@ public class MeshGatewayController : ControllerBase
             string method,
             CancellationToken cancellationToken)
     {
+        serviceName = serviceName?.Trim() ?? string.Empty;
+        method = method?.Trim() ?? string.Empty;
+
         // Check if gateway is enabled (should be enforced by middleware, but double-check)
         if (!_options.Enabled)
         {
             _logger.LogWarning("[GatewayController] Gateway is disabled");
             return NotFound(new { error = "gateway_disabled" });
+        }
+
+        if (string.IsNullOrWhiteSpace(serviceName) || string.IsNullOrWhiteSpace(method))
+        {
+            return BadRequest(new
+            {
+                error = "invalid_request",
+                message = "Service name and method are required"
+            });
         }
 
         // Check service allowlist
@@ -91,7 +103,7 @@ public class MeshGatewayController : ControllerBase
             return StatusCode(403, new
             {
                 error = "service_not_allowed",
-                message = $"Service '{serviceName}' is not in the allowed services list"
+                message = "Requested service is not allowed"
             });
         }
 
@@ -107,7 +119,7 @@ public class MeshGatewayController : ControllerBase
                 return StatusCode(413, new
                 {
                     error = "payload_too_large",
-                    message = $"Request body exceeds {max} bytes"
+                    message = "Request body exceeds the configured size limit"
                 });
             }
 
@@ -130,7 +142,7 @@ public class MeshGatewayController : ControllerBase
                         return StatusCode(413, new
                         {
                             error = "payload_too_large",
-                            message = $"Request body exceeds {max} bytes"
+                            message = "Request body exceeds the configured size limit"
                         });
                     }
 
@@ -162,7 +174,7 @@ public class MeshGatewayController : ControllerBase
                 return StatusCode(503, new
                 {
                     error = "service_unavailable",
-                    message = $"No providers found for service '{serviceName}'"
+                    message = "No providers found for the requested service"
                 });
             }
 
@@ -194,8 +206,8 @@ public class MeshGatewayController : ControllerBase
                     try
                     {
                         var json = Encoding.UTF8.GetString(reply.Payload);
-                        var parsed = JsonDocument.Parse(json);
-                        return Ok(parsed.RootElement);
+                        using var parsed = JsonDocument.Parse(json);
+                        return Ok(parsed.RootElement.Clone());
                     }
                     catch
                     {
@@ -223,7 +235,7 @@ public class MeshGatewayController : ControllerBase
                 {
                     error = "service_error",
                     statusCode = reply.StatusCode,
-                    message = reply.ErrorMessage ?? "Service returned error"
+                    message = "Service returned an error"
                 });
             }
         }
@@ -242,7 +254,7 @@ public class MeshGatewayController : ControllerBase
             return StatusCode(504, new
             {
                 error = "gateway_timeout",
-                message = $"Service call timed out after {_options.RequestTimeoutSeconds} seconds"
+                message = "Service call timed out"
             });
         }
         catch (Exception ex)

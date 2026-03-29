@@ -85,7 +85,14 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend, IDisposab
             _logger.LogWarning(ex, "PreparePrivateTorrentAsync failed for job {JobId}", job.JobId);
             if (manager != null)
             {
-                try { await _engine.RemoveAsync(manager).WaitAsync(cancellationToken); } catch { /* ignore */ }
+                try
+                {
+                    await _engine.RemoveAsync(manager).WaitAsync(cancellationToken);
+                }
+                catch (Exception cleanupEx)
+                {
+                    _logger.LogDebug(cleanupEx, "Failed to remove manager during PreparePrivateTorrentAsync cleanup for job {JobId}", job.JobId);
+                }
             }
 
             return string.Empty;
@@ -156,9 +163,9 @@ public sealed class MonoTorrentBitTorrentBackend : IBitTorrentBackend, IDisposab
                     await manager.StopAsync();
                     await _engine.RemoveAsync(manager);
                 }
-                catch
+                catch (Exception cleanupEx)
                 {
-                    /* ignore */
+                    _logger.LogDebug(cleanupEx, "Failed to cleanup manager during FetchByInfoHashOrMagnetAsync failure for {Ref}", refPreview);
                 }
             }
 

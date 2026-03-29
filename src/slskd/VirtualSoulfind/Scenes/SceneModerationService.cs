@@ -72,7 +72,7 @@ public class SceneModerationService : ISceneModerationService
         logger.LogInformation("[VSF-SCENE-MOD] Muting {PeerId} in scene {SceneId}: {Reason}",
             peerId, sceneId, reason ?? "no reason");
 
-        var muted = mutedPeers.GetOrAdd(sceneId, _ => new HashSet<string>());
+        var muted = mutedPeers.GetOrAdd(sceneId, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         lock (muted)
         {
             muted.Add(peerId);
@@ -106,7 +106,7 @@ public class SceneModerationService : ISceneModerationService
         logger.LogInformation("[VSF-SCENE-MOD] Blocking {PeerId} in scene {SceneId}: {Reason}",
             peerId, sceneId, reason ?? "no reason");
 
-        var blocked = blockedPeers.GetOrAdd(sceneId, _ => new HashSet<string>());
+        var blocked = blockedPeers.GetOrAdd(sceneId, _ => new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         lock (blocked)
         {
             blocked.Add(peerId);

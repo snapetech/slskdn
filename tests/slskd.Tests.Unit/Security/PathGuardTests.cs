@@ -95,6 +95,8 @@ public class PathGuardTests
     [InlineData("file.exe", true)]
     [InlineData("document.bat", true)]
     [InlineData("script.ps1", true)]
+    [InlineData(" song.mp3 ", false)]
+    [InlineData(" file.exe ", true)]
     [InlineData("music.flac", false)]
     [InlineData("song.mp3", false)]
     [InlineData("video.mkv", false)]
@@ -107,6 +109,7 @@ public class PathGuardTests
     [Theory]
     [InlineData("music.flac", true)]
     [InlineData("song.mp3", true)]
+    [InlineData(" song.mp3 ", true)]
     [InlineData("track.ogg", true)]
     [InlineData("audio.wav", true)]
     [InlineData("document.pdf", false)]
@@ -172,11 +175,42 @@ public class PathGuardTests
     }
 
     [Fact]
+    public void Validate_WhenPathNormalizationThrows_ReturnsSanitizedError()
+    {
+        var result = PathGuard.Validate("bad\0path", TestRoot);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(PathViolationType.ControlCharacters, result.ViolationType);
+        Assert.Equal("Path contains control characters", result.Error);
+        Assert.DoesNotContain("null", result.Error ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Validate_TrimsPaddedValidPath()
+    {
+        var result = PathGuard.Validate("  music/track.flac  ", TestRoot);
+
+        Assert.True(result.IsValid);
+        Assert.NotNull(result.SafePath);
+        Assert.EndsWith("/music/track.flac", result.SafePath!.Replace('\\', '/'));
+    }
+
+    [Fact]
     public void NormalizeAbsolutePathWithinRoots_AllowsPathWithinConfiguredRoot()
     {
         var target = Path.Combine(TestRoot, "album", "track.flac");
 
         var result = PathGuard.NormalizeAbsolutePathWithinRoots(target, new[] { TestRoot });
+
+        Assert.Equal(target, result);
+    }
+
+    [Fact]
+    public void NormalizeAbsolutePathWithinRoots_TrimsPaddedPathAndRoot()
+    {
+        var target = Path.Combine(TestRoot, "album", "track.flac");
+
+        var result = PathGuard.NormalizeAbsolutePathWithinRoots($"  {target}  ", new[] { $"  {TestRoot}  " });
 
         Assert.Equal(target, result);
     }
@@ -201,4 +235,3 @@ public class PathGuardTests
         Assert.Null(result);
     }
 }
-

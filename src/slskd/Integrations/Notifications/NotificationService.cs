@@ -32,6 +32,7 @@ namespace slskd.Integrations.Notifications
     {
         private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(30);
         private readonly ConcurrentDictionary<string, DateTime> lastNotificationTimes = new();
+        private readonly object _rateLimitLock = new();
 
         public NotificationService(
             IHttpClientFactory httpClientFactory,
@@ -141,7 +142,7 @@ namespace slskd.Integrations.Notifications
                 request.Headers.Add("Title", $"{options.NotificationPrefix}: {title}");
                 request.Content = new StringContent(body, Encoding.UTF8, "text/plain");
 
-                var response = await client.SendAsync(request);
+                using var response = await client.SendAsync(request);
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
@@ -163,7 +164,7 @@ namespace slskd.Integrations.Notifications
                     new KeyValuePair<string, string>("message", body),
                 });
 
-                var response = await client.PostAsync("https://api.pushover.net/1/messages.json", content);
+                using var response = await client.PostAsync("https://api.pushover.net/1/messages.json", content);
                 response.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
@@ -180,31 +181,34 @@ namespace slskd.Integrations.Notifications
         {
             var now = DateTime.UtcNow;
 
-            if (lastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
+            lock (_rateLimitLock)
             {
-                if (now - lastTime < RateLimitWindow)
+                if (lastNotificationTimes.TryGetValue(cacheKey, out var lastTime))
                 {
-                    Log.LogDebug("Rate limiting notification for key {CacheKey}", cacheKey);
-                    return false;
-                }
-            }
-
-            lastNotificationTimes[cacheKey] = now;
-
-            // Clean up old entries periodically (keep dict from growing unbounded)
-            if (lastNotificationTimes.Count > 1000)
-            {
-                var cutoff = now - RateLimitWindow;
-                foreach (var kvp in lastNotificationTimes)
-                {
-                    if (kvp.Value < cutoff)
+                    if (now - lastTime < RateLimitWindow)
                     {
-                        lastNotificationTimes.TryRemove(kvp.Key, out _);
+                        Log.LogDebug("Rate limiting notification for key {CacheKey}", cacheKey);
+                        return false;
                     }
                 }
-            }
 
-            return true;
+                lastNotificationTimes[cacheKey] = now;
+
+                // Clean up old entries periodically (keep dict from growing unbounded)
+                if (lastNotificationTimes.Count > 1000)
+                {
+                    var cutoff = now - RateLimitWindow;
+                    foreach (var kvp in lastNotificationTimes)
+                    {
+                        if (kvp.Value < cutoff)
+                        {
+                            lastNotificationTimes.TryRemove(kvp.Key, out _);
+                        }
+                    }
+                }
+
+                return true;
+            }
         }
     }
 }

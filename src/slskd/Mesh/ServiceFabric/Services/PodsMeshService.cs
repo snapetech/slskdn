@@ -63,7 +63,7 @@ public class PodsMeshService : IMeshService
                 {
                     CorrelationId = call.CorrelationId,
                     StatusCode = ServiceStatusCodes.MethodNotFound,
-                    ErrorMessage = $"Unknown method: {call.Method}"
+                    ErrorMessage = "Unknown method"
                 }
             };
         }
@@ -84,7 +84,53 @@ public class PodsMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException("Streaming not yet implemented for pods service");
+        return HandleMessageStreamAsync(stream, context, cancellationToken);
+    }
+
+    private async Task HandleMessageStreamAsync(
+        MeshServiceStream stream,
+        MeshServiceContext context,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestPayload = await stream.ReceiveAsync(cancellationToken);
+            if (requestPayload == null || requestPayload.Length == 0)
+            {
+                _logger.LogWarning("[PodsMeshService] Empty stream payload from {PeerId}", context.RemotePeerId);
+                await stream.CloseAsync(cancellationToken);
+                return;
+            }
+
+            var request = JsonSerializer.Deserialize<GetMessagesRequest>(requestPayload);
+            var podId = request?.PodId?.Trim() ?? string.Empty;
+            var channelId = request?.ChannelId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+            {
+                _logger.LogWarning("[PodsMeshService] Invalid stream request from {PeerId}: missing pod or channel ID", context.RemotePeerId);
+                await stream.CloseAsync(cancellationToken);
+                return;
+            }
+
+            var messages = await _podMessaging.GetMessagesAsync(
+                podId,
+                channelId,
+                request!.SinceTimestamp,
+                cancellationToken);
+
+            await stream.SendAsync(JsonSerializer.SerializeToUtf8Bytes(messages), cancellationToken);
+            await stream.CloseAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await stream.CloseAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PodsMeshService] Stream handling failed for {PeerId}", context.RemotePeerId);
+            await stream.CloseAsync(CancellationToken.None);
+        }
     }
 
     private async Task<ServiceReply> HandleListAsync(
@@ -114,7 +160,8 @@ public class PodsMeshService : IMeshService
     {
         var (request, err) = ServicePayloadParser.TryParseJson<GetPodRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (request == null || string.IsNullOrWhiteSpace(request.PodId))
+        var podId = request?.PodId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId))
         {
             return new ServiceReply
             {
@@ -124,7 +171,7 @@ public class PodsMeshService : IMeshService
             };
         }
 
-        var pod = await _podService.GetPodAsync(request.PodId, cancellationToken);
+        var pod = await _podService.GetPodAsync(podId, cancellationToken);
         if (pod == null)
         {
             return new ServiceReply
@@ -152,7 +199,8 @@ public class PodsMeshService : IMeshService
     {
         var (request, err) = ServicePayloadParser.TryParseJson<JoinPodRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (request == null || string.IsNullOrWhiteSpace(request.PodId))
+        var podId = request?.PodId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId))
         {
             return new ServiceReply
             {
@@ -162,14 +210,15 @@ public class PodsMeshService : IMeshService
             };
         }
 
+        var role = string.IsNullOrWhiteSpace(request!.Role) ? "member" : request.Role.Trim();
         var member = new PodMember
         {
-            PeerId = context.RemotePeerId,
+            PeerId = context.RemotePeerId?.Trim() ?? string.Empty,
             PublicKey = context.RemotePublicKey ?? string.Empty,
-            Role = request.Role ?? "member"
+            Role = role
         };
 
-        var success = await _podService.JoinAsync(request.PodId, member, cancellationToken);
+        var success = await _podService.JoinAsync(podId, member, cancellationToken);
 
         var response = JsonSerializer.Serialize(new { Success = success });
 
@@ -188,7 +237,8 @@ public class PodsMeshService : IMeshService
     {
         var (request, err) = ServicePayloadParser.TryParseJson<LeavePodRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (request == null || string.IsNullOrWhiteSpace(request.PodId))
+        var podId = request?.PodId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId))
         {
             return new ServiceReply
             {
@@ -198,7 +248,7 @@ public class PodsMeshService : IMeshService
             };
         }
 
-        var success = await _podService.LeaveAsync(request.PodId, context.RemotePeerId, cancellationToken);
+        var success = await _podService.LeaveAsync(podId, context.RemotePeerId?.Trim() ?? string.Empty, cancellationToken);
 
         var response = JsonSerializer.Serialize(new { Success = success });
 
@@ -227,6 +277,29 @@ public class PodsMeshService : IMeshService
             };
         }
 
+        var podId = request.PodId?.Trim() ?? string.Empty;
+        var channelId = request.ChannelId?.Trim() ?? string.Empty;
+        var senderPeerId = context.RemotePeerId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
+        {
+            return new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "PodId and ChannelId are required"
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(senderPeerId))
+        {
+            return new ServiceReply
+            {
+                CorrelationId = call.CorrelationId,
+                StatusCode = ServiceStatusCodes.InvalidPayload,
+                ErrorMessage = "Remote peer identity is required"
+            };
+        }
+
         // TODO: Validate message size
         if (request.Body?.Length > 4096)
         {
@@ -241,11 +314,12 @@ public class PodsMeshService : IMeshService
         var message = new PodMessage
         {
             MessageId = Guid.NewGuid().ToString("N"),
-            ChannelId = request.ChannelId,
-            SenderPeerId = context.RemotePeerId ?? string.Empty,
+            PodId = podId,
+            ChannelId = channelId,
+            SenderPeerId = senderPeerId,
             Body = request.Body ?? string.Empty,
             TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            Signature = request.Signature ?? string.Empty
+            Signature = request.Signature?.Trim() ?? string.Empty
         };
 
         var success = await _podMessaging.SendAsync(message, cancellationToken);
@@ -267,7 +341,9 @@ public class PodsMeshService : IMeshService
     {
         var (request, err) = ServicePayloadParser.TryParseJson<GetMessagesRequest>(call, _maxPayload);
         if (err != null) return err;
-        if (request == null || string.IsNullOrWhiteSpace(request.PodId) || string.IsNullOrWhiteSpace(request.ChannelId))
+        var podId = request?.PodId?.Trim() ?? string.Empty;
+        var channelId = request?.ChannelId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(podId) || string.IsNullOrWhiteSpace(channelId))
         {
             return new ServiceReply
             {
@@ -278,9 +354,9 @@ public class PodsMeshService : IMeshService
         }
 
         var messages = await _podMessaging.GetMessagesAsync(
-            request.PodId,
-            request.ChannelId,
-            request.SinceTimestamp,
+            podId,
+            channelId,
+            request!.SinceTimestamp,
             cancellationToken);
 
         var response = JsonSerializer.Serialize(messages);
@@ -313,6 +389,7 @@ public record LeavePodRequest
 
 public record PostMessageRequest
 {
+    public string PodId { get; init; } = string.Empty;
     public string ChannelId { get; init; } = string.Empty;
     public string Body { get; init; } = string.Empty;
     public string? Signature { get; init; }
