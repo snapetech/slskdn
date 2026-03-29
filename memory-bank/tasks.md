@@ -758,6 +758,9 @@
 
 ## 2026-03-29 Completed Follow-up
 
+- [x] Merge the detached `build-main-0.24.5-slskdn.92` through `.101` history back into `main`
+  - Status: done
+  - Notes: Merged the previously tag-only side lineage with merge commit `e74d4df1` instead of cherry-picking, resolved the runtime conflicts in `Program`, `RelayService`, and `SongIdService`, updated `docs/CHANGELOG.md`, and confirmed `git tag --no-merged main` is empty afterward.
 - [x] Fix SongID YouTube runs so missing `yt-dlp` degrades instead of failing
   - Status: done
   - Notes: Reproduced the `kspls0` failure for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd`, confirmed the host was missing `yt-dlp`, hardened `SongIdService` to continue with metadata-only analysis when `yt-dlp` is absent, fixed the empty-clip scorecard aggregate crash exposed by that fallback path, added focused SongID unit coverage, and updated AUR / Proxmox packaging to install `yt-dlp`.

@@ -23,8 +23,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Search-path cleanup on top of the recent SongID/Search fixes.
-- **Branch**: `security/master-security-sweep`
+- **Current Task**: None.
+- **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
   - Confirmed `kspls0` was actually logged into the Soulseek server and traced the apparent network deadness to a host firewall gap: inbound `50300/tcp` was missing even though the Web UI ports were open.
@@ -33,6 +33,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added `scripts/setup-git-hooks.sh` so clones can explicitly install `.githooks` via `git config --local core.hooksPath .githooks`, and updated README/local-development docs to make hook installation part of first-time setup.
   - Added commit/PR-time changelog enforcement so release-worthy changes must update `docs/CHANGELOG.md` `## [Unreleased]` when they land instead of relying on release-time git-history fallback.
   - Added `scripts/validate-changelog-entry.sh`, wired it into `.githooks/pre-commit` for staged-change checks and `.github/workflows/ci.yml` for pull-request diff checks, and updated `docs/CHANGELOG.md` to document the policy.
+  - Merged the previously detached `build-main-0.24.5-slskdn.92` through `.101` release line back into `main` with merge commit `e74d4df1`, restoring the missing Docker startup hardening and related packaged/runtime fixes that had been built on tags but never merged.
+  - Resolved the merge-critical runtime conflicts by keeping both benign-startup and expected-network unobserved task exception downgrades in `src/slskd/Program.cs`, preserving the current canonical SongID query generation in `src/slskd/SongID/SongIdService.cs`, and restoring relay client disposal / replacement lifecycle handling in `src/slskd/Relay/RelayService.cs`.
+  - Confirmed there are no remaining unmerged tags (`git tag --no-merged main` is empty). The only remaining local-only objects are stashes, which are experimental WIP / private key rotations and were intentionally not merged into `main`.
   - Cleaned up `scripts/generate-release-notes.sh` so generated `Included Commits` lists no longer surface standalone ADR gotcha commits, release-note doc commits, or stable metadata bookkeeping commits as if they were separate product changes.
   - Documented the release-note hygiene commit gotcha immediately in ADR-0001 and committed it separately as required (`f85f20ac`).
   - Validation for the release-note cleanup:
@@ -63,12 +66,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `bash ./bin/lint`
     - `dotnet test --no-restore -v minimal`
   - Next steps:
+    - push `main` when ready so the restored detached release history and Docker startup hardening actually land on `origin/main`
+    - decide whether to apply or discard the remaining stashes (`stash@{1}` is experimental feature work; `stash@{0}` / `stash@{2}` are `mesh-overlay.key` rotations)
     - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
     - decide whether to ship the `50300/tcp` firewall requirement more explicitly in packaging/docs for host installs that rely on strict inbound nftables policies
     - configure `WINGETCREATE_GITHUB_TOKEN` in GitHub secrets if stable releases should auto-submit to `microsoft/winget-pkgs`
-    - decide whether to also hide other non-user-facing CI-only commits from generated release commit lists beyond the currently-filtered release-hygiene subjects
-    - decide whether packaged defaults should also bind non-loopback explicitly or stay conservative and loopback-only by default
-    - if needed, carry the same `/etc/slskd/slskd.yml` explicit-config behavior into any remaining non-release installers that still depend on search-order defaults
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
   - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
   - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.

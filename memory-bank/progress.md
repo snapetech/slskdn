@@ -5533,6 +5533,16 @@ Code quality improvements were completed as part of Option A:
   - `./scripts/generate-release-notes.sh 0.24.5-slskdn.103 /tmp/release-notes-check.md HEAD`
   - `git diff --check`
   - `bash ./bin/lint`
+
+## 2026-03-29 06:32:00Z
+
+- Merged the previously detached `build-main-0.24.5-slskdn.92` through `.101` history back into `main` with merge commit `e74d4df1`, restoring the Docker startup hardening and the other release-bound fixes that had been tagged but never merged.
+- Resolved the critical runtime conflicts by keeping both the startup-specific benign task-exception downgrade and the broader expected Soulseek-network exception downgrade in `src/slskd/Program.cs`, preserving the current canonical SongID query builder behavior in `src/slskd/SongID/SongIdService.cs`, and restoring relay client disposal / replacement lifecycle handling in `src/slskd/Relay/RelayService.cs`.
+- Confirmed there are no remaining unmerged tags with `git tag --no-merged main`, and verified the only remaining local-only objects are stashes (`stash@{1}` is experimental feature work; `stash@{0}` / `stash@{2}` are `mesh-overlay.key` key rotations), which were intentionally left out of `main`.
+- Validation:
+  - `git diff --check`
+  - `dotnet build src/slskd/slskd.csproj --no-restore -v minimal -clp:ErrorsOnly`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~SongIdServiceTests|FullyQualifiedName~RelayServiceTests" -v minimal`
 ### 2026-03-28 23:55:00 -06:00
 - Fixed the repo process gap where release notes were effectively being reconstructed at tag time because feature/fix commits were not required to touch `docs/CHANGELOG.md`.
 - Added `scripts/validate-changelog-entry.sh` to enforce a real `## [Unreleased]` bullet for release-worthy staged changes locally and for PR diffs in CI.
