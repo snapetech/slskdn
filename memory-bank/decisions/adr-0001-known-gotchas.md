@@ -142,6 +142,33 @@ await api.post('/api/jobs/discography', {
 
 **Why This Keeps Happening**: Most of the web client talks to the versioned REST API using camelCase payloads, so it is easy to assume the native job endpoints behave the same way. When a backend request type uses explicit `JsonPropertyName` values, mirror that contract exactly in the shared frontend client and lock it down with tests.
 
+### 0q. SongID Artist-Graph Expansion Must Be Time-Boxed Per Artist
+
+**The Bug**: SongID runs could appear stuck at `38%` in `artist_graph` because `AddArtistCandidatesAsync()` awaited full MusicBrainz release-graph expansion for each artist candidate. Large artists with many release groups caused long or effectively unbounded waits, which stalled the whole SongID run before the evidence pipeline even started.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+- `src/slskd/Integrations/MusicBrainz/ReleaseGraphService.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+
+**Wrong**:
+```csharp
+var releaseGraph = await _releaseGraphService.GetArtistReleaseGraphAsync(artistId, false, cancellationToken).ConfigureAwait(false);
+```
+
+**Correct**:
+```csharp
+using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+timeoutCts.CancelAfter(ArtistGraphFetchTimeout);
+releaseGraph = await _releaseGraphService.GetArtistReleaseGraphAsync(artistId, false, timeoutCts.Token).ConfigureAwait(false);
+```
+
+```text
+If the fetch times out or fails, continue with a lightweight artist candidate instead of stalling the run.
+```
+
+**Why This Keeps Happening**: the artist-graph stage looks like lightweight candidate enrichment from the SongID side, but the underlying MusicBrainz graph service performs deep release-group expansion with rate-limited per-group requests. Treat that dependency like a potentially expensive remote enrichment step and bound it explicitly inside SongID.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
