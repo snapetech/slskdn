@@ -147,7 +147,8 @@ This document maps out the complete dev build process for slskdn, including vers
   - `installer.yaml`: PackageVersion, InstallerUrl, InstallerSha256
   - `version.yaml`: PackageVersion
 - **Version Format**: `0.24.1-dev-9EPOCH` (hyphens kept)
-- **Note**: Requires manual PR to `microsoft/winget-pkgs`
+- **Stable submission**: Main releases can auto-submit a PR to `microsoft/winget-pkgs` via `wingetcreate --submit` when `WINGETCREATE_GITHUB_TOKEN` is configured
+- **Dev note**: Dev releases still only update the local manifests and do not auto-submit to `winget-pkgs`
 
 ### 8. macOS Package Managers
 
@@ -186,6 +187,7 @@ This document maps out the complete dev build process for slskdn, including vers
 11. **winget-dev** → Updates Winget manifests
 12. **snap-dev** → Builds and publishes Snap
 13. **homebrew-dev** → Updates Homebrew tap
+14. **winget-main** → Auto-submits stable Winget update PR when token is configured
 
 ### `dev-release.yml` Jobs (for `dev-*` tags)
 
@@ -209,6 +211,7 @@ This document maps out the complete dev build process for slskdn, including vers
 | `COPR_TOKEN` | COPR jobs | COPR API token |
 | `GPG_PRIVATE_KEY` | PPA jobs | GPG key for package signing |
 | `CHOCO_API_KEY` | Chocolatey jobs | Chocolatey API key |
+| `WINGETCREATE_GITHUB_TOKEN` | Stable Winget job | GitHub classic PAT with `public_repo` so `wingetcreate --submit` can fork and open a PR against `microsoft/winget-pkgs` |
 | `TAP_GITHUB_TOKEN` | Homebrew jobs | GitHub token for tap repo |
 | `SNAPCRAFT_STORE_CREDENTIALS` | Snap jobs | Snap store credentials |
 

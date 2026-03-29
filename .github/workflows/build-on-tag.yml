@@ -1649,6 +1649,48 @@ jobs:
           }
         shell: pwsh
 
+  winget-main:
+    name: Submit to Winget (Main)
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: windows-latest
+    env:
+      WINGETCREATE_GITHUB_TOKEN: ${{ secrets.WINGETCREATE_GITHUB_TOKEN }}
+    steps:
+      - name: Download wingetcreate
+        if: ${{ env.WINGETCREATE_GITHUB_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          Get-Item .\wingetcreate.exe | Format-List Name,Length,LastWriteTime
+
+      - name: Submit manifest update to winget-pkgs
+        if: ${{ env.WINGETCREATE_GITHUB_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ReleaseVersion = "${{ needs.parse.outputs.version }}"
+          $WingetVersion = $ReleaseVersion.Replace('-', '.')
+          $InstallerUrl = "https://github.com/${{ github.repository }}/releases/download/$ReleaseVersion/slskdn-main-win-x64.zip"
+
+          Write-Host "Submitting Winget update for snapetech.slskdn"
+          Write-Host "Release version: $ReleaseVersion"
+          Write-Host "Winget version:  $WingetVersion"
+          Write-Host "Installer URL:   $InstallerUrl"
+
+          .\wingetcreate.exe update snapetech.slskdn `
+            -u $InstallerUrl `
+            -v $WingetVersion `
+            -t $env:WINGETCREATE_GITHUB_TOKEN `
+            --submit
+
+      - name: Skip if no token
+        if: ${{ env.WINGETCREATE_GITHUB_TOKEN == '' }}
+        shell: pwsh
+        run: |
+          Write-Host "Skipping Winget submission - WINGETCREATE_GITHUB_TOKEN not configured"
+
   metadata-main:
     name: Update Main Repo Metadata
     needs: [parse, release-main]

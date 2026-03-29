@@ -5505,3 +5505,17 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests" -v q`
   - `bash ./bin/lint`
+
+## 2026-03-29 04:30:00Z
+
+- Automated the stable Winget submission path in `build-on-tag.yml` so future `build-main-*` releases can submit `snapetech.slskdn` updates to `microsoft/winget-pkgs` without a separate manual `wingetcreate update ... --submit` step.
+- Added a new `winget-main` Windows job that:
+  - waits for `release-main`
+  - downloads the current `wingetcreate` standalone executable from `https://aka.ms/wingetcreate/latest`
+  - converts the release tag version to the dot-normalized Winget package version
+  - runs `wingetcreate update snapetech.slskdn ... --submit` against the just-published Windows asset URL
+  - skips cleanly if `WINGETCREATE_GITHUB_TOKEN` is not configured
+- Updated `docs/DEV_BUILD_PROCESS.md` to document the new stable Winget automation path and the required `WINGETCREATE_GITHUB_TOKEN` secret (`public_repo` scope).
+- Validation:
+  - `git diff --check`
+  - `bash ./bin/lint`

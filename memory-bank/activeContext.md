@@ -27,6 +27,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Automated stable Winget submission in `.github/workflows/build-on-tag.yml` with a new `winget-main` job that downloads `wingetcreate`, converts the release tag version to the dot-normalized Winget package version, and submits the current Windows asset URL to `microsoft/winget-pkgs`.
+  - Documented the new automation path and required `WINGETCREATE_GITHUB_TOKEN` secret in `docs/DEV_BUILD_PROCESS.md`.
+  - Validation for the Winget automation follow-up:
+    - `git diff --check`
+    - `bash ./bin/lint`
   - Tightened SongID-generated search strings so actual search actions now prefer canonical `Artist - Track` queries instead of concatenating uploader, album, duplicate title, and other metadata noise.
   - Reused a dedicated `BuildTrackSearchText()` helper across SongID query generation, track candidates, segment-derived actions, and fallback search variants in `src/slskd/SongID/SongIdService.cs`.
   - Added focused SongID unit coverage in `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs` for segment query formatting and fallback query formatting.
@@ -47,6 +52,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `dotnet test --no-restore -v minimal`
   - Next steps:
     - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
+    - configure `WINGETCREATE_GITHUB_TOKEN` in GitHub secrets if stable releases should auto-submit to `microsoft/winget-pkgs`
     - decide whether packaged defaults should also bind non-loopback explicitly or stay conservative and loopback-only by default
     - if needed, carry the same `/etc/slskd/slskd.yml` explicit-config behavior into any remaining non-release installers that still depend on search-order defaults
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.

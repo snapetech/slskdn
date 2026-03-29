@@ -770,3 +770,6 @@
 - [x] Tighten SongID-generated search strings to canonical `Artist - Track` format
   - Status: done
   - Notes: Replaced the permissive SongID query joins with a dedicated `BuildTrackSearchText()` helper so generated search actions no longer stuff uploader/album/title cruft into Soulseek searches; added focused SongID unit coverage for segment and fallback query formatting.
+- [x] Automate stable Winget submission from the main release workflow
+  - Status: done
+  - Notes: Added a `winget-main` job in `build-on-tag.yml` that downloads `wingetcreate`, converts the release version to the Winget package version, and runs `wingetcreate update snapetech.slskdn ... --submit` against the current release asset when `WINGETCREATE_GITHUB_TOKEN` is configured.
