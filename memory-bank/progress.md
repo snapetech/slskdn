@@ -5533,3 +5533,7 @@ Code quality improvements were completed as part of Option A:
   - `./scripts/generate-release-notes.sh 0.24.5-slskdn.103 /tmp/release-notes-check.md HEAD`
   - `git diff --check`
   - `bash ./bin/lint`
+### 2026-03-28 23:55:00 -06:00
+- Fixed the repo process gap where release notes were effectively being reconstructed at tag time because feature/fix commits were not required to touch `docs/CHANGELOG.md`.
+- Added `scripts/validate-changelog-entry.sh` to enforce a real `## [Unreleased]` bullet for release-worthy staged changes locally and for PR diffs in CI.
+- Wired the new validator into `.githooks/pre-commit` and `.github/workflows/ci.yml`, and updated `docs/CHANGELOG.md` to state the new commit/PR-time policy explicitly.

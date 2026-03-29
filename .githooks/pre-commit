@@ -4,9 +4,13 @@ set -euo pipefail
 # Shared pre-commit secret scanner
 # Scans staged content (not just working tree) and blocks on high-confidence secrets.
 # Bypass once with: SKIP_SECRET_SCAN=1 git commit ...
-
+skip_secret_scan=0
 if [[ "${SKIP_SECRET_SCAN:-}" == "1" ]]; then
-  exit 0
+  skip_secret_scan=1
+fi
+
+if [[ "${SKIP_CHANGELOG_CHECK:-}" != "1" ]]; then
+  "$(git rev-parse --show-toplevel)/scripts/validate-changelog-entry.sh" staged
 fi
 
 # ── AUR sha256sum consistency check ───────────────────────────────────────────
@@ -66,6 +70,10 @@ for _kf in "${_key_staged[@]}"; do
   fi
 done
 # ── end .key check ────────────────────────────────────────────────────────────
+
+if [[ "$skip_secret_scan" -eq 1 ]]; then
+  exit 0
+fi
 
 if ! command -v rg >/dev/null 2>&1; then
   echo "pre-commit secret scan: ripgrep (rg) not found; skipping" >&2

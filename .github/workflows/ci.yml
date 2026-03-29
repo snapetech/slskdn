@@ -112,6 +112,14 @@ jobs:
           fi
           echo "AUR sha256sums OK"
 
+      - name: Changelog Discipline Check
+        if: github.event_name == 'pull_request'
+        run: |
+          bash scripts/validate-changelog-entry.sh \
+            range \
+            "origin/${{ github.base_ref }}" \
+            "${{ github.sha }}"
+
       - name: Release Gate
         run: bash packaging/scripts/run-release-gate.sh
 

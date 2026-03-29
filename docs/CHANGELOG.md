@@ -3,6 +3,8 @@
 All notable changes to slskdN are documented here. Release pages on GitHub use
 [`scripts/generate-release-notes.sh`](../scripts/generate-release-notes.sh), which prefers the matching section below, then **Unreleased**, then the commit list since the previous tag.
 
+Feature/fix work belongs in `## [Unreleased]` when the commit lands, not later when a release is being cut. PR CI and the local pre-commit hook now block release-worthy changes if `## [Unreleased]` was not updated.
+
 Use headings in this form (date optional but helps match the generator):
 
 ```markdown
@@ -25,6 +27,6 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
-_Add release notes here while developing; move the bullets into a dated version section before tagging._
+- Enforced changelog discipline at commit/PR time so release-worthy changes must add a real `## [Unreleased]` bullet instead of relying on release-time commit-history fallback.
 
 ---
