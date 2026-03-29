@@ -290,6 +290,32 @@ Whenever a packaged static file changes, recompute and commit the matching `sha2
 
 **Why This Keeps Happening**: the package templates and the hash declarations live in different files, so it is easy to update one and forget the other until a later pre-commit run trips over it. The fix belongs with the packaging edit, not in some later cleanup commit.
 
+### 0w. Unobserved Soulseek Peer/Distributed Connection Failures Must Not Be Logged As Process-Fatal
+
+**The Bug**: `InstallShutdownTelemetry()` logged every `TaskScheduler.UnobservedTaskException` as `[FATAL]`, even for routine Soulseek peer/distributed network failures like timeouts, connection refusals, canceled socket reads, and indirect connection failures. The process stayed alive because the handler immediately called `e.SetObserved()`, but the logs made healthy-yet-noisy peer churn look like repeated daemon crashes.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+TaskScheduler.UnobservedTaskException += (sender, e) =>
+{
+    var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
+    Console.Error.WriteLine(msg);
+    Log?.Fatal(e.Exception, msg);
+    e.SetObserved();
+};
+```
+
+**Correct**:
+```text
+Classify common Soulseek peer/distributed network exceptions separately and log them as warning/debug noise, not process-fatal shutdown telemetry.
+Reserve `[FATAL]` for truly unhandled process-level failures.
+```
+
+**Why This Keeps Happening**: unobserved task handlers are a tempting catch-all for "silent crash" telemetry, but P2P networking libraries often use fire-and-forget tasks internally and can surface expected connection churn there. Without classification, ordinary peer timeout noise becomes indistinguishable from an actual daemon-killing fault.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
