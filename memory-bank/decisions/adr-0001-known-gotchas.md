@@ -195,6 +195,28 @@ Use a dedicated formatter for user-facing search actions so generated searches s
 
 **Why This Keeps Happening**: `BuildBestQuery(...)` is fine for broad metadata lookups, but it is too permissive for the actual search strings we send to Soulseek. Once SongID has an artist/title pair, switching back to a generic "join every clue" helper quickly pollutes the query with low-signal metadata.
 
+### 0s. Release Notes Must Filter Release-Hygiene Doc Commits Out Of The Included-Commits List
+
+**The Bug**: The repo-backed release-note generator listed standalone ADR gotcha commits and `docs: add release notes ...` commits in `## Included Commits`, even when the actual product change was already summarized in the changelog. That made release pages look like the same fix landed multiple times.
+
+**Files Affected**:
+- `scripts/generate-release-notes.sh`
+
+**Wrong**:
+```text
+- `9da3519` docs: Add gotcha for packaged slskd config precedence
+- `8265aff` docs: Add gotcha for packaged dual-port web defaults
+- `d988e37` fix: harden packaged defaults and SongID youtube fallback
+```
+
+**Correct**:
+```text
+Treat `docs: Add gotcha for ...` and `docs: add release notes ...` as release-hygiene commits.
+Keep them out of the generated Included-Commits list so the visible commit summary only reflects distinct product/code changes.
+```
+
+**Why This Keeps Happening**: this repo intentionally creates extra docs-only commits during bugfix work, and the generic git-log based release-note generator has no idea those commits are bookkeeping for the real fix. Without an explicit filter, the release page inflates one bugfix into multiple apparent changes.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
