@@ -231,6 +231,33 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Contains(run.Evidence, entry => entry.Contains("mix cluster"));
     }
 
+    [Fact]
+    public async Task AddPipelineEvidenceAsync_WithMissingYtDlp_DoesNotFailYouTubeRuns()
+    {
+        var run = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Source = "https://youtu.be/K3wtamktLGs",
+            SourceType = "youtube_url",
+            Status = "running",
+            CreatedAt = DateTimeOffset.UtcNow,
+            ArtifactDirectory = Path.Combine(_tempDir, "songid", Guid.NewGuid().ToString("D")),
+        };
+        var service = CreateService(new SongIdRunStore(), commandExistsOverride: (fileName, _) =>
+            Task.FromResult(!string.Equals(fileName, "yt-dlp", StringComparison.OrdinalIgnoreCase)));
+        var method = typeof(SongIdService).GetMethod("AddPipelineEvidenceAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        var task = Assert.IsAssignableFrom<Task>(method!.Invoke(service, new object[] { run, run.Source, CancellationToken.None }));
+        await task;
+
+        Assert.Equal("youtube_metadata", run.Scorecard.AnalysisAudioSource);
+        Assert.Contains(run.Evidence, entry => entry.Contains("yt-dlp unavailable; skipping YouTube audio, video, and comment extraction", StringComparison.Ordinal));
+        Assert.Empty(run.Clips);
+        Assert.Empty(run.Transcripts);
+        Assert.Empty(run.Ocr);
+    }
+
     public void Dispose()
     {
         var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
@@ -242,7 +269,9 @@ public sealed class SongIdServiceTests : IDisposable
         }
     }
 
-    private static SongIdService CreateService(ISongIdRunStore store)
+    private static SongIdService CreateService(
+        ISongIdRunStore store,
+        Func<string, CancellationToken, Task<bool>>? commandExistsOverride = null)
     {
         var hubContext = CreateHubContext();
         var options = new slskd.Options
@@ -265,7 +294,8 @@ public sealed class SongIdServiceTests : IDisposable
             new TestOptionsMonitor<slskd.Options>(options),
             hubContext,
             Mock.Of<ILogger<SongIdService>>(),
-            enableBackgroundWorkers: false);
+            enableBackgroundWorkers: false,
+            commandExistsOverride: commandExistsOverride);
     }
 
     private static IHubContext<SongIdHub> CreateHubContext()

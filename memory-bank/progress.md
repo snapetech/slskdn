@@ -5417,3 +5417,35 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint` passed
 - Added the correct root-level ignore entry for the local backup file `mesh-overlay.key.prev`; the repo was only ignoring `/src/slskd/mesh-overlay.key.prev` before, so the root backup kept showing up as untracked noise.
 - Confirmed the current working branch is `e2e-fixture-fix2`, which is 16 commits ahead of `origin/master`; next release work should fast-forward `master` to this validated tip before creating the next `build-main-*` tag.
+
+## 2026-03-29 03:20:00Z
+
+- Fixed the packaged Web UI defaults after reproducing the `kspls0` install behavior:
+  - `packaging/aur/slskd.service` now passes `--config /etc/slskd/slskd.yml`, so packaged installs stop silently preferring the runtime copy under `/var/lib/slskd/.local/share/slskd/`
+  - `packaging/aur/slskd.yml` now disables HTTPS by default, so package users get one default Web UI entry point on `http://host:5030`
+  - mirrored the same HTTP-only default into the Proxmox LXC installer template and updated packaging docs
+  - added a small login-page HTTPS hint in `LoginForm` that points HTTP users at `https://<host>:5031` when an instance explicitly enables TLS
+- Documented the packaged dual-port gotcha immediately in ADR-0001 and committed it separately as required (`8265aff3`).
+- Validation:
+  - `cd src/web && npm test -- --run src/components/LoginForm.test.jsx src/components/App.test.jsx`
+  - `bash ./bin/lint`
+  - `dotnet test --no-restore -v minimal`
+
+## 2026-03-29 03:27:00Z
+
+- Investigated the failed SongID YouTube run on `kspls0` for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` and confirmed the immediate live failure cause:
+  - the run failed at `21:19:24` on March 28, 2026 because `yt-dlp` was not installed on the host
+  - reproduced the failure from the persisted SongID run store and the service journal, then reinstalled `yt-dlp` on `kspls0`
+  - re-queued the same SongID source through the authenticated API using `slskd/slskd` and verified the live run now advances past the old `yt-dlp` crash point into later SongID stages
+- Hardened SongID against the same packaging/runtime drift in future installs:
+  - `SongIdService` now treats missing `yt-dlp` as a metadata-only YouTube analysis path instead of failing the entire run
+  - fixed the follow-on empty-clips bug in `AddPipelineEvidenceAsync` so metadata-only runs do not crash when aggregate scorecard values are computed
+  - added focused SongID unit coverage for the missing-`yt-dlp` fallback path
+  - updated package/install manifests so AUR and Proxmox installs pull in `yt-dlp`
+- Documented both bug patterns immediately in ADR-0001 with required standalone commits:
+  - `40a557f2` missing `yt-dlp` SongID failures
+  - `d840f9d8` SongID empty clip aggregates
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests"`
+  - `bash ./bin/lint`
+  - `dotnet test --no-restore -v minimal` in progress during this log update

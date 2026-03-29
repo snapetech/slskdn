@@ -84,6 +84,8 @@ directories:
 
 web:
   port: 5030
+  https:
+    disabled: true
   authentication:
     username: admin
     password: your_web_password

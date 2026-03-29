@@ -73,6 +73,7 @@ public sealed class SongIdService : ISongIdService
     private readonly IHubContext<SongIdHub> _songIdHub;
     private readonly ILogger<SongIdService> _logger;
     private readonly IOptionsMonitor<slskd.Options> _optionsMonitor;
+    private readonly Func<string, CancellationToken, Task<bool>>? _commandExistsOverride;
     private readonly Channel<Guid> _queue = Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions
     {
         SingleReader = false,
@@ -104,7 +105,8 @@ public sealed class SongIdService : ISongIdService
             optionsMonitor,
             songIdHub,
             logger,
-            enableBackgroundWorkers: true)
+            enableBackgroundWorkers: true,
+            commandExistsOverride: null)
     {
     }
 
@@ -120,7 +122,8 @@ public sealed class SongIdService : ISongIdService
         IOptionsMonitor<slskd.Options> optionsMonitor,
         IHubContext<SongIdHub> songIdHub,
         ILogger<SongIdService> logger,
-        bool enableBackgroundWorkers)
+        bool enableBackgroundWorkers,
+        Func<string, CancellationToken, Task<bool>>? commandExistsOverride = null)
     {
         _store = store;
         _metadataFacade = metadataFacade;
@@ -133,6 +136,7 @@ public sealed class SongIdService : ISongIdService
         _optionsMonitor = optionsMonitor;
         _songIdHub = songIdHub;
         _logger = logger;
+        _commandExistsOverride = commandExistsOverride;
 
         if (enableBackgroundWorkers)
         {
@@ -1649,7 +1653,9 @@ public sealed class SongIdService : ISongIdService
         run.Scorecard.AiArtifactClipCount = run.Clips.Count(clip => clip.AiHeuristics != null);
         run.Scorecard.HighAiArtifactClipCount = run.Clips.Count(clip => string.Equals(clip.AiHeuristics?.ArtifactLabel, "high", StringComparison.OrdinalIgnoreCase));
         run.Scorecard.MeanAiArtifactScore = run.AiHeuristics?.ArtifactScore ?? 0;
-        run.Scorecard.MaxAiArtifactScore = run.Clips.Max(clip => clip.AiHeuristics?.ArtifactScore ?? 0);
+        run.Scorecard.MaxAiArtifactScore = run.Clips.Count == 0
+            ? 0
+            : run.Clips.Max(clip => clip.AiHeuristics?.ArtifactScore ?? 0);
 
         run.IdentityAssessment = SongIdScoring.BuildIdentityAssessment(run);
         run.Assessment = run.IdentityAssessment;
@@ -1706,6 +1712,16 @@ public sealed class SongIdService : ISongIdService
 
     private async Task<PreparedAnalysisAssets> PrepareYouTubeAssetsAsync(string workspace, SongIdRun run, string source, CancellationToken cancellationToken)
     {
+        if (!await CommandExistsAsync("yt-dlp", cancellationToken).ConfigureAwait(false))
+        {
+            run.Evidence.Add("yt-dlp unavailable; skipping YouTube audio, video, and comment extraction. Continuing with metadata-only SongID analysis.");
+            return new PreparedAnalysisAssets
+            {
+                WorkspacePath = workspace,
+                AnalysisAudioSource = "youtube_metadata",
+            };
+        }
+
         var downloadDir = Path.Combine(workspace, "download");
         Directory.CreateDirectory(downloadDir);
         var audioOutput = Path.Combine(downloadDir, "source-audio.%(ext)s");
@@ -3041,6 +3057,11 @@ public sealed class SongIdService : ISongIdService
 
     private async Task<bool> CommandExistsAsync(string fileName, CancellationToken cancellationToken)
     {
+        if (_commandExistsOverride != null)
+        {
+            return await _commandExistsOverride(fileName, cancellationToken).ConfigureAwait(false);
+        }
+
         try
         {
             await RunToolAsync("bash", new[] { "-lc", $"command -v {ShellEscape(fileName)} >/dev/null 2>&1" }, cancellationToken).ConfigureAwait(false);

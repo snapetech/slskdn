@@ -19,6 +19,20 @@ const initialState = {
   username: '',
 };
 
+export const getHttpsHintUrl = (location) => {
+  if (!location) {
+    return null;
+  }
+
+  const { hostname, protocol } = location;
+
+  if (!hostname || protocol === 'https:') {
+    return null;
+  }
+
+  return `https://${hostname}:5031`;
+};
+
 const LoginForm = ({ error, loading, onLoginAttempt }) => {
   const usernameInput = useRef();
   const [state, setState] = useState(initialState);
@@ -27,6 +41,13 @@ const LoginForm = ({ error, loading, onLoginAttempt }) => {
     () => Logos[Math.floor(Math.random() * Logos.length)],
     [],
   );
+  const httpsUrl = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return getHttpsHintUrl(window.location);
+  }, []);
 
   useEffect(() => {
     if (state.username !== '' && state.password !== '') {
@@ -124,6 +145,20 @@ const LoginForm = ({ error, loading, onLoginAttempt }) => {
               >
                 <Icon name="x" />
                 {error.message}
+              </Message>
+            )}
+            {httpsUrl && (
+              <Message
+                icon
+                info
+                size="small"
+              >
+                <Icon name="shield alternate" />
+                <Message.Content>
+                  <Message.Header>HTTPS Option</Message.Header>
+                  If your instance exposes TLS, sign in securely at{' '}
+                  <a href={httpsUrl}>{httpsUrl}</a>.
+                </Message.Content>
               </Message>
             )}
           </Form>

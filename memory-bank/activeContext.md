@@ -23,10 +23,31 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Clear the remaining GitHub Dependabot and CodeQL backlog on the default branch after the release-main fixes landed separately.
+- **Current Task**: SongID YouTube failure follow-up after reproducing the `kspls0` `yt-dlp` crash path.
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed the packaged Web UI defaults after reproducing the `kspls0` install path:
+    - `packaging/aur/slskd.service` now passes `--config /etc/slskd/slskd.yml`, so package installs use the documented config path instead of silently preferring `/var/lib/slskd/.local/share/slskd/slskd.yml`
+    - `packaging/aur/slskd.yml` now disables HTTPS by default so `5030` is the single packaged entry point unless the user explicitly enables TLS
+    - mirrored the same HTTP-only default into `packaging/proxmox-lxc/setup-inside-ct.sh`
+    - added an HTTP-only login-page hint in `src/web/src/components/LoginForm.jsx` pointing users at `https://<host>:5031` when an instance exposes TLS explicitly
+  - Added focused web coverage in `src/web/src/components/LoginForm.test.jsx` for the HTTPS hint behavior.
+  - Documented the packaged dual-port gotcha in ADR-0001 and committed it immediately as `8265aff3`.
+  - Validation for this packaging/UI follow-up:
+    - `cd src/web && npm test -- --run src/components/LoginForm.test.jsx src/components/App.test.jsx`
+    - `bash ./bin/lint`
+    - `dotnet test --no-restore -v minimal`
+  - Next steps:
+    - decide whether packaged defaults should also bind non-loopback explicitly or stay conservative and loopback-only by default
+    - if needed, carry the same `/etc/slskd/slskd.yml` explicit-config behavior into any remaining non-release installers that still depend on search-order defaults
+  - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
+  - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
+  - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.
+  - Added focused SongID unit coverage in `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs` and updated AUR / Proxmox packaging to install `yt-dlp`.
+  - Documented both SongID gotchas immediately in ADR-0001 and committed them separately as required:
+    - `40a557f2` missing `yt-dlp` SongID failures
+    - `d840f9d8` SongID empty clip aggregates
   - Continued past the security-alert-only cleanup into the remaining open Dependabot NuGet backlog and applied the outstanding package versions directly in `src/slskd/slskd.csproj`:
     - `AWSSDK.S3` `3.7.511.4`
     - `prometheus-net.DotNetRuntime` `4.4.1`
@@ -145,9 +166,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit the validated warning-cleanup / validation-repair work and fast-forward `master` to that exact tip.
-2. Create and push the next stable release tag from `master` using the documented `build-main-0.24.5-slskdn.*` format.
-3. Monitor the resulting GitHub Actions release workflow and fix any release-only regressions if they appear.
+1. Commit the live SongID robustness/package changes after the full validation pass finishes.
+2. Decide whether packaged installs should remain loopback-only by default or explicitly bind non-loopback when auth is configured.
+3. Carry the packaged `/etc/slskd/slskd.yml` explicit-config behavior into any remaining installers/scripts that still rely on search-order defaults.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

@@ -746,3 +746,15 @@
 - [x] Fix residual `.83` cover-traffic async-enumerable test flake
   - Status: done
   - Notes: Reworked `CoverTrafficGeneratorTests.GenerateCoverTrafficAsync_GeneratesMessagesWithCorrectSize` so it cancels after collecting the first message instead of using a timeout as the normal completion path; validated with the focused mesh/privacy suite, the full release gate, and `./bin/lint`.
+
+## 2026-03-28 Completed Follow-up
+
+- [x] Fix packaged Web UI defaults so release installs center HTTP on `5030`
+  - Status: done
+  - Notes: Updated packaged `slskd.service` to pass `--config /etc/slskd/slskd.yml`, changed packaged `slskd.yml` defaults to disable HTTPS on `5031`, and added a login-page HTTPS hint that points users to `:5031` only when they are currently on HTTP.
+
+## 2026-03-29 Completed Follow-up
+
+- [x] Fix SongID YouTube runs so missing `yt-dlp` degrades instead of failing
+  - Status: done
+  - Notes: Reproduced the `kspls0` failure for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd`, confirmed the host was missing `yt-dlp`, hardened `SongIdService` to continue with metadata-only analysis when `yt-dlp` is absent, fixed the empty-clip scorecard aggregate crash exposed by that fallback path, added focused SongID unit coverage, and updated AUR / Proxmox packaging to install `yt-dlp`.

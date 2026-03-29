@@ -41,7 +41,7 @@ REPO="https://packages.microsoft.com/${ID}/${VERSION_ID}/prod"
 CODENAME=$(lsb_release -cs)
 echo "deb [arch=amd64] ${REPO} ${CODENAME} main" > /etc/apt/sources.list.d/microsoft.list
 apt-get update -qq
-apt-get install -y -qq aspnetcore-runtime-8.0
+apt-get install -y -qq aspnetcore-runtime-8.0 yt-dlp
 
 echo "[2/7] Downloading slskdn ${SLSKDN_VERSION}…"
 mkdir -p /tmp/slskdn-setup
@@ -85,6 +85,8 @@ directories:
 
 web:
   port: 5030
+  https:
+    disabled: true
   # authentication:
   #   username: admin
   #   password: changeme
