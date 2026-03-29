@@ -5465,3 +5465,16 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `cd src/web && npm test -- --run src/components/App.test.jsx`
   - `bash ./bin/lint`
+
+## 2026-03-29 03:38:00Z
+
+- Fixed two Search/SongID action regressions in the shared frontend clients:
+  - `src/web/src/lib/jobs.js` now posts snake-case fields expected by the native jobs API, which restores SongID actions like `Plan Discography` and single-release album job creation
+  - `src/web/src/lib/searches.js` now retries the search-create path when the backend returns its known serialized-create `429` response, so batch search actions no longer fail just because the search controller only accepts one create request at a time
+- Added focused frontend coverage for both behaviors in:
+  - `src/web/src/lib/jobs.test.js`
+  - `src/web/src/lib/searches.test.js`
+- Documented the jobs payload contract gotcha immediately in ADR-0001 and committed it separately as required (`089eccbe`).
+- Validation:
+  - `cd src/web && npm test -- --run src/lib/jobs.test.js src/lib/searches.test.js src/components/App.test.jsx`
+  - `bash ./bin/lint`

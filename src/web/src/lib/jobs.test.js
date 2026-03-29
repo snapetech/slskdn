@@ -216,9 +216,9 @@ describe('jobs', () => {
       });
 
       expect(api.post).toHaveBeenCalledWith('/api/jobs/discography', {
-        artistId: 'artist-123',
+        artist_id: 'artist-123',
         profile: 'ExtendedDiscography',
-        targetDirectory: '/music/Artist',
+        target_dir: '/music/Artist',
       });
       expect(result).toEqual({ job_id: 'disc-1', status: 'pending' });
     });
@@ -234,8 +234,8 @@ describe('jobs', () => {
       });
 
       expect(api.post).toHaveBeenCalledWith('/api/jobs/mb-release', {
-        mbReleaseId: 'release-123',
-        targetDir: '/music/Artist/Album',
+        mb_release_id: 'release-123',
+        target_dir: '/music/Artist/Album',
         tracks: 'all',
         constraints: null,
       });

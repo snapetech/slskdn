@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Search page layout follow-up after the SongID/YouTube fix.
+- **Current Task**: Search page action follow-up after the collapsible layout change.
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -52,6 +52,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Wrapped the touched search action buttons in Popup tooltips to match repo UI guidance.
   - Validation for the Search page layout follow-up:
     - `cd src/web && npm test -- --run src/components/App.test.jsx`
+    - `bash ./bin/lint`
+  - Investigated broken SongID actions (`Plan Discography`, album planning) and the multi-search `only one concurrent operation is permitted` failure.
+  - Fixed the shared frontend clients:
+    - `src/web/src/lib/jobs.js` now sends the native jobs API's snake-case request fields (`artist_id`, `target_dir`, `mb_release_id`)
+    - `src/web/src/lib/searches.js` now retries the backend's known serialized-create `429` response during batch search creation
+  - Added focused frontend coverage in `src/web/src/lib/jobs.test.js` and `src/web/src/lib/searches.test.js`.
+  - Documented the native jobs payload casing gotcha immediately in ADR-0001 and committed it separately as required (`089eccbe`).
+  - Validation for the Search action follow-up:
+    - `cd src/web && npm test -- --run src/lib/jobs.test.js src/lib/searches.test.js src/components/App.test.jsx`
     - `bash ./bin/lint`
   - Continued past the security-alert-only cleanup into the remaining open Dependabot NuGet backlog and applied the outstanding package versions directly in `src/slskd/slskd.csproj`:
     - `AWSSDK.S3` `3.7.511.4`
@@ -171,7 +180,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the Search page collapsible-panel follow-up if it should land on the active branch.
+1. Commit and push the Search action client fixes if they should land on the active branch.
 2. Decide whether packaged installs should remain loopback-only by default or explicitly bind non-loopback when auth is configured.
 3. Carry the packaged `/etc/slskd/slskd.yml` explicit-config behavior into any remaining installers/scripts that still rely on search-order defaults.
 

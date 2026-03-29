@@ -65,6 +65,37 @@ export const create = ({ id, searchText, providers = null }) => {
   return api.post('/searches', body);
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isSerializedSearchCreateError = (error) =>
+  error?.response?.status === 429 &&
+  /only one concurrent operation is permitted/i.test(
+    error?.response?.data || error?.message || '',
+  );
+
+const createWithRetry = async (
+  request,
+  { maxAttempts = 4, retryDelayMs = 300 } = {},
+) => {
+  let attempt = 0;
+
+  while (attempt < maxAttempts) {
+    attempt += 1;
+
+    try {
+      return await create(request);
+    } catch (error) {
+      if (!isSerializedSearchCreateError(error) || attempt >= maxAttempts) {
+        throw error;
+      }
+
+      await sleep(retryDelayMs * attempt);
+    }
+  }
+
+  throw new Error('Search batch retry loop exhausted unexpectedly.');
+};
+
 export const createBatch = async ({ queries = [], providers = null } = {}) => {
   const normalizedQueries = Array.isArray(queries)
     ? queries.map((query) => (query || '').trim()).filter(Boolean)
@@ -73,7 +104,7 @@ export const createBatch = async ({ queries = [], providers = null } = {}) => {
   await normalizedQueries.reduce(
     (chain, searchText) =>
       chain.then(() =>
-        create({
+        createWithRetry({
           id: uuidv4(),
           providers,
           searchText,

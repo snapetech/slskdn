@@ -1,4 +1,55 @@
+import api from './api';
 import * as search from './searches';
+
+vi.mock('./api', () => ({
+  __esModule: true,
+  default: {
+    post: vi.fn(),
+  },
+}));
+
+describe('createBatch', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('retries serialized search creation conflicts and completes the batch', async () => {
+    vi.useFakeTimers();
+    api.post
+      .mockRejectedValueOnce({
+        message: 'Only one concurrent operation is permitted',
+        response: {
+          data: 'Only one concurrent operation is permitted. Wait until the previous request completes',
+          status: 429,
+        },
+      })
+      .mockResolvedValueOnce({ data: { id: 'first' } })
+      .mockResolvedValueOnce({ data: { id: 'second' } });
+
+    const promise = search.createBatch({ queries: ['one', 'two'] });
+
+    await vi.runAllTimersAsync();
+    await expect(promise).resolves.toBe(2);
+    expect(api.post).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+
+  it('does not swallow non-serialized search errors', async () => {
+    api.post.mockRejectedValueOnce({
+      response: {
+        data: 'bad request',
+        status: 400,
+      },
+    });
+
+    await expect(search.createBatch({ queries: ['one'] })).rejects.toMatchObject({
+      response: {
+        data: 'bad request',
+        status: 400,
+      },
+    });
+  });
+});
 
 describe('filterResponse', () => {
   it('removes VBR files if "iscbr" is specified', () => {

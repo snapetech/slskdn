@@ -761,3 +761,6 @@
 - [x] Make Search page boxes collapsible and keep Search Results open by default
   - Status: done
   - Notes: Added page-level collapsible wrappers around the Search, SongID, MusicBrainz Lookup, Discovery Graph Atlas, Album Completion, and Search Results panels in `src/web/src/components/Search/Searches.jsx`; Search Results now starts expanded so newly-created searches remain immediately visible.
+- [x] Fix SongID job actions and multi-search batching on the Search page
+  - Status: done
+  - Notes: Updated `src/web/src/lib/jobs.js` to use the native jobs API's snake-case request fields so SongID actions like `Plan Discography` and album planning work again, and updated `src/web/src/lib/searches.js` to retry the backend's known serialized-create `429` response so batch search actions no longer fail when multiple searches are queued from one UI action.

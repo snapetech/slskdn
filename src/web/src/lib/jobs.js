@@ -53,9 +53,9 @@ export const createDiscographyJob = async ({
   targetDirectory = '',
 }) => {
   const response = await api.post('/api/jobs/discography', {
-    artistId,
+    artist_id: artistId,
     profile,
-    targetDirectory,
+    target_dir: targetDirectory,
   });
   return response.data;
 };
@@ -67,8 +67,8 @@ export const createMbReleaseJob = async ({
   constraints = null,
 }) => {
   const response = await api.post('/api/jobs/mb-release', {
-    mbReleaseId,
-    targetDir,
+    mb_release_id: mbReleaseId,
+    target_dir: targetDir,
     tracks,
     constraints,
   });
