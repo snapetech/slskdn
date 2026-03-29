@@ -378,6 +378,27 @@ default branch and cover every file the release gate validates.
 
 **Why This Keeps Happening**: release automation was built incrementally around whichever package manager was in front of us at the time, so the "current stable version" ended up duplicated across many files with no single source of truth. Once the repo switched from `master` to `main`, the branch mismatch quietly turned that partial updater into a no-op for the actual default branch.
 
+### 0z. Launchpad PPA Uploads Need Passive FTP And Retry Logic On GitHub Runners
+
+**The Bug**: The PPA workflow successfully signed and started uploading the source package, then failed mid-transfer with `550 Requested action not taken: internal server error`. Launchpad's `dput` output explicitly pointed at `passive_ftp`, and the current workflow used plain FTP with no passive mode or retry.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```text
+Configure `dput` with anonymous FTP only, then do a single `dput slskdn-ppa "$CHANGES_FILE"` attempt.
+```
+
+**Correct**:
+```text
+Set `passive_ftp = 1` in the PPA `dput` target and wrap the upload in a small retry loop,
+because Launchpad FTP failures can be transient even after signatures and package assembly succeed.
+```
+
+**Why This Keeps Happening**: PPA upload is one of the last release steps, so it often gets less local exercise than build/test/package creation. On ephemeral GitHub runners, FTP behavior is more fragile than the earlier release stages, and the workflow needs to be explicit about passive mode instead of relying on whatever default the runner image happens to ship.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
