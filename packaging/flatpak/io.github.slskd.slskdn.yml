@@ -50,7 +50,7 @@ modules:
     sources:
       - type: archive
         url: https://dotnetcli.azureedge.net/dotnet/Runtime/8.0.11/dotnet-runtime-8.0.11-linux-x64.tar.gz
-        sha256: b74a80654e9b9e698d455750c82f581c5149172f3a07593728acc98a2a21c395
+        sha256: 325fb8cf68f3babfc7c11000764b3a33da260f7c8e5ccc2ff6717e427de01589
 
   # slskdN application
   - name: slskdn
@@ -151,10 +151,10 @@ modules:
         cp slskdn.svg /app/share/icons/hicolor/scalable/apps/io.github.slskd.slskdn.svg
 
     sources:
-      # slskdN 0.24.5-slskdn.105 Linux x64 (snapetech; asset slskdn-main-linux-x64.zip)
+      # slskdN 0.24.5-slskdn.109 Linux x64 (snapetech; asset slskdn-main-linux-x64.zip)
       - type: archive
-        url: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.105/slskdn-main-linux-x64.zip
-        sha256: 8a49771ffc856f79f7c47ad63cf2759d3a200e356cfba94ad81416621fb7bf0d
+        url: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.109/slskdn-main-linux-x64.zip
+        sha256: 325fb8cf68f3babfc7c11000764b3a33da260f7c8e5ccc2ff6717e427de01589
 
       # Desktop file
       - type: file
