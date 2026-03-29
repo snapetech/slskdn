@@ -29,5 +29,6 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 - Merged the previously detached `build-main-0.24.5-slskdn.92` through `.101` history back into `main`, restoring the missing Docker startup hardening, release/packaging fixes, runtime lifecycle fixes, and expanded unit/integration coverage that had been built on tags but never merged.
 - Downgraded expected Soulseek peer and distributed-network unobserved task exceptions from fake process-fatal telemetry to warning-level noise so normal P2P timeout/refusal churn no longer looks like a daemon crash.
+- Fixed the Docker image default HTTP bind address so published container ports now serve the Web UI from outside the container instead of binding Kestrel to loopback-only `127.0.0.1`.
 
 ---

@@ -5543,6 +5543,16 @@ Code quality improvements were completed as part of Option A:
   - `git diff --check`
   - `dotnet build src/slskd/slskd.csproj --no-restore -v minimal -clp:ErrorsOnly`
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~SongIdServiceTests|FullyQualifiedName~RelayServiceTests" -v minimal`
+
+## 2026-03-29 06:39:00Z
+
+- Reproduced the remaining Docker accessibility bug locally after the detached history merge: the image booted and passed its internal health check, but host-side requests to the published HTTP port reset because the container inherited the global loopback `web.address` default.
+- Fixed the image default in `Dockerfile` by exporting `SLSKD_HTTP_ADDRESS=0.0.0.0`, documented the pattern in ADR-0001, and updated `docs/CHANGELOG.md` so the release notes capture the Docker reachability fix.
+- Re-verified end to end with a fresh local image build and disposable container run:
+  - `docker build -t slskdn:local-mergecheck-fixed -f Dockerfile .`
+  - `docker run -d --rm --name slskdn-mergecheck-fixed -p 127.0.0.1:15033:5030 -v /tmp/slskdn-mergecheck-app:/app slskdn:local-mergecheck-fixed`
+  - `curl http://127.0.0.1:15033/health` → `Degraded`
+  - `curl -I http://127.0.0.1:15033/` → `HTTP/1.1 200 OK`
 ### 2026-03-28 23:55:00 -06:00
 - Fixed the repo process gap where release notes were effectively being reconstructed at tag time because feature/fix commits were not required to touch `docs/CHANGELOG.md`.
 - Added `scripts/validate-changelog-entry.sh` to enforce a real `## [Unreleased]` bullet for release-worthy staged changes locally and for PR diffs in CI.

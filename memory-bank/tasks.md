@@ -758,6 +758,9 @@
 
 ## 2026-03-29 Completed Follow-up
 
+- [x] Fix Docker image HTTP binding so published ports are reachable from the host
+  - Status: done
+  - Notes: Reproduced the failure locally with `docker build` + `docker run` and confirmed the image was binding HTTP to container loopback only; fixed `Dockerfile` to export `SLSKD_HTTP_ADDRESS=0.0.0.0` and re-verified host-side `/health` and `/` reachability without any manual override env.
 - [x] Merge the detached `build-main-0.24.5-slskdn.92` through `.101` history back into `main`
   - Status: done
   - Notes: Merged the previously tag-only side lineage with merge commit `e74d4df1` instead of cherry-picking, resolved the runtime conflicts in `Program`, `RelayService`, and `SongIdService`, updated `docs/CHANGELOG.md`, and confirmed `git tag --no-merged main` is empty afterward.
