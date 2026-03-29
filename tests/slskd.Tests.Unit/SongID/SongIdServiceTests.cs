@@ -258,6 +258,45 @@ public sealed class SongIdServiceTests : IDisposable
         Assert.Empty(run.Ocr);
     }
 
+    [Fact]
+    public async Task AddArtistCandidatesAsync_WithTimedOutReleaseGraph_UsesLightweightFallback()
+    {
+        var run = new SongIdRun
+        {
+            Tracks = new List<SongIdTrackCandidate>
+            {
+                new()
+                {
+                    CandidateId = "track-1",
+                    RecordingId = "recording-1",
+                    Artist = "Slow Artist",
+                    MusicBrainzArtistId = "artist-1",
+                    Title = "Slow Song",
+                },
+            },
+        };
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>();
+        releaseGraphService
+            .Setup(service => service.GetArtistReleaseGraphAsync("artist-1", false, It.IsAny<CancellationToken>()))
+            .Returns(async (string _, bool _, CancellationToken ct) =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+                return (slskd.Integrations.MusicBrainz.Models.ArtistReleaseGraph?)null;
+            });
+
+        var service = CreateService(new SongIdRunStore(), releaseGraphService: releaseGraphService.Object);
+        var method = typeof(SongIdService).GetMethod("AddArtistCandidatesAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        var task = Assert.IsAssignableFrom<Task>(method!.Invoke(service, new object[] { run, CancellationToken.None }));
+        await task;
+
+        Assert.Single(run.Artists);
+        Assert.Equal("Slow Artist", run.Artists[0].Name);
+        Assert.Equal(0, run.Artists[0].ReleaseGroupCount);
+        Assert.Contains(run.Evidence, entry => entry.Contains("Artist graph fetch timed out for Slow Artist", StringComparison.Ordinal));
+    }
+
     public void Dispose()
     {
         var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.Static);
@@ -271,7 +310,8 @@ public sealed class SongIdServiceTests : IDisposable
 
     private static SongIdService CreateService(
         ISongIdRunStore store,
-        Func<string, CancellationToken, Task<bool>>? commandExistsOverride = null)
+        Func<string, CancellationToken, Task<bool>>? commandExistsOverride = null,
+        IArtistReleaseGraphService? releaseGraphService = null)
     {
         var hubContext = CreateHubContext();
         var options = new slskd.Options
@@ -288,7 +328,7 @@ public sealed class SongIdServiceTests : IDisposable
             Mock.Of<IMusicBrainzClient>(),
             Mock.Of<IAcoustIdClient>(),
             Mock.Of<ICanonicalStatsService>(),
-            Mock.Of<IArtistReleaseGraphService>(),
+            releaseGraphService ?? Mock.Of<IArtistReleaseGraphService>(),
             Mock.Of<IFingerprintExtractionService>(),
             Mock.Of<IHttpClientFactory>(),
             new TestOptionsMonitor<slskd.Options>(options),

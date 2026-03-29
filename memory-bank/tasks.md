@@ -764,3 +764,6 @@
 - [x] Fix SongID job actions and multi-search batching on the Search page
   - Status: done
   - Notes: Updated `src/web/src/lib/jobs.js` to use the native jobs API's snake-case request fields so SongID actions like `Plan Discography` and album planning work again, and updated `src/web/src/lib/searches.js` to retry the backend's known serialized-create `429` response so batch search actions no longer fail when multiple searches are queued from one UI action.
+- [x] Prevent SongID artist-graph stalls on large MusicBrainz discographies
+  - Status: done
+  - Notes: Time-boxed `AddArtistCandidatesAsync()` release-graph fetches so SongID no longer gets pinned at `38%` in `artist_graph` for large artists like Taylor Swift; the stage now falls back to a lightweight artist candidate when release-graph expansion times out or fails.

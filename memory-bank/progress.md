@@ -5478,3 +5478,17 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `cd src/web && npm test -- --run src/lib/jobs.test.js src/lib/searches.test.js src/components/App.test.jsx`
   - `bash ./bin/lint`
+
+## 2026-03-29 03:43:00Z
+
+- Investigated the live `kspls0` SongID stall at `38%` and confirmed the run was truly stuck in `artist_graph`:
+  - live run `e6e59bd4-90d8-4850-a3fb-aa0b399febba` remained at `currentStage=artist_graph`, `percentComplete=0.38`, with `artistCount=0`
+  - the service journal showed deep MusicBrainz release-graph expansion in progress for large artists, including Taylor Swift, with no later stage transition
+- Hardened SongID artist candidate expansion so one large discography cannot stall the whole run:
+  - `AddArtistCandidatesAsync()` now time-boxes each `GetArtistReleaseGraphAsync()` call
+  - on timeout or fetch failure, SongID still adds a lightweight artist candidate and continues the run instead of remaining pinned at `38%`
+- Added focused SongID unit coverage for the timeout fallback path in `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`.
+- Documented the stall pattern immediately in ADR-0001 and committed it separately as required (`fe4b75df`).
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests"`
+  - `bash ./bin/lint`

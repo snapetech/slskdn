@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Search page action follow-up after the collapsible layout change.
+- **Current Task**: SongID stall follow-up after the Search page action fixes.
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -61,6 +61,13 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Documented the native jobs payload casing gotcha immediately in ADR-0001 and committed it separately as required (`089eccbe`).
   - Validation for the Search action follow-up:
     - `cd src/web && npm test -- --run src/lib/jobs.test.js src/lib/searches.test.js src/components/App.test.jsx`
+    - `bash ./bin/lint`
+  - Investigated the live `kspls0` SongID stall at `38%` and confirmed the run was genuinely pinned in `artist_graph` while deep MusicBrainz release-graph expansion ran for a large artist.
+  - Hardened `src/slskd/SongID/SongIdService.cs` so `AddArtistCandidatesAsync()` time-boxes each artist release-graph fetch and falls back to a lightweight artist candidate instead of stalling the whole run.
+  - Added focused timeout-fallback coverage in `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`.
+  - Documented the SongID artist-graph stall gotcha immediately in ADR-0001 and committed it separately as required (`fe4b75df`).
+  - Validation for the SongID stall follow-up:
+    - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests"`
     - `bash ./bin/lint`
   - Continued past the security-alert-only cleanup into the remaining open Dependabot NuGet backlog and applied the outstanding package versions directly in `src/slskd/slskd.csproj`:
     - `AWSSDK.S3` `3.7.511.4`
@@ -180,7 +187,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the Search action client fixes if they should land on the active branch.
+1. Commit and push the SongID artist-graph stall fix if it should land on the active branch.
 2. Decide whether packaged installs should remain loopback-only by default or explicitly bind non-loopback when auth is configured.
 3. Carry the packaged `/etc/slskd/slskd.yml` explicit-config behavior into any remaining installers/scripts that still rely on search-order defaults.
 

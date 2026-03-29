@@ -43,6 +43,7 @@ public sealed class SongIdService : ISongIdService
     private const int MaxComments = 40;
     private const int MaxSegmentGroups = 6;
     private const int MaxSegmentCandidatesPerGroup = 4;
+    private static readonly TimeSpan ArtistGraphFetchTimeout = TimeSpan.FromSeconds(15);
     private const int WhisperExcerptSeconds = 180;
     private const int DemucsExcerptSeconds = 180;
     private const int PerturbationExcerptSeconds = 75;
@@ -639,7 +640,23 @@ public sealed class SongIdService : ISongIdService
                      .Take(4))
         {
             var artistId = group.Key.MusicBrainzArtistId!;
-            var releaseGraph = await _releaseGraphService.GetArtistReleaseGraphAsync(artistId, false, cancellationToken).ConfigureAwait(false);
+            ArtistReleaseGraph? releaseGraph = null;
+
+            try
+            {
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(ArtistGraphFetchTimeout);
+                releaseGraph = await _releaseGraphService.GetArtistReleaseGraphAsync(artistId, false, timeoutCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                run.Evidence.Add($"Artist graph fetch timed out for {group.Key.Artist} ({artistId}); continuing with lightweight discography planning.");
+            }
+            catch (Exception ex)
+            {
+                run.Evidence.Add($"Artist graph fetch failed for {group.Key.Artist} ({artistId}); continuing with lightweight discography planning. {ex.Message}");
+            }
+
             run.Artists.Add(new SongIdArtistCandidate
             {
                 CandidateId = artistId,
