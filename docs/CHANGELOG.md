@@ -28,5 +28,6 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 ## [Unreleased]
 
 - Enforced changelog discipline at commit/PR time so release-worthy changes must add a real `## [Unreleased]` bullet instead of relying on release-time commit-history fallback.
+- Downgraded expected Soulseek peer and distributed-network unobserved task exceptions from fake process-fatal telemetry to warning-level noise so normal P2P timeout/refusal churn no longer looks like a daemon crash.
 
 ---

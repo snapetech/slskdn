@@ -27,6 +27,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Confirmed `kspls0` was actually logged into the Soulseek server and traced the apparent network deadness to a host firewall gap: inbound `50300/tcp` was missing even though the Web UI ports were open.
+  - Added the persistent `50300/tcp` nftables allow rule on `kspls0`, then verified the host immediately established a remote peer connection on `:50300` and a fresh `metallica - one` search returned `236` responses / `1514` files.
+  - Patched `src/slskd/Program.cs` so expected Soulseek peer/distributed-network unobserved task exceptions no longer log as fake `[FATAL]` process-shutdown telemetry.
   - Added `scripts/setup-git-hooks.sh` so clones can explicitly install `.githooks` via `git config --local core.hooksPath .githooks`, and updated README/local-development docs to make hook installation part of first-time setup.
   - Added commit/PR-time changelog enforcement so release-worthy changes must update `docs/CHANGELOG.md` `## [Unreleased]` when they land instead of relying on release-time git-history fallback.
   - Added `scripts/validate-changelog-entry.sh`, wired it into `.githooks/pre-commit` for staged-change checks and `.github/workflows/ci.yml` for pull-request diff checks, and updated `docs/CHANGELOG.md` to document the policy.
@@ -61,6 +64,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `dotnet test --no-restore -v minimal`
   - Next steps:
     - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
+    - decide whether to ship the `50300/tcp` firewall requirement more explicitly in packaging/docs for host installs that rely on strict inbound nftables policies
     - configure `WINGETCREATE_GITHUB_TOKEN` in GitHub secrets if stable releases should auto-submit to `microsoft/winget-pkgs`
     - decide whether to also hide other non-user-facing CI-only commits from generated release commit lists beyond the currently-filtered release-hygiene subjects
     - decide whether packaged defaults should also bind non-loopback explicitly or stay conservative and loopback-only by default

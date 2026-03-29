@@ -5540,3 +5540,7 @@ Code quality improvements were completed as part of Option A:
 ### 2026-03-29 00:03:00 -06:00
 - Closed the last-mile gap for local hook enforcement by adding `scripts/setup-git-hooks.sh`, an idempotent repo-owned installer for `git config --local core.hooksPath .githooks`.
 - Updated `README.md`, `docs/dev/LOCAL_DEVELOPMENT.md`, and `docs/README.md` so first-time local setup now explicitly installs the checked-in hooks and documents how to verify the configuration later.
+### 2026-03-29 00:20:00 -06:00
+- Investigated `kspls0` network inactivity: the client was genuinely logged into the Soulseek server, but the host firewall was still missing inbound `50300/tcp`, which made the node effectively dead to peers until that rule was added.
+- Confirmed the host-side fix immediately changed behavior: `kspls0` established a remote peer connection on `:50300`, and a fresh `metallica - one` search returned `236` responses / `1514` files instead of `0`.
+- Patched `src/slskd/Program.cs` so expected Soulseek peer/distributed network unobserved task exceptions are downgraded from fake `[FATAL]` shutdown telemetry to warning-level noise.

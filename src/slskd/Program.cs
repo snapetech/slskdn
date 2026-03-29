@@ -3712,6 +3712,24 @@ namespace slskd
 
             TaskScheduler.UnobservedTaskException += (sender, e) =>
             {
+                var baseException = e.Exception.GetBaseException();
+
+                if (IsExpectedSoulseekNetworkException(e.Exception))
+                {
+                    var warningMessage = $"[WARN] Unobserved Soulseek peer/distributed network exception: {baseException.Message}";
+                    Console.Error.WriteLine(warningMessage);
+                    try
+                    {
+                        Log?.Warning(baseException, warningMessage);
+                    }
+                    catch
+                    {
+                    }
+
+                    e.SetObserved();
+                    return;
+                }
+
                 var msg = $"[FATAL] Unobserved task exception: {e.Exception.Message}";
                 Console.Error.WriteLine(msg);
                 Console.Error.WriteLine(e.Exception.StackTrace);
@@ -3733,6 +3751,66 @@ namespace slskd
         private static Mesh.Overlay.QuicOverlayServer CreateQuicOverlayServer(IServiceProvider serviceProvider)
         {
             return ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(serviceProvider);
+        }
+
+        private static bool IsExpectedSoulseekNetworkException(Exception exception)
+        {
+            var flattened = FlattenExceptions(exception).ToList();
+
+            return flattened.Count > 0 && flattened.All(IsExpectedSoulseekNetworkExceptionCore);
+        }
+
+        private static IEnumerable<Exception> FlattenExceptions(Exception exception)
+        {
+            if (exception is AggregateException aggregateException)
+            {
+                foreach (var innerException in aggregateException.Flatten().InnerExceptions)
+                {
+                    foreach (var flattenedInnerException in FlattenExceptions(innerException))
+                    {
+                        yield return flattenedInnerException;
+                    }
+                }
+
+                yield break;
+            }
+
+            yield return exception;
+
+            if (exception.InnerException is not null)
+            {
+                foreach (var innerException in FlattenExceptions(exception.InnerException))
+                {
+                    yield return innerException;
+                }
+            }
+        }
+
+        private static bool IsExpectedSoulseekNetworkExceptionCore(Exception exception)
+        {
+            var typeName = exception.GetType().FullName ?? exception.GetType().Name;
+            var details = exception.ToString();
+            var isNetworkFailure =
+                exception is TimeoutException ||
+                exception is OperationCanceledException ||
+                exception is IOException ||
+                exception is System.Net.Sockets.SocketException ||
+                typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal);
+
+            if (!isNetworkFailure)
+            {
+                return false;
+            }
+
+            return details.Contains("Soulseek.Network.PeerConnectionManager", StringComparison.Ordinal) ||
+                details.Contains("Soulseek.Network.DistributedConnectionManager", StringComparison.Ordinal) ||
+                details.Contains("Soulseek.Network.Tcp.Connection", StringComparison.Ordinal) ||
+                details.Contains("Failed to connect", StringComparison.Ordinal) ||
+                details.Contains("Connection refused", StringComparison.Ordinal) ||
+                details.Contains("Operation timed out", StringComparison.Ordinal) ||
+                details.Contains("The wait timed out", StringComparison.Ordinal) ||
+                details.Contains("Failed to read", StringComparison.Ordinal) ||
+                details.Contains("Operation canceled", StringComparison.Ordinal);
         }
 
         [System.Runtime.Versioning.SupportedOSPlatformGuard("linux")]

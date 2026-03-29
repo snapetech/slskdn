@@ -142,6 +142,7 @@
 - [x] **Testing hardening: add one repo-level release gate**: Added `packaging/scripts/run-release-gate.sh`, wired it into `ci.yml` and `build-on-tag.yml`, added built-web output verification for subpath-safe assets, and documented the policy in `docs/dev/testing-policy.md`. Validated locally with packaging checks, 91 frontend tests, 2619 unit tests, and 46 backend smoke/regression tests passing. Done.
 - [x] **Changelog discipline at commit time**: Added `scripts/validate-changelog-entry.sh`, wired it into `.githooks/pre-commit` and PR CI in `.github/workflows/ci.yml`, and updated `docs/CHANGELOG.md` so release-worthy changes must add a real `## [Unreleased]` bullet when the work lands instead of deferring summary writing to release time.
 - [x] **Git hook bootstrap**: Added `scripts/setup-git-hooks.sh` so clones can install `.githooks` with one command, and updated onboarding docs to require the hook-setup step during local development.
+- [x] **Peer exception telemetry cleanup**: Reclassified expected Soulseek peer/distributed-network unobserved task exceptions in `Program.cs` so normal timeout/refusal churn no longer logs as `[FATAL]` process-shutdown telemetry.
 
 ### 40-fixes Out of Scope (docs)
 
