@@ -758,6 +758,9 @@
 
 ## 2026-03-29 Completed Follow-up
 
+- [x] Harden Launchpad PPA uploads against passive FTP / transient transport failures
+  - Status: done
+  - Notes: Enabled `passive_ftp = 1` and added bounded retry loops in all Launchpad upload workflows after the stable `107` tag run proved package generation/signing was fine but the FTP transfer could still fail with Launchpad-side `550` transport errors.
 - [x] Sync stable package metadata to the latest published stable release and fix the auto-sync workflow
   - Status: done
   - Notes: Aligned the checked-in stable metadata baseline to `0.24.5-slskdn.105` and added `packaging/scripts/update-stable-release-metadata.sh` so future successful stable tag runs update the full metadata set on `main` instead of partially drifting on the old `master` target.

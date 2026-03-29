@@ -5562,6 +5562,15 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `bash packaging/scripts/validate-packaging-metadata.sh`
   - `git diff --check`
+
+## 2026-03-29 07:08:00Z
+
+- Investigated the follow-on `build-main-0.24.5-slskdn.107` result and isolated the remaining failure to the Launchpad upload transport: package assembly/signing succeeded, but the PPA step died mid-transfer with `550 Requested action not taken: internal server error`.
+- Hardened all Launchpad upload workflows (`build-on-tag.yml` main/dev PPA jobs, `dev-release.yml`, and `release-ppa.yml`) by enabling `passive_ftp = 1` in `dput` and wrapping the upload in a bounded 3-attempt retry loop.
+- Documented the Launchpad passive-FTP gotcha immediately in ADR-0001 as required.
+- Validation:
+  - `python - <<'PY' ... yaml.safe_load(...) ... PY` for the touched workflow files
+  - `git diff --check`
 ### 2026-03-28 23:55:00 -06:00
 - Fixed the repo process gap where release notes were effectively being reconstructed at tag time because feature/fix commits were not required to touch `docs/CHANGELOG.md`.
 - Added `scripts/validate-changelog-entry.sh` to enforce a real `## [Unreleased]` bullet for release-worthy staged changes locally and for PR diffs in CI.

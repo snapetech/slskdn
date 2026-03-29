@@ -31,5 +31,6 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 - Downgraded expected Soulseek peer and distributed-network unobserved task exceptions from fake process-fatal telemetry to warning-level noise so normal P2P timeout/refusal churn no longer looks like a daemon crash.
 - Fixed the Docker image default HTTP bind address so published container ports now serve the Web UI from outside the container instead of binding Kestrel to loopback-only `127.0.0.1`.
 - Synced the checked-in stable package metadata back to the latest published stable release `0.24.5-slskdn.105` so release gating and downstream package manifests stop disagreeing about the current baseline.
+- Hardened Launchpad PPA uploads in the release workflows by enabling passive FTP and bounded retry so transient FTP-side failures stop breaking otherwise-valid stable/dev package publishes.
 
 ---

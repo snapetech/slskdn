@@ -841,6 +841,7 @@ jobs:
           method = ftp
           incoming = ~keefshape/ubuntu/slskdn/
           login = anonymous
+          passive_ftp = 1
           allow_unsigned_uploads = 0
           EOF
 
@@ -855,7 +856,16 @@ jobs:
           ls -la *.changes || true
           CHANGES_FILE=$(find . -name "slskdn-dev*.changes" -type f | head -1)
           echo "Found changes file: $CHANGES_FILE"
-          dput slskdn-ppa "$CHANGES_FILE"
+          for attempt in 1 2 3; do
+            if dput slskdn-ppa "$CHANGES_FILE"; then
+              echo "✅ Uploaded to PPA: slskdn-dev"
+              exit 0
+            fi
+            echo "PPA upload attempt $attempt failed; retrying..."
+            sleep $((attempt * 15))
+          done
+          echo "::error::PPA upload failed after 3 attempts"
+          exit 1
 
   docker:
     name: Build and Push Docker Image
