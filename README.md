@@ -14,7 +14,7 @@
   <a href="https://github.com/snapetech/slskdn/actions/workflows/build-on-tag.yml"><img src="https://github.com/snapetech/slskdn/actions/workflows/build-on-tag.yml/badge.svg" alt="Release Build"></a>
   <a href="https://github.com/snapetech/slskdn/releases"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version"></a>
   <a href="https://ghcr.io/snapetech/slskdn"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=docker&logo=docker" alt="Docker"></a>
-  <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR"></a>
+  <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR&cacheSeconds=300" alt="AUR"></a>
   <a href="https://copr.fedorainfracloud.org/coprs/slskdn/slskdn/"><img src="https://img.shields.io/badge/copr-slskdn%2Fslskdn-51A2DA?logo=fedora" alt="COPR"></a>
   <a href="https://launchpad.net/~snapetech/+archive/ubuntu/slskdn"><img src="https://img.shields.io/badge/ppa-snapetech%2Fslskdn-E95420?logo=ubuntu" alt="PPA"></a>
   <a href="https://github.com/snapetech/homebrew-slskdn"><img src="https://img.shields.io/badge/homebrew-slskdn-blue?logo=homebrew" alt="Homebrew"></a>
