@@ -351,6 +351,33 @@ Any Docker or container-oriented distribution path must force the web listener t
 
 **Why This Keeps Happening**: the repo-wide default is intentionally conservative for bare-metal installs, but containers invert the reachability model. A loopback default that is safe on a host is broken in Docker unless the image or packaged config explicitly overrides it.
 
+### 0y. Stable Release Metadata Automation Must Update `main` And The Full Metadata Set
+
+**The Bug**: The stable tag workflow's repo-metadata step only rewrote a small subset of files and still tried to reset/push `origin/master`. In a `main`-based repo that meant successful stable releases could leave checked-in package metadata stale for multiple releases, and the next tag build would fail the release gate on mismatched versions.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `packaging/scripts/update-stable-release-metadata.sh`
+
+**Wrong**:
+```text
+After a stable release, update only `flake.nix`, `Formula/slskdn.rb`, and Winget,
+then `git reset --hard origin/master` and `git push origin HEAD:master`.
+```
+
+**Correct**:
+```text
+Use one repo-owned script that updates every checked-in stable metadata target from
+the actual release asset hashes, and have the workflow fetch/reset/push `origin/main`.
+```
+
+```text
+If release automation is supposed to keep the repo in sync, it must target the real
+default branch and cover every file the release gate validates.
+```
+
+**Why This Keeps Happening**: release automation was built incrementally around whichever package manager was in front of us at the time, so the "current stable version" ended up duplicated across many files with no single source of truth. Once the repo switched from `master` to `main`, the branch mismatch quietly turned that partial updater into a no-op for the actual default branch.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
