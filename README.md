@@ -13,17 +13,17 @@
 <p align="center">
   <a href="https://github.com/snapetech/slskdn/actions/workflows/build-on-tag.yml"><img src="https://github.com/snapetech/slskdn/actions/workflows/build-on-tag.yml/badge.svg" alt="Release Build"></a>
   <a href="https://github.com/snapetech/slskdn/releases"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=version" alt="Version"></a>
-  <a href="https://ghcr.io/snapetech/slskdn"><img src="https://img.shields.io/badge/docker-ghcr.io%2Fsnapetech%2Fslskdn-blue?logo=docker" alt="Docker"></a>
+  <a href="https://ghcr.io/snapetech/slskdn"><img src="https://img.shields.io/github/v/release/snapetech/slskdn?label=docker&logo=docker" alt="Docker"></a>
   <a href="https://aur.archlinux.org/packages/slskdn-bin"><img src="https://img.shields.io/aur/version/slskdn-bin?logo=archlinux&label=AUR" alt="AUR"></a>
   <a href="https://copr.fedorainfracloud.org/coprs/slskdn/slskdn/"><img src="https://img.shields.io/badge/copr-slskdn%2Fslskdn-51A2DA?logo=fedora" alt="COPR"></a>
   <a href="https://launchpad.net/~snapetech/+archive/ubuntu/slskdn"><img src="https://img.shields.io/badge/ppa-snapetech%2Fslskdn-E95420?logo=ubuntu" alt="PPA"></a>
   <a href="https://github.com/snapetech/homebrew-slskdn"><img src="https://img.shields.io/badge/homebrew-slskdn-blue?logo=homebrew" alt="Homebrew"></a>
   <a href="https://search.nixos.org/packages?channel=unstable&query=slskdn"><img src="https://img.shields.io/badge/nix-flake-5277C3?logo=nixos" alt="Nix"></a>
   <a href="https://snapcraft.io/slskdn"><img src="https://img.shields.io/badge/snap-slskdn-E95420?logo=snapcraft" alt="Snap"></a>
-  <a href="https://community.chocolatey.org/packages/slskdn"><img src="https://img.shields.io/chocolatey/v/slskdn?label=choco" alt="Chocolatey"></a>
+  <a href="https://community.chocolatey.org/packages/slskdn"><img src="https://img.shields.io/badge/choco-slskdn-80B5E3?logo=chocolatey" alt="Chocolatey"></a>
   <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/s/snapetech/slskdn"><img src="https://img.shields.io/badge/winget-slskdn-00D1F1?logo=windows" alt="Winget"></a>
-  <img src="https://img.shields.io/badge/base-slskd%200.24.3-purple" alt="Based on slskd">
-  <a href="https://github.com/snapetech/slskdn/blob/master/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
+  <a href="https://github.com/slskd/slskd/releases"><img src="https://img.shields.io/github/v/release/slskd/slskd?label=base%20slskd&color=purple" alt="Based on slskd"></a>
+  <a href="https://github.com/snapetech/slskdn/blob/main/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
   <a href="https://discord.gg/NRzj8xycQZ"><img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
