@@ -32,5 +32,6 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 - Fixed the Docker image default HTTP bind address so published container ports now serve the Web UI from outside the container instead of binding Kestrel to loopback-only `127.0.0.1`.
 - Synced the checked-in stable package metadata back to the latest published stable release `0.24.5-slskdn.105` so release gating and downstream package manifests stop disagreeing about the current baseline.
 - Hardened Launchpad PPA uploads in the release workflows by enabling passive FTP and bounded retry so transient FTP-side failures stop breaking otherwise-valid stable/dev package publishes.
+- Fixed the stable release metadata workflow so it emits the full checksum set expected by `update-stable-release-metadata.sh`, restoring the `Update Main Repo Metadata` job for tagged releases.
 
 ---

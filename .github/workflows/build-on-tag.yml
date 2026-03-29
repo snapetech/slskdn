@@ -1780,9 +1780,10 @@ jobs:
           echo "macos_x64_sha=sha256-$(sri_from_file slskdn-main-osx-x64.zip)" >> "$GITHUB_OUTPUT"
           echo "macos_arm64_sha=sha256-$(sri_from_file slskdn-main-osx-arm64.zip)" >> "$GITHUB_OUTPUT"
           echo "linux_x64_hex=$(sha256sum slskdn-main-linux-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64_hex=$(sha256sum slskdn-main-linux-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "macos_x64_hex=$(sha256sum slskdn-main-osx-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "macos_arm64_hex=$(sha256sum slskdn-main-osx-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-          echo "win_x64_sha=$(sha256sum slskdn-main-win-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "win_x64_hex=$(sha256sum slskdn-main-win-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Update Metadata Files
         run: |
@@ -1794,7 +1795,7 @@ jobs:
             "${{ steps.hashes.outputs.linux_arm64_hex }}" \
             "${{ steps.hashes.outputs.macos_x64_hex }}" \
             "${{ steps.hashes.outputs.macos_arm64_hex }}" \
-            "${{ steps.hashes.outputs.win_x64_sha }}" \
+            "${{ steps.hashes.outputs.win_x64_hex }}" \
             "${VERSION}"
 
       - name: Verify Flake
@@ -1822,7 +1823,7 @@ jobs:
               "${{ steps.hashes.outputs.linux_arm64_hex }}" \
               "${{ steps.hashes.outputs.macos_x64_hex }}" \
               "${{ steps.hashes.outputs.macos_arm64_hex }}" \
-              "${{ steps.hashes.outputs.win_x64_sha }}" \
+              "${{ steps.hashes.outputs.win_x64_hex }}" \
               "${VERSION}"
 
             git add \

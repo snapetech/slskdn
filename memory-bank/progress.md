@@ -5582,3 +5582,8 @@ Code quality improvements were completed as part of Option A:
 - Investigated `kspls0` network inactivity: the client was genuinely logged into the Soulseek server, but the host firewall was still missing inbound `50300/tcp`, which made the node effectively dead to peers until that rule was added.
 - Confirmed the host-side fix immediately changed behavior: `kspls0` established a remote peer connection on `:50300`, and a fresh `metallica - one` search returned `236` responses / `1514` files instead of `0`.
 - Patched `src/slskd/Program.cs` so expected Soulseek peer/distributed network unobserved task exceptions are downgraded from fake `[FATAL]` shutdown telemetry to warning-level noise.
+## 2026-03-29 17:40:55Z
+
+- Investigated GitHub Actions run `23703841784` on `snapetech/slskdn` and confirmed the only failure was `Update Main Repo Metadata`.
+- Root cause was a workflow/output mismatch in `.github/workflows/build-on-tag.yml`: `linux_arm64_hex` was referenced but never emitted, and the Windows hex checksum was exposed under the misleading name `win_x64_sha`.
+- Documented the gotcha in ADR-0001 and patched the workflow so both metadata update call sites now pass the complete checksum argument list expected by `packaging/scripts/update-stable-release-metadata.sh`.

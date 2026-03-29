@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None.
+- **Current Task**: Release the metadata-workflow fix for the failed `build-main-0.24.5-slskdn.108` run and verify the replacement tag build.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -218,6 +218,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. Commit and push the SongID artist-graph stall fix if it should land on the active branch.
+2. Confirm the replacement `build-main-0.24.5-slskdn.109` GitHub Actions run passes the `Update Main Repo Metadata` job.
 2. Decide whether packaged installs should remain loopback-only by default or explicitly bind non-loopback when auth is configured.
 3. Carry the packaged `/etc/slskd/slskd.yml` explicit-config behavior into any remaining installers/scripts that still rely on search-order defaults.
 
