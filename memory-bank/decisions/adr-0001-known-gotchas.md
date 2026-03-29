@@ -52,6 +52,45 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
+
+**The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
+
+**Files Affected**:
+- `src/slskd/SongID/SongIdService.cs`
+- `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs`
+- `packaging/aur/PKGBUILD`
+- `packaging/proxmox-lxc/setup-inside-ct.sh`
+
+**Wrong**:
+```csharp
+await RunToolAsync("yt-dlp", new[] { "-f", "bestaudio", "-o", audioOutput, source }, cancellationToken).ConfigureAwait(false);
+```
+
+```text
+Result: YouTube SongID runs failed with "An error occurred trying to start process 'yt-dlp'..."
+instead of completing with metadata-only evidence.
+```
+
+**Correct**:
+```csharp
+if (!await CommandExistsAsync("yt-dlp", cancellationToken).ConfigureAwait(false))
+{
+    run.Evidence.Add("yt-dlp unavailable; skipping YouTube audio, video, and comment extraction. Continuing with metadata-only SongID analysis.");
+    return new PreparedAnalysisAssets
+    {
+        WorkspacePath = workspace,
+        AnalysisAudioSource = "youtube_metadata",
+    };
+}
+```
+
+```text
+Also make packaging install yt-dlp anywhere we claim YouTube SongID works out of the box.
+```
+
+**Why This Keeps Happening**: The source-analysis phase already handles missing helper tools gracefully, but the downstream evidence pipeline is easy to forget because it runs later and uses different helper methods. Any external tool that is optional for enrichment must be checked again at the asset-preparation stage, not just when building the initial query.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
