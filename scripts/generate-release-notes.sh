@@ -81,6 +81,14 @@ subject_highlight() {
   '
 }
 
+is_release_hygiene_subject() {
+  local subject="$1"
+  [[ "$subject" =~ ^docs:\ Add\ gotcha\ for\  ]] && return 0
+  [[ "$subject" =~ ^docs:\ add\ release\ notes\  ]] && return 0
+  [[ "$subject" =~ ^chore\(release\):\ update\ stable\ metadata\  ]] && return 0
+  return 1
+}
+
 LOGICAL_VERSION="${1:-}"
 OUT_PATH="${2:-$ROOT_DIR/dist/release-notes.md}"
 GIT_REF_ARG="${3:-}"
@@ -154,6 +162,20 @@ if [[ -z "$COMMITS" ]]; then
   COMMITS="$(git log --reverse --format='%H%x09%s' "$RANGE" 2>/dev/null || true)"
 fi
 
+DISPLAY_COMMITS=""
+if [[ -n "$COMMITS" ]]; then
+  while IFS=$'\t' read -r sha subject; do
+    [[ -n "$sha" ]] || continue
+    if is_release_hygiene_subject "$subject"; then
+      continue
+    fi
+
+    DISPLAY_COMMITS+="${sha}"$'\t'"${subject}"$'\n'
+  done <<<"$COMMITS"
+
+  DISPLAY_COMMITS="$(printf '%s' "$DISPLAY_COMMITS" | trim_blank_edges || true)"
+fi
+
 PRODUCT_NAME="${RELEASE_NOTES_PRODUCT_NAME:-}"
 if [[ -z "$PRODUCT_NAME" ]]; then
   PRODUCT_NAME="$(basename "$(git config --get remote.origin.url || echo slskdn)" .git)"
@@ -180,7 +202,7 @@ mkdir -p "$(dirname "$OUT_PATH")"
     printf '%s\n\n' "$UNRELEASED_SECTION"
     printf '_Source: `%s` `Unreleased` section at release time._\n\n' "$CHANGELOG_PATH"
   else
-    if [[ -z "$COMMITS" ]]; then
+    if [[ -z "$DISPLAY_COMMITS" ]]; then
       printf '%s\n\n' "- No recorded changes found for \`${LOGICAL_VERSION}\`."
     else
       while IFS=$'\t' read -r sha subject; do
@@ -188,14 +210,14 @@ mkdir -p "$(dirname "$OUT_PATH")"
         if [[ -n "$highlight" ]]; then
           printf '%s\n' "- ${highlight}"
         fi
-      done <<<"$COMMITS"
+      done <<<"$DISPLAY_COMMITS"
       printf '\n'
     fi
   fi
 
   printf '## Included Commits\n\n'
-  if [[ -z "$COMMITS" ]]; then
-    printf '%s\n' "- No commits found for \`${LOGICAL_VERSION}\`."
+  if [[ -z "$DISPLAY_COMMITS" ]]; then
+    printf '%s\n' "- No product commits listed for \`${LOGICAL_VERSION}\` after filtering release-hygiene docs commits."
   else
     while IFS=$'\t' read -r sha subject; do
       short_sha="${sha:0:7}"
@@ -205,7 +227,7 @@ mkdir -p "$(dirname "$OUT_PATH")"
       else
         printf '%s\n' "- \`${short_sha}\` ${subject}"
       fi
-    done <<<"$COMMITS"
+    done <<<"$DISPLAY_COMMITS"
   fi
 } >"$OUT_PATH"
 

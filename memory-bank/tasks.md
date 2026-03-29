@@ -773,3 +773,6 @@
 - [x] Automate stable Winget submission from the main release workflow
   - Status: done
   - Notes: Added a `winget-main` job in `build-on-tag.yml` that downloads `wingetcreate`, converts the release version to the Winget package version, and runs `wingetcreate update snapetech.slskdn ... --submit` against the current release asset when `WINGETCREATE_GITHUB_TOKEN` is configured.
+- [x] Filter release-hygiene docs commits out of generated release note commit lists
+  - Status: done
+  - Notes: Updated `scripts/generate-release-notes.sh` so `Included Commits` excludes standalone ADR gotcha commits, release-notes doc commits, and stable metadata bookkeeping commits that otherwise make one fix appear multiple times in GitHub release output.

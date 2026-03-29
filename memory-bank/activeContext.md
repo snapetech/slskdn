@@ -27,6 +27,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Cleaned up `scripts/generate-release-notes.sh` so generated `Included Commits` lists no longer surface standalone ADR gotcha commits, release-note doc commits, or stable metadata bookkeeping commits as if they were separate product changes.
+  - Documented the release-note hygiene commit gotcha immediately in ADR-0001 and committed it separately as required (`f85f20ac`).
+  - Validation for the release-note cleanup:
+    - `./scripts/generate-release-notes.sh 0.24.5-slskdn.103 /tmp/release-notes-check.md HEAD`
+    - `git diff --check`
+    - `bash ./bin/lint`
   - Automated stable Winget submission in `.github/workflows/build-on-tag.yml` with a new `winget-main` job that downloads `wingetcreate`, converts the release tag version to the dot-normalized Winget package version, and submits the current Windows asset URL to `microsoft/winget-pkgs`.
   - Documented the new automation path and required `WINGETCREATE_GITHUB_TOKEN` secret in `docs/DEV_BUILD_PROCESS.md`.
   - Validation for the Winget automation follow-up:
@@ -53,6 +59,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Next steps:
     - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
     - configure `WINGETCREATE_GITHUB_TOKEN` in GitHub secrets if stable releases should auto-submit to `microsoft/winget-pkgs`
+    - decide whether to also hide other non-user-facing CI-only commits from generated release commit lists beyond the currently-filtered release-hygiene subjects
     - decide whether packaged defaults should also bind non-loopback explicitly or stay conservative and loopback-only by default
     - if needed, carry the same `/etc/slskd/slskd.yml` explicit-config behavior into any remaining non-release installers that still depend on search-order defaults
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.

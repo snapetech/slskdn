@@ -5519,3 +5519,17 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `git diff --check`
   - `bash ./bin/lint`
+
+## 2026-03-29 04:44:00Z
+
+- Cleaned up the repo-backed release-note generator so `## Included Commits` no longer double-counts docs-only release-hygiene commits as product changes.
+- `scripts/generate-release-notes.sh` now filters out:
+  - `docs: Add gotcha for ...`
+  - `docs: add release notes ...`
+  - `chore(release): update stable metadata ...`
+- Regenerated the `0.24.5-slskdn.103` sample notes locally and confirmed the commit list now shows the actual code/CI changes without the extra ADR/release-note bookkeeping commits.
+- Documented the release-note hygiene gotcha immediately in ADR-0001 and committed it separately as required (`f85f20ac`).
+- Validation:
+  - `./scripts/generate-release-notes.sh 0.24.5-slskdn.103 /tmp/release-notes-check.md HEAD`
+  - `git diff --check`
+  - `bash ./bin/lint`
