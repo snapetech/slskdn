@@ -84,6 +84,31 @@ If the package intends `/etc/slskd/slskd.yml` to be authoritative, pass `--confi
 
 **Why This Keeps Happening**: The package ships `/etc/slskd/slskd.yml`, which strongly suggests that file is authoritative, but the service's config search order prefers the runtime config under the service account home directory when no explicit `--config` is passed. On fresh installs that also inherit the loopback default `web.address`, the service looks healthy while the Web UI is unreachable remotely.
 
+### 0m. Packaged Installs Should Not Enable HTTPS On `5031` By Default If The Login UX Still Centers `5030`
+
+**The Bug**: Packaged installs exposed HTTP on `5030` and HTTPS on `5031` by default, while docs and user expectation still centered on `5030`. Browsers that auto-upgraded to HTTPS or users who manually tried `https://host:5030` hit TLS failures or confusing "problem loading page" behavior even though the HTTP UI itself was healthy.
+
+**Files Affected**:
+- `packaging/aur/slskd.yml`
+- `packaging/aur/README.md`
+- release workflows that publish `packaging/aur/slskd.yml`
+
+**Wrong**:
+```yaml
+web:
+  port: 5030
+```
+
+**Correct**:
+```yaml
+web:
+  port: 5030
+  https:
+    disabled: true
+```
+
+**Why This Keeps Happening**: The application defaults are reasonable for a generic binary, but packaged installs are judged by the first URL users type. If packaging wants `5030` to be the default entry point, it must make that path unambiguous by disabling the extra HTTPS listener unless the user explicitly enables TLS and chooses to manage `5031`.
+
 ### 0j. Relay Validation Logs Must Hash Agent And Connection Identifiers
 
 **The Bug**: Relay credential-validation paths logged raw cached relay connection ids and compared response credentials directly in debug logs, which exposed server-internal identifiers and kept triggering CodeQL cleartext-storage findings.
