@@ -23,10 +23,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: SongID stall follow-up after the Search page action fixes.
+- **Current Task**: Search-path cleanup on top of the recent SongID/Search fixes.
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Tightened SongID-generated search strings so actual search actions now prefer canonical `Artist - Track` queries instead of concatenating uploader, album, duplicate title, and other metadata noise.
+  - Reused a dedicated `BuildTrackSearchText()` helper across SongID query generation, track candidates, segment-derived actions, and fallback search variants in `src/slskd/SongID/SongIdService.cs`.
+  - Added focused SongID unit coverage in `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs` for segment query formatting and fallback query formatting.
+  - Documented the noisy SongID search query-builder gotcha immediately in ADR-0001 and committed it separately as required (`167de066`).
+  - Validation for the query-shape follow-up:
+    - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests" -v q`
+    - `bash ./bin/lint`
   - Fixed the packaged Web UI defaults after reproducing the `kspls0` install path:
     - `packaging/aur/slskd.service` now passes `--config /etc/slskd/slskd.yml`, so package installs use the documented config path instead of silently preferring `/var/lib/slskd/.local/share/slskd/slskd.yml`
     - `packaging/aur/slskd.yml` now disables HTTPS by default so `5030` is the single packaged entry point unless the user explicitly enables TLS
@@ -39,6 +46,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `bash ./bin/lint`
     - `dotnet test --no-restore -v minimal`
   - Next steps:
+    - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
     - decide whether packaged defaults should also bind non-loopback explicitly or stay conservative and loopback-only by default
     - if needed, carry the same `/etc/slskd/slskd.yml` explicit-config behavior into any remaining non-release installers that still depend on search-order defaults
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.

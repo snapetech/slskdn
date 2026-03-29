@@ -429,7 +429,7 @@ public sealed class SongIdService : ISongIdService
 
         if (!string.IsNullOrWhiteSpace(metadata.Artist) || !string.IsNullOrWhiteSpace(metadata.Title))
         {
-            analysis.Query = string.Join(" ", new[] { metadata.Artist, metadata.Title }.Where(value => !string.IsNullOrWhiteSpace(value)));
+            analysis.Query = BuildTrackSearchText(metadata.Artist, metadata.Title);
             analysis.Evidence.Add($"MetadataFacade resolved artist/title: {metadata.Artist} - {metadata.Title}");
             analysis.Metadata.Artist = metadata.Artist ?? string.Empty;
             analysis.Metadata.Title = metadata.Title ?? analysis.Metadata.Title;
@@ -479,7 +479,7 @@ public sealed class SongIdService : ISongIdService
             var title = TryGetString(root, "title");
             var uploader = TryGetString(root, "uploader");
 
-            analysis.Query = BuildBestQuery(track, artist, title, uploader);
+            analysis.Query = BuildTrackSearchText(artist ?? uploader, track ?? title);
             analysis.Evidence.Add($"yt-dlp metadata extracted query: {analysis.Query}");
             analysis.Chapters = ParseChapterFindings(root);
 
@@ -539,7 +539,7 @@ public sealed class SongIdService : ISongIdService
 
             var artist = parts.Length > 0 ? parts[0] : null;
             var album = parts.Length > 1 ? parts[1] : null;
-            analysis.Query = BuildBestQuery(title, artist, title, album);
+            analysis.Query = BuildTrackSearchText(artist, title);
             analysis.Evidence.Add($"Spotify page metadata extracted query: {analysis.Query}");
             if (!string.IsNullOrWhiteSpace(album))
             {
@@ -619,7 +619,7 @@ public sealed class SongIdService : ISongIdService
                 Title = hit.Title ?? string.Empty,
                 Artist = hit.Artist ?? string.Empty,
                 MusicBrainzArtistId = hit.MusicBrainzArtistId,
-                SearchText = string.Join(" ", new[] { hit.Artist, hit.Title }.Where(value => !string.IsNullOrWhiteSpace(value))),
+                SearchText = BuildTrackSearchText(hit.Artist, hit.Title),
                 IdentityScore = 0.72,
                 ByzantineScore = 0.58,
                 ActionScore = 0.67,
@@ -759,7 +759,7 @@ public sealed class SongIdService : ISongIdService
             Title = track.Title,
             Artist = track.Artist,
             IsExact = true,
-            SearchText = string.Join(" ", new[] { track.Artist, track.Title }.Where(value => !string.IsNullOrWhiteSpace(value))),
+            SearchText = BuildTrackSearchText(track.Artist, track.Title),
             IdentityScore = 0.96,
             ByzantineScore = 0.89,
             ActionScore = 0.93,
@@ -1090,10 +1090,9 @@ public sealed class SongIdService : ISongIdService
         }
 
         var fallbackQueries = new List<string>();
-        AddFallbackQuery(fallbackQueries, BuildBestQuery(run.Metadata.Artist, run.Metadata.Title));
+        AddFallbackQuery(fallbackQueries, BuildTrackSearchText(run.Metadata.Artist, run.Metadata.Title));
         AddFallbackQuery(fallbackQueries, run.Query);
-        AddFallbackQuery(fallbackQueries, BuildBestQuery(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Title));
-        AddFallbackQuery(fallbackQueries, BuildBestQuery(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Album, run.Metadata.Title));
+        AddFallbackQuery(fallbackQueries, BuildTrackSearchText(TryGetMetadataValue(run.Metadata.Extra, "uploader"), run.Metadata.Title));
 
         if (fallbackQueries.Count == 0)
         {
@@ -1216,7 +1215,7 @@ public sealed class SongIdService : ISongIdService
                 continue;
             }
 
-            var query = BuildBestQuery(artistContext, cleaned);
+            var query = BuildTrackSearchText(artistContext, cleaned);
             if (!TryAddSegmentQuery(segments, seenQueries, query, $"Chapter {FormatTimestamp(chapter.StartSeconds)}", $"chapter \"{chapter.Title}\"", chapter.StartSeconds, 0.54))
             {
                 continue;
@@ -1231,7 +1230,7 @@ public sealed class SongIdService : ISongIdService
                 continue;
             }
 
-            var query = BuildBestQuery(artistContext, cleaned);
+            var query = BuildTrackSearchText(artistContext, cleaned);
             TryAddSegmentQuery(
                 segments,
                 seenQueries,
@@ -1294,7 +1293,7 @@ public sealed class SongIdService : ISongIdService
             Title = hit.Title ?? string.Empty,
             Artist = hit.Artist ?? string.Empty,
             MusicBrainzArtistId = hit.MusicBrainzArtistId,
-            SearchText = string.Join(" ", new[] { hit.Artist, hit.Title }.Where(value => !string.IsNullOrWhiteSpace(value))),
+            SearchText = BuildTrackSearchText(hit.Artist, hit.Title),
             IdentityScore = Math.Max(0.46, segmentQuery.Confidence + 0.16 - (rank * 0.05)),
             ByzantineScore = Math.Max(0.42, segmentQuery.Confidence + 0.08 - (rank * 0.04)),
             ActionScore = Math.Max(0.5, segmentQuery.Confidence + 0.18 - (rank * 0.04)),
@@ -1310,7 +1309,7 @@ public sealed class SongIdService : ISongIdService
             Title = hit.Title,
             Artist = hit.Artist,
             MusicBrainzArtistId = hit.MusicBrainzArtistId,
-            SearchText = string.Join(" ", new[] { hit.Artist, hit.Title }.Where(value => !string.IsNullOrWhiteSpace(value))),
+            SearchText = BuildTrackSearchText(hit.Artist, hit.Title),
             IdentityScore = Math.Max(0.42, segmentQuery.Confidence + 0.10 - (rank * 0.05)),
             ByzantineScore = Math.Max(0.39, segmentQuery.Confidence + 0.04 - (rank * 0.04)),
             ActionScore = Math.Max(0.46, segmentQuery.Confidence + 0.12 - (rank * 0.04)),
@@ -3212,6 +3211,23 @@ public sealed class SongIdService : ISongIdService
     private static string BuildBestQuery(params string?[] parts)
     {
         return string.Join(" ", parts.Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part!.Trim())).Trim();
+    }
+
+    private static string BuildTrackSearchText(string? artist, string? title)
+    {
+        var normalizedArtist = artist?.Trim();
+        var normalizedTitle = title?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(normalizedArtist) && !string.IsNullOrWhiteSpace(normalizedTitle))
+        {
+            return string.Equals(normalizedArtist, normalizedTitle, StringComparison.OrdinalIgnoreCase)
+                ? normalizedTitle
+                : $"{normalizedArtist} - {normalizedTitle}";
+        }
+
+        return !string.IsNullOrWhiteSpace(normalizedTitle)
+            ? normalizedTitle
+            : normalizedArtist ?? string.Empty;
     }
 
     private static string? TryGetString(JsonElement element, string propertyName)

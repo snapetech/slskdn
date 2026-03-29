@@ -5492,3 +5492,16 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests"`
   - `bash ./bin/lint`
+
+## 2026-03-29 04:15:00Z
+
+- Tightened SongID-generated search strings so the actual search actions stay in canonical `Artist - Track` form instead of concatenating uploader, album, duplicate title, and other low-signal metadata.
+- Updated `src/slskd/SongID/SongIdService.cs` to reuse a dedicated `BuildTrackSearchText()` helper across:
+  - file / YouTube / Spotify query generation when artist-title metadata is available
+  - track candidates, exact-track actions, segment candidate actions, and segment-derived search plans
+  - fallback SongID search variants
+- Added focused SongID unit coverage in `tests/slskd.Tests.Unit/SongID/SongIdServiceTests.cs` for segment query formatting and fallback search query formatting.
+- Documented the noisy SongID query-builder gotcha immediately in ADR-0001 and committed it separately as required (`167de066`).
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests" -v q`
+  - `bash ./bin/lint`

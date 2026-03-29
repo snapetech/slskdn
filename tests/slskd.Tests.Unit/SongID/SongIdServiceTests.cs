@@ -232,6 +232,65 @@ public sealed class SongIdServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildSegmentQueries_UsesArtistDashTrackFormat()
+    {
+        var run = new SongIdRun
+        {
+            Metadata = new SongIdMetadata
+            {
+                Artist = "Joachim Pastor",
+            },
+            Chapters = new List<SongIdChapterFinding>
+            {
+                new()
+                {
+                    Title = "Joda",
+                    StartSeconds = 15,
+                },
+            },
+        };
+
+        var method = typeof(SongIdService).GetMethod("BuildSegmentQueries", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var segments = Assert.IsAssignableFrom<System.Collections.IEnumerable>(method!.Invoke(null, new object[] { run }));
+        var segment = Assert.Single(segments.Cast<object>());
+        var query = segment.GetType().GetProperty("Query", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(segment) as string;
+
+        Assert.Equal("Joachim Pastor - Joda", query);
+    }
+
+    [Fact]
+    public void AddFallbackOptions_UsesArtistDashTrackQueries()
+    {
+        var run = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Query = "Uploader Name Very Long Video Title Official Audio",
+            Metadata = new SongIdMetadata
+            {
+                Artist = "Lucio101",
+                Title = "Taylor Swift",
+            },
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "needs_manual_review",
+            },
+        };
+
+        var method = typeof(SongIdService).GetMethod("AddFallbackOptions", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        method!.Invoke(null, new object[] { run });
+
+        var option = Assert.Single(run.Options);
+        Assert.Equal("Lucio101 - Taylor Swift", option.SearchText);
+        Assert.Contains("Lucio101 - Taylor Swift", option.SearchTexts);
+        Assert.Contains("Uploader Name Very Long Video Title Official Audio", option.SearchTexts);
+        Assert.DoesNotContain(option.SearchTexts, query => query.Contains("Lucio101 Taylor Swift", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AddPipelineEvidenceAsync_WithMissingYtDlp_DoesNotFailYouTubeRuns()
     {
         var run = new SongIdRun

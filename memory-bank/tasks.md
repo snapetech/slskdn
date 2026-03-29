@@ -767,3 +767,6 @@
 - [x] Prevent SongID artist-graph stalls on large MusicBrainz discographies
   - Status: done
   - Notes: Time-boxed `AddArtistCandidatesAsync()` release-graph fetches so SongID no longer gets pinned at `38%` in `artist_graph` for large artists like Taylor Swift; the stage now falls back to a lightweight artist candidate when release-graph expansion times out or fails.
+- [x] Tighten SongID-generated search strings to canonical `Artist - Track` format
+  - Status: done
+  - Notes: Replaced the permissive SongID query joins with a dedicated `BuildTrackSearchText()` helper so generated search actions no longer stuff uploader/album/title cruft into Soulseek searches; added focused SongID unit coverage for segment and fallback query formatting.
