@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
+
+**The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
+
+**Files Affected**:
+- `packaging/aur/slskd.service`
+- runtime config at `/var/lib/slskd/.local/share/slskd/slskd.yml`
+
+**Wrong**:
+```ini
+ExecStart=/usr/share/dotnet/dotnet /usr/lib/slskd/slskd.dll
+Environment="HOME=/var/lib/slskd"
+```
+
+```yaml
+# edited, but ignored by the running service
+web:
+  port: 5030
+  address: "*"
+```
+
+**Correct**:
+```ini
+ExecStart=/usr/share/dotnet/dotnet /usr/lib/slskd/slskd.dll --http-address "*"
+```
+
+```text
+If the package intends `/etc/slskd/slskd.yml` to be authoritative, pass `--config /etc/slskd/slskd.yml` explicitly from the service unit.
+```
+
+**Why This Keeps Happening**: The package ships `/etc/slskd/slskd.yml`, which strongly suggests that file is authoritative, but the service's config search order prefers the runtime config under the service account home directory when no explicit `--config` is passed. On fresh installs that also inherit the loopback default `web.address`, the service looks healthy while the Web UI is unreachable remotely.
+
 ### 0j. Relay Validation Logs Must Hash Agent And Connection Identifiers
 
 **The Bug**: Relay credential-validation paths logged raw cached relay connection ids and compared response credentials directly in debug logs, which exposed server-internal identifiers and kept triggering CodeQL cleartext-storage findings.
