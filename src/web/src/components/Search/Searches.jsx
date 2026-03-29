@@ -19,8 +19,63 @@ import {
   useRouteMatch,
 } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Button, Checkbox, Icon, Input, Segment } from 'semantic-ui-react';
+import {
+  Button,
+  Checkbox,
+  Header,
+  Icon,
+  Input,
+  Popup,
+  Segment,
+} from 'semantic-ui-react';
 import { v4 as uuidv4 } from 'uuid';
+
+const CollapsibleSection = ({
+  children,
+  defaultOpen = true,
+  title,
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <Segment raised>
+      <div
+        style={{
+          alignItems: 'center',
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: open ? '1em' : 0,
+        }}
+      >
+        <Header
+          as="h4"
+          style={{ margin: 0 }}
+        >
+          {title}
+        </Header>
+        <Popup
+          content={
+            open
+              ? `Collapse the ${title.toLowerCase()} panel to free up room on the page.`
+              : `Expand the ${title.toLowerCase()} panel to inspect its contents.`
+          }
+          position="top center"
+          trigger={
+            <Button
+              aria-label={`${open ? 'Collapse' : 'Expand'} ${title}`}
+              icon
+              onClick={() => setOpen((current) => !current)}
+              size="mini"
+            >
+              <Icon name={open ? 'angle up' : 'angle down'} />
+            </Button>
+          }
+        />
+      </div>
+      {open ? children : null}
+    </Segment>
+  );
+};
 
 const Searches = ({ server } = {}) => {
   const normalizedServer = server ?? { isConnected: false };
@@ -298,134 +353,158 @@ const Searches = ({ server } = {}) => {
 
   return (
     <>
-      <Segment
-        className="search-segment"
-        raised
-      >
-        <div className="search-segment-icon">
-          <Icon
-            name="search"
+      <CollapsibleSection title="Search">
+        <Segment className="search-segment">
+          <div className="search-segment-icon">
+            <Icon
+              name="search"
+              size="big"
+            />
+          </div>
+          <Input
+            action={
+              <>
+                <Popup
+                  content="Queue this search without leaving the search page."
+                  position="top center"
+                  trigger={
+                    <Button
+                      disabled={creating || !normalizedServer.isConnected}
+                      icon="plus"
+                      onClick={create}
+                    />
+                  }
+                />
+                <Popup
+                  content="Start this search and open its detailed results immediately."
+                  position="top center"
+                  trigger={
+                    <Button
+                      disabled={creating || !normalizedServer.isConnected}
+                      icon="search"
+                      onClick={() => create({ navigate: true })}
+                    />
+                  }
+                />
+              </>
+            }
+            className="search-input"
+            disabled={creating || !normalizedServer.isConnected}
+            input={
+              <input
+                data-lpignore="true"
+                data-testid="search-input"
+                placeholder={
+                  normalizedServer.isConnected
+                    ? 'Search phrase'
+                    : 'Connect to server to perform a search'
+                }
+                type="search"
+              />
+            }
+            loading={creating}
+            onKeyUp={(keyUpEvent) => (keyUpEvent.key === 'Enter' ? create() : '')}
+            placeholder="Search phrase"
+            ref={inputRef}
             size="big"
           />
-        </div>
-        <Input
-          action={
-            <>
-              <Button
-                disabled={creating || !normalizedServer.isConnected}
-                icon="plus"
-                onClick={create}
-              />
-              <Button
-                disabled={creating || !normalizedServer.isConnected}
-                icon="search"
-                onClick={() => create({ navigate: true })}
-              />
-            </>
-          }
-          className="search-input"
-          disabled={creating || !normalizedServer.isConnected}
-          input={
-            <input
-              data-lpignore="true"
-              data-testid="search-input"
-              placeholder={
-                normalizedServer.isConnected
-                  ? 'Search phrase'
-                  : 'Connect to server to perform a search'
-              }
-              type="search"
-            />
-          }
-          loading={creating}
-          onKeyUp={(keyUpEvent) => (keyUpEvent.key === 'Enter' ? create() : '')}
-          placeholder="Search phrase"
-          ref={inputRef}
-          size="big"
-        />
-        {scenePodBridgeEnabled && (
-          <div
-            style={{
-              background: 'rgba(0,0,0,0.05)',
-              borderRadius: '4px',
-              marginTop: '0.75em',
-              padding: '0.75em',
-            }}
-          >
+          {scenePodBridgeEnabled && (
             <div
               style={{
-                alignItems: 'center',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1em',
+                background: 'rgba(0,0,0,0.05)',
+                borderRadius: '4px',
+                marginTop: '0.75em',
+                padding: '0.75em',
               }}
             >
-              <span style={{ fontSize: '0.95em', fontWeight: 'bold' }}>
-                Search Sources:
-              </span>
-              <Checkbox
-                checked={providerPod}
-                label={
-                  <label>
-                    <Icon
-                      name="sitemap"
-                      style={{ marginRight: '0.25em' }}
-                    />
-                    Pod/Mesh
-                  </label>
-                }
-                onChange={(e, { checked }) => setProviderPod(checked)}
-                toggle
-              />
-              <Checkbox
-                checked={providerScene}
-                label={
-                  <label>
-                    <Icon
-                      name="globe"
-                      style={{ marginRight: '0.25em' }}
-                    />
-                    Soulseek Scene
-                  </label>
-                }
-                onChange={(e, { checked }) => setProviderScene(checked)}
-                toggle
-              />
-              {!providerPod && !providerScene && (
-                <span
-                  style={{
-                    color: 'orange',
-                    fontSize: '0.9em',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  <Icon name="warning" /> At least one source must be selected
+              <div
+                style={{
+                  alignItems: 'center',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '1em',
+                }}
+              >
+                <span style={{ fontSize: '0.95em', fontWeight: 'bold' }}>
+                  Search Sources:
                 </span>
-              )}
+                <Checkbox
+                  checked={providerPod}
+                  label={
+                    <label>
+                      <Icon
+                        name="sitemap"
+                        style={{ marginRight: '0.25em' }}
+                      />
+                      Pod/Mesh
+                    </label>
+                  }
+                  onChange={(e, { checked }) => setProviderPod(checked)}
+                  toggle
+                />
+                <Checkbox
+                  checked={providerScene}
+                  label={
+                    <label>
+                      <Icon
+                        name="globe"
+                        style={{ marginRight: '0.25em' }}
+                      />
+                      Soulseek Scene
+                    </label>
+                  }
+                  onChange={(e, { checked }) => setProviderScene(checked)}
+                  toggle
+                />
+                {!providerPod && !providerScene && (
+                  <span
+                    style={{
+                      color: 'orange',
+                      fontSize: '0.9em',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    <Icon name="warning" /> At least one source must be selected
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+        </Segment>
+      </CollapsibleSection>
+      <CollapsibleSection title="SongID">
+        <SongIDPanel disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection title="MusicBrainz Lookup">
+        <MusicBrainzLookup disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Discovery Graph Atlas">
+        <DiscoveryGraphAtlasPanel disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Album Completion">
+        <AlbumCompletionPanel disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection
+        defaultOpen
+        title="Search Results"
+      >
+        {Object.keys(searches).length === 0 ? (
+          <PlaceholderSegment
+            caption="No searches to display"
+            icon="search"
+          />
+        ) : (
+          <SearchList
+            connecting={connecting}
+            error={error}
+            onRemove={remove}
+            onRemoveAll={removeAll}
+            onStop={stop}
+            removingAll={removingAll}
+            searches={searches}
+          />
         )}
-      </Segment>
-      <SongIDPanel disabled={!normalizedServer.isConnected} />
-      <MusicBrainzLookup disabled={!normalizedServer.isConnected} />
-      <DiscoveryGraphAtlasPanel disabled={!normalizedServer.isConnected} />
-      <AlbumCompletionPanel disabled={!normalizedServer.isConnected} />
-      {Object.keys(searches).length === 0 ? (
-        <PlaceholderSegment
-          caption="No searches to display"
-          icon="search"
-        />
-      ) : (
-        <SearchList
-          connecting={connecting}
-          error={error}
-          onRemove={remove}
-          onRemoveAll={removeAll}
-          onStop={stop}
-          removingAll={removingAll}
-          searches={searches}
-        />
-      )}
+      </CollapsibleSection>
     </>
   );
 };

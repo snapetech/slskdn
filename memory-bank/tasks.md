@@ -758,3 +758,6 @@
 - [x] Fix SongID YouTube runs so missing `yt-dlp` degrades instead of failing
   - Status: done
   - Notes: Reproduced the `kspls0` failure for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd`, confirmed the host was missing `yt-dlp`, hardened `SongIdService` to continue with metadata-only analysis when `yt-dlp` is absent, fixed the empty-clip scorecard aggregate crash exposed by that fallback path, added focused SongID unit coverage, and updated AUR / Proxmox packaging to install `yt-dlp`.
+- [x] Make Search page boxes collapsible and keep Search Results open by default
+  - Status: done
+  - Notes: Added page-level collapsible wrappers around the Search, SongID, MusicBrainz Lookup, Discovery Graph Atlas, Album Completion, and Search Results panels in `src/web/src/components/Search/Searches.jsx`; Search Results now starts expanded so newly-created searches remain immediately visible.

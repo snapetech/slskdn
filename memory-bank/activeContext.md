@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: SongID YouTube failure follow-up after reproducing the `kspls0` `yt-dlp` crash path.
+- **Current Task**: Search page layout follow-up after the SongID/YouTube fix.
 - **Branch**: `security/master-security-sweep`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -48,6 +48,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Documented both SongID gotchas immediately in ADR-0001 and committed them separately as required:
     - `40a557f2` missing `yt-dlp` SongID failures
     - `d840f9d8` SongID empty clip aggregates
+  - Added page-level collapsible wrappers in `src/web/src/components/Search/Searches.jsx` so every top-level Search page box can be collapsed, and left Search Results expanded by default so newly-triggered searches are immediately visible.
+  - Wrapped the touched search action buttons in Popup tooltips to match repo UI guidance.
+  - Validation for the Search page layout follow-up:
+    - `cd src/web && npm test -- --run src/components/App.test.jsx`
+    - `bash ./bin/lint`
   - Continued past the security-alert-only cleanup into the remaining open Dependabot NuGet backlog and applied the outstanding package versions directly in `src/slskd/slskd.csproj`:
     - `AWSSDK.S3` `3.7.511.4`
     - `prometheus-net.DotNetRuntime` `4.4.1`
@@ -166,7 +171,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit the live SongID robustness/package changes after the full validation pass finishes.
+1. Commit and push the Search page collapsible-panel follow-up if it should land on the active branch.
 2. Decide whether packaged installs should remain loopback-only by default or explicitly bind non-loopback when auth is configured.
 3. Carry the packaged `/etc/slskd/slskd.yml` explicit-config behavior into any remaining installers/scripts that still rely on search-order defaults.
 

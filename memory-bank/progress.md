@@ -5449,3 +5449,19 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~SongIdServiceTests"`
   - `bash ./bin/lint`
   - `dotnet test --no-restore -v minimal` in progress during this log update
+
+## 2026-03-29 03:33:37Z
+
+- Made the Search page panels collapsible so long SongID and search flows no longer force the search results off the bottom of the scrollable area.
+- Added page-level collapse controls for:
+  - Search
+  - SongID
+  - MusicBrainz Lookup
+  - Discovery Graph Atlas
+  - Album Completion
+  - Search Results
+- Left the Search Results panel expanded by default so newly-triggered searches stay visible immediately.
+- Wrapped the search create buttons in Popup tooltips while touching the page-level controls to stay consistent with repo UI guidance.
+- Validation:
+  - `cd src/web && npm test -- --run src/components/App.test.jsx`
+  - `bash ./bin/lint`
