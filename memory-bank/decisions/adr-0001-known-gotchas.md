@@ -113,6 +113,35 @@ run.Scorecard.MaxAiArtifactScore = run.Clips.Count == 0
 
 **Why This Keeps Happening**: SongID scoring code was written assuming the evidence pipeline always produces at least one clip for non-text sources. As soon as optional-tool fallback paths or metadata-only analysis are introduced, every aggregate over `run.Clips` needs an empty-list-safe default.
 
+### 0p. Native Job API Clients Must Use The Backend's Snake-Case Contract Exactly
+
+**The Bug**: SongID action buttons like `Plan Discography` and single-release album planning silently failed because the frontend posted camelCase keys (`artistId`, `targetDirectory`, `mbReleaseId`, `targetDir`) to native job endpoints whose request models are annotated with snake-case names (`artist_id`, `target_dir`, `mb_release_id`).
+
+**Files Affected**:
+- `src/web/src/lib/jobs.js`
+- `src/slskd/Jobs/DiscographyJobService.cs`
+- `src/slskd/API/Native/JobsController.cs`
+
+**Wrong**:
+```javascript
+await api.post('/api/jobs/discography', {
+  artistId,
+  profile,
+  targetDirectory,
+});
+```
+
+**Correct**:
+```javascript
+await api.post('/api/jobs/discography', {
+  artist_id: artistId,
+  profile,
+  target_dir: targetDirectory,
+});
+```
+
+**Why This Keeps Happening**: Most of the web client talks to the versioned REST API using camelCase payloads, so it is easy to assume the native job endpoints behave the same way. When a backend request type uses explicit `JsonPropertyName` values, mirror that contract exactly in the shared frontend client and lock it down with tests.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
