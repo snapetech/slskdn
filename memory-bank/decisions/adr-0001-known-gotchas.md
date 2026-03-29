@@ -242,6 +242,32 @@ Release generation should consume curated changelog content, not serve as the fi
 
 **Why This Keeps Happening**: release automation is easier to notice because it runs on every tag, while changelog discipline has no pain until much later. Without a local hook and CI validation, developers optimize for shipping code and defer the changelog until the release is already being cut, which is exactly when recall is worst.
 
+### 0u. A Checked-In Hook Is Useless Unless The Repo Explicitly Installs `core.hooksPath`
+
+**The Bug**: The repo added meaningful checks in `.githooks/pre-commit` and `.githooks/pre-push`, but nothing in the normal setup path actually configured `git config core.hooksPath .githooks`. That meant local enforcement was silently absent for anyone who had not configured hooks manually.
+
+**Files Affected**:
+- `.githooks/pre-commit`
+- `.githooks/pre-push`
+- local setup / bootstrap docs and scripts
+
+**Wrong**:
+```text
+Assume that committing hook scripts into `.githooks/` is enough for them to run automatically on every clone.
+```
+
+**Correct**:
+```text
+Provide an explicit repo bootstrap step (script and docs) that runs:
+git config core.hooksPath .githooks
+```
+
+```text
+If local hook enforcement matters, install the hooks as part of normal developer setup instead of relying on tribal knowledge.
+```
+
+**Why This Keeps Happening**: checked-in hooks look "present" in the tree, so it is easy to forget Git ignores them unless `core.hooksPath` or `.git/hooks` is configured. CI catches some problems later, but the whole point of local hooks is to fail earlier than PR time.
+
 ### 0l. Packaged Service Config Can Keep Reading The Runtime Copy Under `~/.local/share/slskd`, Not `/etc/slskd/slskd.yml`
 
 **The Bug**: On packaged installs, changing `/etc/slskd/slskd.yml` did not affect the live service because the systemd unit runs with `HOME=/var/lib/slskd` and no `--config`, so `slskd` kept loading `/var/lib/slskd/.local/share/slskd/slskd.yml`. That left the Web UI bound to `127.0.0.1:5030` even after `/etc/slskd/slskd.yml` was updated.
