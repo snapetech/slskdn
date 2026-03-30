@@ -172,13 +172,10 @@ jobs:
           fi
           
           # Setup SSH
-          mkdir -p ~/.ssh
-          echo "$AUR_SSH_KEY" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          echo "Host aur.archlinux.org" >> ~/.ssh/config
-          echo "  IdentityFile ~/.ssh/aur" >> ~/.ssh/config
-          echo "  User aur" >> ~/.ssh/config
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          tmp_key=$(mktemp)
+          trap 'rm -f "$tmp_key"' EXIT
+          printf '%s\n' "$AUR_SSH_KEY" > "$tmp_key"
+          bash packaging/scripts/setup-aur-ssh.sh "$tmp_key"
           
           # Configure git
           git config --global user.email "slskdn@proton.me"
@@ -211,7 +208,7 @@ jobs:
           }
           
           # Clone and update AUR repo (slskdn-bin)
-          git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-repo || mkdir aur-repo
+          bash packaging/scripts/checkout-aur-repo.sh slskdn-bin aur-repo
           cd aur-repo
           cp ../packaging/aur/PKGBUILD-bin PKGBUILD
           cp ../packaging/aur/slskd.service .
@@ -220,12 +217,11 @@ jobs:
           cp ../packaging/aur/slskd.install .
           generate_srcinfo PKGBUILD > .SRCINFO
           git add -A
-          git commit -m "Update to ${{ steps.version.outputs.tag }}" || true
-          git push || echo "AUR push failed - may need manual intervention"
+          bash ../packaging/scripts/push-aur-repo.sh . slskdn-bin "Update to ${{ steps.version.outputs.tag }}"
           cd ..
           
           # Clone and update AUR repo (slskdn source)
-          git clone ssh://aur@aur.archlinux.org/slskdn.git aur-repo-src || mkdir aur-repo-src
+          bash packaging/scripts/checkout-aur-repo.sh slskdn aur-repo-src
           cd aur-repo-src
           cp ../packaging/aur/PKGBUILD .
           cp ../packaging/aur/slskd.service .
@@ -234,5 +230,4 @@ jobs:
           cp ../packaging/aur/slskd.install .
           generate_srcinfo PKGBUILD > .SRCINFO
           git add -A
-          git commit -m "Update to ${{ steps.version.outputs.tag }}" || true
-          git push || echo "AUR push failed - may need manual intervention"
+          bash ../packaging/scripts/push-aur-repo.sh . slskdn "Update to ${{ steps.version.outputs.tag }}"

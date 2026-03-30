@@ -27,7 +27,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
-- Hardened the tag-driven AUR release workflows so transient `aur.archlinux.org` SSH disconnects now retry clone/push instead of falling back to an empty `git init` repo and failing the release with a non-fast-forward binary-package push.
+- Centralized all AUR publish logic into shared packaging scripts, switched AUR clone/fetch/rebase traffic to HTTPS, and kept SSH only for the final authenticated push so release workflows stop failing on transient AUR SSH read-side disconnects or drifting YAML copies.
 - Fixed the remaining open `SessionController` CodeQL login alert by moving admin credential verification behind the security service, and updated CodeQL to scan the live `main` branch so fixes on the release branch clear instead of lingering.
 - Grouped non-breaking Dependabot updates by ecosystem to collapse the release-time dependency PR flood into a small set of batched update PRs.
 - Froze `@uiw/react-codemirror` Dependabot updates until the planned React migration because the current 4.25.x line now requires React 17+ while the repo stays on React 16.8.6.

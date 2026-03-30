@@ -262,18 +262,11 @@ jobs:
             echo "⚠️ AUR_SSH_KEY not configured, skipping AUR publish"
             exit 0
           fi
-          
-          mkdir -p ~/.ssh
-          echo "$AUR_SSH_KEY" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          
-          cat >> ~/.ssh/config << EOF
-          Host aur.archlinux.org
-            IdentityFile ~/.ssh/aur
-            User aur
-          EOF
-          
-          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+          tmp_key=$(mktemp)
+          trap 'rm -f "$tmp_key"' EXIT
+          printf '%s\n' "$AUR_SSH_KEY" > "$tmp_key"
+          bash packaging/scripts/setup-aur-ssh.sh "$tmp_key"
 
       - name: Clone AUR Package
         env:
@@ -281,21 +274,7 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
 
-          for attempt in 1 2 3; do
-            rm -rf aur-pkg
-            if git clone ssh://aur@aur.archlinux.org/slskdn-dev.git aur-pkg; then
-              echo "✅ Cloned AUR repo: slskdn-dev"
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ Failed to clone AUR repo slskdn-dev after 3 attempts"
-              exit 1
-            fi
-
-            echo "Clone failed, retrying in $((attempt * 2)) seconds..."
-            sleep $((attempt * 2))
-          done
+          bash packaging/scripts/checkout-aur-repo.sh slskdn-dev aur-pkg
 
       - name: Update PKGBUILD
         env:
@@ -348,27 +327,8 @@ jobs:
           fi
           
           cd aur-pkg
-          git config user.name "slskdn CI"
-          git config user.email "slskdn@proton.me"
           git add PKGBUILD .SRCINFO slskd.install
-          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
-
-          for attempt in 1 2 3; do
-            if git push origin HEAD:master; then
-              echo "✅ Pushed to AUR: slskdn-dev"
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ Failed to push AUR repo slskdn-dev after 3 attempts"
-              exit 1
-            fi
-
-            echo "Push failed, rebasing and retrying in $((attempt * 2)) seconds..."
-            sleep $((attempt * 2))
-            git fetch origin master
-            git pull --rebase origin master
-          done
+          bash ../packaging/scripts/push-aur-repo.sh . slskdn-dev "Update to ${{ needs.parse.outputs.version }}"
 
   copr-dev:
     name: Publish to COPR (Dev)
@@ -1243,21 +1203,7 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
 
-          for attempt in 1 2 3; do
-            rm -rf aur-pkg-source
-            if git clone ssh://aur@aur.archlinux.org/slskdn.git aur-pkg-source; then
-              echo "✅ Cloned AUR repo: slskdn"
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ Failed to clone AUR repo slskdn after 3 attempts"
-              exit 1
-            fi
-
-            echo "Clone failed, retrying in $((attempt * 2)) seconds..."
-            sleep $((attempt * 2))
-          done
+          bash packaging/scripts/checkout-aur-repo.sh slskdn aur-pkg-source
 
       - name: Update PKGBUILD (Source)
         env:
@@ -1308,27 +1254,8 @@ jobs:
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
           cd aur-pkg-source
-          git config user.name "slskdn CI"
-          git config user.email "slskdn@proton.me"
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
-          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
-
-          for attempt in 1 2 3; do
-            if git push origin HEAD:master; then
-              echo "✅ Pushed to AUR: slskdn (source)"
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ Failed to push AUR repo slskdn after 3 attempts"
-              exit 1
-            fi
-
-            echo "Push failed, rebasing and retrying in $((attempt * 2)) seconds..."
-            sleep $((attempt * 2))
-            git fetch origin master
-            git pull --rebase origin master
-          done
+          bash ../packaging/scripts/push-aur-repo.sh . slskdn "Update to ${{ needs.parse.outputs.version }}"
 
       # Publish slskdn-bin (binary package)
       - name: Clone AUR Package (Binary)
@@ -1337,21 +1264,7 @@ jobs:
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
 
-          for attempt in 1 2 3; do
-            rm -rf aur-pkg-bin
-            if git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin; then
-              echo "✅ Cloned AUR repo: slskdn-bin"
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ Failed to clone AUR repo slskdn-bin after 3 attempts"
-              exit 1
-            fi
-
-            echo "Clone failed, retrying in $((attempt * 2)) seconds..."
-            sleep $((attempt * 2))
-          done
+          bash packaging/scripts/checkout-aur-repo.sh slskdn-bin aur-pkg-bin
 
       - name: Update PKGBUILD (Binary)
         env:
@@ -1406,27 +1319,8 @@ jobs:
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
           
           cd aur-pkg-bin
-          git config user.name "slskdn CI"
-          git config user.email "slskdn@proton.me"
           git add PKGBUILD .SRCINFO slskd.install slskd.service slskd.yml slskd.sysusers
-          git commit -m "Update to ${{ needs.parse.outputs.version }}" || echo "No changes"
-
-          for attempt in 1 2 3; do
-            if git push origin HEAD:master; then
-              echo "✅ Pushed to AUR: slskdn-bin (binary)"
-              break
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              echo "❌ Failed to push AUR repo slskdn-bin after 3 attempts"
-              exit 1
-            fi
-
-            echo "Push failed, rebasing and retrying in $((attempt * 2)) seconds..."
-            sleep $((attempt * 2))
-            git fetch origin master
-            git pull --rebase origin master
-          done
+          bash ../packaging/scripts/push-aur-repo.sh . slskdn-bin "Update to ${{ needs.parse.outputs.version }}"
 
   copr-main:
     name: Publish to COPR (Main)

@@ -5608,3 +5608,17 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `python - <<'PY' ... yaml.safe_load(...) ... PY`
   - `git diff --check`
+
+## 2026-03-30 16:20:00Z
+
+- Investigated the replacement `build-main-0.24.5-slskdn.111` run and confirmed the retry-only fix was still insufficient: `Publish to AUR (Main - Source & Binary)` now failed at `Clone AUR Package (Source)` because `aur.archlinux.org` kept closing SSH read-side clone sessions before auth completed.
+- Reworked the AUR publishing path around shared packaging scripts instead of duplicated YAML snippets:
+  - `packaging/scripts/setup-aur-ssh.sh` now owns SSH key and host-key setup with retries
+  - `packaging/scripts/checkout-aur-repo.sh` clones AUR repos over HTTPS and configures SSH as the push URL
+  - `packaging/scripts/push-aur-repo.sh` owns commit/push/rebase retry behavior
+- Rewired every workflow that publishes to AUR (`build-on-tag.yml`, `dev-release.yml`, `release-linux.yml`) to use those scripts so the transport policy and retry behavior cannot drift out of sync again.
+- Validation:
+  - `bash -n packaging/scripts/checkout-aur-repo.sh packaging/scripts/push-aur-repo.sh packaging/scripts/setup-aur-ssh.sh`
+  - local `checkout-aur-repo.sh` runs against `slskdn` and `slskdn-bin`, verifying `origin` fetches over HTTPS and pushes over SSH
+  - `python - <<'PY' ... yaml.safe_load(...) ... PY` for the touched workflow files
+  - `git diff --check`

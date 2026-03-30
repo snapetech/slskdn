@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Stabilize the tag-driven release automation after the `build-main-0.24.5-slskdn.110` AUR binary publish failure and cut a replacement tag once the workflow fix is committed.
+- **Current Task**: Finish hardening AUR release publishing after the `build-main-0.24.5-slskdn.110` and `.111` failures, then cut a replacement tag from the centralized AUR transport scripts and verify the package jobs end-to-end.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -217,9 +217,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the AUR retry hardening in `.github/workflows/build-on-tag.yml` and `.github/workflows/dev-release.yml`.
-2. If requested, cut a replacement `build-main-*` tag and watch the `Publish to AUR (Main - Source & Binary)` job through completion.
-3. Re-check whether any remaining tag-driven package jobs still have similar transient-network failure paths worth hardening.
+1. Commit and push the centralized AUR transport-script refactor and its workflow rewires.
+2. If requested, cut a replacement `build-main-*` tag and watch `Publish to AUR (Main - Source & Binary)` through completion on the new HTTPS-read/SSH-push path.
+3. If the next AUR run still fails, inspect the final SSH push leg specifically rather than the old clone/bootstrap path.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
