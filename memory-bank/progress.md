@@ -5622,3 +5622,9 @@ Code quality improvements were completed as part of Option A:
   - local `checkout-aur-repo.sh` runs against `slskdn` and `slskdn-bin`, verifying `origin` fetches over HTTPS and pushes over SSH
   - `python - <<'PY' ... yaml.safe_load(...) ... PY` for the touched workflow files
   - `git diff --check`
+
+## 2026-03-30 16:35:00Z
+
+- Re-checked GitHub after the AUR fix and found the last two open Dependabot PRs were not stale at all: they were fresh major-version proposals for `Microsoft.Extensions.Configuration` and `Microsoft.Extensions.Caching.Memory`.
+- Root cause was policy drift: `src/slskd/slskd.csproj` already documents those direct `Microsoft.Extensions.*` references as intentionally pinned, but `.github/dependabot.yml` did not carry matching ignore rules, so Dependabot kept recreating the same queue.
+- Documented that gotcha in ADR-0001 and updated Dependabot to ignore major bumps for the direct `Microsoft.Extensions.Caching.Memory`, `Microsoft.Extensions.Configuration`, `Microsoft.Extensions.Configuration.Abstractions`, and `Microsoft.Extensions.Primitives` package line.

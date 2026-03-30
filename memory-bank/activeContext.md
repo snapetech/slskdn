@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish hardening AUR release publishing after the `build-main-0.24.5-slskdn.110` and `.111` failures, then cut a replacement tag from the centralized AUR transport scripts and verify the package jobs end-to-end.
+- **Current Task**: Finish the post-release queue cleanup: the AUR path is now green on `.112`, and the remaining work is locking Dependabot to the repo’s deliberate package pins so old major-version PRs stop reappearing.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -217,9 +217,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the centralized AUR transport-script refactor and its workflow rewires.
-2. If requested, cut a replacement `build-main-*` tag and watch `Publish to AUR (Main - Source & Binary)` through completion on the new HTTPS-read/SSH-push path.
-3. If the next AUR run still fails, inspect the final SSH push leg specifically rather than the old clone/bootstrap path.
+1. Push the Dependabot policy update for the direct `Microsoft.Extensions.*` pins.
+2. Close the two reopened PRs after `main` contains the ignore rules.
+3. Re-check the open PR queue and code-scanning queue once more so the release backlog is actually drained.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
