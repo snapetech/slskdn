@@ -299,6 +299,41 @@ If the repo still needs compatibility during a branch rename, include both branc
 
 **Why This Keeps Happening**: release and security work naturally follow the real default branch, but old workflow triggers are easy to miss after a branch rename because the YAML still looks valid and GitHub does not warn that the workflow is effectively dormant for the active branch. Any branch rename must be followed by an audit of all workflow trigger branches, especially CodeQL and other security automation.
 
+### 0w. Swashbuckle.AspNetCore 10 Is Not A Drop-In Upgrade For The Current OpenAPI Surface
+
+**The Bug**: Merging the Dependabot bump from `Swashbuckle.AspNetCore 6.6.2` to `10.1.7` immediately broke the backend build. Existing code references `Microsoft.OpenApi.Models` and the current `IOperationFilter` surface expected by the 6.x package set, so the build failed as soon as restore picked up the new package.
+
+**Files Affected**:
+- `src/slskd/slskd.csproj`
+- `.github/dependabot.yml`
+- `src/slskd/Common/OpenAPI/ContentNegotiationOperationFilter.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```xml
+<PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+```
+
+```text
+Result: `Microsoft.OpenApi.Models` and `OpenApiOperation` references no longer resolved against the restored package graph.
+```
+
+**Correct**:
+```xml
+<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+```
+
+```yaml
+- dependency-name: "Swashbuckle.AspNetCore"
+  update-types: ["version-update:semver-major"]
+```
+
+```text
+Treat the 10.x line as an intentional migration task, not a background Dependabot merge.
+```
+
+**Why This Keeps Happening**: Swagger/OpenAPI packages look like low-risk tooling deps, but major-version jumps often change transitive OpenAPI assemblies and code-generation contracts. If the repo has handwritten `Microsoft.OpenApi` integrations, keep major Swashbuckle bumps behind an explicit migration plan instead of auto-merging them from a green Dependabot PR.
+
 **The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
 
 **Files Affected**:
