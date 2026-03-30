@@ -334,6 +334,40 @@ Treat the 10.x line as an intentional migration task, not a background Dependabo
 
 **Why This Keeps Happening**: Swagger/OpenAPI packages look like low-risk tooling deps, but major-version jumps often change transitive OpenAPI assemblies and code-generation contracts. If the repo has handwritten `Microsoft.OpenApi` integrations, keep major Swashbuckle bumps behind an explicit migration plan instead of auto-merging them from a green Dependabot PR.
 
+### 0x. Roslyn Analyzer Package Upgrades Must Match The Effective Compiler Version
+
+**The Bug**: Upgrading `Microsoft.CodeAnalysis.Analyzers` to `5.3.0` removed a Dependabot PR but introduced persistent `CS9057` warnings because the analyzer assembly expects compiler `4.12.0.0` while the current build still runs compiler `4.11.0.0`.
+
+**Files Affected**:
+- `src/slskd/slskd.csproj`
+- `.github/dependabot.yml`
+
+**Wrong**:
+```xml
+<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" />
+```
+
+```text
+CSC : warning CS9057: The analyzer assembly ... references version '4.12.0.0'
+of the compiler, which is newer than the currently running version '4.11.0.0'.
+```
+
+**Correct**:
+```xml
+<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+```
+
+```yaml
+- dependency-name: "Microsoft.CodeAnalysis.Analyzers"
+  update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+```
+
+```text
+Keep analyzer package upgrades blocked until the repo intentionally upgrades to a compiler/SDK line that satisfies the analyzer's Roslyn dependency.
+```
+
+**Why This Keeps Happening**: analyzer packages look like ordinary dev-time dependencies, but they execute inside the compiler and are tightly coupled to the Roslyn version shipped by the active SDK. Green restore/build does not mean the package is actually compatible; always check for `CS9057` after analyzer bumps and treat that warning as a version-compatibility failure, not benign noise.
+
 **The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
 
 **Files Affected**:
