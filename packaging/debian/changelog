@@ -1,6 +1,6 @@
-slskdn (0.24.5.slskdn.110-1) stable; urgency=medium stable; urgency=medium stable; urgency=medium
+slskdn (0.24.5.slskdn.111-1) stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium
 
-  * Bump packaging metadata to stable release 0.24.5-slskdn.110
+  * Bump packaging metadata to stable release 0.24.5-slskdn.111
     (slskdn-main-linux-x64.zip)
 
  -- snapetech <slskdn@proton.me>  Mon, 23 Mar 2026 00:00:00 +0000
