@@ -46,7 +46,7 @@
     "eslint-config-canonical": "^47.4.2",
     "jsdom": "^29.0.1",
     "less": "^4.2.0",
-    "typescript": "^5.0.0",
+    "typescript": "^6.0.2",
     "vite": "^8.0.3",
     "vitest": "^4.0.0"
   },
