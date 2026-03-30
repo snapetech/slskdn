@@ -29,6 +29,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 - Fixed the remaining open `SessionController` CodeQL login alert by moving admin credential verification behind the security service, and updated CodeQL to scan the live `main` branch so fixes on the release branch clear instead of lingering.
 - Grouped non-breaking Dependabot updates by ecosystem to collapse the release-time dependency PR flood into a small set of batched update PRs.
+- Froze `@uiw/react-codemirror` Dependabot updates until the planned React migration because the current 4.25.x line now requires React 17+ while the repo stays on React 16.8.6.
 - Folded the remaining safe dependency bumps directly into `main` for `Serilog.Sinks.Console`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and `OpenTelemetry.Extensions.Hosting`, leaving only the incompatible React 17 CodeMirror update out of band.
 - Reverted the breaking `Swashbuckle.AspNetCore 10.x` auto-upgrade to `6.6.2` and blocked future major-version Dependabot PRs for that package until the OpenAPI integration is migrated deliberately.
 - Merged the previously detached `build-main-0.24.5-slskdn.92` through `.101` history back into `main`, restoring the missing Docker startup hardening, release/packaging fixes, runtime lifecycle fixes, and expanded unit/integration coverage that had been built on tags but never merged.

@@ -38,6 +38,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      # Current 4.25.x releases require React 17+, but the repo is pinned to React 16.8.6.
+      # Keep this package frozen until the frontend migration is done deliberately.
+      - dependency-name: "@uiw/react-codemirror"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
       # react-scripts is EOL and can't be bumped without breaking the build;
       # remaining npm vulns are locked inside its transitive dep tree.
       # Long-term fix: migrate to Vite.
