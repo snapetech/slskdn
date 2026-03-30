@@ -268,6 +268,37 @@ bash packaging/scripts/update-stable-release-metadata.sh \
 
 **Why This Keeps Happening**: GitHub Actions expressions silently expand missing outputs to empty strings, so the workflow looks correct at a glance until the downstream script rejects the argument list. Whenever a shell script has positional required arguments, define the workflow outputs next to the call site and keep the output names aligned with the script parameter names.
 
+### 0v. CodeQL Must Track The Live Default Branch, Or Fixed Alerts Stay Open Forever
+
+**The Bug**: The repository’s CodeQL workflow was still configured for `master` while active development and releases happen on `main`. Security fixes landed on `main`, but GitHub never re-analyzed the branch automatically, so open alerts on `main` persisted and reappeared in release triage even after the underlying code changed.
+
+**Files Affected**:
+- `.github/workflows/codeql.yml`
+
+**Wrong**:
+```yaml
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+```
+
+**Correct**:
+```yaml
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+```
+
+```text
+If the repo still needs compatibility during a branch rename, include both branches explicitly.
+```
+
+**Why This Keeps Happening**: release and security work naturally follow the real default branch, but old workflow triggers are easy to miss after a branch rename because the YAML still looks valid and GitHub does not warn that the workflow is effectively dormant for the active branch. Any branch rename must be followed by an audit of all workflow trigger branches, especially CodeQL and other security automation.
+
 **The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
 
 **Files Affected**:
