@@ -5587,3 +5587,15 @@ Code quality improvements were completed as part of Option A:
 - Investigated GitHub Actions run `23703841784` on `snapetech/slskdn` and confirmed the only failure was `Update Main Repo Metadata`.
 - Root cause was a workflow/output mismatch in `.github/workflows/build-on-tag.yml`: `linux_arm64_hex` was referenced but never emitted, and the Windows hex checksum was exposed under the misleading name `win_x64_sha`.
 - Documented the gotcha in ADR-0001 and patched the workflow so both metadata update call sites now pass the complete checksum argument list expected by `packaging/scripts/update-stable-release-metadata.sh`.
+## 2026-03-30 00:00:00Z
+
+- Audited the open GitHub dependency/security queue with `gh` and found 16 open Dependabot PRs, one live CodeQL alert on `main`, and no open Dependabot security alerts.
+- Merged the clean Dependabot PRs directly, then handled the remaining backlog by policy:
+  - folded the safe leftover bumps (`Serilog.Sinks.Console`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, `OpenTelemetry.Extensions.Hosting`) into `main`
+  - identified `@uiw/react-codemirror 4.25.9` as incompatible with the repo's React 16.8.6 floor and treated it as an explicit close-out item instead of a merge candidate
+  - caught a breaking `Swashbuckle.AspNetCore 10.1.7` auto-upgrade after restore/test validation, documented it in ADR-0001, and pinned the package back to `6.6.2`
+- Fixed the live `SessionController` CodeQL login alert by moving admin credential verification into `ISecurityService`, updated the CodeQL workflow to track `main`, and grouped non-breaking Dependabot updates by ecosystem to reduce future PR floods.
+- Validation:
+  - `dotnet restore src/slskd/slskd.csproj`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SessionControllerTests" -v q`
+  - `git diff --check`

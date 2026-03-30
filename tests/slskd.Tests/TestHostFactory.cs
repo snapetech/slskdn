@@ -131,6 +131,8 @@ internal class StubSecurityService : ISecurityService
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes("test-key-must-be-32-bytes!!!!!!!")),
                 "HS256"));
 
+    public bool AuthenticateAdminCredentials(string username, string password) => true;
+
     public (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress) =>
         ("test", Role.Administrator);
 

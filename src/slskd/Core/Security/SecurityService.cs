@@ -35,6 +35,7 @@ namespace slskd
     public interface ISecurityService
     {
         JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null);
+        bool AuthenticateAdminCredentials(string username, string password);
         (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress);
         void RevokeToken(string jti);
         bool IsTokenRevoked(string jti);
@@ -59,6 +60,14 @@ namespace slskd
         private SymmetricSecurityKey JwtSigningKey { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+
+        public bool AuthenticateAdminCredentials(string username, string password)
+        {
+            var configuredUsername = OptionsMonitor.CurrentValue.Web.Authentication.Username?.Trim() ?? string.Empty;
+            var configuredPassword = OptionsMonitor.CurrentValue.Web.Authentication.Password?.Trim() ?? string.Empty;
+
+            return ConstantTimeEqual(configuredUsername, username) && ConstantTimeEqual(configuredPassword, password);
+        }
 
         public (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress)
         {
@@ -97,6 +106,18 @@ namespace slskd
             }
 
             return (record.Key, record.Value.Role.ToEnum<Role>());
+        }
+
+        private static bool ConstantTimeEqual(string expected, string provided)
+        {
+            var expectedBytes = System.Text.Encoding.UTF8.GetBytes(expected ?? string.Empty);
+            var providedBytes = System.Text.Encoding.UTF8.GetBytes(provided ?? string.Empty);
+            var padLen = Math.Max(expectedBytes.Length, providedBytes.Length);
+            var expectedPad = new byte[padLen];
+            var providedPad = new byte[padLen];
+            expectedBytes.CopyTo(expectedPad, 0);
+            providedBytes.CopyTo(providedPad, 0);
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expectedPad, providedPad);
         }
 
         public void RevokeToken(string jti)

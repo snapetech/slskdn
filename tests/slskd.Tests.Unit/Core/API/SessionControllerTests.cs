@@ -30,6 +30,9 @@ public class SessionControllerTests
     {
         var security = new Mock<ISecurityService>();
         security
+            .Setup(service => service.AuthenticateAdminCredentials("admin", "secret"))
+            .Returns(true);
+        security
             .Setup(service => service.GenerateJwt(It.IsAny<string>(), It.IsAny<Role>(), It.IsAny<int?>()))
             .Returns(new JwtSecurityToken());
 
@@ -42,6 +45,7 @@ public class SessionControllerTests
         });
 
         Assert.IsType<OkObjectResult>(result);
+        security.Verify(service => service.AuthenticateAdminCredentials("admin", "secret"), Times.Once);
         security.Verify(service => service.GenerateJwt("admin", Role.Administrator, null), Times.Once);
     }
 
@@ -49,6 +53,9 @@ public class SessionControllerTests
     public void Login_TrimsConfiguredCredentialsBeforeComparison()
     {
         var security = new Mock<ISecurityService>();
+        security
+            .Setup(service => service.AuthenticateAdminCredentials("admin", "secret"))
+            .Returns(true);
         security
             .Setup(service => service.GenerateJwt(It.IsAny<string>(), It.IsAny<Role>(), It.IsAny<int?>()))
             .Returns(new JwtSecurityToken());
@@ -65,6 +72,7 @@ public class SessionControllerTests
         });
 
         Assert.IsType<OkObjectResult>(result);
+        security.Verify(service => service.AuthenticateAdminCredentials("admin", "secret"), Times.Once);
         security.Verify(service => service.GenerateJwt("admin", Role.Administrator, null), Times.Once);
     }
 

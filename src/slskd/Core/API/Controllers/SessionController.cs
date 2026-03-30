@@ -149,8 +149,6 @@ namespace slskd.Core.API
 
             var normalizedUsername = login.Username;
             var normalizedPassword = login.Password;
-            var configuredUsername = OptionsSnapshot.Value.Web.Authentication.Username?.Trim() ?? string.Empty;
-            var configuredPassword = OptionsSnapshot.Value.Web.Authentication.Password?.Trim() ?? string.Empty;
             var remoteIp = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
 
             // Check for active lockout
@@ -160,24 +158,7 @@ namespace slskd.Core.API
                 return StatusCode(429, "Too many failed login attempts. Try again later.");
             }
 
-            // only admin login for now
-            var storedUser = System.Text.Encoding.UTF8.GetBytes(configuredUsername);
-            var storedPass = System.Text.Encoding.UTF8.GetBytes(configuredPassword);
-            var inputUser = System.Text.Encoding.UTF8.GetBytes(normalizedUsername);
-            var inputPass = System.Text.Encoding.UTF8.GetBytes(normalizedPassword);
-
-            // Pad to same length to prevent length oracle (always compare full buffers)
-            static bool ConstantTimeEqual(byte[] a, byte[] b)
-            {
-                var padLen = Math.Max(a.Length, b.Length);
-                var aPad = new byte[padLen];
-                var bPad = new byte[padLen];
-                a.CopyTo(aPad, 0);
-                b.CopyTo(bPad, 0);
-                return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(aPad, bPad);
-            }
-
-            if (ConstantTimeEqual(storedUser, inputUser) && ConstantTimeEqual(storedPass, inputPass))
+            if (Security.AuthenticateAdminCredentials(normalizedUsername, normalizedPassword))
             {
                 // Successful login: clear failed attempt counter
                 _loginAttempts.TryRemove(remoteIp, out _);

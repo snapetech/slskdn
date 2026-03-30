@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release the metadata-workflow fix for the failed `build-main-0.24.5-slskdn.108` run and verify the replacement tag build.
+- **Current Task**: Drain GitHub dependency/security noise: merge or close every open Dependabot PR, fix the live CodeQL alert, and harden automation so the queue does not explode again on future releases.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -218,7 +218,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ### Next Steps
 1. Commit and push the SongID artist-graph stall fix if it should land on the active branch.
-2. Confirm the replacement `build-main-0.24.5-slskdn.109` GitHub Actions run passes the `Update Main Repo Metadata` job.
+2. Push the dependency/security cleanup commit and verify the stale PRs are closed or merged as intended in GitHub.
+3. Re-check CodeQL on `main` after the push and close/dismiss any remaining stale alert state in GitHub if the new analysis does not clear it automatically.
 2. Decide whether packaged installs should remain loopback-only by default or explicitly bind non-loopback when auth is configured.
 3. Carry the packaged `/etc/slskd/slskd.yml` explicit-config behavior into any remaining installers/scripts that still rely on search-order defaults.
 

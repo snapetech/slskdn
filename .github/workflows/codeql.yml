@@ -2,13 +2,13 @@ name: CodeQL (C#)
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - 'src/**/*.cs'
       - 'src/**/*.csproj'
       - '.github/workflows/codeql.yml'
   pull_request:
-    branches: [master]
+    branches: [main]
     paths:
       - 'src/**/*.cs'
       - 'src/**/*.csproj'
