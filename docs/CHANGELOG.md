@@ -29,6 +29,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 - Centralized all AUR publish logic into shared packaging scripts, switched AUR clone/fetch/rebase traffic to HTTPS, and kept SSH only for the final authenticated push so release workflows stop failing on transient AUR SSH read-side disconnects or drifting YAML copies.
 - Blocked Dependabot major-version churn for the deliberately pinned direct `Microsoft.Extensions.*` package line so the same unresolved 9.x→10.x PRs stop reopening on every release cycle.
+- Moved the direct `Microsoft.Extensions.*` runtime and performance-test companion packages onto `10.0.5`, eliminating the `NU1605` downgrade failure that had been blocking the `Microsoft.Extensions.Caching.Memory` Dependabot upgrade.
 - Fixed the remaining open `SessionController` CodeQL login alert by moving admin credential verification behind the security service, and updated CodeQL to scan the live `main` branch so fixes on the release branch clear instead of lingering.
 - Grouped non-breaking Dependabot updates by ecosystem to collapse the release-time dependency PR flood into a small set of batched update PRs.
 - Froze `@uiw/react-codemirror` Dependabot updates until the planned React migration because the current 4.25.x line now requires React 17+ while the repo stays on React 16.8.6.

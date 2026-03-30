@@ -101,10 +101,9 @@
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.661903" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.25" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.25" />
-    <!-- Pin to 9.x so framework-dependent publish includes these; dotNetRdf 3.4.1 requires 9.0.9 -->
-    <!-- Also pins vuln-patched versions of transitive deps (GHSA-qj66, GHSA-hh2w, GHSA-8g4q) -->
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.14" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.14" />
+    <!-- Keep the direct Microsoft.Extensions.* line aligned to avoid cross-project restore downgrades. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.5" />
     <PackageReference Include="System.Text.Json" Version="10.0.5" />

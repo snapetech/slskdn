@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish the post-release queue cleanup: the AUR path is now green on `.112`, and the remaining work is locking Dependabot to the repo’s deliberate package pins so old major-version PRs stop reappearing.
+- **Current Task**: Finish the dependency cleanup by landing the verified `Microsoft.Extensions.* 10.0.5` alignment on `main`, then re-check whether any Dependabot churn remains after the real upgrade.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -217,9 +217,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Push the Dependabot policy update for the direct `Microsoft.Extensions.*` pins.
-2. Close the two reopened PRs after `main` contains the ignore rules.
-3. Re-check the open PR queue and code-scanning queue once more so the release backlog is actually drained.
+1. Commit and push the verified `Microsoft.Extensions.* 10.0.5` alignment.
+2. Re-check whether any Dependabot PRs remain after `main` contains the actual upgrade.
+3. Decide whether the temporary major-ignore rules for those packages should stay as a future-11 guard or be relaxed.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

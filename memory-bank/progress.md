@@ -5628,3 +5628,12 @@ Code quality improvements were completed as part of Option A:
 - Re-checked GitHub after the AUR fix and found the last two open Dependabot PRs were not stale at all: they were fresh major-version proposals for `Microsoft.Extensions.Configuration` and `Microsoft.Extensions.Caching.Memory`.
 - Root cause was policy drift: `src/slskd/slskd.csproj` already documents those direct `Microsoft.Extensions.*` references as intentionally pinned, but `.github/dependabot.yml` did not carry matching ignore rules, so Dependabot kept recreating the same queue.
 - Documented that gotcha in ADR-0001 and updated Dependabot to ignore major bumps for the direct `Microsoft.Extensions.Caching.Memory`, `Microsoft.Extensions.Configuration`, `Microsoft.Extensions.Configuration.Abstractions`, and `Microsoft.Extensions.Primitives` package line.
+
+## 2026-03-30 16:50:00Z
+
+- Re-opened the `Microsoft.Extensions.*` question instead of leaving it policy-blocked and confirmed the real issue was partial alignment, not an inherently bad 10.x upgrade.
+- Upgraded the direct app references `Microsoft.Extensions.Caching.Memory` and `Microsoft.Extensions.Configuration` to `10.0.5`, and aligned the performance-test companion references `Microsoft.Extensions.Logging.Abstractions` and `Microsoft.Extensions.Options` to the same line.
+- Validation:
+  - `dotnet restore src/slskd/slskd.csproj`
+  - `dotnet restore tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj`
+  - `dotnet build src/slskd/slskd.csproj --no-restore -v q`
