@@ -404,6 +404,34 @@ If a package is intentionally pinned for runtime/publish compatibility, Dependab
 
 **Why This Keeps Happening**: the project file comment explains the package pin, but Dependabot only knows what is encoded in `.github/dependabot.yml`. Any deliberate direct-package pin needs a matching ignore rule, otherwise the PR queue drifts back open even after the team already decided not to take that major line.
 
+### 0z. `Microsoft.Extensions.*` Upgrades Must Move As An Aligned Set Across App And Test Projects
+
+**The Bug**: The repo partially upgraded onto `Microsoft.Extensions.* 10.0.5` by moving `Configuration.Abstractions` and `Primitives`, but left direct `Caching.Memory`, `Configuration`, and the performance-test `Logging.Abstractions` / `Options` packages on `9.0.14`. Dependabot PR `#189` then failed restore with `NU1605` because `slskd` pulled `10.0.5` transitive requirements into `slskd.Tests.Performance`, which still pinned lower versions.
+
+**Files Affected**:
+- `src/slskd/slskd.csproj`
+- `tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj`
+
+**Wrong**:
+```xml
+<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.14" />
+<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.14" />
+<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
+<PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.5" />
+```
+
+```xml
+<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.14" />
+<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.14" />
+```
+
+**Correct**:
+```text
+When taking a `Microsoft.Extensions.*` major line, align the direct app references and any test-project companion references (`Logging.Abstractions`, `Options`, etc.) to the same line before judging the upgrade.
+```
+
+**Why This Keeps Happening**: these packages are tightly interrelated, but they live across multiple projects and some of them arrive transitively. A partial upgrade can look harmless in the main app project while still breaking restore in test projects that pin adjacent `Microsoft.Extensions.*` packages directly.
+
 **The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
 
 **Files Affected**:
