@@ -40,7 +40,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.5.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^4.1.2",
     "esbuild": "^0.27.0",
     "eslint": "^8.56.0",
     "eslint-config-canonical": "^47.4.2",
