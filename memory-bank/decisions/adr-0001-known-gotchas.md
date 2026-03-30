@@ -368,6 +368,42 @@ Keep analyzer package upgrades blocked until the repo intentionally upgrades to 
 
 **Why This Keeps Happening**: analyzer packages look like ordinary dev-time dependencies, but they execute inside the compiler and are tightly coupled to the Roslyn version shipped by the active SDK. Green restore/build does not mean the package is actually compatible; always check for `CS9057` after analyzer bumps and treat that warning as a version-compatibility failure, not benign noise.
 
+### 0y. Dependabot Must Ignore Deliberately Pinned `Microsoft.Extensions.*` Major Lines
+
+**The Bug**: Dependabot kept reopening PRs for `Microsoft.Extensions.Configuration 10.0.5` and `Microsoft.Extensions.Caching.Memory 10.0.5` even though `slskd.csproj` already documents those direct references as intentionally pinned to the current compatibility line.
+
+**Files Affected**:
+- `.github/dependabot.yml`
+- `src/slskd/slskd.csproj`
+
+**Wrong**:
+```yaml
+ignore:
+  - dependency-name: "Microsoft.Data.Sqlite"
+    update-types: ["version-update:semver-major"]
+```
+
+```xml
+<!-- Pin to 9.x so framework-dependent publish includes these; dotNetRdf 3.4.1 requires 9.0.9 -->
+<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.14" />
+<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.14" />
+```
+
+**Correct**:
+```yaml
+ignore:
+  - dependency-name: "Microsoft.Extensions.Caching.Memory"
+    update-types: ["version-update:semver-major"]
+  - dependency-name: "Microsoft.Extensions.Configuration"
+    update-types: ["version-update:semver-major"]
+```
+
+```text
+If a package is intentionally pinned for runtime/publish compatibility, Dependabot must carry the same rule or it will keep reopening the same "unresolved" major bump PRs.
+```
+
+**Why This Keeps Happening**: the project file comment explains the package pin, but Dependabot only knows what is encoded in `.github/dependabot.yml`. Any deliberate direct-package pin needs a matching ignore rule, otherwise the PR queue drifts back open even after the team already decided not to take that major line.
+
 **The Bug**: The repo relied on `scripts/generate-release-notes.sh` fallback behavior at release time instead of requiring feature/fix commits to update `docs/CHANGELOG.md` as they landed. That left dozens of releases with no curated changelog content, and release notes were synthesized from commit history long after the actual work happened.
 
 **Files Affected**:
