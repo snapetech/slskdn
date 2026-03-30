@@ -110,6 +110,8 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    exclude-paths:
+      - "/.github/workflows/check-upstream-access.yml"
     groups:
       github-actions-nonbreaking:
         patterns:

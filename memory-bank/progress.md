@@ -5637,3 +5637,15 @@ Code quality improvements were completed as part of Option A:
   - `dotnet restore src/slskd/slskd.csproj`
   - `dotnet restore tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj`
   - `dotnet build src/slskd/slskd.csproj --no-restore -v q`
+
+## 2026-03-30 18:05:00Z
+
+- Investigated the two immediate red sidecar workflows that appeared alongside `build-main-0.24.5-slskdn.113`.
+- Root causes:
+  - `Dependabot Updates` failed because GitHub Actions Dependabot could not parse `.github/workflows/check-upstream-access.yml`
+  - `Automatic Dependency Submission` on the grouped NuGet PR still hit `NU1605` in `slskd.Tests.Performance` because `System.Configuration.ConfigurationManager` was pinned below the upgraded `dotNetRdf` transitive requirement
+- Fixed both by excluding `check-upstream-access.yml` from the `github-actions` Dependabot ecosystem and aligning `tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj` to `System.Configuration.ConfigurationManager 10.0.2`.
+- Validation:
+  - `python - <<'PY' ... yaml.safe_load(...) ... PY` for `.github/dependabot.yml`
+  - `dotnet restore tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj`
+  - `dotnet build src/slskd/slskd.csproj --no-restore -v q`

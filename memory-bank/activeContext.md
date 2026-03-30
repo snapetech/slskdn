@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish the dependency cleanup by landing the verified `Microsoft.Extensions.* 10.0.5` alignment on `main`, then re-check whether any Dependabot churn remains after the real upgrade.
+- **Current Task**: Clean up the last sidecar CI regressions after the `Microsoft.Extensions.*` upgrade and confirm the release plus Dependabot/dependency-submission automation are all green again.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -217,9 +217,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the verified `Microsoft.Extensions.* 10.0.5` alignment.
-2. Re-check whether any Dependabot PRs remain after `main` contains the actual upgrade.
-3. Decide whether the temporary major-ignore rules for those packages should stay as a future-11 guard or be relaxed.
+1. Commit and push the Dependabot/dependency-submission follow-up fixes.
+2. Re-check the `build-main-0.24.5-slskdn.113` release and the red sidecar workflows after GitHub reruns them.
+3. Confirm the open PR queue is still empty after Dependabot reprocesses the updated policy.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
