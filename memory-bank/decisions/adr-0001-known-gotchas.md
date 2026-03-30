@@ -4801,6 +4801,40 @@ return Ok(message);
 
 **Why This Keeps Happening**: Nullable-signature cleanup often turns synchronous-looking lookups into `Task<T?>`, but controller code can still visually resemble the old synchronous pattern. In async controller actions, always await the lookup before testing for `null` / `default` or returning the payload.
 
+### 3g. AUR Clone Failures Must Retry, Not Fall Back To `git init`
+
+**The Bug**: The stable `Publish to AUR (Main - Source & Binary)` workflow treated any `git clone` failure for `slskdn-bin` as if the package repo did not exist. A transient AUR SSH disconnect created a brand-new local repo with `git init`, so the later push became a root commit and failed with `fetch first`.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```bash
+git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin || {
+  mkdir -p aur-pkg-bin
+  cd aur-pkg-bin
+  git init
+  git remote add origin ssh://aur@aur.archlinux.org/slskdn-bin.git
+}
+```
+
+**Correct**:
+```bash
+for attempt in 1 2 3; do
+  rm -rf aur-pkg-bin
+  if git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin; then
+    break
+  fi
+  sleep $((attempt * 2))
+done
+```
+
+```text
+Only initialize a brand-new AUR repo during an intentional package bootstrap path. For normal release publishing, treat clone failures as transient network/auth errors and retry them; on push rejection, fetch/rebase and retry instead of pushing an unrelated root commit.
+```
+
+**Why This Keeps Happening**: the original fallback was written to be convenient for first-time package setup, but release workflows run against long-lived AUR repos where "clone failed" usually means SSH/network instability, not a missing repository. Reusing the bootstrap fallback in steady-state CI silently destroys git history and turns a recoverable clone hiccup into a guaranteed push failure.
+
 ---
 
 *Last updated: 2026-03-21*
