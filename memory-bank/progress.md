@@ -5599,3 +5599,12 @@ Code quality improvements were completed as part of Option A:
   - `dotnet restore src/slskd/slskd.csproj`
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SessionControllerTests" -v q`
   - `git diff --check`
+
+## 2026-03-30 15:50:00Z
+
+- Investigated the failed `build-main-0.24.5-slskdn.110` AUR publish and pulled the exact GitHub Actions job log with `gh`.
+- Root cause was the AUR clone fallback in the release workflows: a transient `slskdn-bin` SSH disconnect from `aur.archlinux.org` was treated like a missing repo, so CI ran `git init` locally and then hit a guaranteed `fetch first` rejection on push.
+- Documented the gotcha in ADR-0001, then hardened the live tag-driven AUR workflows (`build-on-tag.yml` main/dev and `dev-release.yml`) to retry clone/push with backoff and rebase instead of manufacturing a disconnected local history.
+- Validation:
+  - `python - <<'PY' ... yaml.safe_load(...) ... PY`
+  - `git diff --check`

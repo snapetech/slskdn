@@ -352,14 +352,22 @@ jobs:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           if [ -z "$AUR_SSH_KEY" ]; then exit 0; fi
-          
-          git clone ssh://aur@aur.archlinux.org/slskdn-dev.git aur-pkg || {
-            # If package doesn't exist yet, create it
-            mkdir -p aur-pkg
-            cd aur-pkg
-            git init
-            git remote add origin ssh://aur@aur.archlinux.org/slskdn-dev.git
-          }
+
+          for attempt in 1 2 3; do
+            rm -rf aur-pkg
+            if git clone ssh://aur@aur.archlinux.org/slskdn-dev.git aur-pkg; then
+              echo "✅ Cloned AUR repo: slskdn-dev"
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ Failed to clone AUR repo slskdn-dev after 3 attempts"
+              exit 1
+            fi
+
+            echo "Clone failed, retrying in $((attempt * 2)) seconds..."
+            sleep $((attempt * 2))
+          done
 
       - name: Ensure Master Branch
         env:
@@ -432,7 +440,23 @@ jobs:
           git config user.email "slskdn@proton.me"
           git add PKGBUILD .SRCINFO slskd.install
           git commit -m "Update to ${{ needs.build.outputs.dev_version }}" || echo "No changes to commit"
-          git push origin master || git push --set-upstream origin master
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:master; then
+              echo "✅ Pushed to AUR: slskdn-dev"
+              break
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "❌ Failed to push AUR repo slskdn-dev after 3 attempts"
+              exit 1
+            fi
+
+            echo "Push failed, rebasing and retrying in $((attempt * 2)) seconds..."
+            sleep $((attempt * 2))
+            git fetch origin master
+            git pull --rebase origin master
+          done
 
   nix:
     name: Update Nix Flake
