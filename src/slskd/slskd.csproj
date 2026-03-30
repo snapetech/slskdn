@@ -105,8 +105,8 @@
     <!-- Also pins vuln-patched versions of transitive deps (GHSA-qj66, GHSA-hh2w, GHSA-8g4q) -->
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Primitives" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.1" />
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
     <PackageReference Include="Mono.Nat" Version="3.0.0" />
     <PackageReference Include="MonoTorrent" Version="3.0.2" />
@@ -122,7 +122,7 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Grafana.Loki" Version="8.3.2" />
-    <PackageReference Include="Serilog.Sinks.Http" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Http" Version="9.2.1" />
     <PackageReference Include="Soulseek" Version="8.5.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
       <PrivateAssets>all</PrivateAssets>
