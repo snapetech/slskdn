@@ -39,8 +39,8 @@
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.4.0" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="MessagePack" Version="2.5.198" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0-2.25625.1" />
   </ItemGroup>
 
   <Target Name="CopyAfterBuild" AfterTargets="AfterBuild">
@@ -88,7 +88,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.1" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Dapper" Version="2.1.72" />
     <PackageReference Include="FluentFTP" Version="49.0.2" />
     <PackageReference Include="IPAddressRange" Version="6.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
@@ -103,12 +103,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.25" />
     <!-- Pin to 9.x so framework-dependent publish includes these; dotNetRdf 3.4.1 requires 9.0.9 -->
     <!-- Also pins vuln-patched versions of transitive deps (GHSA-qj66, GHSA-hh2w, GHSA-8g4q) -->
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.1" />
-    <PackageReference Include="System.Text.Json" Version="9.0.9" />
-    <PackageReference Include="Mono.Nat" Version="3.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Primitives" Version="10.0.5" />
+    <PackageReference Include="System.Text.Json" Version="9.0.14" />
+    <PackageReference Include="Mono.Nat" Version="3.0.4" />
     <PackageReference Include="MonoTorrent" Version="3.0.2" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="prometheus-net" Version="8.2.1" />
@@ -128,7 +128,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
     <PackageReference Include="Utility.CommandLine.Arguments" Version="6.0.0" />
     <PackageReference Include="Utility.EnvironmentVariables" Version="1.0.5" />
@@ -136,7 +136,7 @@
     <PackageReference Include="NSec.Cryptography" Version="24.4.0" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.511.5" />
-    <PackageReference Include="Zeroconf" Version="3.0.30" />
+    <PackageReference Include="Zeroconf" Version="3.7.16" />
     <PackageReference Include="OpenTelemetry" Version="1.15.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.6.0-rc.1" />
