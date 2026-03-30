@@ -4820,20 +4820,15 @@ git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin || {
 
 **Correct**:
 ```bash
-for attempt in 1 2 3; do
-  rm -rf aur-pkg-bin
-  if git clone ssh://aur@aur.archlinux.org/slskdn-bin.git aur-pkg-bin; then
-    break
-  fi
-  sleep $((attempt * 2))
-done
+git clone "https://aur.archlinux.org/slskdn-bin.git" aur-pkg-bin
+git -C aur-pkg-bin remote set-url --push origin "ssh://aur@aur.archlinux.org/slskdn-bin.git"
 ```
 
 ```text
-Only initialize a brand-new AUR repo during an intentional package bootstrap path. For normal release publishing, treat clone failures as transient network/auth errors and retry them; on push rejection, fetch/rebase and retry instead of pushing an unrelated root commit.
+Use HTTPS for clone/fetch/rebase and reserve SSH only for the final authenticated push. Only initialize a brand-new AUR repo during an intentional package bootstrap path. For normal release publishing, treat clone failures as transient network/auth errors and retry them; on push rejection, fetch/rebase and retry instead of pushing an unrelated root commit.
 ```
 
-**Why This Keeps Happening**: the original fallback was written to be convenient for first-time package setup, but release workflows run against long-lived AUR repos where "clone failed" usually means SSH/network instability, not a missing repository. Reusing the bootstrap fallback in steady-state CI silently destroys git history and turns a recoverable clone hiccup into a guaranteed push failure.
+**Why This Keeps Happening**: the original fallback was written to be convenient for first-time package setup, but release workflows run against long-lived AUR repos where "clone failed" usually means SSH/network instability, not a missing repository. Reusing the bootstrap fallback in steady-state CI silently destroys git history and turns a recoverable clone hiccup into a guaranteed push failure. Even after removing the `git init` fallback, using SSH for read-side clone/fetch still leaves the workflow exposed to AUR-side connection drops; HTTPS reads plus SSH push isolates the flaky part to the only step that actually needs credentials.
 
 ---
 
