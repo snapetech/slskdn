@@ -75,6 +75,20 @@
 #   download:
 #     slots: 500
 #     speed_limit: 1000
+#     auto_replace_stuck: true
+#     auto_replace_threshold: 5.0
+#     auto_replace_interval: 60
+#   wishlist:
+#     enabled: true
+#     interval: 60
+#     auto_download: false
+# destinations:
+#   folders:
+#     - name: "Music"
+#       path: "/downloads/music"
+#       default: true
+#     - name: "Audiobooks"
+#       path: "/downloads/audiobooks"
 # groups:
 #   default:
 #     upload:
@@ -411,6 +425,12 @@
 #     cooldown_time: 900000
 # Mesh.Security (PR-01, §8). Binds to Mesh:Security when Mesh section is used.
 # mesh:
+#   enabled: true
+#   dht:
+#     bootstrap_nodes: 60
+#   overlay:
+#     udp_port: 50301
+#     quic_port: 50302
 #   security:
 #     enforceRemotePayloadLimits: true   # when true, enforce max size and safe deserialization on overlay/transport
 #     maxRemotePayloadSize: 1048576      # 1 MiB; max for remote JSON/MessagePack payloads
