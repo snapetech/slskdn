@@ -14,12 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-
 /// <summary>
 /// Full slskdn instance runner for tests that require TCP listeners (e.g., Bridge proxy server).
 /// Starts an actual slskdn process instead of using TestServer.
@@ -59,6 +53,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
     public async Task StartAsync(
         bool enableBridge = false,
         int? bridgePortOverride = null,
+        bool disableAuthentication = false,
         CancellationToken ct = default)
     {
         logger.LogInformation("[TEST-SLSKDN-FULL] Starting full instance {TestId}", testId);
@@ -72,7 +67,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
 
         // Write configuration file
         var configPath = Path.Combine(appDir, "config", "slskd.yml");
-        var configYaml = BuildConfigYaml(enableBridge);
+        var configYaml = BuildConfigYaml(enableBridge, disableAuthentication);
         await File.WriteAllTextAsync(configPath, configYaml, ct);
 
         // Find slskdn binary
@@ -169,13 +164,14 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         }
     }
 
-    private string BuildConfigYaml(bool enableBridge)
+    private string BuildConfigYaml(bool enableBridge, bool disableAuthentication)
     {
         var sb = new StringBuilder();
         sb.AppendLine("web:");
         sb.AppendLine($"  port: {apiPort}");
         sb.AppendLine("  host: 127.0.0.1");
         sb.AppendLine("  authentication:");
+        sb.AppendLine($"    disabled: {disableAuthentication.ToString().ToLowerInvariant()}");
         sb.AppendLine("    username: admin");
         sb.AppendLine("    password: admin");
         sb.AppendLine("directories:");
@@ -219,8 +215,8 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         {
             var candidates = new[]
             {
-                Path.Combine(solutionRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd"),
                 Path.Combine(solutionRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd"),
+                Path.Combine(solutionRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd"),
                 Path.Combine(solutionRoot, "publish", "slskd")
             };
 

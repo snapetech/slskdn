@@ -2966,55 +2966,6 @@ namespace slskd
                 app.UseCors("ConfiguredCors");
             }
 
-            // CSRF token middleware - generates tokens for cookie-based auth
-            // This must come AFTER UsePathBase but BEFORE UseAuthentication
-            app.Use(async (context, next) =>
-            {
-                // Log all requests to MediaCore endpoints for debugging
-                var path = context.Request.Path.Value ?? string.Empty;
-                if (path.Contains("mediacore", StringComparison.OrdinalIgnoreCase))
-                {
-                    Log.Information("[CSRF Middleware] Processing MediaCore request: {Method} {Path} (Raw: {RawPath})",
-                        context.Request.Method, path, context.Request.Path);
-                }
-
-                try
-                {
-                    var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
-
-                    // GetAndStoreTokens can throw for some requests - catch and log but don't fail
-                    // This is safe because our custom ValidateCsrfForCookiesOnlyAttribute handles validation
-                    var tokens = antiforgery.GetAndStoreTokens(context);
-
-                    // Set the XSRF-TOKEN cookie that frontend JavaScript can read
-                    if (tokens.RequestToken != null)
-                    {
-                        context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken,
-                            new CookieOptions
-                            {
-                                HttpOnly = false,  // JavaScript needs to read this
-                                Secure = context.Request.IsHttps,
-                                SameSite = SameSiteMode.Strict,
-                                Path = "/",
-                            });
-                    }
-                }
-                catch (Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException ex)
-                {
-                    // This is expected for some requests - log at debug level only
-                    Log.Debug(ex, "[CSRF Middleware] Antiforgery validation exception for {Method} {Path} (this is normal for some requests)",
-                        context.Request.Method, context.Request.Path);
-                }
-                catch (Exception ex)
-                {
-                    // Log other exceptions but don't fail - GetAndStoreTokens can fail for some requests
-                    Log.Warning(ex, "[CSRF Middleware] Exception getting/storing tokens for {Method} {Path}",
-                        context.Request.Method, context.Request.Path);
-                }
-
-                await next();
-            });
-
             if (OptionsAtStartup.Web.Https.Force)
             {
                 app.UseHttpsRedirection();
@@ -3042,6 +2993,72 @@ namespace slskd
 
             // The main fix is making HTTP_ADDRESS configurable for proper binding
             app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={OptionsAtStartup.Web.Port}</script>", excludedRoutes: new[] { "/api", "/swagger" });
+            app.UseAuthentication();
+
+            // CSRF token middleware - generates tokens for cookie-based auth
+            // This must run after path-base rewriting and after authentication so tokens are bound to the
+            // principal that will later be used for validation on state-changing requests.
+            app.Use(async (context, next) =>
+            {
+                // Log all requests to MediaCore endpoints for debugging
+                var path = context.Request.Path.Value ?? string.Empty;
+                if (path.Contains("mediacore", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log.Information("[CSRF Middleware] Processing MediaCore request: {Method} {Path} (Raw: {RawPath})",
+                        context.Request.Method, path, context.Request.Path);
+                }
+
+                if (HttpMethods.IsGet(context.Request.Method) ||
+                    HttpMethods.IsHead(context.Request.Method) ||
+                    HttpMethods.IsOptions(context.Request.Method) ||
+                    HttpMethods.IsTrace(context.Request.Method))
+                {
+                    try
+                    {
+                        var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
+
+                        // Only mint/store tokens on safe requests. Rotating them on the same unsafe request that
+                        // later validates them can invalidate the frontend's header/cookie pair mid-flight.
+                        var tokens = antiforgery.GetAndStoreTokens(context);
+
+                        // ASP.NET stores the antiforgery cookie token using the configured Cookie.Name.
+                        // Only publish the JavaScript-readable request token here.
+                        if (tokens.RequestToken != null)
+                        {
+                            context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken,
+                                new CookieOptions
+                                {
+                                    HttpOnly = false,  // JavaScript needs to read this
+                                    Secure = context.Request.IsHttps,
+                                    SameSite = SameSiteMode.Strict,
+                                    Path = "/",
+                                });
+                        }
+
+                        // Clear the legacy request-token cookie so mixed old/new cookie sets cannot confuse the web client.
+                        context.Response.Cookies.Delete("XSRF-TOKEN", new CookieOptions
+                        {
+                            Path = "/",
+                            Secure = context.Request.IsHttps,
+                            SameSite = SameSiteMode.Strict,
+                        });
+                    }
+                    catch (Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException ex)
+                    {
+                        // This is expected for some requests - log at debug level only
+                        Log.Debug(ex, "[CSRF Middleware] Antiforgery validation exception for {Method} {Path} (this is normal for some requests)",
+                            context.Request.Method, context.Request.Path);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log other exceptions but don't fail - GetAndStoreTokens can fail for some requests
+                        Log.Warning(ex, "[CSRF Middleware] Exception getting/storing tokens for {Method} {Path}",
+                            context.Request.Method, context.Request.Path);
+                    }
+                }
+
+                await next();
+            });
             Log.Information("Using base url {UrlBase}", urlBase);
 
             // serve static content from the configured path
@@ -3119,7 +3136,6 @@ namespace slskd
                     await next(ctx);
                 }));
 
-            app.UseAuthentication();
             app.UseRouting();
             if (OptionsAtStartup.Web.RateLimiting.Enabled)
             {

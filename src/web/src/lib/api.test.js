@@ -5,6 +5,10 @@
 import { getCsrfTokenFromCookieString } from './api';
 
 describe('api csrf token selection', () => {
+  afterEach(() => {
+    delete window.port;
+  });
+
   it('prefers the current port scoped csrf token', () => {
     const token = getCsrfTokenFromCookieString(
       'XSRF-TOKEN-5031=https-token; XSRF-TOKEN-5030=http-token',
@@ -33,6 +37,16 @@ describe('api csrf token selection', () => {
     const token = getCsrfTokenFromCookieString(
       'XSRF-TOKEN-5030=request-token',
       '',
+    );
+
+    expect(token).toBe('request-token');
+  });
+
+  it('uses the injected backend port by default before the browser url port', () => {
+    window.port = '5030';
+
+    const token = getCsrfTokenFromCookieString(
+      'XSRF-TOKEN-5030=request-token; XSRF-TOKEN-443=proxy-token',
     );
 
     expect(token).toBe('request-token');

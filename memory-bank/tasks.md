@@ -758,6 +758,12 @@
   - Status: done
   - Notes: Updated packaged `slskd.service` to pass `--config /etc/slskd/slskd.yml`, changed packaged `slskd.yml` defaults to disable HTTPS on `5031`, and added a login-page HTTPS hint that points users to `:5031` only when they are currently on HTTP.
 
+## 2026-04-06 Completed Follow-up
+
+- [x] Re-verify reopened tester regressions `#193` and `#194` with live repro coverage
+  - Status: done
+  - Notes: Added a full-instance CSRF regression test for the Web UI rescan path, added focused expected-network-exception unit coverage, and fixed the integration harness to launch the freshly built `Debug` app binary instead of a stale `Release` executable.
+
 ## 2026-03-29 Completed Follow-up
 
 - [x] Harden Launchpad PPA uploads against passive FTP / transient transport failures

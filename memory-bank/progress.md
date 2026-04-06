@@ -5642,6 +5642,18 @@ Code quality improvements were completed as part of Option A:
   - `python - <<'PY' ... yaml.safe_load(...) ... PY`
   - `git diff --check`
 
+## 2026-04-06 21:00:00Z
+
+- Re-verified the reopened tester regressions for `#193` and `#194` with stronger focused tests instead of relying on the earlier release pass.
+- Added full-instance CSRF regression coverage in `tests/slskd.Tests.Integration/Security/CsrfPortScopedTokenIntegrationTests.cs` and supporting harness support for auth-disabled startup in `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`.
+- Root cause of the false negative was the full-instance harness selecting `src/slskd/bin/Release/net8.0/slskd` before the freshly built `Debug` binary, so the test was launching stale runtime code. Documented that gotcha in ADR-0001 and fixed the harness to prefer `Debug`.
+- Cleaned up the CSRF middleware in `src/slskd/Program.cs` so ASP.NET owns the antiforgery cookie token while slskdn only emits the JavaScript-readable request token cookie.
+- Added focused unit coverage for expected network churn classification in `tests/slskd.Tests.Unit/ProgramExpectedNetworkExceptionTests.cs`.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~CsrfPortScopedTokenIntegrationTests" -v minimal`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramExpectedNetworkExceptionTests|FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+  - `cd src/web && npm test -- --run src/lib/api.test.js`
+
 ## 2026-03-30 16:20:00Z
 
 - Investigated the replacement `build-main-0.24.5-slskdn.111` run and confirmed the retry-only fix was still insufficient: `Publish to AUR (Main - Source & Binary)` now failed at `Clone AUR Package (Source)` because `aur.archlinux.org` kept closing SSH read-side clone sessions before auth completed.
