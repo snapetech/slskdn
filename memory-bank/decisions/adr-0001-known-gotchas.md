@@ -4524,11 +4524,11 @@ window.__ROUTE_MISS_ELEMENT__ = el.textContent;
 
 ---
 
-#### E2E-10: Cross-node share discovery requires token signing key and port-specific CSRF cookies
+#### E2E-10: Cross-node share discovery requires token signing key plus distinct per-port CSRF cookie names
 
 **The Bug**: Cross-node share discovery via private messages requires:
 1. `Sharing:TokenSigningKey` configured (base64, min 32 bytes) or token creation fails
-2. CSRF cookie names must be port-specific (`XSRF-TOKEN-{port}`) for multi-instance E2E to avoid cookie collisions
+2. The antiforgery cookie token and the JS-readable request-token cookie must use different names, and both names must be port-specific, or the frontend can read the cookie token and send it back as the request token
 3. OwnerEndpoint in announcements must use `127.0.0.1` not `localhost` (Playwright request client prefers IPv6 `::1` for "localhost")
 
 **Files Affected**:
@@ -4539,17 +4539,78 @@ window.__ROUTE_MISS_ELEMENT__ = el.textContent;
 
 **Wrong**:
 ```csharp
-options.Cookie.Name = "XSRF-TOKEN"; // Same name for all instances = collision
+options.Cookie.Name = $"XSRF-TOKEN-{OptionsAtStartup.Web.Port}";
+context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken, cookieOptions);
 var ownerEndpoint = $"{scheme}://localhost:{web.Port}"; // localhost → ::1 in Playwright
 ```
 
 **Correct**:
 ```csharp
-options.Cookie.Name = $"XSRF-TOKEN-{OptionsAtStartup.Web.Port}"; // Port-specific
+options.Cookie.Name = $"XSRF-COOKIE-{OptionsAtStartup.Web.Port}";
+context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken, cookieOptions);
 var ownerEndpoint = $"{scheme}://127.0.0.1:{web.Port}"; // Explicit IPv4
 ```
 
-**Why This Keeps Happening**: Multi-instance E2E runs multiple nodes on the same host with different ports. Cookies are host-scoped (not port-scoped), so fixed names collide. Playwright's request client resolves "localhost" to IPv6 by default, but nodes bind to IPv4.
+**Why This Keeps Happening**: Multi-instance E2E runs multiple nodes on the same host with different ports. Cookies are host-scoped (not port-scoped), so fixed names collide. A second trap is that ASP.NET antiforgery uses one cookie token and one request token; if both cookies share the `XSRF-TOKEN*` namespace, the frontend can pick up the wrong one and ASP.NET reports the token pair as swapped. Playwright's request client also resolves "localhost" to IPv6 by default, but nodes bind to IPv4.
+
+### 0v. Share Scan Progress Must Stay Monotonic While Parallel Workers Finish Out Of Order
+
+**The Bug**: Share scans process directories in parallel, but worker completions arrive out of order. The scanner can emit a newer progress snapshot first and then a stale lower snapshot later, which makes the UI and logs move backward from `9%` to `8%` or drop the in-progress file count.
+
+**Files Affected**:
+- `src/slskd/Shares/ShareService.cs`
+- `tests/slskd.Tests.Unit/Shares/ShareServiceLifecycleTests.cs`
+
+**Wrong**:
+```csharp
+ScanProgress = current.FillProgress,
+Files = current.Files,
+```
+
+**Correct**:
+```csharp
+ScanProgress = current.Filling && current.FillProgress < state.ScanProgress ? state.ScanProgress : current.FillProgress,
+Files = current.Filling && current.Files < state.Files ? state.Files : current.Files,
+```
+
+**Why This Keeps Happening**: even after moving the raw counters to `Interlocked`, the state update still arrives asynchronously from multiple workers. The service layer has to treat in-flight scan progress as monotonic state instead of trusting every late-arriving worker snapshot.
+
+### 0w. Soulseek Network Teardown Exceptions Must Not Fall Through To Generic Fatal Telemetry
+
+**The Bug**: expected Soulseek network churn such as disposed `Connection` objects, `Unknown PierceFirewall attempt`, `No route to host`, and inactivity timeouts could bypass the expected-network exception filter and get logged as generic `[FATAL] Unobserved task exception`, making ordinary connectivity failures look like process corruption.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+var isNetworkFailure =
+    exception is TimeoutException ||
+    exception is OperationCanceledException ||
+    exception is IOException ||
+    exception is SocketException ||
+    typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal);
+```
+
+**Correct**:
+```csharp
+var isNetworkFailure =
+    exception is TimeoutException ||
+    exception is OperationCanceledException ||
+    exception is IOException ||
+    exception is ObjectDisposedException objectDisposedException && string.Equals(objectDisposedException.ObjectName, "Connection", StringComparison.Ordinal) ||
+    exception is SocketException ||
+    typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal) ||
+    typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal);
+```
+
+```text
+Also match common Soulseek network detail strings such as "Unknown PierceFirewall attempt",
+"No route to host", "Inactivity timeout", and both "Operation canceled" spellings.
+```
+
+**Why This Keeps Happening**: the Soulseek library surfaces several expected connection-failure paths through different exception types and message text. Filtering only the obvious socket/cancel/read exceptions leaves teardown races and peer-protocol failures to fall through the generic fatal logger.
 
 ---
 
