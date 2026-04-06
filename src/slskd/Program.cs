@@ -2726,8 +2726,9 @@ namespace slskd
             services.AddAntiforgery(options =>
             {
                 // Multi-instance (E2E) runs multiple nodes on the same host with different ports.
-                // Cookies are host-scoped (not port-scoped), so a fixed name will collide across nodes and break CSRF.
-                options.Cookie.Name = $"XSRF-TOKEN-{OptionsAtStartup.Web.Port}";
+                // Cookies are host-scoped (not port-scoped), so both the antiforgery cookie token and the
+                // JS-readable request-token cookie need stable per-port names that do not collide with each other.
+                options.Cookie.Name = $"XSRF-COOKIE-{OptionsAtStartup.Web.Port}";
                 options.HeaderName = "X-CSRF-TOKEN";
                 options.Cookie.SameSite = SameSiteMode.Strict;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // HTTPS in prod, HTTP in dev
@@ -2988,7 +2989,7 @@ namespace slskd
                     // Set the XSRF-TOKEN cookie that frontend JavaScript can read
                     if (tokens.RequestToken != null)
                     {
-                        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken,
+                        context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken,
                             new CookieOptions
                             {
                                 HttpOnly = false,  // JavaScript needs to read this
@@ -3975,7 +3976,7 @@ namespace slskd
             return ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(serviceProvider);
         }
 
-        private static bool IsExpectedSoulseekNetworkException(Exception exception)
+        internal static bool IsExpectedSoulseekNetworkException(Exception exception)
         {
             var flattened = FlattenExceptions(exception).ToList();
 
@@ -4016,8 +4017,10 @@ namespace slskd
                 exception is TimeoutException ||
                 exception is OperationCanceledException ||
                 exception is IOException ||
+                (exception is ObjectDisposedException objectDisposedException && string.Equals(objectDisposedException.ObjectName, "Connection", StringComparison.Ordinal)) ||
                 exception is System.Net.Sockets.SocketException ||
-                typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal);
+                typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal) ||
+                typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal);
 
             if (!isNetworkFailure)
             {
@@ -4029,10 +4032,15 @@ namespace slskd
                 details.Contains("Soulseek.Network.Tcp.Connection", StringComparison.Ordinal) ||
                 details.Contains("Failed to connect", StringComparison.Ordinal) ||
                 details.Contains("Connection refused", StringComparison.Ordinal) ||
+                details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||
                 details.Contains("The wait timed out", StringComparison.Ordinal) ||
+                details.Contains("Inactivity timeout", StringComparison.Ordinal) ||
                 details.Contains("Failed to read", StringComparison.Ordinal) ||
-                details.Contains("Operation canceled", StringComparison.Ordinal);
+                details.Contains("Operation canceled", StringComparison.Ordinal) ||
+                details.Contains("Operation cancelled", StringComparison.Ordinal) ||
+                details.Contains("Unknown PierceFirewall attempt", StringComparison.Ordinal) ||
+                details.Contains("Cannot access a disposed object.", StringComparison.Ordinal);
         }
 
         [System.Runtime.Versioning.SupportedOSPlatformGuard("linux")]

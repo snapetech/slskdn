@@ -17,7 +17,7 @@ docker run -d \
   -p <listen port>:50300 \
   -v <path/to/application/data>:/app \
   --name slskd \
-  slskd/slskd:latest
+  ghcr.io/snapetech/slskdn:latest
 ```
 
 This configuration, however, doesn't include any shared directories.
@@ -40,7 +40,7 @@ docker run -d \
   -v /home/JohnDoe/eBooks:/ebooks \
   --name slskd \
   --user 1000:1000 \
-  slskd/slskd:latest
+  ghcr.io/snapetech/slskdn:latest
 ```
 
 Or, for `docker-compose`:
@@ -60,7 +60,7 @@ services:
       - /home/JohnDoe/Music:/music:rw
       - /home/JohnDoe/eBooks:/ebooks:rw
     user: 1000:1000
-    image: slskd/slskd:latest
+    image: ghcr.io/snapetech/slskdn:latest
 ```
 The YAML configuration file would contain:
 
@@ -85,7 +85,7 @@ docker run -d \
   -e "SLSKD_SHARED_DIR=/music;/ebooks" \
   --name slskd \
   --user 1000:1000 \
-  slskd/slskd:latest
+  ghcr.io/snapetech/slskdn:latest
 ```
 
 Or, for `docker-compose`:
@@ -106,5 +106,5 @@ services:
       - /home/JohnDoe/Music:/music:rw
       - /home/JohnDoe/eBooks:/ebooks:rw
     user: 1000:1000
-    image: slskd/slskd:latest
+    image: ghcr.io/snapetech/slskdn:latest
 ```

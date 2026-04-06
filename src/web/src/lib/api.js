@@ -35,18 +35,32 @@ export function buildApiUrl(path) {
 }
 
 // Helper function to get CSRF token from cookie
-const getCsrfToken = () => {
-  const cookies = document.cookie.split(';');
+export const getCsrfTokenFromCookieString = (
+  cookieString = document.cookie,
+  currentPort = window.location.port,
+) => {
+  const cookies = cookieString.split(';');
+  const parsedCookies = new Map();
+
   for (let cookie of cookies) {
     cookie = cookie.trim();
     const index = cookie.indexOf('=');
     if (index <= 0) continue;
     const k = cookie.slice(0, index);
     const v = cookie.slice(index + 1);
-    // Multi-instance E2E uses per-port CSRF cookie names: XSRF-TOKEN-<port>
-    if (k === 'XSRF-TOKEN' || k.startsWith('XSRF-TOKEN-')) {
-      return v;
+    parsedCookies.set(k, v);
+  }
+
+  if (currentPort) {
+    const portScopedToken = parsedCookies.get(`XSRF-TOKEN-${currentPort}`);
+    if (portScopedToken) {
+      return portScopedToken;
     }
+  }
+
+  const legacyToken = parsedCookies.get('XSRF-TOKEN');
+  if (legacyToken) {
+    return legacyToken;
   }
 
   return null;
@@ -68,7 +82,7 @@ api.interceptors.request.use((config) => {
   );
 
   if (needsCsrf) {
-    const csrfToken = getCsrfToken();
+    const csrfToken = getCsrfTokenFromCookieString();
     if (csrfToken) {
       config.headers['X-CSRF-TOKEN'] = csrfToken;
     }

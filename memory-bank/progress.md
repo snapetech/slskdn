@@ -7,6 +7,27 @@
 
 ## 2026-03-28 13:08 - GitHub security backlog cleanup on `master`
 
+## 2026-04-06 13:36 - Tester issue fixes, PR cleanup, and release prep
+
+### Completed
+- Fixed the tester-reported Web UI rescan/CSRF break by separating the antiforgery cookie token from the JavaScript request-token cookie in `Program.cs` and making the web client prefer the current port-specific `XSRF-TOKEN-{port}` cookie instead of matching arbitrary `XSRF-TOKEN*` names.
+- Fixed share scan progress regressions by making `ShareService` keep in-progress file counts and percentages monotonic while parallel scanner worker updates are still arriving out of order.
+- Broadened expected Soulseek network exception classification so normal peer teardown/refusal/PierceFirewall churn stops surfacing as fake `[FATAL]` unobserved-task telemetry.
+- Added focused regression coverage for the CSRF cookie parsing, share scan lifecycle monotonicity, and expected network exception classification paths.
+- Folded the remaining low-risk frontend dependency PRs directly into `main` and absorbed the open Docker/config documentation cleanup so the outstanding dependency/docs PR queue can be closed as superseded.
+- Documented the relevant gotchas immediately in `memory-bank/decisions/adr-0001-known-gotchas.md` per repo policy.
+
+### Verification
+- `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ShareServiceLifecycleTests" -v minimal`
+- `cd src/web && npm test -- --run src/lib/api.test.js src/components/LoginForm.test.jsx`
+- `cd src/web && npm run build`
+- `dotnet test -v minimal`
+- `bash ./bin/lint`
+
+### Remaining
+- Commit the fixes on `main`, close the superseded Dependabot/docs PRs, tag the next stable release, and close issues `#193` / `#194` with the shipped root-cause summary.
+
 ### Completed
 - Switched to a focused `master`-based security branch to clear the GitHub backlog that was still open only because `release-main` fixes had never landed on the default branch.
 - Finished the remaining relay log hardening in `RelayService` by hashing cached relay connection ids in validation failures and removing direct credential/expected-credential debug logging.

@@ -142,6 +142,23 @@ public class ProgramPathNormalizationTests
         Assert.False(Program.IsBenignUnobservedTaskException(exception));
     }
 
+    [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForDisposedConnectionFailures()
+    {
+        var exception = new AggregateException(new ObjectDisposedException("Connection"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForPierceFirewallConnectionFailures()
+    {
+        var exception = new AggregateException(new IOException(
+            "Unknown PierceFirewall attempt with token 46 from x.x.x.x:44490 (id: abcdef)"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
     private static void SetAppDirectory(string value)
     {
         var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);

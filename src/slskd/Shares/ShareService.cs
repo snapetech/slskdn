@@ -84,9 +84,9 @@ namespace slskd.Shares
                     Scanning = current.Filling,
                     Faulted = current.Faulted,
                     Cancelled = current.Cancelled,
-                    ScanProgress = current.FillProgress,
+                    ScanProgress = current.Filling && current.FillProgress < state.ScanProgress ? state.ScanProgress : current.FillProgress,
                     Directories = current.Directories,
-                    Files = current.Files,
+                    Files = current.Filling && current.Files < state.Files ? state.Files : current.Files,
                 });
             });
 
