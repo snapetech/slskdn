@@ -4612,6 +4612,64 @@ Also match common Soulseek network detail strings such as "Unknown PierceFirewal
 
 **Why This Keeps Happening**: the Soulseek library surfaces several expected connection-failure paths through different exception types and message text. Filtering only the obvious socket/cancel/read exceptions leaves teardown races and peer-protocol failures to fall through the generic fatal logger.
 
+### 0x. Port-Scoped CSRF Request Tokens Must Use The Injected Backend Port, Not `window.location.port`
+
+**The Bug**: The web client switched to per-port CSRF request-token cookies, but the reader used `window.location.port` to choose the cookie name. That works for direct `:5030` access and fails behind a reverse proxy or default-port deployment, because the browser URL may have no visible port while the backend still issued `XSRF-TOKEN-5030`.
+
+**Files Affected**:
+- `src/web/src/lib/api.js`
+- `src/web/src/lib/api.test.js`
+
+**Wrong**:
+```javascript
+export const getCsrfTokenFromCookieString = (
+  cookieString = document.cookie,
+  currentPort = window.location.port,
+) => {
+  const portScopedToken = parsedCookies.get(`XSRF-TOKEN-${currentPort}`);
+```
+
+**Correct**:
+```javascript
+const inferredPort = String(window.port || window.location.port || '');
+const portScopedToken = parsedCookies.get(`XSRF-TOKEN-${inferredPort}`);
+```
+
+```text
+If the injected backend port is unavailable, only then fall back to the browser-visible port.
+For reverse-proxy/default-port deployments, also fall back to the single available `XSRF-TOKEN-*`
+cookie instead of sending no CSRF token at all.
+```
+
+**Why This Keeps Happening**: the frontend naturally wants to key off the current URL, but slskdN injects the real backend port separately because the app can sit behind path prefixes, TLS termination, or a proxy that hides the origin port from `window.location`. Per-port cookie names have to follow the injected backend port, not the visible URL port.
+
+### 0y. Expected Soulseek Unobserved Network Churn Should Not Spam Warning-Level Telemetry
+
+**The Bug**: After classifying more Soulseek teardown exceptions as expected, the handler still logged them as `[WARN] Unobserved Soulseek peer/distributed network exception ...`. That avoided the fake fatal crash signal, but it still made ordinary peer churn look like an active runtime problem and reopened the issue.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+var warningMessage = $"[WARN] Unobserved Soulseek peer/distributed network exception: {baseException.Message}";
+Console.Error.WriteLine(warningMessage);
+Log?.Warning(baseException, warningMessage);
+```
+
+**Correct**:
+```csharp
+var debugMessage = $"Ignoring expected Soulseek peer/distributed network exception: {baseException.Message}";
+Log?.Debug(baseException, debugMessage);
+```
+
+```text
+Also keep broadening the expected-network matcher for normal churn strings such as
+"Remote connection closed" so the handler does not bounce between fatal, warning, and benign paths.
+```
+
+**Why This Keeps Happening**: once a noisy path has been misclassified as fatal, the instinctive follow-up is to downgrade it only one step to warning. For P2P connection churn that is already expected and observed, warning is still too loud; it becomes a second false-positive channel instead of a real fix.
+
 ---
 
 #### E2E-11: Backfill requires OwnerEndpoint for HTTP downloads (cross-node)
