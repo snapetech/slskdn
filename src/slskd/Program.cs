@@ -3939,11 +3939,10 @@ namespace slskd
 
                 if (IsExpectedSoulseekNetworkException(e.Exception))
                 {
-                    var warningMessage = $"[WARN] Unobserved Soulseek peer/distributed network exception: {baseException.Message}";
-                    Console.Error.WriteLine(warningMessage);
+                    var warningMessage = $"Ignoring expected Soulseek peer/distributed network exception: {baseException.Message}";
                     try
                     {
-                        Log?.Warning(baseException, warningMessage);
+                        Log?.Debug(baseException, warningMessage);
                     }
                     catch
                     {
@@ -4032,6 +4031,7 @@ namespace slskd
                 details.Contains("Soulseek.Network.Tcp.Connection", StringComparison.Ordinal) ||
                 details.Contains("Failed to connect", StringComparison.Ordinal) ||
                 details.Contains("Connection refused", StringComparison.Ordinal) ||
+                details.Contains("Remote connection closed", StringComparison.Ordinal) ||
                 details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||
                 details.Contains("The wait timed out", StringComparison.Ordinal) ||

@@ -159,6 +159,14 @@ public class ProgramPathNormalizationTests
         Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
     }
 
+    [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForRemoteConnectionClosedFailures()
+    {
+        var exception = new AggregateException(new IOException("Remote connection closed"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
     private static void SetAppDirectory(string value)
     {
         var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);

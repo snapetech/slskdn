@@ -37,7 +37,7 @@ export function buildApiUrl(path) {
 // Helper function to get CSRF token from cookie
 export const getCsrfTokenFromCookieString = (
   cookieString = document.cookie,
-  currentPort = window.location.port,
+  currentPort = String(window.port || window.location.port || ''),
 ) => {
   const cookies = cookieString.split(';');
   const parsedCookies = new Map();
@@ -61,6 +61,14 @@ export const getCsrfTokenFromCookieString = (
   const legacyToken = parsedCookies.get('XSRF-TOKEN');
   if (legacyToken) {
     return legacyToken;
+  }
+
+  const portScopedTokens = [...parsedCookies.entries()].filter(([key]) =>
+    key.startsWith('XSRF-TOKEN-'),
+  );
+
+  if (portScopedTokens.length === 1) {
+    return portScopedTokens[0][1];
   }
 
   return null;

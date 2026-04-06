@@ -28,6 +28,18 @@
 ### Remaining
 - Commit the fixes on `main`, close the superseded Dependabot/docs PRs, tag the next stable release, and close issues `#193` / `#194` with the shipped root-cause summary.
 
+## 2026-04-06 14:31 - Tester regression follow-up for #193 / #194
+
+### Completed
+- Fixed the remaining cookie-auth CSRF regression by making the web client read port-scoped request tokens from the injected backend `window.port` first instead of relying on `window.location.port`, then falling back to the single available `XSRF-TOKEN-*` cookie for reverse-proxy/default-port installs.
+- Reduced expected Soulseek unobserved peer/distributed-network churn from warning-level log spam to debug-only noise and expanded the matcher to treat `Remote connection closed` as expected teardown.
+- Added focused regression tests for the proxy/no-visible-port CSRF path and the `Remote connection closed` Soulseek teardown case.
+
+### Verification
+- `cd src/web && npm test -- --run src/lib/api.test.js`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+- `bash ./bin/lint`
+
 ### Completed
 - Switched to a focused `master`-based security branch to clear the GitHub backlog that was still open only because `release-main` fixes had never landed on the default branch.
 - Finished the remaining relay log hardening in `RelayService` by hashing cached relay connection ids in validation failures and removing direct credential/expected-credential debug logging.

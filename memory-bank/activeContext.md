@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Ship the tester-reported fixes for issues `#193` and `#194`, close the superseded dependency/docs PRs, and cut the next stable release from `main`.
+- **Current Task**: Close out the reopened tester regressions on issues `#193` and `#194` after the first release pass missed the reverse-proxy CSRF token lookup and left expected Soulseek churn at warning level.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -217,9 +217,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Finish validation (`dotnet test`, `bash ./bin/lint`), commit the tester-fix/dependency/doc updates, and push `main`.
-2. Close the superseded open PRs after `main` contains the same fixes/versions.
-3. Tag and push the next stable `build-main-*` release, then comment on and close issues `#193` and `#194`.
+1. Commit and push the reopened regression fixes on `main`.
+2. Decide whether to cut a follow-up stable tag for the post-`0.24.5-slskdn.114` regression fixes.
 2. Re-check the `build-main-0.24.5-slskdn.113` release and the red sidecar workflows after GitHub reruns them.
 3. Confirm the open PR queue is still empty after Dependabot reprocesses the updated policy.
 

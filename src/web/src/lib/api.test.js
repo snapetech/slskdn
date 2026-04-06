@@ -28,4 +28,13 @@ describe('api csrf token selection', () => {
 
     expect(token).toBe('request-token');
   });
+
+  it('falls back to the only port scoped token when the browser url has no port', () => {
+    const token = getCsrfTokenFromCookieString(
+      'XSRF-TOKEN-5030=request-token',
+      '',
+    );
+
+    expect(token).toBe('request-token');
+  });
 });

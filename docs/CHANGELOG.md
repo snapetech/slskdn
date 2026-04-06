@@ -28,8 +28,10 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 ## [Unreleased]
 
 - Fixed Web UI state-changing requests when cookie auth is enabled by separating the antiforgery cookie token from the JavaScript request token and making the client prefer the current port-specific token instead of grabbing the first `XSRF-TOKEN*` cookie.
+- Fixed the follow-on CSRF regression for reverse-proxy/default-port installs by making the web client use the injected backend port for `XSRF-TOKEN-{port}` lookup and fall back to the single available port-scoped token when the browser URL has no visible port.
 - Fixed share rescan progress so in-flight scan updates stay monotonic even when parallel scanner workers complete out of order, preventing the UI/logged percentage and file counts from jumping backward mid-scan.
 - Downgraded more expected Soulseek peer/distributed-network teardown exceptions from fake process-fatal telemetry to normal network churn so inbound connection races and PierceFirewall edge cases stop looking like daemon crashes.
+- Downgraded the remaining expected Soulseek unobserved peer/distributed-network churn from warning spam to debug-only noise and taught the matcher to treat normal `Remote connection closed` teardown as expected.
 - Folded the remaining low-risk frontend dependency updates directly into `main` (`vite 8.0.5`, `esbuild 0.28.0`, `@playwright/test 1.59.1`, `@types/node 25.5.2`, `lodash-es 4.18.1`) and refreshed the checked-in Docker docs/example config to match the current `ghcr.io/snapetech/slskdn` image and feature set.
 - Centralized all AUR publish logic into shared packaging scripts, switched AUR clone/fetch/rebase traffic to HTTPS, and kept SSH only for the final authenticated push so release workflows stop failing on transient AUR SSH read-side disconnects or drifting YAML copies.
 - Blocked Dependabot major-version churn for the deliberately pinned direct `Microsoft.Extensions.*` package line so the same unresolved 9.x→10.x PRs stop reopening on every release cycle.
