@@ -980,6 +980,33 @@ if (!File.Exists(slskdDll))
 
 **Why This Keeps Happening**: Integration tests that spawn the app as a subprocess are not automatically tied to the current test build configuration. If they hard-code one output folder, they can silently run stale binaries and invalidate the test result. Always resolve the current build output first, then fall back only if necessary.
 
+### 0j3b. Full-Instance Test Harnesses Must Prefer The Current `Debug` Binary Over An Older Native `Release` Executable
+
+**The Bug**: `SlskdnFullInstanceRunner` searched for the native app executable in `Release` before `Debug`. During `dotnet test`, the integration project rebuilt the app in `Debug`, but the harness still launched an older `src/slskd/bin/Release/net8.0/slskd` binary. That made end-to-end CSRF tests report stale runtime behavior even though the current source already emitted the correct antiforgery cookies.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+
+**Wrong**:
+```csharp
+var candidates = new[]
+{
+    Path.Combine(solutionRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd"),
+    Path.Combine(solutionRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd"),
+};
+```
+
+**Correct**:
+```csharp
+var candidates = new[]
+{
+    Path.Combine(solutionRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd"),
+    Path.Combine(solutionRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd"),
+};
+```
+
+**Why This Keeps Happening**: subprocess integration harnesses are easy to treat like "real app" launchers, but they still need to follow the build configuration of the current test run. If `Release` is checked first, an old executable can survive indefinitely and make new fixes look broken. Always prefer the freshly built `Debug` output inside test harnesses, then fall back to `Release` only when needed.
+
 ### 0j4. Empty-String Unix Socket Defaults Must Be Treated As "Not Configured" Before Kestrel Startup
 
 **The Bug**: Full-instance integration tests timed out for 25 seconds per test because `Program` treated `web.socket` as configured whenever it was non-null. The option defaults to `string.Empty`, so Kestrel received an empty Unix socket path and crashed during `builder.Build()` before the API ever came up.
