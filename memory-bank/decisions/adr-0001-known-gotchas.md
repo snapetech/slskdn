@@ -52,6 +52,42 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0v. CSRF Token Middleware Must Not Mint New Tokens On Unsafe Requests
+
+**The Bug**: The custom CSRF middleware called `antiforgery.GetAndStoreTokens(context)` on every request, including `POST`/`PUT`/`DELETE`/`PATCH`. That meant a state-changing request could receive a freshly rotated antiforgery token pair immediately before `ValidateCsrfForCookiesOnlyAttribute` validated the request, causing valid header/cookie pairs from the previous page load to fail with `CSRF token validation failed`.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Integration/Security/CsrfPortScopedTokenIntegrationTests.cs`
+
+**Wrong**:
+```csharp
+var tokens = antiforgery.GetAndStoreTokens(context);
+context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken, ...);
+```
+
+```text
+This ran on every request, including the unsafe request currently being validated.
+```
+
+**Correct**:
+```csharp
+if (HttpMethods.IsGet(context.Request.Method) ||
+    HttpMethods.IsHead(context.Request.Method) ||
+    HttpMethods.IsOptions(context.Request.Method) ||
+    HttpMethods.IsTrace(context.Request.Method))
+{
+    var tokens = antiforgery.GetAndStoreTokens(context);
+    context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken, ...);
+}
+```
+
+```text
+Only mint/store antiforgery tokens on safe requests. Unsafe requests should validate the pair the client already has; they should not rotate it mid-flight.
+```
+
+**Why This Keeps Happening**: It is easy to think of the antiforgery middleware as harmless cookie setup that can run globally, but `GetAndStoreTokens(...)` is stateful. Once validation is deferred to a controller/filter, token issuance must stay on safe/bootstrap requests or the request under validation can invalidate itself.
+
 ### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
 
 **The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
