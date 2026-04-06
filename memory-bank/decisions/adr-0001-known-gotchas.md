@@ -1007,6 +1007,31 @@ var candidates = new[]
 
 **Why This Keeps Happening**: subprocess integration harnesses are easy to treat like "real app" launchers, but they still need to follow the build configuration of the current test run. If `Release` is checked first, an old executable can survive indefinitely and make new fixes look broken. Always prefer the freshly built `Debug` output inside test harnesses, then fall back to `Release` only when needed.
 
+### 0j3c. CI Must Not Enforce Constant-Time Behavior With Raw Wall-Clock Microbenchmarks
+
+**The Bug**: `SecurityUtilsTests.ConstantTimeEquals_LargeArrays_PerformsConstantTime` compared `MeasureTimingVariance()` results for equal and unequal inputs and failed the release gate when GitHub runner noise made the ratio explode. The test was measuring `max - min` across tiny stopwatch samples, so scheduler jitter dominated the result and created a flaky false failure unrelated to the actual `ConstantTimeEquals` implementation.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Common/Security/SecurityUtilsTests.cs`
+
+**Wrong**:
+```csharp
+var timingEqual = SecurityUtils.MeasureTimingVariance(() =>
+    SecurityUtils.ConstantTimeEquals(a, a), 100);
+var timingUnequal = SecurityUtils.MeasureTimingVariance(() =>
+    SecurityUtils.ConstantTimeEquals(a, b), 100);
+
+var ratio = (double)timingUnequal / Math.Max(timingEqual, 1);
+Assert.True(ratio < 300.0, $"Timing ratio too high: {ratio} ...");
+```
+
+**Correct**:
+```text
+Keep deterministic correctness coverage in CI, and treat constant-time claims as code-structure / algorithm reviews, not stopwatch-ratio assertions. If timing is checked at all, do it in a dedicated benchmark or security harness outside the release gate.
+```
+
+**Why This Keeps Happening**: wall-clock timing tests look attractive for security helpers, but shared CI runners are hostile to microbenchmarks. A ratio built from min/max stopwatch deltas mostly measures host jitter, preemption, and CPU frequency changes. For release gating, prefer deterministic invariants such as full-length iteration logic and `NoInlining`/`NoOptimization` markers over pseudo-benchmark thresholds.
+
 ### 0j4. Empty-String Unix Socket Defaults Must Be Treated As "Not Configured" Before Kestrel Startup
 
 **The Bug**: Full-instance integration tests timed out for 25 seconds per test because `Program` treated `web.socket` as configured whenever it was non-null. The option defaults to `string.Empty`, so Kestrel received an empty Unix socket path and crashed during `builder.Build()` before the API ever came up.
