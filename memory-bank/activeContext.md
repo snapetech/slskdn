@@ -27,6 +27,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Investigated the failed `build-main-0.24.5-slskdn.115` release and confirmed the failure was an unrelated flaky `SecurityUtilsTests` stopwatch-ratio assertion in the release gate, not the `#193/#194` fixes.
+  - Documented the CI timing-microbenchmark gotcha in ADR-0001, replaced the wall-clock timing assertions with deterministic `SecurityUtils` correctness coverage, and reran `bash packaging/scripts/run-release-gate.sh` successfully.
   - Confirmed `kspls0` was actually logged into the Soulseek server and traced the apparent network deadness to a host firewall gap: inbound `50300/tcp` was missing even though the Web UI ports were open.
   - Added the persistent `50300/tcp` nftables allow rule on `kspls0`, then verified the host immediately established a remote peer connection on `:50300` and a fresh `metallica - one` search returned `236` responses / `1514` files.
   - Patched `src/slskd/Program.cs` so expected Soulseek peer/distributed-network unobserved task exceptions no longer log as fake `[FATAL]` process-shutdown telemetry.
@@ -217,8 +219,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the verification/harness fixes on `main`.
-2. Decide whether to cut a follow-up stable tag for the post-`0.24.5-slskdn.114` regression fixes once the user is satisfied with the stronger repro coverage.
+1. Commit and push the release-gate stabilization fix on `main`.
+2. Cut a replacement stable tag after the failed `build-main-0.24.5-slskdn.115` run.
 3. Re-check the `build-main-0.24.5-slskdn.113` release and the red sidecar workflows after GitHub reruns them.
 4. Confirm the open PR queue is still empty after Dependabot reprocesses the updated policy.
 

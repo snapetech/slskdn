@@ -5642,6 +5642,15 @@ Code quality improvements were completed as part of Option A:
   - `python - <<'PY' ... yaml.safe_load(...) ... PY`
   - `git diff --check`
 
+## 2026-04-06 21:35:00Z
+
+- Investigated the failed `build-main-0.24.5-slskdn.115` release and traced it to an unrelated flaky unit test, not the `#193/#194` fixes.
+- Root cause: `SecurityUtilsTests` was using stopwatch-based wall-clock ratios as a release-gate assertion for constant-time behavior, and GitHub runner jitter blew up the timing ratio.
+- Documented the gotcha in ADR-0001, then replaced the wall-clock timing assertions with deterministic mismatch/correctness coverage in `tests/slskd.Tests.Unit/Common/Security/SecurityUtilsTests.cs`.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~SecurityUtilsTests" -v minimal`
+  - `bash packaging/scripts/run-release-gate.sh`
+
 ## 2026-04-06 21:00:00Z
 
 - Re-verified the reopened tester regressions for `#193` and `#194` with stronger focused tests instead of relying on the earlier release pass.

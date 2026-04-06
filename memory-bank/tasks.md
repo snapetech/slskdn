@@ -763,6 +763,9 @@
 - [x] Re-verify reopened tester regressions `#193` and `#194` with live repro coverage
   - Status: done
   - Notes: Added a full-instance CSRF regression test for the Web UI rescan path, added focused expected-network-exception unit coverage, and fixed the integration harness to launch the freshly built `Debug` app binary instead of a stale `Release` executable.
+- [x] Stabilize the release gate after `build-main-0.24.5-slskdn.115` failed on a flaky timing microbenchmark
+  - Status: done
+  - Notes: Removed the stopwatch-ratio CI assertion from `SecurityUtilsTests`, kept deterministic correctness coverage, documented the gotcha in ADR-0001, and re-ran `packaging/scripts/run-release-gate.sh` successfully.
 
 ## 2026-03-29 Completed Follow-up
 
