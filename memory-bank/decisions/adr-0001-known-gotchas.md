@@ -5197,6 +5197,28 @@ immediately and keep a bounded in-memory buffer for diagnostics. Do not leave th
 
 **Why This Keeps Happening**: redirected output feels harmless when the only goal is "capture logs if startup fails," but unread pipes have backpressure. As soon as the child emits enough startup logging, the harness itself becomes the reason the process stalls.
 
+### 3l. Browse Cache Readers Must Allow Replacement, And Rebuilds Must Be Serialized
+
+**The Bug**: `BrowseResponseResolver()` opened `browse.cache` with the default exclusive sharing mode, while `CacheBrowseResponse()` rebuilt the cache with `File.Move(..., overwrite: true)` and no rebuild lock. Active browse readers could therefore block cache replacement, and concurrent rebuild triggers could race each other as well.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+var stream = new FileStream(cacheFilename, FileMode.Open, FileAccess.Read);
+...
+File.Move(temp, destination, overwrite: true);
+```
+
+**Correct**:
+```text
+Open browse-cache readers with a sharing mode that permits the file to be replaced while it is being streamed,
+and serialize cache rebuilds so only one writer updates `browse.cache` at a time.
+```
+
+**Why This Keeps Happening**: file-backed caches look simple because readers and writers touch the same pathname, but they still need an explicit concurrency contract. If readers take exclusive locks and writers replace the file opportunistically, normal live traffic turns every refresh into a lock race.
+
 ---
 
 *Last updated: 2026-03-21*
