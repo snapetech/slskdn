@@ -763,6 +763,9 @@
 - [x] Add guard rails so GitHub actions from this checkout cannot drift to upstream `slskd/slskd`
   - Status: done
   - Notes: Pinned `gh` default repo to `snapetech/slskdn`, added `scripts/verify-github-target.sh`, and updated repo AI instructions so upstream is treated as read-only reference only.
+- [x] Make initial share scans less aggressive by default for issue `#193`
+  - Status: done
+  - Notes: Changed `shares.cache.workers` to a conservative default based on host CPU count, added focused unit coverage for the default calculation, and documented the knob more clearly in config/docs so operators can tune it further.
 
 ## 2026-04-06 Completed Follow-up
 

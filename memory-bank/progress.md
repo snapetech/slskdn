@@ -5712,3 +5712,18 @@ Code quality improvements were completed as part of Option A:
   - `python - <<'PY' ... yaml.safe_load(...) ... PY` for `.github/dependabot.yml`
   - `dotnet restore tests/slskd.Tests.Performance/slskd.Tests.Performance.csproj`
   - `dotnet build src/slskd/slskd.csproj --no-restore -v q`
+
+## 2026-04-07 21:10:00Z
+
+- Investigated fresh tester feedback on issue `#193` and confirmed the remaining pain point was first-scan host pressure, not another CSRF/runtime defect.
+- Changed `shares.cache.workers` to use a conservative default instead of `Environment.ProcessorCount`: one worker on 1-2 core hosts, otherwise half the cores capped at four workers.
+- Added focused unit coverage for the default-worker calculation in `tests/slskd.Tests.Unit/Core/ShareCacheOptionsTests.cs`.
+- Updated `config/slskd.example.yml` and `docs/config.md` so the knob is documented as the tuning escape hatch for weaker or stronger hosts.
+- While validating the change, found and fixed a separate full-instance test harness bug: `SlskdnFullInstanceRunner` redirected child stdout/stderr without draining the pipes, which could stall subprocess startup and make the CSRF integration tests time out falsely under load.
+- Hardened the harness by increasing the subprocess startup budget to 60 seconds and asynchronously capturing bounded stdout/stderr buffers for timeout and early-exit diagnostics.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareCacheOptionsTests|FullyQualifiedName~ProgramExpectedNetworkExceptionTests|FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~CsrfPortScopedTokenIntegrationTests" -v minimal`
+  - `dotnet test`
+  - `bash ./bin/lint`
+  - `git diff --check`

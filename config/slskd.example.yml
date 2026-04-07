@@ -52,7 +52,7 @@
 #     - \.DS_Store$
 #   cache:
 #     storage_mode: memory
-#     workers: 16
+#     workers: 4 # default is conservative; lower this on weaker hosts, raise it carefully if scans are too slow
 #     retention: ~ # retain indefinitely (do not automatically re-scan)
 # rooms:
 #   - ~

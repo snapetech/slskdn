@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Verification pass for the reopened tester regressions on issues `#193` and `#194`, focused on reproducing the real CSRF/runtime path and confirming the expected-network-exception downgrade with live tests.
+- **Current Task**: Ship the follow-up for issue `#193` that reduces first-scan host pressure by using a conservative default for `shares.cache.workers`, then tag a stable build and report the adjustment back on the issue.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -69,12 +69,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `cd src/web && npm test -- --run src/components/LoginForm.test.jsx src/components/App.test.jsx`
     - `bash ./bin/lint`
     - `dotnet test --no-restore -v minimal`
+  - Shifted issue `#193` from pure bug-fix verification to performance tuning after tester feedback showed first-library scans can still overload weaker hosts even when the CSRF/runtime regressions are fixed.
+  - Documented the new gotcha in ADR-0001: defaulting share scan workers to full `ProcessorCount` is too aggressive for first-time scans and should remain conservative by default.
+  - Changed `Options.SharesOptions.ShareCacheOptions.Workers` to default to one worker on 1-2 core hosts and otherwise half the cores capped at four workers, preserving the existing `shares.cache.workers` knob for manual tuning.
+  - Added focused unit coverage for the default-worker calculation and updated config/docs so operators know they can lower or raise the scan concurrency explicitly.
+  - Validation for this follow-up:
+    - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareCacheOptionsTests|FullyQualifiedName~ProgramExpectedNetworkExceptionTests|FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+    - `bash ./bin/lint`
+    - `git diff --check`
   - Next steps:
-    - push `main` when ready so the restored detached release history and Docker startup hardening actually land on `origin/main`
-    - decide whether to apply or discard the remaining stashes (`stash@{1}` is experimental feature work; `stash@{0}` / `stash@{2}` are `mesh-overlay.key` rotations)
-    - investigate the live `kspls0` search path that is still completing searches with `0` bridge responses
-    - decide whether to ship the `50300/tcp` firewall requirement more explicitly in packaging/docs for host installs that rely on strict inbound nftables policies
-    - configure `WINGETCREATE_GITHUB_TOKEN` in GitHub secrets if stable releases should auto-submit to `microsoft/winget-pkgs`
+    - commit and push the conservative share-scan default change on `main`
+    - create the next stable build tag after the push so CI publishes the adjusted defaults
+    - comment on issue `#193` after the tag push, apologizing for the earlier miss and explaining the safer defaults plus the `shares.cache.workers` tuning knob
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
   - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
   - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.

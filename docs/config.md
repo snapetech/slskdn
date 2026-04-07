@@ -224,7 +224,7 @@ Scanning shares is an I/O intensive operation; all of the files and directories 
 are used to allow metadata to be read from several files concurrently. The scan generally gets faster as additional workers are added, but each worker also adds additional I/O pressure and increases CPU and memory usage. At some number of workers
 performance will start to get worse as more are added.  The optimal number of workers will vary from system to system, so if scan performance is important to you it will be a good idea to experiment to see what the optimal number is for your system.
 
-The default number of workers determined by the [Environment.ProcessorCount](https://learn.microsoft.com/en-us/dotnet/api/system.environment.processorcount?view=net-6.0) property.
+The default number of workers is intentionally conservative: `1` worker on 1-2 core hosts, otherwise half of the detected cores capped at `4`. If your machine can comfortably handle more scan pressure, increase the value explicitly. If initial scans cause high load, reduce it to `1`, `2`, or `4`.
 
 Shares can be configured to be automatically re-scanned at a regular interval by setting the retention limit for the cache.  This value is empty by default, and shares will not be re-scanned automatically.  The interval is set in minutes.
 
@@ -239,7 +239,7 @@ Shares can be configured to be automatically re-scanned at a regular interval by
 shares:
   cache:
     storage_mode: memory
-    workers: 4 # assuming the host has a quad core CPU
+    workers: 4 # default is conservative; lower this on weaker hosts, raise it carefully if scans are too slow
     retention: 10080 # 1 week
 ```
 

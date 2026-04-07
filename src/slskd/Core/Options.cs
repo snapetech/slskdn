@@ -1050,6 +1050,8 @@ namespace slskd
             /// </summary>
             public class ShareCacheOptions
             {
+                private const int MaxConservativeWorkerDefault = 4;
+
                 /// <summary>
                 ///     Gets the type of storage to use for the share cache.
                 /// </summary>
@@ -1068,7 +1070,24 @@ namespace slskd
                 [Description("the number of workers to use while scanning shares")]
                 [Range(1, 128)]
                 [RequiresRestart]
-                public int Workers { get; init; } = Environment.ProcessorCount;
+                public int Workers { get; init; } = GetDefaultWorkers();
+
+                /// <summary>
+                ///     Gets the conservative default worker count for share scans.
+                /// </summary>
+                /// <param name="processorCount">Optional processor count override for testing.</param>
+                /// <returns>The default worker count.</returns>
+                public static int GetDefaultWorkers(int? processorCount = null)
+                {
+                    var count = processorCount ?? Environment.ProcessorCount;
+
+                    if (count <= 2)
+                    {
+                        return 1;
+                    }
+
+                    return Math.Min(MaxConservativeWorkerDefault, Math.Max(2, count / 2));
+                }
 
                 /// <summary>
                 ///     Gets the time to retain the cache (the interval on which to re-scan automatically), in minutes.

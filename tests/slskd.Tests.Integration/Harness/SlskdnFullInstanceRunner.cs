@@ -4,9 +4,11 @@
 
 namespace slskd.Tests.Integration.Harness;
 
+using System.Collections.Concurrent;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -20,9 +22,14 @@ using System.Threading.Tasks;
 /// </summary>
 public class SlskdnFullInstanceRunner : IAsyncDisposable
 {
+    private static readonly TimeSpan ApiStartupTimeout = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ApiStartupProbeDelay = TimeSpan.FromMilliseconds(500);
+    private const int CapturedLogLineLimit = 200;
     private readonly ILogger<SlskdnFullInstanceRunner> logger;
     private readonly string testId;
     private readonly string appDir;
+    private readonly ConcurrentQueue<string> stdoutLines = new();
+    private readonly ConcurrentQueue<string> stderrLines = new();
     private Process? slskdnProcess;
     private int apiPort;
     private int? bridgePort;
@@ -103,6 +110,11 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             throw new InvalidOperationException($"Failed to start slskdn process: {binaryPath}");
         }
 
+        slskdnProcess.OutputDataReceived += (_, args) => CaptureProcessLogLine(stdoutLines, args.Data);
+        slskdnProcess.ErrorDataReceived += (_, args) => CaptureProcessLogLine(stderrLines, args.Data);
+        slskdnProcess.BeginOutputReadLine();
+        slskdnProcess.BeginErrorReadLine();
+
         // Wait for API to be ready
         await WaitForApiReadyAsync(ct);
 
@@ -131,6 +143,8 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
 
             try
             {
+                slskdnProcess.CancelOutputRead();
+                slskdnProcess.CancelErrorRead();
                 slskdnProcess.Kill();
                 await slskdnProcess.WaitForExitAsync();
             }
@@ -252,7 +266,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
 
     private async Task WaitForApiReadyAsync(CancellationToken ct)
     {
-        const int maxAttempts = 50;
+        var maxAttempts = (int)Math.Ceiling(ApiStartupTimeout.TotalMilliseconds / ApiStartupProbeDelay.TotalMilliseconds);
         var attempt = 0;
 
         while (attempt < maxAttempts && !ct.IsCancellationRequested)
@@ -278,11 +292,14 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
                 // Not ready yet
             }
 
-            await Task.Delay(500, ct);
+            await Task.Delay(ApiStartupProbeDelay, ct);
             attempt++;
         }
 
-        throw new TimeoutException($"slskdn instance did not become ready after {maxAttempts * 500}ms");
+        throw new TimeoutException(
+            $"slskdn instance did not become ready after {ApiStartupTimeout.TotalMilliseconds}ms" +
+            $"{Environment.NewLine}STDOUT:{Environment.NewLine}{FormatCapturedLogs(stdoutLines)}" +
+            $"{Environment.NewLine}STDERR:{Environment.NewLine}{FormatCapturedLogs(stderrLines)}");
     }
 
     private InvalidOperationException BuildProcessExitException()
@@ -292,13 +309,10 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             return new InvalidOperationException("slskdn process exited before startup completed");
         }
 
-        var stdout = slskdnProcess.StandardOutput.ReadToEnd();
-        var stderr = slskdnProcess.StandardError.ReadToEnd();
-
         return new InvalidOperationException(
             $"slskdn process exited before startup completed (exit code {slskdnProcess.ExitCode})" +
-            $"{Environment.NewLine}STDOUT:{Environment.NewLine}{stdout}" +
-            $"{Environment.NewLine}STDERR:{Environment.NewLine}{stderr}");
+            $"{Environment.NewLine}STDOUT:{Environment.NewLine}{FormatCapturedLogs(stdoutLines)}" +
+            $"{Environment.NewLine}STDERR:{Environment.NewLine}{FormatCapturedLogs(stderrLines)}");
     }
 
     private async Task WaitForBridgeReadyAsync(int port, CancellationToken ct)
@@ -335,5 +349,26 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         return port;
+    }
+
+    private static void CaptureProcessLogLine(ConcurrentQueue<string> lines, string? line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return;
+        }
+
+        lines.Enqueue(line);
+        while (lines.Count > CapturedLogLineLimit && lines.TryDequeue(out _))
+        {
+        }
+    }
+
+    private static string FormatCapturedLogs(ConcurrentQueue<string> lines)
+    {
+        var snapshot = lines.ToArray();
+        return snapshot.Length == 0
+            ? "<no output captured>"
+            : string.Join(Environment.NewLine, snapshot.TakeLast(CapturedLogLineLimit));
     }
 }
