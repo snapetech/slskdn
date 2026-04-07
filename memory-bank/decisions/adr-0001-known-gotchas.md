@@ -5101,6 +5101,34 @@ Use HTTPS for clone/fetch/rebase and reserve SSH only for the final authenticate
 
 **Why This Keeps Happening**: the original fallback was written to be convenient for first-time package setup, but release workflows run against long-lived AUR repos where "clone failed" usually means SSH/network instability, not a missing repository. Reusing the bootstrap fallback in steady-state CI silently destroys git history and turns a recoverable clone hiccup into a guaranteed push failure. Even after removing the `git init` fallback, using SSH for read-side clone/fetch still leaves the workflow exposed to AUR-side connection drops; HTTPS reads plus SSH push isolates the flaky part to the only step that actually needs credentials.
 
+### 3h. All GitHub Issue / PR / Release Actions In This Repo Must Target `snapetech/slskdn`, Never Upstream `slskd/slskd`
+
+**The Bug**: GitHub cleanup work intended for this fork was run against the upstream `slskd/slskd` project instead. The root cause was repo-target ambiguity: this checkout has both `origin` (`snapetech/slskdn`) and `upstream` (`slskd/slskd`), and `gh` / connector operations were allowed to resolve against the wrong repository when the target was not stated explicitly.
+
+**Files / Systems Affected**:
+- local GitHub CLI state
+- AI/operator instructions for this repo
+
+**Wrong**:
+```text
+Run GitHub issue / PR / release commands without explicitly verifying the target repo,
+or assume "slskd" and "slskdn" will be distinguished automatically by the tool.
+```
+
+**Correct**:
+```text
+For this repository, every GitHub issue / PR / release action must target `snapetech/slskdn`.
+Treat upstream `slskd/slskd` as read-only reference only.
+
+Before any GitHub write action:
+1. Verify `origin` is `snapetech/slskdn`
+2. Verify `gh repo set-default --view` resolves to `snapetech/slskdn`
+3. Pass the repo explicitly to any CLI / MCP action when possible
+4. Never comment on, close, label, or otherwise modify upstream `slskd/slskd`
+```
+
+**Why This Keeps Happening**: fork repos often keep an `upstream` remote for reference, and the names here differ by only one letter. That makes repo targeting an easy place to fail, especially when tools cache a default repo or infer one from context. When both fork and upstream are accessible, "implicit repo selection" is unsafe. Pin the default to `snapetech/slskdn`, verify it before write actions, and treat upstream as non-writable from this workspace.
+
 ---
 
 *Last updated: 2026-03-21*
