@@ -5151,6 +5151,28 @@ existing `shares.cache.workers` knob available for hosts that want to tune highe
 
 **Why This Keeps Happening**: "one worker per core" sounds reasonable for CPU-bound work, but share scans are mixed CPU/I/O pressure and include metadata extraction, file system traversal, and moderation checks. On modest systems, the default needs to assume the host is doing other work and that storage is often the real bottleneck. Tune up explicitly if the machine can handle it; do not make the most aggressive path the default.
 
+### 3j. Full-Instance Integration Startup Timeouts Must Tolerate Loaded Test Runs
+
+**The Bug**: `SlskdnFullInstanceRunner.WaitForApiReadyAsync()` hard-coded a 25 second startup timeout. That was enough in isolated focused runs, but it failed in repo-wide validation when the full-instance CSRF integration tests booted a subprocess while the machine was already under heavy test load.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+
+**Wrong**:
+```csharp
+const int maxAttempts = 50;
+await Task.Delay(500, ct);
+throw new TimeoutException($"slskdn instance did not become ready after {maxAttempts * 500}ms");
+```
+
+**Correct**:
+```text
+Use a startup wait budget that tolerates loaded local/CI runs for subprocess-backed integration tests,
+and reserve the short timeouts for in-process `TestServer` style probes.
+```
+
+**Why This Keeps Happening**: focused harness tests often make the startup path look fast and deterministic, but subprocess-backed integration tests pay for real app startup, config/bootstrap work, and scheduler contention from the rest of the suite. A timeout that is "fine on a quiet machine" becomes a flake once the full solution runs together.
+
 ---
 
 *Last updated: 2026-03-21*
