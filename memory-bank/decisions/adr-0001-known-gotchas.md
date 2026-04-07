@@ -5173,6 +5173,30 @@ and reserve the short timeouts for in-process `TestServer` style probes.
 
 **Why This Keeps Happening**: focused harness tests often make the startup path look fast and deterministic, but subprocess-backed integration tests pay for real app startup, config/bootstrap work, and scheduler contention from the rest of the suite. A timeout that is "fine on a quiet machine" becomes a flake once the full solution runs together.
 
+### 3k. Redirected Child-Process Output In Test Harnesses Must Be Drained Continuously
+
+**The Bug**: `SlskdnFullInstanceRunner` started the subprocess with `RedirectStandardOutput = true` and `RedirectStandardError = true`, but it only read those streams if the process exited early. Under heavier startup logging, the child could block on full pipe buffers before the API came up, and the harness misreported that as a startup timeout.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+
+**Wrong**:
+```csharp
+RedirectStandardOutput = true,
+RedirectStandardError = true,
+...
+var stdout = slskdnProcess.StandardOutput.ReadToEnd();
+var stderr = slskdnProcess.StandardError.ReadToEnd();
+```
+
+**Correct**:
+```text
+When redirecting child-process output in a long-lived test harness, begin asynchronous reads
+immediately and keep a bounded in-memory buffer for diagnostics. Do not leave the pipes unread.
+```
+
+**Why This Keeps Happening**: redirected output feels harmless when the only goal is "capture logs if startup fails," but unread pipes have backpressure. As soon as the child emits enough startup logging, the harness itself becomes the reason the process stalls.
+
 ---
 
 *Last updated: 2026-03-21*
