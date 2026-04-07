@@ -275,6 +275,7 @@ namespace slskd
         private OptionsAtStartup OptionsAtStartup { get; set; }
         private IOptionsMonitor<Options> OptionsMonitor { get; set; }
         private SemaphoreSlim OptionsSyncRoot { get; } = new SemaphoreSlim(1, 1);
+        private SemaphoreSlim BrowseCacheSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private SemaphoreSlim GlobalEnqueueSemaphore { get; } = new SemaphoreSlim(10, 10);
         private SemaphoreSlim UserEnqueueSemaphoreSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private ConcurrentDictionary<string, SemaphoreSlim> UserEnqueueSemaphores { get; } = new ConcurrentDictionary<string, SemaphoreSlim>();
@@ -1120,7 +1121,7 @@ namespace slskd
                 }
                 else
                 {
-                    var stream = new FileStream(cacheFilename, FileMode.Open, FileAccess.Read);
+                    var stream = OpenBrowseCacheReadStream(cacheFilename);
                     response = new RawBrowseResponse(cacheFileInfo.Length, stream);
                 }
 
@@ -2235,6 +2236,10 @@ namespace slskd
 
         private async Task<BrowseResponse> CacheBrowseResponse()
         {
+            await BrowseCacheSyncRoot.WaitAsync();
+
+            string? temp = default;
+
             try
             {
                 var sw = new Stopwatch();
@@ -2242,8 +2247,8 @@ namespace slskd
 
                 var directories = await Shares.BrowseAsync();
                 var response = new BrowseResponse(directories);
-                var temp = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                 var destination = Path.Combine(Program.DataDirectory, "browse.cache");
+                temp = Path.Combine(Program.DataDirectory, $"browse.cache.{Guid.NewGuid():N}.tmp");
 
                 Log.Information("Warming browse response cache...");
                 await System.IO.File.WriteAllBytesAsync(temp, response.ToByteArray());
@@ -2261,6 +2266,20 @@ namespace slskd
                 Log.Error(ex, "Error caching browse response: {Message}", ex.Message);
                 throw;
             }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(temp) && System.IO.File.Exists(temp))
+                {
+                    System.IO.File.Delete(temp);
+                }
+
+                BrowseCacheSyncRoot.Release();
+            }
+        }
+
+        internal static FileStream OpenBrowseCacheReadStream(string cacheFilename)
+        {
+            return new FileStream(cacheFilename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         }
 
         private void State_OnChange((State Previous, State Current) state)

@@ -27,6 +27,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
+- Fixed `browse.cache` refreshes so live browse-response readers no longer block cache replacement, and serialized cache rebuilds to stop overlapping refreshes from racing each other.
 - Made initial share scans less aggressive out of the box by changing the default `shares.cache.workers` value from full CPU count to a conservative host-aware cap, and documented the knob more clearly for further operator tuning on weaker or stronger machines.
 - Fixed Web UI state-changing requests when cookie auth is enabled by separating the antiforgery cookie token from the JavaScript request token and making the client prefer the current port-specific token instead of grabbing the first `XSRF-TOKEN*` cookie.
 - Fixed the follow-on CSRF regression for reverse-proxy/default-port installs by making the web client use the injected backend port for `XSRF-TOKEN-{port}` lookup and fall back to the single available port-scoped token when the browser URL has no visible port.

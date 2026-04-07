@@ -5727,3 +5727,14 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-07 22:35:00Z
+
+- Investigated issue `#199` and confirmed `browse.cache` rebuilds were racing live browse readers: the browse-response stream opened the cache file with exclusive sharing, while rebuilds replaced the file with `File.Move(..., overwrite: true)` and no writer serialization.
+- Fixed `Application` so browse-cache readers open with `FileShare.ReadWrite | FileShare.Delete`, browse-cache rebuilds serialize through a dedicated semaphore, and temporary cache files are created in `Program.DataDirectory` before the final atomic replace.
+- Added focused unit coverage in `tests/slskd.Tests.Unit/Core/ApplicationBrowseCacheTests.cs` that keeps a browse-cache read stream open while replacing the cache file and verifies both the old stream and the new on-disk cache behave correctly.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationBrowseCacheTests|FullyQualifiedName~ApplicationLifecycleTests" -v minimal`
+  - `dotnet test`
+  - `bash ./bin/lint`
+  - `git diff --check`

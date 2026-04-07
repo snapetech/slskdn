@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Ship the follow-up for issue `#193` that reduces first-scan host pressure by using a conservative default for `shares.cache.workers`, then tag a stable build and report the adjustment back on the issue.
+- **Current Task**: Fix issue `#199` (`browse.cache` rebuild collision) by making browse-cache reads compatible with atomic replacement and serializing cache rebuilds.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -77,10 +77,21 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareCacheOptionsTests|FullyQualifiedName~ProgramExpectedNetworkExceptionTests|FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
     - `bash ./bin/lint`
     - `git diff --check`
+  - Investigated issue `#199` and confirmed the failure was a real file-sharing bug in `Application`: active browse readers were opening `browse.cache` exclusively while cache refreshes replaced the file in place, and refreshes themselves had no serialization.
+  - Documented the browse-cache locking gotcha in ADR-0001 and committed it separately as required.
+  - Fixed the browse-cache path by:
+    - opening browse-cache readers with `FileShare.ReadWrite | FileShare.Delete`
+    - serializing `CacheBrowseResponse()` through a dedicated semaphore
+    - writing temp cache files inside `Program.DataDirectory` before the final replace
+  - Added focused regression coverage in `tests/slskd.Tests.Unit/Core/ApplicationBrowseCacheTests.cs` that keeps a cache reader open while replacing the on-disk file.
+  - Validation for the browse-cache follow-up:
+    - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationBrowseCacheTests|FullyQualifiedName~ApplicationLifecycleTests" -v minimal`
+    - `dotnet test`
+    - `bash ./bin/lint`
+    - `git diff --check`
   - Next steps:
-    - commit and push the conservative share-scan default change on `main`
-    - create the next stable build tag after the push so CI publishes the adjusted defaults
-    - comment on issue `#193` after the tag push, apologizing for the earlier miss and explaining the safer defaults plus the `shares.cache.workers` tuning knob
+    - commit the `#199` browse-cache fix
+    - decide whether to push it immediately or batch it with the next release cut
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
   - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
   - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.

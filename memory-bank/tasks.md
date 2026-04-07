@@ -766,6 +766,9 @@
 - [x] Make initial share scans less aggressive by default for issue `#193`
   - Status: done
   - Notes: Changed `shares.cache.workers` to a conservative default based on host CPU count, added focused unit coverage for the default calculation, and documented the knob more clearly in config/docs so operators can tune it further.
+- [x] Fix issue `#199` browse cache rebuild collisions
+  - Status: done
+  - Notes: Changed browse-cache readers to allow replacement while streaming, serialized browse-cache rebuilds behind a semaphore, kept temp files in the data directory for atomic replacement, and added focused unit coverage for replacing the cache while a reader is active.
 
 ## 2026-04-06 Completed Follow-up
 
