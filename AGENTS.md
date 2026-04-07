@@ -50,6 +50,16 @@ If you skip this step, you WILL generate slop.
 
 ## Core Principles
 
+### Fork Boundary And GitHub Targeting
+
+**This workspace writes to `snapetech/slskdn`, not upstream `slskd/slskd`.**
+
+- Treat upstream `slskd/slskd` as read-only reference only
+- Never comment on, close, label, review, or otherwise modify upstream issues / PRs from this repo workspace
+- Before any GitHub issue / PR / release action, run `./scripts/verify-github-target.sh`
+- Prefer passing the repo explicitly to GitHub tooling when possible (`snapetech/slskdn`)
+- If the target repo is ambiguous, stop and resolve it before taking any write action
+
 ### Network Health First 🌐
 
 **slskdn prioritizes Soulseek network health in ALL design decisions.**
@@ -278,4 +288,3 @@ See `memory-bank/decisions/adr-0005-tagging-system.md` for detailed tag format a
 | `docs/archive/DEVELOPMENT_HISTORY.md` | Release history |
 | `TODO.md` | Human-maintained todo list |
 | **`from-lack-workspace/`** | **Reference-only artifacts** (plans, code review, spec docs from lack workspace). Do not merge into main tree; use when the task relates to those plans. See `from-lack-workspace/README.md`. |
-

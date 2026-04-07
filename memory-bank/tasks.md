@@ -758,6 +758,12 @@
   - Status: done
   - Notes: Updated packaged `slskd.service` to pass `--config /etc/slskd/slskd.yml`, changed packaged `slskd.yml` defaults to disable HTTPS on `5031`, and added a login-page HTTPS hint that points users to `:5031` only when they are currently on HTTP.
 
+## 2026-04-07 Completed Follow-up
+
+- [x] Add guard rails so GitHub actions from this checkout cannot drift to upstream `slskd/slskd`
+  - Status: done
+  - Notes: Pinned `gh` default repo to `snapetech/slskdn`, added `scripts/verify-github-target.sh`, and updated repo AI instructions so upstream is treated as read-only reference only.
+
 ## 2026-04-06 Completed Follow-up
 
 - [x] Re-verify reopened tester regressions `#193` and `#194` with live repro coverage

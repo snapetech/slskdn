@@ -27,6 +27,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Pinned the local GitHub CLI default repo to `snapetech/slskdn` and added `scripts/verify-github-target.sh` so this workspace verifies `origin`, `upstream`, and `gh` default repo before any GitHub write action.
+  - Added explicit fork-boundary instructions in `AGENTS.md` and `docs/archive/implementation/AI_START_HERE.md`: all issue / PR / release work from this checkout must target `snapetech/slskdn`; upstream `slskd/slskd` is read-only reference only.
   - Investigated the failed `build-main-0.24.5-slskdn.115` release and confirmed the failure was an unrelated flaky `SecurityUtilsTests` stopwatch-ratio assertion in the release gate, not the `#193/#194` fixes.
   - Documented the CI timing-microbenchmark gotcha in ADR-0001, replaced the wall-clock timing assertions with deterministic `SecurityUtils` correctness coverage, and reran `bash packaging/scripts/run-release-gate.sh` successfully.
   - Confirmed `kspls0` was actually logged into the Soulseek server and traced the apparent network deadness to a host firewall gap: inbound `50300/tcp` was missing even though the Web UI ports were open.
@@ -219,8 +221,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the release-gate stabilization fix on `main`.
-2. Cut a replacement stable tag after the failed `build-main-0.24.5-slskdn.115` run.
+1. Commit and push the GitHub-target guard rails on `main`.
+2. Keep using `./scripts/verify-github-target.sh` before any GitHub issue / PR / release write action from this checkout.
 3. Re-check the `build-main-0.24.5-slskdn.113` release and the red sidecar workflows after GitHub reruns them.
 4. Confirm the open PR queue is still empty after Dependabot reprocesses the updated policy.
 

@@ -5,6 +5,8 @@
 **Branch**: experimental/brainz
 
 > **Project Note**: This is a fork of [slskd](https://github.com/slskd/slskd). See [../README.md](../README.md#acknowledgments) for attribution.
+>
+> **GitHub Boundary**: all issue / PR / release work from this checkout must target `snapetech/slskdn`. Upstream `slskd/slskd` is read-only reference only. Before any GitHub write action, run `./scripts/verify-github-target.sh`.
 
 ---
 

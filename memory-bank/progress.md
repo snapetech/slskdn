@@ -5642,6 +5642,15 @@ Code quality improvements were completed as part of Option A:
   - `python - <<'PY' ... yaml.safe_load(...) ... PY`
   - `git diff --check`
 
+## 2026-04-07 00:05:00Z
+
+- Added fork-boundary guard rails after GitHub actions were mistakenly aimed at upstream `slskd/slskd` instead of this fork.
+- Pinned the local `gh` default repository to `snapetech/slskdn`.
+- Added `scripts/verify-github-target.sh` to verify `origin`, `upstream`, and `gh` default repo before any GitHub write action.
+- Updated `AGENTS.md` and `docs/archive/implementation/AI_START_HERE.md` so future AI sessions treat upstream `slskd/slskd` as read-only reference only.
+- Validation:
+  - `./scripts/verify-github-target.sh`
+
 ## 2026-04-06 21:35:00Z
 
 - Investigated the failed `build-main-0.24.5-slskdn.115` release and traced it to an unrelated flaky unit test, not the `#193/#194` fixes.
