@@ -5129,6 +5129,28 @@ Before any GitHub write action:
 
 **Why This Keeps Happening**: fork repos often keep an `upstream` remote for reference, and the names here differ by only one letter. That makes repo targeting an easy place to fail, especially when tools cache a default repo or infer one from context. When both fork and upstream are accessible, "implicit repo selection" is unsafe. Pin the default to `snapetech/slskdn`, verify it before write actions, and treat upstream as non-writable from this workspace.
 
+### 3i. Share Scan Worker Defaults Must Be Conservative; `ProcessorCount` Is Too Aggressive For First-Time Scans
+
+**The Bug**: The share scanner defaulted `shares.cache.workers` to `Environment.ProcessorCount`. On weaker hosts or slow storage, first-time library scans could drive load unreasonably high because each worker enumerates directories and reads file metadata concurrently.
+
+**Files Affected**:
+- `src/slskd/Core/Options.cs`
+- `config/slskd.example.yml`
+- `docs/config.md`
+
+**Wrong**:
+```csharp
+public int Workers { get; init; } = Environment.ProcessorCount;
+```
+
+**Correct**:
+```text
+Use a conservative default that favors stability over peak scan throughput, and keep the
+existing `shares.cache.workers` knob available for hosts that want to tune higher or lower.
+```
+
+**Why This Keeps Happening**: "one worker per core" sounds reasonable for CPU-bound work, but share scans are mixed CPU/I/O pressure and include metadata extraction, file system traversal, and moderation checks. On modest systems, the default needs to assume the host is doing other work and that storage is often the real bottleneck. Tune up explicitly if the machine can handle it; do not make the most aggressive path the default.
+
 ---
 
 *Last updated: 2026-03-21*
