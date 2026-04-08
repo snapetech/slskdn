@@ -27,6 +27,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
+- Fixed the remaining share-scan stall path for large or slow libraries by skipping unnecessary moderation hashing and avoiding eager video metadata probing on the hot scan path, then added both synthetic and manual share-scan harnesses to reproduce low-progress scan failures locally before shipping builds.
 - Fixed `browse.cache` refreshes so live browse-response readers no longer block cache replacement, and serialized cache rebuilds to stop overlapping refreshes from racing each other.
 - Made initial share scans less aggressive out of the box by changing the default `shares.cache.workers` value from full CPU count to a conservative host-aware cap, and documented the knob more clearly for further operator tuning on weaker or stronger machines.
 - Fixed Web UI state-changing requests when cookie auth is enabled by separating the antiforgery cookie token from the JavaScript request token and making the client prefer the current port-specific token instead of grabbing the first `XSRF-TOKEN*` cookie.

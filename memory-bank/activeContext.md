@@ -23,10 +23,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Fix issue `#199` (`browse.cache` rebuild collision) by making browse-cache reads compatible with atomic replacement and serializing cache rebuilds.
+- **Current Task**: Revisit tester issue `#193` (`Initial scan loops`) and the remaining open issue set to identify any further local fixes plus stronger local repro coverage before shipping more builds.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Re-reviewed the open issue list on `snapetech/slskdn`; the active bug threads remain `#193` (share-scan stalls/load) and `#199` (browse-cache race), with `#69` still just a roadmap discussion.
+  - Identified an additional `#193` root cause in `src/slskd/Shares/ShareScanner.cs`: share scans still computed a full-file hash for every file before local moderation, even when moderation was disabled or when the active moderation path only needed lightweight metadata.
+  - Updated `ShareScanner` and `CompositeModerationProvider` so local-file scans only hash when the active moderation configuration actually requires a hash, while still allowing metadata-only moderation providers to run.
+  - Added focused unit coverage in `tests/slskd.Tests.Unit/Shares/ShareScannerModerationTests.cs` for both the no-op moderation path and the metadata-only moderation path, proving `ComputeHashAsync(...)` is skipped in both cases.
+  - Added `tests/slskd.Tests.Unit/Shares/ShareScannerHarnessTests.cs` plus `scripts/run-share-scan-harness.sh` so share scans can now be exercised both against a large synthetic tree and against an env-configured real share root.
+  - Used the new manual harness against `/mnt/datapool_lvm_media/download/music` (remote NFS-backed) with `workers=1` and reproduced the tester-style stall: the scan timed out after 60 seconds having indexed only 8 files.
+  - Added a manual harness switch to skip media-attribute extraction and confirmed the same NFS-backed scan completes when media attributes are skipped, strongly implicating `src/slskd/Shares/SoulseekFileFactory.cs` / `TagLib.File.Create(...)` probing as the remaining `#193` bottleneck.
+  - Re-ran focused issue regression coverage with `ApplicationBrowseCacheTests`, `ShareScannerModerationTests`, and `ShareScannerHarnessTests`, then verified the repo lint gate still passes.
   - Pinned the local GitHub CLI default repo to `snapetech/slskdn` and added `scripts/verify-github-target.sh` so this workspace verifies `origin`, `upstream`, and `gh` default repo before any GitHub write action.
   - Added explicit fork-boundary instructions in `AGENTS.md` and `docs/archive/implementation/AI_START_HERE.md`: all issue / PR / release work from this checkout must target `snapetech/slskdn`; upstream `slskd/slskd` is read-only reference only.
   - Investigated the failed `build-main-0.24.5-slskdn.115` release and confirmed the failure was an unrelated flaky `SecurityUtilsTests` stopwatch-ratio assertion in the release gate, not the `#193/#194` fixes.

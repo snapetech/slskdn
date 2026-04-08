@@ -72,6 +72,26 @@ namespace slskd.Common.Moderation
             _llmModerationProvider = llmModerationProvider; // T-MCP-LM02
         }
 
+        internal bool HasActiveLocalFileChecks
+        {
+            get
+            {
+                var opts = _options.CurrentValue;
+                return (_hashBlocklist != null && opts.HashBlocklist.Enabled)
+                    || (_externalClient != null && opts.ExternalModeration.Enabled)
+                    || (_llmModerationProvider != null && opts.LlmModeration.Enabled);
+            }
+        }
+
+        internal bool RequiresLocalFileHash
+        {
+            get
+            {
+                var opts = _options.CurrentValue;
+                return _hashBlocklist != null && opts.HashBlocklist.Enabled;
+            }
+        }
+
         /// <inheritdoc/>
         public async Task<ModerationDecision> CheckLocalFileAsync(
             LocalFileMetadata file,

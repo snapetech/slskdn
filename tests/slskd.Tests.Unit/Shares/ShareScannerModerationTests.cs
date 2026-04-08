@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Common.Moderation;
 using slskd.Files;
@@ -39,6 +41,122 @@ public class ShareScannerModerationTests
 
         // Assert: Scanner was created with moderation provider
         Assert.NotNull(scanner);
+    }
+
+    [Fact]
+    public async Task ScanAsync_WithNoopModeration_DoesNotComputeHashes()
+    {
+        var shareRoot = Path.Combine(Path.GetTempPath(), $"share-scan-noop-{Guid.NewGuid():N}");
+        var databasePath = Path.Combine(Path.GetTempPath(), $"share-scan-noop-{Guid.NewGuid():N}.db");
+
+        System.IO.Directory.CreateDirectory(shareRoot);
+        await System.IO.File.WriteAllTextAsync(Path.Combine(shareRoot, "sample.txt"), "sample");
+
+        try
+        {
+            var fileService = new Mock<FileService>(MockBehavior.Strict, null);
+            fileService.Setup(x => x.ResolveFileInfo(It.IsAny<string>()))
+                .Returns<string>(path => new FileInfo(path));
+            fileService.Setup(x => x.ComputeHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Throws(new Xunit.Sdk.XunitException("ComputeHashAsync should not be called when moderation is disabled."));
+
+            var scanner = new ShareScanner(
+                workerCount: 1,
+                fileService: fileService.Object,
+                moderationProvider: new NoopModerationProvider());
+
+            using var repository = new SqliteShareRepository($"Data Source={databasePath}");
+            repository.Create(discardExisting: true);
+
+            var share = new Share(shareRoot);
+            var options = new slskd.Options.SharesOptions();
+
+            await scanner.ScanAsync(new[] { share }, options, repository);
+
+            Assert.Equal(1, repository.CountFiles());
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(shareRoot))
+            {
+                System.IO.Directory.Delete(shareRoot, recursive: true);
+            }
+
+            if (System.IO.File.Exists(databasePath))
+            {
+                System.IO.File.Delete(databasePath);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ScanAsync_WithMetadataOnlyModeration_DoesNotComputeHashes()
+    {
+        var shareRoot = Path.Combine(Path.GetTempPath(), $"share-scan-metadata-only-{Guid.NewGuid():N}");
+        var databasePath = Path.Combine(Path.GetTempPath(), $"share-scan-metadata-only-{Guid.NewGuid():N}.db");
+
+        System.IO.Directory.CreateDirectory(shareRoot);
+        await System.IO.File.WriteAllTextAsync(Path.Combine(shareRoot, "sample.txt"), "sample");
+
+        try
+        {
+            var fileService = new Mock<FileService>(MockBehavior.Strict, null);
+            fileService.Setup(x => x.ResolveFileInfo(It.IsAny<string>()))
+                .Returns<string>(path => new FileInfo(path));
+            fileService.Setup(x => x.ComputeHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Throws(new Xunit.Sdk.XunitException("ComputeHashAsync should not be called when active moderation does not require hashes."));
+
+            var optionsMonitor = new Mock<IOptionsMonitor<ModerationOptions>>();
+            optionsMonitor.Setup(x => x.CurrentValue).Returns(new ModerationOptions
+            {
+                Enabled = true,
+                FailsafeMode = "allow",
+                ExternalModeration = new ModerationOptions.ExternalModerationOptions
+                {
+                    Mode = "Local",
+                    Endpoint = "http://127.0.0.1:11434"
+                }
+            });
+
+            var externalClient = new Mock<IExternalModerationClient>();
+            externalClient
+                .Setup(x => x.AnalyzeFileAsync(It.IsAny<LocalFileMetadata>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(ModerationDecision.Allow());
+
+            var scanner = new ShareScanner(
+                workerCount: 1,
+                fileService: fileService.Object,
+                moderationProvider: new CompositeModerationProvider(
+                    optionsMonitor.Object,
+                    Mock.Of<ILogger<CompositeModerationProvider>>(),
+                    externalClient: externalClient.Object));
+
+            using var repository = new SqliteShareRepository($"Data Source={databasePath}");
+            repository.Create(discardExisting: true);
+
+            var share = new Share(shareRoot);
+            var options = new slskd.Options.SharesOptions();
+
+            await scanner.ScanAsync(new[] { share }, options, repository);
+
+            Assert.Equal(1, repository.CountFiles());
+            externalClient.Verify(x => x.AnalyzeFileAsync(
+                It.Is<LocalFileMetadata>(file => file.PrimaryHash == string.Empty && file.Id == "sample.txt"),
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(shareRoot))
+            {
+                System.IO.Directory.Delete(shareRoot, recursive: true);
+            }
+
+            if (System.IO.File.Exists(databasePath))
+            {
+                System.IO.File.Delete(databasePath);
+            }
+        }
     }
 
     [Fact]

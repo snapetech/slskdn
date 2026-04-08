@@ -49,8 +49,7 @@ namespace slskd.Shares
     public class SoulseekFileFactory : ISoulseekFileFactory
     {
         private static readonly string[] AudioExtensions = { "aa", "aax", "aac", "aiff", "ape", "dsf", "flac", "m4a", "m4b", "m4p", "mp3", "mpc", "mpp", "ogg", "oga", "wav", "wma", "wv", "webm" };
-        private static readonly string[] VideoExtensions = { "mkv", "ogv", "avi", "wmv", "asf", "mp4", "m4p", "m4v", "mpg", "mpe", "mpv", "mpg", "m2v" };
-        private static readonly HashSet<string> SupportedExtensions = AudioExtensions.Concat(VideoExtensions).ToHashSet();
+        private static readonly HashSet<string> AudioExtensionsSet = AudioExtensions.ToHashSet();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="SoulseekFileFactory"/> class.
@@ -77,7 +76,9 @@ namespace slskd.Shares
             var extension = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
             List<FileAttribute>? attributeList = null;
 
-            if (SupportedExtensions.Contains(extension))
+            // Keep the share-scan hot path cheap on slow or remote storage. Video metadata probing
+            // via TagLib can dominate scans without materially improving browse/share usefulness.
+            if (AudioExtensionsSet.Contains(extension))
             {
                 attributeList = new List<FileAttribute>();
                 TagLib.File? file = null;

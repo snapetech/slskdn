@@ -99,6 +99,22 @@ namespace slskd.Shares
         private CancellationTokenSource? CancellationTokenSource { get; set; }
         private Options.FlagsOptions Flags { get; set; }
 
+        private bool HasActiveLocalFileModeration =>
+            ModerationProvider switch
+            {
+                Common.Moderation.NoopModerationProvider => false,
+                Common.Moderation.CompositeModerationProvider composite => composite.HasActiveLocalFileChecks,
+                _ => true,
+            };
+
+        private bool RequiresLocalFileHash =>
+            ModerationProvider switch
+            {
+                Common.Moderation.CompositeModerationProvider composite => composite.RequiresLocalFileHash,
+                Common.Moderation.NoopModerationProvider => false,
+                _ => true,
+            };
+
         /// <summary>
         ///     Scans the configured shares and fills the cache.
         /// </summary>
@@ -284,58 +300,61 @@ namespace slskd.Shares
                                         continue;
                                     }
 
-                                    // T-MCP02: Check file against moderation provider before marking as shareable
                                     bool isBlocked = false;
                                     bool isQuarantined = false;
                                     string? moderationReason = null;
 
-                                    try
+                                    if (HasActiveLocalFileModeration)
                                     {
-                                        // Compute hash for moderation (use simple hash for now)
-                                        var fileHash = await Files.ComputeHashAsync(originalFilename, cancellationToken);
-
-                                        var localFileMetadata = new Common.Moderation.LocalFileMetadata
+                                        try
                                         {
-                                            Id = Path.GetFileName(originalFilename), // Sanitized: filename only
-                                            SizeBytes = info.Length,
-                                            PrimaryHash = fileHash,
-                                            MediaInfo = $"File: {file.Extension}"
-                                        };
+                                            var fileHash = RequiresLocalFileHash
+                                                ? await Files.ComputeHashAsync(originalFilename, cancellationToken)
+                                                : string.Empty;
 
-                                        var decision = await ModerationProvider.CheckLocalFileAsync(localFileMetadata, cancellationToken);
+                                            var localFileMetadata = new Common.Moderation.LocalFileMetadata
+                                            {
+                                                Id = Path.GetFileName(originalFilename), // Sanitized: filename only
+                                                SizeBytes = info.Length,
+                                                PrimaryHash = fileHash,
+                                                MediaInfo = $"File: {file.Extension}"
+                                            };
 
-                                        if (decision.Verdict == Common.Moderation.ModerationVerdict.Blocked)
-                                        {
-                                            isBlocked = true;
-                                            moderationReason = decision.Reason;
-                                            filteredFiles++;
+                                            var decision = await ModerationProvider.CheckLocalFileAsync(localFileMetadata, cancellationToken);
 
-                                            // 🔒 SECURITY: Log sanitized info only (no full path, no full hash)
-                                            Log.Warning(
-                                                "[SECURITY] MCP blocked file | Filename={Filename} | Size={Size} | Reason={Reason}",
-                                                Path.GetFileName(originalFilename),
-                                                info.Length,
-                                                decision.Reason);
+                                            if (decision.Verdict == Common.Moderation.ModerationVerdict.Blocked)
+                                            {
+                                                isBlocked = true;
+                                                moderationReason = decision.Reason;
+                                                filteredFiles++;
+
+                                                // 🔒 SECURITY: Log sanitized info only (no full path, no full hash)
+                                                Log.Warning(
+                                                    "[SECURITY] MCP blocked file | Filename={Filename} | Size={Size} | Reason={Reason}",
+                                                    Path.GetFileName(originalFilename),
+                                                    info.Length,
+                                                    decision.Reason);
+                                            }
+                                            else if (decision.Verdict == Common.Moderation.ModerationVerdict.Quarantined)
+                                            {
+                                                isQuarantined = true;
+                                                moderationReason = decision.Reason;
+                                                filteredFiles++;
+
+                                                // 🔒 SECURITY: Log sanitized info only
+                                                Log.Warning(
+                                                    "[SECURITY] MCP quarantined file | Filename={Filename} | Size={Size} | Reason={Reason}",
+                                                    Path.GetFileName(originalFilename),
+                                                    info.Length,
+                                                    decision.Reason);
+                                            }
                                         }
-                                        else if (decision.Verdict == Common.Moderation.ModerationVerdict.Quarantined)
+                                        catch (Exception ex)
                                         {
-                                            isQuarantined = true;
-                                            moderationReason = decision.Reason;
-                                            filteredFiles++;
+                                            Log.Error(ex, "[SECURITY] MCP check failed for file | Filename={Filename}", Path.GetFileName(originalFilename));
 
-                                            // 🔒 SECURITY: Log sanitized info only
-                                            Log.Warning(
-                                                "[SECURITY] MCP quarantined file | Filename={Filename} | Size={Size} | Reason={Reason}",
-                                                Path.GetFileName(originalFilename),
-                                                info.Length,
-                                                decision.Reason);
+                                            // Note: Continue with isBlocked=false per failsafe logic in CompositeModerationProvider
                                         }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Log.Error(ex, "[SECURITY] MCP check failed for file | Filename={Filename}", Path.GetFileName(originalFilename));
-
-                                        // Note: Continue with isBlocked=false per failsafe logic in CompositeModerationProvider
                                     }
 
                                     // Always insert the file (even if blocked/quarantined), but mark it appropriately

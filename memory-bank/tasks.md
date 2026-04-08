@@ -26,6 +26,16 @@
  - Priority: P3
  - Notes: The March 2026 security dependency refresh cleared `npm audit`, but `@vitejs/plugin-react` still advertises support through Vite 7 and `@vitest/coverage-v8` still peers against the older Vitest line. Follow up with a deliberate toolchain alignment pass instead of mixing peer-range churn into security-only fixes.
 
+- [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
+ - Status: completed (2026-04-08)
+ - Priority: P2
+ - Notes: Added `ShareScannerHarnessTests` plus `scripts/run-share-scan-harness.sh`. The automated harness scans a large synthetic temp tree and asserts completion/index counts without hash computation. The manual harness accepts `SLSKDN_SHARE_SCAN_ROOT` so local runs can target real storage such as the tester-like NFS path.
+
+- [ ] **bug**: Reduce or defer media-attribute probing during share scans on slow/remote storage.
+ - Status: pending
+ - Priority: P1
+ - Notes: The new manual share-scan harness reproduces `#193` on the NFS-backed `/mnt/datapool_lvm_media/download/music` tree with `workers=1`: the scan times out after 60s having indexed only 8 files. The same harness passes when `SLSKDN_SHARE_SCAN_SKIP_MEDIA_ATTRIBUTES=1`, which strongly implicates `SoulseekFileFactory` / `TagLib.File.Create(...)` media-attribute extraction as the remaining stall source.
+
 - [ ] **T-919**: Discovery Graph / Constellation substrate
  - Status: in progress
  - Priority: P1

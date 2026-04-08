@@ -9,6 +9,33 @@
 
 ## 2026-04-06 13:36 - Tester issue fixes, PR cleanup, and release prep
 
+## 2026-04-08 09:42 - Revisit tester issue #193 and local repro coverage
+
+### Completed
+- Re-reviewed the currently open issue set and confirmed the actionable bug threads are still `#193` (initial scan stalls/load) and `#199` (browse cache race); `#69` remains a non-code roadmap discussion.
+- Found an additional real `#193` root cause in `ShareScanner`: local-file moderation was still computing a full file hash for every scanned file even when moderation was fully disabled (`NoopModerationProvider`) or when the active moderation path only needed lightweight metadata (for example external moderation without the hash blocklist).
+- Updated `ShareScanner` so it only performs moderation work when there are active local-file checks and only computes `ComputeHashAsync(...)` when the active moderation configuration actually requires hashes.
+- Added focused share-scan regression coverage proving both low-load paths:
+  - `ScanAsync_WithNoopModeration_DoesNotComputeHashes`
+  - `ScanAsync_WithMetadataOnlyModeration_DoesNotComputeHashes`
+- Added a heavier `ShareScannerHarnessTests` harness plus `scripts/run-share-scan-harness.sh`:
+  - automated synthetic tree scan that indexes hundreds of files with `workers=1`
+  - manual env-driven harness that can point at a real share root such as the tester-like NFS path
+- Used the manual harness against `/mnt/datapool_lvm_media/download/music` (remote NFS-backed mount) and reproduced the remaining stall shape: with `workers=1` the scan timed out after 60 seconds having indexed only 8 files.
+- Added an A/B switch in the manual harness to skip media-attribute extraction and confirmed the same NFS-backed scan passes when `SLSKDN_SHARE_SCAN_SKIP_MEDIA_ATTRIBUTES=1`, which strongly implicates `SoulseekFileFactory` / `TagLib.File.Create(...)` probing as the remaining `#193` bottleneck on slow/remote storage.
+- Re-verified the existing `#199` browse-cache regression coverage; the current unit test still covers the reader-vs-replace file-lock failure mode that originally broke `browse.cache`.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareScannerModerationTests|FullyQualifiedName~ApplicationBrowseCacheTests" -v minimal`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ShareScannerHarnessTests|FullyQualifiedName~ShareScannerModerationTests|FullyQualifiedName~ApplicationBrowseCacheTests" -v minimal`
+- `SLSKDN_SHARE_SCAN_ROOT=/mnt/datapool_lvm_media/download/music SLSKDN_SHARE_SCAN_WORKERS=1 SLSKDN_SHARE_SCAN_TIMEOUT_SECONDS=60 dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ScanAsync_WithManualShareRoot_IndexesAllFiles" -v minimal`
+- `SLSKDN_SHARE_SCAN_ROOT=/mnt/datapool_lvm_media/download/music SLSKDN_SHARE_SCAN_WORKERS=1 SLSKDN_SHARE_SCAN_TIMEOUT_SECONDS=60 SLSKDN_SHARE_SCAN_SKIP_MEDIA_ATTRIBUTES=1 dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ScanAsync_WithManualShareRoot_IndexesAllFiles" -v minimal`
+- `bash ./bin/lint`
+
+### Remaining
+- Decide whether to ship the new `#193` scan-hashing fix after any additional review.
+- Follow up with a production fix for the remaining media-attribute probing bottleneck on slow/remote storage now that the new manual harness reproduces it reliably.
+
 ### Completed
 - Fixed the tester-reported Web UI rescan/CSRF break by separating the antiforgery cookie token from the JavaScript request-token cookie in `Program.cs` and making the web client prefer the current port-specific `XSRF-TOKEN-{port}` cookie instead of matching arbitrary `XSRF-TOKEN*` names.
 - Fixed share scan progress regressions by making `ShareService` keep in-progress file counts and percentages monotonic while parallel scanner worker updates are still arriving out of order.
