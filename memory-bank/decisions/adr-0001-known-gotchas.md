@@ -5246,6 +5246,33 @@ when the active provider configuration truly requires one (for example, a hash b
 
 **Why This Keeps Happening**: the moderation API takes `LocalFileMetadata`, and `PrimaryHash` looks like part of that contract, so it is easy to front-load the hash unconditionally. On a large library scan, that turns “moderation disabled” into “still read every file end-to-end,” which looks like a scan hang or runaway load even with low worker counts.
 
+### 3n. Share Scans Must Not Eagerly Probe Media Attributes For Every Supported File On Slow Or Remote Storage
+
+**The Bug**: `SoulseekFileFactory.Create(...)` eagerly called `TagLib.File.Create(...)` for every supported audio and video file during share scans in order to populate Soulseek attributes. On slow or remote storage such as NFS-backed shares, that probing path could dominate the scan so heavily that scans appeared to stall after only a handful of files.
+
+**Files Affected**:
+- `src/slskd/Shares/SoulseekFileFactory.cs`
+- `src/slskd/Shares/ShareScanner.cs`
+- `tests/slskd.Tests.Unit/Shares/ShareScannerHarnessTests.cs`
+
+**Wrong**:
+```csharp
+if (SupportedExtensions.Contains(extension))
+{
+    file = TagLib.File.Create(filename, TagLib.ReadStyle.Average | TagLib.ReadStyle.PictureLazy);
+    ...
+}
+```
+
+**Correct**:
+```text
+Keep share scans cheap by default. Do not synchronously probe full media metadata for every supported file
+on the hot scan path unless the value is clearly worth the I/O cost. Prefer lightweight file records during scan,
+or restrict expensive attribute probing to the smaller set of file types that truly need it.
+```
+
+**Why This Keeps Happening**: media attributes look small in the final `Soulseek.File`, so it is easy to forget that extracting them may require non-trivial reads and parsing for every file. On local SSDs this can hide in the noise; on remote or high-latency storage it becomes the actual bottleneck, and lowering worker count alone does not fix it.
+
 ---
 
 *Last updated: 2026-03-21*
