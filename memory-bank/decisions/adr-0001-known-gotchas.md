@@ -5219,6 +5219,33 @@ and serialize cache rebuilds so only one writer updates `browse.cache` at a time
 
 **Why This Keeps Happening**: file-backed caches look simple because readers and writers touch the same pathname, but they still need an explicit concurrency contract. If readers take exclusive locks and writers replace the file opportunistically, normal live traffic turns every refresh into a lock race.
 
+### 3m. Disabled Moderation Must Not Force Full-File Hashing During Share Scans
+
+**The Bug**: `ShareScanner` computed a full SHA-256 for every scanned file before it even asked the moderation provider for a decision. When the active provider was `NoopModerationProvider` or another effectively inactive moderation setup, scans still paid the whole-file hashing cost for no benefit.
+
+**Files Affected**:
+- `src/slskd/Shares/ShareScanner.cs`
+- `src/slskd/Common/Moderation/CompositeModerationProvider.cs`
+
+**Wrong**:
+```csharp
+var fileHash = await Files.ComputeHashAsync(originalFilename, cancellationToken);
+var localFileMetadata = new LocalFileMetadata
+{
+    PrimaryHash = fileHash,
+    ...
+};
+var decision = await ModerationProvider.CheckLocalFileAsync(localFileMetadata, cancellationToken);
+```
+
+**Correct**:
+```text
+Only run the moderation path when local-file moderation is actually active, and only compute a full-file hash
+when the active provider configuration truly requires one (for example, a hash blocklist check).
+```
+
+**Why This Keeps Happening**: the moderation API takes `LocalFileMetadata`, and `PrimaryHash` looks like part of that contract, so it is easy to front-load the hash unconditionally. On a large library scan, that turns “moderation disabled” into “still read every file end-to-end,” which looks like a scan hang or runaway load even with low worker counts.
+
 ---
 
 *Last updated: 2026-03-21*
