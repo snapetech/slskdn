@@ -27,6 +27,9 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
+- Fixed the remaining System Web UI regressions reported by testers: eliminated residual `/api/v0/api/v0/...` frontend requests, repaired Bridge admin payload handling, made saved search rows reopen their existing results instead of starting duplicate searches, and restored dark-theme readability for the Network mesh/hash/backfill statistics.
+- Added real PWA install plumbing for Android and subpath deployments by shipping a registered service worker alongside the existing manifest and keeping the manifest/icon references relative so mobile browsers can offer app installation instead of only a shortcut.
+- Added explicit Network-page and troubleshooting guidance for the confirmed "logged in but zero peers/transfers" failure mode so operators are pointed directly at the Soulseek listen-port (`50300/tcp` by default), firewall, NAT, and container-port checks.
 - Fixed the remaining share-scan stall path for large or slow libraries by skipping unnecessary moderation hashing and avoiding eager video metadata probing on the hot scan path, then added both synthetic and manual share-scan harnesses to reproduce low-progress scan failures locally before shipping builds.
 - Fixed `browse.cache` refreshes so live browse-response readers no longer block cache replacement, and serialized cache rebuilds to stop overlapping refreshes from racing each other.
 - Made initial share scans less aggressive out of the box by changing the default `shares.cache.workers` value from full CPU count to a conservative host-aware cap, and documented the knob more clearly for further operator tuning on weaker or stronger machines.

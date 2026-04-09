@@ -124,7 +124,7 @@ const SearchListRow = ({ onRemove, onStop, search }) => {
           <SearchStatusIcon state={search.state} />
         </Table.Cell>
         <Table.Cell>
-          <Link to={`${match.url}?q=${encodeURIComponent(search.searchText)}`}>
+          <Link to={`${match.url}/${encodeURIComponent(search.id)}`}>
             {search.searchText}
           </Link>
           <Popup

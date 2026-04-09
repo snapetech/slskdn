@@ -1,6 +1,6 @@
 import api from './api';
 
-const baseUrl = '/api/v0/security';
+const baseUrl = '/security';
 
 /**
  * Get security dashboard overview

@@ -23,10 +23,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Revisit tester issue `#193` (`Initial scan loops`) and the remaining open issue set to identify any further local fixes plus stronger local repro coverage before shipping more builds.
+- **Current Task**: No active coding task. The latest pass closed out GitHub issues `#200`, `#201`, and `#202`; next work should return to the remaining open issue set and fresh tester feedback.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Closed GitHub issues `#200`, `#201`, and `#202` locally:
+    - fixed the remaining Web UI API/client regressions (`security.js`, `mediacore.js`, `bridge.js`, search-row routing, dark-theme Network stats)
+    - added real PWA install support via `registerServiceWorker.js` + `public/service-worker.js`
+    - added explicit listen-port/firewall diagnostics to the Network tab and troubleshooting docs for the zero-peer/zero-transfer failure mode
+  - Added focused web regression coverage for the above in `bridge.test.js`, `security.test.js`, `mediacore.test.js`, `registerServiceWorker.test.js`, `SearchListRow.test.jsx`, and `System/Network/index.test.jsx`.
+  - Validated the issue fixes with targeted web tests, a production web build, the build-output subpath check, emitted `build/service-worker.js`, `git diff --check`, and `bash ./bin/lint`.
+  - `dotnet test` still hit an unrelated environment-specific integration failure in `CsrfPortScopedTokenIntegrationTests` because another slskd instance was already using `/home/keith/.local/share/slskd`; this did not exercise or block the new web fixes.
   - Re-reviewed the open issue list on `snapetech/slskdn`; the active bug threads remain `#193` (share-scan stalls/load) and `#199` (browse-cache race), with `#69` still just a roadmap discussion.
   - Identified an additional `#193` root cause in `src/slskd/Shares/ShareScanner.cs`: share scans still computed a full-file hash for every file before local moderation, even when moderation was disabled or when the active moderation path only needed lightweight metadata.
   - Updated `ShareScanner` and `CompositeModerationProvider` so local-file scans only hash when the active moderation configuration actually requires a hash, while still allowing metadata-only moderation providers to run.

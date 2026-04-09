@@ -69,7 +69,7 @@ const System = ({ options = {}, state = {}, theme }) => {
       ),
       render: () => (
         <Tab.Pane>
-          <Network />
+          <Network theme={theme} />
         </Tab.Pane>
       ),
       route: 'network',

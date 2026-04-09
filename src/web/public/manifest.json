@@ -4,12 +4,12 @@
   "icons": [
     {
       "sizes": "192x192",
-      "src": "logo192.png",
+      "src": "./logo192.png",
       "type": "image/png"
     },
     {
       "sizes": "512x512",
-      "src": "logo512.png",
+      "src": "./logo512.png",
       "type": "image/png"
     }
   ],
@@ -18,7 +18,6 @@
   "start_url": ".",
   "theme_color": "#2185d0"
 }
-
 
 
 

@@ -1,20 +1,20 @@
 import { apiBaseUrl } from '../config';
 import api from './api';
 
-const baseUrl = '/api/v0/mediacore/contentid';
-const ipldBaseUrl = '/api/v0/mediacore/ipld';
-const perceptualHashBaseUrl = '/api/v0/mediacore/perceptualhash';
-const fuzzyMatchBaseUrl = '/api/v0/mediacore/fuzzymatch';
-const portabilityBaseUrl = '/api/v0/mediacore/portability';
-const publishBaseUrl = '/api/v0/mediacore/publish';
-const retrieveBaseUrl = '/api/v0/mediacore/retrieve';
-const statsBaseUrl = '/api/v0/mediacore/stats';
-const podDhtBaseUrl = '/api/v0/mediacore/podcore/dht';
-const podMembershipBaseUrl = '/api/v0/mediacore/podcore/membership';
-const podDiscoveryBaseUrl = '/api/v0/mediacore/podcore/discovery';
-const podRoutingBaseUrl = '/api/v0/mediacore/podcore/routing';
-const podSigningBaseUrl = '/api/v0/mediacore/podcore/signing';
-const podVerificationBaseUrl = '/api/v0/mediacore/podcore/verification';
+const baseUrl = '/mediacore/contentid';
+const ipldBaseUrl = '/mediacore/ipld';
+const perceptualHashBaseUrl = '/mediacore/perceptualhash';
+const fuzzyMatchBaseUrl = '/mediacore/fuzzymatch';
+const portabilityBaseUrl = '/mediacore/portability';
+const publishBaseUrl = '/mediacore/publish';
+const retrieveBaseUrl = '/mediacore/retrieve';
+const statsBaseUrl = '/mediacore/stats';
+const podDhtBaseUrl = '/mediacore/podcore/dht';
+const podMembershipBaseUrl = '/mediacore/podcore/membership';
+const podDiscoveryBaseUrl = '/mediacore/podcore/discovery';
+const podRoutingBaseUrl = '/mediacore/podcore/routing';
+const podSigningBaseUrl = '/mediacore/podcore/signing';
+const podVerificationBaseUrl = '/mediacore/podcore/verification';
 
 /**
  * Register a mapping from external ID to ContentID.

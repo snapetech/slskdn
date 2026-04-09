@@ -5765,3 +5765,28 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-09 20:55:00Z
+
+- Fixed the remaining GitHub issue `#200` Web UI regressions that were still present on `main`:
+  - removed residual frontend double-prefix API clients in `src/web/src/lib/security.js` and `src/web/src/lib/mediacore.js`
+  - fixed `src/web/src/lib/bridge.js` to return `response.data` consistently so the Bridge tab uses the actual payload instead of raw Axios responses
+  - changed `src/web/src/components/Search/List/SearchListRow.jsx` to open the existing search result route instead of replaying the query
+  - passed theme through to `src/web/src/components/System/Network/index.jsx` and inverted the statistics blocks so dark theme keeps the mesh/hash/backfill stats readable
+- Fixed GitHub issue `#202` by adding actual PWA install plumbing:
+  - added `src/web/src/registerServiceWorker.js`
+  - registered it from `src/web/src/index.jsx`
+  - added `src/web/public/service-worker.js`
+  - kept manifest/icon paths subpath-safe in `src/web/public/manifest.json`
+- Addressed GitHub issue `#201` as an operator-facing diagnostics fix:
+  - added a Network-page warning that explicitly points to the Soulseek listen-port/firewall/NAT path when peer counts stay at zero
+  - updated `docs/troubleshooting.md` with the same `50300/tcp` guidance
+- Documented the frontend `/api/v0` double-prefix gotcha in ADR-0001 so future web helpers do not regress the same failure mode.
+- Validation:
+  - `cd src/web && npm test -- SearchListRow.test.jsx registerServiceWorker.test.js bridge.test.js security.test.js mediacore.test.js src/components/System/Network/index.test.jsx`
+  - `cd src/web && npm run build`
+  - `cd src/web && npm run test:build-output`
+  - `cd src/web && ls -l build/service-worker.js build/manifest.json`
+  - `git diff --check`
+  - `bash ./bin/lint`
+  - `dotnet test` hit an unrelated environment conflict in `CsrfPortScopedTokenIntegrationTests`: another running slskd instance already owns `/home/keith/.local/share/slskd`, so the full integration suite could not complete cleanly in this shell.

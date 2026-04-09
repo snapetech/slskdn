@@ -46,6 +46,7 @@ Common issues and solutions for slskdN.
    - Ensure port 2234 (Soulseek) is not blocked
    - Check both local firewall and router settings
    - For Docker: ensure ports are properly mapped
+   - Also ensure the configured Soulseek listen port is reachable from peers. By default this is `50300/tcp`; if the Web UI works but uploads/downloads stay at `0`, the listen port is often the missing firewall/NAT rule.
 
 4. **Check Soulseek Server Status:**
    - Soulseek servers may be temporarily down

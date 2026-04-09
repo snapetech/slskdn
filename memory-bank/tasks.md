@@ -780,6 +780,12 @@
   - Status: done
   - Notes: Changed browse-cache readers to allow replacement while streaming, serialized browse-cache rebuilds behind a semaphore, kept temp files in the data directory for atomic replacement, and added focused unit coverage for replacing the cache while a reader is active.
 
+## 2026-04-09 Completed Follow-up
+
+- [x] Fix GitHub issues `#200`, `#201`, and `#202`
+  - Status: done
+  - Notes: Cleaned up the remaining Web UI route/API regressions (`/api/v0` double-prefix helpers, Bridge payload handling, search-row navigation, dark-theme Network statistics), added service-worker registration plus a shipped worker so Android can install the app as a real PWA, and surfaced the confirmed listen-port/firewall guidance directly in the Network page and troubleshooting docs.
+
 ## 2026-04-06 Completed Follow-up
 
 - [x] Re-verify reopened tester regressions `#193` and `#194` with live repro coverage

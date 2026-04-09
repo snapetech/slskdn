@@ -47,24 +47,32 @@ const formatTimeAgo = (dateString) => {
   return `${Math.floor(seconds / 86_400)}d ago`;
 };
 
-const StatCard = ({ color, icon, label, subLabel, value }) => (
-  <Card>
+const StatCard = ({ color, icon, inverted = false, label, subLabel, value }) => (
+  <Card raised={inverted}>
     <Card.Content>
-      <Card.Header>
+      <Card.Header style={inverted ? { color: 'rgba(255, 255, 255, 0.92)' } : undefined}>
         <Icon
           color={color}
           name={icon}
         />{' '}
         {value}
       </Card.Header>
-      <Card.Meta>{label}</Card.Meta>
-      {subLabel && <Card.Description>{subLabel}</Card.Description>}
+      <Card.Meta style={inverted ? { color: 'rgba(255, 255, 255, 0.7)' } : undefined}>
+        {label}
+      </Card.Meta>
+      {subLabel && (
+        <Card.Description
+          style={inverted ? { color: 'rgba(255, 255, 255, 0.82)' } : undefined}
+        >
+          {subLabel}
+        </Card.Description>
+      )}
     </Card.Content>
   </Card>
 );
 
 // eslint-disable-next-line complexity
-const Network = () => {
+const Network = ({ theme }) => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({});
   const [meshPeers, setMeshPeers] = useState([]);
@@ -147,9 +155,32 @@ const Network = () => {
   }
 
   const { backfill, capabilities, hashDb, mesh, swarmJobs } = stats;
+  const darkTheme = theme === 'dark';
+  const shouldWarnAboutConnectivity =
+    (meshPeers.length === 0 && discoveredPeers.length === 0) ||
+    ((mesh?.connectedPeerCount ?? 0) === 0 &&
+      (stats?.dht?.dhtNodeCount ?? 0) === 0 &&
+      (stats?.dht?.isDhtRunning ?? false));
 
   return (
     <div className="network-dashboard">
+      {shouldWarnAboutConnectivity && (
+        <Message warning>
+          <Message.Header>Connectivity diagnostics</Message.Header>
+          <p>
+            slskdN is not seeing reachable peers yet. If you can log into the
+            Soulseek server but uploads, downloads, and peer counts stay at
+            zero, verify that your configured Soulseek listen port is reachable
+            from other peers. The default is <code>50300/tcp</code>.
+          </p>
+          <p>
+            Check local firewall rules, router/NAT forwarding, container port
+            publishing, and any reverse-proxy setup that might expose the Web UI
+            but not the Soulseek listen port.
+          </p>
+        </Message>
+      )}
+
       {/* Header Stats */}
       <Card.Group
         itemsPerRow={4}
@@ -158,6 +189,7 @@ const Network = () => {
         <StatCard
           color="blue"
           icon="sitemap"
+          inverted={darkTheme}
           label="Mesh Peers"
           subLabel="slskdn clients connected"
           value={mesh?.connectedPeerCount ?? meshPeers.length ?? 0}
@@ -165,6 +197,7 @@ const Network = () => {
         <StatCard
           color="green"
           icon="database"
+          inverted={darkTheme}
           label="Hash Entries"
           subLabel={
             hashDb?.dbSizeBytes
@@ -176,6 +209,7 @@ const Network = () => {
         <StatCard
           color="purple"
           icon="sync"
+          inverted={darkTheme}
           label="Sequence ID"
           subLabel="Mesh sync position"
           value={hashDb?.currentSeqId ?? mesh?.localSeqId ?? 0}
@@ -183,6 +217,7 @@ const Network = () => {
         <StatCard
           color="orange"
           icon="bolt"
+          inverted={darkTheme}
           label="Active Swarms"
           subLabel="Multi-source downloads"
           value={swarmJobs?.length ?? 0}
@@ -405,6 +440,7 @@ const Network = () => {
           </Message>
         )}
         <Statistic.Group
+          inverted={darkTheme}
           size="small"
           widths={7}
         >
@@ -525,6 +561,7 @@ const Network = () => {
         </Header>
 
         <Statistic.Group
+          inverted={darkTheme}
           size="tiny"
           widths={4}
         >
@@ -584,7 +621,10 @@ const Network = () => {
           stackable
         >
           <Grid.Column>
-            <Statistic size="mini">
+            <Statistic
+              inverted={darkTheme}
+              size="mini"
+            >
               <Statistic.Value>
                 <Icon
                   color={backfill?.isActive ? 'green' : 'grey'}
@@ -596,19 +636,28 @@ const Network = () => {
             </Statistic>
           </Grid.Column>
           <Grid.Column>
-            <Statistic size="mini">
+            <Statistic
+              inverted={darkTheme}
+              size="mini"
+            >
               <Statistic.Value>{backfill?.pendingCount ?? 0}</Statistic.Value>
               <Statistic.Label>Pending Files</Statistic.Label>
             </Statistic>
           </Grid.Column>
           <Grid.Column>
-            <Statistic size="mini">
+            <Statistic
+              inverted={darkTheme}
+              size="mini"
+            >
               <Statistic.Value>{backfill?.completedToday ?? 0}</Statistic.Value>
               <Statistic.Label>Completed Today</Statistic.Label>
             </Statistic>
           </Grid.Column>
           <Grid.Column>
-            <Statistic size="mini">
+            <Statistic
+              inverted={darkTheme}
+              size="mini"
+            >
               <Statistic.Value>
                 {backfill?.discoveryRate ?? 0}/hr
               </Statistic.Value>
