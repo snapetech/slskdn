@@ -52,6 +52,80 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0x. Vite Relative Asset URLs Break Deep-Link Refreshes In The Embedded Web UI
+
+**The Bug**: Switching the Vite build to `base: './'` made the root page work under `web.url_base`, but it broke hard refreshes on client-side routes like `/system`. Browsers resolved `./assets/...` relative to the current route, so `/system` tried to load `/system/assets/...` instead of the actual app root assets.
+
+**Files Affected**:
+- `src/web/vite.config.js`
+- `src/web/index.html`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```javascript
+export default defineConfig({
+  base: './',
+});
+```
+
+```html
+<link rel="manifest" href="./manifest.json" />
+<script type="module" src="./src/index.jsx"></script>
+```
+
+**Correct**:
+```javascript
+export default defineConfig({
+  base: '/',
+});
+```
+
+```html
+<link rel="manifest" href="/manifest.json" />
+<script type="module" src="/src/index.jsx"></script>
+```
+
+```csharp
+foreach (var (pattern, replacement) in CreateWebHtmlRewriteRules(urlBase))
+{
+    app.UseHTMLRewrite(pattern, replacement);
+}
+```
+
+**Why This Keeps Happening**: Relative asset URLs look attractive because they work in a static subdirectory smoke test, but slskdn is not serving a plain static site. It serves an SPA behind ASP.NET with `UsePathBase`, client-side routes, and HTML rewriting. Deep-link refreshes need build output to use app-root paths, and the backend must rewrite those root-relative paths to the configured `web.url_base`.
+
+### 0y. Soulseek Client Listener Settings Must Exist In Initial Options, Not Only In Startup Reconfiguration
+
+**The Bug**: The Soulseek client was instantiated with `enableListener: false` and no listen endpoint, then later reconfigured during `Application.StartAsync()`. That left a window where connect/login work could still observe a non-listening client and throw `InvalidOperationException: Not listening. You must call the Start() method before calling this method.`
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Application.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+return new SoulseekClientOptions(
+    enableListener: false,
+    enableDistributedNetwork: false,
+    acceptDistributedChildren: false,
+    ...);
+```
+
+**Correct**:
+```csharp
+return new SoulseekClientOptions(
+    enableListener: true,
+    listenIPAddress: startupListenAddress,
+    listenPort: optionsAtStartup.Soulseek.ListenPort,
+    enableDistributedNetwork: !optionsAtStartup.Soulseek.DistributedNetwork.Disabled,
+    acceptDistributedChildren: !optionsAtStartup.Soulseek.DistributedNetwork.DisableChildren,
+    distributedChildLimit: optionsAtStartup.Soulseek.DistributedNetwork.ChildLimit,
+    ...);
+```
+
+**Why This Keeps Happening**: It is easy to assume that no network work happens until after `Application.StartAsync()` finishes, but the Soulseek client’s own connection/login flow and background tasks can still depend on listener state once connects begin. Listener/distributed-network bootstrap settings need to be present on the initial client object, while later reconfiguration should only patch resolvers, caches, and other runtime-dependent services.
+
 ### 0v. CSRF Token Middleware Must Not Mint New Tokens On Unsafe Requests
 
 **The Bug**: The custom CSRF middleware called `antiforgery.GetAndStoreTokens(context)` on every request, including `POST`/`PUT`/`DELETE`/`PATCH`. That meant a state-changing request could receive a freshly rotated antiforgery token pair immediately before `ValidateCsrfForCookiesOnlyAttribute` validated the request, causing valid header/cookie pairs from the previous page load to fail with `CSRF token validation failed`.
