@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z. Release-Gate Subpath Smoke Checks Must Mirror Backend HTML Rewrite Behavior, Not Old Relative-Asset Assumptions
+
+**The Bug**: The frontend build was correctly switched back to root-relative asset URLs (`/assets/...`) with ASP.NET HTML rewriting for `web.url_base`, but the release-gate smoke script still expected built `index.html` to contain relative asset references like `./assets/...`. Stable tag builds failed in `run-release-gate.sh` before any release jobs or Discord announcements could run.
+
+**Files Affected**:
+- `src/web/scripts/smoke-subpath-build.mjs`
+- `src/web/scripts/verify-build-output.mjs`
+- `packaging/scripts/run-release-gate.sh`
+
+**Wrong**:
+```javascript
+const relativeAssetMatches = [...indexHtml.matchAll(/(?:src|href)="(\.[^"]+)"/g)];
+
+if (relativeAssetPaths.length === 0) {
+  fail('Expected built index.html to contain relative asset references under a subpath');
+}
+```
+
+**Correct**:
+```javascript
+// Smoke tests for subpath deployment must emulate the backend's HTML rewrite layer.
+// Built output should stay root-relative, and the smoke server should rewrite those
+// root-relative references to the mounted subpath before fetching assets.
+```
+
+**Why This Keeps Happening**: It is easy to update the frontend build and backend serving model but forget the standalone smoke harnesses in release automation. Any check that validates subpath behavior must follow the same contract as `Program.CreateWebHtmlRewriteRules(...)`; otherwise CI ends up enforcing the superseded behavior and blocks releases even though the product code is correct.
+
 ### 0x. Vite Relative Asset URLs Break Deep-Link Refreshes In The Embedded Web UI
 
 **The Bug**: Switching the Vite build to `base: './'` made the root page work under `web.url_base`, but it broke hard refreshes on client-side routes like `/system`. Browsers resolved `./assets/...` relative to the current route, so `/system` tried to load `/system/assets/...` instead of the actual app root assets.
