@@ -88,6 +88,29 @@ Only mint/store antiforgery tokens on safe requests. Unsafe requests should vali
 
 **Why This Keeps Happening**: It is easy to think of the antiforgery middleware as harmless cookie setup that can run globally, but `GetAndStoreTokens(...)` is stateful. Once validation is deferred to a controller/filter, token issuance must stay on safe/bootstrap requests or the request under validation can invalidate itself.
 
+### 0w. Frontend API Helpers Must Not Re-Add `/api/v0` When Axios Already Has That Base URL
+
+**The Bug**: Some Web UI helper modules hardcoded endpoint roots like `/api/v0/security/...` and `/api/v0/mediacore/...` even though the shared Axios client already uses `apiBaseUrl = ${rootUrl}/api/v0`. Requests became `/api/v0/api/v0/...`, which broke System tabs with 404s.
+
+**Files Affected**:
+- `src/web/src/lib/api.js`
+- `src/web/src/lib/security.js`
+- `src/web/src/lib/mediacore.js`
+
+**Wrong**:
+```javascript
+const baseUrl = '/api/v0/security';
+return (await api.get(`${baseUrl}/dashboard`)).data;
+```
+
+**Correct**:
+```javascript
+const baseUrl = '/security';
+return (await api.get(`${baseUrl}/dashboard`)).data;
+```
+
+**Why This Keeps Happening**: Some frontend modules build URLs relative to Axios, while others build fully-qualified API paths. Once `api.js` owns the `/api/v0` prefix, every helper that uses `api.get/post/put/delete(...)` must pass paths relative to that prefix or the request will be versioned twice.
+
 ### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
 
 **The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
