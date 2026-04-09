@@ -58,6 +58,10 @@ function resolveFilePath(requestPath) {
   return filePath;
 }
 
+function rewriteHtmlForMountPath(html) {
+  return html.replace(/((?:src|href)=["'])\/(?!\/)/g, `$1${mountPath}`);
+}
+
 if (!fs.existsSync(indexPath)) {
   fail(`Missing built index.html at ${indexPath}`);
 }
@@ -69,6 +73,12 @@ const server = http.createServer((req, res) => {
   if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not Found');
+    return;
+  }
+
+  if (filePath === indexPath) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(rewriteHtmlForMountPath(fs.readFileSync(filePath, 'utf8')));
     return;
   }
 
@@ -93,15 +103,15 @@ server.listen(0, '127.0.0.1', async () => {
     }
 
     const indexHtml = await indexResponse.text();
-    const relativeAssetMatches = [...indexHtml.matchAll(/(?:src|href)="(\.[^"]+)"/g)];
-    const relativeAssetPaths = [...new Set(relativeAssetMatches.map((match) => match[1]))];
+    const mountedAssetMatches = [...indexHtml.matchAll(/(?:src|href)="(\/slskd\/[^"]+)"/g)];
+    const mountedAssetPaths = [...new Set(mountedAssetMatches.map((match) => match[1]))];
 
-    if (relativeAssetPaths.length === 0) {
-      fail('Expected built index.html to contain relative asset references under a subpath');
+    if (mountedAssetPaths.length === 0) {
+      fail('Expected rewritten index.html to expose mount-prefixed asset references under a subpath');
     }
 
-    for (const relativeAssetPath of relativeAssetPaths) {
-      const assetUrl = new URL(relativeAssetPath, baseUrl);
+    for (const mountedAssetPath of mountedAssetPaths) {
+      const assetUrl = new URL(mountedAssetPath, `http://127.0.0.1:${address.port}`);
       const assetResponse = await fetch(assetUrl);
 
       if (!assetResponse.ok) {
@@ -110,16 +120,16 @@ server.listen(0, '127.0.0.1', async () => {
 
       const contentType = assetResponse.headers.get('content-type') ?? '';
 
-      if (relativeAssetPath.endsWith('.js') && contentType.includes('text/html')) {
+      if (mountedAssetPath.endsWith('.js') && contentType.includes('text/html')) {
         fail(`Expected ${assetUrl} to resolve to JavaScript, got ${contentType}`);
       }
 
-      if (relativeAssetPath.endsWith('.css') && contentType.includes('text/html')) {
+      if (mountedAssetPath.endsWith('.css') && contentType.includes('text/html')) {
         fail(`Expected ${assetUrl} to resolve to CSS, got ${contentType}`);
       }
     }
 
-    console.log('Verified built web output loads correctly when mounted under /slskd/.');
+    console.log('Verified built web output loads correctly when mounted under /slskd/ with backend-style HTML rewriting.');
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
   } finally {

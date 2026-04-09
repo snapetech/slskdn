@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-04-09 16:10 - Release-gate subpath smoke fix for blocked stable builds
+
+### Completed
+- Fixed `src/web/scripts/smoke-subpath-build.mjs` so the subpath smoke harness rewrites root-relative asset URLs the same way the ASP.NET backend does for `web.url_base`, instead of still expecting built HTML to contain relative asset paths.
+- Identified the actual reason Discord announcements never fired: stable tag `build-main-0.24.5-slskdn.121` failed in `Build -> Release Gate`, which skipped the later release and Discord jobs entirely.
+- Documented the release-gate rewrite mismatch immediately in `ADR-0001` and committed that gotcha separately per repo policy.
+
+### Verification
+- `cd src/web && npm run build`
+- `node src/web/scripts/verify-build-output.mjs`
+- `node src/web/scripts/smoke-subpath-build.mjs`
+- `bash packaging/scripts/run-release-gate.sh` advanced past the previously failing frontend subpath smoke step and into backend tests
+
+### Remaining
+- Push the release-gate fix to `main`.
+- Cut the next stable tag after the fix lands so the release and Discord announcement jobs can retry on a passing pipeline.
+
 ## 2026-04-09 16:02 - Dependabot suppression for recurring axios/lodash PRs
 
 ### Completed

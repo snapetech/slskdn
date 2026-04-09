@@ -27,6 +27,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Traced the missing Discord announcements to a release-gate regression instead of the webhook job itself: `build-main-0.24.5-slskdn.121` failed before `release-main`, because `src/web/scripts/smoke-subpath-build.mjs` still enforced old relative asset references after the Web UI moved back to root-relative assets plus backend HTML rewriting. Fixed the smoke harness to emulate the backend rewrite model and documented the gotcha in `ADR-0001`.
   - Updated `.github/dependabot.yml` so Dependabot ignores recurring `axios` and `lodash` frontend bumps instead of reopening those PRs, removed invalid Dependabot labels that were generating bot comments, and prepared GitHub cleanup for PRs `#198` and `#203`.
   - Re-opened and fixed the remaining tester-reported regressions on GitHub issues `#200` and `#201`:
     - restored deep-link refreshes in the embedded Web UI by switching the Vite build back to root-relative asset URLs and rewriting those HTML asset paths against `web.url_base` in the ASP.NET pipeline instead of relying on `./assets/...`

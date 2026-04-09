@@ -27,6 +27,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
+- Fixed the release-gate subpath smoke harness so it now emulates the backend HTML rewrite layer for `web.url_base` deployments instead of enforcing the obsolete relative-asset build model, which had been blocking stable tag releases before the Discord announcement jobs could run.
 - Stopped Dependabot from reopening the recurring `axios` and `lodash` frontend update PRs by ignoring those packages directly in `.github/dependabot.yml` while leaving the package semver ranges alone, and removed the invalid Dependabot label settings that were generating bot error comments on dependency PRs.
 - Added tag-workflow Discord release announcements for both dev and stable slskdN GitHub releases, driven by the repository secret `DISCORD_RELEASE_WEBHOOK` after the release is published.
 - Fixed the remaining System Web UI regressions reported by testers: eliminated residual `/api/v0/api/v0/...` frontend requests, repaired Bridge admin payload handling, made saved search rows reopen their existing results instead of starting duplicate searches, and restored dark-theme readability for the Network mesh/hash/backfill statistics.
