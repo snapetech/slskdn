@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-04-09 16:02 - Dependabot suppression for recurring axios/lodash PRs
+
+### Completed
+- Updated `.github/dependabot.yml` so Dependabot ignores `axios` and `lodash` in `src/web`, which stops the recurring PRs without tightening the package semver ranges in `package.json`.
+- Removed the invalid Dependabot label configuration (`dependencies`, `npm`, `nuget`, `github-actions`) so future dependency PRs no longer generate label-not-found bot comments.
+- Prepared GitHub cleanup for open Dependabot PRs `#198` and `#203`, which are now superseded by the repo-level ignore policy.
+
+### Verification
+- `git diff --check`
+- `bash ./bin/lint`
+- `dotnet test -v minimal` reached passing `slskd.Tests` and `slskd.Tests.Unit` suites before stalling without further output during the later integration tail
+
+### Remaining
+- Push the Dependabot config change to `main`.
+- Close `#198` and `#203` on GitHub with a brief superseded note once the push lands.
+
 ## 2026-04-09 15:40 - Discord release announcements wired into tag builds
 
 ### Completed

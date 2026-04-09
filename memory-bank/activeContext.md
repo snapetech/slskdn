@@ -27,6 +27,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Updated `.github/dependabot.yml` so Dependabot ignores recurring `axios` and `lodash` frontend bumps instead of reopening those PRs, removed invalid Dependabot labels that were generating bot comments, and prepared GitHub cleanup for PRs `#198` and `#203`.
   - Re-opened and fixed the remaining tester-reported regressions on GitHub issues `#200` and `#201`:
     - restored deep-link refreshes in the embedded Web UI by switching the Vite build back to root-relative asset URLs and rewriting those HTML asset paths against `web.url_base` in the ASP.NET pipeline instead of relying on `./assets/...`
     - fixed the Bridge Web UI client to use versioned-relative API paths and added `/api/v0/bridge/...` routes server-side while preserving the legacy `/api/bridge/...` compatibility surface
