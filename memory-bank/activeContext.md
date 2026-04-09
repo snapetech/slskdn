@@ -23,10 +23,25 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: No active coding task. The latest pass closed out GitHub issues `#200`, `#201`, and `#202`; next work should return to the remaining open issue set and fresh tester feedback.
+- **Current Task**: No active coding task. The follow-up pass for GitHub issues `#200` and `#201` is complete locally; next work should wait for fresh tester confirmation on the new build.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Re-opened and fixed the remaining tester-reported regressions on GitHub issues `#200` and `#201`:
+    - restored deep-link refreshes in the embedded Web UI by switching the Vite build back to root-relative asset URLs and rewriting those HTML asset paths against `web.url_base` in the ASP.NET pipeline instead of relying on `./assets/...`
+    - fixed the Bridge Web UI client to use versioned-relative API paths and added `/api/v0/bridge/...` routes server-side while preserving the legacy `/api/bridge/...` compatibility surface
+    - versioned `SecurityController` correctly so `/api/v0/security/...` no longer fails with `ApiVersionUnspecified`
+    - moved the Soulseek listener/distributed-network bootstrap settings into the initial `SoulseekClientOptions` so startup no longer races against a non-listening client, and removed the old “benign” log suppression for that listener-startup exception
+  - Added focused regression coverage for the follow-up fixes in `ProgramPathNormalizationTests`, `NicotinePlusIntegrationTests`, `SecurityRoutesIntegrationTests`, and the web `bridge.test.js`.
+  - Validation for the follow-up pass completed cleanly:
+    - targeted web tests
+    - targeted unit/integration tests for versioned bridge/security routes and initial Soulseek client options
+    - `cd src/web && npm run build`
+    - `cd src/web && npm run test:build-output`
+    - full `dotnet test`
+    - `bash ./bin/lint`
+    - `git diff --check`
+  - Wired Discord release announcements into `.github/workflows/build-on-tag.yml` for both dev and stable releases, verified the GitHub target, stored the webhook in the `snapetech/slskdn` repository secret `DISCORD_RELEASE_WEBHOOK`, and documented the behavior in `docs/DEV_BUILD_PROCESS.md` / `docs/CHANGELOG.md`.
   - Closed GitHub issues `#200`, `#201`, and `#202` locally:
     - fixed the remaining Web UI API/client regressions (`security.js`, `mediacore.js`, `bridge.js`, search-row routing, dark-theme Network stats)
     - added real PWA install support via `registerServiceWorker.js` + `public/service-worker.js`

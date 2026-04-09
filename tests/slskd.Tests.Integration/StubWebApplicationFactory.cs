@@ -50,6 +50,7 @@ using slskd.Core;
 using slskd.Streaming;
 using slskd.Mesh;
 using slskd.Search.Providers;
+using slskd.Common.Security.API;
 using System.Linq;
 using Moq;
 using OptionsModel = global::slskd.Options;
@@ -158,6 +159,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddApplicationPart(typeof(global::slskd.Transfers.MultiSource.API.AnalyticsController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeAdminController).Assembly)
+                        .AddApplicationPart(typeof(SecurityController).Assembly)
                         .ConfigureApplicationPartManager(manager =>
                         {
                             // Exclude conflicting controllers - use JobsController instead

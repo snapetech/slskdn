@@ -347,13 +347,40 @@ namespace slskd
             return ResolveOptionalAppRelativePath(candidate);
         }
 
+        internal static IReadOnlyList<(string Pattern, string Replacement)> CreateWebHtmlRewriteRules(string urlBase)
+        {
+            var normalizedUrlBase = string.IsNullOrWhiteSpace(urlBase) || urlBase == "/"
+                ? string.Empty
+                : (urlBase.StartsWith("/") ? urlBase : "/" + urlBase).TrimEnd('/');
+
+            string Prefix(string path) => string.IsNullOrEmpty(normalizedUrlBase) ? path : $"{normalizedUrlBase}{path}";
+
+            return new List<(string Pattern, string Replacement)>
+            {
+                ("((?:src|href)=\")/assets/", $"$1{Prefix("/assets/")}"),
+                ("((?:src|href)=\")/manifest\\.json", $"$1{Prefix("/manifest.json")}"),
+                ("((?:src|href)=\")/logo192\\.png", $"$1{Prefix("/logo192.png")}"),
+                ("((?:src|href)=\")/logo512\\.png", $"$1{Prefix("/logo512.png")}"),
+            };
+        }
+
         internal static SoulseekClientOptions CreateInitialSoulseekClientOptions(OptionsAtStartup optionsAtStartup)
         {
+            if (!IPAddress.TryParse(optionsAtStartup.Soulseek.ListenIpAddress, out var startupListenAddress))
+            {
+                startupListenAddress = IPAddress.Any;
+            }
+
             return new SoulseekClientOptions(
-                enableListener: false,
-                enableDistributedNetwork: false,
-                acceptDistributedChildren: false,
+                enableListener: true,
+                listenIPAddress: startupListenAddress,
+                listenPort: optionsAtStartup.Soulseek.ListenPort,
+                enableDistributedNetwork: !optionsAtStartup.Soulseek.DistributedNetwork.Disabled,
+                acceptDistributedChildren: !optionsAtStartup.Soulseek.DistributedNetwork.DisableChildren,
+                distributedChildLimit: optionsAtStartup.Soulseek.DistributedNetwork.ChildLimit,
+                maximumUploadSpeed: optionsAtStartup.Global.Upload.SpeedLimit,
                 maximumConcurrentUploads: optionsAtStartup.Global.Upload.Slots,
+                maximumDownloadSpeed: optionsAtStartup.Global.Download.SpeedLimit,
                 maximumConcurrentDownloads: optionsAtStartup.Global.Download.Slots,
                 minimumDiagnosticLevel: optionsAtStartup.Soulseek.DiagnosticLevel.ToEnum<Soulseek.Diagnostics.DiagnosticLevel>(),
                 maximumConcurrentSearches: 2,
@@ -374,11 +401,6 @@ namespace slskd
         {
             return exception switch
             {
-                InvalidOperationException invalidOperationException
-                    when string.Equals(
-                        invalidOperationException.Message,
-                        "Not listening. You must call the Start() method before calling this method.",
-                        StringComparison.Ordinal) => true,
                 SocketException socketException when socketException.SocketErrorCode == SocketError.ConnectionRefused => true,
                 _ => false,
             };
@@ -2989,7 +3011,10 @@ namespace slskd
             // inject urlBase into any html files we serve, and rewrite links to ./static or /static to
             // prepend the url base.
             app.UsePathBase(urlBase);
-            app.UseHTMLRewrite("((\\.)?\\/static)", $"{(urlBase == "/" ? string.Empty : urlBase)}/static");
+            foreach (var (pattern, replacement) in CreateWebHtmlRewriteRules(urlBase))
+            {
+                app.UseHTMLRewrite(pattern, replacement);
+            }
 
             // The main fix is making HTTP_ADDRESS configurable for proper binding
             app.UseHTMLInjection($"<script>window.urlBase=\"{urlBase}\";window.port={OptionsAtStartup.Web.Port}</script>", excludedRoutes: new[] { "/api", "/swagger" });

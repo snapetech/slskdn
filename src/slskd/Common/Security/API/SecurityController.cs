@@ -16,6 +16,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Asp.Versioning;
 using slskd;
 using slskd.Common.Security;
 using slskd.Mesh;
@@ -28,7 +29,8 @@ using IOFile = System.IO.File;
 /// API controller for security monitoring and management.
 /// </summary>
 [ApiController]
-[Route("api/v0/security")]
+[Route("api/v{version:apiVersion}/security")]
+[ApiVersion("0")]
 [Authorize]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class SecurityController : ControllerBase

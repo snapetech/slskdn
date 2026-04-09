@@ -4,6 +4,7 @@
 
 namespace slskd.API.VirtualSoulfind;
 
+using Asp.Versioning;
 using slskd.Core.Security;
 
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,8 @@ using slskd.VirtualSoulfind.Bridge;
 /// Bridge configuration and dashboard API.
 /// </summary>
 [Route("api/bridge/admin")]
+[Route("api/v{version:apiVersion}/bridge/admin")]
+[ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

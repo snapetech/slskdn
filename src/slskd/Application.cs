@@ -505,13 +505,7 @@ namespace slskd
             }
 
             var patch = new SoulseekClientOptionsPatch(
-                listenIPAddress: startupListenAddress,
-                listenPort: OptionsAtStartup.Soulseek.ListenPort,
-                enableListener: true,
                 userEndPointCache: new UserEndPointCache(),
-                distributedChildLimit: OptionsAtStartup.Soulseek.DistributedNetwork.ChildLimit,
-                enableDistributedNetwork: !OptionsAtStartup.Soulseek.DistributedNetwork.Disabled,
-                acceptDistributedChildren: !OptionsAtStartup.Soulseek.DistributedNetwork.DisableChildren,
                 maximumUploadSpeed: OptionsAtStartup.Global.Upload.SpeedLimit,
                 maximumDownloadSpeed: OptionsAtStartup.Global.Download.SpeedLimit,
                 autoAcknowledgePrivateMessages: false,

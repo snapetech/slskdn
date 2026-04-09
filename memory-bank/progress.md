@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-04-09 15:40 - Discord release announcements wired into tag builds
+
+### Completed
+- Added Discord announcement jobs to `.github/workflows/build-on-tag.yml` so both `build-dev-*` and `build-main-*` release paths post to Discord only after the corresponding GitHub release is created successfully.
+- Stored the Discord webhook in the `snapetech/slskdn` repository secret `DISCORD_RELEASE_WEBHOOK` instead of committing the URL into the repo.
+- Updated `docs/DEV_BUILD_PROCESS.md` to document the new announcement jobs and required secret, and added an `Unreleased` changelog note for the new release-announcement behavior.
+
+### Verification
+- `./scripts/verify-github-target.sh`
+- `gh secret set DISCORD_RELEASE_WEBHOOK --repo snapetech/slskdn`
+- `git diff --check`
+
+### Remaining
+- Trigger the next `build-dev-*` or `build-main-*` tag to observe the first live Discord announcement end-to-end.
+
 ## 2026-03-28 13:08 - GitHub security backlog cleanup on `master`
 
 ## 2026-04-06 13:36 - Tester issue fixes, PR cleanup, and release prep
@@ -5790,3 +5805,27 @@ Code quality improvements were completed as part of Option A:
   - `git diff --check`
   - `bash ./bin/lint`
   - `dotnet test` hit an unrelated environment conflict in `CsrfPortScopedTokenIntegrationTests`: another running slskd instance already owns `/home/keith/.local/share/slskd`, so the full integration suite could not complete cleanly in this shell.
+
+## 2026-04-09 21:40:00Z
+
+- Re-opened GitHub issues `#200` and `#201` from fresh tester feedback and fixed the broader remaining causes instead of only the earlier surface symptoms.
+- For issue `#200`:
+  - changed the embedded Web UI build back to root-relative asset URLs (`/assets`, `/manifest.json`, `/logo192.png`) and moved the subpath handling into backend HTML rewriting so hard refreshes on client routes like `/system` stop requesting `/system/assets/...`
+  - fixed `src/web/src/lib/bridge.js` to call versioned-relative bridge endpoints via the shared Axios client, then added versioned backend routes to both `BridgeController` and `BridgeAdminController` while keeping the legacy `/api/bridge/...` routes working
+  - versioned `SecurityController` properly so `/api/v0/security/...` no longer fails with `ApiVersionUnspecified`
+- For issue `#201`:
+  - moved the Soulseek listener/distributed-network bootstrap settings into `Program.CreateInitialSoulseekClientOptions(...)` so the client is instantiated with a real listening configuration instead of enabling the listener only later during `Application.StartAsync()`
+  - removed the old special-case that treated `Not listening. You must call the Start() method before calling this method.` as a benign unobserved-task exception, because the startup race is now fixed at the source instead of hidden in logging
+- Added regression coverage for the new fixes:
+  - web tests for the corrected bridge client paths
+  - unit tests for the new initial Soulseek client options and HTML rewrite rules
+  - integration tests for `/api/v0/bridge/...` and `/api/v0/security/...`
+- Validation:
+  - `cd src/web && npm test -- src/lib/bridge.test.js src/lib/security.test.js src/registerServiceWorker.test.js src/components/Search/List/SearchListRow.test.jsx`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests"`
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~NicotinePlusIntegrationTests|FullyQualifiedName~SecurityRoutesIntegrationTests"`
+  - `cd src/web && npm run build`
+  - `cd src/web && npm run test:build-output`
+  - `dotnet test`
+  - `bash ./bin/lint`
+  - `git diff --check`

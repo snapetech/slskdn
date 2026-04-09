@@ -17,21 +17,10 @@ if (!fs.existsSync(indexPath)) {
 
 const html = fs.readFileSync(indexPath, 'utf8');
 
-const forbiddenPatterns = [
-  { pattern: /(?:src|href)="\/assets\//, reason: 'root-relative /assets URLs break web.url_base subpath hosting' },
-  { pattern: /href="\/manifest\.json"/, reason: 'root-relative manifest path breaks subpath hosting' },
-  { pattern: /href="\/logo192\.png"/, reason: 'root-relative icon path breaks subpath hosting' },
-];
-
-for (const { pattern, reason } of forbiddenPatterns) {
-  if (pattern.test(html)) {
-    fail(`Built index.html contains a forbidden path (${pattern}): ${reason}`);
-  }
-}
-
 const requiredPatterns = [
-  { pattern: /(?:src|href)="\.\/assets\//, reason: 'expected relative built asset URL' },
-  { pattern: /href="\.\/manifest\.json"/, reason: 'expected relative manifest path' },
+  { pattern: /(?:src|href)="\/assets\//, reason: 'expected root-relative built asset URL for deep-link refreshes' },
+  { pattern: /href="\/manifest\.json"/, reason: 'expected root-relative manifest path for backend urlBase rewriting' },
+  { pattern: /href="\/logo192\.png"/, reason: 'expected root-relative icon path for backend urlBase rewriting' },
 ];
 
 for (const { pattern, reason } of requiredPatterns) {
@@ -40,4 +29,4 @@ for (const { pattern, reason } of requiredPatterns) {
   }
 }
 
-console.log('Verified built web output uses subpath-safe relative asset references.');
+console.log('Verified built web output uses root-relative asset references for backend urlBase rewriting.');

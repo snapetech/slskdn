@@ -109,21 +109,52 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
-    public void CreateInitialSoulseekClientOptions_DisablesListenerAndDistributedNetworkUntilStartupReconfiguration()
+    public void CreateInitialSoulseekClientOptions_UsesConfiguredListenerAndDistributedNetworkSettings()
     {
-        var options = Program.CreateInitialSoulseekClientOptions(new OptionsAtStartup());
+        var optionsAtStartup = new OptionsAtStartup
+        {
+            Soulseek = new Options.SoulseekOptions
+            {
+                ListenIpAddress = "127.0.0.1",
+                ListenPort = 50444,
+                DistributedNetwork = new Options.SoulseekOptions.DistributedNetworkOptions
+                {
+                    ChildLimit = 7,
+                    Disabled = false,
+                    DisableChildren = false,
+                },
+            },
+        };
 
-        Assert.False(options.EnableListener);
-        Assert.False(options.EnableDistributedNetwork);
-        Assert.False(options.AcceptDistributedChildren);
+        var options = Program.CreateInitialSoulseekClientOptions(optionsAtStartup);
+
+        Assert.True(options.EnableListener);
+        Assert.Equal("127.0.0.1", options.ListenIPAddress.ToString());
+        Assert.Equal(50444, options.ListenPort);
+        Assert.True(options.EnableDistributedNetwork);
+        Assert.True(options.AcceptDistributedChildren);
+        Assert.Equal(7, options.DistributedChildLimit);
     }
 
     [Fact]
-    public void IsBenignUnobservedTaskException_ReturnsTrue_ForListenerStartupRace()
+    public void CreateWebHtmlRewriteRules_PrefixesAssetAndManifestPaths_ForUrlBase()
     {
-        var exception = new AggregateException(new InvalidOperationException("Not listening. You must call the Start() method before calling this method."));
+        var rules = Program.CreateWebHtmlRewriteRules("/system");
 
-        Assert.True(Program.IsBenignUnobservedTaskException(exception));
+        var html = """
+            <link rel="manifest" href="/manifest.json" />
+            <link rel="apple-touch-icon" href="/logo192.png" />
+            <script type="module" src="/assets/index.js"></script>
+            """;
+
+        foreach (var (pattern, replacement) in rules)
+        {
+            html = System.Text.RegularExpressions.Regex.Replace(html, pattern, replacement);
+        }
+
+        Assert.Contains("href=\"/system/manifest.json\"", html);
+        Assert.Contains("href=\"/system/logo192.png\"", html);
+        Assert.Contains("src=\"/system/assets/index.js\"", html);
     }
 
     [Fact]

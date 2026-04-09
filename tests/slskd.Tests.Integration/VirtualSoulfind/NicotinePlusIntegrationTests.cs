@@ -38,6 +38,16 @@ public class NicotinePlusIntegrationTests : IClassFixture<StubWebApplicationFact
     }
 
     [Fact]
+    public async Task NicotinePlus_VersionedBridgeRoutes_ShouldSucceed()
+    {
+        using var client = _factory.CreateClient();
+        await _factory.Services.GetRequiredService<ISoulfindBridgeService>().StartAsync();
+
+        var status = await client.GetAsync("/api/v0/bridge/status");
+        status.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
     public async Task NicotinePlus_SearchViaBridge_ShouldReturnResults()
     {
         var stub = _factory.Services.GetRequiredService<StubBridgeApi>();

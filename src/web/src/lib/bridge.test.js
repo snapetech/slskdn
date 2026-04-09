@@ -24,7 +24,7 @@ describe('bridge', () => {
 
     const result = await bridge.getConfig();
 
-    expect(api.get).toHaveBeenCalledWith('/api/bridge/admin/config');
+    expect(api.get).toHaveBeenCalledWith('/bridge/admin/config');
     expect(result).toEqual({ enabled: true, port: 2242 });
   });
 
@@ -33,7 +33,7 @@ describe('bridge', () => {
 
     const result = await bridge.getDashboard();
 
-    expect(api.get).toHaveBeenCalledWith('/api/bridge/admin/dashboard');
+    expect(api.get).toHaveBeenCalledWith('/bridge/admin/dashboard');
     expect(result).toEqual({ health: { status: 'ok' } });
   });
 
