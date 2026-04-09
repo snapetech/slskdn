@@ -5862,3 +5862,16 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-09 22:05:00Z
+
+- Corrected the earlier Dependabot handling mistake by removing the temporary `axios` / `lodash` ignore entries from `.github/dependabot.yml` and updating the actual frontend dependency line instead.
+- Updated `src/web/package.json` to `axios 1.15.0` and refreshed `src/web/package-lock.json` so the locked tree now carries `axios 1.15.0` plus transitive `lodash 4.18.1`.
+- Rebased the dependency update onto the release workflow's `.123` metadata commit and pushed it to `main` as `5ad4d215`, so the current branch head reflects the real upgrade rather than the earlier suppression change.
+- Confirmed the `build-main-0.24.5-slskdn.123` tag run reached `Create Main Release` successfully and the `Announce Main Release to Discord` job completed successfully; the original Discord miss was caused by the earlier release-gate failure, not the webhook job itself.
+- Validation:
+  - `cd src/web && npm audit --json`
+  - `cd src/web && npm test`
+  - `cd src/web && npm run build`
+  - `git diff --check`
+  - `gh run view 24215101350 --repo snapetech/slskdn --json status,conclusion,jobs,url`

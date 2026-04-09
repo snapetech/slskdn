@@ -23,10 +23,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: No active coding task. The follow-up pass for GitHub issues `#200` and `#201` is complete locally; next work should wait for fresh tester confirmation on the new build.
+- **Current Task**: No active coding task. The `.123` stable release completed far enough to publish the release and post the Discord announcement, and the mistaken Dependabot ignore change has been superseded on `main` by a real frontend dependency upgrade.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Corrected the frontend dependency handling on `main`: removed the temporary `axios` / `lodash` Dependabot ignore entries, upgraded the actual web dependency state to `axios 1.15.0` with locked `lodash 4.18.1`, rebased the fix onto the `.123` release metadata commit, and pushed it as `5ad4d215`.
+  - Monitored `build-main-0.24.5-slskdn.123` and confirmed the stable release path now reaches `Create Main Release` successfully and the `Announce Main Release to Discord` job completes successfully; the Discord outage report was downstream of the earlier release-gate regression, not a webhook failure.
   - Traced the missing Discord announcements to a release-gate regression instead of the webhook job itself: `build-main-0.24.5-slskdn.121` failed before `release-main`, because `src/web/scripts/smoke-subpath-build.mjs` still enforced old relative asset references after the Web UI moved back to root-relative assets plus backend HTML rewriting. Fixed the smoke harness to emulate the backend rewrite model and documented the gotcha in `ADR-0001`.
   - Updated `.github/dependabot.yml` so Dependabot ignores recurring `axios` and `lodash` frontend bumps instead of reopening those PRs, removed invalid Dependabot labels that were generating bot comments, and prepared GitHub cleanup for PRs `#198` and `#203`.
   - Re-opened and fixed the remaining tester-reported regressions on GitHub issues `#200` and `#201`:
