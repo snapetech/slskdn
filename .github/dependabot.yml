@@ -24,12 +24,6 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     ignore:
-      # These frontend packages are intentionally managed outside Dependabot PR flow.
-      # Keep the declared semver ranges in package.json, but suppress auto-update PR churn.
-      - dependency-name: "axios"
-        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
-      - dependency-name: "lodash"
-        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
       # Keep aligned with upstream slskd (react 16, router 5, etc.)
       - dependency-name: "react"
         update-types: ["version-update:semver-major"]

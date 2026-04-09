@@ -27,8 +27,8 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
+- Updated the frontend dependency state to `axios 1.15.0` and the locked transitive `lodash 4.18.1`, eliminating the previously open Dependabot bumps and bringing `npm audit` in `src/web` back to `0` vulnerabilities.
 - Fixed the release-gate subpath smoke harness so it now emulates the backend HTML rewrite layer for `web.url_base` deployments instead of enforcing the obsolete relative-asset build model, which had been blocking stable tag releases before the Discord announcement jobs could run.
-- Stopped Dependabot from reopening the recurring `axios` and `lodash` frontend update PRs by ignoring those packages directly in `.github/dependabot.yml` while leaving the package semver ranges alone, and removed the invalid Dependabot label settings that were generating bot error comments on dependency PRs.
 - Added tag-workflow Discord release announcements for both dev and stable slskdN GitHub releases, driven by the repository secret `DISCORD_RELEASE_WEBHOOK` after the release is published.
 - Fixed the remaining System Web UI regressions reported by testers: eliminated residual `/api/v0/api/v0/...` frontend requests, repaired Bridge admin payload handling, made saved search rows reopen their existing results instead of starting duplicate searches, and restored dark-theme readability for the Network mesh/hash/backfill statistics.
 - Finished the issue `#200` follow-up by restoring hard-refresh support on client-side routes like `/system`, versioning the Bridge and Security Web UI/API paths consistently, and preserving legacy `/api/bridge/...` compatibility for existing bridge consumers.
