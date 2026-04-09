@@ -226,6 +226,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  announce-dev:
+    name: Announce Dev Release to Discord
+    needs: [parse, release-dev]
+    if: needs.parse.outputs.channel == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Discord announcement
+        env:
+          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          VERSION: ${{ needs.parse.outputs.version }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -z "$DISCORD_RELEASE_WEBHOOK" ]; then
+            echo "DISCORD_RELEASE_WEBHOOK is not configured; skipping Discord announcement."
+            exit 0
+          fi
+
+          payload=$(cat <<EOF
+          {
+            "content": "🧪 **slskdN dev release published**\nVersion: \`${VERSION}\`\nTag: \`${TAG_NAME}\`\nRelease: ${RELEASE_URL}"
+          }
+          EOF
+          )
+
+          curl --fail --silent --show-error \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "$DISCORD_RELEASE_WEBHOOK"
+
   aur-dev:
     name: Publish to AUR (Dev)
     needs: [parse, release-dev]
@@ -1146,6 +1176,36 @@ jobs:
           echo "📦 Package publishing jobs will run below..."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  announce-main:
+    name: Announce Main Release to Discord
+    needs: [parse, release-main]
+    if: needs.parse.outputs.channel == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Discord announcement
+        env:
+          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.parse.outputs.version }}
+          VERSION: ${{ needs.parse.outputs.version }}
+          TRIGGER_TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "$DISCORD_RELEASE_WEBHOOK" ]; then
+            echo "DISCORD_RELEASE_WEBHOOK is not configured; skipping Discord announcement."
+            exit 0
+          fi
+
+          payload=$(cat <<EOF
+          {
+            "content": "🔋 **slskdN stable release published**\nVersion: \`${VERSION}\`\nBuild tag: \`${TRIGGER_TAG}\`\nRelease: ${RELEASE_URL}"
+          }
+          EOF
+          )
+
+          curl --fail --silent --show-error \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "$DISCORD_RELEASE_WEBHOOK"
 
   aur-main:
     name: Publish to AUR (Main - Source & Binary)

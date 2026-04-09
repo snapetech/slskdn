@@ -178,16 +178,18 @@ This document maps out the complete dev build process for slskdn, including vers
 2. **build** → Builds frontend (single job)
 3. **publish** → Builds backend for each platform (matrix strategy)
 4. **release-dev** → Creates GitHub release with all artifacts
-5. **aur-dev** → Updates and pushes to AUR
-6. **copr-dev** → Builds and uploads to COPR
-7. **ppa-dev** → Builds and uploads to PPA
-8. **docker-dev** → Builds and pushes Docker images
-9. **chocolatey-dev** → Updates and pushes to Chocolatey
-10. **nix-dev** → Updates flake.nix and commits
-11. **winget-dev** → Updates Winget manifests
-12. **snap-dev** → Builds and publishes Snap
-13. **homebrew-dev** → Updates Homebrew tap
-14. **winget-main** → Auto-submits stable Winget update PR when token is configured
+5. **announce-dev** → Posts the new dev release to Discord
+6. **aur-dev** → Updates and pushes to AUR
+7. **copr-dev** → Builds and uploads to COPR
+8. **ppa-dev** → Builds and uploads to PPA
+9. **docker-dev** → Builds and pushes Docker images
+10. **chocolatey-dev** → Updates and pushes to Chocolatey
+11. **nix-dev** → Updates flake.nix and commits
+12. **winget-dev** → Updates Winget manifests
+13. **snap-dev** → Builds and publishes Snap
+14. **homebrew-dev** → Updates Homebrew tap
+15. **announce-main** → Posts the new stable release to Discord
+16. **winget-main** → Auto-submits stable Winget update PR when token is configured
 
 ### `dev-release.yml` Jobs (for `dev-*` tags)
 
@@ -211,6 +213,7 @@ This document maps out the complete dev build process for slskdn, including vers
 | `COPR_TOKEN` | COPR jobs | COPR API token |
 | `GPG_PRIVATE_KEY` | PPA jobs | GPG key for package signing |
 | `CHOCO_API_KEY` | Chocolatey jobs | Chocolatey API key |
+| `DISCORD_RELEASE_WEBHOOK` | `announce-dev`, `announce-main` | Discord webhook URL used to announce each published dev and stable GitHub release |
 | `WINGETCREATE_GITHUB_TOKEN` | Stable Winget job | GitHub classic PAT with `public_repo` so `wingetcreate --submit` can fork and open a PR against `microsoft/winget-pkgs` |
 | `TAP_GITHUB_TOKEN` | Homebrew jobs | GitHub token for tap repo |
 | `SNAPCRAFT_STORE_CREDENTIALS` | Snap jobs | Snap store credentials |
