@@ -276,11 +276,7 @@ jobs:
           today_utc="$(date -u +%F)"
           marker="releasebot-project:${MATRIX_PROJECT_KEY}"
           sync_filter="$(jq -cn --arg room "$MATRIX_ROOM_ID" '{"room":{"rooms":[ $room ],"timeline":{"limit":50}}}')"
-          sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 - <<'PY'
-import os, urllib.parse
-print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))
-PY
-)"
+          sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))')"
 
           previous_event_id="$(
             curl --fail --silent --show-error \
@@ -1304,11 +1300,7 @@ PY
           today_utc="$(date -u +%F)"
           marker="releasebot-project:${MATRIX_PROJECT_KEY}"
           sync_filter="$(jq -cn --arg room "$MATRIX_ROOM_ID" '{"room":{"rooms":[ $room ],"timeline":{"limit":50}}}')"
-          sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 - <<'PY'
-import os, urllib.parse
-print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))
-PY
-)"
+          sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))')"
 
           previous_event_id="$(
             curl --fail --silent --show-error \
