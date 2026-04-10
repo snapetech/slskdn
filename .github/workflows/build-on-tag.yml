@@ -261,6 +261,7 @@ jobs:
           MATRIX_RELEASE_ACCESS_TOKEN: ${{ secrets.TIMEWAYS_MATRIX_RELEASE_TOKEN }}
           MATRIX_BASE_URL: https://matrix.timeways.net
           MATRIX_ROOM_ID: '!feVqoCPCPPaCQmTCEE:timeways.net'
+          MATRIX_PROJECT_KEY: slskdn-dev
           RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
           VERSION: ${{ needs.parse.outputs.version }}
           TAG_NAME: ${{ github.ref_name }}
@@ -272,15 +273,58 @@ jobs:
             exit 0
           fi
 
-          payload=$(cat <<EOF
-          {
-            "msgtype": "m.text",
-            "body": "🧪 slskdN dev release published\nVersion: ${VERSION}\nTag: ${TAG_NAME}\nRelease: ${RELEASE_URL}"
-          }
-          EOF
-          )
+          today_utc="$(date -u +%F)"
+          marker="releasebot-project:${MATRIX_PROJECT_KEY}"
+          sync_filter="$(jq -cn --arg room "$MATRIX_ROOM_ID" '{"room":{"rooms":[ $room ],"timeline":{"limit":50}}}')"
+          sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 - <<'PY'
+import os, urllib.parse
+print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))
+PY
+)"
 
-          txn_id="slskdn-dev-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          previous_event_id="$(
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
+              "${MATRIX_BASE_URL}/_matrix/client/r0/sync?timeout=0&filter=${sync_filter_encoded}" |
+              jq -r \
+                --arg room "$MATRIX_ROOM_ID" \
+                --arg marker "$marker" \
+                --arg today "$today_utc" \
+                '
+                  [.rooms.join[$room].timeline.events[]?
+                    | select(.sender == "@releasebot:timeways.net")
+                    | select(.type == "m.room.message")
+                    | select((.content.formatted_body // "") | contains($marker))
+                    | select((.origin_server_ts / 1000 | strftime("%F")) == $today)
+                  ]
+                  | sort_by(.origin_server_ts)
+                  | last
+                  | .event_id // empty
+                '
+          )"
+
+          if [ -n "$previous_event_id" ]; then
+            redact_txn="redact-${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            curl --fail --silent --show-error \
+              -X POST \
+              -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"reason":"Superseded by newer release announcement"}' \
+              "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/redact/${previous_event_id}/${redact_txn}"
+          fi
+
+          payload="$(jq -cn \
+            --arg body "🧪 slskdN dev release published\nVersion: ${VERSION}\nTag: ${TAG_NAME}\nRelease: ${RELEASE_URL}" \
+            --arg html "<p>🧪 slskdN dev release published<br>Version: <code>${VERSION}</code><br>Tag: <code>${TAG_NAME}</code><br>Release: <a href=\"${RELEASE_URL}\">${RELEASE_URL}</a></p><!-- ${marker} -->" \
+            '{
+              msgtype: "m.text",
+              body: $body,
+              format: "org.matrix.custom.html",
+              formatted_body: $html
+            }'
+          )"
+
+          txn_id="${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
           curl --fail --silent --show-error \
             -X PUT \
@@ -1245,6 +1289,7 @@ jobs:
           MATRIX_RELEASE_ACCESS_TOKEN: ${{ secrets.TIMEWAYS_MATRIX_RELEASE_TOKEN }}
           MATRIX_BASE_URL: https://matrix.timeways.net
           MATRIX_ROOM_ID: '!feVqoCPCPPaCQmTCEE:timeways.net'
+          MATRIX_PROJECT_KEY: slskdn-main
           RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.parse.outputs.version }}
           VERSION: ${{ needs.parse.outputs.version }}
           TRIGGER_TAG: ${{ github.ref_name }}
@@ -1256,15 +1301,58 @@ jobs:
             exit 0
           fi
 
-          payload=$(cat <<EOF
-          {
-            "msgtype": "m.text",
-            "body": "🔋 slskdN stable release published\nVersion: ${VERSION}\nBuild tag: ${TRIGGER_TAG}\nRelease: ${RELEASE_URL}"
-          }
-          EOF
-          )
+          today_utc="$(date -u +%F)"
+          marker="releasebot-project:${MATRIX_PROJECT_KEY}"
+          sync_filter="$(jq -cn --arg room "$MATRIX_ROOM_ID" '{"room":{"rooms":[ $room ],"timeline":{"limit":50}}}')"
+          sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 - <<'PY'
+import os, urllib.parse
+print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))
+PY
+)"
 
-          txn_id="slskdn-main-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          previous_event_id="$(
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
+              "${MATRIX_BASE_URL}/_matrix/client/r0/sync?timeout=0&filter=${sync_filter_encoded}" |
+              jq -r \
+                --arg room "$MATRIX_ROOM_ID" \
+                --arg marker "$marker" \
+                --arg today "$today_utc" \
+                '
+                  [.rooms.join[$room].timeline.events[]?
+                    | select(.sender == "@releasebot:timeways.net")
+                    | select(.type == "m.room.message")
+                    | select((.content.formatted_body // "") | contains($marker))
+                    | select((.origin_server_ts / 1000 | strftime("%F")) == $today)
+                  ]
+                  | sort_by(.origin_server_ts)
+                  | last
+                  | .event_id // empty
+                '
+          )"
+
+          if [ -n "$previous_event_id" ]; then
+            redact_txn="redact-${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            curl --fail --silent --show-error \
+              -X POST \
+              -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"reason":"Superseded by newer release announcement"}' \
+              "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/redact/${previous_event_id}/${redact_txn}"
+          fi
+
+          payload="$(jq -cn \
+            --arg body "🔋 slskdN stable release published\nVersion: ${VERSION}\nBuild tag: ${TRIGGER_TAG}\nRelease: ${RELEASE_URL}" \
+            --arg html "<p>🔋 slskdN stable release published<br>Version: <code>${VERSION}</code><br>Build tag: <code>${TRIGGER_TAG}</code><br>Release: <a href=\"${RELEASE_URL}\">${RELEASE_URL}</a></p><!-- ${marker} -->" \
+            '{
+              msgtype: "m.text",
+              body: $body,
+              format: "org.matrix.custom.html",
+              formatted_body: $html
+            }'
+          )"
+
+          txn_id="${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
           curl --fail --silent --show-error \
             -X PUT \
