@@ -27,6 +27,7 @@ For dev / build tags, use the same string as `needs.parse.outputs.version` (the 
 
 ## [Unreleased]
 
+- Added Matrix release announcements to the existing tagged dev/stable GitHub release workflow so the same short notices posted to Discord are now also sent into the configured `timeways.net` room.
 - Updated the frontend dependency state to `axios 1.15.0` and the locked transitive `lodash 4.18.1`, eliminating the previously open Dependabot bumps and bringing `npm audit` in `src/web` back to `0` vulnerabilities.
 - Fixed the release-gate subpath smoke harness so it now emulates the backend HTML rewrite layer for `web.url_base` deployments instead of enforcing the obsolete relative-asset build model, which had been blocking stable tag releases before the Discord announcement jobs could run.
 - Added tag-workflow Discord release announcements for both dev and stable slskdN GitHub releases, driven by the repository secret `DISCORD_RELEASE_WEBHOOK` after the release is published.
