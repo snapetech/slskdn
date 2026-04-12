@@ -307,6 +307,42 @@ await Client.ConnectToUserAsync(username, invalidateCache: false, cancellationTo
 
 **Why This Keeps Happening**: It feels reasonable to “warm” a peer connection up front for validation or caching, but that creates a second connection path with different failure behavior than the real transfer code. When the preflight connect fails earlier or differently, slskdn aborts legitimate transfer requests for the wrong reason and the logs point at the warm-up path instead of the transfer path that actually matters.
 
+### 0w4. Startup Soulseek Option Patches Must Match The Live Reconfigure Transfer Surface
+
+**The Bug**: The startup `Application.StartAsync()` patch path and the later live-reconfigure path were not actually equivalent. Live reconfigure updated `incomingConnectionOptions`, but startup patching only set `peerConnectionOptions` and `transferConnectionOptions`. That left transfer-listener behavior dependent on whether the process had only booted once or had already gone through a later options reconfigure, which is exactly the kind of environment-sensitive seam that can keep search/browse working while peer transfers still misbehave.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs`
+
+**Wrong**:
+```csharp
+return new SoulseekClientOptionsPatch(
+    ...
+    peerConnectionOptions: connectionOptions,
+    transferConnectionOptions: transferOptions,
+    distributedConnectionOptions: distributedOptions,
+    ...);
+```
+
+**Correct**:
+```csharp
+return new SoulseekClientOptionsPatch(
+    ...
+    peerConnectionOptions: connectionOptions,
+    transferConnectionOptions: transferOptions,
+    incomingConnectionOptions: connectionOptions,
+    distributedConnectionOptions: distributedOptions,
+    ...);
+```
+
+```text
+Startup and later reconfigure must configure the same transfer-related option surface, or fixes appear
+"working" only after an options reload instead of on a clean boot.
+```
+
+**Why This Keeps Happening**: Boot-time configuration code tends to drift from the "real" runtime reconfigure code because both paths are manually assembled patches with overlapping fields. If one path gets a new transfer-related option and the other does not, clean startup and post-reconfigure behavior silently diverge. Any Soulseek client patch helper used at startup should be shared and unit-tested against the fields the live reconfigure path depends on.
+
 ### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
 
 **The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
