@@ -212,6 +212,51 @@ return (await api.get(`${baseUrl}/dashboard`)).data;
 
 **Why This Keeps Happening**: Some frontend modules build URLs relative to Axios, while others build fully-qualified API paths. Once `api.js` owns the `/api/v0` prefix, every helper that uses `api.get/post/put/delete(...)` must pass paths relative to that prefix or the request will be versioned twice.
 
+### 0w1. Route Smoke Coverage Must Exercise The Same Versioned Web UI Paths Production Uses
+
+**The Bug**: The Jobs Web UI helper still called `/api/jobs...` through an Axios client already rooted at `/api/v0`, while multiple MediaCore controllers exposed versioned-looking paths without `ApiVersion` metadata. The existing tests still passed because they asserted the wrong frontend URLs and the release integration smoke filter never exercised the affected `/api/v0/jobs`, `/api/v0/mediacore/...`, `/api/v0/security/...`, or `/api/v0/bridge/...` routes.
+
+**Files Affected**:
+- `src/web/src/lib/jobs.js`
+- `src/web/src/lib/jobs.test.js`
+- `src/slskd/API/Native/JobsController.cs`
+- `src/slskd/MediaCore/API/Controllers/*.cs`
+- `tests/slskd.Tests.Integration/Api/VersionedApiRoutesIntegrationTests.cs`
+- `packaging/scripts/run-release-integration-smoke.sh`
+
+**Wrong**:
+```javascript
+const url = `/api/jobs${queryString ? `?${queryString}` : ''}`;
+expect(api.get).toHaveBeenCalledWith('/api/jobs');
+```
+
+```csharp
+[Route("api/v0/mediacore/contentid")]
+public class ContentIdController : ControllerBase
+```
+
+```bash
+FILTER='...|FullyQualifiedName~SoulbeetAdvancedModeTests|...'
+```
+
+**Correct**:
+```javascript
+const url = `/jobs${queryString ? `?${queryString}` : ''}`;
+expect(api.get).toHaveBeenCalledWith('/jobs');
+```
+
+```csharp
+[Route("api/v{version:apiVersion}/mediacore/contentid")]
+[ApiVersion("0")]
+public class ContentIdController : ControllerBase
+```
+
+```bash
+FILTER='...|FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualifiedName~SecurityRoutesIntegrationTests|FullyQualifiedName~NicotinePlusIntegrationTests'
+```
+
+**Why This Keeps Happening**: Route regressions can hide behind two layers of false confidence at once: unit tests that only assert whatever broken path a helper currently builds, and release smoke filters that skip the exact versioned routes the Web UI uses in production. For Web UI APIs, tests must assert the helper's relative path against the shared Axios base URL, controllers must declare explicit version metadata when serving `/api/v{version:apiVersion}/...`, and release smoke must include at least one end-to-end probe for every critical System-page route family.
+
 ### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
 
 **The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
