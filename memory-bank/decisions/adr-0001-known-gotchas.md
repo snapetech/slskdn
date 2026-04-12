@@ -257,6 +257,34 @@ FILTER='...|FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualified
 
 **Why This Keeps Happening**: Route regressions can hide behind two layers of false confidence at once: unit tests that only assert whatever broken path a helper currently builds, and release smoke filters that skip the exact versioned routes the Web UI uses in production. For Web UI APIs, tests must assert the helper's relative path against the shared Axios base URL, controllers must declare explicit version metadata when serving `/api/v{version:apiVersion}/...`, and release smoke must include at least one end-to-end probe for every critical System-page route family.
 
+### 0w2. `Connection refused` Must Not Be Blanket-Classified As A Benign Unobserved Task Failure
+
+**The Bug**: After the listener-startup race was fixed, `Program.IsBenignUnobservedTaskException(...)` still treated any unobserved `SocketError.ConnectionRefused` as benign. That meant real refused connections from unrelated or still-broken transfer paths could be silently downgraded before the narrower Soulseek-network classifier had a chance to decide whether the failure was expected churn or a real bug.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+return exception switch
+{
+    SocketException socketException when socketException.SocketErrorCode == SocketError.ConnectionRefused => true,
+    _ => false,
+};
+```
+
+**Correct**:
+```csharp
+return false;
+```
+
+```text
+Only `IsExpectedSoulseekNetworkException(...)` should downgrade expected peer/distributed-network churn, because it checks the exception type and the Soulseek-specific context. Blanket refusal suppression hides real failures.
+```
+
+**Why This Keeps Happening**: Once a specific startup race is fixed, it is tempting to keep a broad suppression rule around as “harmless noise control.” In practice that turns a targeted workaround into a catch-all mask. Global unobserved-task handling must stay narrower than the suspected failure domain, or the logs and tests stop distinguishing expected network churn from real transfer-path regressions.
+
 ### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
 
 **The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
