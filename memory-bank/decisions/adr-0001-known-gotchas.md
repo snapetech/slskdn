@@ -285,6 +285,28 @@ Only `IsExpectedSoulseekNetworkException(...)` should downgrade expected peer/di
 
 **Why This Keeps Happening**: Once a specific startup race is fixed, it is tempting to keep a broad suppression rule around as “harmless noise control.” In practice that turns a targeted workaround into a catch-all mask. Global unobserved-task handling must stay narrower than the suspected failure domain, or the logs and tests stop distinguishing expected network churn from real transfer-path regressions.
 
+### 0w3. Download Enqueue Must Not Pre-Fail On Auxiliary `ConnectToUserAsync` Priming
+
+**The Bug**: `DownloadService.EnqueueAsync(...)` fetched the user's endpoint and then eagerly called `Client.ConnectToUserAsync(...)` before scheduling the real transfer task. That control-channel priming was not required for the actual `Client.DownloadAsync(...)` path, but if the auxiliary peer connect hit `Connection refused` it aborted the whole enqueue before the transfer pipeline had a chance to run or report the real failure state.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+- `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs`
+
+**Wrong**:
+```csharp
+endpoint = await Client.GetUserEndPointAsync(username, cancellationToken);
+await Client.ConnectToUserAsync(username, invalidateCache: false, cancellationToken);
+```
+
+**Correct**:
+```csharp
+// Do not require an eager auxiliary peer-control connection here.
+// Let the actual transfer pipeline own connection establishment and failure handling.
+```
+
+**Why This Keeps Happening**: It feels reasonable to “warm” a peer connection up front for validation or caching, but that creates a second connection path with different failure behavior than the real transfer code. When the preflight connect fails earlier or differently, slskdn aborts legitimate transfer requests for the wrong reason and the logs point at the warm-up path instead of the transfer path that actually matters.
+
 ### 0n. Missing `yt-dlp` Must Degrade YouTube SongID Runs, Not Fail Them
 
 **The Bug**: SongID treated a missing `yt-dlp` binary as a fatal YouTube run failure. Metadata analysis already fell back to a raw URL query, but the later evidence pipeline still called `PrepareYouTubeAssetsAsync()` unguarded and crashed the run at the evidence stage.
