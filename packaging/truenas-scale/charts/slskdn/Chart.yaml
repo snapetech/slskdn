@@ -3,7 +3,7 @@ name: slskdn
 description: A decentralized mesh community service for Soulseek with advanced VPN, privacy features, and peer networking - Next Generation
 type: application
 version: 0.2.1
-appVersion: "0.24.5-slskdn.125"
+appVersion: "0.24.5-slskdn.126"
 keywords:
   - p2p
   - mesh-networking
