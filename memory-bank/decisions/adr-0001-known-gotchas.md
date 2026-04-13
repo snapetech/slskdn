@@ -283,6 +283,33 @@ elif [[ -n "$UNRELEASED_SECTION" ]]; then
 
 **Why This Keeps Happening**: `Unreleased` is a rolling staging area for future release content, so it always contains a mixture of old and new bullets until someone manually cuts a dated/versioned section. Using it at tag time feels convenient, but it breaks the core release contract: a published release body must describe only the changes introduced since the immediately previous release.
 
+### 0w4. `Soulseek.ListenIpAddress` Must Not Be Set To Loopback For A Live Client
+
+**The Bug**: A live slskd node was configured with `Soulseek.ListenIpAddress = 127.0.0.1`. The client still logged in and could search, but every peer-facing operation (`endpoint`, `info`, `browse`, downloads) failed because the Soulseek server handed other peers the node's externally visible address while slskd was only listening on loopback.
+
+**Files Affected**:
+- `src/slskd/Core/Options.cs`
+- `config/slskd.example.yml`
+
+**Wrong**:
+```yaml
+soulseek:
+  listen_ip_address: 127.0.0.1
+```
+
+**Correct**:
+```yaml
+soulseek:
+  listen_ip_address: 0.0.0.0
+```
+
+```text
+If the node is meant to connect to the Soulseek network, bind the Soulseek
+listener to 0.0.0.0 or a reachable LAN/VPN interface, not loopback.
+```
+
+**Why This Keeps Happening**: Loopback feels safe for local testing because the daemon still starts, logs in, and can initiate server-side activity like searches. But peer operations are different: other clients dial the address the server knows for you, not your local loopback binding. That creates the exact “logged in, searchable, but all peer transfers/browse/info fail” pattern unless startup rejects the configuration.
+
 **The Bug**: After the listener-startup race was fixed, `Program.IsBenignUnobservedTaskException(...)` still treated any unobserved `SocketError.ConnectionRefused` as benign. That meant real refused connections from unrelated or still-broken transfer paths could be silently downgraded before the narrower Soulseek-network classifier had a chance to decide whether the failure was expected churn or a real bug.
 
 **Files Affected**:
