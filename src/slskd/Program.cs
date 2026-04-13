@@ -399,11 +399,7 @@ namespace slskd
 
         private static bool IsBenignUnobservedTaskInnerException(Exception exception)
         {
-            return exception switch
-            {
-                SocketException socketException when socketException.SocketErrorCode == SocketError.ConnectionRefused => true,
-                _ => false,
-            };
+            return false;
         }
 
         private static IDisposable? DotNetRuntimeStats { get; set; }

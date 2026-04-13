@@ -25,7 +25,7 @@ describe('jobs', () => {
 
       await jobs.getJobs();
 
-      expect(api.get).toHaveBeenCalledWith('/api/jobs');
+      expect(api.get).toHaveBeenCalledWith('/jobs');
     });
 
     it('calls API with type filter', async () => {
@@ -33,7 +33,7 @@ describe('jobs', () => {
 
       await jobs.getJobs({ type: 'discography' });
 
-      expect(api.get).toHaveBeenCalledWith('/api/jobs?type=discography');
+      expect(api.get).toHaveBeenCalledWith('/jobs?type=discography');
     });
 
     it('calls API with status filter', async () => {
@@ -41,7 +41,7 @@ describe('jobs', () => {
 
       await jobs.getJobs({ status: 'running' });
 
-      expect(api.get).toHaveBeenCalledWith('/api/jobs?status=running');
+      expect(api.get).toHaveBeenCalledWith('/jobs?status=running');
     });
 
     it('calls API with multiple filters', async () => {
@@ -57,7 +57,7 @@ describe('jobs', () => {
       });
 
       expect(api.get).toHaveBeenCalledWith(
-        '/api/jobs?type=discography&status=running&limit=20&offset=10&sortBy=created_at&sortOrder=desc',
+        '/jobs?type=discography&status=running&limit=20&offset=10&sortBy=created_at&sortOrder=desc',
       );
     });
 
@@ -93,7 +93,7 @@ describe('jobs', () => {
         type: 'discography',
       });
 
-      expect(api.get).toHaveBeenCalledWith('/api/jobs?type=discography');
+      expect(api.get).toHaveBeenCalledWith('/jobs?type=discography');
     });
   });
 
@@ -108,7 +108,7 @@ describe('jobs', () => {
 
       await jobs.getJob('job-123');
 
-      expect(api.get).toHaveBeenCalledWith('/api/jobs/job-123');
+      expect(api.get).toHaveBeenCalledWith('/jobs/job-123');
     });
 
     it('encodes special characters in job ID', async () => {
@@ -116,7 +116,7 @@ describe('jobs', () => {
 
       await jobs.getJob('job/with/slashes');
 
-      expect(api.get).toHaveBeenCalledWith('/api/jobs/job%2Fwith%2Fslashes');
+      expect(api.get).toHaveBeenCalledWith('/jobs/job%2Fwith%2Fslashes');
     });
 
     it('returns job data from API response', async () => {
@@ -215,7 +215,7 @@ describe('jobs', () => {
         targetDirectory: '/music/Artist',
       });
 
-      expect(api.post).toHaveBeenCalledWith('/api/jobs/discography', {
+      expect(api.post).toHaveBeenCalledWith('/jobs/discography', {
         artist_id: 'artist-123',
         profile: 'ExtendedDiscography',
         target_dir: '/music/Artist',
@@ -233,7 +233,7 @@ describe('jobs', () => {
         targetDir: '/music/Artist/Album',
       });
 
-      expect(api.post).toHaveBeenCalledWith('/api/jobs/mb-release', {
+      expect(api.post).toHaveBeenCalledWith('/jobs/mb-release', {
         mb_release_id: 'release-123',
         target_dir: '/music/Artist/Album',
         tracks: 'all',

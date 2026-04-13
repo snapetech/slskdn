@@ -1,7 +1,11 @@
 namespace slskd.Tests.Unit.Transfers.Downloads;
 
 using System;
+using System.Linq;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Events;
@@ -15,6 +19,95 @@ using Xunit;
 
 public class DownloadServiceTests
 {
+    [Fact]
+    public async Task EnqueueAsync_DoesNotRequirePeerPreflightConnection()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<TransfersDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (var context = new TransfersDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .SetupGet(client => client.Downloads)
+            .Returns(Array.Empty<Soulseek.Transfer>());
+        soulseekClient
+            .Setup(client => client.ConnectToUserAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken?>()))
+            .ThrowsAsync(new InvalidOperationException("peer preflight should not run"));
+        soulseekClient
+            .Setup(client => client.GetUserEndPointAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken?>()))
+            .ThrowsAsync(new InvalidOperationException("endpoint preflight should not run"));
+        soulseekClient
+            .Setup(client => client.DownloadAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Func<Task<Stream>>>(),
+                It.IsAny<long?>(),
+                It.IsAny<long>(),
+                It.IsAny<int?>(),
+                It.IsAny<TransferOptions>(),
+                It.IsAny<CancellationToken?>()))
+            .Returns(async (
+                string username,
+                string remoteFilename,
+                Func<Task<Stream>> outputStreamFactory,
+                long? size,
+                long startOffset,
+                int? token,
+                TransferOptions transferOptions,
+                CancellationToken? cancellationToken) =>
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken ?? CancellationToken.None);
+                return null!;
+            });
+
+        var service = new DownloadService(
+            new TestOptionsMonitor<slskd.Options>(new slskd.Options()),
+            soulseekClient.Object,
+            new TestDbContextFactory(options),
+            new FileService(new TestOptionsMonitor<slskd.Options>(new slskd.Options())),
+            Mock.Of<IRelayService>(),
+            Mock.Of<IFTPService>(),
+            new EventBus(new EventService(Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<EventsDbContext>>())));
+
+        try
+        {
+            var (enqueued, failed) = await service.EnqueueAsync(
+                "alice",
+                new[] { (Filename: @"Music\track.flac", Size: 1234L) },
+                CancellationToken.None);
+
+            Assert.Single(enqueued);
+            Assert.Empty(failed);
+
+            Assert.True(service.TryCancel(enqueued.Single().Id));
+
+            soulseekClient.Verify(client => client.ConnectToUserAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken?>()), Times.Never);
+            soulseekClient.Verify(client => client.GetUserEndPointAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken?>()), Times.Never);
+        }
+        finally
+        {
+            service.Dispose();
+        }
+    }
+
     [Fact]
     public void Dispose_UnsubscribesClockMinuteHandler()
     {
@@ -42,5 +135,17 @@ public class DownloadServiceTests
             ?? throw new InvalidOperationException($"{type.FullName}.{eventName} backing field was not found.");
 
         return (field.GetValue(null) as MulticastDelegate)?.GetInvocationList().Length ?? 0;
+    }
+
+    private sealed class TestDbContextFactory : Microsoft.EntityFrameworkCore.IDbContextFactory<TransfersDbContext>
+    {
+        private readonly DbContextOptions<TransfersDbContext> _options;
+
+        public TestDbContextFactory(DbContextOptions<TransfersDbContext> options)
+        {
+            _options = options;
+        }
+
+        public TransfersDbContext CreateDbContext() => new(_options);
     }
 }

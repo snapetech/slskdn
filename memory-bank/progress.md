@@ -5,6 +5,70 @@
 
 ---
 
+## 2026-04-12 13:12 - Removed download enqueue peer preflight from `#201` transfer path
+
+## 2026-04-12 13:25 - Closed startup transfer config drift and tightened release smoke for `#201`
+
+### Completed
+- Traced another real `#201` seam in `Application.StartAsync()`: the startup Soulseek options patch was not configuring `incomingConnectionOptions`, even though the later live reconfigure path did.
+- Extracted `Application.CreateStartupSoulseekClientOptionsPatch(...)` so startup patch assembly is shared, then added the missing `incomingConnectionOptions` assignment there.
+- Added focused `ApplicationLifecycleTests` coverage to prove startup patching now includes `PeerConnectionOptions`, `TransferConnectionOptions`, and `IncomingConnectionOptions`.
+- Tightened `packaging/scripts/run-release-integration-smoke.sh` so the release smoke path now runs the focused unit regressions for `ApplicationLifecycleTests`, `DownloadServiceTests`, `ProgramPathNormalizationTests`, and `ConnectionWatchdogTests` before the integration smoke slice.
+- Documented the startup patch drift in `ADR-0001` and committed that gotcha separately as required (`cd345aab`).
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~DownloadServiceTests|FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ConnectionWatchdogTests" -v minimal`
+- `bash packaging/scripts/run-release-integration-smoke.sh`
+- `bash ./bin/lint`
+
+### Findings
+- The earlier release smoke was still too shallow for transfer regressions: it exercised versioned API routes, but not the startup/download unit seams that actually produced the `#201` fixes.
+- The remaining unknown is now narrower: if testers can still reproduce all-transfer failure after these startup and enqueue fixes, the next producer is likely below slskd’s current startup/enqueue layers in the Soulseek connection/transfer path itself.
+
+### Completed
+- Traced one concrete `#201` transfer-path bug in `DownloadService.EnqueueAsync(...)`: it was still doing an eager `GetUserEndPointAsync(...)` plus `ConnectToUserAsync(...)` peer-control preflight before scheduling the real transfer work.
+- Removed that auxiliary peer preflight so download enqueue no longer fails early on a separate `Connection refused` path that is not required by the actual `Client.DownloadAsync(...)` transfer pipeline.
+- Added focused `DownloadServiceTests` coverage that now fails if download enqueue ever starts requiring `ConnectToUserAsync(...)` or `GetUserEndPointAsync(...)` again.
+- Documented the peer-preflight gotcha in `ADR-0001` and committed it separately as required (`e4f84359`).
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~DownloadServiceTests|FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ConnectionWatchdogTests" -v minimal`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualifiedName~SecurityRoutesIntegrationTests|FullyQualifiedName~NicotinePlusIntegrationTests" -v minimal`
+- `bash packaging/scripts/run-release-integration-smoke.sh`
+- `bash ./bin/lint`
+
+### Findings
+- The refused-connection spam was not only a logging/suppression problem: the download path really did have a second, unnecessary peer-connect route that could abort enqueue before the owned transfer pipeline ran.
+- This fix narrows `#201`, but it does not yet prove the remaining upload-side and lower-level Soulseek `Connection.ConnectAsync(...)` refusals are fully resolved; those still need dedicated tracing if testers can reproduce them after this change.
+
+## 2026-04-12 11:48 - Deeper route regression coverage for tester issues #200 and #201
+
+### Completed
+- Fixed a still-live Web UI jobs regression that earlier follow-up work missed: `src/web/src/lib/jobs.js` was still building `/api/jobs...` paths even though Axios already targets `/api/v0`, which produced the tester-reported `/api/v0/api/jobs...` 404s.
+- Versioned the native Jobs API and the MediaCore controllers explicitly so the Web UI route families now line up with production `/api/v0/...` behavior instead of depending on permissive test-host defaults.
+- Added release-relevant integration coverage in `VersionedApiRoutesIntegrationTests` for `/api/v0/jobs`, `/api/v0/mediacore/contentid/stats`, `/api/v0/mediacore/perceptualhash/algorithms`, and `/api/v0/mediacore/portability/strategies`, while keeping the existing Bridge/Security regression tests in place.
+- Wired those versioned route suites into `packaging/scripts/run-release-integration-smoke.sh`, so the release smoke path now exercises the same Jobs/Security/Bridge/MediaCore route families the tester was breaking in the real UI.
+- Documented the repeated regression pattern in `ADR-0001` and committed that gotcha separately as required (`5838c1de`).
+- Removed the blanket `Connection refused` benign-unobserved-task special-case from `Program`, so only the narrower Soulseek peer/distributed-network classifier can downgrade expected refusal churn. This stops the global handler from silently masking refused connections from unrelated or still-broken transfer paths.
+- Added/updated focused `ProgramPathNormalizationTests` coverage to prove `Connection refused` is no longer considered benign while still being recognized as an expected Soulseek-network failure when it matches the network-exception classifier.
+- Documented the overbroad benign-refusal suppression pattern in `ADR-0001` and committed that gotcha separately as required (`96dffd12`).
+
+### Verification
+- `npm --prefix src/web test -- --run src/lib/jobs.test.js src/lib/mediacore.test.js src/lib/bridge.test.js`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualifiedName~SecurityRoutesIntegrationTests|FullyQualifiedName~NicotinePlusIntegrationTests" -v minimal`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ConnectionWatchdogTests" -v minimal`
+- `npm --prefix src/web run build`
+- `npm --prefix src/web run test:build-output`
+- `bash ./bin/lint`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~ConnectionWatchdogTests" -v minimal`
+
+### Findings
+- The earlier frontend jobs tests were asserting the broken `/api/jobs` paths, so they actively blessed the regression instead of detecting it.
+- The release smoke script was not running any of the versioned route tests for Jobs, MediaCore, Security, or Bridge, so even correct targeted tests would not have protected tagged builds.
+- Full `dotnet test -v minimal` still does not return cleanly in this environment; after the unit and integration projects report passing counts, the remaining integration `testhost` stays alive without further output. That is a separate gate-reliability problem from the fixed route regressions.
+- The remaining `#201` `Connection refused` spam is still unresolved at the root-cause level: `Program.IsBenignUnobservedTaskException(...)` continues to treat `SocketError.ConnectionRefused` as benign, which is likely hiding the real failing transfer/connect path rather than validating it.
+- The remaining `#201` work is now narrowed: the global handler no longer hides all refused connects, but the actual transfer/connect producer behind the tester’s upload/download failures still needs dedicated tracing and targeted tests.
+
 ## 2026-04-09 16:10 - Release-gate subpath smoke fix for blocked stable builds
 
 ### Completed

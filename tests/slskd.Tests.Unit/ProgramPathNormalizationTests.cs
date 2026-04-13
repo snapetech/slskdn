@@ -158,11 +158,11 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
-    public void IsBenignUnobservedTaskException_ReturnsTrue_ForConnectionRefusedSocketFailure()
+    public void IsBenignUnobservedTaskException_ReturnsFalse_ForConnectionRefusedSocketFailure()
     {
         var exception = new AggregateException(new SocketException((int)SocketError.ConnectionRefused));
 
-        Assert.True(Program.IsBenignUnobservedTaskException(exception));
+        Assert.False(Program.IsBenignUnobservedTaskException(exception));
     }
 
     [Fact]
@@ -194,6 +194,14 @@ public class ProgramPathNormalizationTests
     public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForRemoteConnectionClosedFailures()
     {
         var exception = new AggregateException(new IOException("Remote connection closed"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForConnectionRefusedFailures()
+    {
+        var exception = new AggregateException(new IOException("Connection refused"));
 
         Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
     }

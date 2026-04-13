@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Asp.Versioning;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,8 @@ using slskd.Core.Security;
 /// <summary>
 /// IPLD content graph API controller.
 /// </summary>
-[Route("api/v0/mediacore/ipld")]
+[Route("api/v{version:apiVersion}/mediacore/ipld")]
+[ApiVersion("0")]
 [ApiController]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

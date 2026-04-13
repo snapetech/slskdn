@@ -32,7 +32,7 @@ export const getJobs = async ({
   if (sortOrder) parameters.append('sortOrder', sortOrder);
 
   const queryString = parameters.toString();
-  const url = `/api/jobs${queryString ? `?${queryString}` : ''}`;
+  const url = `/jobs${queryString ? `?${queryString}` : ''}`;
   const response = await api.get(url);
   return response.data;
 };
@@ -43,7 +43,7 @@ export const getJobs = async ({
  * @returns {Promise<object>} Job details
  */
 export const getJob = async (jobId) => {
-  const response = await api.get(`/api/jobs/${encodeURIComponent(jobId)}`);
+  const response = await api.get(`/jobs/${encodeURIComponent(jobId)}`);
   return response.data;
 };
 
@@ -52,7 +52,7 @@ export const createDiscographyJob = async ({
   profile = 'CoreDiscography',
   targetDirectory = '',
 }) => {
-  const response = await api.post('/api/jobs/discography', {
+  const response = await api.post('/jobs/discography', {
     artist_id: artistId,
     profile,
     target_dir: targetDirectory,
@@ -66,7 +66,7 @@ export const createMbReleaseJob = async ({
   tracks = 'all',
   constraints = null,
 }) => {
-  const response = await api.post('/api/jobs/mb-release', {
+  const response = await api.post('/jobs/mb-release', {
     mb_release_id: mbReleaseId,
     target_dir: targetDir,
     tracks,

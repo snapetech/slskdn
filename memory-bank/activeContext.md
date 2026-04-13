@@ -23,11 +23,48 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: No active coding task. The `.123` stable release completed far enough to publish the release and post the Discord announcement, and the mistaken Dependabot ignore change has been superseded on `main` by a real frontend dependency upgrade.
+- **Current Task**: Finish the deeper `#200/#201` follow-up by keeping the release-route and startup/download transfer regressions closed, while tracing any remaining upload-side / lower-level Soulseek transfer failures beyond those fixed seams.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
   - Corrected the frontend dependency handling on `main`: removed the temporary `axios` / `lodash` Dependabot ignore entries, upgraded the actual web dependency state to `axios 1.15.0` with locked `lodash 4.18.1`, rebased the fix onto the `.123` release metadata commit, and pushed it as `5ad4d215`.
+  - Re-reviewed the tester follow-up on issues `#200` and `#201` instead of trusting the earlier “fixed” state:
+    - found that `src/web/src/lib/jobs.js` was still building `/api/jobs...` requests through an Axios client already rooted at `/api/v0`, which exactly explains the tester’s `/api/v0/api/jobs...` 404s
+    - found that the MediaCore controllers still used versioned-looking routes without explicit `ApiVersion` metadata, which is why those endpoints could still fail in production despite passing under the permissive integration host
+    - found that the release integration smoke filter never exercised the versioned Jobs / MediaCore / Security / Bridge route families at all
+  - Fixed those gaps by:
+    - switching the jobs Web UI helper/tests to relative `/jobs...` paths
+    - adding explicit `/api/v{version:apiVersion}/...` + `[ApiVersion("0")]` metadata to `JobsController` and the MediaCore controllers
+    - adding `VersionedApiRoutesIntegrationTests` for the production-facing `/api/v0/...` route families the tester broke
+    - extending `packaging/scripts/run-release-integration-smoke.sh` so release smoke includes the new versioned route tests plus the existing Security/Bridge route suites
+  - Validation for this follow-up:
+    - focused web helper tests passed
+    - focused unit/integration route tests passed
+    - frontend production build passed
+    - built-output verification passed
+    - `bash ./bin/lint` passed
+    - `dotnet test -v minimal` still does not terminate cleanly in this environment after the main test projects report passing counts; the remaining integration `testhost` stays alive without additional output
+  - Documented the route-smoke blind spot in `ADR-0001` and committed the gotcha separately as `5838c1de`.
+  - Tightened the remaining `#201` runtime masking:
+    - removed the blanket `SocketError.ConnectionRefused` benign-unobserved-task special-case from `Program`, so only the narrower Soulseek peer/distributed-network classifier can downgrade expected refusal churn
+    - updated focused unit coverage to prove refused connections are no longer globally blessed as benign while still classifying Soulseek-network refusal churn as expected
+    - documented the suppression gotcha in `ADR-0001` and committed it separately as `96dffd12`
+  - Fixed one concrete remaining `#201` download-path root cause:
+    - removed the eager `GetUserEndPointAsync(...)` / `ConnectToUserAsync(...)` peer-control preflight from `DownloadService.EnqueueAsync(...)`, because it could abort downloads on an auxiliary `Connection refused` path before the real transfer pipeline ran
+    - added `DownloadServiceTests` coverage that now fails if download enqueue starts depending on that preflight again
+    - documented the peer-preflight gotcha in `ADR-0001` and committed it separately as `e4f84359`
+  - Fixed a second startup-side `#201` transfer seam:
+    - extracted `Application.CreateStartupSoulseekClientOptionsPatch(...)` and added the missing `incomingConnectionOptions` assignment so clean startup now configures the same transfer-related option surface that later live reconfigure already used
+    - added `ApplicationLifecycleTests` coverage that fails if startup patching ever drops the incoming transfer connection options again
+    - documented the startup patch drift in `ADR-0001` and committed it separately as `cd345aab`
+  - Re-verified the current regression net after the download-path fix:
+    - focused unit tests for `DownloadServiceTests`, `ProgramPathNormalizationTests`, and `ConnectionWatchdogTests` passed
+    - focused versioned-route integration tests passed
+    - `bash packaging/scripts/run-release-integration-smoke.sh` passed (`39/39`)
+    - `bash ./bin/lint` passed
+  - Tightened the release smoke path itself:
+    - `packaging/scripts/run-release-integration-smoke.sh` now runs the focused startup/transfer unit regression slice (`ApplicationLifecycleTests`, `DownloadServiceTests`, `ProgramPathNormalizationTests`, `ConnectionWatchdogTests`) before the integration route smoke
+    - reran that revised release smoke successfully
   - Monitored `build-main-0.24.5-slskdn.123` and confirmed the stable release path now reaches `Create Main Release` successfully and the `Announce Main Release to Discord` job completes successfully; the Discord outage report was downstream of the earlier release-gate regression, not a webhook failure.
   - Traced the missing Discord announcements to a release-gate regression instead of the webhook job itself: `build-main-0.24.5-slskdn.121` failed before `release-main`, because `src/web/scripts/smoke-subpath-build.mjs` still enforced old relative asset references after the Web UI moved back to root-relative assets plus backend HTML rewriting. Fixed the smoke harness to emulate the backend rewrite model and documented the gotcha in `ADR-0001`.
   - Updated `.github/dependabot.yml` so Dependabot ignores recurring `axios` and `lodash` frontend bumps instead of reopening those PRs, removed invalid Dependabot labels that were generating bot comments, and prepared GitHub cleanup for PRs `#198` and `#203`.
@@ -124,8 +161,8 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `bash ./bin/lint`
     - `git diff --check`
   - Next steps:
-    - commit the `#199` browse-cache fix
-    - decide whether to push it immediately or batch it with the next release cut
+    - trace the still-unresolved `#201` `Connection refused` producer now that the global handler no longer hides all refusal failures
+    - decide whether the hanging full `dotnet test -v minimal` tail is an existing integration-test cleanup item or a release-gate blocker that needs a dedicated harness fix before the next tag
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
   - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
   - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.

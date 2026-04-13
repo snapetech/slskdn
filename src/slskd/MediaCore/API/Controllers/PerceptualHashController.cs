@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Asp.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,7 +19,8 @@ using slskd.Core.Security;
 /// <summary>
 /// Perceptual hash computation API controller.
 /// </summary>
-[Route("api/v0/mediacore/perceptualhash")]
+[Route("api/v{version:apiVersion}/mediacore/perceptualhash")]
+[ApiVersion("0")]
 [ApiController]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

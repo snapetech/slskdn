@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using slskd.Core.API;
 using slskd.Events;
@@ -24,6 +26,27 @@ namespace slskd.Tests.Unit.Core;
 
 public class ApplicationLifecycleTests
 {
+    [Fact]
+    public void CreateStartupSoulseekClientOptionsPatch_ConfiguresIncomingConnectionOptions()
+    {
+        var patch = Application.CreateStartupSoulseekClientOptionsPatch(
+            new OptionsAtStartup(),
+            static (_, _) => { },
+            static (_, _) => Task.FromResult<UserInfo>(null!),
+            static (_, _) => Task.FromResult<BrowseResponse>(null!),
+            static (_, _, _, _) => Task.FromResult<IEnumerable<Soulseek.Directory>>(Array.Empty<Soulseek.Directory>()),
+            static (_, _, _) => Task.CompletedTask,
+            static (_, _, _) => Task.FromResult<SearchResponse?>(null),
+            static (_, _, _) => Task.FromResult<int?>(null));
+
+        Assert.NotNull(patch.PeerConnectionOptions);
+        Assert.NotNull(patch.TransferConnectionOptions);
+        Assert.NotNull(patch.IncomingConnectionOptions);
+        Assert.Equal(patch.PeerConnectionOptions.ReadBufferSize, patch.IncomingConnectionOptions.ReadBufferSize);
+        Assert.Equal(patch.PeerConnectionOptions.WriteBufferSize, patch.IncomingConnectionOptions.WriteBufferSize);
+        Assert.Equal(patch.PeerConnectionOptions.InactivityTimeout, patch.IncomingConnectionOptions.InactivityTimeout);
+    }
+
     [Fact]
     public void Dispose_DetachesManagedStateSubscriptions()
     {
@@ -112,6 +135,7 @@ public class ApplicationLifecycleTests
     }
 
     private static Application CreateApplication(
+        OptionsAtStartup optionsAtStartup,
         TestOptionsMonitor<Options> optionsMonitor,
         ManagedState<State> applicationState,
         ManagedState<ShareState> shareState,
@@ -122,7 +146,7 @@ public class ApplicationLifecycleTests
         applicationHub = new Mock<IClientProxy>();
         soulseekClient = new Mock<ISoulseekClient>();
         var vpnService = new VPNService(
-            new OptionsAtStartup(),
+            optionsAtStartup,
             optionsMonitor,
             Mock.Of<IStateMutator<State>>(),
             soulseekClient.Object,
@@ -131,7 +155,7 @@ public class ApplicationLifecycleTests
             soulseekClient.Object,
             vpnService,
             optionsMonitor,
-            new OptionsAtStartup(),
+            optionsAtStartup,
             applicationState);
         var relayService = new Mock<IRelayService>();
         relayService.SetupGet(x => x.StateMonitor).Returns(relayState);
@@ -139,6 +163,33 @@ public class ApplicationLifecycleTests
 
         var shareService = new Mock<IShareService>();
         shareService.SetupGet(x => x.StateMonitor).Returns(shareState);
+        shareService.Setup(service => service.InitializeAsync(It.IsAny<bool>())).Returns(Task.CompletedTask);
+
+        var uploadService = new Mock<slskd.Transfers.Uploads.IUploadService>();
+        uploadService
+            .Setup(service => service.List(
+                It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Transfers.Transfer, bool>>>(),
+                It.IsAny<bool>()))
+            .Returns([]);
+
+        var downloadService = new Mock<slskd.Transfers.Downloads.IDownloadService>();
+        downloadService
+            .Setup(service => service.List(
+                It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Transfers.Transfer, bool>>>(),
+                It.IsAny<bool>()))
+            .Returns([]);
+
+        var transferService = new Mock<ITransferService>();
+        transferService.SetupGet(service => service.Uploads).Returns(uploadService.Object);
+        transferService.SetupGet(service => service.Downloads).Returns(downloadService.Object);
+
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.ListAsync(
+                It.IsAny<System.Linq.Expressions.Expression<Func<slskd.Search.Search, bool>>>(),
+                It.IsAny<int>(),
+                It.IsAny<int>()))
+            .ReturnsAsync([]);
 
         var hubClients = new Mock<IHubClients>();
         hubClients.SetupGet(x => x.All).Returns(applicationHub.Object);
@@ -148,19 +199,19 @@ public class ApplicationLifecycleTests
         var eventService = new EventService(Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<EventsDbContext>>());
 
         return new Application(
-            new OptionsAtStartup(),
+            optionsAtStartup,
             optionsMonitor,
             applicationState,
             soulseekClient.Object,
             new FileService(optionsMonitor),
             connectionWatchdog,
-            Mock.Of<ITransferService>(),
+            transferService.Object,
             Mock.Of<IBrowseTracker>(),
             Mock.Of<IRoomService>(),
             Mock.Of<IUserService>(),
             Mock.Of<IMessagingService>(),
             shareService.Object,
-            Mock.Of<ISearchService>(),
+            searchService.Object,
             Mock.Of<INotificationService>(),
             relayService.Object,
             appHubContext.Object,
@@ -171,6 +222,24 @@ public class ApplicationLifecycleTests
             Mock.Of<IServiceProvider>(),
             Mock.Of<IServiceScopeFactory>(),
             Mock.Of<slskd.NowPlaying.NowPlayingService>());
+    }
+
+    private static Application CreateApplication(
+        TestOptionsMonitor<Options> optionsMonitor,
+        ManagedState<State> applicationState,
+        ManagedState<ShareState> shareState,
+        ManagedState<RelayState> relayState,
+        out Mock<IClientProxy> applicationHub,
+        out Mock<ISoulseekClient> soulseekClient)
+    {
+        return CreateApplication(
+            new OptionsAtStartup(),
+            optionsMonitor,
+            applicationState,
+            shareState,
+            relayState,
+            out applicationHub,
+            out soulseekClient);
     }
 
     private static int GetStaticEventInvocationCount(Type type, string eventName)

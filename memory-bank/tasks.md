@@ -36,6 +36,11 @@
  - Priority: P1
  - Notes: The new manual share-scan harness reproduces `#193` on the NFS-backed `/mnt/datapool_lvm_media/download/music` tree with `workers=1`: the scan times out after 60s having indexed only 8 files. The same harness passes when `SLSKDN_SHARE_SCAN_SKIP_MEDIA_ATTRIBUTES=1`, which strongly implicates `SoulseekFileFactory` / `TagLib.File.Create(...)` media-attribute extraction as the remaining stall source.
 
+- [ ] **bug**: Trace and contain `#201` transfer-path `Connection refused` unobserved task exceptions.
+ - Status: pending
+ - Priority: P1
+ - Notes: The startup listener race is fixed, the blanket benign-refusal suppression is removed, startup patching now configures `incomingConnectionOptions`, and `DownloadService.EnqueueAsync(...)` no longer aborts on an unnecessary `GetUserEndPointAsync(...)` / `ConnectToUserAsync(...)` peer preflight. The release smoke script now includes focused startup/transfer unit regressions in addition to the versioned integration slice. Remaining work is to trace any still-live upload-side or lower-level Soulseek `Connection.ConnectAsync(...)` refusals if testers can reproduce them after those fixes, and add focused coverage around the actual producer instead of the global unobserved-task handler.
+
 - [ ] **T-919**: Discovery Graph / Constellation substrate
  - Status: in progress
  - Priority: P1

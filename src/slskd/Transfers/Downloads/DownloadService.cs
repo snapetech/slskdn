@@ -317,32 +317,7 @@ namespace slskd.Transfers.Downloads
                 throw new ArgumentException("Two or more files in request are duplicated", nameof(files));
             }
 
-            IPEndPoint endpoint;
-
             Log.Information("Requested enqueue of {Count} files from user {Username}", fileList.Count, username);
-
-            // get the user's ip and port. this will throw if they are offline.
-            try
-            {
-                endpoint = await Client.GetUserEndPointAsync(username, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to enqueue {Count} files from {Username}: {Message}", fileList.Count, username, ex.Message);
-                throw;
-            }
-
-            // prime the cache for this user, to 1) make sure we can connect, and 2) avoid needing to race for it in the loop
-            try
-            {
-                Log.Debug("Priming message connection to {Username}", username);
-                await Client.ConnectToUserAsync(username, invalidateCache: false, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Failed to connect to {Username}: {Message}", username, ex.Message);
-                throw;
-            }
 
             List<Transfer> enqueued = [];
             List<string> failed = [];

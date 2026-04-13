@@ -51,6 +51,7 @@ using slskd.Streaming;
 using slskd.Mesh;
 using slskd.Search.Providers;
 using slskd.Common.Security.API;
+using slskd.MediaCore.API.Controllers;
 using System.Linq;
 using Moq;
 using OptionsModel = global::slskd.Options;
@@ -160,6 +161,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeController).Assembly)
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeAdminController).Assembly)
                         .AddApplicationPart(typeof(SecurityController).Assembly)
+                        .AddApplicationPart(typeof(ContentIdController).Assembly)
                         .ConfigureApplicationPartManager(manager =>
                         {
                             // Exclude conflicting controllers - use JobsController instead
@@ -223,6 +225,8 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                     services.AddSingleton<IModerationProvider, NoopModerationProvider>();
                     services.AddSingleton<IDescriptorPublisher, StubDescriptorPublisher>();
                     services.AddSingleton<IContentIdRegistry, ContentIdRegistry>();
+                    services.AddSingleton<IPerceptualHasher, PerceptualHasher>();
+                    services.AddSingleton<IMetadataPortability>(_ => Mock.Of<IMetadataPortability>());
                     services.AddOptions<MediaCoreOptions>();
                     services.AddSingleton<IContentDescriptorPublisher, ContentDescriptorPublisher>();
                     services.AddSingleton<ICatalogueStore, InMemoryCatalogueStore>();

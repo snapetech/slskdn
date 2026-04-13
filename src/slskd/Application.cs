@@ -465,62 +465,16 @@ namespace slskd
 
             Log.Debug("Configuring client");
 
-            ProxyOptions? proxyOptions = null;
-
-            if (OptionsAtStartup.Soulseek.Connection.Proxy.Enabled)
-            {
-                proxyOptions = new ProxyOptions(
-                    address: OptionsAtStartup.Soulseek.Connection.Proxy.Address,
-                    port: OptionsAtStartup.Soulseek.Connection.Proxy.Port.GetValueOrDefault(),
-                    username: OptionsAtStartup.Soulseek.Connection.Proxy.Username,
-                    password: OptionsAtStartup.Soulseek.Connection.Proxy.Password);
-            }
-
-            var connectionOptions = new ConnectionOptions(
-                readBufferSize: OptionsAtStartup.Soulseek.Connection.Buffer.Read,
-                writeBufferSize: OptionsAtStartup.Soulseek.Connection.Buffer.Write,
-                writeQueueSize: int.MaxValue, // no write queue for peer, server or transfer connections
-                connectTimeout: OptionsAtStartup.Soulseek.Connection.Timeout.Connect,
-                inactivityTimeout: OptionsAtStartup.Soulseek.Connection.Timeout.Inactivity,
-                proxyOptions: proxyOptions);
-
-            // os-specific keepalive is configured for long-lived connections for the server and distributed parent/children
-            var serverOptions = connectionOptions.With(
-                inactivityTimeout: -1, // don't disconnect due to inactivity
-                configureSocket: socket => ConfigureSocketKeepaliveOptions(socket, OptionsAtStartup.Soulseek.Connection));
-
-            var distributedOptions = connectionOptions.With(
-                writeQueueSize: OptionsAtStartup.Soulseek.Connection.Buffer.WriteQueue, // write queue set to keep distributed children from impacting performance
-                configureSocket: socket => ConfigureSocketKeepaliveOptions(socket, OptionsAtStartup.Soulseek.Connection));
-
-            var transferOptions = connectionOptions.With(
-                readBufferSize: OptionsAtStartup.Soulseek.Connection.Buffer.Transfer,
-                writeBufferSize: OptionsAtStartup.Soulseek.Connection.Buffer.Transfer,
-                inactivityTimeout: OptionsAtStartup.Soulseek.Connection.Timeout.Transfer);
-
-            if (!IPAddress.TryParse(OptionsAtStartup.Soulseek.ListenIpAddress, out var startupListenAddress))
-            {
-                Log.Warning("Invalid Soulseek listen IP address '{Address}', defaulting to 0.0.0.0", OptionsAtStartup.Soulseek.ListenIpAddress);
-                startupListenAddress = IPAddress.Any;
-            }
-
-            var patch = new SoulseekClientOptionsPatch(
-                userEndPointCache: new UserEndPointCache(),
-                maximumUploadSpeed: OptionsAtStartup.Global.Upload.SpeedLimit,
-                maximumDownloadSpeed: OptionsAtStartup.Global.Download.SpeedLimit,
-                autoAcknowledgePrivateMessages: false,
-                acceptPrivateRoomInvitations: true,
-                serverConnectionOptions: serverOptions,
-                peerConnectionOptions: connectionOptions,
-                transferConnectionOptions: transferOptions,
-                distributedConnectionOptions: distributedOptions,
-                userInfoResolver: UserInfoResolver,
-                browseResponseResolver: BrowseResponseResolver,
-                directoryContentsResolver: DirectoryContentsResponseResolver,
-                enqueueDownload: EnqueueDownload,
-                searchResponseCache: new SearchResponseCache(),
-                searchResponseResolver: SearchResponseResolver,
-                placeInQueueResolver: PlaceInQueueResolver);
+            var patch = CreateStartupSoulseekClientOptionsPatch(
+                OptionsAtStartup,
+                ConfigureSocketKeepaliveOptions,
+                UserInfoResolver,
+                BrowseResponseResolver,
+                DirectoryContentsResponseResolver,
+                EnqueueDownload,
+                SearchResponseResolver,
+                PlaceInQueueResolver,
+                Log.Warning);
 
             await Client.ReconfigureOptionsAsync(patch);
 
@@ -669,6 +623,78 @@ namespace slskd
             {
                 Log.Error(ex, "Failed to register mesh services in background");
             }
+        }
+
+        internal static SoulseekClientOptionsPatch CreateStartupSoulseekClientOptionsPatch(
+            OptionsAtStartup optionsAtStartup,
+            Action<Socket, Options.SoulseekOptions.ConnectionOptions> configureSocketKeepaliveOptions,
+            Func<string, IPEndPoint, Task<UserInfo>> userInfoResolver,
+            Func<string, IPEndPoint, Task<BrowseResponse>> browseResponseResolver,
+            Func<string, IPEndPoint, int, string, Task<IEnumerable<Soulseek.Directory>>> directoryContentsResolver,
+            Func<string, IPEndPoint, string, Task> enqueueDownload,
+            Func<string, int, SearchQuery, Task<SearchResponse?>> searchResponseResolver,
+            Func<string, IPEndPoint, string, Task<int?>> placeInQueueResolver,
+            Action<string, string>? warnInvalidListenAddress = null)
+        {
+            ProxyOptions? proxyOptions = null;
+
+            if (optionsAtStartup.Soulseek.Connection.Proxy.Enabled)
+            {
+                proxyOptions = new ProxyOptions(
+                    address: optionsAtStartup.Soulseek.Connection.Proxy.Address,
+                    port: optionsAtStartup.Soulseek.Connection.Proxy.Port.GetValueOrDefault(),
+                    username: optionsAtStartup.Soulseek.Connection.Proxy.Username,
+                    password: optionsAtStartup.Soulseek.Connection.Proxy.Password);
+            }
+
+            var connectionOptions = new ConnectionOptions(
+                readBufferSize: optionsAtStartup.Soulseek.Connection.Buffer.Read,
+                writeBufferSize: optionsAtStartup.Soulseek.Connection.Buffer.Write,
+                writeQueueSize: int.MaxValue,
+                connectTimeout: optionsAtStartup.Soulseek.Connection.Timeout.Connect,
+                inactivityTimeout: optionsAtStartup.Soulseek.Connection.Timeout.Inactivity,
+                proxyOptions: proxyOptions);
+
+            var serverOptions = connectionOptions.With(
+                inactivityTimeout: -1,
+                configureSocket: socket => configureSocketKeepaliveOptions(socket, optionsAtStartup.Soulseek.Connection));
+
+            var distributedOptions = connectionOptions.With(
+                writeQueueSize: optionsAtStartup.Soulseek.Connection.Buffer.WriteQueue,
+                configureSocket: socket => configureSocketKeepaliveOptions(socket, optionsAtStartup.Soulseek.Connection));
+
+            var transferOptions = connectionOptions.With(
+                readBufferSize: optionsAtStartup.Soulseek.Connection.Buffer.Transfer,
+                writeBufferSize: optionsAtStartup.Soulseek.Connection.Buffer.Transfer,
+                inactivityTimeout: optionsAtStartup.Soulseek.Connection.Timeout.Transfer);
+
+            if (!IPAddress.TryParse(optionsAtStartup.Soulseek.ListenIpAddress, out var startupListenAddress))
+            {
+                warnInvalidListenAddress?.Invoke(
+                    "Invalid Soulseek listen IP address '{Address}', defaulting to 0.0.0.0",
+                    optionsAtStartup.Soulseek.ListenIpAddress);
+                startupListenAddress = IPAddress.Any;
+            }
+
+            return new SoulseekClientOptionsPatch(
+                userEndPointCache: new UserEndPointCache(),
+                listenIPAddress: startupListenAddress,
+                maximumUploadSpeed: optionsAtStartup.Global.Upload.SpeedLimit,
+                maximumDownloadSpeed: optionsAtStartup.Global.Download.SpeedLimit,
+                autoAcknowledgePrivateMessages: false,
+                acceptPrivateRoomInvitations: true,
+                serverConnectionOptions: serverOptions,
+                peerConnectionOptions: connectionOptions,
+                transferConnectionOptions: transferOptions,
+                incomingConnectionOptions: connectionOptions,
+                distributedConnectionOptions: distributedOptions,
+                userInfoResolver: userInfoResolver,
+                browseResponseResolver: browseResponseResolver,
+                directoryContentsResolver: directoryContentsResolver,
+                enqueueDownload: enqueueDownload,
+                searchResponseCache: new SearchResponseCache(),
+                searchResponseResolver: searchResponseResolver,
+                placeInQueueResolver: placeInQueueResolver);
         }
 
         async Task IHostedService.StopAsync(CancellationToken cancellationToken)

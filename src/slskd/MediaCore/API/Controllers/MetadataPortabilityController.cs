@@ -5,6 +5,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Asp.Versioning;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,7 +18,8 @@ using slskd.Core.Security;
 /// <summary>
 /// Metadata portability API controller.
 /// </summary>
-[Route("api/v0/mediacore/portability")]
+[Route("api/v{version:apiVersion}/mediacore/portability")]
+[ApiVersion("0")]
 [ApiController]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

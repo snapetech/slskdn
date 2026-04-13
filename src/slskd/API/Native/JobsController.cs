@@ -6,6 +6,7 @@ namespace slskd.API.Native;
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,8 @@ using slskd.Jobs;
 /// </summary>
 [ApiController]
 [Route("api/jobs")]
+[Route("api/v{version:apiVersion}/jobs")]
+[ApiVersion("0")]
 [Produces("application/json")]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
 public class JobsController : ControllerBase
