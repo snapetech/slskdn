@@ -259,6 +259,30 @@ FILTER='...|FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualified
 
 ### 0w2. `Connection refused` Must Not Be Blanket-Classified As A Benign Unobserved Task Failure
 
+### 0w3. Tagged Release Notes Must Never Fall Back To The Entire `Unreleased` Section
+
+**The Bug**: The release-note generator preferred a matching changelog section, but when one did not exist yet for the exact tag it fell back to the full `docs/CHANGELOG.md` `## [Unreleased]` section. That caused each new GitHub release body to re-publish old bullets from prior releases instead of only listing the delta since the previous tag.
+
+**Files Affected**:
+- `scripts/generate-release-notes.sh`
+- `docs/CHANGELOG.md`
+
+**Wrong**:
+```bash
+# Tagged release notes pulled the whole rolling Unreleased bucket.
+elif [[ -n "$UNRELEASED_SECTION" ]]; then
+  printf '%s\n\n' "$UNRELEASED_SECTION"
+```
+
+**Correct**:
+```bash
+# Tagged release notes must use either the matching version section or
+# synthesize from the previous-tag commit range. Unreleased is for in-flight
+# work only, not for published tags.
+```
+
+**Why This Keeps Happening**: `Unreleased` is a rolling staging area for future release content, so it always contains a mixture of old and new bullets until someone manually cuts a dated/versioned section. Using it at tag time feels convenient, but it breaks the core release contract: a published release body must describe only the changes introduced since the immediately previous release.
+
 **The Bug**: After the listener-startup race was fixed, `Program.IsBenignUnobservedTaskException(...)` still treated any unobserved `SocketError.ConnectionRefused` as benign. That meant real refused connections from unrelated or still-broken transfer paths could be silently downgraded before the narrower Soulseek-network classifier had a chance to decide whether the failure was expected churn or a real bug.
 
 **Files Affected**:
