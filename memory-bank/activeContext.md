@@ -23,10 +23,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish the deeper `#200/#201` follow-up by keeping the release-route and startup/download transfer regressions closed, while tracing any remaining upload-side / lower-level Soulseek transfer failures beyond those fixed seams.
+- **Current Task**: Clean up the release-note process so tagged releases only describe the delta since the previous published release, then rewrite the latest release entries to match.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed the release-note carry-forward bug:
+    - documented the gotcha in `ADR-0001` and committed it immediately as `4f1b0e80`
+    - updated `scripts/generate-release-notes.sh` so tagged releases never publish the rolling `## [Unreleased]` section
+    - taught the generator to resolve previous published release ranges correctly even when the build starts from `build-main-*` / `build-dev-*` source tags instead of the logical release tag
+    - rewrote `docs/CHANGELOG.md` so it now keeps only `## [Unreleased]` plus the latest three shipped releases (`0.24.5-slskdn.123` / `.124` / `.125`) in a cleaner delta-only format
+    - updated `scripts/validate-changelog-entry.sh` placeholder guidance so it matches the new “move only shipped bullets when cutting a release” rule
+    - validated the generator locally for `0.24.5-slskdn.123`, `.124`, and `.125`, confirming the generated notes now contain only the intended per-release changes
   - Corrected the frontend dependency handling on `main`: removed the temporary `axios` / `lodash` Dependabot ignore entries, upgraded the actual web dependency state to `axios 1.15.0` with locked `lodash 4.18.1`, rebased the fix onto the `.123` release metadata commit, and pushed it as `5ad4d215`.
   - Re-reviewed the tester follow-up on issues `#200` and `#201` instead of trusting the earlier “fixed” state:
     - found that `src/web/src/lib/jobs.js` was still building `/api/jobs...` requests through an Axios client already rooted at `/api/v0`, which exactly explains the tester’s `/api/v0/api/jobs...` 404s

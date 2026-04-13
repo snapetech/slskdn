@@ -785,6 +785,12 @@
   - Status: done
   - Notes: Changed browse-cache readers to allow replacement while streaming, serialized browse-cache rebuilds behind a semaphore, kept temp files in the data directory for atomic replacement, and added focused unit coverage for replacing the cache while a reader is active.
 
+## 2026-04-13 Completed Follow-up
+
+- [x] Clean up release notes so each published release only lists new changes
+  - Status: done
+  - Notes: Removed the tagged-release fallback to `docs/CHANGELOG.md` `## [Unreleased]`, taught the generator to resolve previous published release ranges even when builds start from `build-main-*` / `build-dev-*` tags, rewrote the latest three changelog sections as explicit per-release deltas, and prepared the GitHub release cleanup to keep only the newest three releases.
+
 ## 2026-04-09 Completed Follow-up
 
 - [x] Fix GitHub issues `#200`, `#201`, and `#202`

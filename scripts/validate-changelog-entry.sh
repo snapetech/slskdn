@@ -40,7 +40,7 @@ trim_blank_edges() {
 is_placeholder_unreleased() {
   local section="$1"
   [[ -z "$section" ]] && return 0
-  [[ "$section" == "_Add release notes here while developing; move the bullets into a dated version section before tagging._" ]] && return 0
+  [[ "$section" == "_Add release notes here while developing; move only shipped bullets into a dated version section when a release is cut._" ]] && return 0
   [[ "$section" == "- *(none)*" ]] && return 0
   return 1
 }

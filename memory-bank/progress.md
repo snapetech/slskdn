@@ -5903,6 +5903,13 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`
   - `dotnet test` hit an unrelated environment conflict in `CsrfPortScopedTokenIntegrationTests`: another running slskd instance already owns `/home/keith/.local/share/slskd`, so the full integration suite could not complete cleanly in this shell.
 
+## 2026-04-13 20:45:00Z
+
+- Fixed the release-note carry-forward bug: `scripts/generate-release-notes.sh` no longer publishes `docs/CHANGELOG.md` `## [Unreleased]` for tagged releases, and it now resolves previous-release comparisons correctly even when builds are triggered from `build-main-*` / `build-dev-*` source tags.
+- Rewrote `docs/CHANGELOG.md` into a cleaner rolling format with only `Unreleased` plus the latest three shipped releases (`0.24.5-slskdn.123` / `.124` / `.125`), removing older published sections from the changelog itself.
+- Updated the changelog validator placeholder text so the repo instructions now explicitly say to move only shipped bullets into a dated section when a release is cut.
+- Validated the new generator against the live release ranges by generating fresh notes for `0.24.5-slskdn.123`, `.124`, and `.125`, confirming those outputs now contain only the actual delta for each release.
+
 ## 2026-04-09 21:40:00Z
 
 - Re-opened GitHub issues `#200` and `#201` from fresh tester feedback and fixed the broader remaining causes instead of only the earlier surface symptoms.

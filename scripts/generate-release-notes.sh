@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Repo-backed GitHub Release notes (same idea as iptvTunerr).
-# Prefers docs/CHANGELOG.md section for the logical version, then Unreleased,
-# then commit summaries for the range since the previous tag.
+# Repo-backed GitHub release notes.
+# Tagged releases use either the matching version section in docs/CHANGELOG.md
+# or synthesize notes from the commit delta since the previous release tag.
+# They must never publish the rolling Unreleased bucket.
 #
 # Usage:
 #   ./scripts/generate-release-notes.sh <logical-version> <out-path> [git-ref]
@@ -9,9 +10,9 @@
 # <logical-version> should match a heading in docs/CHANGELOG.md:
 #   ## [<logical-version>] — YYYY-MM-DD   or   ## [<logical-version>]
 #
-# <git-ref> defaults to refs/tags/<logical-version> if that tag exists,
-# otherwise GITHUB_SHA or HEAD (for releases where the version tag is created
-# by the release action after this script runs).
+# <git-ref> defaults to the release source tag when available (for example
+# build-main-<logical-version> / build-dev-<logical-version>), otherwise
+# refs/tags/<logical-version>, GITHUB_SHA, or HEAD.
 
 set -euo pipefail
 
@@ -65,6 +66,23 @@ normalize_remote_url() {
   esac
 }
 
+repo_slug_from_url() {
+  local raw="$1"
+  case "$raw" in
+    https://github.com/*)
+      raw="${raw#https://github.com/}"
+      printf '%s\n' "${raw%.git}"
+      ;;
+    git@github.com:*)
+      raw="${raw#git@github.com:}"
+      printf '%s\n' "${raw%.git}"
+      ;;
+    *)
+      printf '%s\n' ""
+      ;;
+  esac
+}
+
 subject_highlight() {
   local subject="$1"
   subject="$(printf '%s' "$subject" | sed -E 's/^[a-z]+(\([^)]+\))?:[[:space:]]*//')"
@@ -85,8 +103,101 @@ is_release_hygiene_subject() {
   local subject="$1"
   [[ "$subject" =~ ^docs:\ Add\ gotcha\ for\  ]] && return 0
   [[ "$subject" =~ ^docs:\ add\ release\ notes\  ]] && return 0
+  [[ "$subject" =~ ^docs:\ update\ release\  ]] && return 0
   [[ "$subject" =~ ^chore\(release\):\ update\ stable\ metadata\  ]] && return 0
   return 1
+}
+
+logical_is_release_version() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$ ]]
+}
+
+strip_build_prefix() {
+  local tag="$1"
+  tag="${tag#build-main-}"
+  tag="${tag#build-dev-}"
+  printf '%s\n' "$tag"
+}
+
+resolve_current_source_tag() {
+  local logical="$1"
+  local explicit_ref="${2:-}"
+  local candidate=""
+
+  if [[ -n "$explicit_ref" ]] && git rev-parse -q --verify "refs/tags/${explicit_ref}" >/dev/null 2>&1; then
+    printf '%s\n' "$explicit_ref"
+    return 0
+  fi
+
+  for candidate in \
+    "build-main-${logical}" \
+    "build-dev-${logical}" \
+    "${logical}"
+  do
+    if git rev-parse -q --verify "refs/tags/${candidate}" >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+}
+
+find_previous_tag() {
+  local current_tag="$1"
+
+  if [[ -z "$current_tag" ]]; then
+    git describe --tags --abbrev=0 "${GIT_REF}^" 2>/dev/null || true
+    return 0
+  fi
+
+  if [[ "$current_tag" =~ ^build-main- ]]; then
+    git tag --sort=-v:refname |
+      grep -E '^build-main-[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' |
+      awk -v cur="$current_tag" '$0 != cur { print; exit }' || true
+    return 0
+  fi
+
+  if [[ "$current_tag" =~ ^build-dev- ]]; then
+    git tag --sort=-v:refname |
+      grep -E '^build-dev-[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z]+)*$' |
+      awk -v cur="$current_tag" '$0 != cur { print; exit }' || true
+    return 0
+  fi
+
+  if logical_is_release_version "$current_tag"; then
+    git tag --sort=-v:refname |
+      grep -E '^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' |
+      awk -v cur="$current_tag" '$0 != cur { print; exit }' || true
+    return 0
+  fi
+
+  git describe --tags --abbrev=0 "${current_tag}^" 2>/dev/null || true
+}
+
+find_previous_published_release_version() {
+  local logical="$1"
+  local repo_slug="$2"
+  local prev=""
+  local tag=""
+
+  logical_is_release_version "$logical" || return 0
+  command -v gh >/dev/null 2>&1 || return 0
+  [[ -n "$repo_slug" ]] || return 0
+
+  while IFS= read -r tag; do
+    [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$ ]] || continue
+    if [[ "$tag" == "$logical" ]]; then
+      break
+    fi
+    prev="$tag"
+  done < <(
+    gh release list \
+      --repo "$repo_slug" \
+      --limit 100 \
+      --json tagName \
+      --jq '.[].tagName' 2>/dev/null | sort -V
+  )
+
+  printf '%s\n' "$prev"
 }
 
 LOGICAL_VERSION="${1:-}"
@@ -97,10 +208,17 @@ GIT_REF_ARG="${3:-}"
 
 REMOTE_URL="$(git config --get remote.origin.url || true)"
 REPO_URL="$(normalize_remote_url "$REMOTE_URL")"
+REPO_SLUG="$(repo_slug_from_url "$REMOTE_URL")"
+CURRENT_SOURCE_TAG="$(resolve_current_source_tag "$LOGICAL_VERSION" "$GIT_REF_ARG")"
 
-# Resolve anchor ref for dates + commit range
 if [[ -n "$GIT_REF_ARG" ]]; then
-  GIT_REF="$GIT_REF_ARG"
+  if git rev-parse -q --verify "refs/tags/${GIT_REF_ARG}" >/dev/null 2>&1; then
+    GIT_REF="refs/tags/${GIT_REF_ARG}"
+  else
+    GIT_REF="$GIT_REF_ARG"
+  fi
+elif [[ -n "$CURRENT_SOURCE_TAG" ]]; then
+  GIT_REF="refs/tags/${CURRENT_SOURCE_TAG}"
 elif git rev-parse -q --verify "refs/tags/${LOGICAL_VERSION}" >/dev/null 2>&1; then
   GIT_REF="refs/tags/${LOGICAL_VERSION}"
 else
@@ -110,27 +228,27 @@ fi
 git rev-parse -q --verify "$GIT_REF" >/dev/null || err "git ref not found: $GIT_REF"
 
 RELEASE_DATE="$(git log -1 --format=%cs "$GIT_REF")"
+PREV_RELEASE_VERSION="$(find_previous_published_release_version "$LOGICAL_VERSION" "$REPO_SLUG")"
+PREV_TAG=""
+PREV_DISPLAY_TAG=""
 
-# Previous tag: stable slskdn semver tags first when this release uses that scheme
-logical_is_release_version() {
-  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$ ]]
-}
+if [[ -n "$PREV_RELEASE_VERSION" ]]; then
+  PREV_DISPLAY_TAG="$PREV_RELEASE_VERSION"
+  for candidate in \
+    "build-main-${PREV_RELEASE_VERSION}" \
+    "build-dev-${PREV_RELEASE_VERSION}" \
+    "${PREV_RELEASE_VERSION}"
+  do
+    if git rev-parse -q --verify "refs/tags/${candidate}" >/dev/null 2>&1; then
+      PREV_TAG="$candidate"
+      break
+    fi
+  done
+fi
 
-if logical_is_release_version "$LOGICAL_VERSION"; then
-  PREV_TAG="$(
-    git tag --sort=-v:refname |
-      grep -E '^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' |
-      awk -v cur="$LOGICAL_VERSION" '$0 != cur { print; exit }' || true
-  )"
-  if [[ -z "$PREV_TAG" ]]; then
-    PREV_TAG="$(
-      git tag --sort=-v:refname | awk -v cur="$LOGICAL_VERSION" '$0 != cur { print; exit }' || true
-    )"
-  fi
-else
-  PREV_TAG="$(
-    git tag --sort=-v:refname | awk -v cur="$LOGICAL_VERSION" '$0 != cur { print; exit }' || true
-  )"
+if [[ -z "$PREV_TAG" ]]; then
+  PREV_TAG="$(find_previous_tag "$CURRENT_SOURCE_TAG")"
+  PREV_DISPLAY_TAG="$(strip_build_prefix "$PREV_TAG")"
 fi
 
 TAG_SECTION="$(extract_changelog_section "## [$LOGICAL_VERSION] — $RELEASE_DATE" || true)"
@@ -143,15 +261,10 @@ if [[ -z "$TAG_SECTION" && -f "$CHANGELOG_PATH" ]]; then
     ' "$CHANGELOG_PATH" | trim_blank_edges || true
   )"
 fi
-UNRELEASED_SECTION="$(extract_changelog_section "## [Unreleased]" || true)"
-
-if [[ "$UNRELEASED_SECTION" == "- *(none)*" ]]; then
-  UNRELEASED_SECTION=""
-fi
 
 if [[ -n "$PREV_TAG" ]]; then
   RANGE="${PREV_TAG}..${GIT_REF}"
-  COMPARE_URL="$REPO_URL/compare/${PREV_TAG}...${LOGICAL_VERSION}"
+  COMPARE_URL="$REPO_URL/compare/${PREV_DISPLAY_TAG}...${LOGICAL_VERSION}"
 else
   RANGE="${GIT_REF}^!"
   COMPARE_URL=""
@@ -188,19 +301,16 @@ mkdir -p "$(dirname "$OUT_PATH")"
   printf 'Released: %s\n\n' "$RELEASE_DATE"
 
   if [[ -n "$PREV_TAG" && -n "$REPO_URL" ]]; then
-    printf 'Compare: [%s...%s](%s)\n\n' "$PREV_TAG" "$LOGICAL_VERSION" "$COMPARE_URL"
+    printf 'Compare: [%s...%s](%s)\n\n' "$PREV_DISPLAY_TAG" "$LOGICAL_VERSION" "$COMPARE_URL"
   elif [[ -n "$PREV_TAG" ]]; then
-    printf 'Compare: `%s...%s`\n\n' "$PREV_TAG" "$LOGICAL_VERSION"
+    printf 'Compare: `%s...%s`\n\n' "$PREV_DISPLAY_TAG" "$LOGICAL_VERSION"
   fi
 
-  printf '## What Changed\n\n'
+  printf '## Highlights\n\n'
 
   if [[ -n "$TAG_SECTION" ]]; then
     printf '%s\n\n' "$TAG_SECTION"
     printf '_Source: `%s` section for `%s`._\n\n' "$CHANGELOG_PATH" "$LOGICAL_VERSION"
-  elif [[ -n "$UNRELEASED_SECTION" ]]; then
-    printf '%s\n\n' "$UNRELEASED_SECTION"
-    printf '_Source: `%s` `Unreleased` section at release time._\n\n' "$CHANGELOG_PATH"
   else
     if [[ -z "$DISPLAY_COMMITS" ]]; then
       printf '%s\n\n' "- No recorded changes found for \`${LOGICAL_VERSION}\`."
@@ -222,7 +332,6 @@ mkdir -p "$(dirname "$OUT_PATH")"
     while IFS=$'\t' read -r sha subject; do
       short_sha="${sha:0:7}"
       if [[ -n "$REPO_URL" ]]; then
-        # Subject may contain '%'; avoid printf format parsing on the message body.
         printf '%s\n' "- \`${short_sha}\` ${subject} ([commit](${REPO_URL}/commit/${sha}))"
       else
         printf '%s\n' "- \`${short_sha}\` ${subject}"

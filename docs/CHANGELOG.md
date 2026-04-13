@@ -1,73 +1,41 @@
 # Changelog
 
-All notable changes to slskdN are documented here. Release pages on GitHub use
-[`scripts/generate-release-notes.sh`](../scripts/generate-release-notes.sh), which prefers the matching section below, then **Unreleased**, then the commit list since the previous tag.
+All notable changes to slskdN are documented here. GitHub release pages use
+[`scripts/generate-release-notes.sh`](../scripts/generate-release-notes.sh),
+which prefers the matching version section below and otherwise falls back to
+the commit delta since the previous release tag. Tagged releases must never
+publish the rolling `## [Unreleased]` section.
 
-Feature/fix work belongs in `## [Unreleased]` when the commit lands, not later when a release is being cut. PR CI and the local pre-commit hook now block release-worthy changes if `## [Unreleased]` was not updated.
+Feature and fix work belongs in `## [Unreleased]` when the commit lands. When a
+release is cut, move only the shipped bullets into the new versioned section so
+each release note reflects the delta from the previous release.
 
-Use headings in this form (date optional but helps match the generator):
+Use headings in this form:
 
 ```markdown
-## [0.24.5-slskdn.72] — 2026-03-19
+## [<version>] — YYYY-MM-DD
 ```
 
-For dev / build tags, use the same string as `needs.parse.outputs.version` (the version embedded in `build-dev-*` / `build-main-*` tags).
+For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
-
-## [0.24.5-slskdn.103] — 2026-03-28
-
-- Fixed packaged installs so the documented `/etc/slskd/slskd.yml` is actually authoritative and the default Web UI path centers on plain HTTP `:5030` instead of an ambiguous `5030`/`5031` split.
-- Hardened SongID YouTube handling so missing `yt-dlp` degrades to metadata-only analysis instead of failing the run, and updated packaging so supported installs include `yt-dlp` by default.
-- Restored broken SongID handoff actions like `Plan Discography` and album planning by fixing the native jobs API payload casing in the web client.
-- Fixed Search page batch actions so multi-search creation retries the backend's serialized-create `429` instead of failing when several searches are queued together.
-- Made every top-level Search page panel collapsible and left `Search Results` expanded by default so active searches and results stay reachable on long pages.
-- Prevented SongID runs from stalling indefinitely at `artist_graph` by time-boxing deep MusicBrainz artist release-graph expansion and falling back to lightweight artist candidates.
-- Tightened SongID-generated search actions so they use canonical `Artist - Track` queries instead of concatenating uploader, album, duplicate title, and other metadata noise into Soulseek searches.
 
 ## [Unreleased]
 
-- Added Matrix release announcements to the existing tagged dev/stable GitHub release workflow so the same short notices posted to Discord are now also sent into the configured `timeways.net` room.
-- Updated the frontend dependency state to `axios 1.15.0` and the locked transitive `lodash 4.18.1`, eliminating the previously open Dependabot bumps and bringing `npm audit` in `src/web` back to `0` vulnerabilities.
-- Fixed the release-gate subpath smoke harness so it now emulates the backend HTML rewrite layer for `web.url_base` deployments instead of enforcing the obsolete relative-asset build model, which had been blocking stable tag releases before the Discord announcement jobs could run.
-- Added tag-workflow Discord release announcements for both dev and stable slskdN GitHub releases, driven by the repository secret `DISCORD_RELEASE_WEBHOOK` after the release is published.
-- Fixed the remaining System Web UI regressions reported by testers: eliminated residual `/api/v0/api/v0/...` frontend requests, repaired Bridge admin payload handling, made saved search rows reopen their existing results instead of starting duplicate searches, and restored dark-theme readability for the Network mesh/hash/backfill statistics.
-- Finished the issue `#200` follow-up by restoring hard-refresh support on client-side routes like `/system`, versioning the Bridge and Security Web UI/API paths consistently, and preserving legacy `/api/bridge/...` compatibility for existing bridge consumers.
-- Closed the remaining `#200` Web UI/API gaps by fixing the Jobs client path double-prefix (`/api/v0/api/jobs`), adding explicit version metadata for the MediaCore route families the System pages use, and extending release smoke so tagged builds exercise those production `/api/v0/...` routes before shipping.
-- Added real PWA install plumbing for Android and subpath deployments by shipping a registered service worker alongside the existing manifest and keeping the manifest/icon references relative so mobile browsers can offer app installation instead of only a shortcut.
-- Added explicit Network-page and troubleshooting guidance for the confirmed "logged in but zero peers/transfers" failure mode so operators are pointed directly at the Soulseek listen-port (`50300/tcp` by default), firewall, NAT, and container-port checks.
-- Finished the issue `#201` follow-up by moving Soulseek listener/distributed-network bootstrap settings into the initial client options instead of enabling the listener only later during startup reconfiguration, which removes the `Not listening. You must call the Start() method...` startup race at the source.
-- Closed two more concrete `#201` transfer-path bugs by removing the unnecessary download enqueue peer preflight that could fail on an auxiliary `Connection refused`, and by making startup Soulseek patching configure `incomingConnectionOptions` the same way later live reconfigure already did; release smoke now includes the focused startup/transfer regression tests that cover those paths.
-- Fixed the remaining share-scan stall path for large or slow libraries by skipping unnecessary moderation hashing and avoiding eager video metadata probing on the hot scan path, then added both synthetic and manual share-scan harnesses to reproduce low-progress scan failures locally before shipping builds.
-- Fixed `browse.cache` refreshes so live browse-response readers no longer block cache replacement, and serialized cache rebuilds to stop overlapping refreshes from racing each other.
-- Made initial share scans less aggressive out of the box by changing the default `shares.cache.workers` value from full CPU count to a conservative host-aware cap, and documented the knob more clearly for further operator tuning on weaker or stronger machines.
-- Fixed Web UI state-changing requests when cookie auth is enabled by separating the antiforgery cookie token from the JavaScript request token and making the client prefer the current port-specific token instead of grabbing the first `XSRF-TOKEN*` cookie.
-- Fixed the follow-on CSRF regression for reverse-proxy/default-port installs by making the web client use the injected backend port for `XSRF-TOKEN-{port}` lookup and fall back to the single available port-scoped token when the browser URL has no visible port.
-- Added a full-instance CSRF regression test for the Web UI share-rescan path and fixed the full-instance integration harness to prefer the freshly built `Debug` app binary instead of stale `Release` output.
-- Fixed share rescan progress so in-flight scan updates stay monotonic even when parallel scanner workers complete out of order, preventing the UI/logged percentage and file counts from jumping backward mid-scan.
-- Downgraded more expected Soulseek peer/distributed-network teardown exceptions from fake process-fatal telemetry to normal network churn so inbound connection races and PierceFirewall edge cases stop looking like daemon crashes.
-- Downgraded the remaining expected Soulseek unobserved peer/distributed-network churn from warning spam to debug-only noise and taught the matcher to treat normal `Remote connection closed` teardown as expected.
-- Added focused backend regression coverage for the expected Soulseek network-churn exception classifier so the downgraded timeout/cancel/remote-close paths stay covered.
-- Replaced the release-gate-hostile `SecurityUtils` constant-time wall-clock microbenchmark assertions with deterministic correctness coverage so stable tags no longer fail on CI runner timing jitter.
-- Folded the remaining low-risk frontend dependency updates directly into `main` (`vite 8.0.5`, `esbuild 0.28.0`, `@playwright/test 1.59.1`, `@types/node 25.5.2`, `lodash-es 4.18.1`) and refreshed the checked-in Docker docs/example config to match the current `ghcr.io/snapetech/slskdn` image and feature set.
-- Centralized all AUR publish logic into shared packaging scripts, switched AUR clone/fetch/rebase traffic to HTTPS, and kept SSH only for the final authenticated push so release workflows stop failing on transient AUR SSH read-side disconnects or drifting YAML copies.
-- Blocked Dependabot major-version churn for the deliberately pinned direct `Microsoft.Extensions.*` package line so the same unresolved 9.x→10.x PRs stop reopening on every release cycle.
-- Moved the direct `Microsoft.Extensions.*` runtime and performance-test companion packages onto `10.0.5`, eliminating the `NU1605` downgrade failure that had been blocking the `Microsoft.Extensions.Caching.Memory` Dependabot upgrade.
-- Fixed the two sidecar CI regressions introduced during the dependency cleanup: Dependabot now skips the nonstandard upstream-check workflow that its GitHub Actions parser cannot read, and the performance-test project now aligns `System.Configuration.ConfigurationManager` with the upgraded dotNetRdf dependency graph.
-- Fixed the remaining open `SessionController` CodeQL login alert by moving admin credential verification behind the security service, and updated CodeQL to scan the live `main` branch so fixes on the release branch clear instead of lingering.
-- Grouped non-breaking Dependabot updates by ecosystem to collapse the release-time dependency PR flood into a small set of batched update PRs.
-- Froze `@uiw/react-codemirror` Dependabot updates until the planned React migration because the current 4.25.x line now requires React 17+ while the repo stays on React 16.8.6.
-- Folded the remaining safe dependency bumps directly into `main` for `Serilog.Sinks.Console`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and `OpenTelemetry.Extensions.Hosting`, leaving only the incompatible React 17 CodeMirror update out of band.
-- Folded the first grouped NuGet non-breaking update into `main` as well, including the aligned performance-test package pins needed to avoid restore-time downgrade failures.
-- Absorbed the remaining direct NuGet update PRs for `System.Text.Json 10.0.5` and `YamlDotNet 16.3.0`, again aligning the performance-test project so dependency-submission restore stays green.
-- Absorbed the follow-up stable Roslyn analyzer bump and the remaining grouped frontend dev-tool updates (`@playwright/test`, `less`) so Dependabot no longer has leftover low-risk PRs queued behind the new baseline.
-- Pinned the Roslyn pair back to `Microsoft.CodeAnalysis.CSharp 5.0.0` / `Microsoft.CodeAnalysis.Analyzers 3.11.0` and blocked future auto-upgrades there because the newer 5.3.x line emits `CS9057` against the repo's current compiler baseline.
-- Reverted the breaking `Swashbuckle.AspNetCore 10.x` auto-upgrade to `6.6.2` and blocked future major-version Dependabot PRs for that package until the OpenAPI integration is migrated deliberately.
-- Merged the previously detached `build-main-0.24.5-slskdn.92` through `.101` history back into `main`, restoring the missing Docker startup hardening, release/packaging fixes, runtime lifecycle fixes, and expanded unit/integration coverage that had been built on tags but never merged.
-- Downgraded expected Soulseek peer and distributed-network unobserved task exceptions from fake process-fatal telemetry to warning-level noise so normal P2P timeout/refusal churn no longer looks like a daemon crash.
-- Fixed the Docker image default HTTP bind address so published container ports now serve the Web UI from outside the container instead of binding Kestrel to loopback-only `127.0.0.1`.
-- Synced the checked-in stable package metadata back to the latest published stable release `0.24.5-slskdn.105` so release gating and downstream package manifests stop disagreeing about the current baseline.
-- Hardened Launchpad PPA uploads in the release workflows by enabling passive FTP and bounded retry so transient FTP-side failures stop breaking otherwise-valid stable/dev package publishes.
-- Fixed the stable release metadata workflow so it emits the full checksum set expected by `update-stable-release-metadata.sh`, restoring the `Update Main Repo Metadata` job for tagged releases.
+- *(none)*
 
----
+## [0.24.5-slskdn.125] — 2026-04-13
+
+- Closed the remaining tester follow-up on issues `#200` and `#201` by fixing the last versioned Web UI/API route gaps, tightening MediaCore and Jobs API versioning, removing the blanket benign `Connection refused` suppression, and covering those production `/api/v0/...` paths in release smoke.
+- Removed the unnecessary download enqueue peer preflight that could fail on an auxiliary `Connection refused`, and aligned startup Soulseek option patching so `incomingConnectionOptions` is configured at startup the same way later live reconfigure already does.
+- Added Matrix release announcements to the tagged dev and stable release workflow.
+
+## [0.24.5-slskdn.124] — 2026-04-09
+
+- Updated the frontend dependency baseline to `axios 1.15.0` and locked transitive `lodash 4.18.1`, clearing the standing Dependabot bumps and returning `npm audit` in `src/web` to `0` vulnerabilities.
+
+## [0.24.5-slskdn.123] — 2026-04-09
+
+- Finished the earlier issues `#200` and `#201` follow-up by restoring hard-refresh support on client-side routes, versioning the Bridge and Security Web UI/API paths consistently, preserving legacy Bridge compatibility, and moving Soulseek listener bootstrap settings into the initial client options.
+- Fixed the release-gate subpath smoke harness so it mirrors the backend HTML rewrite behavior for `web.url_base` deployments instead of enforcing the obsolete relative-asset build model.
+- Added Discord release announcements for tagged dev and stable releases, and blocked recurring `axios` / `lodash` Dependabot churn that was reopening the same low-value dependency PRs.
