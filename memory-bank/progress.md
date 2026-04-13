@@ -5903,6 +5903,14 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`
   - `dotnet test` hit an unrelated environment conflict in `CsrfPortScopedTokenIntegrationTests`: another running slskd instance already owns `/home/keith/.local/share/slskd`, so the full integration suite could not complete cleanly in this shell.
 
+## 2026-04-13 21:25:00Z
+
+- Reproduced the remaining peer-operation failure in a fresh two-node local Soulfind probe and isolated it away from the earlier startup/download fixes.
+- Verified the exact failure mode:
+  - with `Soulseek.ListenIpAddress = 127.0.0.1`, Alice saw Bob's endpoint as `172.17.0.1:<port>` from the server and every peer-facing call (`/users/{username}/endpoint`, `/info`, `/browse`) failed with `Failed to establish a direct or indirect message connection`
+  - with `Soulseek.ListenIpAddress = 0.0.0.0`, the same `endpoint`, `info`, and `browse` calls succeeded immediately against the same local topology
+- Added a startup validation guard in `Options.Validate(...)` that rejects loopback `Soulseek.ListenIpAddress` when `Flags.NoConnect` is false, added focused unit coverage in `SoulseekOptionsValidationTests`, and clarified the example config comment so operators do not bind the live Soulseek listener to loopback by mistake.
+
 ## 2026-04-13 20:45:00Z
 
 - Fixed the release-note carry-forward bug: `scripts/generate-release-notes.sh` no longer publishes `docs/CHANGELOG.md` `## [Unreleased]` for tagged releases, and it now resolves previous-release comparisons correctly even when builds are triggered from `build-main-*` / `build-dev-*` source tags.

@@ -790,6 +790,9 @@
 - [x] Clean up release notes so each published release only lists new changes
   - Status: done
   - Notes: Removed the tagged-release fallback to `docs/CHANGELOG.md` `## [Unreleased]`, taught the generator to resolve previous published release ranges even when builds start from `build-main-*` / `build-dev-*` tags, rewrote the latest three changelog sections as explicit per-release deltas, and prepared the GitHub release cleanup to keep only the newest three releases.
+- [x] Block the Soulseek loopback-listener misconfiguration that makes peer ops fail after login
+  - Status: done
+  - Notes: Reproduced the `logged in but all peer connections fail` path against local Soulfind, proved it was caused by `Soulseek.ListenIpAddress = 127.0.0.1` advertising an unreachable external endpoint, then added startup validation plus focused unit coverage so live clients must use `0.0.0.0` or another reachable interface.
 
 ## 2026-04-09 Completed Follow-up
 

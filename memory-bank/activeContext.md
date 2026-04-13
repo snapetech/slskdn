@@ -23,10 +23,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Clean up the release-note process so tagged releases only describe the delta since the previous published release, then rewrite the latest release entries to match.
+- **Current Task**: Re-check the remaining transfer failure path after the `#200/#201` fixes and close any still-live peer connectivity root causes before the next release.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Reproduced the still-open peer connectivity failure in a fresh two-node local Soulfind probe and proved it was not another download-engine regression:
+    - with `Soulseek.ListenIpAddress = 127.0.0.1`, Alice resolved Bob to `172.17.0.1:<port>` and `endpoint`, `info`, and `browse` all failed with `Failed to establish a direct or indirect message connection`
+    - rerunning the same topology with `Soulseek.ListenIpAddress = 0.0.0.0` made the same peer operations succeed immediately
+  - Added a startup validation guard in `Options.Validate(...)` so live clients now reject loopback `Soulseek.ListenIpAddress` when `Flags.NoConnect` is false, added focused unit coverage in `SoulseekOptionsValidationTests`, and updated the example config comment to steer operators toward reachable listener binds.
+  - Documented the loopback-listener gotcha in `ADR-0001` and committed it separately as `4f984008`.
   - Fixed the release-note carry-forward bug:
     - documented the gotcha in `ADR-0001` and committed it immediately as `4f1b0e80`
     - updated `scripts/generate-release-notes.sh` so tagged releases never publish the rolling `## [Unreleased]` section

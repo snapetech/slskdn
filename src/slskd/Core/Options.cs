@@ -26,6 +26,7 @@ namespace slskd
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Text.Json.Serialization;
     using System.Text.RegularExpressions;
     using FluentFTP;
@@ -480,6 +481,15 @@ namespace slskd
             if (InstanceName == Program.LocalHostName && Relay.Mode.ToEnum<RelayMode>() == RelayMode.Agent)
             {
                 results.Add(new ValidationResult($"Instance name must be something other than '{Program.LocalHostName}' when operating in Relay Agent mode"));
+            }
+
+            if (!Flags.NoConnect &&
+                IPAddress.TryParse(Soulseek.ListenIpAddress, out var soulseekListenAddress) &&
+                IPAddress.IsLoopback(soulseekListenAddress))
+            {
+                results.Add(new ValidationResult(
+                    "Soulseek.ListenIpAddress must not be a loopback address when the client is connecting. Use 0.0.0.0 or a reachable LAN/VPN interface instead.",
+                    [nameof(Soulseek), nameof(Flags)]));
             }
 
             // Validate realm configuration (T-REALM-01, T-REALM-02)
