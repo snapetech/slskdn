@@ -5954,3 +5954,20 @@ Code quality improvements were completed as part of Option A:
   - `cd src/web && npm run build`
   - `git diff --check`
   - `gh run view 24215101350 --repo snapetech/slskdn --json status,conclusion,jobs,url`
+
+## 2026-04-14 15:39:56Z
+
+- Cleaned up the remaining open GitHub PR dependency chores on `main` by folding the safe bump set directly into the branch instead of leaving four Dependabot PRs open:
+  - `src/slskd/slskd.csproj`: `YamlDotNet 17.0.1`, `dotNetRDF 3.5.1`, `OpenTelemetry` / console / OTLP / hosting `1.15.2`
+  - `src/web/package.json` / `package-lock.json`: `follow-redirects 1.16.0`, `@microsoft/signalr 7.0.14`, `@types/node 25.6.0`, `@vitest/coverage-v8 4.1.4`, `eslint 8.57.1`, `vite 8.0.8`, `vitest 4.1.4`
+  - kept `@uiw/react-codemirror` on `4.21.21` after checking the newer line and finding it now declares `react >=17`, which is incompatible with the repo's React 16 baseline
+- Hit and fixed two dependency-batch regressions during validation:
+  - documented and reverted `jsdom 29.0.2` after Vitest fork workers started failing on JSDOM/parse5/entities bootstrap in this repo; committed the gotcha separately as `39eb984c`
+  - aligned `tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` to `YamlDotNet 17.0.1` after the main-project bump exposed a solution restore downgrade (`NU1605`)
+- Validation for the dependency/release chore pass:
+  - `npm test --prefix src/web`
+  - `npm run build --prefix src/web`
+  - `npm run test:build-output --prefix src/web`
+  - `bash packaging/scripts/run-release-gate.sh`
+  - `bash ./bin/lint`
+  - `dotnet test -v minimal` still hangs after reporting passing suite counts in this environment; added a follow-up task to isolate that harness tail separately from the now-green release gate

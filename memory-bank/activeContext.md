@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Re-check the remaining transfer failure path after the `#200/#201` fixes and close any still-live peer connectivity root causes before the next release.
+- **Current Task**: Finish the April 14 dependency/release chore pass on `main`: push the tested dependency bump batch, close the superseded Dependabot PRs, and trigger the next stable `build-main-*` tag.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -172,9 +172,22 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `dotnet test`
     - `bash ./bin/lint`
     - `git diff --check`
+  - Ran the April 14 dependency/release chore pass on `main`:
+    - folded the four remaining open Dependabot PRs into one local batch (`YamlDotNet 17.0.1`, `dotNetRDF 3.5.1`, `OpenTelemetry` / console / OTLP / hosting `1.15.2`, plus the safe web toolchain/security bumps)
+    - kept `@uiw/react-codemirror` on `4.21.21` after confirming the newer line now peers on `react >=17`, which does not fit the repo's React 16 baseline
+    - documented and reverted the `jsdom 29.0.2` Vitest worker bootstrap regression immediately in ADR-0001 (`39eb984c`)
+    - aligned `tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj` to `YamlDotNet 17.0.1` after the main-project bump exposed a `NU1605` downgrade during solution restore
+  - Validation for the dependency/release pass:
+    - `npm test --prefix src/web`
+    - `npm run build --prefix src/web`
+    - `npm run test:build-output --prefix src/web`
+    - `bash packaging/scripts/run-release-gate.sh`
+    - `bash ./bin/lint`
+    - broad `dotnet test -v minimal` still hangs after reporting passing suite counts in this environment; the green release gate remains the more reliable release signal for now
   - Next steps:
-    - trace the still-unresolved `#201` `Connection refused` producer now that the global handler no longer hides all refusal failures
-    - decide whether the hanging full `dotnet test -v minimal` tail is an existing integration-test cleanup item or a release-gate blocker that needs a dedicated harness fix before the next tag
+    - commit and push the remaining dependency/docs changes on `main`
+    - close superseded Dependabot PRs `#204`-`#207` after the branch is pushed
+    - push `build-main-0.24.5-slskdn.129` from the tested branch tip
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
   - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
   - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.
@@ -321,10 +334,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the GitHub-target guard rails on `main`.
-2. Keep using `./scripts/verify-github-target.sh` before any GitHub issue / PR / release write action from this checkout.
-3. Re-check the `build-main-0.24.5-slskdn.113` release and the red sidecar workflows after GitHub reruns them.
-4. Confirm the open PR queue is still empty after Dependabot reprocesses the updated policy.
+1. Commit and push the tested dependency/release chore batch on `main`.
+2. Close superseded Dependabot PRs `#204`-`#207` once the branch tip is on GitHub.
+3. Push `build-main-0.24.5-slskdn.129` from the validated branch tip and monitor the run.
+4. Isolate the still-hanging full `dotnet test -v minimal` tail as a separate harness follow-up.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)

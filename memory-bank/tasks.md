@@ -26,6 +26,11 @@
  - Priority: P3
  - Notes: The March 2026 security dependency refresh cleared `npm audit`, but `@vitejs/plugin-react` still advertises support through Vite 7 and `@vitest/coverage-v8` still peers against the older Vitest line. Follow up with a deliberate toolchain alignment pass instead of mixing peer-range churn into security-only fixes.
 
+- [ ] **bug**: Trace the still-hanging full `dotnet test -v minimal` tail after the main suites report passing.
+ - Status: pending
+ - Priority: P2
+ - Notes: The April 14 dependency/release chore pass restored green release-gate validation, but a broad `dotnet test -v minimal` run in this environment still stops returning output after the unit suite reports passing counts. The release gate and focused smoke slices pass, so this remains a separate harness/cleanup problem to isolate before relying on the broad solution-level test command as a hard release signal.
+
 - [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
  - Status: completed (2026-04-08)
  - Priority: P2
