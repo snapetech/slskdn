@@ -1350,6 +1350,7 @@ namespace slskd
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
             services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
             services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
+            services.AddSingleton<slskd.API.Native.IJobServiceWithList, slskd.Jobs.HashDbJobServiceListAdapter>();
             services.AddSingleton<Signals.Swarm.ISwarmJobStore, Signals.Swarm.InMemorySwarmJobStore>();
             services.AddSingleton<Signals.Swarm.ISecurityPolicyEngine, Signals.Swarm.StubSecurityPolicyEngine>();
             services.AddSingleton<Signals.Swarm.IBitTorrentBackend, Signals.Swarm.MonoTorrentBitTorrentBackend>();
