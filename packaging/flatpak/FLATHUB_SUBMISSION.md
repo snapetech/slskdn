@@ -9,8 +9,8 @@ Before submitting to Flathub, update `io.github.slskd.slskdn.yml` as follows.
 
 ## 2. slskdn application — ✅ done
 
-- `slskdn` module uses `https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.126/slskdn-main-linux-x64.zip` with sha256.
-- Asset names from the GitHub API can differ from release notes: for `0.24.5-slskdn.126` the Linux x64 asset is `slskdn-main-linux-x64.zip`. Dev builds use `slskdn-dev-linux-x64.zip`.
+- `slskdn` module uses `https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.128/slskdn-main-linux-x64.zip` with sha256.
+- Asset names from the GitHub API can differ from release notes: for `0.24.5-slskdn.128` the Linux x64 asset is `slskdn-main-linux-x64.zip`. Dev builds use `slskdn-dev-linux-x64.zip`.
 - Build-commands copy `slskd*`, `*.dll`, and `wwwroot/` into `/app/lib/slskdn/`. Wrapper runs `/app/dotnet/dotnet /app/lib/slskdn/slskd.dll`.
 
 ## 3. Icon — ✅ done
