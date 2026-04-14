@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z1. `jsdom 29.0.2` Breaks This Vitest/JSDOM Stack Even When Plain Node Imports Still Resolve
+
+**The Bug**: Bumping the web test toolchain from `jsdom 29.0.1` to `29.0.2` caused Vitest fork workers to fail before any tests ran, with `Cannot find module 'parse5'` and `Cannot find module 'entities/decode'` coming from the JSDOM HTML parser path, even though direct `node --input-type=module` imports of `parse5` and `entities/decode` still succeeded.
+
+**Files Affected**:
+- `src/web/package.json`
+- `src/web/package-lock.json`
+
+**Wrong**:
+```json
+"jsdom": "^29.0.2"
+```
+
+```text
+Vitest worker bootstrap can fail in this repo with parse5/entities resolution errors
+after that bump, so a plain npm install + node import smoke check is not enough.
+```
+
+**Correct**:
+```json
+"jsdom": "^29.0.1"
+```
+
+```text
+Keep the last known-good JSDOM line unless the Vitest worker pool passes again in
+this exact repo environment after the upgrade.
+```
+
+**Why This Keeps Happening**: Dependency bumps that look safe in isolation can still break this repo's older React/Vitest/JSDOM stack in ways that only show up when Vitest forks its workers. Direct package-resolution spot checks are weaker than the actual `npm test` path here, so test-runner dependencies need real end-to-end Vitest validation before they are kept.
+
 ### 0z. Release-Gate Subpath Smoke Checks Must Mirror Backend HTML Rewrite Behavior, Not Old Relative-Asset Assumptions
 
 **The Bug**: The frontend build was correctly switched back to root-relative asset URLs (`/assets/...`) with ASP.NET HTML rewriting for `web.url_base`, but the release-gate smoke script still expected built `index.html` to contain relative asset references like `./assets/...`. Stable tag builds failed in `run-release-gate.sh` before any release jobs or Discord announcements could run.
