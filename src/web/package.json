@@ -44,7 +44,7 @@
     "esbuild": "^0.28.0",
     "eslint": "^8.57.1",
     "eslint-config-canonical": "^47.4.2",
-    "jsdom": "29.0.1",
+    "jsdom": "29.0.2",
     "less": "^4.6.4",
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
