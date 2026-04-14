@@ -23,6 +23,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 ## [Unreleased]
 
 - Rejected loopback `Soulseek.ListenIpAddress` binds for live clients so slskd fails fast instead of logging in successfully while all peer-facing operations (`info`, `browse`, transfers) silently break behind an unreachable advertised endpoint. `Flags.NoConnect = true` still permits loopback for offline/testing scenarios.
+- Fixed the real root causes behind the persistent tester reports on `#200` and `#201`: the web service worker was cache-first on navigations and pre-cached the app shell, serving a stale `index.html` that pointed at asset bundle hashes no longer on disk after every rebuild (blank new tabs, 404s on `/assets/*`); it is now network-first for HTML, never caches `/assets/*`, and the shell cache name is bumped so old versions are purged on activate.
+- Removed `listenIPAddress` from the startup `SoulseekClientOptionsPatch`. It is already applied via `CreateInitialSoulseekClientOptions`; re-applying it through `ReconfigureOptionsAsync` at startup tore down the `TcpListener` mid-accept and raced `Listener.ListenContinuouslyAsync`, producing the `Not listening. You must call the Start() method before calling this method.` exception and leaving the listener stopped so every inbound peer connection was refused and all transfers failed.
+- Added `GET api/v{version}/jobs` aggregating discography and label-crate jobs from HashDb with `type`/`status`/`limit`/`offset`/`sortBy`/`sortOrder` filtering and the snake-cased response shape (`jobs`, `total`, `has_more`, per-job `progress.{releases_total,releases_done,releases_failed}`) consumed by `System/Jobs`. Adds `ListDiscographyJobsAsync` and `ListLabelCrateJobsAsync` to `IHashDbService`.
 
 ## [0.24.5-slskdn.125] — 2026-04-13
 

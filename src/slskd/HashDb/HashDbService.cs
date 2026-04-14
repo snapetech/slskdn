@@ -2124,6 +2124,65 @@ namespace slskd.HashDb
         }
 
         /// <inheritdoc/>
+        public async Task<IReadOnlyList<Jobs.DiscographyJob>> ListDiscographyJobsAsync(CancellationToken cancellationToken = default)
+        {
+            var results = new List<Jobs.DiscographyJob>();
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT job_id, artist_id, artist_name, profile, target_directory, total_releases, completed_releases, failed_releases, status, created_at, json_data
+                FROM DiscographyJobs
+                ORDER BY created_at DESC";
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var json = reader.IsDBNull(10) ? null : reader.GetString(10);
+                Jobs.DiscographyJob? job = null;
+
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    try
+                    {
+                        job = JsonSerializer.Deserialize<Jobs.DiscographyJob>(json, CaseInsensitiveJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warning(ex, "[HashDb] Failed to deserialize discography job from list row");
+                    }
+                }
+
+                if (job == null)
+                {
+                    var profileText = reader.IsDBNull(3) ? null : reader.GetString(3);
+                    var statusText = reader.IsDBNull(8) ? null : reader.GetString(8);
+                    job = new Jobs.DiscographyJob
+                    {
+                        JobId = reader.GetString(0).Trim(),
+                        ArtistId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
+                        ArtistName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2).Trim(),
+                        Profile = Enum.TryParse<Integrations.MusicBrainz.DiscographyProfile>(profileText, ignoreCase: true, out var profile)
+                            ? profile
+                            : Integrations.MusicBrainz.DiscographyProfile.CoreDiscography,
+                        TargetDirectory = reader.IsDBNull(4) ? string.Empty : reader.GetString(4).Trim(),
+                        TotalReleases = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                        CompletedReleases = reader.IsDBNull(6) ? 0 : reader.GetInt32(6),
+                        FailedReleases = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
+                        Status = Enum.TryParse<Jobs.JobStatus>(statusText, ignoreCase: true, out var status)
+                            ? status
+                            : Jobs.JobStatus.Pending,
+                        CreatedAt = reader.IsDBNull(9) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(9)),
+                    };
+                }
+
+                results.Add(NormalizeDiscographyJob(job));
+            }
+
+            return results;
+        }
+
+        /// <inheritdoc/>
         public async Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default)
         {
             if (job == null || string.IsNullOrWhiteSpace(job.JobId))
@@ -2629,6 +2688,61 @@ namespace slskd.HashDb
                     : Jobs.JobStatus.Pending,
                 CreatedAt = reader.IsDBNull(8) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(8)),
             });
+        }
+
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<LabelCrateJob>> ListLabelCrateJobsAsync(CancellationToken cancellationToken = default)
+        {
+            var results = new List<LabelCrateJob>();
+
+            using var conn = GetConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT job_id, label_id, label_name, limit_count, total_releases, completed_releases, failed_releases, status, created_at, json_data
+                FROM LabelCrateJobs
+                ORDER BY created_at DESC";
+
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var json = reader.IsDBNull(9) ? null : reader.GetString(9);
+                LabelCrateJob? job = null;
+
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    try
+                    {
+                        job = JsonSerializer.Deserialize<LabelCrateJob>(json, CaseInsensitiveJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warning(ex, "[HashDb] Failed to deserialize label crate job from list row");
+                    }
+                }
+
+                if (job == null)
+                {
+                    var statusText = reader.IsDBNull(7) ? null : reader.GetString(7);
+                    job = new LabelCrateJob
+                    {
+                        JobId = reader.GetString(0).Trim(),
+                        LabelId = reader.IsDBNull(1) ? string.Empty : reader.GetString(1).Trim(),
+                        LabelName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2).Trim(),
+                        Limit = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
+                        TotalReleases = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                        CompletedReleases = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                        FailedReleases = reader.IsDBNull(6) ? 0 : reader.GetInt32(6),
+                        Status = Enum.TryParse<Jobs.JobStatus>(statusText, ignoreCase: true, out var status)
+                            ? status
+                            : Jobs.JobStatus.Pending,
+                        CreatedAt = reader.IsDBNull(8) ? DateTimeOffset.UtcNow : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(8)),
+                    };
+                }
+
+                results.Add(NormalizeLabelCrateJob(job));
+            }
+
+            return results;
         }
 
         /// <inheritdoc/>

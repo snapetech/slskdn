@@ -668,17 +668,23 @@ namespace slskd
                 writeBufferSize: optionsAtStartup.Soulseek.Connection.Buffer.Transfer,
                 inactivityTimeout: optionsAtStartup.Soulseek.Connection.Timeout.Transfer);
 
-            if (!IPAddress.TryParse(optionsAtStartup.Soulseek.ListenIpAddress, out var startupListenAddress))
+            if (!IPAddress.TryParse(optionsAtStartup.Soulseek.ListenIpAddress, out _))
             {
                 warnInvalidListenAddress?.Invoke(
                     "Invalid Soulseek listen IP address '{Address}', defaulting to 0.0.0.0",
                     optionsAtStartup.Soulseek.ListenIpAddress);
-                startupListenAddress = IPAddress.Any;
             }
 
+            // NOTE: deliberately do NOT set listenIPAddress / listenPort / enableListener here.
+            // Those are already applied via CreateInitialSoulseekClientOptions() when the
+            // SoulseekClient is constructed. Including them in the startup patch causes
+            // ReconfigureOptionsAsync to tear down and restart the TcpListener while
+            // Listener.ListenContinuouslyAsync is mid-accept, producing the
+            // "Not listening. You must call the Start() method before calling this method."
+            // race and, in some cases, leaving the listener permanently stopped so all
+            // incoming peer connections are refused and every transfer fails.
             return new SoulseekClientOptionsPatch(
                 userEndPointCache: new UserEndPointCache(),
-                listenIPAddress: startupListenAddress,
                 maximumUploadSpeed: optionsAtStartup.Global.Upload.SpeedLimit,
                 maximumDownloadSpeed: optionsAtStartup.Global.Download.SpeedLimit,
                 autoAcknowledgePrivateMessages: false,

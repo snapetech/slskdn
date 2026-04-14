@@ -217,6 +217,8 @@ namespace slskd.HashDb
         // ========== Discography Jobs ==========
         Task<Jobs.DiscographyJob?> GetDiscographyJobAsync(string jobId, CancellationToken cancellationToken = default);
 
+        Task<IReadOnlyList<Jobs.DiscographyJob>> ListDiscographyJobsAsync(CancellationToken cancellationToken = default);
+
         Task UpsertDiscographyJobAsync(Jobs.DiscographyJob job, CancellationToken cancellationToken = default);
 
         Task<List<Jobs.DiscographyReleaseJobStatus>> GetDiscographyReleaseJobsAsync(string jobId, CancellationToken cancellationToken = default);
@@ -234,6 +236,8 @@ namespace slskd.HashDb
 
         // ========== Label Crate Jobs ==========
         Task<Jobs.LabelCrateJob?> GetLabelCrateJobAsync(string jobId, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<Jobs.LabelCrateJob>> ListLabelCrateJobsAsync(CancellationToken cancellationToken = default);
 
         Task UpsertLabelCrateJobAsync(Jobs.LabelCrateJob job, CancellationToken cancellationToken = default);
 
