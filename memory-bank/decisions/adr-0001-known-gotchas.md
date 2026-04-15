@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z3. `@testing-library/react` Major Upgrades Can Require A Direct `@testing-library/dom` Dependency In This Repo
+
+**The Bug**: After upgrading the web stack to React 18 and `@testing-library/react` 16, Vitest failed before several suites could load with `Cannot find module '@testing-library/dom'`. The repo had `@testing-library/react` installed, but not the DOM package it now expects in this dependency graph.
+
+**Files Affected**:
+- `src/web/package.json`
+- `src/web/package-lock.json`
+
+**Wrong**:
+```json
+"devDependencies": {
+  "@testing-library/react": "^16.3.2"
+}
+```
+
+```text
+Vitest can fail at module load time because @testing-library/react no longer
+brings in a usable @testing-library/dom path here automatically.
+```
+
+**Correct**:
+```json
+"devDependencies": {
+  "@testing-library/dom": "^10.4.1",
+  "@testing-library/react": "^16.3.2"
+}
+```
+
+**Why This Keeps Happening**: Testing-library upgrades look like a simple React-version follow-up, but their package graph changes across majors. When bumping `@testing-library/react`, run the full Vitest suite and treat any missing peer/helper package as part of the same upgrade instead of assuming the old dependency tree still holds.
+
 ### 0z2. React Router Major Migrations Must Remove Every Stale v5 `history` / `match` Reference, Not Just The Imports
 
 **The Bug**: During the React Router 7 migration, `Searches.jsx` was updated to `useNavigate()` and `useParams()`, but one old fallback still called `history.replace(match.url.replace(...))`. Lint caught `match` as undefined, but the deeper problem is that partial router migrations leave dead v5 navigation code behind in edge-path cleanup branches.
