@@ -87,6 +87,33 @@ if (enableBridge)
 
 **Why This Keeps Happening**: Integration harnesses that rely on external binaries cannot assume those tools exist on every dev or CI machine. If a test path needs `soulfind`, check that prerequisite before spawning the main application process and fail or skip fast with a clear message; otherwise the suite ends up diagnosing a stuck host instead of the real missing dependency.
 
+### 0z5. Long Fixed Delays In Integration Tests Can Trigger `--blame-hang` Even When The Code Path Is Fine
+
+**The Bug**: `DisasterModeTests.Disaster_Mode_Recovery_Should_Deactivate_When_Soulfind_Returns` timed out under `dotnet test --blame-hang --blame-hang-timeout 30s` because the test spent most of its runtime inside two blind `Task.Delay(...)` calls while never asserting the underlying state transition. The host was still alive, but the runner saw 30 seconds of inactivity and killed the suite.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/DisasterMode/DisasterModeTests.cs`
+
+**Wrong**:
+```csharp
+await soulfind!.StopAsync();
+await Task.Delay(TimeSpan.FromSeconds(15));
+
+await soulfind.StartAsync();
+await Task.Delay(TimeSpan.FromSeconds(10));
+```
+
+**Correct**:
+```csharp
+await soulfind!.StopAsync();
+await WaitForStatusEndpointAsync(alice!);
+
+await soulfind.StartAsync();
+await WaitForStatusEndpointAsync(alice);
+```
+
+**Why This Keeps Happening**: Long integration waits are easy to add while sketching end-to-end scenarios, especially when the test has TODO assertions. Under hang diagnostics, a quiet sleep is indistinguishable from a stuck testhost. Poll the observable condition you care about instead of burning fixed delays.
+
 ### 0z3. `@testing-library/react` Major Upgrades Can Require A Direct `@testing-library/dom` Dependency In This Repo
 
 **The Bug**: After upgrading the web stack to React 18 and `@testing-library/react` 16, Vitest failed before several suites could load with `Cannot find module '@testing-library/dom'`. The repo had `@testing-library/react` installed, but not the DOM package it now expects in this dependency graph.
