@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z4. Bridge Integration Tests Must Preflight External `soulfind` Prerequisites Before Launching A Full `slskdn` Instance
+
+**The Bug**: `dotnet test slskd.sln` could hang in `BridgeProxyServerIntegrationTests` when the environment did not have a `soulfind` binary. The test harness launched a full `slskdn` process in bridge mode first, then waited for the bridge listener, so the suite never failed or skipped cleanly when the external bridge dependency was missing.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+
+**Wrong**:
+```csharp
+if (enableBridge)
+{
+    bridgePort = bridgePortOverride ?? AllocateEphemeralPort();
+}
+
+slskdnProcess = Process.Start(startInfo);
+await WaitForApiReadyAsync(ct);
+await WaitForBridgeReadyAsync(bridgePort.Value, ct);
+```
+
+**Correct**:
+```csharp
+if (enableBridge)
+{
+    bridgePort = bridgePortOverride ?? AllocateEphemeralPort();
+
+    if (string.IsNullOrEmpty(DiscoverSoulfindBinary()))
+    {
+        throw new InvalidOperationException(
+            "Soulfind binary not found. Install soulfind or set SOULFIND_PATH before running bridge integration tests.");
+    }
+}
+```
+
+**Why This Keeps Happening**: Integration harnesses that rely on external binaries cannot assume those tools exist on every dev or CI machine. If a test path needs `soulfind`, check that prerequisite before spawning the main application process and fail or skip fast with a clear message; otherwise the suite ends up diagnosing a stuck host instead of the real missing dependency.
+
 ### 0z3. `@testing-library/react` Major Upgrades Can Require A Direct `@testing-library/dom` Dependency In This Repo
 
 **The Bug**: After upgrading the web stack to React 18 and `@testing-library/react` 16, Vitest failed before several suites could load with `Cannot find module '@testing-library/dom'`. The repo had `@testing-library/react` installed, but not the DOM package it now expects in this dependency graph.
