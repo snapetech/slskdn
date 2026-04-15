@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z2. React Router Major Migrations Must Remove Every Stale v5 `history` / `match` Reference, Not Just The Imports
+
+**The Bug**: During the React Router 7 migration, `Searches.jsx` was updated to `useNavigate()` and `useParams()`, but one old fallback still called `history.replace(match.url.replace(...))`. Lint caught `match` as undefined, but the deeper problem is that partial router migrations leave dead v5 navigation code behind in edge-path cleanup branches.
+
+**Files Affected**:
+- `src/web/src/components/Search/Searches.jsx`
+- `src/web/src/components/App.jsx`
+- `src/web/src/components/System/System.jsx`
+
+**Wrong**:
+```javascript
+import { useNavigate, useParams } from 'react-router-dom';
+
+// ...later, in an edge path that did not get migrated:
+history.replace(match.url.replace(`/${searchId}`, ''));
+```
+
+**Correct**:
+```javascript
+import { useNavigate, useParams } from 'react-router-dom';
+
+const navigate = useNavigate();
+
+// ...all route repair/redirect paths must use the same router API:
+navigate('/searches', { replace: true });
+```
+
+**Why This Keeps Happening**: Router major upgrades are easy to do mechanically at the import level while missing less-traveled fallback branches. Every file moving off Router v5 needs a full pass for `history`, `match`, `Redirect`, and route-render props, not just the happy-path navigation buttons.
+
 ### 0z1. `jsdom 29.0.2` Breaks This Vitest/JSDOM Stack Even When Plain Node Imports Still Resolve
 
 **The Bug**: Bumping the web test toolchain from `jsdom 29.0.1` to `29.0.2` caused Vitest fork workers to fail before any tests ran, with `Cannot find module 'parse5'` and `Cannot find module 'entities/decode'` coming from the JSDOM HTML parser path, even though direct `node --input-type=module` imports of `parse5` and `entities/decode` still succeeded.
@@ -286,6 +315,48 @@ FILTER='...|FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualified
 ```
 
 **Why This Keeps Happening**: Route regressions can hide behind two layers of false confidence at once: unit tests that only assert whatever broken path a helper currently builds, and release smoke filters that skip the exact versioned routes the Web UI uses in production. For Web UI APIs, tests must assert the helper's relative path against the shared Axios base URL, controllers must declare explicit version metadata when serving `/api/v{version:apiVersion}/...`, and release smoke must include at least one end-to-end probe for every critical System-page route family.
+
+### 0w1a. Search UI Actions Must Import The Same API Helper Module They Invoke
+
+**The Bug**: A search response action called `library.createBatch(...)` without importing `library`, so the UI path only failed at runtime when users queued nearby graph searches from a result card.
+
+**Files Affected**:
+- `src/web/src/components/Search/Response.jsx`
+
+**Wrong**:
+```javascript
+const count = await library.createBatch({ queries });
+```
+
+**Correct**:
+```javascript
+import * as searches from '../../lib/searches';
+
+const count = await searches.createBatch({ queries });
+```
+
+**Why This Keeps Happening**: Nearby components use slightly different helper names (`search`, `searches`, `library`, `createBatch`), so copy/paste between panels can leave a stale identifier behind. Any new UI action that queues searches should be checked against its import list, not just nearby components with similar behavior.
+
+### 0w1b. Do Not Mix `+` And `??` Without Explicitly Defaulting Each Operand First
+
+**The Bug**: Explorer totals used `directory?.directories?.length + directory?.files?.length ?? 0`, which looks like “sum lengths or fall back to zero” but actually evaluates the addition first and can produce `NaN` before the nullish coalescing runs.
+
+**Files Affected**:
+- `src/web/src/components/System/Files/Explorer.jsx`
+
+**Wrong**:
+```javascript
+const total = directory?.directories?.length + directory?.files?.length ?? 0;
+```
+
+**Correct**:
+```javascript
+const total =
+  (directory?.directories?.length ?? 0) +
+  (directory?.files?.length ?? 0);
+```
+
+**Why This Keeps Happening**: `??` has lower precedence than `+`, so a fallback at the end of an arithmetic expression does not protect intermediate operands. When optional values participate in math, default each term before the calculation.
 
 ### 0w2. `Connection refused` Must Not Be Blanket-Classified As A Benign Unobserved Task Failure
 
