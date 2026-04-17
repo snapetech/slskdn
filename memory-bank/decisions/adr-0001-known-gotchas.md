@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z11. A Reported "Still Broken" Release Can Actually Be A Stale Running Install, So The App Must Self-Identify Its Executable And Config Paths
+
+**The Bug**: We treated issue `#209` as if the new DHT build was still failing in the same way, but the reporter's WebUI still showed version `126` while they believed they had installed `131`. That means the running process was still an older binary, and we had no fast way to prove which executable/config path the live instance was actually using.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Core/State.cs`
+
+**Wrong**:
+```text
+Validate the fix in code and release assets, then assume the reporter's machine is actually running that new binary.
+```
+
+**Correct**:
+```text
+Make the live process identify itself clearly: log the executable path and base directory at startup,
+and expose the running executable/app/config paths in runtime state so /system/info shows what is
+actually running before diagnosing the feature itself.
+```
+
+**Why This Keeps Happening**: Once a repo has package installs, raw zip installs, systemd units, and reused app directories, an operator can replace one tree while the service still launches another. Version mismatches then look like feature regressions. Before calling a user report a failed fix, first prove the live process version and path match the release you think they installed.
+
 ### 0z10. Release Assets Must Not Publish The Same Build Under Both Stable And Version-Named Zip Files
 
 **The Bug**: Stable releases were uploading identical Linux payloads multiple times under names like `slskdn-main-linux-x64.zip` and `slskdn-0.24.5.slskdn.131-linux-x64.zip`. That made the release page look like it contained extra architectures or variants when it was really the same archive duplicated for compatibility.

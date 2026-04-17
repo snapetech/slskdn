@@ -895,3 +895,7 @@
 - [x] Fix issue `#209` at the actual DHT bootstrap root cause instead of adding more operator-facing logging
   - Status: done
   - Notes: Reproduced the failure in a bare MonoTorrent `3.0.2` probe, confirmed the older package stalls with `nodes=0`, upgraded to `MonoTorrent 3.0.3-alpha.unstable.rev0049`, made slskdn pass explicit `dht.bootstrap_routers`, added startup validation, and updated the example config.
+
+- [x] Make runtime state expose executable/base/config paths for release-debugging
+  - Status: done
+  - Notes: Added startup/runtime self-identification after issue #209 proved a user can think they installed a new zip while the live process is still an older binary.

@@ -23,10 +23,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release asset cleanup and dependency roll-up in progress. Tagged release workflows are aligned to `.NET 10`, Matrix release redaction uses `PUT`, and Linux release assets are being standardized on explicit `linux-glibc-*` naming without duplicate stable/versioned zip uploads.
+- **Current Task**: Re-verify issue #209 after the reporter still saw the same DHT error, and close the stale-install blind spot by making the running process self-identify its executable/config paths in logs and `/system/info`.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+
+  - Re-opened issue `#209` after the reporter said the same DHT error remained and verified the shipped release artifacts directly:
+    - downloaded the published `0.24.5-slskdn.130` and `.131` ARM64 zip assets locally and confirmed `.131` contains the newer `slskd.dll` / `MonoTorrent.dll` bits
+    - confirmed the reporter's `version 126` UI screenshot/log evidence means the live instance was still running an older backend, not the `131` backend we thought they were testing
+  - Added runtime self-identification to prevent another false positive:
+    - startup now logs the executable path and base directory
+    - `/system/info` now exposes the running executable path, base directory, app directory, config path, and process id via `State.Runtime`
   - Fixed the release-pipeline follow-up after the `#209` build review:
     - updated all workflow `DOTNET_VERSION` pins plus the Dockerfile SDK/runtime images from `.NET 8` to `.NET 10`, which addresses the tagged Docker build failure (`NETSDK1045`)
     - corrected both Matrix release-announcement cleanup calls in `build-on-tag.yml` to use `PUT` for `/redact/...`, matching the homeserver behavior that was returning `405`

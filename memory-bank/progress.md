@@ -6123,3 +6123,14 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SoulseekOptionsValidationTests|FullyQualifiedName~HostedServiceLifecycleTests" -v minimal`
   - `dotnet build src/slskd/slskd.csproj -v minimal`
   - standalone MonoTorrent probe confirming the newer package seeds the DHT routing table immediately while `3.0.2` does not
+
+## 2026-04-17 22:40:00Z
+
+- Re-investigated issue `#209` after the reporter said the same DHT error remained and found the new release itself was not the whole story:
+  - downloaded the published `0.24.5-slskdn.130` and `.131` ARM64 zip assets locally
+  - confirmed the `131` release does contain the new DHT backend bits (`slskd.dll` and `MonoTorrent.dll` differ from `130`)
+  - confirmed the reporter's evidence still points to a stale running install because their WebUI showed version `126` and their logs used the old bootstrap warning text
+- Tightened runtime self-identification so stale installs are obvious:
+  - `Program` now logs the running executable path and base directory at startup
+  - `State` now exposes `runtime.executablePath`, `runtime.baseDirectory`, `runtime.appDirectory`, `runtime.configurationFile`, and `runtime.processId`, which shows up directly in `/system/info`
+  - added a focused unit test in `ApplicationControllerTests` that locks the runtime-state values to the current `Program` statics
