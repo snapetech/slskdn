@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Re-verify issue #209 after the reporter still saw the same DHT error, and close the stale-install blind spot by making the running process self-identify its executable/config paths in logs and `/system/info`.
+- **Current Task**: Reproduce the shipped release/install path around issue #209 and make stable releases ship a supported Linux installer path so upgrades cannot silently keep running an older `slskd` service binary.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -34,6 +34,10 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added runtime self-identification to prevent another false positive:
     - startup now logs the executable path and base directory
     - `/system/info` now exposes the running executable path, base directory, app directory, config path, and process id via `State.Runtime`
+  - Reproduced the published `0.24.5-slskdn.131` Linux release zip directly and confirmed the artifact itself reports `131`, which shifts the remaining `#209` problem from the binary payload to the Linux install/migration path when users upgrade from an existing `slskd` systemd service
+  - Fixed that release packaging gap:
+    - added `packaging/linux/install-from-release.sh` as a supported Linux installer/migration path for release users
+    - updated stable and dev release workflows to publish `slskd.service`, `slskd.yml`, `slskd.sysusers`, and `install-linux-release.sh` alongside the zip assets
   - Fixed the release-pipeline follow-up after the `#209` build review:
     - updated all workflow `DOTNET_VERSION` pins plus the Dockerfile SDK/runtime images from `.NET 8` to `.NET 10`, which addresses the tagged Docker build failure (`NETSDK1045`)
     - corrected both Matrix release-announcement cleanup calls in `build-on-tag.yml` to use `PUT` for `/redact/...`, matching the homeserver behavior that was returning `405`

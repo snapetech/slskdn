@@ -86,6 +86,10 @@ expect_line packaging/snap/snapcraft.yaml '^name: slskdn$'
 
 reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
 expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-glibc-x64\.zip'
+expect_literal .github/workflows/build-on-tag.yml 'cp packaging/linux/install-from-release.sh release/install-linux-release.sh'
+expect_literal .github/workflows/build-on-tag.yml 'sha256sum *.zip slskd.service slskd.yml slskd.sysusers install-linux-release.sh > SHA256SUMS.txt'
+expect_literal .github/workflows/build-on-tag.yml 'cp packaging/aur/slskd.service packaging/aur/slskd.yml packaging/aur/slskd.sysusers release/'
+
 expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
 
 expect_line packaging/aur/PKGBUILD '^source=\($'

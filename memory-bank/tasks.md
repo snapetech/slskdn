@@ -899,3 +899,7 @@
 - [x] Make runtime state expose executable/base/config paths for release-debugging
   - Status: done
   - Notes: Added startup/runtime self-identification after issue #209 proved a user can think they installed a new zip while the live process is still an older binary.
+
+- [x] Ship a supported Linux release installer path with stable GitHub releases
+  - Status: done
+  - Notes: Stable releases now publish `install-linux-release.sh` plus the Linux service/config helper assets so release users upgrading from an existing `slskd` service do not have to hand-wire the new binary path.

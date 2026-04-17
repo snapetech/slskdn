@@ -196,7 +196,9 @@ jobs:
           mkdir -p release
           find artifacts -name "*.zip" -exec cp {} release/ \;
           cp packaging/aur/slskd.service packaging/aur/slskd.yml packaging/aur/slskd.sysusers release/
-          cd release && sha256sum *.zip > SHA256SUMS.txt && cd ..
+          cp packaging/linux/install-from-release.sh release/install-linux-release.sh
+          chmod +x release/install-linux-release.sh
+          cd release && sha256sum *.zip slskd.service slskd.yml slskd.sysusers install-linux-release.sh > SHA256SUMS.txt && cd ..
           ls -lh release/
           echo "=== SHA256SUMS.txt ==="
           cat release/SHA256SUMS.txt
@@ -1221,7 +1223,10 @@ jobs:
         run: |
           mkdir -p release
           find artifacts -name "*.zip" -exec cp {} release/ \;
-          cd release && sha256sum *.zip > SHA256SUMS.txt && cd ..
+          cp packaging/aur/slskd.service packaging/aur/slskd.yml packaging/aur/slskd.sysusers release/
+          cp packaging/linux/install-from-release.sh release/install-linux-release.sh
+          chmod +x release/install-linux-release.sh
+          cd release && sha256sum *.zip slskd.service slskd.yml slskd.sysusers install-linux-release.sh > SHA256SUMS.txt && cd ..
           ls -lh release/
           echo "=== SHA256SUMS.txt ==="
           cat release/SHA256SUMS.txt

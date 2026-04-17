@@ -6134,3 +6134,20 @@ Code quality improvements were completed as part of Option A:
   - `Program` now logs the running executable path and base directory at startup
   - `State` now exposes `runtime.executablePath`, `runtime.baseDirectory`, `runtime.appDirectory`, `runtime.configurationFile`, and `runtime.processId`, which shows up directly in `/system/info`
   - added a focused unit test in `ApplicationControllerTests` that locks the runtime-state values to the current `Program` statics
+
+## 2026-04-17 23:20:00Z
+
+- Reproduced the published release path directly instead of guessing from source state:
+  - downloaded and extracted the published `0.24.5-slskdn.131` Linux x64 zip
+  - ran the shipped binary against a temporary app/config directory and confirmed the live API reports `0.24.5-slskdn.131`
+  - confirmed the release artifact itself is not secretly `126`; the remaining bug is the Linux install/migration path for users coming from an existing `slskd` service
+- Fixed the stable-release packaging gap that allowed that confusion:
+  - added `packaging/linux/install-from-release.sh`, a supported Linux release installer that downloads the right x64/arm64 asset, installs `.NET 10`, replaces `/opt/slskdn`, and rewrites `slskd.service` to the extracted release tree
+  - updated `.github/workflows/build-on-tag.yml` so both dev and stable releases ship `slskd.service`, `slskd.yml`, `slskd.sysusers`, and `install-linux-release.sh` alongside the zips
+  - updated packaging metadata validation to fail if the workflow stops publishing the installer/helper assets
+  - documented the supported release-installer path in `README.md` and added the shipped change to `docs/CHANGELOG.md`
+- Validation:
+  - `bash -n packaging/linux/install-from-release.sh`
+  - `bash packaging/scripts/validate-packaging-metadata.sh`
+  - `bash ./bin/lint`
+  - `git diff --check`
