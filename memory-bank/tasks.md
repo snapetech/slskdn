@@ -56,6 +56,11 @@
  - Priority: P1
  - Notes: Stopped publishing duplicate version-named stable zip assets, standardized Linux release artifacts on `linux-glibc-*`, and updated packaging/workflows to consume the explicit names directly while keeping limited fallback download logic only where older releases still need it.
 
+- [x] **chore**: Repair the `build-main-0.24.5-slskdn.135` package pipeline regressions.
+ - Status: completed (2026-04-17)
+ - Priority: P1
+ - Notes: Realigned stable metadata and packaging to the published `linux-glibc-*` assets on `0.24.5-slskdn.135`, fixed the COPR RPM spec/source filename mismatch, repaired the stable metadata updater so it no longer corrupts Flatpak/Chocolatey/Debian files, and updated `Dockerfile` to real `.NET 10 noble` base images so local Docker, Nix smoke, and packaging validation now match the tagged release workflow.
+
 - [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
  - Status: completed (2026-04-08)
  - Priority: P2

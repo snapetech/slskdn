@@ -1,3 +1,15 @@
+## Update 2026-04-17 23:05:00Z
+
+- Current task: Package/release pipeline regressions from `build-main-0.24.5-slskdn.135` are fixed locally and validated; ready to commit, push, and retag.
+- Last activity:
+  - fixed the Docker release failure by moving `Dockerfile` onto real `.NET 10 noble` SDK/runtime-deps images and validating a full local Docker build
+  - realigned stable package metadata, COPR/RPM inputs, and the metadata refresh script with the published `linux-glibc-*` release assets on `0.24.5-slskdn.135`
+  - revalidated packaging metadata, a full Nix flake smoke build, and the Docker image path locally
+- Next steps:
+  1. Commit the packaging/workflow/docs fix set and push `main`.
+  2. Cut a fresh stable tag to replace the failed `build-main-0.24.5-slskdn.135` run.
+  3. Monitor the replacement tag for COPR, Docker, and metadata-update success before closing out the release.
+
 # Active Context
 
 > What is currently being worked on in this repository.  

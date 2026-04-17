@@ -30,12 +30,7 @@ MACOS_ARM64_SRI="$(hex_to_sri "$MACOS_ARM64_HEX")"
 WIN_URL="https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-win-x64.zip"
 PKGVER_DOTTED="${VERSION//-/.}"
 
-bash packaging/scripts/update-winget-manifests.sh \
-    stable \
-    "$VERSION" \
-    "$WIN_URL" \
-    "$WIN_X64_HEX" \
-    "$RELEASE_TAG"
+bash packaging/scripts/update-winget-manifests.sh     stable     "$VERSION"     "$WIN_URL"     "$WIN_X64_HEX"     "$RELEASE_TAG"
 
 cat > Formula/slskdn.rb <<EOF
 class Slskdn < Formula
@@ -54,7 +49,7 @@ class Slskdn < Formula
     end
   end
   on_linux do
-    url "https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-x64.zip"
+    url "https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip"
     sha256 "$LINUX_X64_HEX"
   end
   def install
@@ -84,7 +79,7 @@ class Slskdn < Formula
   end
 
   on_linux do
-    url "https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-x64.zip"
+    url "https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip"
     sha256 "$LINUX_X64_HEX"
   end
 
@@ -95,46 +90,71 @@ class Slskdn < Formula
   end
 
   test do
-    # Simple test to verify version or help output
     assert_match "slskd", shell_output("#{bin}/slskd --help", 1)
   end
 end
 EOF
 
-sed -i "s/version = \".*\";/version = \"${VERSION}\";/" flake.nix
-sed -i "/stableSources = {/,/};/s|sha256 = \".*\"; # x86_64-linux (glibc)|sha256 = \"${LINUX_X64_SRI}\"; # x86_64-linux (glibc)|" flake.nix
-sed -i "/stableSources = {/,/};/s|sha256 = \".*\"; # aarch64-linux (glibc)|sha256 = \"${LINUX_ARM64_SRI}\"; # aarch64-linux (glibc)|" flake.nix
-sed -i "/stableSources = {/,/};/s|sha256 = \".*\"; # x86_64-darwin|sha256 = \"${MACOS_X64_SRI}\"; # x86_64-darwin|" flake.nix
-sed -i "/stableSources = {/,/};/s|sha256 = \".*\"; # aarch64-darwin|sha256 = \"${MACOS_ARM64_SRI}\"; # aarch64-darwin|" flake.nix
+sed -i 's/version = ".*";/version = "'"${VERSION}"'";/' flake.nix
+sed -i '/stableSources = {/,/};/s|url = "https://github.com/snapetech/slskdn/releases/download/.*/slskdn-main-linux[^"]*x64.zip";|url = "https://github.com/snapetech/slskdn/releases/download/'"${RELEASE_TAG}"'/slskdn-main-linux-glibc-x64.zip";|' flake.nix
+sed -i '/stableSources = {/,/};/s|url = "https://github.com/snapetech/slskdn/releases/download/.*/slskdn-main-linux[^"]*arm64.zip";|url = "https://github.com/snapetech/slskdn/releases/download/'"${RELEASE_TAG}"'/slskdn-main-linux-glibc-arm64.zip";|' flake.nix
+sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-linux (glibc)|sha256 = "'"${LINUX_X64_SRI}"'"; # x86_64-linux (glibc)|' flake.nix
+sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux (glibc)|sha256 = "'"${LINUX_ARM64_SRI}"'"; # aarch64-linux (glibc)|' flake.nix
+sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "'"${MACOS_X64_SRI}"'"; # x86_64-darwin|' flake.nix
+sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "'"${MACOS_ARM64_SRI}"'"; # aarch64-darwin|' flake.nix
 
 sed -i "s/^version: '.*'/version: '${VERSION}'/" packaging/snap/snapcraft.yaml
-sed -i "s|^    source: .*|    source: https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-x64.zip|" packaging/snap/snapcraft.yaml
+sed -i "s|^    source: .*|    source: https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|" packaging/snap/snapcraft.yaml
 sed -i "s|^    source-checksum: .*|    source-checksum: sha256/${LINUX_X64_HEX}|" packaging/snap/snapcraft.yaml
 
-sed -i "s|# slskdN .* Linux x64|# slskdN ${VERSION} Linux x64|" packaging/flatpak/io.github.slskd.slskdn.yml
-sed -i "s|url: https://github.com/snapetech/slskdn/releases/download/.*/slskdn-main-linux-x64.zip|url: https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-x64.zip|" packaging/flatpak/io.github.slskd.slskdn.yml
-sed -i "s|sha256: .*|sha256: ${LINUX_X64_HEX}|" packaging/flatpak/io.github.slskd.slskdn.yml
+sed -i "s|# slskdN .* Linux .* x64|# slskdN ${VERSION} Linux glibc x64|" packaging/flatpak/io.github.slskd.slskdn.yml
+sed -i "s|# Install slskdN (from .*: slskd, slskd.dll, deps, wwwroot)|# Install slskdN (from slskdn-main-linux-glibc-x64.zip: slskd, slskd.dll, deps, wwwroot)|" packaging/flatpak/io.github.slskd.slskdn.yml
+python3 - <<PY_FLATPAK
+from pathlib import Path
+import re
 
-sed -i "s/appVersion: \".*\"/appVersion: \"${VERSION}\"/" packaging/truenas-scale/charts/slskdn/Chart.yaml
-sed -i "s/appVersion: \".*\"/appVersion: \"${VERSION}\"/" packaging/helm/slskdn/Chart.yaml
+path = Path("packaging/flatpak/io.github.slskd.slskdn.yml")
+text = path.read_text()
+pattern = re.compile(
+    r"      # slskdN .*? asset slskdn-main-linux.*?zip\)\n"
+    r"      - type: archive\n"
+    r"        url: https://github.com/snapetech/slskdn/releases/download/.*/slskdn-main-linux.*?x64\.zip\n"
+    r"        sha256: [0-9a-f]{64}\n",
+    re.S,
+)
+replacement = (
+    f"      # slskdN ${VERSION} Linux glibc x64 (snapetech; asset slskdn-main-linux-glibc-x64.zip)\n"
+    f"      - type: archive\n"
+    f"        url: https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip\n"
+    f"        sha256: ${LINUX_X64_HEX}\n"
+)
+text, count = pattern.subn(replacement, text, count=1)
+if count != 1:
+    raise SystemExit("failed to update Flatpak slskdn archive block")
+path.write_text(text)
+PY_FLATPAK
+
+sed -i 's/appVersion: ".*"/appVersion: "'"${VERSION}"'"/' packaging/truenas-scale/charts/slskdn/Chart.yaml
+sed -i 's/appVersion: ".*"/appVersion: "'"${VERSION}"'"/' packaging/helm/slskdn/Chart.yaml
 sed -i "s/--set image.tag=.*/--set image.tag=${VERSION}/" packaging/helm/slskdn/README.md
 
 sed -i "s#<version>.*</version>#<version>${VERSION}</version>#" packaging/chocolatey/slskdn.nuspec
-sed -i "s#^\\\$url.*#\\\$url        = \"https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-win-x64.zip\"#" packaging/chocolatey/tools/chocolateyinstall.ps1
-sed -i "s#^\\\$checksum.*#\\\$checksum   = \"${WIN_X64_HEX}\"#" packaging/chocolatey/tools/chocolateyinstall.ps1
+sed -i "s#^\$url.*#\$url        = \"https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-win-x64.zip\"#" packaging/chocolatey/tools/chocolateyinstall.ps1
+sed -i "s#^\$checksum.*#\$checksum   = \"${WIN_X64_HEX}\"#" packaging/chocolatey/tools/chocolateyinstall.ps1
 
-sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-x64.zip|" packaging/rpm/slskdn.spec
+sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|" packaging/rpm/slskdn.spec
 sed -i "s|^Version:.*|Version:        ${PKGVER_DOTTED}|" packaging/rpm/slskdn.spec
-sed -i "s|0\\.24\\.5-slskdn\\.[0-9]\\+ (slskdn-main-linux-x64.zip)|${VERSION} (slskdn-main-linux-x64.zip)|" packaging/rpm/slskdn.spec
+sed -i "s|0\.24\.5-slskdn\.[0-9]\+ (slskdn-main-linux-glibc-x64.zip)|${VERSION} (slskdn-main-linux-glibc-x64.zip)|" packaging/rpm/slskdn.spec
 
-sed -i "1s|^slskdn (.*)|slskdn (${PKGVER_DOTTED}-1) stable; urgency=medium|" packaging/debian/changelog
-sed -i "s|stable release 0\\.24\\.5-slskdn\\.[0-9]\\+|stable release ${VERSION}|" packaging/debian/changelog
-sed -i "s|SLSKDN_VERSION=0\\.24\\.5-slskdn\\.[0-9]\\+|SLSKDN_VERSION=${VERSION}|" packaging/proxmox-lxc/README.md
+sed -i "1c slskdn (${PKGVER_DOTTED}-1) stable; urgency=medium" packaging/debian/changelog
+sed -i "s|stable release 0\.24\.5-slskdn\.[0-9]\+|stable release ${VERSION}|" packaging/debian/changelog
+sed -i "s|SLSKDN_VERSION=0\.24\.5-slskdn\.[0-9]\+|SLSKDN_VERSION=${VERSION}|" packaging/proxmox-lxc/README.md
 
 sed -i "s|^pkgver=.*|pkgver=${PKGVER_DOTTED}|" packaging/aur/PKGBUILD
 sed -i "s|^pkgver=.*|pkgver=${PKGVER_DOTTED}|" packaging/aur/PKGBUILD-bin
+sed -i 's|slskdn-main-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip|slskdn-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip|' packaging/aur/PKGBUILD-bin
 
-sed -i "s|https://github.com/snapetech/slskdn/releases/download/0\\.24\\.5-slskdn\\.[0-9]\\+/slskdn-main-linux-x64.zip|https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-x64.zip|g" packaging/flatpak/FLATHUB_SUBMISSION.md
-sed -i "s|for \`0\\.24\\.5-slskdn\\.[0-9]\\+\`|for \`${VERSION}\`|" packaging/flatpak/FLATHUB_SUBMISSION.md
+sed -i "s|https://github.com/snapetech/slskdn/releases/download/0\.24\.5-slskdn\.[0-9]\+/slskdn-main-linux-glibc-x64.zip|https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|g" packaging/flatpak/FLATHUB_SUBMISSION.md
+sed -i 's|slskdn-main-linux-x64.zip|slskdn-main-linux-glibc-x64.zip|g' packaging/flatpak/FLATHUB_SUBMISSION.md
 
 echo "Updated stable release metadata to ${VERSION} (tag ${RELEASE_TAG})."

@@ -27,7 +27,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added runtime self-identification for release-debugging: startup now logs the running executable/base paths, and `/system/info` exposes the live executable path, base directory, app directory, config path, and process id so stale installs can be distinguished from real regressions.
 
 - Cleaned up release asset naming: future Linux builds publish a single explicit `linux-glibc-*` asset per runtime instead of duplicating the same payload under `main`, version-specific, and alias names. Packaging and release automation now consume the explicit glibc names directly.
-- Fixed the stable package metadata drift that broke `Nix Package Smoke`: until a stable GitHub release actually publishes the new `linux-glibc-*` assets, `flake.nix` and the stable package manifests continue to reference the currently published stable Linux asset names (`slskdn-main-linux-x64.zip` and `slskdn-main-linux-arm64.zip`) instead of guessing future names.
+- Fixed the stable package metadata drift that broke `Nix Package Smoke`: stable package metadata is now aligned with the published `linux-glibc-*` release assets so flake/package smoke validates the same filenames the release workflow actually ships.
 
 - Fixed the tagged release pipeline to match the repo's `.NET 10` target and corrected Matrix release-message redaction to use the homeserver's accepted `PUT` method.
 

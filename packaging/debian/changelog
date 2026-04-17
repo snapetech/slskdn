@@ -1,7 +1,7 @@
-slskdn (0.24.5.slskdn.131-1) stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium stable; urgency=medium
+slskdn (0.24.5.slskdn.135-1) stable; urgency=medium
 
-  * Bump packaging metadata to stable release 0.24.5-slskdn.131
-    (slskdn-main-linux-x64.zip)
+  * Bump packaging metadata to stable release 0.24.5-slskdn.135
+    (slskdn-main-linux-glibc-x64.zip)
 
  -- snapetech <slskdn@proton.me>  Mon, 23 Mar 2026 00:00:00 +0000
 

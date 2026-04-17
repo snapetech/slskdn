@@ -1,3 +1,22 @@
+## 2026-04-17 23:05 - Repaired the failed `build-main-0.24.5-slskdn.135` package pipeline
+
+### Completed
+- Traced the only failing `135` jobs to three concrete release-path mismatches: COPR was still pairing a `slskdn-main-linux-glibc-x64.zip` artifact with a spec/source path that expected `slskdn-main-linux-x64.zip`; stable package metadata had drifted away from the actual published `linux-glibc-*` assets; and the Docker release build still referenced nonexistent `.NET 10 bookworm-slim` images.
+- Fixed `Dockerfile` to use real `mcr.microsoft.com/dotnet/sdk:10.0-noble` and `runtime-deps:10.0-noble` bases and validated a full local `docker build` end to end.
+- Realigned `flake.nix`, Flatpak, AUR binary packaging, RPM metadata, Homebrew/Chocolatey-generated metadata, and the stable metadata refresh script with the published `0.24.5-slskdn.135` `linux-glibc-*` assets instead of the older legacy names.
+- Repaired `packaging/scripts/update-stable-release-metadata.sh` so it updates the right fields without clobbering the Flatpak .NET runtime checksum, corrupting the Debian changelog header, or tripping over literal PowerShell variable names in the Chocolatey install script.
+
+### Verification
+- `bash packaging/scripts/validate-packaging-metadata.sh`
+- `docker run --rm -v slskdn-nix-cache:/nix -v /home/keith/Documents/code/slskdn:/workspace -w /workspace nixos/nix:latest sh -lc "nix --extra-experimental-features 'nix-command flakes' build --no-write-lock-file 'path:/workspace#default' >/tmp/build.log 2>&1 || { cat /tmp/build.log; exit 1; }; ./result/bin/slskd --help >/tmp/slskd-help.txt 2>&1 || { cat /tmp/slskd-help.txt; exit 1; }; echo NIX_BUILD_OK; head -n 20 /tmp/slskd-help.txt"`
+- `docker build --pull --platform linux/amd64 -t slskdn-docker-smoke --build-arg VERSION=0.24.5-slskdn.135 .`
+- `bash ./bin/lint`
+- `git diff --check`
+
+### Findings
+- The `135` failures were not independent package bugs; they all came from one release-asset split-brain where some consumers had already moved to `linux-glibc-*` while other checked-in metadata and helper scripts still assumed legacy `linux-x64` names.
+- The stable metadata updater itself was the sharp edge: once it used overly broad replacements, it silently rewrote unrelated checksum/value lines and made later release jobs fail in misleading ways.
+
 ## 2026-04-17 12:10 - Removed duplicate stable zip assets and standardized Linux release names
 
 ### Completed
