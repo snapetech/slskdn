@@ -81,12 +81,12 @@
         
         stableSources = {
           "x86_64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-x64.zip";
-            sha256 = "sha256-lvQjt9nwfKEkpvPxZ0PvoRJgc5DEP14Wh4F64GUtEAc="; # x86_64-linux
+            url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-glibc-x64.zip";
+            sha256 = "sha256-lvQjt9nwfKEkpvPxZ0PvoRJgc5DEP14Wh4F64GUtEAc="; # x86_64-linux (glibc)
           };
           "aarch64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-arm64.zip";
-            sha256 = "sha256-th6nCbu0vgEqmLMQffXypBrnoktUgRUzlplD0MOvINk="; # aarch64-linux
+            url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-glibc-arm64.zip";
+            sha256 = "sha256-th6nCbu0vgEqmLMQffXypBrnoktUgRUzlplD0MOvINk="; # aarch64-linux (glibc)
           };
           "x86_64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-osx-x64.zip";
@@ -101,11 +101,11 @@
         devSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-linux-x64.zip";
-            sha256 = "1bz25gy9p0h3jin4zfhp5msvy8aqxbniq4m50q2xikp6p7bhw1km"; # x86_64-linux
+            sha256 = "1bz25gy9p0h3jin4zfhp5msvy8aqxbniq4m50q2xikp6p7bhw1km"; # x86_64-linux (glibc)
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-linux-arm64.zip";
-            sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # aarch64-linux
+            sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # aarch64-linux (glibc)
           };
           "x86_64-darwin" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-osx-x64.zip";

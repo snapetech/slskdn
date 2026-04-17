@@ -85,13 +85,13 @@ expect_line packaging/homebrew/Formula/slskdn.rb '^class Slskdn < Formula$'
 expect_line packaging/snap/snapcraft.yaml '^name: slskdn$'
 
 reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
-expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-x64\.zip'
+expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-glibc-x64\.zip'
 expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
 
 expect_line packaging/aur/PKGBUILD '^source=\($'
-expect_literal packaging/aur/PKGBUILD-bin '"slskdn-main-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip"'
+expect_literal packaging/aur/PKGBUILD-bin '"slskdn-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip"'
 reject_line packaging/aur/PKGBUILD-bin 'slskdn-\$\{pkgver\}-linux-x64\.zip::https://github\.com/snapetech/slskdn/releases/download/\${pkgver//\.slskdn/-slskdn}/slskdn-\$\{pkgver\}-linux-x64\.zip'
-expect_literal packaging/aur/PKGBUILD-dev '"slskdn-dev-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/RELEASE_TAG_PLACEHOLDER/slskdn-dev-linux-x64.zip"'
+expect_literal packaging/aur/PKGBUILD-dev '"slskdn-dev-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/RELEASE_TAG_PLACEHOLDER/slskdn-dev-linux-glibc-x64.zip"'
 
 bash packaging/scripts/validate-release-copy.sh
 

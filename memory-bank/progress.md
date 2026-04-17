@@ -1,3 +1,19 @@
+## 2026-04-17 12:10 - Removed duplicate stable zip assets and standardized Linux release names
+
+### Completed
+- Updated the tagged release workflow so each Linux runtime now publishes one explicit asset name: `linux-glibc-x64`, `linux-glibc-arm64`, or `linux-musl-x64`, instead of uploading duplicate stable/versioned zip payloads for the same build.
+- Updated release packaging, metadata refresh scripts, Homebrew/Flatpak/Snap/RPM/AUR references, and installer helpers to consume the new `linux-glibc-*` asset names directly.
+- Kept backward-compatible fallback download checks only in paths that may still need to fetch older already-published releases.
+
+### Verification
+- `bash ./bin/lint`
+- `git diff --check`
+- targeted workflow/package sanity checks
+
+### Findings
+- The old duplicate assets were purely naming duplication; packaging already preferred the stable alias, so removing the version-named copies does not remove any unique build output.
+- Explicit libc naming solves the actual user-facing ambiguity; `main` vs version was a release-channel distinction, not a platform one.
+
 ## 2026-04-17 11:35 - Fixed tag-build Docker/announce regressions and clarified Linux release asset names
 
 ### Completed

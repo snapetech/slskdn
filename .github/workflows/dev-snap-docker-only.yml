@@ -44,13 +44,13 @@ jobs:
         run: |
           gh release download dev \
             --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-linux-x64.zip"
+            --pattern "slskdn-dev-linux-glibc-x64.zip"
       
       - name: Build and Push
         env: { SNAPCRAFT_STORE_CREDENTIALS: "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" }
         if: "${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}"
         run: |
-          unzip slskdn-dev-linux-x64.zip -d slskdn_dist
+          unzip slskdn-dev-linux-glibc-x64.zip -d slskdn_dist
           sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
           sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
           sed -i "s|version: .*|version: '${{ needs.get-version.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
@@ -87,7 +87,7 @@ jobs:
         run: |
           gh release download dev \
             --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-linux-x64.zip"
+            --pattern "slskdn-dev-linux-glibc-x64.zip"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -115,4 +115,4 @@ jobs:
             ghcr.io/${{ github.repository }}:dev-latest
           build-args: |
             VERSION=${{ needs.get-version.outputs.dev_version }}
-            BUILD_ARTIFACT=slskdn-dev-linux-x64.zip
+            BUILD_ARTIFACT=slskdn-dev-linux-glibc-x64.zip

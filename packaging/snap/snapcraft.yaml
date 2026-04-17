@@ -22,7 +22,7 @@ apps:
 parts:
   slskdn:
     plugin: dump
-    source: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.131/slskdn-main-linux-x64.zip
+    source: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.131/slskdn-main-linux-glibc-x64.zip
     source-checksum: sha256/96f423b7d9f07ca124a6f3f16743efa112607390c43f5e1687817ae0652d1007
     stage-packages:
       - libicu70

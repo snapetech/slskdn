@@ -37,7 +37,7 @@ done
 echo ""
 echo "=== Version check (Linux x64 binary) ==="
 LINUX_ZIP=""
-for f in slskdn-dev-linux-x64.zip slskdn-main-linux-x64.zip slskdn-*-linux-x64.zip; do
+for f in slskdn-dev-linux-glibc-x64.zip slskdn-main-linux-glibc-x64.zip slskdn-dev-linux-x64.zip slskdn-main-linux-x64.zip slskdn-*-linux-x64.zip; do
   if [ -f "$f" ]; then LINUX_ZIP="$f"; break; fi
 done
 if [ -n "$LINUX_ZIP" ]; then

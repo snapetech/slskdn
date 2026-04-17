@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Release pipeline follow-up closed. Docker/tag workflows are aligned to `.NET 10`, Matrix release redaction now uses `PUT`, and tagged releases now publish additive `linux-glibc-*` aliases alongside the existing asset names.
+- **Current Task**: Release asset cleanup and dependency roll-up in progress. Tagged release workflows are aligned to `.NET 10`, Matrix release redaction uses `PUT`, and Linux release assets are being standardized on explicit `linux-glibc-*` naming without duplicate stable/versioned zip uploads.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:

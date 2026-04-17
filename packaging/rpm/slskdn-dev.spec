@@ -5,7 +5,7 @@ Summary:        🔋 The batteries included fork of slskd with 24+ new features 
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn/tree/experimental/multi-source-swarm
-Source0:        slskdn-dev-linux-x64.zip
+Source0:        slskdn-dev-linux-glibc-x64.zip
 Source1:        slskd.service
 Source2:        slskd.yml
 Source3:        slskd.conf

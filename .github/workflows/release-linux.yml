@@ -65,16 +65,14 @@ jobs:
       - name: Create Zip
         run: |
           cd publish-linux-${{ matrix.arch }}
-          zip -r ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip .
-          cp ../slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip ../slskdn-main-linux-${{ matrix.arch }}.zip
+          zip -r ../slskdn-main-linux-glibc-${{ matrix.arch }}.zip .
 
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
-            slskdn-main-linux-${{ matrix.arch }}.zip
+            slskdn-main-linux-glibc-${{ matrix.arch }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -82,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: slskdn-linux-${{ matrix.arch }}
-          path: slskdn-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.zip
+          path: slskdn-main-linux-glibc-${{ matrix.arch }}.zip
 
   update-aur:
     needs: build-linux
@@ -114,6 +112,7 @@ jobs:
           fi
 
           ASSET_NAMES=(
+            "slskdn-main-linux-glibc-x64.zip"
             "slskdn-main-linux-x64.zip"
             "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
           )

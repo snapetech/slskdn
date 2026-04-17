@@ -42,6 +42,7 @@ jobs:
           fi
 
           ASSET_NAMES=(
+            "slskdn-main-linux-glibc-x64.zip"
             "slskdn-main-linux-x64.zip"
             "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
           )
@@ -140,6 +141,7 @@ jobs:
           fi
 
           ASSET_NAMES=(
+            "slskdn-main-linux-glibc-x64.zip"
             "slskdn-main-linux-x64.zip"
             "slskdn-${{ steps.version.outputs.tag }}-linux-x64.zip"
           )
@@ -148,7 +150,7 @@ jobs:
             for ASSET_NAME in "${ASSET_NAMES[@]}"; do
               ASSET_URL="https://github.com/snapetech/slskdn/releases/download/${{ steps.version.outputs.tag }}/${ASSET_NAME}"
               echo "Attempt $i: Checking ${ASSET_NAME}..."
-              if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-main-linux-x64.zip; then
+              if curl -fsSL "${CURL_AUTH_ARGS[@]}" -H "Accept: application/octet-stream" "$ASSET_URL" -o ~/rpmbuild/SOURCES/slskdn-main-linux-glibc-x64.zip; then
                 echo "Asset downloaded successfully"
                 break 2
               fi
@@ -173,7 +175,7 @@ jobs:
           sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/slskdn.spec
           
           # Fix Source0 to use exact tag-format filename
-          sed -i "s|^Source0:.*|Source0:        slskdn-main-linux-x64.zip|" packaging/rpm/slskdn.spec
+          sed -i "s|^Source0:.*|Source0:        slskdn-main-linux-glibc-x64.zip|" packaging/rpm/slskdn.spec
           
           cp packaging/rpm/slskdn.spec ~/rpmbuild/SPECS/
 

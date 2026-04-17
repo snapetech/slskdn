@@ -14,7 +14,7 @@ class Slskdn < Formula
     end
   end
   on_linux do
-    url "https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.131/slskdn-main-linux-x64.zip"
+    url "https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.131/slskdn-main-linux-glibc-x64.zip"
     sha256 "96f423b7d9f07ca124a6f3f16743efa112607390c43f5e1687817ae0652d1007"
   end
   def install

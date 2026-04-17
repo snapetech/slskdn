@@ -83,6 +83,7 @@ mkdir -p /tmp/slskdn-setup
 cd /tmp/slskdn-setup
 
 ZIP_CANDIDATES=(
+  "slskdn-main-linux-glibc-x64.zip"
   "slskdn-main-linux-x64.zip"
   "slskdn-${SLSKDN_VERSION//-slskdn/.}-linux-x64.zip"
   "slskdn-${SLSKDN_VERSION}-linux-x64.zip"

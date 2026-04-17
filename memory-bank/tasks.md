@@ -51,6 +51,11 @@
  - Priority: P1
  - Notes: Updated all GitHub Actions `DOTNET_VERSION` pins and the Dockerfile build/runtime images to `.NET 10`, fixed Matrix release-message redaction in `build-on-tag.yml` to use `PUT`, and added additive `linux-glibc-*` release zip aliases while preserving the existing `slskdn-main-*` and versioned asset names used by packaging and downstream automation.
 
+- [x] **chore**: Remove duplicate stable release zip names and standardize Linux assets on explicit glibc identifiers.
+ - Status: completed (2026-04-17)
+ - Priority: P1
+ - Notes: Stopped publishing duplicate version-named stable zip assets, standardized Linux release artifacts on `linux-glibc-*`, and updated packaging/workflows to consume the explicit names directly while keeping limited fallback download logic only where older releases still need it.
+
 - [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
  - Status: completed (2026-04-08)
  - Priority: P2
