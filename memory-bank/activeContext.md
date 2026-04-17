@@ -414,3 +414,15 @@ dotnet test
 # Build release
 ./bin/build
 ```
+
+## Update 2026-04-17 20:25:00Z
+
+- Current task: None. The `#209` root-cause follow-up is implemented locally and validated.
+- Last activity:
+  - proved the failure was in the pinned upstream DHT library path, not just local logging/config wording
+  - upgraded `MonoTorrent` from `3.0.2` to `3.0.3-alpha.unstable.rev0049`
+  - added explicit `dht.bootstrap_routers` handling and validation so slskdn no longer depends on one hidden upstream bootstrap router
+- Next steps:
+  1. Run `bash ./bin/lint` and `git diff --check`, then commit the code/config/test follow-up.
+  2. Push `main` and trigger a fresh stable build once the user wants the fix released.
+  3. Update issue `#209` only after the fixed build is available for retest.

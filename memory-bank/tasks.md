@@ -879,3 +879,9 @@
 - [x] Fix DHT rendezvous bootstrap defaults behind issue #209
   - Status: done
   - Notes: Replaced the random fallback DHT UDP port with a stable default (`50306`), added startup validation so enabled DHT cannot run on port `0`, updated the example config, and made bootstrap timeout logs explicitly tell operators that announce/discovery remain disabled until the configured UDP port is reachable.
+
+## 2026-04-17 Completed Follow-up
+
+- [x] Fix issue `#209` at the actual DHT bootstrap root cause instead of adding more operator-facing logging
+  - Status: done
+  - Notes: Reproduced the failure in a bare MonoTorrent `3.0.2` probe, confirmed the older package stalls with `nodes=0`, upgraded to `MonoTorrent 3.0.3-alpha.unstable.rev0049`, made slskdn pass explicit `dht.bootstrap_routers`, added startup validation, and updated the example config.

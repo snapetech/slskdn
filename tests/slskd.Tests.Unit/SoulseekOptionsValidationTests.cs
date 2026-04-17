@@ -4,7 +4,6 @@
 
 namespace slskd.Tests.Unit;
 
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Xunit;
@@ -81,7 +80,7 @@ public class SoulseekOptionsValidationTests
     }
 
     [Fact]
-    public void Options_AllowsStableDhtPort_WhenDhtRendezvousIsEnabled()
+    public void Options_RejectsMissingBootstrapRouters_WhenDhtRendezvousIsEnabled()
     {
         var options = new Options
         {
@@ -89,6 +88,34 @@ public class SoulseekOptionsValidationTests
             {
                 Enabled = true,
                 DhtPort = 50306,
+                BootstrapRouters = [],
+            },
+        };
+
+        var results = options.Validate(new ValidationContext(options)).ToList();
+
+        Assert.Contains(
+            results,
+            result => result.ErrorMessage!.Contains(
+                "DHT rendezvous requires at least one bootstrap router",
+                System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Options_AllowsStableDhtPortAndBootstrapRouters_WhenDhtRendezvousIsEnabled()
+    {
+        var options = new Options
+        {
+            DhtRendezvous = new slskd.DhtRendezvous.DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 50306,
+                BootstrapRouters =
+                [
+                    "router.bittorrent.com",
+                    "router.utorrent.com",
+                    "dht.transmissionbt.com",
+                ],
             },
         };
 
@@ -98,6 +125,11 @@ public class SoulseekOptionsValidationTests
             results,
             result => result.ErrorMessage?.Contains(
                 "DHT rendezvous requires an explicit UDP port",
+                System.StringComparison.Ordinal) == true);
+        Assert.DoesNotContain(
+            results,
+            result => result.ErrorMessage?.Contains(
+                "DHT rendezvous requires at least one bootstrap router",
                 System.StringComparison.Ordinal) == true);
     }
 }
