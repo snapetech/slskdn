@@ -180,6 +180,16 @@ namespace slskd
         /// </summary>
         public static readonly int ProcessId = Environment.ProcessId;
 
+        /// <summary>
+        ///     Gets the application's base directory.
+        /// </summary>
+        public static readonly string BaseDirectory = AppContext.BaseDirectory;
+
+        /// <summary>
+        ///     Gets the current executable path when available.
+        /// </summary>
+        public static readonly string ExecutablePath = TryGetExecutablePath();
+
         /// <remarks>
         ///     Inaccurate when running locally.
         /// </remarks>
@@ -238,6 +248,18 @@ namespace slskd
         ///     Gets a value indicating whether the application is being run in Relay Agent mode.
         /// </summary>
         public static bool IsRelayAgent { get; private set; }
+
+        private static string TryGetExecutablePath()
+        {
+            try
+            {
+                return System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
 
         /// <summary>
         ///     Gets the application flags.
@@ -631,6 +653,8 @@ namespace slskd
 
             Log.Information("System: .NET {DotNet}, {OS}, {BitNess} bit, {ProcessorCount} processors", Environment.Version, Environment.OSVersion, Environment.Is64BitOperatingSystem ? 64 : 32, Environment.ProcessorCount);
             Log.Information("Process ID: {ProcessId} ({BitNess} bit)", ProcessId, Environment.Is64BitProcess ? 64 : 32);
+            Log.Information("Executable path: {ExecutablePath}", ExecutablePath);
+            Log.Information("Base directory: {BaseDirectory}", BaseDirectory);
 
             Log.Information("Invocation ID: {InvocationId}", InvocationId);
             Log.Information("Instance Name: {InstanceName}", OptionsAtStartup.InstanceName);

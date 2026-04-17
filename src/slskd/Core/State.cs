@@ -35,6 +35,7 @@ namespace slskd
     public record State
     {
         public VersionState Version { get; init; } = new VersionState();
+        public RuntimeState Runtime { get; init; } = new RuntimeState();
         public bool PendingReconnect { get; init; }
         public bool PendingRestart { get; init; }
         public ServerState Server { get; init; } = new ServerState();
@@ -74,6 +75,15 @@ namespace slskd
         public bool? IsUpdateAvailable { get; init; }
         public bool IsCanary { get; init; } = Program.IsCanary;
         public bool IsDevelopment { get; init; } = Program.IsDevelopment;
+    }
+
+    public record RuntimeState
+    {
+        public string ExecutablePath { get; init; } = Program.ExecutablePath;
+        public string BaseDirectory { get; init; } = Program.BaseDirectory;
+        public string AppDirectory { get; init; } = Program.AppDirectory;
+        public string ConfigurationFile { get; init; } = Program.ConfigurationFile;
+        public int ProcessId { get; init; } = Program.ProcessId;
     }
 
     public record ServerState
