@@ -11,6 +11,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -287,9 +288,19 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Handshake failed with {Endpoint}", remoteEndPoint);
-                Interlocked.Increment(ref _totalRejected);
-                _rateLimiter.RecordViolation(remoteIp);
+                if (IsExpectedHandshakeNoise(ex))
+                {
+                    _logger.LogDebug("Ignoring non-overlay TLS noise from {Endpoint}: {Message}", remoteEndPoint, ex.Message);
+                    Interlocked.Increment(ref _totalRejected);
+                    _rateLimiter.RecordDisconnection(remoteIp);
+                }
+                else
+                {
+                    _logger.LogWarning(ex, "Handshake failed with {Endpoint}", remoteEndPoint);
+                    Interlocked.Increment(ref _totalRejected);
+                    _rateLimiter.RecordViolation(remoteIp);
+                }
+
                 if (connection != null)
                 {
                     await connection.DisposeAsync();
@@ -299,7 +310,15 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error handling connection from {Endpoint}", remoteEndPoint);
+            if (IsExpectedHandshakeNoise(ex))
+            {
+                _logger.LogDebug("Ignoring non-overlay TLS noise from {Endpoint}: {Message}", remoteEndPoint, ex.Message);
+            }
+            else
+            {
+                _logger.LogWarning(ex, "Error handling connection from {Endpoint}", remoteEndPoint);
+            }
+
             Interlocked.Increment(ref _totalRejected);
             _rateLimiter.RecordDisconnection(remoteIp);
             tcpClient.Dispose();
@@ -491,6 +510,17 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         {
             _logger.LogWarning(ex, "Error handling mesh message from {Username}", connection.Username);
         }
+    }
+
+    internal static bool IsExpectedHandshakeNoise(Exception exception)
+    {
+        if (exception is AuthenticationException authenticationException)
+        {
+            return authenticationException.Message.Contains("Cannot determine the frame size", StringComparison.Ordinal) ||
+                authenticationException.Message.Contains("corrupted frame was received", StringComparison.Ordinal);
+        }
+
+        return exception.InnerException is not null && IsExpectedHandshakeNoise(exception.InnerException);
     }
 
     public MeshOverlayServerStats GetStats()

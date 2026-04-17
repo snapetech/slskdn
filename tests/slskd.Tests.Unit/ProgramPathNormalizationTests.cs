@@ -8,6 +8,10 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http;
+using Moq;
 using Soulseek;
 using Xunit;
 
@@ -205,6 +209,54 @@ public class ProgramPathNormalizationTests
 
         Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
     }
+
+    [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForConnectionResetByPeerFailures()
+    {
+        var exception = new AggregateException(new SocketException((int)SocketError.ConnectionReset));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
+    public void IsStaleAntiforgeryTokenException_ReturnsTrue_ForKeyRingMismatch()
+    {
+        var exception = new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring."));
+
+        Assert.True(Program.IsStaleAntiforgeryTokenException(exception));
+    }
+
+    [Fact]
+    public void TryGetAndStoreAntiforgeryTokens_Retries_AfterClearingStaleCookies()
+    {
+        var port = GetProgramValue<OptionsAtStartup>("OptionsAtStartup").Web.Port;
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "https";
+        context.Request.Path = "/api/v0/session/enabled";
+        context.Request.Headers.Cookie = $"XSRF-COOKIE-{port}=stale-cookie; XSRF-TOKEN-{port}=stale-request";
+
+        var expectedTokens = new AntiforgeryTokenSet("fresh-request", "fresh-cookie", "X-CSRF-TOKEN", $"XSRF-COOKIE-{port}");
+        var antiforgery = new Mock<IAntiforgery>();
+        antiforgery
+            .SetupSequence(mock => mock.GetAndStoreTokens(context))
+            .Throws(new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring.")))
+            .Returns(expectedTokens);
+
+        var tokens = Program.TryGetAndStoreAntiforgeryTokens(context, antiforgery.Object);
+
+        Assert.Same(expectedTokens, tokens);
+        antiforgery.Verify(mock => mock.GetAndStoreTokens(context), Times.Exactly(2));
+        Assert.Contains(context.Response.Headers["Set-Cookie"], value => value.Contains($"XSRF-COOKIE-{port}=;", StringComparison.Ordinal));
+        Assert.Contains(context.Response.Headers["Set-Cookie"], value => value.Contains($"XSRF-TOKEN-{port}=;", StringComparison.Ordinal));
+    }
+
+    private static T GetProgramValue<T>(string propertyName)
+    {
+        var field = typeof(Program).GetField($"<{propertyName}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        return (T)field!.GetValue(null)!;
+    }
+
 
     private static void SetAppDirectory(string value)
     {
