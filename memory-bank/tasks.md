@@ -911,3 +911,7 @@
 - [x] Fix stable package metadata so Nix smoke fetches the currently published stable assets
   - Status: done
   - Notes: Reverted the stable metadata consumers from unreleased `slskdn-main-linux-glibc-*` names back to the real `0.24.5-slskdn.131` asset names (`slskdn-main-linux-x64.zip` / `slskdn-main-linux-arm64.zip`) and updated `packaging/scripts/update-stable-release-metadata.sh` plus packaging validation to stop jumping ahead of the published release.
+
+- [x] Fix issue `#209` follow-on noise after DHT bootstrap succeeds
+  - Status: done
+  - Notes: Classified `Connection reset by peer` as expected Soulseek network churn, made safe requests clear and reissue stale antiforgery cookies after reinstall/key-ring changes, downgraded obvious non-overlay TLS garbage on the public mesh port to debug noise, and added focused unit/integration coverage for all three regressions.

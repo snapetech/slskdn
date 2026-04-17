@@ -3070,11 +3070,11 @@ namespace slskd
 
                         // Only mint/store tokens on safe requests. Rotating them on the same unsafe request that
                         // later validates them can invalidate the frontend's header/cookie pair mid-flight.
-                        var tokens = antiforgery.GetAndStoreTokens(context);
+                        var tokens = TryGetAndStoreAntiforgeryTokens(context, antiforgery);
 
                         // ASP.NET stores the antiforgery cookie token using the configured Cookie.Name.
                         // Only publish the JavaScript-readable request token here.
-                        if (tokens.RequestToken != null)
+                        if (tokens?.RequestToken != null)
                         {
                             context.Response.Cookies.Append($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", tokens.RequestToken,
                                 new CookieOptions
@@ -4049,6 +4049,45 @@ namespace slskd
             return flattened.Count > 0 && flattened.All(IsExpectedSoulseekNetworkExceptionCore);
         }
 
+        internal static Microsoft.AspNetCore.Antiforgery.AntiforgeryTokenSet? TryGetAndStoreAntiforgeryTokens(
+            HttpContext context,
+            Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery)
+        {
+            try
+            {
+                return antiforgery.GetAndStoreTokens(context);
+            }
+            catch (Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException ex) when (IsStaleAntiforgeryTokenException(ex))
+            {
+                ClearKnownAntiforgeryCookies(context);
+                Log.Warning("[CSRF Middleware] Cleared stale antiforgery cookies for {Path} after key-ring mismatch", context.Request.Path);
+                return antiforgery.GetAndStoreTokens(context);
+            }
+        }
+
+        internal static bool IsStaleAntiforgeryTokenException(Exception exception)
+        {
+            return FlattenExceptions(exception).Any(innerException =>
+                innerException is CryptographicException ||
+                innerException.Message.Contains("could not be decrypted", StringComparison.OrdinalIgnoreCase) ||
+                innerException.Message.Contains("key ring", StringComparison.OrdinalIgnoreCase));
+        }
+
+        internal static void ClearKnownAntiforgeryCookies(HttpContext context)
+        {
+            var options = new CookieOptions
+            {
+                Path = "/",
+                Secure = context.Request.IsHttps,
+                SameSite = SameSiteMode.Strict,
+            };
+
+            context.Response.Cookies.Delete($"XSRF-COOKIE-{OptionsAtStartup.Web.Port}", options);
+            context.Response.Cookies.Delete($"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", options);
+            context.Response.Cookies.Delete("XSRF-COOKIE", options);
+            context.Response.Cookies.Delete("XSRF-TOKEN", options);
+        }
+
         private static IEnumerable<Exception> FlattenExceptions(Exception exception)
         {
             if (exception is AggregateException aggregateException)
@@ -4098,6 +4137,7 @@ namespace slskd
                 details.Contains("Soulseek.Network.Tcp.Connection", StringComparison.Ordinal) ||
                 details.Contains("Failed to connect", StringComparison.Ordinal) ||
                 details.Contains("Connection refused", StringComparison.Ordinal) ||
+                details.Contains("Connection reset by peer", StringComparison.Ordinal) ||
                 details.Contains("Remote connection closed", StringComparison.Ordinal) ||
                 details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||

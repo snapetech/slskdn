@@ -64,6 +64,43 @@ public class CsrfPortScopedTokenIntegrationTests
     }
 
     [Fact]
+    public async Task SafeRequest_WithStaleAntiforgeryCookies_ReissuesFreshPortScopedTokens()
+    {
+        using var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
+        await using var runner = new SlskdnFullInstanceRunner(
+            loggerFactory.CreateLogger<SlskdnFullInstanceRunner>(),
+            $"csrf-port-token-stale-{Guid.NewGuid():N}");
+
+        await runner.StartAsync(disableAuthentication: true);
+
+        using var handler = new HttpClientHandler
+        {
+            CookieContainer = new CookieContainer(),
+            UseCookies = true,
+        };
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(runner.ApiUrl),
+        };
+
+        var baseUri = new Uri(runner.ApiUrl);
+        handler.CookieContainer.Add(baseUri, new Cookie($"XSRF-COOKIE-{runner.ApiPort}", "stale-cookie"));
+        handler.CookieContainer.Add(baseUri, new Cookie($"XSRF-TOKEN-{runner.ApiPort}", "stale-request-token"));
+        handler.CookieContainer.Add(baseUri, new Cookie("XSRF-TOKEN", "legacy-stale-token"));
+
+        using var bootstrapResponse = await client.GetAsync("/api/v0/session/enabled");
+        bootstrapResponse.EnsureSuccessStatusCode();
+
+        var cookies = handler.CookieContainer.GetCookies(baseUri).Cast<Cookie>().ToList();
+        var antiforgeryCookie = cookies.Single(cookie => cookie.Name == $"XSRF-COOKIE-{runner.ApiPort}");
+        var requestTokenCookie = cookies.Single(cookie => cookie.Name == $"XSRF-TOKEN-{runner.ApiPort}");
+
+        Assert.NotEqual("stale-cookie", antiforgeryCookie.Value);
+        Assert.NotEqual("stale-request-token", requestTokenCookie.Value);
+        Assert.DoesNotContain(cookies, cookie => cookie.Name == "XSRF-TOKEN");
+    }
+
+    [Fact]
     public async Task SharesRescan_WithWrongToken_StillFailsCsrfValidation()
     {
         using var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));

@@ -10,6 +10,20 @@
   2. Cut a fresh stable tag to replace the failed `build-main-0.24.5-slskdn.135` run.
   3. Monitor the replacement tag for COPR, Docker, and metadata-update success before closing out the release.
 
+## Update 2026-04-17 23:55:00Z
+
+- Current task: None. Issue `#209` follow-on runtime-noise regressions are fixed locally and validated.
+- Last activity:
+  - confirmed the tester's newest `#209` report is no longer about DHT bootstrap; the node is reaching `Ready`, announcing, and discovering peers
+  - fixed three follow-on runtime issues from that public-node state:
+    - classified `Connection reset by peer` as expected Soulseek peer/distributed network churn instead of `[FATAL]`
+    - taught the antiforgery token middleware/filter to clear stale cookies after reinstall/key-ring mismatch and reissue fresh tokens on safe requests
+    - downgraded corrupted-frame TLS garbage on the mesh overlay port to debug noise in `MeshOverlayServer`
+  - added focused regression coverage in `ProgramPathNormalizationTests`, `MeshOverlayServerTests`, and `CsrfPortScopedTokenIntegrationTests`
+- Next steps:
+  1. Push the fix set when a new `#209` verification build is wanted.
+  2. If the tester still reports issues after this, focus on functional mesh connectivity or hole-punch behavior rather than the old bootstrap/token/logging noise.
+
 # Active Context
 
 > What is currently being worked on in this repository.  

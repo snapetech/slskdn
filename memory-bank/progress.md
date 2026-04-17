@@ -6182,3 +6182,19 @@ Code quality improvements were completed as part of Option A:
   - `git diff --check`
   - `bash packaging/scripts/run-nix-package-smoke.sh` skipped locally because `nix` is not installed on this machine
 - Next release hygiene step: remove the failed `build-main-0.24.5-slskdn.133` tag so it no longer looks like a live release path.
+
+## 2026-04-17 23:55:00Z
+
+- Followed up on issue `#209` after new tester logs showed DHT bootstrap is now healthy but three post-bootstrap regressions remained:
+  - `Connection reset by peer` was being treated as a fatal unobserved task exception even though it is expected peer-connect churn
+  - stale antiforgery cookies from reinstall/key-ring rotation were spamming decrypt errors on safe requests
+  - random internet junk hitting the public overlay port was logged as warning-stack traces during TLS accept
+- Fixed those follow-on issues in code:
+  - `Program.IsExpectedSoulseekNetworkException(...)` now treats `Connection reset by peer` as expected network churn
+  - safe-request antiforgery token minting now clears stale cookies and retries once, and unsafe-request CSRF validation also clears stale cookies when the key ring changed
+  - `MeshOverlayServer` now classifies corrupted-frame TLS handshakes as expected public-port noise and logs them at debug instead of warning
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~MeshOverlayServerTests" -v minimal`
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~CsrfPortScopedTokenIntegrationTests|FullyQualifiedName~MeshSearchLoopbackTests" -v minimal`
+  - `bash ./bin/lint`
+  - `git diff --check`
