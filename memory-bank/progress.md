@@ -7,6 +7,37 @@
 
 ## 2026-04-12 13:12 - Removed download enqueue peer preflight from `#201` transfer path
 
+## 2026-04-14 14:05 - Added reproduce-first bugfix release workflow after `#200` / `#201` review
+
+### Completed
+- Turned the `#200` / `#201` postmortem into repo guidance instead of leaving it as chat-only advice.
+- Added `docs/dev/bugfix-verification-checklist.md`, which requires a concrete repro contract, per-symptom acceptance checks, reproduce-then-disprove validation, and stricter release-language rules for externally reported bugs.
+- Wired that checklist into `docs/dev/testing-policy.md`, `docs/dev/release-checklist.md`, and `memory-bank/decisions/adr-0004-pr-checklist.md` so bugfix releases cannot rely on generic green smoke alone.
+
+### Findings
+- The recurring failure was procedural: builds were being described as fixes before the same tester-visible path had been re-run locally.
+- The missing guardrail was not another broad smoke slice; it was an explicit reproduce-first workflow tied to release claims and acceptance language.
+
+## 2026-04-14 10:05 - Tightened Dependabot holds and added direct proof coverage for `#200` / `#201`
+
+### Completed
+- Audited the remaining Dependabot suppressions after the earlier `axios` / `lodash` mistake and removed the stale `react-scripts` ignore entry.
+- Pinned `@uiw/react-codemirror` exactly to `4.21.21` so the lockfile stops drifting to `4.25.x`, which now peers on React 17+ and is not actually compatible with this repo's React 16 line.
+- Confirmed the live web toolchain expects ESLint 9 with flat config (`eslint-config-canonical 47.4.2` peers on `eslint ^9`), then moved `src/web` to `eslint.config.mjs` and added the direct import resolver packages that flat-config lint now needs.
+- Added `src/web/src/serviceWorkerCaching.test.js` so the `#200` stale-shell/new-tab failure is covered directly: install only precaches static shell assets, navigation fetches stay network-first, and hashed `/assets/*` requests never come from the service worker cache.
+- Tightened `tests/slskd.Tests.Unit/Core/ApplicationLifecycleTests.cs` with an explicit assertion that the startup Soulseek options patch does not reapply `EnableListener`, `ListenIPAddress`, or `ListenPort`, which is the `#201` listener-teardown regression path.
+
+### Verification
+- `npm --prefix src/web test -- --run src/lib/jobs.test.js src/lib/mediacore.test.js src/registerServiceWorker.test.js src/serviceWorkerCaching.test.js`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~SoulseekOptionsValidationTests|FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualifiedName~SecurityRoutesIntegrationTests|FullyQualifiedName~NicotinePlusIntegrationTests" -v minimal`
+- `git diff --check`
+
+### Findings
+- The remaining Dependabot holds are now real blockers, not queue-cleanup tricks: React 16 vs modern React-package lines, `jsdom 29.0.2` breaking Vitest workers in this repo, and backend major-version jumps tied to larger runtime/framework migrations.
+- The current proof net for `#200` now covers the actual stale-service-worker behavior plus the versioned Jobs/MediaCore/Security/Bridge routes that were previously escaping.
+- The current proof net for `#201` now covers both the startup listener reconfiguration race and the loopback listener misconfiguration guard that reproduces the "logged in but zero transfers" failure mode locally.
+
 ## 2026-04-12 13:25 - Closed startup transfer config drift and tightened release smoke for `#201`
 
 ### Completed
@@ -5971,3 +6002,56 @@ Code quality improvements were completed as part of Option A:
   - `bash packaging/scripts/run-release-gate.sh`
   - `bash ./bin/lint`
   - `dotnet test -v minimal` still hangs after reporting passing suite counts in this environment; added a follow-up task to isolate that harness tail separately from the now-green release gate
+
+## 2026-04-15 14:15:00Z
+
+- Finished the follow-up lint cleanup left behind by the web ESLint 9 migration.
+- Replaced the over-scoped / broken web lint setup with an explicit flat config for `src/**/*.{js,jsx}` and test files, added direct `eslint-plugin-react-hooks` plus `eslint-plugin-promise` dependencies so legacy `eslint-disable` comments resolve cleanly again, and kept non-app paths like `e2e`, generated artifacts, and tooling configs out of the web lint gate.
+- Fixed two real frontend bugs surfaced during the lint pass:
+  - `src/web/src/components/Search/Response.jsx` now imports `../../lib/searches` and calls `searches.createBatch(...)` instead of a stale undefined `library` symbol in the queue-nearby path
+  - `src/web/src/components/System/Files/Explorer.jsx` now defaults each optional length operand before addition so totals do not collapse through `NaN` because of `+` / `??` precedence
+- Documented both bugs in `memory-bank/decisions/adr-0001-known-gotchas.md`.
+- Validation:
+  - `npm --prefix src/web run lint`
+  - `bash ./bin/lint`
+  - `npm --prefix src/web test -- --run src/registerServiceWorker.test.js src/serviceWorkerCaching.test.js src/lib/jobs.test.js src/lib/mediacore.test.js`
+  - `git diff --check`
+
+## 2026-04-15 15:10:00Z
+
+- Removed the remaining Dependabot major-version ignore blocks from `.github/dependabot.yml` instead of carrying them forward.
+- Finished the held dependency/runtime upgrades:
+  - `src/web/package.json` / `package-lock.json`: React 18.3.1, React DOM 18.3.1, React Router DOM 7.14.1, `uuid` 13.0.0, `@uiw/react-codemirror` 4.25.9, `jsdom` 29.0.2, `@testing-library/react` 16.3.2, `@testing-library/dom` 10.4.1, `@vitejs/plugin-react` 6.0.1
+  - backend/test projects: moved to `net10.0` and kept the earlier held major NuGet lines on their upgraded versions
+- Fixed the breakages caused by those upgrades:
+  - migrated the web app from React Router v5 APIs to Router 7 APIs, including route declarations, navigation hooks, and the `Pods` class-component wrapper
+  - switched `src/web/src/index.jsx` to the React 18 `createRoot(...)` entrypoint
+  - fixed compile/runtime fallout in backend code already touched by the .NET 10 package/runtime move (`Program`, OpenAPI filter, `RelayService`, `Gluetun`)
+  - documented two upgrade gotchas in ADR-0001 and committed those doc-only checkpoints (`c69f2e4f`, `a774b8e3`)
+- Validation:
+  - `npm --prefix src/web run lint`
+  - `npm --prefix src/web run build`
+  - `npm --prefix src/web test -- --run`
+  - `npm --prefix src/web run test:build-output`
+  - `bash ./bin/lint`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ApplicationLifecycleTests|FullyQualifiedName~ProgramPathNormalizationTests|FullyQualifiedName~SoulseekOptionsValidationTests" -v minimal`
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~VersionedApiRoutesIntegrationTests|FullyQualifiedName~SecurityRoutesIntegrationTests|FullyQualifiedName~NicotinePlusIntegrationTests" -v minimal`
+  - `dotnet test slskd.sln -v minimal` still hangs after reporting passing output in this environment
+  - `packaging/scripts/run-release-gate.sh` reaches the backend test phase but appears to hit the same hanging-tail behavior, so the explicit green slices are the reliable proof for now
+
+## 2026-04-15 16:05:00Z
+
+- Closed the lingering backend test-tail follow-up under `.NET 10`.
+- Isolated the original solution-wide `dotnet test` stall to two integration-test-specific problems instead of one generic runner failure:
+  - `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs` was still using stale `net8.0` binary discovery and could start bridge-mode full-instance tests without first proving `soulfind` existed, which left `BridgeProxyServerIntegrationTests` hanging the host when the external bridge binary was unavailable.
+  - `tests/slskd.Tests.Integration/DisasterMode/DisasterModeTests.cs` used long blind `Task.Delay(...)` waits in the recovery path, which tripped hang diagnostics even though the app path itself was fine.
+- Fixed both integration harness/test issues:
+  - added fast `soulfind` prerequisite checks plus `net10.0` binary discovery to `SlskdnFullInstanceRunner`
+  - replaced the disaster-mode recovery sleeps with short status-endpoint polling and added basic success assertions so the test keeps making observable progress
+- Re-ran the previously failing tests under blame-hang successfully:
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~Disaster_Mode_Recovery_Should_Deactivate_When_Soulfind_Returns" --blame-hang --blame-hang-timeout 20s -v normal`
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~DownloadItem_PodResult_FetchFailed_ReturnsBadGateway" --blame-hang --blame-hang-timeout 20s -v normal`
+- Validation after the fixes:
+  - `bash ./bin/lint`
+  - `git diff --check`
+  - `timeout 180s dotnet test slskd.sln -v minimal` now reaches and reports passing counts for `slskd.Tests` (`46`), `slskd.Tests.Unit` (`3374`), and `slskd.Tests.Integration` (`270`) instead of hanging on the old testhost tail

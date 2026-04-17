@@ -31,6 +31,21 @@
  - Priority: P2
  - Notes: The April 14 dependency/release chore pass restored green release-gate validation, but a broad `dotnet test -v minimal` run in this environment still stops returning output after the unit suite reports passing counts. The release gate and focused smoke slices pass, so this remains a separate harness/cleanup problem to isolate before relying on the broad solution-level test command as a hard release signal.
 
+- [x] **chore**: Add a reproduce-first verification workflow for tester-reported bugfix releases.
+ - Status: completed (2026-04-14)
+ - Priority: P1
+ - Notes: Added `docs/dev/bugfix-verification-checklist.md` and wired it into the release checklist, testing policy, and ADR-0004 so reported bugs must be split into concrete acceptance checks, reproduced or explicitly marked as unverified mitigations, and re-run on the same path before a tag build is described as a fix.
+
+- [x] **chore**: Remove stale Dependabot suppressions and tighten dependency holds to real blockers only.
+ - Status: completed (2026-04-14)
+ - Priority: P1
+ - Notes: Removed the dead `react-scripts` ignore, kept only actual framework/runtime blockers in `.github/dependabot.yml`, pinned `@uiw/react-codemirror` to the last React-16-compatible `4.21.21` so the lockfile no longer drifts to the React-17-only `4.25.x` line, and moved the web lint toolchain onto the compatible ESLint 9 flat-config path required by `eslint-config-canonical 47.4.2`.
+
+- [x] **chore**: Restore green web lint after the ESLint 9 migration.
+ - Status: completed (2026-04-15)
+ - Priority: P1
+ - Notes: Replaced the broken web ESLint 9 setup with an explicit flat config for app/test code, added direct `eslint-plugin-react-hooks` and `eslint-plugin-promise` deps, fixed the stale `searches.createBatch(...)` import in `Search/Response.jsx`, fixed the `Explorer.jsx` `+`/`??` precedence bug, and documented both gotchas in ADR-0001.
+
 - [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
  - Status: completed (2026-04-08)
  - Priority: P2
@@ -798,6 +813,18 @@
 - [x] Block the Soulseek loopback-listener misconfiguration that makes peer ops fail after login
   - Status: done
   - Notes: Reproduced the `logged in but all peer connections fail` path against local Soulfind, proved it was caused by `Soulseek.ListenIpAddress = 127.0.0.1` advertising an unreachable external endpoint, then added startup validation plus focused unit coverage so live clients must use `0.0.0.0` or another reachable interface.
+
+## 2026-04-15 Completed Follow-up
+
+- [x] Eliminate the remaining Dependabot major-version holds by doing the upgrades instead of ignoring them
+  - Status: done
+  - Notes: Removed all major-version ignore blocks from `.github/dependabot.yml`, upgraded the web app to React 18 / React Router 7 / `uuid` 13 / `@uiw/react-codemirror` 4.25.9 / `jsdom` 29.0.2, moved the backend and test projects to `net10.0`, and updated the held NuGet major lines in `src/slskd/slskd.csproj` plus the test projects.
+- [x] Fix the breakages introduced by those dependency/runtime jumps and prove the upgraded stack still works
+  - Status: done
+  - Notes: Migrated router usage off v5 APIs, added the missing `@testing-library/dom` peer required by the upgraded test stack, fixed the backend compile breaks from Swashbuckle / Soulseek / .NET 10 API changes, documented both upgrade gotchas in ADR-0001, and revalidated lint/build/tests on the new stack.
+- [x] Isolate why full-solution backend test commands still hang after passing output under `.NET 10`
+  - Status: done
+  - Notes: The lingering tail was not one generic `.NET 10` harness bug. It was two integration-test-specific stalls: `BridgeProxyServerIntegrationTests` started a full bridge instance without preflighting the external `soulfind` dependency, and `DisasterModeTests.Disaster_Mode_Recovery_Should_Deactivate_When_Soulfind_Returns` burned the hang timeout on blind sleeps. After fixing those test paths, `dotnet test slskd.sln -v minimal` completed with passing counts across `slskd.Tests`, `slskd.Tests.Unit`, and `slskd.Tests.Integration`.
 
 ## 2026-04-09 Completed Follow-up
 

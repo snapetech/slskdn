@@ -5,7 +5,7 @@ import PortForwarding from './PortForwarding';
 import VpnGatewayConfig from './VpnGatewayConfig';
 import React, { Component } from 'react';
 import { toast } from 'react-toastify';
-import { withRouter } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
   Dimmer,
@@ -31,6 +31,27 @@ const initialState = {
   pods: [],
 };
 
+const withRouter = (WrappedComponent) => {
+  const RoutedComponent = (props) => {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const params = useParams();
+
+    return (
+      <WrappedComponent
+        {...props}
+        location={location}
+        navigate={navigate}
+        params={params}
+      />
+    );
+  };
+
+  RoutedComponent.displayName = `withRouter(${WrappedComponent.displayName || WrappedComponent.name || 'Component'})`;
+
+  return RoutedComponent;
+};
+
 class Pods extends Component {
   constructor(props) {
     super(props);
@@ -39,8 +60,8 @@ class Pods extends Component {
   }
 
   componentDidMount() {
-    const podId = this.props.match?.params?.podId;
-    const channelId = this.props.match?.params?.channelId;
+    const podId = this.props.params?.podId;
+    const channelId = this.props.params?.channelId;
 
     this.setState(
       {
@@ -65,10 +86,10 @@ class Pods extends Component {
 
   componentDidUpdate(previousProps) {
     // Handle route changes
-    const podId = this.props.match?.params?.podId;
-    const channelId = this.props.match?.params?.channelId;
-    const previousPodId = previousProps.match?.params?.podId;
-    const previousChannelId = previousProps.match?.params?.channelId;
+    const podId = this.props.params?.podId;
+    const channelId = this.props.params?.channelId;
+    const previousPodId = previousProps.params?.podId;
+    const previousChannelId = previousProps.params?.channelId;
 
     if ((podId !== previousPodId || channelId !== previousChannelId) && podId) {
       this.selectPod(podId, channelId);
@@ -153,15 +174,13 @@ class Pods extends Component {
     });
 
     // Update URL only if different from current route
-    const currentPodId = this.props.match?.params?.podId;
-    const currentChannelId = this.props.match?.params?.channelId;
+    const currentPodId = this.props.params?.podId;
+    const currentChannelId = this.props.params?.channelId;
     if (podId !== currentPodId || channelId !== currentChannelId) {
       if (channelId) {
-        this.props.history.push(
-          `${urlBase}/pods/${podId}/channels/${channelId}`,
-        );
+        this.props.navigate(`${urlBase}/pods/${podId}/channels/${channelId}`);
       } else {
-        this.props.history.push(`${urlBase}/pods/${podId}`);
+        this.props.navigate(`${urlBase}/pods/${podId}`);
       }
     }
 

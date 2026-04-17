@@ -1,5 +1,6 @@
 import * as discoveryGraph from '../../lib/discoveryGraph';
 import api from '../../lib/api';
+import * as searches from '../../lib/searches';
 import * as transfers from '../../lib/transfers';
 import { getDirectoryContents, getGroup } from '../../lib/users';
 import { formatBytes, getDirectoryName, getFileName } from '../../lib/util';
@@ -326,7 +327,7 @@ class Response extends Component {
     }
 
     try {
-      const count = await library.createBatch({ queries });
+      const count = await searches.createBatch({ queries });
       toast.success(`Started ${count} nearby graph searches`);
     } catch (error) {
       console.error(error);

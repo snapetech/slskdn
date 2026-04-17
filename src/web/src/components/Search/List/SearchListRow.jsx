@@ -4,7 +4,7 @@ import DiscoveryGraphModal from '../DiscoveryGraphModal';
 import * as searches from '../../../lib/searches';
 import SearchActionIcon from './SearchActionIcon';
 import React, { useState } from 'react';
-import { Link, useRouteMatch } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Icon, Popup, Table } from 'semantic-ui-react';
 import { toast } from 'react-toastify';
 
@@ -14,8 +14,6 @@ const SearchListRow = ({ onRemove, onStop, search }) => {
   const [graphLoading, setGraphLoading] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const [graphRequest, setGraphRequest] = useState(null);
-  const match = useRouteMatch();
-
   const invoke = async (function_) => {
     setWorking(true);
 
@@ -124,7 +122,7 @@ const SearchListRow = ({ onRemove, onStop, search }) => {
           <SearchStatusIcon state={search.state} />
         </Table.Cell>
         <Table.Cell>
-          <Link to={`${match.url}/${encodeURIComponent(search.id)}`}>
+          <Link to={`/searches/${encodeURIComponent(search.id)}`}>
             {search.searchText}
           </Link>
           <Popup

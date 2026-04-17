@@ -102,7 +102,7 @@ public class Gluetun : IVPNClient
                 PublicIPAddress = !IPAddress.TryParse(publicIp.PublicIp, out var ipAddress)
                     ? throw new InvalidOperationException($"Invalid public IP returned by Gluetun: {publicIp.PublicIp}")
                     : ipAddress,
-                Location = string.Join(", ", [publicIp.City, publicIp.Country]),
+                Location = string.Join(", ", new[] { publicIp.City, publicIp.Country }),
                 ForwardedPort = port,
             };
         }

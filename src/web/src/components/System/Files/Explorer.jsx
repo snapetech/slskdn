@@ -159,7 +159,9 @@ const Explorer = ({ remoteFileManagement, root }) => {
     return <LoaderSegment />;
   }
 
-  const total = directory?.directories?.length + directory?.files?.length ?? 0;
+  const total =
+    (directory?.directories?.length ?? 0) +
+    (directory?.files?.length ?? 0);
 
   return (
     <>

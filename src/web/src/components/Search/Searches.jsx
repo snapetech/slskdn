@@ -13,10 +13,9 @@ import MusicBrainzLookup from './MusicBrainzLookup';
 import SongIDPanel from './SongIDPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  useHistory,
   useLocation,
+  useNavigate,
   useParams,
-  useRouteMatch,
 } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -96,9 +95,8 @@ const Searches = ({ server } = {}) => {
 
   const inputRef = useRef();
 
-  const history = useHistory();
   const location = useLocation();
-  const match = useRouteMatch();
+  const routerNavigate = useNavigate();
   const { id: searchId } = useParams();
 
   // Handle URL query parameters for predictable search URLs
@@ -112,8 +110,12 @@ const Searches = ({ server } = {}) => {
         navigate: false,
         search: decodeURIComponent(queryParameter),
       }).then((id) => {
-        if (id) history.replace(`${match.url}/${id}`);
-        else history.replace({ search: '' });
+        if (id) {
+          routerNavigate(`/searches/${id}`, { replace: true });
+          return;
+        }
+
+        routerNavigate('/searches', { replace: true });
       });
     }
   }, [location.search, creating, searchId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -250,7 +252,7 @@ const Searches = ({ server } = {}) => {
       setCreating(false);
 
       if (navigate) {
-        history.push(`${match.url}/${id}`);
+        routerNavigate(`/searches/${id}`);
       }
 
       return id;
@@ -346,7 +348,7 @@ const Searches = ({ server } = {}) => {
 
     // if the searchId doesn't match a search we know about, chop
     // the id off of the url and force navigation back to the list
-    history.replace(match.url.replace(`/${searchId}`, ''));
+    routerNavigate('/searches', { replace: true });
   }
 
   inputRef?.current?.inputRef?.current.focus();

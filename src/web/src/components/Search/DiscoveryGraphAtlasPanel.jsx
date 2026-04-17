@@ -2,7 +2,7 @@ import * as discoveryGraph from '../../lib/discoveryGraph';
 import * as searches from '../../lib/searches';
 import DiscoveryGraphAtlas from './DiscoveryGraphAtlas';
 import React, { useEffect, useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   Button,
@@ -24,8 +24,8 @@ const scopeOptions = [
 ];
 
 const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
-  const history = useHistory();
   const location = useLocation();
+  const navigate = useNavigate();
   const [scope, setScope] = useState('songid_run');
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
@@ -101,10 +101,10 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
       setGraph(nextGraph);
       if (persistRoute) {
         const query = discoveryGraph.toQueryString(request);
-        history.replace({
+        navigate({
           pathname: location.pathname,
           search: query ? `?${query}` : '',
-        });
+        }, { replace: true });
       }
     } catch (error) {
       console.error(error);

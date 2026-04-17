@@ -22,6 +22,18 @@ Run through this checklist before committing. If any check fails, fix it.
 
 **This is not optional. Skip this and the bug WILL come back.**
 
+### 0b. If This Change Claims To Fix A Reported Bug
+```bash
+# Open the reproduce-first checklist
+sed -n '1,240p' docs/dev/bugfix-verification-checklist.md
+```
+You must be able to answer:
+- What exact user-visible failure did I reproduce?
+- What exact acceptance check did I re-run after the patch?
+- Which sub-symptoms are still unverified?
+
+If you cannot answer those clearly, do not describe the change as "fixed."
+
 ---
 
 ## Backend (C#)
@@ -191,6 +203,8 @@ echo "=== Done ==="
 Before every commit:
 
 0. ✅ **(If plan-driven)** Deferred and doc updates: add rows to the plan’s **Deferred and Follow-up Work** table for any left-out work; when completing a deferred item, remove its row. Update `config/slskd.example.yml` if options changed. See **AGENTS.md § After Completing Work**.
+0a. ✅ **(If bugfix)** Document the gotcha in `ADR-0001` immediately.
+0b. ✅ **(If reported bugfix)** Capture and re-run the exact repro/acceptance path from `docs/dev/bugfix-verification-checklist.md`.
 1. ✅ No factories/wrappers/builders
 2. ✅ No swallowed exceptions
 3. ✅ No logging spam
@@ -211,4 +225,3 @@ Before every commit:
 ---
 
 *Last updated: 2025-12-08*
-

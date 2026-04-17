@@ -4,7 +4,7 @@ import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import RoomCreateModal from './RoomCreateModal';
 import RoomSession from './RoomSession';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -54,7 +54,7 @@ const saveTabsToStorage = (tabsToSave) => {
 };
 
 const Rooms = () => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [tabs, setTabs] = useState(() => loadTabsFromStorage());
   const [activeIndex, setActiveIndex] = useState(0);
   const [availableRooms, setAvailableRooms] = useState([]);
@@ -207,16 +207,16 @@ const Rooms = () => {
 
   const handleUserProfile = useCallback(
     (username) => {
-      history.push('/users', { user: username });
+      navigate('/users', { state: { user: username } });
     },
-    [history],
+    [navigate],
   );
 
   const handleBrowseShares = useCallback(
     (username) => {
-      history.push('/browse', { user: username });
+      navigate('/browse', { state: { user: username } });
     },
-    [history],
+    [navigate],
   );
 
   const roomOptions = availableRooms.map((r) => ({

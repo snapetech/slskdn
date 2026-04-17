@@ -48,6 +48,24 @@ public class ApplicationLifecycleTests
     }
 
     [Fact]
+    public void CreateStartupSoulseekClientOptionsPatch_DoesNotReapplyListenerSettings()
+    {
+        var patch = Application.CreateStartupSoulseekClientOptionsPatch(
+            new OptionsAtStartup(),
+            static (_, _) => { },
+            static (_, _) => Task.FromResult<UserInfo>(null!),
+            static (_, _) => Task.FromResult<BrowseResponse>(null!),
+            static (_, _, _, _) => Task.FromResult<IEnumerable<Soulseek.Directory>>(Array.Empty<Soulseek.Directory>()),
+            static (_, _, _) => Task.CompletedTask,
+            static (_, _, _) => Task.FromResult<SearchResponse?>(null),
+            static (_, _, _) => Task.FromResult<int?>(null));
+
+        Assert.Null(patch.EnableListener);
+        Assert.Null(patch.ListenIPAddress);
+        Assert.Null(patch.ListenPort);
+    }
+
+    [Fact]
     public void Dispose_DetachesManagedStateSubscriptions()
     {
         var optionsMonitor = new TestOptionsMonitor<Options>(new Options());

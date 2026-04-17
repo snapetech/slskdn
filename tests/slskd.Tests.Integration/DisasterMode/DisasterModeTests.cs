@@ -72,8 +72,7 @@ public class DisasterModeTests : IAsyncLifetime
         // Act: Kill Soulfind
         await soulfind!.StopAsync();
 
-        // Wait for disaster mode
-        await Task.Delay(TimeSpan.FromSeconds(15));
+        await WaitForStatusEndpointAsync(alice!);
 
         // Act: Alice searches (should use shadow index only)
         var searchResponse = await alice!.SearchAsync("test track");
@@ -88,21 +87,53 @@ public class DisasterModeTests : IAsyncLifetime
     {
         // Arrange: Activate disaster mode
         await soulfind!.StopAsync();
-        await Task.Delay(TimeSpan.FromSeconds(15));
+        await WaitForStatusEndpointAsync(alice!);
 
         // Verify disaster mode active
         var statusBefore = await alice!.HttpClient.GetAsync("/api/virtualsoulfind/disaster-mode/status");
+        Assert.True(statusBefore.IsSuccessStatusCode);
         // TODO: Assert IsActive = true
 
         // Act: Restart Soulfind
         await soulfind.StartAsync();
 
-        // Wait for reconnection and stability check (1 min in prod, shorter in tests)
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        await WaitForStatusEndpointAsync(alice);
 
         // Assert: Disaster mode deactivated
         var statusAfter = await alice.HttpClient.GetAsync("/api/virtualsoulfind/disaster-mode/status");
+        Assert.True(statusAfter.IsSuccessStatusCode);
         // TODO: Assert IsActive = false
+    }
+
+    private static async Task WaitForStatusEndpointAsync(SlskdnTestClient client, TimeSpan? timeout = null)
+    {
+        using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
+
+        while (!cts.IsCancellationRequested)
+        {
+            try
+            {
+                var response = await client.HttpClient.GetAsync(
+                    "/api/virtualsoulfind/disaster-mode/status",
+                    cts.Token);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+            }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            {
+                break;
+            }
+            catch
+            {
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250), cts.Token);
+        }
+
+        throw new TimeoutException("Disaster mode status endpoint did not become ready in time.");
     }
 }
 

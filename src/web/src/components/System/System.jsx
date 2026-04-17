@@ -17,15 +17,12 @@ import Security from './Security';
 import Shares from './Shares';
 import SwarmAnalytics from './SwarmAnalytics';
 import React from 'react';
-import { Redirect, useHistory, useRouteMatch } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Icon, Menu, Segment, Tab } from 'semantic-ui-react';
 
 const System = ({ options = {}, state = {}, theme }) => {
-  const {
-    params: { tab },
-    ...route
-  } = useRouteMatch();
-  const history = useHistory();
+  const navigate = useNavigate();
+  const { tab } = useParams();
 
   const panes = [
     {
@@ -282,11 +279,11 @@ const System = ({ options = {}, state = {}, theme }) => {
   const activeIndex = panes.findIndex((pane) => pane.route === tab);
 
   const onTabChange = (_event, { activeIndex: newActiveIndex }) => {
-    history.push(panes[newActiveIndex].route);
+    navigate(`/system/${panes[newActiveIndex].route}`);
   };
 
   if (tab === undefined) {
-    return <Redirect to={`${route.url}/${panes[0].route}`} />;
+    return <Navigate replace to={`/system/${panes[0].route}`} />;
   }
 
   return (

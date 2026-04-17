@@ -30,7 +30,7 @@ import Transfers from './Transfers/Transfers';
 import Users from './Users/Users';
 import Wishlist from './Wishlist/Wishlist';
 import React, { Component } from 'react';
-import { Link, Redirect, Route, Switch } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import {
   Button,
@@ -158,6 +158,43 @@ const ModeSpecificConnectButton = ({
       </Menu.Item>
     );
   }
+};
+
+const RouteMissRedirect = () => {
+  const location = useLocation();
+
+  if (typeof window !== 'undefined') {
+    window.routeMissPath = location.pathname;
+
+    setTimeout(() => {
+      const element = document.querySelector('[data-testid="route-miss"]');
+      if (element) {
+        window.routeMissElement = element.textContent;
+      }
+    }, 100);
+  }
+
+  console.error('[Router] Route miss for:', location.pathname);
+
+  return (
+    <>
+      <div
+        data-testid="route-miss"
+        style={{
+          background: 'red',
+          color: 'white',
+          left: 0,
+          padding: '20px',
+          position: 'fixed',
+          top: 0,
+          zIndex: 9_999,
+        }}
+      >
+        Route miss: {location.pathname}
+      </div>
+      <Navigate replace to="/searches" />
+    </>
+  );
 };
 
 class App extends Component {
@@ -719,43 +756,52 @@ class App extends Component {
               value={{ options: applicationOptions, state: applicationState }}
             >
               {isAgent ? (
-                <Switch>
+                <Routes>
                   <Route
-                    path="/system/:tab?"
-                    render={(props) =>
+                    path="/system"
+                    element={
                       this.withTokenCheck(
                         <System
-                          {...props}
                           options={applicationOptions}
                           state={applicationState}
                         />,
                       )
                     }
                   />
-                  <Redirect
-                    from="*"
-                    to="/system"
-                  />
-                </Switch>
-              ) : (
-                <Switch>
                   <Route
-                    exact
+                    path="/system/:tab"
+                    element={
+                      this.withTokenCheck(
+                        <System
+                          options={applicationOptions}
+                          state={applicationState}
+                        />,
+                      )
+                    }
+                  />
+                  <Route
+                    path="*"
+                    element={<Navigate replace to="/system" />}
+                  />
+                </Routes>
+              ) : (
+                <Routes>
+                  <Route
                     path="/collections"
-                    render={(props) => {
+                    element={(() => {
                       // This should log if route matches
                       if (typeof window !== 'undefined') {
                         window.routeMatchedCollections = true;
                         console.log(
                           '[Router] /collections route matched!',
-                          props,
+                          '/collections',
                         );
                       }
 
                       try {
                         const result = this.withTokenCheck(
                           <div className="view">
-                            <Collections {...props} />
+                            <Collections />
                           </div>,
                         );
                         console.log(
@@ -776,135 +822,122 @@ class App extends Component {
                           </div>
                         );
                       }
-                    }}
+                    })()}
                   />
                   <Route
-                    exact
                     path="/solid"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
-                          <SolidSettings {...props} />
+                          <SolidSettings />
                         </div>,
                       )
                     }
                   />
                   <Route
-                    exact
                     path="/discovery-graph"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <DiscoveryGraphAtlasPage
                           server={applicationState.server}
-                          {...props}
                         />,
                       )
                     }
                   />
                   <Route
-                    exact
                     path="/searches"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
-                          <Searches
-                            server={applicationState.server}
-                            {...props}
-                          />
+                          <Searches server={applicationState.server} />
                         </div>,
                       )
                     }
                   />
                   <Route
                     path="/searches/:id"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
-                          <Searches
-                            server={applicationState.server}
-                            {...props}
-                          />
+                          <Searches server={applicationState.server} />
                         </div>,
                       )
                     }
                   />
                   <Route
                     path="/wishlist"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
-                          <Wishlist {...props} />
+                          <Wishlist />
                         </div>,
                       )
                     }
                   />
                   <Route
                     path="/browse"
-                    render={(props) =>
-                      this.withTokenCheck(<Browse {...props} />)
-                    }
+                    element={this.withTokenCheck(<Browse />)}
                   />
                   <Route
                     path="/users"
-                    render={(props) =>
-                      this.withTokenCheck(<Users {...props} />)
-                    }
+                    element={this.withTokenCheck(<Users />)}
                   />
                   <Route
-                    exact
                     path="/contacts"
-                    render={(props) =>
-                      this.withTokenCheck(<Contacts {...props} />)
-                    }
+                    element={this.withTokenCheck(<Contacts />)}
                   />
                   <Route
                     path="/sharegroups"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
-                          <ShareGroups {...props} />
+                          <ShareGroups />
                         </div>,
                       )
                     }
                   />
                   <Route
                     path="/shared"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
-                          <SharedWithMe {...props} />
+                          <SharedWithMe />
                         </div>,
                       )
                     }
                   />
                   <Route
                     path="/chat"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <Chat
-                          {...props}
                           state={applicationState}
                         />,
                       )
                     }
                   />
                   <Route
-                    path="/pods/:podId?/channels/:channelId?"
-                    render={(props) => this.withTokenCheck(<Pods {...props} />)}
+                    path="/pods"
+                    element={this.withTokenCheck(<Pods />)}
+                  />
+                  <Route
+                    path="/pods/:podId"
+                    element={this.withTokenCheck(<Pods />)}
+                  />
+                  <Route
+                    path="/pods/:podId/channels/:channelId"
+                    element={this.withTokenCheck(<Pods />)}
                   />
                   <Route
                     path="/rooms"
-                    render={(props) =>
-                      this.withTokenCheck(<Rooms {...props} />)
-                    }
+                    element={this.withTokenCheck(<Rooms />)}
                   />
                   <Route
                     path="/uploads"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
                           <Transfers
-                            {...props}
                             direction="upload"
                           />
                         </div>,
@@ -913,11 +946,10 @@ class App extends Component {
                   />
                   <Route
                     path="/downloads"
-                    render={(props) =>
+                    element={
                       this.withTokenCheck(
                         <div className="view">
                           <Transfers
-                            {...props}
                             direction="download"
                             server={applicationState.server}
                           />
@@ -926,11 +958,10 @@ class App extends Component {
                     }
                   />
                   <Route
-                    path="/system/:tab?"
-                    render={(props) =>
+                    path="/system"
+                    element={
                       this.withTokenCheck(
                         <System
-                          {...props}
                           options={applicationOptions}
                           state={applicationState}
                           theme={theme}
@@ -938,49 +969,23 @@ class App extends Component {
                       )
                     }
                   />
-                  <Route path="*">
-                    {({ location }) => {
-                      // Log route miss for debugging - this should appear in browser console
-                      console.error(
-                        '[Router] Route miss for:',
-                        location.pathname,
-                      );
-                      // Set flag so test can detect route miss
-                      if (typeof window !== 'undefined') {
-                        window.routeMissPath = location.pathname;
-                        // Also set it on the route-miss element so it persists even after redirect
-                        setTimeout(() => {
-                          const element = document.querySelector(
-                            '[data-testid="route-miss"]',
-                          );
-                          if (element) {
-                            window.routeMissElement = element.textContent;
-                          }
-                        }, 100);
-                      }
-
-                      return (
-                        <>
-                          <div
-                            data-testid="route-miss"
-                            style={{
-                              background: 'red',
-                              color: 'white',
-                              left: 0,
-                              padding: '20px',
-                              position: 'fixed',
-                              top: 0,
-                              zIndex: 9_999,
-                            }}
-                          >
-                            Route miss: {location.pathname}
-                          </div>
-                          <Redirect to="/searches" />
-                        </>
-                      );
-                    }}
-                  </Route>
-                </Switch>
+                  <Route
+                    path="/system/:tab"
+                    element={
+                      this.withTokenCheck(
+                        <System
+                          options={applicationOptions}
+                          state={applicationState}
+                          theme={theme}
+                        />,
+                      )
+                    }
+                  />
+                  <Route
+                    path="*"
+                    element={<RouteMissRedirect />}
+                  />
+                </Routes>
               )}
             </AppContext.Provider>
           </Sidebar.Pusher>

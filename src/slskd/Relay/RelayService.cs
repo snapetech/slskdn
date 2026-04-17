@@ -795,7 +795,7 @@ namespace slskd.Relay
         /// <returns>A value indicating whether the response is valid.</returns>
         public bool TryValidateAuthenticationCredential(string connectionId, string agentName, string credential)
         {
-            if (!MemoryCache.TryGetValue(GetAuthTokenCacheKey(connectionId), out var challengeToken))
+            if (!MemoryCache.TryGetValue((object)GetAuthTokenCacheKey(connectionId), out var challengeToken))
             {
                 Log.Debug("Auth challenge for {Id} failed: no challenge token cached for ID", connectionId);
                 return false;
@@ -995,7 +995,7 @@ namespace slskd.Relay
                     return false;
                 }
 
-                if (!MemoryCache.TryGetValue(cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
+                if (!MemoryCache.TryGetValue((object)cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
                 {
                     Log.Debug("Validation failed: Cache key {Key} not cached", cacheKey);
                     return false;
@@ -1040,7 +1040,7 @@ namespace slskd.Relay
         {
             validatedAgentName = string.Empty;
 
-            if (!MemoryCache.TryGetValue(cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
+            if (!MemoryCache.TryGetValue((object)cacheKey, out var cachedConnectionId) || cachedConnectionId is not string trustedConnectionId)
             {
                 Log.Debug("Validation failed: Cache key {Key} not cached", cacheKey);
                 return false;

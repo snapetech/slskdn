@@ -70,7 +70,7 @@ namespace slskd
     using Microsoft.Extensions.FileProviders;
     using Microsoft.Extensions.FileProviders.Physical;
     using Microsoft.IdentityModel.Tokens;
-    using Microsoft.OpenApi.Models;
+    using Microsoft.OpenApi;
     using OpenTelemetry.Trace;
     using Prometheus.DotNetRuntime;
     using Prometheus.SystemMetrics;
@@ -159,6 +159,11 @@ namespace slskd
         ///     The default XML documentation filename.
         /// </summary>
         public static readonly string XmlDocumentationFile = Path.Combine(AppContext.BaseDirectory, "etc", $"{AppName}.xml");
+
+        /// <summary>
+        ///     Soulseek.NET requires a caller-owned minor-version slot.
+        /// </summary>
+        public static readonly int SoulseekMinorVersion = 760;
 
         /// <summary>
         ///     The default application data directory.
@@ -1050,7 +1055,7 @@ namespace slskd
             // add a partially configured instance of SoulseekClient. the Application instance will
             // complete configuration at startup.
             services.AddSingleton<ISoulseekClient, SoulseekClient>(_ =>
-                new SoulseekClient(options: CreateInitialSoulseekClientOptions(OptionsAtStartup)));
+                new SoulseekClient(SoulseekMinorVersion, options: CreateInitialSoulseekClientOptions(OptionsAtStartup)));
 
             // add the core application service to DI as well as a hosted service so that other services can
             // access instance methods

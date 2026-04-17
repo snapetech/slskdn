@@ -23,7 +23,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish the April 14 dependency/release chore pass on `main`: push the tested dependency bump batch, close the superseded Dependabot PRs, and trigger the next stable `build-main-*` tag.
+- **Current Task**: None. The lingering `.NET 10` full-solution test-tail investigation is closed.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -78,6 +78,26 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `packaging/scripts/run-release-integration-smoke.sh` now runs the focused startup/transfer unit regression slice (`ApplicationLifecycleTests`, `DownloadServiceTests`, `ProgramPathNormalizationTests`, `ConnectionWatchdogTests`) before the integration route smoke
     - reran that revised release smoke successfully
   - Monitored `build-main-0.24.5-slskdn.123` and confirmed the stable release path now reaches `Create Main Release` successfully and the `Announce Main Release to Discord` job completes successfully; the Discord outage report was downstream of the earlier release-gate regression, not a webhook failure.
+  - Reviewed closed-but-still-unresolved tester issues `#200` and `#201` without touching the issue threads and identified the main failure mode: we kept shipping builds on partial symptom relief without reproducing the tester's exact path first.
+  - Added a repo-level reproduce-first follow-up:
+    - new `docs/dev/bugfix-verification-checklist.md`
+    - `docs/dev/testing-policy.md` now requires reproduce-then-disprove validation for externally reported bugs
+    - `docs/dev/release-checklist.md` now states that green generic smoke is not enough for claimed bugfix releases
+    - `memory-bank/decisions/adr-0004-pr-checklist.md` now requires the exact repro/acceptance answers before calling a reported bug fixed
+  - Audited the remaining Dependabot holds and removed stale cleanup-only suppression:
+    - deleted the dead `react-scripts` ignore
+    - pinned `@uiw/react-codemirror` to exact `4.21.21` so the lockfile no longer drifts onto the React-17-only `4.25.x` line
+    - confirmed the current `eslint-config-canonical 47.4.2` line requires ESLint 9 and moved `src/web` onto `eslint.config.mjs` with the direct import resolver dependencies that flat config now needs
+  - Closed the remaining web lint follow-up from that ESLint 9 move:
+    - replaced the broken / over-scoped web lint setup with an explicit flat config for app and test files
+    - added direct `eslint-plugin-react-hooks` and `eslint-plugin-promise` dependencies so legacy disable comments resolve cleanly again
+    - fixed the stale `searches.createBatch(...)` import bug in `src/web/src/components/Search/Response.jsx`
+    - fixed the `src/web/src/components/System/Files/Explorer.jsx` `+` / `??` precedence bug so totals cannot collapse through `NaN`
+    - documented both frontend gotchas in `ADR-0001`
+  - Added direct proof coverage for the remaining tester issues:
+    - new `src/web/src/serviceWorkerCaching.test.js` covers the stale cached app-shell behavior behind the white-tab `/assets/*` 404 failure in `#200`
+    - `ApplicationLifecycleTests` now asserts the startup Soulseek options patch leaves listener fields unset so `ReconfigureOptionsAsync(...)` cannot tear down the live listener again during bootstrap (`#201`)
+    - reran the focused web, unit, and integration proof slices for the affected paths successfully
   - Traced the missing Discord announcements to a release-gate regression instead of the webhook job itself: `build-main-0.24.5-slskdn.121` failed before `release-main`, because `src/web/scripts/smoke-subpath-build.mjs` still enforced old relative asset references after the Web UI moved back to root-relative assets plus backend HTML rewriting. Fixed the smoke harness to emulate the backend rewrite model and documented the gotcha in `ADR-0001`.
   - Updated `.github/dependabot.yml` so Dependabot ignores recurring `axios` and `lodash` frontend bumps instead of reopening those PRs, removed invalid Dependabot labels that were generating bot comments, and prepared GitHub cleanup for PRs `#198` and `#203`.
   - Re-opened and fixed the remaining tester-reported regressions on GitHub issues `#200` and `#201`:
@@ -323,7 +343,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Total tasks: 127 (T-300 to T-915, plus misc)**
 
 ### Blocking Issues
-- None currently
+- No active blocker from the old `.NET 10` test-tail issue; the previously hanging full-solution test run now exits after the integration harness/test fixes.
 
 ### Current focus (the rest)
 - **40-fixes plan (PR-00–PR-14):** Done. slskd.Tests 46, slskd.Tests.Unit 2257 pass; Epic implemented. Deferred table: status only.
@@ -334,10 +354,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 **Research (9) implementation:** ✅ Complete. T-901–T-913 all done per `memory-bank/tasks.md`.
 
 ### Next Steps
-1. Commit and push the tested dependency/release chore batch on `main`.
-2. Close superseded Dependabot PRs `#204`-`#207` once the branch tip is on GitHub.
-3. Push `build-main-0.24.5-slskdn.129` from the validated branch tip and monitor the run.
-4. Isolate the still-hanging full `dotnet test -v minimal` tail as a separate harness follow-up.
+1. Keep using the reproduce-first checklist whenever a build claims to fix a tester-reported regression.
+2. If `#200` / `#201` reports come back again, reproduce against the current proof slices first instead of shipping another speculative tag.
+3. If release automation ever reports another backend test tail, start from the two fixed gotchas first: missing external test prerequisites and long integration sleeps under hang diagnostics.
 
 4. **Recent completions** (2026-01-27):
    - ✅ Backfill for shared collections (API + UI, supports HTTP and Soulseek)
@@ -369,7 +388,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 - **Backend Port**: 5030 (default)
 - **Frontend Dev Port**: 3000 (CRA default)
-- **.NET Version**: 8.0
+- **.NET Version**: 10.0
 - **Node Version**: Check `package.json` engines
 
 ---

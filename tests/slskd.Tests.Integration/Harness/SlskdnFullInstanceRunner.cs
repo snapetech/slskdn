@@ -70,6 +70,12 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         if (enableBridge)
         {
             bridgePort = bridgePortOverride ?? AllocateEphemeralPort();
+
+            if (string.IsNullOrEmpty(DiscoverSoulfindBinary()))
+            {
+                throw new InvalidOperationException(
+                    "Soulfind binary not found. Install soulfind or set SOULFIND_PATH before running bridge integration tests.");
+            }
         }
 
         // Write configuration file
@@ -229,8 +235,8 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         {
             var candidates = new[]
             {
-                Path.Combine(solutionRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd"),
-                Path.Combine(solutionRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd"),
+                Path.Combine(solutionRoot, "src", "slskd", "bin", "Debug", "net10.0", "slskd"),
+                Path.Combine(solutionRoot, "src", "slskd", "bin", "Release", "net10.0", "slskd"),
                 Path.Combine(solutionRoot, "publish", "slskd")
             };
 
@@ -241,6 +247,51 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
                     return candidate;
                 }
             }
+        }
+
+        return null;
+    }
+
+    private string? DiscoverSoulfindBinary()
+    {
+        var locations = new[]
+        {
+            "/usr/local/bin/soulfind",
+            "/usr/bin/soulfind",
+            "./soulfind",
+            "../soulfind/soulfind",
+            Environment.GetEnvironmentVariable("SOULFIND_PATH")
+        };
+
+        foreach (var location in locations.Where(l => !string.IsNullOrWhiteSpace(l)))
+        {
+            if (File.Exists(location))
+            {
+                return location;
+            }
+        }
+
+        try
+        {
+            var whichCommand = OperatingSystem.IsWindows() ? "where" : "which";
+            var psi = new ProcessStartInfo
+            {
+                FileName = whichCommand,
+                Arguments = "soulfind",
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            };
+
+            using var process = Process.Start(psi);
+            var output = process?.StandardOutput.ReadToEnd()?.Trim();
+
+            if (!string.IsNullOrEmpty(output) && File.Exists(output))
+            {
+                return output;
+            }
+        }
+        catch
+        {
         }
 
         return null;

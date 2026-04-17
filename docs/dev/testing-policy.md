@@ -11,6 +11,18 @@ slskdn needs one repeatable gate for release-critical behavior, not scattered on
 
 ## Test Layers
 
+### 0. Reproduce-Then-Disprove Bugfix Work
+
+For tester-reported or externally reported regressions, the release bar is not just "some tests passed." The team must capture the reported repro contract, reproduce the same failure locally or in an equivalent environment when practical, then verify the same path after the patch.
+
+Use [bugfix-verification-checklist.md](/home/keith/Documents/code/slskdn/docs/dev/bugfix-verification-checklist.md) before calling a reported issue "fixed."
+
+Rules:
+
+- split multi-symptom reports into separate acceptance checks
+- do not call a bug "fixed" based on a partial internal signal if the user-visible flow was not re-run
+- if exact repro is still unavailable, describe the result as a mitigation or unverified fix, not a confirmed fix
+
 ### 1. Release Gate
 
 Run `bash packaging/scripts/run-release-gate.sh`.
@@ -41,6 +53,7 @@ Every confirmed bug should leave behind one focused automated check when practic
 - backend persistence/API bugs: add unit or `tests/slskd.Tests` coverage
 - legacy data compatibility bugs: add persistence/materialization tests with representative rows
 - packaging/build regressions: add script validation or workflow-safe assertions
+- tester-reported route or runtime regressions: add a regression that matches the exact production path that failed, not a nearby approximation
 
 ### 3. Deeper Integration / E2E
 
@@ -78,9 +91,10 @@ When adding tests, prioritize these surfaces first:
 
 1. startup/auth/session/bootstrap paths
 2. packaged web output and `web.url_base` compatibility
-3. config validation and security boundaries
-4. persistence compatibility with legacy SQLite rows
-5. release workflow/script logic
+3. externally reported repro paths that already escaped once
+4. config validation and security boundaries
+5. persistence compatibility with legacy SQLite rows
+6. release workflow/script logic
 
 ## Rule of Thumb
 

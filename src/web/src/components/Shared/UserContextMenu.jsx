@@ -1,22 +1,19 @@
 import { activeChatKey } from '../../config';
 import UserNoteModal from '../Users/UserNoteModal';
 import React from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Dropdown } from 'semantic-ui-react';
 
 const UserContextMenu = ({ children, trigger, username }) => {
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleBrowse = () => {
-    history.push({
-      pathname: '/browse',
-      state: { user: username },
-    });
+    navigate('/browse', { state: { user: username } });
   };
 
   const handleChat = () => {
     sessionStorage.setItem(activeChatKey, username);
-    history.push('/chat');
+    navigate('/chat');
   };
 
   return (

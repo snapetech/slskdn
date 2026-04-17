@@ -1,6 +1,6 @@
 import * as discoveryGraph from '../../lib/discoveryGraph';
 import React, { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Divider,
@@ -26,7 +26,7 @@ const DiscoveryGraphModal = ({
   onRestoreBranch,
   open,
 }) => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [activeEdgeTypes, setActiveEdgeTypes] = useState([]);
   const [atlasMode, setAtlasMode] = useState(false);
   const [maxDepth, setMaxDepth] = useState(2);
@@ -163,7 +163,7 @@ const DiscoveryGraphModal = ({
                       }
 
                       const query = discoveryGraph.toQueryString(graph.request);
-                      history.push(`/discovery-graph?${query}`);
+                      navigate(`/discovery-graph?${query}`);
                     }}
                     size="small"
                     style={{ marginLeft: '0.5em' }}
