@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z6. MonoTorrent `3.0.2` DHT Bootstrap Can Stall Forever Because It Only Seeds From `router.bittorrent.com`
+
+**The Bug**: slskdn's DHT rendezvous looked broken in production because the pinned `MonoTorrent 3.0.2` bootstrap path seeded only from `router.bittorrent.com`. If that single router did not answer, the engine stayed in `Initialising` with `nodes=0`, so announce/discovery never became usable no matter how much local logging or port explanation we added.
+
+**Files Affected**:
+- `src/slskd/slskd.csproj`
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `config/slskd.example.yml`
+
+**Wrong**:
+```csharp
+// slskdn relied on MonoTorrent 3.0.2's hidden bootstrap defaults.
+await dhtEngine.StartAsync();
+```
+
+```text
+MonoTorrent 3.0.2 only seeded bootstrap from router.bittorrent.com in this path,
+so DHT startup could stall forever at nodes=0 when that router was unreachable.
+```
+
+**Correct**:
+```csharp
+await dhtEngine.StartAsync(initialNodes, _options.BootstrapRouters);
+```
+
+```text
+Pin a MonoTorrent build with the multi-router bootstrap fix and carry the router
+list in slskdn's own config so DHT startup does not depend on one hidden upstream default.
+```
+
+**Why This Keeps Happening**: DHT bootstrap failures are easy to misdiagnose as local firewall or NAT mistakes because the visible symptom is just `NotReady` with zero nodes. When the underlying library hides a single-router bootstrap default, operator-facing logging changes do nothing. Reproduce the engine outside the app, confirm whether the routing table ever gets seeded, and make bootstrap routers explicit in our own configuration instead of trusting opaque upstream defaults.
+
 ### 0z4. Bridge Integration Tests Must Preflight External `soulfind` Prerequisites Before Launching A Full `slskdn` Instance
 
 **The Bug**: `dotnet test slskd.sln` could hang in `BridgeProxyServerIntegrationTests` when the environment did not have a `soulfind` binary. The test harness launched a full `slskdn` process in bridge mode first, then waited for the bridge listener, so the suite never failed or skipped cleanly when the external bridge dependency was missing.
