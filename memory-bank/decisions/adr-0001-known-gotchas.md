@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z15. Public Overlay Exposure Creates Follow-On Noise Unless We Classify Expected Handshake Churn And Clear Stale CSRF Cookies
+
+**The Bug**: After issue `#209` finally fixed DHT bootstrap, the first public test node immediately started logging three follow-on problems as if the feature were still broken: `Connection reset by peer` surfaced as a `[FATAL]` unobserved task exception, stale antiforgery cookies from a reinstall spammed decrypt/key-ring errors on every safe request, and random internet junk hitting the overlay port showed up as warning-stack traces from the TLS handshake path.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Core/Security/ValidateCsrfForCookiesOnlyAttribute.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+
+**Wrong**:
+```text
+Fix DHT bootstrap, expose the overlay port publicly, and keep treating every
+subsequent connection reset, stale XSRF cookie, and garbage TLS probe as an
+unexpected fatal-or-warning condition.
+```
+
+**Correct**:
+```text
+Once the node is reachable:
+- classify `Connection reset by peer` as expected network churn
+- clear stale antiforgery cookies when data-protection keys changed across reinstall
+- downgrade obvious non-TLS overlay probes to debug-level noise instead of warning stack traces
+```
+
+**Why This Keeps Happening**: The first successful public deployment changes the operating environment. A reachable overlay listener attracts scanners and failed handshakes immediately, and reinstalling a web app often leaves old antiforgery cookies in the browser. If we only test the bootstrap path and not the first reachable-runtime behavior, the next operator report looks like the original bug never got fixed even though the real problem has moved on.
+
 ### 0z14. Release Asset Naming Changes Must Be Applied Atomically Across Build Outputs, Repo Metadata, And Package Workflows
 
 **The Bug**: We changed stable package metadata to `slskdn-main-linux-x64.zip` while the release workflow still published `slskdn-main-linux-glibc-x64.zip`. That left the main release partially split-brain: COPR copied one filename while the RPM spec referenced the other, metadata refresh rebuilt `flake.nix` against a filename the just-created release did not publish, and package jobs failed even though the Linux payload itself had built successfully.
