@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z13. Stable Metadata Must Reference Asset Names That Already Exist On The Published Stable Release
+
+**The Bug**: We changed `flake.nix` and other stable package metadata to `slskdn-main-linux-glibc-*.zip` before any stable GitHub release actually published those asset names. `Nix Package Smoke` then fetched `0.24.5-slskdn.131/slskdn-main-linux-glibc-x64.zip`, got a `404`, and failed even though the real stable asset was still `slskdn-main-linux-x64.zip`.
+
+**Files Affected**:
+- `flake.nix`
+- `packaging/scripts/update-stable-release-metadata.sh`
+- stable packaging metadata files (`Formula`, `snapcraft`, `flatpak`, `rpm`, `aur`)
+
+**Wrong**:
+```text
+Switch stable metadata to a future asset naming scheme as soon as the workflow code changes.
+```
+
+**Correct**:
+```text
+Stable metadata must point at the asset names on the latest published stable release.
+Only change those URLs after a release has successfully published the new asset names, or
+teach the metadata updater to choose the asset names that actually exist for that release.
+```
+
+**Why This Keeps Happening**: Release workflows and post-release metadata files move on different timelines. A workflow can be updated to produce new asset names on the next tag, but package metadata is consumed immediately against the current published stable release. If the metadata jumps ahead, anything that validates or downloads the current stable asset will 404.
+
 ### 0z12. Stable Linux Releases Must Ship An Explicit Installer Path, Not Just Raw Zip Payloads
 
 **The Bug**: Stable GitHub releases published only the platform zip payloads, while dev releases also shipped the Linux service/config helper files. That leaves Linux users upgrading from an existing `slskd` systemd install to guess how to replace the old service path, and it is easy to restart the old package-managed binary while thinking the new release zip is running.
