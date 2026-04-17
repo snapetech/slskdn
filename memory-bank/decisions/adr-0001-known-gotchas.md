@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z12. Stable Linux Releases Must Ship An Explicit Installer Path, Not Just Raw Zip Payloads
+
+**The Bug**: Stable GitHub releases published only the platform zip payloads, while dev releases also shipped the Linux service/config helper files. That leaves Linux users upgrading from an existing `slskd` systemd install to guess how to replace the old service path, and it is easy to restart the old package-managed binary while thinking the new release zip is running.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `packaging/linux/install-from-release.sh`
+
+**Wrong**:
+```text
+Ship a stable Linux zip and assume operators will correctly replace any existing service/unit/install path by hand.
+```
+
+**Correct**:
+```text
+Publish the Linux install helper and service/config assets with stable releases too, and give release users
+a single supported install/migration path that rewrites the systemd unit to the extracted release tree.
+```
+
+**Why This Keeps Happening**: Raw release zips are just file payloads. They do not carry a service migration story, and existing `slskd` installs already have a unit file, config location, and binary path. If stable releases do not ship an explicit installer path, users can extract the new tree somewhere and still restart the old service target.
+
 ### 0z11. A Reported "Still Broken" Release Can Actually Be A Stale Running Install, So The App Must Self-Identify Its Executable And Config Paths
 
 **The Bug**: We treated issue `#209` as if the new DHT build was still failing in the same way, but the reporter's WebUI still showed version `126` while they believed they had installed `131`. That means the running process was still an older binary, and we had no fast way to prove which executable/config path the live instance was actually using.
