@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z10. Release Assets Must Not Publish The Same Build Under Both Stable And Version-Named Zip Files
+
+**The Bug**: Stable releases were uploading identical Linux payloads multiple times under names like `slskdn-main-linux-x64.zip` and `slskdn-0.24.5.slskdn.131-linux-x64.zip`. That made the release page look like it contained extra architectures or variants when it was really the same archive duplicated for compatibility.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-packages.yml`
+- `packaging/scripts/update-stable-release-metadata.sh`
+
+**Wrong**:
+```bash
+zip -r ../slskdn-main-linux-x64.zip .
+cp ../slskdn-main-linux-x64.zip ../slskdn-0.24.5.slskdn.131-linux-x64.zip
+```
+
+**Correct**:
+```bash
+zip -r ../slskdn-main-linux-glibc-x64.zip .
+```
+
+```text
+Update packaging and metadata consumers to use the one explicit asset name
+instead of publishing duplicate aliases into the release itself.
+```
+
+**Why This Keeps Happening**: GitHub Releases do not have lightweight aliases, so it is tempting to upload the same file repeatedly under machine-friendly and human-friendly names. That pushes compatibility clutter into the public release page. Pick one canonical asset name per runtime, make the runtime identifier explicit (`glibc` vs `musl`), and keep any backward-compat lookup logic only in consumers that still need to fetch older releases.
+
 ### 0z8. Tag Builds Must Move Docker And Workflow SDK Versions In Lockstep With The App Target Framework
 
 **The Bug**: Stable tag builds can pass most of the repo and still fail only in the Docker publish leg when `slskd` moves to a newer target framework but `.github/workflows/build-on-tag.yml` and `Dockerfile` are still pinned to the previous SDK/runtime images. The failure only shows up late as `NETSDK1045`.
