@@ -6151,3 +6151,15 @@ Code quality improvements were completed as part of Option A:
   - `bash packaging/scripts/validate-packaging-metadata.sh`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-17 21:59:58Z
+
+- Fixed the stable metadata drift that broke `Nix Package Smoke`:
+  - reverted stable package metadata (`flake.nix`, Homebrew, Snap, Flatpak, RPM, AUR) to the asset names that actually exist on published stable release `0.24.5-slskdn.131` (`slskdn-main-linux-x64.zip` / `slskdn-main-linux-arm64.zip`)
+  - updated `packaging/scripts/update-stable-release-metadata.sh` so future stable metadata updates keep using the published stable asset names instead of jumping ahead to the unreleased `linux-glibc-*` scheme
+  - updated packaging validation expectations accordingly
+- Validation:
+  - `bash packaging/scripts/validate-packaging-metadata.sh`
+  - `git diff --check`
+  - `bash packaging/scripts/run-nix-package-smoke.sh` skipped locally because `nix` is not installed on this machine
+- Next release hygiene step: remove the failed `build-main-0.24.5-slskdn.133` tag so it no longer looks like a live release path.

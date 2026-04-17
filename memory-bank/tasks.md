@@ -903,3 +903,6 @@
 - [x] Ship a supported Linux release installer path with stable GitHub releases
   - Status: done
   - Notes: Stable releases now publish `install-linux-release.sh` plus the Linux service/config helper assets so release users upgrading from an existing `slskd` service do not have to hand-wire the new binary path.
+- [x] Fix stable package metadata so Nix smoke fetches the currently published stable assets
+  - Status: done
+  - Notes: Reverted the stable metadata consumers from unreleased `slskdn-main-linux-glibc-*` names back to the real `0.24.5-slskdn.131` asset names (`slskdn-main-linux-x64.zip` / `slskdn-main-linux-arm64.zip`) and updated `packaging/scripts/update-stable-release-metadata.sh` plus packaging validation to stop jumping ahead of the published release.

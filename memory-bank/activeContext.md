@@ -438,3 +438,15 @@ dotnet test
   1. Run `bash ./bin/lint` and `git diff --check`, then commit the code/config/test follow-up.
   2. Push `main` and trigger a fresh stable build once the user wants the fix released.
   3. Update issue `#209` only after the fixed build is available for retest.
+
+## Update 2026-04-17 21:59:58Z
+
+- Current task: Stable package metadata drift fixed locally; ready to push and clean up failed tag `build-main-0.24.5-slskdn.133`.
+- Last activity:
+  - traced the `Nix Package Smoke` failure to stable metadata pointing at unreleased `slskdn-main-linux-glibc-*` assets while the latest published stable release (`0.24.5-slskdn.131`) still publishes `slskdn-main-linux-x64.zip` / `slskdn-main-linux-arm64.zip`
+  - reverted the stable metadata consumers and the metadata updater script to the currently published stable asset names
+  - validated packaging metadata successfully; local Nix smoke remains unexercised here because `nix` is not installed on this machine
+- Next steps:
+  1. Commit and push the stable metadata fix.
+  2. Delete the stale `build-main-0.24.5-slskdn.133` tag locally and on origin.
+  3. Re-run a fresh stable tag build only after the metadata fix is on `main`.
