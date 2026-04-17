@@ -23,10 +23,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The DHT bootstrap/default-port follow-up for issue `#209` is closed.
+- **Current Task**: Release pipeline follow-up closed. Docker/tag workflows are aligned to `.NET 10`, Matrix release redaction now uses `PUT`, and tagged releases now publish additive `linux-glibc-*` aliases alongside the existing asset names.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Fixed the release-pipeline follow-up after the `#209` build review:
+    - updated all workflow `DOTNET_VERSION` pins plus the Dockerfile SDK/runtime images from `.NET 8` to `.NET 10`, which addresses the tagged Docker build failure (`NETSDK1045`)
+    - corrected both Matrix release-announcement cleanup calls in `build-on-tag.yml` to use `PUT` for `/redact/...`, matching the homeserver behavior that was returning `405`
+    - added additive `slskdn-*-linux-glibc-x64.zip` and `slskdn-*-linux-glibc-arm64.zip` aliases for both channel and versioned release assets while preserving the existing `slskdn-main-*`, `slskdn-dev-*`, and legacy versioned names used by packaging
+  - Documented the release workflow drift / Matrix redact gotchas in `ADR-0001` and committed that docs checkpoint separately as `21aeac9d`.
   - Investigated issue `#209` and fixed the DHT bootstrap operator trap:
     - replaced the random fallback DHT UDP port with a stable default `50306` so forwarding / allow-listing is predictable across restarts
     - added startup validation so enabled DHT cannot run with `dht.dht_port = 0`
@@ -210,10 +215,6 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - `bash packaging/scripts/run-release-gate.sh`
     - `bash ./bin/lint`
     - broad `dotnet test -v minimal` still hangs after reporting passing suite counts in this environment; the green release gate remains the more reliable release signal for now
-  - Next steps:
-    - commit and push the remaining dependency/docs changes on `main`
-    - close superseded Dependabot PRs `#204`-`#207` after the branch is pushed
-    - push `build-main-0.24.5-slskdn.129` from the tested branch tip
   - Investigated the failed SongID YouTube run for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd` on `kspls0` and confirmed the immediate host-side failure was a missing `yt-dlp` binary.
   - Reinstalled `yt-dlp` on `kspls0`, re-queued the same SongID source through the authenticated API, and verified the run now advances past the old `PrepareYouTubeAssetsAsync` crash point.
   - Hardened `src/slskd/SongID/SongIdService.cs` so missing `yt-dlp` falls back to metadata-only YouTube analysis instead of failing the run, and fixed the empty-clip aggregate bug that fallback exposed.

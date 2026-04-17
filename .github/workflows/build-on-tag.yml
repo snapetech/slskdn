@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOTNET_VERSION: '8'
+  DOTNET_VERSION: '10'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 permissions: {}
@@ -151,11 +151,43 @@ jobs:
       - name: Create Archive
         run: |
           cd publish-${{ matrix.runtime }}
-          zip -r ../slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip .
+
+          CHANNEL_ARCHIVE="slskdn-${{ needs.parse.outputs.channel }}-${{ matrix.runtime }}.zip"
+          zip -r "../${CHANNEL_ARCHIVE}" .
+
+          CLEAR_CHANNEL_ARCHIVE=""
+          case "${{ matrix.runtime }}" in
+            linux-x64)
+              CLEAR_CHANNEL_ARCHIVE="slskdn-${{ needs.parse.outputs.channel }}-linux-glibc-x64.zip"
+              ;;
+            linux-arm64)
+              CLEAR_CHANNEL_ARCHIVE="slskdn-${{ needs.parse.outputs.channel }}-linux-glibc-arm64.zip"
+              ;;
+          esac
+
+          if [[ -n "$CLEAR_CHANNEL_ARCHIVE" ]]; then
+            cp "../${CHANNEL_ARCHIVE}" "../${CLEAR_CHANNEL_ARCHIVE}"
+          fi
+
           if [[ "${{ needs.parse.outputs.channel }}" == "main" ]]; then
             RELEASE_VERSION="${{ needs.parse.outputs.version }}"
             RELEASE_VERSION="${RELEASE_VERSION//-/.}"
-            zip -r ../slskdn-${RELEASE_VERSION}-${{ matrix.runtime }}.zip .
+            VERSIONED_ARCHIVE="slskdn-${RELEASE_VERSION}-${{ matrix.runtime }}.zip"
+            cp "../${CHANNEL_ARCHIVE}" "../${VERSIONED_ARCHIVE}"
+
+            CLEAR_VERSIONED_ARCHIVE=""
+            case "${{ matrix.runtime }}" in
+              linux-x64)
+                CLEAR_VERSIONED_ARCHIVE="slskdn-${RELEASE_VERSION}-linux-glibc-x64.zip"
+                ;;
+              linux-arm64)
+                CLEAR_VERSIONED_ARCHIVE="slskdn-${RELEASE_VERSION}-linux-glibc-arm64.zip"
+                ;;
+            esac
+
+            if [[ -n "$CLEAR_VERSIONED_ARCHIVE" ]]; then
+              cp "../${VERSIONED_ARCHIVE}" "../${CLEAR_VERSIONED_ARCHIVE}"
+            fi
           fi
 
       - name: Upload Artifact
@@ -302,7 +334,7 @@ jobs:
           if [ -n "$previous_event_id" ]; then
             redact_txn="redact-${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             curl --fail --silent --show-error \
-              -X POST \
+              -X PUT \
               -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
               -H "Content-Type: application/json" \
               -d '{"reason":"Superseded by newer release announcement"}' \
@@ -1326,7 +1358,7 @@ jobs:
           if [ -n "$previous_event_id" ]; then
             redact_txn="redact-${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             curl --fail --silent --show-error \
-              -X POST \
+              -X PUT \
               -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
               -H "Content-Type: application/json" \
               -d '{"reason":"Superseded by newer release announcement"}' \

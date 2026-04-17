@@ -46,6 +46,11 @@
  - Priority: P1
  - Notes: Replaced the broken web ESLint 9 setup with an explicit flat config for app/test code, added direct `eslint-plugin-react-hooks` and `eslint-plugin-promise` deps, fixed the stale `searches.createBatch(...)` import in `Search/Response.jsx`, fixed the `Explorer.jsx` `+`/`??` precedence bug, and documented both gotchas in ADR-0001.
 
+- [x] **chore**: Align tagged release workflows with `.NET 10` and add clearer Linux asset aliases.
+ - Status: completed (2026-04-17)
+ - Priority: P1
+ - Notes: Updated all GitHub Actions `DOTNET_VERSION` pins and the Dockerfile build/runtime images to `.NET 10`, fixed Matrix release-message redaction in `build-on-tag.yml` to use `PUT`, and added additive `linux-glibc-*` release zip aliases while preserving the existing `slskdn-main-*` and versioned asset names used by packaging and downstream automation.
+
 - [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
  - Status: completed (2026-04-08)
  - Priority: P2

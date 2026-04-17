@@ -1,3 +1,21 @@
+## 2026-04-17 11:35 - Fixed tag-build Docker/announce regressions and clarified Linux release asset names
+
+### Completed
+- Updated the repo's GitHub Actions workflow pins from `.NET 8` to `.NET 10` so tagged builds, CI, and release packaging paths no longer drift behind the project target framework.
+- Updated `Dockerfile` to use `.NET 10` SDK and runtime-deps images, which fixes the `NETSDK1045` failure in the stable Docker release job.
+- Fixed both Matrix release-announcement cleanup steps in `build-on-tag.yml` to redact the previous message with `PUT` instead of `POST`, matching the homeserver behavior that was returning `405`.
+- Added additive `linux-glibc-x64` and `linux-glibc-arm64` release zip aliases for channel and versioned assets while preserving the existing `slskdn-main-*`, `slskdn-dev-*`, and old versioned names that packaging and downstream automation already consume.
+- Documented the release workflow drift / Matrix redact gotchas immediately in `ADR-0001` and committed that docs checkpoint separately as `21aeac9d`.
+
+### Verification
+- `python3 - <<'PY'` sanity-checked the workflow/archive blocks after patching.
+- `bash ./bin/lint`
+- `git diff --check`
+
+### Findings
+- The Docker failure on `build-main-0.24.5-slskdn.130` was the expected late-stage symptom of stale workflow/image pins, not a problem in the new `.NET 10` application code itself.
+- The old release asset names are heavily wired into packaging and installer metadata, so the safe fix is additive clearer aliases rather than renaming or removing existing assets.
+
 # Progress Log
 
 > Chronological log of development activity.
