@@ -52,6 +52,57 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z8. Tag Builds Must Move Docker And Workflow SDK Versions In Lockstep With The App Target Framework
+
+**The Bug**: Stable tag builds can pass most of the repo and still fail only in the Docker publish leg when `slskd` moves to a newer target framework but `.github/workflows/build-on-tag.yml` and `Dockerfile` are still pinned to the previous SDK/runtime images. The failure only shows up late as `NETSDK1045`.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `Dockerfile`
+
+**Wrong**:
+```yaml
+env:
+  DOTNET_VERSION: '8'
+```
+
+```dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS publish
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-bookworm-slim AS slskd
+```
+
+**Correct**:
+```yaml
+env:
+  DOTNET_VERSION: '10'
+```
+
+```dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:10.0-bookworm-slim AS publish
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim AS slskd
+```
+
+**Why This Keeps Happening**: The repo can move its project files to a new target framework without immediately breaking local builds, but the tag-only Docker path uses its own SDK/runtime pins. Every framework bump must include the tag workflow's `setup-dotnet` version and the Dockerfile base images in the same change.
+
+### 0z9. Matrix Message Redaction In This Release Workflow Uses `PUT`, Not `POST`
+
+**The Bug**: Release announcements could succeed in Discord but still fail the combined announce job because the Matrix cleanup step tried to redact the previous release message with `POST`, and the homeserver returned `405 Method Not Allowed`.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```bash
+curl --fail --silent --show-error   -X POST   -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}"   -H "Content-Type: application/json"   -d '{"reason":"Superseded by newer release announcement"}'   "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/.../redact/${previous_event_id}/${redact_txn}"
+```
+
+**Correct**:
+```bash
+curl --fail --silent --show-error   -X PUT   -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}"   -H "Content-Type: application/json"   -d '{"reason":"Superseded by newer release announcement"}'   "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/.../redact/${previous_event_id}/${redact_txn}"
+```
+
+**Why This Keeps Happening**: The send step already uses `PUT`, so it is easy to assume the redact helper can be sketched from memory without checking the server behavior. When touching Matrix release automation, verify the exact method against the live homeserver path instead of trusting a generic snippet.
+
 ### 0z6. MonoTorrent `3.0.2` DHT Bootstrap Can Stall Forever Because It Only Seeds From `router.bittorrent.com`
 
 **The Bug**: slskdn's DHT rendezvous looked broken in production because the pinned `MonoTorrent 3.0.2` bootstrap path seeded only from `router.bittorrent.com`. If that single router did not answer, the engine stayed in `Initialising` with `nodes=0`, so announce/discovery never became usable no matter how much local logging or port explanation we added.
