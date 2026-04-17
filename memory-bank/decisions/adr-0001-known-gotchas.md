@@ -5772,6 +5772,29 @@ or restrict expensive attribute probing to the smaller set of file types that tr
 
 **Why This Keeps Happening**: media attributes look small in the final `Soulseek.File`, so it is easy to forget that extracting them may require non-trivial reads and parsing for every file. On local SSDs this can hide in the noise; on remote or high-latency storage it becomes the actual bottleneck, and lowering worker count alone does not fix it.
 
+### 3o. DHT Rendezvous Must Use A Stable Explicit UDP Port, Not A Random Startup Port
+
+**The Bug**: `DhtRendezvousService` defaulted `DhtPort` to `0`, then replaced it with a random UDP port on each startup. Operators could correctly forward their normal Soulseek ports and still see `DHT bootstrap timed out` forever, because the actual DHT bootstrap traffic was leaving from a different random port that was never forwarded or mapped.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `src/slskd/Core/Options.cs`
+- `config/slskd.example.yml`
+
+**Wrong**:
+```csharp
+var dhtPort = _options.DhtPort > 0 ? _options.DhtPort : RandomNumberGenerator.GetInt32(6881, 7000);
+```
+
+**Correct**:
+```text
+DHT rendezvous must always use a stable explicit UDP port. Give it a real default,
+validate that enabled DHT never runs with port 0, and tell operators clearly which
+UDP port must be forwarded or mapped.
+```
+
+**Why This Keeps Happening**: random ports feel convenient because they avoid collisions during development, but a peer-discovery service is an operator-facing network surface, not an internal ephemeral socket. If users cannot know the port in advance, they cannot forward it, allow-list it, or reason about bootstrap failures.
+
 ---
 
 *Last updated: 2026-03-21*
