@@ -48,10 +48,10 @@
     "eslint-import-resolver-node": "^0.3.10",
     "eslint-plugin-import": "npm:eslint-plugin-import-x@^4.16.2",
     "eslint-plugin-promise": "^7.2.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-hooks": "^7.1.0",
     "jsdom": "^29.0.2",
     "less": "^4.6.4",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.4"
   },
