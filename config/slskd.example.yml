@@ -86,6 +86,10 @@
 #   enabled: true
 #   overlay_port: 50305
 #   dht_port: 50306 # explicit stable UDP port; forward/allow-list this port if DHT rendezvous is enabled
+#   bootstrap_routers:
+#     - router.bittorrent.com
+#     - router.utorrent.com
+#     - dht.transmissionbt.com
 #   announce_interval_seconds: 900
 #   discovery_interval_seconds: 600
 #   min_neighbors: 3

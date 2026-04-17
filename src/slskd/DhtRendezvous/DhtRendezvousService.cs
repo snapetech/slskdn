@@ -383,13 +383,15 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             }
 
             // Start DHT engine (will bootstrap from saved nodes or public bootstrap nodes)
+            var bootstrapRouters = _options.BootstrapRouters?.Where(router => !string.IsNullOrWhiteSpace(router)).ToArray() ?? Array.Empty<string>();
+
             if (initialNodes.Length > 0)
             {
-                await dhtEngine.StartAsync(initialNodes);
+                await dhtEngine.StartAsync(initialNodes, bootstrapRouters);
             }
             else
             {
-                await dhtEngine.StartAsync();
+                await dhtEngine.StartAsync(bootstrapRouters);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -728,6 +730,16 @@ public sealed class DhtRendezvousOptions
     /// UDP port for DHT.
     /// </summary>
     public int DhtPort { get; set; } = 50306;
+
+    /// <summary>
+    /// Bootstrap routers used to seed the public BitTorrent DHT when no saved node table is available.
+    /// </summary>
+    public string[] BootstrapRouters { get; set; } =
+    {
+        "router.bittorrent.com",
+        "router.utorrent.com",
+        "dht.transmissionbt.com",
+    };
 
     /// <summary>
     /// Interval between DHT announcements (seconds).

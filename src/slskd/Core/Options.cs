@@ -499,6 +499,13 @@ namespace slskd
                     [nameof(DhtRendezvous)]));
             }
 
+            if (DhtRendezvous.Enabled && (DhtRendezvous.BootstrapRouters is null || DhtRendezvous.BootstrapRouters.Length == 0 || DhtRendezvous.BootstrapRouters.All(string.IsNullOrWhiteSpace)))
+            {
+                results.Add(new ValidationResult(
+                    "DHT rendezvous requires at least one bootstrap router. Configure dht.bootstrap_routers with reachable BitTorrent DHT routers.",
+                    [nameof(DhtRendezvous)]));
+            }
+
             // Validate realm configuration (T-REALM-01, T-REALM-02)
             results.AddRange(Realm.Validate());
             results.AddRange(MultiRealm.Validate());

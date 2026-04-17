@@ -6071,3 +6071,21 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SoulseekOptionsValidationTests|FullyQualifiedName~HostedServiceLifecycleTests" -v minimal`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-17 20:25:00Z
+
+- Re-opened issue `#209` after the reporter confirmed the stable-port / logging change did not fix the underlying failure.
+- Reproduced the root cause outside slskdn with a bare MonoTorrent probe:
+  - `MonoTorrent 3.0.2` stayed in `Initialising` with `nodes=0`
+  - `MonoTorrent 3.0.3-alpha.unstable.rev0049` immediately seeded the routing table (`nodes > 0`) under the same environment
+- Traced the difference back to the upstream DHT bootstrap path: the older pinned package only seeded from `router.bittorrent.com`, while the newer line supports multi-router bootstrap.
+- Fixed slskdn by:
+  - bumping `MonoTorrent` to `3.0.3-alpha.unstable.rev0049`
+  - making `DhtRendezvousService` pass explicit `bootstrap_routers` instead of relying on hidden upstream defaults
+  - adding DHT bootstrap-router validation in `Options.Validate(...)`
+  - exposing `dht.bootstrap_routers` in `config/slskd.example.yml`
+- Documented the upstream bootstrap-router gotcha in `ADR-0001` and committed that doc checkpoint separately as `0b1c33d2`.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SoulseekOptionsValidationTests|FullyQualifiedName~HostedServiceLifecycleTests" -v minimal`
+  - `dotnet build src/slskd/slskd.csproj -v minimal`
+  - standalone MonoTorrent probe confirming the newer package seeds the DHT routing table immediately while `3.0.2` does not
