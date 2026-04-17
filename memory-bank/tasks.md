@@ -876,3 +876,6 @@
 - [x] Filter release-hygiene docs commits out of generated release note commit lists
   - Status: done
   - Notes: Updated `scripts/generate-release-notes.sh` so `Included Commits` excludes standalone ADR gotcha commits, release-notes doc commits, and stable metadata bookkeeping commits that otherwise make one fix appear multiple times in GitHub release output.
+- [x] Fix DHT rendezvous bootstrap defaults behind issue #209
+  - Status: done
+  - Notes: Replaced the random fallback DHT UDP port with a stable default (`50306`), added startup validation so enabled DHT cannot run on port `0`, updated the example config, and made bootstrap timeout logs explicitly tell operators that announce/discovery remain disabled until the configured UDP port is reachable.

@@ -492,6 +492,13 @@ namespace slskd
                     [nameof(Soulseek), nameof(Flags)]));
             }
 
+            if (DhtRendezvous.Enabled && (DhtRendezvous.DhtPort <= IPEndPoint.MinPort || DhtRendezvous.DhtPort > IPEndPoint.MaxPort))
+            {
+                results.Add(new ValidationResult(
+                    "DHT rendezvous requires an explicit UDP port between 1 and 65535. Configure dht.dht_port to a stable forwarded or allow-listed port.",
+                    [nameof(DhtRendezvous)]));
+            }
+
             // Validate realm configuration (T-REALM-01, T-REALM-02)
             results.AddRange(Realm.Validate());
             results.AddRange(MultiRealm.Validate());

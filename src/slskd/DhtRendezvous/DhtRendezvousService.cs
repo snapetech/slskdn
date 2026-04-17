@@ -267,8 +267,15 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         }
         else
         {
-            _logger.LogWarning("DHT bootstrap timed out, continuing anyway (state: {State}, nodes: {Nodes})",
-                _dhtEngine?.State, _dhtEngine?.NodeCount ?? 0);
+            _logger.LogWarning(
+                "DHT bootstrap did not reach Ready within {TimeoutSeconds}s on UDP port {Port} (state: {State}, nodes: {Nodes}). " +
+                "Peer announce/discovery will stay disabled until bootstrap succeeds. Ensure UDP port {Port} is reachable, " +
+                "forwarded, or automatically mapped when using UPnP.",
+                (int)bootstrapTimeout.TotalSeconds,
+                _options.DhtPort,
+                _dhtEngine?.State,
+                _dhtEngine?.NodeCount ?? 0,
+                _options.DhtPort);
         }
 
         // Main loop
@@ -344,9 +351,8 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             dhtEngine.PeersFound += OnPeersFound;
             dhtEngine.StateChanged += OnDhtStateChanged;
 
-            // Create UDP listener for DHT on a random port (standard DHT port range)
-            // SECURITY: Use cryptographic RNG for port selection
-            var dhtPort = _options.DhtPort > 0 ? _options.DhtPort : System.Security.Cryptography.RandomNumberGenerator.GetInt32(6881, 7000);
+            // Use a stable UDP port so operators can forward or allow-list it explicitly.
+            var dhtPort = _options.DhtPort;
             dhtListener = MonoTorrent.Factories.Default.CreateDhtListener(new IPEndPoint(IPAddress.Any, dhtPort));
 
             if (dhtListener is null)
@@ -719,9 +725,9 @@ public sealed class DhtRendezvousOptions
     public int OverlayPort { get; set; } = 50305;
 
     /// <summary>
-    /// UDP port for DHT. If 0, a random port in range 6881-6999 is used.
+    /// UDP port for DHT.
     /// </summary>
-    public int DhtPort { get; set; } = 0;
+    public int DhtPort { get; set; } = 50306;
 
     /// <summary>
     /// Interval between DHT announcements (seconds).

@@ -82,6 +82,15 @@
 #     enabled: true
 #     interval: 60
 #     auto_download: false
+# dht:
+#   enabled: true
+#   overlay_port: 50305
+#   dht_port: 50306 # explicit stable UDP port; forward/allow-list this port if DHT rendezvous is enabled
+#   announce_interval_seconds: 900
+#   discovery_interval_seconds: 600
+#   min_neighbors: 3
+#   enable_upnp: false # opt in only; when true slskdn will try to map overlay/dht ports automatically
+#   enable_stun: true
 # destinations:
 #   folders:
 #     - name: "Music"

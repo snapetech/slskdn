@@ -23,10 +23,16 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The lingering `.NET 10` full-solution test-tail investigation is closed.
+- **Current Task**: None. The DHT bootstrap/default-port follow-up for issue `#209` is closed.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+  - Investigated issue `#209` and fixed the DHT bootstrap operator trap:
+    - replaced the random fallback DHT UDP port with a stable default `50306` so forwarding / allow-listing is predictable across restarts
+    - added startup validation so enabled DHT cannot run with `dht.dht_port = 0`
+    - updated the example config to expose the DHT section and call out the forwarding / UPnP expectations directly
+    - changed the bootstrap timeout warning to state clearly that announce/discovery stay disabled until the DHT reaches `Ready`, and to name the exact UDP port operators need to check
+  - Documented the random DHT bootstrap port gotcha in `ADR-0001` and committed the doc checkpoint separately as `ab33da85`.
   - Reproduced the still-open peer connectivity failure in a fresh two-node local Soulfind probe and proved it was not another download-engine regression:
     - with `Soulseek.ListenIpAddress = 127.0.0.1`, Alice resolved Bob to `172.17.0.1:<port>` and `endpoint`, `info`, and `browse` all failed with `Failed to establish a direct or indirect message connection`
     - rerunning the same topology with `Soulseek.ListenIpAddress = 0.0.0.0` made the same peer operations succeed immediately

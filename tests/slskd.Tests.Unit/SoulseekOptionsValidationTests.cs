@@ -58,4 +58,46 @@ public class SoulseekOptionsValidationTests
                 "Soulseek.ListenIpAddress must not be a loopback address",
                 System.StringComparison.Ordinal) == true);
     }
+
+    [Fact]
+    public void Options_RejectsMissingStableDhtPort_WhenDhtRendezvousIsEnabled()
+    {
+        var options = new Options
+        {
+            DhtRendezvous = new slskd.DhtRendezvous.DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 0,
+            },
+        };
+
+        var results = options.Validate(new ValidationContext(options)).ToList();
+
+        Assert.Contains(
+            results,
+            result => result.ErrorMessage!.Contains(
+                "DHT rendezvous requires an explicit UDP port",
+                System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Options_AllowsStableDhtPort_WhenDhtRendezvousIsEnabled()
+    {
+        var options = new Options
+        {
+            DhtRendezvous = new slskd.DhtRendezvous.DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 50306,
+            },
+        };
+
+        var results = options.Validate(new ValidationContext(options)).ToList();
+
+        Assert.DoesNotContain(
+            results,
+            result => result.ErrorMessage?.Contains(
+                "DHT rendezvous requires an explicit UDP port",
+                System.StringComparison.Ordinal) == true);
+    }
 }

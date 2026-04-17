@@ -6055,3 +6055,19 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`
   - `git diff --check`
   - `timeout 180s dotnet test slskd.sln -v minimal` now reaches and reports passing counts for `slskd.Tests` (`46`), `slskd.Tests.Unit` (`3374`), and `slskd.Tests.Integration` (`270`) instead of hanging on the old testhost tail
+
+## 2026-04-17 18:05:00Z
+
+- Investigated issue `#209` and traced the likely operator-facing failure to DHT rendezvous startup defaults rather than another generic connectivity regression:
+  - `DhtRendezvousService` was still falling back to a random UDP port whenever `dht.dht_port` was unset, which made forwarding / allow-listing impossible to reason about across restarts
+  - bootstrap timeout logs implied the service was "continuing anyway" without making clear that announce/discovery stay disabled until the DHT actually reaches `Ready`
+- Fixed the DHT bootstrap path:
+  - changed the DHT default to a stable explicit UDP port (`50306`)
+  - added top-level `Options.Validate(...)` coverage so enabled DHT rejects port `0` at startup
+  - updated `config/slskd.example.yml` to surface the DHT section and explain the forwarding / UPnP expectations
+  - tightened the bootstrap timeout warning so it points directly at the configured UDP port and the real disabled behavior
+- Documented the random-DHT-port gotcha in `ADR-0001` and committed that doc checkpoint separately as required (`ab33da85`).
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~SoulseekOptionsValidationTests|FullyQualifiedName~HostedServiceLifecycleTests" -v minimal`
+  - `bash ./bin/lint`
+  - `git diff --check`
