@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z14. Release Asset Naming Changes Must Be Applied Atomically Across Build Outputs, Repo Metadata, And Package Workflows
+
+**The Bug**: We changed stable package metadata to `slskdn-main-linux-x64.zip` while the release workflow still published `slskdn-main-linux-glibc-x64.zip`. That left the main release partially split-brain: COPR copied one filename while the RPM spec referenced the other, metadata refresh rebuilt `flake.nix` against a filename the just-created release did not publish, and package jobs failed even though the Linux payload itself had built successfully.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `packaging/scripts/update-stable-release-metadata.sh`
+- stable packaging metadata (`flake.nix`, Homebrew, Snap, Flatpak, RPM, AUR)
+
+**Wrong**:
+```text
+Change the canonical stable Linux asset name in one layer (repo metadata or workflow consumers) without changing the release output and every downstream package job in the same edit.
+```
+
+**Correct**:
+```text
+Pick one canonical stable Linux asset name and update all of these together:
+- release upload step
+- repo metadata updater
+- package workflows (COPR, Snap, PPA, Homebrew, metadata smoke)
+- checked-in package metadata
+```
+
+**Why This Keeps Happening**: The release pipeline has multiple independent consumers of the same Linux zip, and several of them rewrite local filenames before packaging. If one part of the pipeline moves from `linux-x64` to `linux-glibc-x64` without the others moving in lockstep, failures surface later as missing files or 404s in unrelated jobs rather than at the initial release upload step.
+
 ### 0z13. Stable Metadata Must Reference Asset Names That Already Exist On The Published Stable Release
 
 **The Bug**: We changed `flake.nix` and other stable package metadata to `slskdn-main-linux-glibc-*.zip` before any stable GitHub release actually published those asset names. `Nix Package Smoke` then fetched `0.24.5-slskdn.131/slskdn-main-linux-glibc-x64.zip`, got a `404`, and failed even though the real stable asset was still `slskdn-main-linux-x64.zip`.
