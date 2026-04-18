@@ -6840,3 +6840,12 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** We wrote the assertion as if both sides would expose a symmetric "peer listener port" view. The current controller surfaces `MeshOverlayConnection.RemoteEndPoint`, and for accepted inbound sockets that endpoint is the caller's transient outbound port. We were validating the wrong network fact and turned a healthy connection into a false negative.
 
 **How to prevent it:** In full-instance overlay tests, assert on peer identity and connection presence, not the inbound side's remote socket source port. If listener-port identity matters, expose it explicitly in the overlay handshake payload or a dedicated response field instead of inferring it from the accepted TCP socket endpoint.
+
+
+### 0z54. Experimental Bridge Search Must Not Replace The Proven Soulseek Search Path By Default
+
+**What went wrong:** Issue `#209` evolved from DHT bootstrap failures into a user-visible search regression: a logged-in client could run a popular search and get `0` files while logs showed the request using `[ScenePodBridge]`. The bridge path depends on multiple experimental provider layers and mesh peer availability, so making it the default path allowed bridge/provider problems to look like core Soulseek search was broken.
+
+**Why it happened:** `Feature.ScenePodBridge` defaulted to `true`, so normal searches were diverted into the aggregation path whenever providers were registered. That changed the baseline behavior of an upgrade from upstream `slskd`; users expected the proven Soulseek network search path, but the app ran the newer Scene/Pod bridge path unless disabled.
+
+**How to prevent it:** Keep core Soulseek search as the default user path. Experimental bridge/provider aggregation must be explicit opt-in until it has end-to-end field proof and separate diagnostics. New mesh/bridge features may run as supplemental parallel paths only when they cannot suppress or replace normal Soulseek results.
