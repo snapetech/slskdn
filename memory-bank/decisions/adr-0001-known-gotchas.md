@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z18. Transfer Bulk Actions Must Respect The Backend Request Shape Instead Of Spamming Per-File Calls
+
+**The Bug**: The Transfers page implemented `Retry All` and `Remove All` as `Promise.all(...)` over one API request per selected file. That looked simple in the UI, but the backend download enqueue path is intentionally concurrency-limited and returns `429` when hit in parallel, while completed-transfer cleanup already has dedicated bulk-clear endpoints. In practice, bulk retry turned into a toast storm of self-inflicted `429` failures, and bulk remove completed created unnecessary request floods instead of one clear operation.
+
+**Files Affected**:
+- `src/web/src/components/Transfers/Transfers.jsx`
+- `src/web/src/components/Transfers/TransferGroup.jsx`
+- `src/web/src/lib/transfers.js`
+- `src/slskd/Transfers/API/Controllers/TransfersController.cs`
+
+**Wrong**:
+```text
+Implement "Retry All" and "Remove All" by firing one request per file in
+parallel from the browser and assume the backend wants that shape too.
+```
+
+**Correct**:
+```text
+Use the backend's actual contract:
+- serialize or batch retry requests so they do not trip the enqueue limiter
+- call the dedicated clear-completed endpoint when the action is "remove all completed"
+- reserve per-file calls for mixed or non-completed selections that genuinely need them
+```
+
+**Why This Keeps Happening**: Bulk UI actions are easy to write as `Promise.all(...)`, but transfer backends often have throttling or special bulk endpoints for a reason. If the frontend ignores those contracts, the product generates its own errors and makes a sick queue look much worse than it is.
+
 ### 0z17. Do Not Run UDP Hole-Punch Preflight Against DHT Overlay TCP Endpoints
 
 **The Bug**: `MeshOverlayConnector` took each DHT-discovered overlay endpoint and wrapped it as `udp://host:port` for NAT traversal preflight before the real TCP connect. But DHT peers advertise the mesh overlay TCP listener port, and there is no corresponding UDP responder in that path, so the hole-punch attempts were guaranteed to fail and produced misleading `[HolePunch] ... FAILED` noise even when DHT discovery itself was healthy.
