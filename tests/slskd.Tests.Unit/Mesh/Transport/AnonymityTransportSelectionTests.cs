@@ -143,6 +143,58 @@ public class AnonymityTransportSelectionTests : IDisposable
     }
 
     [Fact]
+    public void GetTransportStatuses_WithDirectMode_ContainsDirectTransportInsteadOfTor()
+    {
+        // Arrange
+        _adversarialOptions.AnonymityLayer.Mode = AnonymityMode.Direct;
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
+
+        // Act
+        var statuses = selector.GetTransportStatuses();
+
+        // Assert
+        Assert.Contains(AnonymityTransportType.Direct, statuses.Keys);
+        Assert.DoesNotContain(AnonymityTransportType.Tor, statuses.Keys);
+    }
+
+    [Fact]
+    public void GetTransportPriorityOrder_WithDirectMode_PrioritizesDirect()
+    {
+        // Arrange
+        _adversarialOptions.AnonymityLayer.Mode = AnonymityMode.Direct;
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
+
+        // Act
+        var method = typeof(AnonymityTransportSelector).GetMethod("GetTransportPriorityOrder",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var priorityOrder = (List<AnonymityTransportType>)method.Invoke(selector, new object[] { null });
+
+        // Assert
+        Assert.NotEmpty(priorityOrder);
+        Assert.Equal(AnonymityTransportType.Direct, priorityOrder[0]);
+    }
+
+    [Fact]
+    public async Task SelectAndConnectAsync_WithDirectModeAndNoTorProxy_FailsAsDirectDialInsteadOfNoTransportAvailable()
+    {
+        // Arrange
+        _adversarialOptions.AnonymityLayer.Mode = AnonymityMode.Direct;
+        var selector = new AnonymityTransportSelector(_adversarialOptions, _policyManager, _selectorLoggerMock.Object, _loggerFactory);
+
+        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+
+        // Act
+        var exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            selector.SelectAndConnectAsync("peer-direct", null, "127.0.0.1", port, null, CancellationToken.None));
+
+        // Assert
+        Assert.DoesNotContain("No anonymity transport is available", exception.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SelectAndConnectAsync_WithPeerPolicy_UsesPolicyAwareSelection()
     {
         // Arrange

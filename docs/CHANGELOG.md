@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed issue `#209`'s remaining direct-mode circuit failure: `AnonymityMode.Direct` now registers and prioritizes a real direct transport instead of still depending on a local Tor SOCKS proxy, so DHT-ready peers no longer immediately fail circuit establishment with `No anonymity transport is available` just because Tor is absent.
 ### Fixed
 
 - Fixed the standalone distro packaging drift that was still breaking Jammy PPA and related release jobs after the main release path moved on: `release-ppa.yml`, `release-copr.yml`, and `release-linux.yml` now use `.NET 10`, validate the staged publish output, and the DEB/RPM runtime SONAME patch now discovers `libcoreclrtraceptprovider.so` dynamically inside the staged package tree instead of assuming one flat appdir path.

@@ -289,11 +289,17 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
 
             // Initialize anonymity transports based on mode
             var anonymityOptions = _adversarialOptions.AnonymityLayer;
-            if (anonymityOptions.Mode == AnonymityMode.Tor || anonymityOptions.Mode == AnonymityMode.Direct)
+            if (anonymityOptions.Mode == AnonymityMode.Tor)
             {
                 _transports[AnonymityTransportType.Tor] = new TorSocksTransport(
                     anonymityOptions.Tor,
                     _loggerFactory.CreateLogger<TorSocksTransport>());
+            }
+
+            if (anonymityOptions.Mode == AnonymityMode.Direct)
+            {
+                _transports[AnonymityTransportType.Direct] = new DirectTransport(
+                    _loggerFactory.CreateLogger<DirectTransport>());
             }
 
             if (anonymityOptions.Mode == AnonymityMode.I2P)
@@ -487,7 +493,7 @@ public class AnonymityTransportSelector : IAnonymityTransportSelector, IDisposab
                 // Default ordering
                 var anonymityTransports = anonymityMode switch
                 {
-                    AnonymityMode.Direct => new[] { AnonymityTransportType.Tor },
+                    AnonymityMode.Direct => new[] { AnonymityTransportType.Direct },
                     AnonymityMode.Tor => new[] { AnonymityTransportType.Tor },
                     AnonymityMode.I2P => new[] { AnonymityTransportType.I2P, AnonymityTransportType.Tor },
                     AnonymityMode.RelayOnly => new[] { AnonymityTransportType.RelayOnly },

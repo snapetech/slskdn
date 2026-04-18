@@ -6332,3 +6332,10 @@ Code quality improvements were completed as part of Option A:
 - Fixed the standalone distro workflows (`release-ppa.yml`, `release-copr.yml`, `release-linux.yml`) to use `.NET 10` and added publish-output sanity checks so those jobs fail early if the staged apphost or runtime files are missing.
 - Hardened the DEB and RPM packaging recipes so the `liblttng-ust` SONAME patch discovers `libcoreclrtraceptprovider.so` dynamically inside the staged bundle instead of assuming one hard-coded flat path.
 - Reproduced and validated the DEB staging logic locally with a real self-contained `linux-x64` publish: `make -f debian/rules override_dh_auto_install` now patches the discovered trace-provider library successfully, and `patchelf --print-needed` confirms the staged library now references `liblttng-ust.so.1`.
+
+## 2026-04-18 15:25:00Z
+
+- Re-ran issue `#209` from the tester's latest actual symptom chain instead of from our earlier fix assumptions. The important state was no longer `DHT not ready`; it was `DHT Ready` + discovered peers + circuit maintenance immediately failing on `Tor SOCKS proxy not available at 127.0.0.1:9050`.
+- Traced that to a concrete selector bug: `AnonymityMode.Direct` still initialized only `TorSocksTransport`, and `GetTransportPriorityOrder(...)` also prioritized `Tor` for direct mode. In other words, the default direct-mode path still hard-required a local Tor proxy.
+- Fixed the root mismatch by adding a real `DirectTransport` and changing `AnonymityTransportSelector` so direct mode registers and prioritizes it instead of Tor. Added focused unit coverage proving the old failure mode (`No anonymity transport is available`) no longer happens in direct mode just because Tor is absent.
+- Revalidated with targeted `AnonymityTransportSelectionTests`, `MeshCircuitBuilderTests`, `CircuitMaintenanceServiceTests`, `bash ./bin/lint`, and `git diff --check`.

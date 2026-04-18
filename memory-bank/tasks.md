@@ -963,3 +963,7 @@
 - [x] Fix Jammy PPA and standalone distro workflow drift after the packaging/toolchain changes
   - Status: done
   - Notes: Updated the standalone PPA/COPR/Linux release workflows to use `.NET 10`, added publish-output verification for the staged Linux bundle, and hardened the DEB/RPM runtime SONAME patching so it discovers `libcoreclrtraceptprovider.so` in the staged package tree instead of assuming one flat appdir path.
+
+- [x] Fix issue `#209` direct-mode circuit selection so DHT-ready peers do not still depend on a local Tor SOCKS proxy
+  - Status: done
+  - Notes: Added a real `DirectTransport`, changed `AnonymityTransportSelector` so `AnonymityMode.Direct` registers and prioritizes that transport instead of Tor, and added focused unit coverage that reproduces the old `No anonymity transport is available` failure path when Tor is absent.
