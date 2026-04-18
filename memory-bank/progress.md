@@ -6391,3 +6391,10 @@ Code quality improvements were completed as part of Option A:
 
 ### Notes
 - The filtered security slice now passes cleanly (`15` targeted tests). The remaining build noise in this repo is existing analyzer warning debt outside this hardening batch, not a blocker in the changed paths.
+
+## 2026-04-18 18:45:00Z
+
+- Continued the live issue `#209` audit on `kspls0` instead of relying on synthetic gates and found a real self-descriptor publication bug in the older mesh stack: `PeerDescriptorPublisher` was auto-detecting bare `ip:2234` / `ip:2235` endpoints and publishing `DirectQuic` transport endpoints even when the host reported `QuicListener.IsSupported == false`.
+- Fixed descriptor publication so auto-detected legacy endpoints now use explicit `udp://...:<overlay-port>` addresses derived from the configured overlay listener, and direct QUIC transport advertisement is suppressed when the runtime cannot actually accept QUIC. Added focused unit coverage for explicit UDP formatting and the unsupported-QUIC decision rule.
+- Redeployed the exact patched tree to `kspls0` and validated the correction live: startup now logs `Published self descriptor ... endpoints=4 transports=0` instead of advertising impossible direct transports, while DHT rendezvous and the TCP mesh overlay listener continue to start normally.
+- The audit also exposed a still-open architectural gap: QUIC-unsupported hosts remain unable to build direct mesh circuits because `TransportSelector` only has `DirectQuicDialer` for clearnet mesh transport. The current fix makes the host state honest; the next real follow-up is a non-QUIC direct dialer path or an explicit runtime/package gate.

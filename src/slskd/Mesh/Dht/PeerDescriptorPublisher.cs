@@ -6,10 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Quic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Mesh.Overlay;
 using slskd.Mesh.Transport;
 using static slskd.Mesh.TransportType;
 
@@ -31,6 +33,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     private readonly MeshOptions options;
     private readonly INatDetector natDetector;
     private readonly MeshTransportOptions transportOptions;
+    private readonly OverlayOptions overlayOptions;
     private readonly DescriptorSigningService signingService;
     private readonly Mesh.Overlay.IKeyStore? keyStore;
 
@@ -40,6 +43,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         IOptions<MeshOptions> options,
         INatDetector natDetector,
         IOptions<MeshTransportOptions> transportOptions,
+        IOptions<OverlayOptions> overlayOptions,
         DescriptorSigningService signingService,
         Mesh.Overlay.IKeyStore? keyStore = null)
     {
@@ -48,6 +52,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         this.options = options.Value;
         this.natDetector = natDetector;
         this.transportOptions = transportOptions.Value;
+        this.overlayOptions = overlayOptions.Value;
         this.signingService = signingService;
         this.keyStore = keyStore;
     }
@@ -175,13 +180,13 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         // If no configured endpoints, try to detect actual network interfaces
         if (!endpoints.Any())
         {
-            endpoints.AddRange(DetectNetworkEndpoints());
+            endpoints.AddRange(DetectLegacyNetworkEndpoints());
             logger.LogInformation("[MeshDHT] No configured endpoints, detected {Count} network interfaces", endpoints.Count);
         }
         else
         {
             // Supplement configured endpoints with detected ones if they differ
-            var detectedEndpoints = DetectNetworkEndpoints();
+            var detectedEndpoints = DetectLegacyNetworkEndpoints();
             foreach (var detected in detectedEndpoints)
             {
                 if (!endpoints.Contains(detected))
@@ -205,32 +210,20 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
     {
         var endpoints = new List<TransportEndpoint>();
 
-        // Add direct QUIC endpoint if enabled and not in privacy mode
-        if (transportOptions.EnableDirect && !transportOptions.Tor.PrivacyModeNoClearnetAdvertise)
+        // Add direct QUIC endpoint only when the running host can actually accept QUIC.
+        if (ShouldAdvertiseDirectTransport(transportOptions.EnableDirect, transportOptions.Tor.PrivacyModeNoClearnetAdvertise, QuicConnection.IsSupported))
         {
-            // Use detected network endpoints for direct connectivity
-            var detectedEndpoints = DetectNetworkEndpoints();
-            foreach (var endpointStr in detectedEndpoints)
+            foreach (var host in DetectNetworkHosts())
             {
-                try
+                endpoints.Add(new TransportEndpoint
                 {
-                    if (TryParseAdvertisedEndpoint(endpointStr, out var host, out var port))
-                    {
-                        endpoints.Add(new TransportEndpoint
-                        {
-                            TransportType = TransportType.DirectQuic,
-                            Host = host,
-                            Port = port,
-                            Scope = TransportScope.ControlAndData,
-                            Preference = 0, // Highest preference for direct
-                            Cost = 0
-                        });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to create direct QUIC endpoint from {Endpoint}", endpointStr);
-                }
+                    TransportType = TransportType.DirectQuic,
+                    Host = host,
+                    Port = overlayOptions.ListenPort,
+                    Scope = TransportScope.ControlAndData,
+                    Preference = 0,
+                    Cost = 0
+                });
             }
         }
 
@@ -268,7 +261,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         return endpoints;
     }
 
-    private static bool TryParseAdvertisedEndpoint(string endpoint, out string host, out int port)
+    internal static bool TryParseAdvertisedEndpoint(string endpoint, out string host, out int port)
     {
         host = string.Empty;
         port = 0;
@@ -303,17 +296,30 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         return int.TryParse(endpoint[(separatorIndex + 1)..], out port) && port is > 0 and <= ushort.MaxValue;
     }
 
-    /// <summary>
-    /// Detects available network endpoints from active network interfaces.
-    /// Returns endpoints in the format "ip:port" for common ports.
-    /// </summary>
-    private IEnumerable<string> DetectNetworkEndpoints()
+    internal static bool ShouldAdvertiseDirectTransport(bool enableDirect, bool privacyModeNoClearnetAdvertise, bool quicIsSupported)
     {
-        var endpoints = new List<string>();
+        return enableDirect && !privacyModeNoClearnetAdvertise && quicIsSupported;
+    }
+
+    internal static string FormatUdpLegacyEndpoint(string host, int port)
+    {
+        return host.Contains(':', StringComparison.Ordinal) ? $"udp://[{host}]:{port}" : $"udp://{host}:{port}";
+    }
+
+    private IEnumerable<string> DetectLegacyNetworkEndpoints()
+    {
+        return DetectNetworkHosts().Select(host => FormatUdpLegacyEndpoint(host, overlayOptions.ListenPort));
+    }
+
+    /// <summary>
+    /// Detects routable host addresses from active network interfaces.
+    /// </summary>
+    private IEnumerable<string> DetectNetworkHosts()
+    {
+        var hosts = new List<string>();
 
         try
         {
-            // Get all active network interfaces
             var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
                 .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
                             ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
@@ -322,7 +328,6 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             {
                 var ipProperties = ni.GetIPProperties();
 
-                // Get IPv4 addresses
                 foreach (var unicast in ipProperties.UnicastAddresses)
                 {
                     if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
@@ -330,14 +335,11 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
                         var ip = unicast.Address;
                         if (!IPAddress.IsLoopback(ip) && ip.ToString() != "0.0.0.0")
                         {
-                            // Add common Soulseek ports
-                            endpoints.Add($"{ip}:2234"); // Default Soulseek port
-                            endpoints.Add($"{ip}:2235"); // Alternative port
+                            hosts.Add(ip.ToString());
                         }
                     }
                 }
 
-                // Get IPv6 addresses (global scope only)
                 foreach (var unicast in ipProperties.UnicastAddresses)
                 {
                     if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
@@ -347,10 +349,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
                             ip.ToString() != "::" &&
                             !ip.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase))
                         {
-                            // Skip link-local.
-                            // Add IPv6 endpoints with brackets
-                            endpoints.Add($"[{ip}]:2234");
-                            endpoints.Add($"[{ip}]:2235");
+                            hosts.Add(ip.ToString());
                         }
                     }
                 }
@@ -361,6 +360,6 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             logger.LogWarning(ex, "[MeshDHT] Failed to detect network endpoints");
         }
 
-        return endpoints;
+        return hosts.Distinct();
     }
 }

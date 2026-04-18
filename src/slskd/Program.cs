@@ -1994,6 +1994,7 @@ namespace slskd
                     sp.GetRequiredService<IOptions<Mesh.MeshOptions>>(),
                     sp.GetRequiredService<Mesh.INatDetector>(),
                     sp.GetRequiredService<IOptions<Mesh.MeshTransportOptions>>(),
+                    sp.GetRequiredService<IOptions<Mesh.Overlay.OverlayOptions>>(),
                     sp.GetRequiredService<Mesh.Transport.DescriptorSigningService>(),
                     sp.GetService<Mesh.Overlay.IKeyStore>());
                 Log.Information("[DI] PeerDescriptorPublisher constructed");

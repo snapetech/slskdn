@@ -11,10 +11,10 @@ using Xunit;
 public class PeerDescriptorPublisherTests
 {
     [Theory]
-    [InlineData("203.0.113.10:2234", "203.0.113.10", 2234)]
+    [InlineData("203.0.113.10:50400", "203.0.113.10", 50400)]
     [InlineData("example.com:443", "example.com", 443)]
-    [InlineData("2001:db8::42:2235", "2001:db8::42", 2235)]
-    [InlineData("[2001:db8::42]:2235", "2001:db8::42", 2235)]
+    [InlineData("2001:db8::42:50400", "2001:db8::42", 50400)]
+    [InlineData("[2001:db8::42]:50400", "2001:db8::42", 50400)]
     public void TryParseAdvertisedEndpoint_ParsesIpv4HostnamesAndIpv6(
         string endpoint,
         string expectedHost,
@@ -36,6 +36,28 @@ public class PeerDescriptorPublisherTests
         var result = InvokeTryParseAdvertisedEndpoint(endpoint);
 
         Assert.False(result.Success);
+    }
+
+    [Theory]
+    [InlineData("203.0.113.10", 50400, "udp://203.0.113.10:50400")]
+    [InlineData("2001:db8::42", 50400, "udp://[2001:db8::42]:50400")]
+    public void FormatUdpLegacyEndpoint_UsesExplicitUdpScheme(string host, int port, string expected)
+    {
+        Assert.Equal(expected, PeerDescriptorPublisher.FormatUdpLegacyEndpoint(host, port));
+    }
+
+    [Theory]
+    [InlineData(true, false, true, true)]
+    [InlineData(true, true, true, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(false, false, true, false)]
+    public void ShouldAdvertiseDirectTransport_RequiresSupportedDirectRuntime(
+        bool enableDirect,
+        bool privacyModeNoClearnetAdvertise,
+        bool quicIsSupported,
+        bool expected)
+    {
+        Assert.Equal(expected, PeerDescriptorPublisher.ShouldAdvertiseDirectTransport(enableDirect, privacyModeNoClearnetAdvertise, quicIsSupported));
     }
 
     private static (bool Success, string Host, int Port) InvokeTryParseAdvertisedEndpoint(string endpoint)

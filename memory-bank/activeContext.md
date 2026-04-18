@@ -48,18 +48,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The remaining concurrent security hardening follow-up is complete locally and ready to push/tag.
+- **Current Task**: None. The live mesh self-descriptor audit/fix is implemented locally, validated on `kspls0`, and ready to commit/push if desired.
 - **Branch**: `main`
-- **Environment**: Local dev
+- **Environment**: Local dev + live validation on `kspls0`
 - **Last Activity**:
-  - Reproduced the stale-antiforgery part of issue `#209` directly on `kspls0` with a GET carrying stale `XSRF-COOKIE-5030` / `XSRF-TOKEN-5030` cookies and confirmed the journal still logged ASP.NET decrypt errors before our cleanup ran.
-  - Fixed the safe-request CSRF path so known antiforgery cookies are stripped from the incoming request before `GetAndStoreTokens()` reads them, then confirmed on `kspls0` that the same stale-cookie GET no longer emits any antiforgery decrypt stack trace.
-  - Found and fixed a separate DHT diagnostics bug exposed during that same host validation: `/api/v0/dht/status` was reporting `isEnabled` from readiness instead of config, which made the UI lie that DHT was disabled during bootstrap.
-  - Revalidated the updated build on `kspls0`: `GET /api/v0/dht/status` now reports `isEnabled: true` while bootstrap is still in progress, and the stale-cookie curl repro no longer produces antiforgery spam in the journal.
+  - Continued the host-backed `#209` audit and confirmed the current live failure is split between two systems: DHT rendezvous/TCP overlay on `50305` is healthy, while the older mesh descriptor publisher was still advertising fake `2234/2235` endpoints and impossible `DirectQuic` transport candidates from the separate mesh stack.
+  - Fixed `PeerDescriptorPublisher` so auto-detected legacy endpoints now derive from the real UDP overlay listen port (`udp://...:50400` on `kspls0`) and direct QUIC transport advertisement is suppressed entirely when `QuicListener.IsSupported` is false on the running host.
+  - Added focused unit tests for the explicit UDP endpoint formatting and the unsupported-QUIC direct-transport decision rule, then redeployed the exact patched tree to `kspls0` and verified startup now logs `Published self descriptor ... endpoints=4 transports=0`.
+  - Confirmed a deeper follow-up remains: QUIC-unsupported hosts still cannot build direct mesh circuits because `TransportSelector` only has `DirectQuicDialer` for clearnet mesh transport. The new fix stops the host from lying about impossible direct candidates, but it does not yet add a non-QUIC direct dialer path.
 - **Next Steps**:
-  1. Push the current `main` tree so the completed security follow-up and concurrent Claude changes land on `origin/main`.
-  2. Cut the next stable build tag after the push so the current hardening batch goes through the tagged release pipeline.
-  3. Continue watching `kspls0` and the new build outputs for any remaining real `#209` symptoms after this release ships.
+  1. Commit the mesh self-descriptor fix if the worktree stays clean.
+  2. Decide whether to wire the existing direct TLS transport into the mesh transport selector or to add an explicit startup/package gate for QUIC-unsupported hosts before another release.
+  3. Keep validating future `#209` work on `kspls0` first so the tagged builds reflect real host behavior instead of synthetic green gates.
 
 ## Recent Context
 

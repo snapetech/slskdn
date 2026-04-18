@@ -989,3 +989,11 @@
 - [x] Fix issue `#209` peer stats so DHT candidates do not masquerade as verified onion-capable peers
   - Status: done
   - Notes: Stopped marking DHT-discovered endpoints as `supportsOnionRouting=true` before any overlay handshake succeeds, updated DHT rendezvous tests so failed immediate connects stay tracked as `dht-discovered` candidates instead of circuit-capable peers, and validated on `kspls0` that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while raw DHT candidates are still visible separately.
+
+- [x] Fix mesh self-descriptor publication on QUIC-unsupported hosts
+  - Status: done
+  - Notes: Reproduced on `kspls0` that `PeerDescriptorPublisher` was auto-advertising fake `2234/2235` endpoints and impossible `DirectQuic` transports while `QuicListener.IsSupported` was false. Updated descriptor publication to derive legacy endpoints from the real UDP overlay listen port and to suppress direct QUIC transport advertisement when the host cannot actually accept QUIC. Validated on `kspls0`: published self descriptor now logs `endpoints=4 transports=0` instead of poisoning DHT with impossible direct candidates.
+
+- [ ] Add a non-QUIC direct mesh transport path or runtime dependency gate
+  - Status: pending
+  - Notes: The audit on `kspls0` showed a deeper architecture gap remains after the descriptor fix: `TransportSelector` still only has `DirectQuicDialer` for clearnet mesh transport, so QUIC-unsupported hosts cannot build direct circuits at all. Either wire the existing direct TLS transport into mesh dialing or add a startup/package gate that makes this unsupported state explicit before release.
