@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z24. Successful Soulseek Transfers Can Still Emit A Terminal "Transfer complete" Exception That Must Be Treated As Expected Churn
+
+**The Bug**: On `kspls0`, downloads were succeeding end to end, but the process still emitted `[FATAL] Unobserved task exception` with `Soulseek.ConnectionException: Transfer failed: Transfer complete` immediately after the successful transfer state transition. The transfer was already done; only the trailing connection teardown surfaced as an exception name/message we were not classifying as expected Soulseek transport churn.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```text
+Downgrade socket resets, remote closes, and remote-declared transfer failures, but leave
+the Soulseek post-success `Transfer failed: Transfer complete` teardown exception outside
+the same expected-exception bucket.
+```
+
+**Correct**:
+```text
+If the transfer path raises `Transfer failed: Transfer complete` after a successful file
+transfer, treat it as expected Soulseek connection churn for unobserved-task telemetry so
+completed downloads do not emit fake fatal crash noise.
+```
+
+**Why This Keeps Happening**: The Soulseek library can signal the end of a completed transfer through an exception-shaped teardown path rather than a clean no-op completion. It looks like a real failure if you only key off exception type names, but on a live host you can see the transfer already reached `Completed, Succeeded` before the finalizer-thread exception appears. The message text has to be folded into the same expected-churn classifier as the other transfer-layer cases.
+
 ### 0z23. Remote Peer Transfer Rejections Are Expected Soulseek Churn, Not Fatal Host Errors
 
 **The Bug**: After the local queue and DHT fixes, `kspls0` showed both successful downloads and normal remote-peer failures on the same build. One remaining bad behavior was that `Soulseek.TransferReportedFailedException` (`Download reported as failed by remote client`) could still fall through the unobserved-task classifier and show up as fake `[FATAL] Unobserved task exception` noise, even though the remote peer simply declined or aborted that one transfer.
