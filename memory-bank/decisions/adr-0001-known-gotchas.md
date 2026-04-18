@@ -6813,3 +6813,12 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 **How to prevent it:** Any full-instance test harness that launches `slskd` must pass both `--config` and `--app-dir` explicitly on the command line. Do not rely on environment-only appdir overrides for subprocess isolation when the product has singleton/appdir locking during startup.
 
+
+### 0z51. Full-Instance Harnesses Must Override Every Bound Listener Port, Not Just The Primary HTTP Port
+
+**What went wrong:** After fixing `--app-dir`, the new two-instance mesh smoke still died during startup because the subprocess tried to bind other default listeners already used by the developer machine, including HTTPS on `5031` and the mesh UDP/QUIC defaults on `50400/50401`. Randomizing only the primary web port was not enough to isolate the child process.
+
+**Why it happened:** The harness wrote a partial config and assumed the remaining listeners were harmless defaults. `slskd` starts multiple network surfaces, so any unoverridden default port can collide with a live local install and make an integration test look like an application failure.
+
+**How to prevent it:** Full-instance test config must explicitly set or disable every listener that can bind a socket: HTTP, HTTPS, overlay TCP, DHT UDP, UDP overlay, and QUIC/data overlay. Do not rely on product defaults when launching subprocesses on a developer machine with another instance already running.
+
