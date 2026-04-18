@@ -6063,6 +6063,32 @@ UDP port must be forwarded or mapped.
 
 **Why This Keeps Happening**: random ports feel convenient because they avoid collisions during development, but a peer-discovery service is an operator-facing network surface, not an internal ephemeral socket. If users cannot know the port in advance, they cannot forward it, allow-list it, or reason about bootstrap failures.
 
+
+### 3p. DHT Overlay Neighbors Must Populate The Mesh Circuit Peer Inventory
+
+**The Bug**: DHT rendezvous could bootstrap successfully, discover peers, and even register active overlay neighbors in `MeshNeighborRegistry`, while `CircuitMaintenanceService` still logged `0 circuits, 0 total peers, 0 active, 0 onion-capable`. The circuit builder and maintenance path were looking at `IMeshPeerManager`, which never learned about those successful overlay neighbors.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshNeighborRegistry.cs`
+- `src/slskd/Mesh/MeshPeerManager.cs`
+- `src/slskd/Mesh/CircuitMaintenanceService.cs`
+
+**Wrong**:
+```text
+Treat successful overlay handshakes as enough proof that mesh connectivity is working,
+without synchronizing those neighbors into the peer inventory used by circuit services.
+```
+
+**Correct**:
+```text
+Whenever overlay neighbors become the source of truth for live mesh connectivity, explicitly
+bridge `MeshNeighborRegistry` add/remove events into `IMeshPeerManager` and keep peer stats
+in sync. Add regression coverage that proves a registered overlay neighbor increases mesh peer
+stats and a removed neighbor is deleted from the circuit peer inventory.
+```
+
+**Why This Keeps Happening**: mesh connectivity currently has two layers of state that look similar in logs but are not the same thing. It is easy to stop at “DHT found peers” or “neighbor registered” and assume higher-level mesh features will work automatically, when the circuit stack is actually reading a different store.
+
 ---
 
 *Last updated: 2026-03-21*
