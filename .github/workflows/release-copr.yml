@@ -35,7 +35,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -61,6 +61,11 @@ jobs:
       - name: Copy Web Assets
         run: |
           cp -r src/web/build/* publish-linux-x64/wwwroot/
+
+      - name: Verify Publish Output
+        run: |
+          test -x publish-linux-x64/slskd || { echo 'missing slskd apphost'; exit 1; }
+          find publish-linux-x64 -name 'libcoreclrtraceptprovider.so' -print || true
 
       - name: Create Zip
         run: |

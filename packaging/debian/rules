@@ -11,9 +11,13 @@ override_dh_auto_install:
 	install -dm755 debian/slskdn/usr/lib/slskd
 	cp -r usr/lib/slskd/* debian/slskdn/usr/lib/slskd/
 	chmod +x debian/slskdn/usr/lib/slskd/slskd
-	# Match the Nix package fix: current Fedora-family systems ship liblttng-ust.so.1,
-	# while the published .NET bundle still references liblttng-ust.so.0 here.
-	patchelf --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 debian/slskdn/usr/lib/slskd/libcoreclrtraceptprovider.so
+	# Match the Nix package fix when the bundled runtime includes the trace provider library.
+	tracept_provider=$$(find debian/slskdn/usr/lib/slskd -name libcoreclrtraceptprovider.so -print -quit); \
+	if [ -n "$$tracept_provider" ]; then \
+		patchelf --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 "$$tracept_provider"; \
+	else \
+		echo "libcoreclrtraceptprovider.so not present in staged DEB payload; skipping SONAME patch"; \
+	fi
 	
 	# Create symlink
 	install -dm755 debian/slskdn/usr/bin

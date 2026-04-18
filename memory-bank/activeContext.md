@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Issue `#209` has a new root-level fix staged locally: DHT-discovered peers now feed the circuit peer inventory directly, and stale antiforgery token recovery now catches the full key-ring/decryption failure family instead of one exception type.
+- **Current Task**: None. The latest standalone packaging/PPA drift fix is staged locally: PPA/COPR/Linux release workflows now target `.NET 10`, and the DEB/RPM runtime patching logic no longer assumes a single hard-coded trace-provider path.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -546,6 +546,18 @@ dotnet test
   1. Push the installer trap fix if you want it included in the next release.
   2. Use a machine with `flatpak-builder`, `snapcraft`, or `brew` available to add real install-smokes for those remaining ship methods.
 
+
+## Update 2026-04-18 14:55:00Z
+
+- Current task: None. The Jammy PPA / standalone packaging drift fix is implemented locally and validated.
+- Last activity:
+  - pulled the real Launchpad Jammy build log for `0.24.5.slskdn.144` and confirmed the build was failing in `debian/rules` because the standalone PPA path had drifted behind the main release flow: stale `.NET 8` workflow pin plus a hard-coded `libcoreclrtraceptprovider.so` patch path
+  - updated `release-ppa.yml`, `release-copr.yml`, and `release-linux.yml` to use `.NET 10` and added publish-output verification steps so those workflows validate the staged Linux app bundle before packaging it
+  - hardened the DEB/RPM `liblttng-ust` SONAME patching to discover `libcoreclrtraceptprovider.so` dynamically inside the staged package tree instead of assuming one flat path
+  - validated the Debian staging logic locally with a real self-contained publish and confirmed the staged trace-provider library now depends on `liblttng-ust.so.1`
+- Next steps:
+  1. Push the packaging/workflow fix and cut a new stable build so Launchpad retries with the corrected PPA path.
+  2. Watch the next Jammy build specifically; if it still fails, the next problem will be in the PPA source-package assembly or Launchpad environment rather than this runtime-path drift.
 
 ## Update 2026-04-18 11:20:00Z
 

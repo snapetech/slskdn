@@ -6325,3 +6325,10 @@ Code quality improvements were completed as part of Option A:
 - Fixed that split-brain by publishing each DHT-discovered overlay endpoint into `IMeshPeerManager` immediately as an onion-capable peer candidate and then updating its quality on connection success/failure, which closes the exact `Ready + peers found + 0 circuits / 0 total peers` gap from the tester report.
 - Tightened stale antiforgery recovery so `TryGetAndStoreAntiforgeryTokens(...)` retries after any flattened key-ring/decryption exception shape, not just `AntiforgeryValidationException`, which should stop repeated stale-cookie decrypt warnings after reinstall/key rotation paths that surface as raw `CryptographicException`.
 - Added focused unit coverage for both regressions in `DhtRendezvousServiceTests` and `ProgramPathNormalizationTests`, and reran the DHT/circuit/hosted-service/security unit slices plus `./bin/lint` and `git diff --check`.
+
+## 2026-04-18 14:55:00Z
+
+- Investigated the failed Jammy PPA build for `0.24.5.slskdn.144` from the actual Launchpad log instead of guessing. The previous `patchelf` build-dep fix was present, but the standalone PPA path had drifted behind the main release flow: it still pinned `.NET 8`, and `debian/rules` still assumed a single flat `libcoreclrtraceptprovider.so` path inside the staged package tree.
+- Fixed the standalone distro workflows (`release-ppa.yml`, `release-copr.yml`, `release-linux.yml`) to use `.NET 10` and added publish-output sanity checks so those jobs fail early if the staged apphost or runtime files are missing.
+- Hardened the DEB and RPM packaging recipes so the `liblttng-ust` SONAME patch discovers `libcoreclrtraceptprovider.so` dynamically inside the staged bundle instead of assuming one hard-coded flat path.
+- Reproduced and validated the DEB staging logic locally with a real self-contained `linux-x64` publish: `make -f debian/rules override_dh_auto_install` now patches the discovered trace-provider library successfully, and `patchelf --print-needed` confirms the staged library now references `liblttng-ust.so.1`.

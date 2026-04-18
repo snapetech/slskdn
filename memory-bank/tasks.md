@@ -959,3 +959,7 @@
 - [x] Fix issue `#209` root split between DHT discovery, circuit peer inventory, and stale antiforgery recovery
   - Status: done
   - Notes: DHT-discovered rendezvous peers now publish into `IMeshPeerManager` immediately so circuit maintenance sees nonzero onion-capable peers even before overlay neighbor registration completes, connection success/failure updates now refine those peer records, and stale antiforgery cookie recovery now retries on any key-ring/decryption exception shape instead of only `AntiforgeryValidationException`.
+
+- [x] Fix Jammy PPA and standalone distro workflow drift after the packaging/toolchain changes
+  - Status: done
+  - Notes: Updated the standalone PPA/COPR/Linux release workflows to use `.NET 10`, added publish-output verification for the staged Linux bundle, and hardened the DEB/RPM runtime SONAME patching so it discovers `libcoreclrtraceptprovider.so` in the staged package tree instead of assuming one flat appdir path.

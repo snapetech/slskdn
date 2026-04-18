@@ -74,7 +74,12 @@ cp -r * %{buildroot}%{slskd_appdir}/
 chmod +x %{buildroot}%{slskd_appdir}/slskd
 # Match the Nix package fix: current Fedora-family systems ship liblttng-ust.so.1,
 # while the published .NET bundle still references liblttng-ust.so.0 here.
-patchelf --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 %{buildroot}%{slskd_appdir}/libcoreclrtraceptprovider.so
+tracept_provider=$(find %{buildroot}%{slskd_appdir} -name libcoreclrtraceptprovider.so -print -quit); \
+if [ -n "${tracept_provider}" ]; then \
+  patchelf --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 "${tracept_provider}"; \
+else \
+  echo "libcoreclrtraceptprovider.so not present in staged RPM payload; skipping SONAME patch"; \
+fi
 
 # Create symlink
 install -dm755 %{buildroot}%{_bindir}
