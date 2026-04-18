@@ -53,6 +53,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 
+### 0z57. Overlay Logs Must Sanitize Remote Usernames And Public Endpoints Before Operator Output
+
+**The Bug**: Issue `#209` tester logs exposed remote mesh usernames and public endpoints because DHT rendezvous overlay code logged `hello.Username`, `connection.Username`, `ack.Username`, and raw `IPEndPoint` values directly. The older privacy work only protected selected VirtualSoulfind capture data and mesh transport helpers; it was not a global log redaction layer.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+- `src/slskd/DhtRendezvous/MeshNeighborRegistry.cs`
+- `src/slskd/DhtRendezvous/OverlayLogSanitizer.cs`
+
+**Wrong**:
+```text
+_logger.LogInformation("Accepted mesh connection from {Username}@{Endpoint}", hello.Username, remoteEndPoint);
+```
+
+**Correct**:
+```text
+_logger.LogInformation("Accepted mesh connection from {Username}@{Endpoint}", OverlayLogSanitizer.Username(hello.Username), OverlayLogSanitizer.Endpoint(remoteEndPoint));
+```
+
+**Why This Keeps Happening**: Structured logging makes raw identifiers easy to pass through, and privacy helpers are scattered across subsystems instead of enforced globally. Any new externally supplied username, peer id, IP address, or endpoint in DHT/overlay logs must go through an explicit sanitizer before it reaches the logger.
+
 ### 0z50. DHT Discovery Must Not Treat "Seen Once" As "Tried Forever"
 
 **The Bug**: `DhtRendezvousService` stored discovered overlay endpoints in `_discoveredPeers` and only attempted an outbound overlay connection when `TryAdd(...)` succeeded. Once an endpoint had been seen once, every later discovery cycle skipped the connect path entirely, even if the first attempt failed because of a transient timeout, stale local state, or a later code fix. The node kept a growing list of candidates but never retried them.
