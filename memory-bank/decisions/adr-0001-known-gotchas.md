@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z37. Clearing Stale Antiforgery Cookies After `GetAndStoreTokens()` Is Too Late To Stop Framework Log Spam
+
+**The Bug**: Issue `#209` kept showing repeated `An exception was thrown while deserializing the token` / `The antiforgery token could not be decrypted` errors even after we added stale-cookie cleanup and retry logic. The real problem was ordering: on safe GET requests we still let `IAntiforgery.GetAndStoreTokens()` read the incoming stale `XSRF-COOKIE-*` first, and ASP.NET logged the decryption failure inside `DefaultAntiforgery.GetCookieTokenDoesNotThrow(...)` before our catch block could clear and replace the cookies.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```text
+Catch stale antiforgery exceptions around `GetAndStoreTokens()` and clear cookies afterward,
+assuming that prevents the operator-visible decrypt spam.
+```
+
+**Correct**:
+```text
+On safe requests that mint replacement CSRF tokens, strip the known antiforgery cookies from the
+incoming request before calling `GetAndStoreTokens()`. Then expire the stale cookies in the
+response and issue a fresh token pair. If cleanup happens only after `GetAndStoreTokens()`,
+ASP.NET has already logged the decrypt failure.
+```
+
+**Why This Keeps Happening**: It is easy to think “we catch the stale-cookie exception, so we fixed it,” but antiforgery token deserialization and logging happen inside ASP.NET before the exception reaches our code. That means post-failure cleanup can repair browser state while still leaving the exact noisy log spam the user reported. The only way to stop that path is to prevent the framework from seeing the stale cookie on the minting request in the first place.
+
 ### 0z36. `AnonymityMode.Direct` Cannot Still Bootstrap Only Tor Or Circuit Building Will Fail Exactly Like A Missing Tor Proxy
 
 **The Bug**: Issue `#209` kept advancing from `DHT state changed to: Ready` and `DHT discovery found ... peers` straight into `Tor SOCKS proxy not available at 127.0.0.1:9050`, `No available anonymity transports found`, and `Circuit establishment failed - not all hops connected`. The root cause was that `AnonymityTransportSelector` treated `AnonymityMode.Direct` as if it should initialize the Tor transport, and `GetTransportPriorityOrder(...)` also prioritized `Tor` for direct mode. So the default direct configuration still depended on a local Tor SOCKS proxy even though no real direct transport existed in the selector at all.
