@@ -76,6 +76,30 @@ ASP.NET has already logged the decrypt failure.
 
 **Why This Keeps Happening**: It is easy to think “we catch the stale-cookie exception, so we fixed it,” but antiforgery token deserialization and logging happen inside ASP.NET before the exception reaches our code. That means post-failure cleanup can repair browser state while still leaving the exact noisy log spam the user reported. The only way to stop that path is to prevent the framework from seeing the stale cookie on the minting request in the first place.
 
+### 0z39. Auto-Banning Peers On Overlay Certificate Pin Mismatch Can Partition The Mesh After Normal Cert Rotation
+
+**The Bug**: While live-testing issue `#209` on `kspls0`, DHT discovery found real peers and at least one real slskdn overlay endpoint, but the node still never formed a neighbor because `CertificatePinStore` had a stale pin for `minimus7`. The connector treated the mismatch as a possible MITM, blocked that username for an hour, and stopped trying. Clearing the stale pin immediately produced the first successful overlay neighbor.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/CertificateManager.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+
+**Wrong**:
+```text
+Treat every overlay certificate pin mismatch as a hard MITM event and auto-ban the username, even
+though real peers can rotate self-signed certificates across reinstalls or appdir loss.
+```
+
+**Correct**:
+```text
+For overlay TOFU pins, log the mismatch loudly but rotate the stored pin to the newly presented
+certificate instead of auto-blocking the peer. Otherwise a normal peer certificate rotation can
+partition the mesh until an operator manually clears `cert_pins.json` or the blocklist.
+```
+
+**Why This Keeps Happening**: The current overlay identity is only TOFU on self-signed certs, so a strict block-on-mismatch policy assumes certificate continuity that many real installs do not have. In practice that turns ordinary peer reinstalls into self-inflicted partitions. If the system cannot provide a stronger long-lived peer identity, pin mismatches need a softer recovery path than automatic bans.
+
 ### 0z38. DHT Status APIs Cannot Report `IsEnabled` From `IsDhtRunning` Or The UI Lies During Bootstrap
 
 **The Bug**: While rechecking issue `#209` on `kspls0`, the live `/api/v0/dht/status` response reported `isEnabled: false` and `isDhtRunning: false` even though the configured DHT service was running, had a node count, and was actively transitioning through bootstrap states. `DhtRendezvousController.GetDhtStatus()` incorrectly mapped `IsEnabled` from `stats.IsDhtRunning` instead of the actual configured enabled flag.
