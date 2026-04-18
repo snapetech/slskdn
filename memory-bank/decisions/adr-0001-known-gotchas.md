@@ -6734,6 +6734,14 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 **How to prevent it:** Mesh self-descriptor publication must derive advertised ports from the real configured listeners, not hard-coded legacy defaults. Do not publish `DirectQuic` endpoints unless QUIC is actually supported on the running host, and never publish bare `ip:port` legacy endpoints when the consuming code expects explicit `udp://` / `quic://` schemes. Add regression coverage for both the configured port selection and the unsupported-QUIC path.
 
+### 0z48. QUIC-Unsupported Hosts Need A Real Direct Mesh Dialer Fallback, Not Just Honest Descriptor Publication
+
+**What went wrong:** Live validation on `kspls0` showed that fixing the mesh self-descriptor only made the node honest; it did not make mesh circuits work. The host correctly stopped advertising impossible `DirectQuic` transports once `QuicListener.IsSupported` was false, but `TransportSelector` still only had `DirectQuicDialer` for clearnet mesh transport. That left QUIC-unsupported hosts with no direct dialer at all, so circuit formation could never succeed even though DHT rendezvous and the TCP overlay listener were healthy.
+
+**Why it happened:** The codebase grew two separate direct-connection stacks: the mesh transport selector assumed direct clearnet means QUIC, while the anonymity layer already had a working direct TLS transport to the TCP overlay listener. We fixed the advertisement lie first, but the dialer layer still had no fallback to the transport the host could actually accept.
+
+**How to prevent it:** Whenever a transport advertisement is made conditional on runtime capability, audit the matching outbound dialer path in the same change. Do not leave a host in a state where it truthfully advertises no supported direct transport but the circuit builder still assumes one exists. Either provide a direct TLS/TCP mesh dialer fallback or fail startup/package validation explicitly on QUIC-unsupported hosts.
+
 ### 0z46. Security Refactors Must Delete Or Rewrite Tests That Still Resolve Removed Service Types
 
 **What went wrong:** A security refactor removed the old `TransferSecurity` service, but `SecurityStartupTests` still tried to resolve it from DI. The whole targeted unit pass then failed at compile time, which hid the actual status of the new hardening work.
