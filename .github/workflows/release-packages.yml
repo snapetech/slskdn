@@ -69,7 +69,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper fakeroot build-essential
+          sudo apt-get install -y devscripts debhelper fakeroot build-essential patchelf
 
       - name: Prepare Package Structure
         run: |
@@ -125,7 +125,7 @@ jobs:
 
       - name: Install Build Dependencies
         run: |
-          dnf install -y rpm-build rpmdevtools unzip curl systemd-rpm-macros
+          dnf install -y rpm-build rpmdevtools unzip curl systemd-rpm-macros patchelf
 
       - name: Setup RPM Build Environment
         run: rpmdev-setuptree

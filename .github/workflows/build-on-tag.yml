@@ -557,7 +557,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dput gnupg build-essential
+          sudo apt-get install -y devscripts debhelper dput gnupg build-essential patchelf
 
       - name: Import GPG Key
         env:
@@ -1654,7 +1654,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dput gnupg build-essential
+          sudo apt-get install -y devscripts debhelper dput gnupg build-essential patchelf
 
       - name: Import GPG Key
         env:

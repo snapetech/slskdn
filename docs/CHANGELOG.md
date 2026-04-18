@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added explicit ICU runtime dependencies to the DEB and RPM packages so clean Ubuntu/Fedora installs can actually launch `slskd` instead of dying on first start with .NET globalization errors.
+- Fixed the Fedora/COPR Linux package path by patching `libcoreclrtraceptprovider.so` during DEB/RPM package assembly to replace the old `liblttng-ust.so.0` SONAME with `liblttng-ust.so.1`, and by forcing the RPM bundle back onto the project's drop-in `/usr/lib/slskd` path instead of `%{_libdir}` so the shared `slskd.service` still points at a real executable on Fedora.
 - Fixed the remaining false-fatal Soulseek transfer telemetry and DHT startup diagnostics: successful downloads no longer emit `[FATAL]` `Transfer failed: Transfer complete` unobserved-task noise after completion, and the DHT bootstrap grace period is now long enough for slow-but-healthy public-router bootstrap before warning operators about forwarding/firewall problems.
 
 - Downgraded remote peer transfer rejections (`Download reported as failed by remote client`) into the expected Soulseek-network telemetry bucket so those peer-side failures no longer surface as fake `[FATAL] Unobserved task exception` host noise.

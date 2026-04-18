@@ -11,7 +11,7 @@ Rules-Requires-Root: no
 
 Package: slskdn
 Architecture: amd64 arm64
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, libicu76 | libicu74 | libicu70
 Provides: slskd
 Conflicts: slskd
 Replaces: slskd

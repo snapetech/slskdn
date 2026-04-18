@@ -14,14 +14,17 @@ Source3:        slskd.conf
 BuildArch:      x86_64
 BuildRequires:  systemd-rpm-macros
 BuildRequires:  unzip
+BuildRequires:  patchelf
 # Required for user creation in %pre
 Requires(pre):  shadow-utils
 Requires:       systemd
+Requires:       libicu
 Provides:       slskd
 
 # Disable debuginfo - this is a pre-built .NET binary
 %global debug_package %{nil}
 %define __strip /bin/true
+%global slskd_appdir /usr/lib/slskd
 Conflicts:      slskd
 Obsoletes:      slskd < %{version}
 
@@ -66,13 +69,16 @@ Modern web UI for the Soulseek network. Drop-in replacement for slskd.
 
 %install
 # Install application
-install -dm755 %{buildroot}%{_libdir}/slskd
-cp -r * %{buildroot}%{_libdir}/slskd/
-chmod +x %{buildroot}%{_libdir}/slskd/slskd
+install -dm755 %{buildroot}%{slskd_appdir}
+cp -r * %{buildroot}%{slskd_appdir}/
+chmod +x %{buildroot}%{slskd_appdir}/slskd
+# Match the Nix package fix: current Fedora-family systems ship liblttng-ust.so.1,
+# while the published .NET bundle still references liblttng-ust.so.0 here.
+patchelf --replace-needed liblttng-ust.so.0 liblttng-ust.so.1 %{buildroot}%{slskd_appdir}/libcoreclrtraceptprovider.so
 
 # Create symlink
 install -dm755 %{buildroot}%{_bindir}
-ln -sf %{_libdir}/slskd/slskd %{buildroot}%{_bindir}/slskd
+ln -sf %{slskd_appdir}/slskd %{buildroot}%{_bindir}/slskd
 
 # Install systemd service
 install -Dm644 %{SOURCE1} %{buildroot}%{_unitdir}/slskd.service
@@ -114,8 +120,8 @@ echo ""
 %systemd_postun_with_restart slskd.service
 
 %files
-%license %{_libdir}/slskd/LICENSE
-%{_libdir}/slskd/
+%license %{slskd_appdir}/LICENSE
+%{slskd_appdir}/
 %{_bindir}/slskd
 %{_unitdir}/slskd.service
 %config(noreplace) %{_sysconfdir}/slskd/slskd.yml

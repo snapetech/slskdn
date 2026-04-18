@@ -6297,3 +6297,11 @@ Code quality improvements were completed as part of Option A:
 - Reworked the AUR package layout without changing the public slskd install surface: `slskdn`, `slskdn-bin`, and `slskdn-dev` now keep `/usr/lib/slskd/slskd` as the launcher path but install each bundled release under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current` pointing at the active payload.
 - Removed the ineffective `pre_upgrade()` pruning from `packaging/aur/slskd.install` after proving pacman checks file conflicts before scriptlets run.
 - Validated the new layout on `kspls0` by building a local `slskdn-bin 0.24.5.slskdn.140-2`, creating unowned junk files directly under `/usr/lib/slskd`, and confirming pacman upgraded cleanly while the stale root files remained in place and `slskd.service` stayed active.
+## 2026-04-18 01:45:00Z
+
+- Validated non-AUR Linux shippers directly: Debian package reinstall smoke passed even with unowned junk left under `/usr/lib/slskd`, but clean Fedora RPM install failed immediately because the published bundle still linked `libcoreclrtraceptprovider.so` against `liblttng-ust.so.0`.
+- Fixed the DEB/RPM package builders to apply the same SONAME rewrite already used in `flake.nix` (`liblttng-ust.so.0 -> liblttng-ust.so.1`) during package assembly, updated the GitHub Actions package builders to install `patchelf`, and forced the RPM payload back onto `/usr/lib/slskd` so the shared systemd unit still points at a real executable on Fedora.
+## 2026-04-18 02:00:00Z
+
+- Extended the non-AUR package validation to actually run `/usr/bin/slskd --version` on clean Ubuntu and Fedora containers after package install, which exposed another latent issue: both package families installed successfully but failed immediately without ICU because .NET loads globalization support dynamically.
+- Added explicit ICU runtime dependencies to `packaging/debian/control` and `packaging/rpm/slskdn.spec` so clean distro installs pull the required globalization library before first launch.

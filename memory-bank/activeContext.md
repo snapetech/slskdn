@@ -53,6 +53,12 @@ This is the #1 most important thing to do before ending a session. Future AI age
 - **Environment**: Local dev
 - **Last Activity**:
 
+  - Tightened the non-AUR package smoke to actually run `/usr/bin/slskd --version` on clean Ubuntu/Fedora containers after install, which exposed missing ICU runtime dependencies that a plain package-install check would miss.
+  - Added explicit ICU runtime dependencies to the DEB and RPM package metadata so clean distro installs can launch `slskd` immediately after install.
+
+  - Validated the non-AUR Linux shippers directly instead of assuming they were fine: Debian package reinstall smoke passed even with unowned junk under `/usr/lib/slskd`, but clean Fedora RPM install failed immediately on a missing `liblttng-ust.so.0` dependency.
+  - Fixed the DEB/RPM package builders to patch `libcoreclrtraceptprovider.so` from `liblttng-ust.so.0` to `liblttng-ust.so.1` during package assembly, mirroring the existing Nix package workaround, updated the package-building workflows to install `patchelf`, and forced the RPM payload back onto `/usr/lib/slskd` so Fedora keeps the same drop-in service path.
+
   - Reproduced the real `slskdn-bin` AUR upgrade failure on `kspls0`, proved pacman checks file conflicts before `pre_upgrade()` can run, and reworked the AUR package layout so `/usr/lib/slskd/slskd` remains the drop-in launcher while bundled releases live under `/usr/lib/slskd/releases/<version>` and `/usr/lib/slskd/current`.
   - Built and installed a local `slskdn-bin 0.24.5.slskdn.140-2` on `kspls0` after planting fake unowned junk files directly under `/usr/lib/slskd`; pacman upgraded cleanly, `/usr/bin/slskd --version` still reported `0.24.5-slskdn.140`, and `slskd.service` stayed active.
   - Reproduced the real `slskdn-bin` AUR failure on `kspls0`: `yay` built `0.24.5.slskdn.140-1` correctly, but pacman aborted with root-level `/usr/lib/slskd` file conflicts before any package scriptlet could run.
