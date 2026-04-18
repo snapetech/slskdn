@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z26. Pacman File Conflicts Are Checked Before AUR pre_upgrade Scriptlets, So A Loose Root App Bundle Cannot Repair Its Own Upgrade Path
+
+**The Bug**: `slskdn-bin` tried to solve stale `/usr/lib/slskd` file conflicts with a `slskd.install` `pre_upgrade()` cleanup, but pacman checks filesystem conflicts before it runs that scriptlet. On a real `0.24.5.slskdn.129 -> 0.24.5.slskdn.140` upgrade, the package still aborted with `failed to commit transaction (conflicting files)` because unmanaged runtime DLLs and compressed web assets already existed directly under `/usr/lib/slskd`.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/PKGBUILD-dev`
+- `packaging/aur/slskd.install`
+
+**Wrong**:
+```text
+Install the full self-contained app bundle directly into `/usr/lib/slskd` and assume a
+`pre_upgrade()` scriptlet can delete stale files before pacman performs its conflict check.
+```
+
+**Correct**:
+```text
+Keep `/usr/lib/slskd` as the drop-in public path, but package the mutable app payload inside
+a managed subdirectory underneath it and leave the root path to a stable launcher/service
+surface. Do not depend on pacman scriptlets to rescue a root-level file dump once unmanaged
+files already exist there.
+```
+
+**Why This Keeps Happening**: The old layout made the root appdir both the compatibility surface and the payload dump. That works until a manual copy, release-asset experiment, or previous package version leaves behind one unowned file. Once that happens, pacman sees the conflict before any package cleanup code can run. The only reliable same-path fix is to stop spraying versioned payload files directly into the root compatibility directory.
+
 ### 0z24. Successful Soulseek Transfers Can Still Emit A Terminal "Transfer complete" Exception That Must Be Treated As Expected Churn
 
 ### 0z25. DHT Bootstrap Can Take Longer Than 30 Seconds Even When The Network Path Is Healthy
