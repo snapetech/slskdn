@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z33. Stale Antiforgery Cookie Recovery Cannot Only Catch `AntiforgeryValidationException`
+
+**The Bug**: Issue `#209` still showed repeated `The antiforgery token could not be decrypted` / `The key ... was not found in the key ring` noise even after we added stale-cookie cleanup. The recovery helper only caught `AntiforgeryValidationException`, but `GetAndStoreTokens(...)` can surface the same stale key-ring condition as a different wrapped exception, including raw `CryptographicException`. That meant the stale-cookie path sometimes bypassed cleanup entirely and fell into the generic warning path again and again.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```text
+Assume stale antiforgery cookie/key-ring mismatches will always arrive as
+`AntiforgeryValidationException`, and only clear cookies in that one catch block.
+```
+
+**Correct**:
+```text
+Classify stale antiforgery failures by the flattened exception content, not just one concrete
+exception type. If the exception chain indicates a key-ring/decryption mismatch, clear the
+known cookies and retry token minting once.
+```
+
+**Why This Keeps Happening**: ASP.NET antiforgery and Data Protection wrap failures differently depending on exactly where token deserialization failed. The stale-token condition is semantic, not tied to one exception type, so a narrow catch filter misses real stale-cookie cases and leaves the operator staring at repeated key-ring warnings.
+
 ### 0z32. DHT Discovery Must Feed `IMeshPeerManager`, Not Just Fire Opportunistic Overlay Connect Attempts
 
 **The Bug**: Issue `#209` kept reporting `DHT state changed to: Ready` and nonzero peers discovered, but the runtime still logged `Circuit maintenance: 0 circuits, 0 total peers, 0 active, 0 onion-capable`. `DhtRendezvousService.OnPeersFound(...)` stored discovered endpoints in `_discoveredPeers` and kicked off `TryConnectToPeerAsync(...)`, but it never published those discovered candidates into `IMeshPeerManager`. The circuit layer only reads `IMeshPeerManager`, so DHT discovery could be healthy while circuit building stayed blind.
