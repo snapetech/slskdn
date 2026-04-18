@@ -953,3 +953,5 @@
 - [x] **fix (2026-04-18):** Add explicit ICU runtime dependencies to the DEB and RPM package metadata so clean installs can actually start `slskd` instead of failing on missing globalization libraries.
 
 - [x] **fix (2026-04-18):** Fix `packaging/linux/install-from-release.sh` cleanup so successful installs do not exit nonzero from an out-of-scope `EXIT` trap, and re-smoke the published raw Linux release installer on a clean Ubuntu container.
+
+- [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.

@@ -2,7 +2,7 @@ Source: slskdn
 Section: net
 Priority: optional
 Maintainer: snapetech <slskdn@proton.me>
-Build-Depends: debhelper-compat (= 13)
+Build-Depends: debhelper-compat (= 13), patchelf
 Standards-Version: 4.6.0
 Homepage: https://github.com/snapetech/slskdn
 Vcs-Browser: https://github.com/snapetech/slskdn

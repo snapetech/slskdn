@@ -545,3 +545,15 @@ dotnet test
 - Next steps:
   1. Push the installer trap fix if you want it included in the next release.
   2. Use a machine with `flatpak-builder`, `snapcraft`, or `brew` available to add real install-smokes for those remaining ship methods.
+
+
+## Update 2026-04-18 10:05:00Z
+
+- Current task: None. The Jammy PPA packaging regression is fixed locally and validated.
+- Last activity:
+  - inspected the Launchpad Jammy build log for `slskdn 0.24.5.slskdn.141-1ppa...` and confirmed the failure was `patchelf: No such file or directory` during `override_dh_auto_install`
+  - added the missing Debian source-package dependency (`patchelf`) to `packaging/debian/control` so Launchpad installs the tool required by `debian/rules`
+  - reproduced the PPA source-package build locally in a clean `ubuntu:22.04` container using the same source-tree shape as `release-ppa.yml`, and verified `dpkg-buildpackage -b` now completes successfully
+- Next steps:
+  1. Push the Debian packaging fix if you want the next PPA/release build to pick it up.
+  2. Monitor the next Jammy PPA build for any second-stage Launchpad-only issues after this missing `Build-Depends` fix.

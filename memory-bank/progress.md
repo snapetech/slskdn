@@ -6312,3 +6312,9 @@ Code quality improvements were completed as part of Option A:
 - Smoked the published raw Linux release installer on a clean `ubuntu:24.04` container and found a real script bug: the install finished but the script exited nonzero because `trap 'rm -rf "$work_dir"' EXIT` referenced a function-local variable after `main()` returned under `set -u`.
 - Fixed `packaging/linux/install-from-release.sh` to freeze the `mktemp` path into the `EXIT` trap at definition time, then reran the clean Ubuntu smoke successfully against the latest published release (`0.24.5-slskdn.140`). The installer now exits cleanly, leaves a runnable `/opt/slskdn/slskd.dll`, and writes the expected systemd unit.
 - Confirmed the current host still lacks local tooling for deeper install-smokes of `flatpak-builder`, `snapcraft`, and `brew`, so those package paths remain un-smoked from this machine.
+
+## 2026-04-18 10:05:00Z
+
+- Investigated the Jammy PPA failure for `slskdn 0.24.5.slskdn.141-1ppa...` using the Launchpad build log and confirmed the failure was not ICU or runtime packaging: `debian/rules` now invokes `patchelf`, but `packaging/debian/control` did not declare `patchelf` in `Build-Depends`, so Launchpad never installed it.
+- Added the packaging gotcha to `ADR-0001`, then updated the Debian source metadata to `Build-Depends: debhelper-compat (= 13), patchelf`.
+- Reproduced the Launchpad-style DEB build locally in a clean `ubuntu:22.04` container by assembling the same source tree shape used by `release-ppa.yml` (published Linux payload under `usr/lib/slskd` plus `packaging/debian` and the AUR service/config/sysusers files). The Jammy `dpkg-buildpackage -b` run now completes successfully.
