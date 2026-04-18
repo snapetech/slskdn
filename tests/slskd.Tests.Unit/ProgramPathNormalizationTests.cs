@@ -227,6 +227,14 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForTransferCompleteTeardownFailures()
+    {
+        var exception = new AggregateException(new ConnectionException("Transfer failed: Transfer complete"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
     public void IsStaleAntiforgeryTokenException_ReturnsTrue_ForKeyRingMismatch()
     {
         var exception = new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring."));

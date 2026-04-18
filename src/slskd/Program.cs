@@ -4143,6 +4143,7 @@ namespace slskd
                 details.Contains("Connection reset by peer", StringComparison.Ordinal) ||
                 details.Contains("Remote connection closed", StringComparison.Ordinal) ||
                 details.Contains("Download reported as failed by remote client", StringComparison.Ordinal) ||
+                details.Contains("Transfer failed: Transfer complete", StringComparison.Ordinal) ||
                 details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||
                 details.Contains("The wait timed out", StringComparison.Ordinal) ||

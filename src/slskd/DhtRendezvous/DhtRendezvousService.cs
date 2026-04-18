@@ -253,7 +253,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
         // Wait for DHT to bootstrap
         _logger.LogInformation("Waiting for DHT to bootstrap...");
-        var bootstrapTimeout = TimeSpan.FromSeconds(30);
+        var bootstrapTimeout = TimeSpan.FromSeconds(120);
         sw.Restart();
 
         while (_dhtEngine?.State != DhtState.Ready && sw.Elapsed < bootstrapTimeout && !stoppingToken.IsCancellationRequested)
@@ -269,8 +269,8 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         {
             _logger.LogWarning(
                 "DHT bootstrap did not reach Ready within {TimeoutSeconds}s on UDP port {Port} (state: {State}, nodes: {Nodes}). " +
-                "Peer announce/discovery will stay disabled until bootstrap succeeds. Ensure UDP port {Port} is reachable, " +
-                "forwarded, or automatically mapped when using UPnP.",
+                "Peer announce/discovery will stay disabled until bootstrap succeeds. If the DHT still has not reached Ready after this grace period, " +
+                "verify that UDP port {Port} is reachable, forwarded, and allowed through the host firewall.",
                 (int)bootstrapTimeout.TotalSeconds,
                 _options.DhtPort,
                 _dhtEngine?.State,

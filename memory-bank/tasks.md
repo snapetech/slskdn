@@ -937,9 +937,12 @@
 - [x] Fix `DownloadService.EnqueueAsync(...)` semaphore lifetime so live enqueue cleanup cannot crash after `Queued, Remotely`
   - Status: done
   - Notes: Stopped disposing the per-batch enqueue semaphore while background enqueue observer tasks still release it, added focused `DownloadServiceTests` regression coverage for the cancelled-transfer path, redeployed a self-contained build to `kspls0`, and verified the old `ObjectDisposedException` / `SemaphoreSlim` crash is gone.
-- [ ] Investigate post-enqueue remote stream failures on `kspls0`
+- [x] Investigate post-enqueue remote stream failures on `kspls0`
+  - Status: done
+  - Notes: Confirmed the remaining mixed remote stream outcomes are normal peer-side churn rather than another host-wide local transfer bug; fixed the lingering fake fatal `Transfer failed: Transfer complete` unobserved-task noise, opened the missing host firewall rules for `50305/tcp` and `50306/udp`, and proved DHT reaches `Ready` on `kspls0` once the host firewall is open.
+- [ ] Revisit the DHT bootstrap diagnostics after more live-runtime samples
   - Status: pending
-  - Notes: After the enqueue and file-permissions fixes, transfers now reach `InProgress` again on `kspls0`, but some peers still fail later with `Transfer failed: Read error: Remote connection closed` or remote-side failure/timeout outcomes. Distinguish bad peers from any remaining host/runtime regression before changing code again.
+  - Notes: The startup grace period is now 120 seconds instead of 30, which matches the slow-but-healthy bootstrap observed on `kspls0`. Gather more host samples before deciding whether the warning should become adaptive instead of static.
 
 - [x] Downgrade remote peer transfer rejections from fake fatal host telemetry
   - Status: done

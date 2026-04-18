@@ -6273,3 +6273,17 @@ Code quality improvements were completed as part of Option A:
 - Fixed one remaining product-level telemetry bug in that path: `Soulseek.TransferReportedFailedException` / `Download reported as failed by remote client` now falls into the same expected Soulseek-network classifier as read/reset/timeout churn, so unobserved task handling will stop reporting those as fake `[FATAL]` host failures.
 - Validation:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+
+## 2026-04-18 09:05:00Z
+
+- Continued the live `kspls0` transfer/network investigation after the router forwards for `50305/tcp` and `50306/udp` were added.
+- Verified the remaining transfer symptoms are no longer a host-wide zero-byte failure: the live host now has multiple real `InProgress` and `Completed, Succeeded` downloads, while some peers still reject or close transfers as ordinary remote-peer churn.
+- Fixed one remaining telemetry bug in-repo: `Transfer failed: Transfer complete` is now classified as expected Soulseek transfer teardown noise for unobserved-task handling, which stops successful downloads from emitting fake `[FATAL] Unobserved task exception` log lines after completion.
+- Fixed the `kspls0` host firewall so the DHT overlay ports are actually reachable on the box, not just on the router: `50305/tcp` and `50306/udp` are now allowed in nftables alongside the existing `50300/tcp` listener rule.
+- Re-tested DHT bootstrap on the live host and proved the current startup warning window was too short: after the firewall fix, DHT still took roughly 90 seconds to transition from `Initialising` to `Ready`, so the old 30-second warning path was a false alarm even on a healthy network path.
+- Extended the DHT bootstrap grace period to 120 seconds and tightened the warning text so operators only get the firewall/forwarding guidance after a genuinely slow bootstrap window, not during normal warm-up.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`
+  - `bash ./bin/lint`
+  - `git diff --check`
+  - live `kspls0` redeploy + journal verification of DHT reaching `Ready` after the host firewall change

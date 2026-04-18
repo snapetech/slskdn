@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the remaining false-fatal Soulseek transfer telemetry and DHT startup diagnostics: successful downloads no longer emit `[FATAL]` `Transfer failed: Transfer complete` unobserved-task noise after completion, and the DHT bootstrap grace period is now long enough for slow-but-healthy public-router bootstrap before warning operators about forwarding/firewall problems.
+
 - Downgraded remote peer transfer rejections (`Download reported as failed by remote client`) into the expected Soulseek-network telemetry bucket so those peer-side failures no longer surface as fake `[FATAL] Unobserved task exception` host noise.
 
 - Fixed the live download enqueue crash on Linux hosts after transfers reached `Queued, Remotely`: `DownloadService.EnqueueAsync(...)` no longer disposes its shared per-batch `SemaphoreSlim` while background enqueue tasks still release it, which removes the host-side `Cannot access a disposed object. Object name: 'System.Threading.SemaphoreSlim'.` failure and lets transfers proceed into real `InProgress` socket work again.

@@ -505,3 +505,16 @@ dotnet test
 - Next steps:
   1. Commit the code/test/docs fix set if lint and diff checks stay green.
   2. If `#209` still reports zero circuits after this, inspect actual outbound overlay connection success/failure rates and remote peer feature compatibility rather than local peer inventory wiring.
+
+
+## Update 2026-04-18 09:05:00Z
+
+- Current task: None. The latest `kspls0` live transfer and DHT follow-up is implemented locally and validated on-host.
+- Last activity:
+  - proved that successful transfers on `kspls0` were still emitting fake fatal `Transfer failed: Transfer complete` unobserved-task noise and fixed the classifier in `Program`
+  - opened `50305/tcp` and `50306/udp` in the `kspls0` host firewall, then verified DHT eventually reaches `Ready` on the live host once both router and host firewall paths are open
+  - proved the old 30-second DHT bootstrap warning was too aggressive on a healthy host and extended the bootstrap grace period to 120 seconds
+- Next steps:
+  1. Commit and push the current `Program` / DHT bootstrap follow-up if the worktree stays clean.
+  2. Watch the next `kspls0` runtime window for a successful transfer on the patched process and confirm the `Transfer complete` fatal log never returns.
+  3. If DHT still shows slow `Initialising` windows on other hosts, consider making the bootstrap diagnostics adaptive instead of static.
