@@ -40,11 +40,8 @@ vi.mock('./TransfersHeader', () => ({
     return (
       <div>
         <button onClick={() => onRetryAll(files)}>retry-all</button>
-        <button
-          onClick={() =>
-            onRemoveAll(files, false, { useBulkClear: true })
-          }
-        >
+        <button onClick={() => onRetryAll(files)}>retry-all-again</button>
+        <button onClick={() => onRemoveAll(files, false, { useBulkClear: true })}>
           remove-completed
         </button>
       </div>
@@ -101,7 +98,7 @@ describe('Transfers', () => {
     vi.restoreAllMocks();
   });
 
-  it('retries failed downloads sequentially instead of flooding the backend', async () => {
+  it('trickles bulk retries through the background queue one request at a time', async () => {
     const resolvers = [];
 
     transfersLibrary.download.mockImplementation(() => {
@@ -136,11 +133,14 @@ describe('Transfers', () => {
     });
   });
 
-  it('uses the dedicated clear-completed endpoint for remove-all-completed', async () => {
-    transfersLibrary.getAll.mockResolvedValue(
-      makeTransfers('Completed, Succeeded'),
-    );
-    transfersLibrary.clearCompleted.mockResolvedValue({});
+  it('dedupes bulk retries while the same work is already queued', async () => {
+    const resolvers = [];
+
+    transfersLibrary.download.mockImplementation(() => {
+      return new Promise((resolve) => {
+        resolvers.push(resolve);
+      });
+    });
 
     render(
       <Transfers
@@ -149,16 +149,56 @@ describe('Transfers', () => {
       />,
     );
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'remove-completed' }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'retry-all' }));
+    fireEvent.click(screen.getByRole('button', { name: 'retry-all-again' }));
 
     await waitFor(() => {
-      expect(transfersLibrary.clearCompleted).toHaveBeenCalledWith({
-        direction: 'download',
-      });
+      expect(transfersLibrary.download).toHaveBeenCalledTimes(1);
     });
-    expect(transfersLibrary.cancel).not.toHaveBeenCalled();
+
+    resolvers.shift()({});
+
+    await waitFor(() => {
+      expect(transfersLibrary.download).toHaveBeenCalledTimes(2);
+    });
+
+    resolvers.shift()({});
+
+    await waitFor(() => {
+      expect(transfersLibrary.download).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('dedupes remove-all-completed while clear-completed is already queued', async () => {
+    let resolveClearCompleted;
+    transfersLibrary.getAll.mockResolvedValue(makeTransfers('Completed, Succeeded'));
+    transfersLibrary.clearCompleted.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveClearCompleted = resolve;
+        }),
+    );
+
+    render(
+      <Transfers
+        direction="download"
+        server={{ isConnected: true }}
+      />,
+    );
+
+    const button = await screen.findByRole('button', { name: 'remove-completed' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(transfersLibrary.clearCompleted).toHaveBeenCalledTimes(1);
+    });
+
+    resolveClearCompleted({});
+
+    await waitFor(() => {
+      expect(transfersLibrary.clearCompleted).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('shows one bulk retry error instead of a toast per file', async () => {

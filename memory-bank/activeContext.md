@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The Transfers UI bulk-action fix for the live `kspls0` audit is implemented locally and validated; remaining work is the separate host/runtime investigation.
+- **Current Task**: None. The Transfers UI bulk queue/dedupe fix for the live `kspls0` audit is implemented locally and validated; remaining work is the separate host/runtime investigation.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -56,11 +56,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Audited `kspls0` directly and confirmed the transfer/runtime complaints have two layers:
     - the live service is up, but the journal shows repeated Soulseek `Connection refused` / `Connection reset by peer` exceptions, search endpoint resolution timeouts, and DHT / mesh logs back in `NotReady` / `0 circuits` state
     - the Transfers page itself was compounding that by issuing per-file `Promise.all(...)` bulk retry/remove requests that trip the backend download limiter and create one toast per failed request
-  - Fixed the Transfers UI bulk-action regression locally:
-    - serialized bulk retry/cancel/remove requests in `Transfers.jsx`
-    - switched the top-level `Remove All Completed` path onto `transfers.clearCompleted(...)`
-    - changed `TransferGroup.jsx` to delegate grouped retry/cancel/remove actions to the parent handlers so the same throttled behavior applies there too
-    - added focused web regression tests proving sequential retry, single-toast bulk failure reporting, and bulk clear-completed endpoint usage
+  - Finished the Transfers UI bulk-action fix properly:
+    - bulk retry/remove/cancel now enqueue into a background queue in `Transfers.jsx` instead of running inline from the click handler
+    - queued and in-flight work is deduped by transfer/action key, so repeated clicks while a drain is running do not reschedule the same transfers
+    - the top-level `Remove All Completed` path still uses `transfers.clearCompleted(...)`, but that clear request is now queued and deduped too
+    - added focused web regression tests proving one-at-a-time draining, duplicate bulk-submission suppression, single-toast failure reporting, and deduped clear-completed behavior
 
   - Re-opened issue `#209` after the reporter said the same DHT error remained and verified the shipped release artifacts directly:
     - downloaded the published `0.24.5-slskdn.130` and `.131` ARM64 zip assets locally and confirmed `.131` contains the newer `slskd.dll` / `MonoTorrent.dll` bits

@@ -6229,11 +6229,11 @@ Code quality improvements were completed as part of Option A:
 - Audited the live `kspls0` transfer/runtime state and found two layers of failure:
   - host logs show real network/runtime instability (`Connection refused`, `Connection reset by peer`, search endpoint resolution timeouts, DHT `NotReady`, and `0 circuits`)
   - the Transfers page itself was making that look even worse by storming the backend with per-file bulk retry/remove requests
-- Fixed the Transfers UI bulk-action regressions locally:
-  - `Retry All` and group retry now serialize download enqueue requests so they stop tripping the backend `429` limiter
-  - bulk actions aggregate failures into one summary toast instead of one toast per file
-  - the top-level `Remove All Completed` path now calls the dedicated bulk-clear endpoint instead of issuing one remove request per completed transfer
-  - `TransferGroup` now delegates bulk retry/cancel/remove to the parent handlers so the same throttled behavior applies to grouped selections too
+- Finished the Transfers UI bulk-action fix properly instead of stopping at inline serialization:
+  - bulk retry/remove/cancel now enqueue into a background queue that drains one request at a time
+  - queued and in-flight work is deduped by transfer/action key, so repeated clicks while a drain is in progress do not schedule the same work again
+  - the top-level `Remove All Completed` path still uses the dedicated bulk-clear endpoint, but that clear request is now queued and deduped too
+  - bulk failures are summarized once per batch instead of one toast per file
 - Validation:
   - `npm --prefix src/web test -- --run src/components/Transfers/Transfers.test.jsx`
   - `npm --prefix src/web run lint`

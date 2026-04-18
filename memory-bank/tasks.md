@@ -76,10 +76,10 @@
  - Priority: P1
  - Notes: The startup listener race is fixed, the blanket benign-refusal suppression is removed, startup patching now configures `incomingConnectionOptions`, and `DownloadService.EnqueueAsync(...)` no longer aborts on an unnecessary `GetUserEndPointAsync(...)` / `ConnectToUserAsync(...)` peer preflight. The release smoke script now includes focused startup/transfer unit regressions in addition to the versioned integration slice. Remaining work is to trace any still-live upload-side or lower-level Soulseek `Connection.ConnectAsync(...)` refusals if testers can reproduce them after those fixes, and add focused coverage around the actual producer instead of the global unobserved-task handler.
 
-- [x] **bug**: Stop Transfers UI bulk actions from overrunning the backend request contract.
+- [x] **bug**: Queue and dedupe Transfers bulk actions instead of running them inline.
  - Status: completed (2026-04-18)
  - Priority: P1
- - Notes: `Retry All` and selected/group retry now run sequentially instead of flooding the download enqueue limiter with parallel requests, the Transfers page `Remove All Completed` path now uses the dedicated `clearCompleted` endpoint, and bulk actions aggregate failures into a single toast instead of one popup per file. Focused web tests cover sequential retry, single-toast failure reporting, and the bulk-clear-completed path.
+ - Notes: Transfers bulk retry/remove/cancel now enqueue work into a background queue that drains one request at a time, dedupes identical queued or in-flight operations, preserves the dedicated `clearCompleted` path for top-level remove-all-completed, and aggregates failures once per batch instead of once per file. Focused web tests cover sequential draining, duplicate bulk-submission suppression, single-toast failure reporting, and deduped clear-completed behavior.
 
 - [ ] **T-919**: Discovery Graph / Constellation substrate
  - Status: in progress

@@ -4,7 +4,7 @@ import * as transfersLibrary from '../../lib/transfers';
 import { LoaderSegment, PlaceholderSegment } from '../Shared';
 import TransferGroup from './TransferGroup';
 import TransfersHeader from './TransfersHeader';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 
 const AUTO_REPLACE_THRESHOLD = 0; // 0% = exact match only (configurable on backend)
@@ -25,17 +25,103 @@ const summarizeBulkFailures = ({ action, failures }) => {
   );
 };
 
+const getTransferKey = ({ file, suffix = '' }) => {
+  return `${file.username}:${file.id}${suffix ? `:${suffix}` : ''}`;
+};
+
 const Transfers = ({ direction, server }) => {
   const testId = direction === 'download' ? 'downloads-root' : 'uploads-root';
   const [connecting, setConnecting] = useState(true);
   const [transfers, setTransfers] = useState([]);
 
-  const [retrying, setRetrying] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [removing, setRemoving] = useState(false);
+  const [retryingSingle, setRetryingSingle] = useState(false);
+  const [cancellingSingle, setCancellingSingle] = useState(false);
+  const [removingSingle, setRemovingSingle] = useState(false);
+  const [bulkCounts, setBulkCounts] = useState({ retry: 0, cancel: 0, remove: 0 });
 
   const [autoReplaceEnabled, setAutoReplaceEnabled] = useState(false);
   const autoReplaceThreshold = AUTO_REPLACE_THRESHOLD;
+
+  const bulkQueueRef = useRef([]);
+  const queuedBulkKeysRef = useRef(new Set());
+  const bulkQueueRunningRef = useRef(false);
+
+  const retrying = retryingSingle || bulkCounts.retry > 0;
+  const cancelling = cancellingSingle || bulkCounts.cancel > 0;
+  const removing = removingSingle || bulkCounts.remove > 0;
+
+  const changeBulkCount = (action, delta) => {
+    setBulkCounts((previousCounts) => ({
+      ...previousCounts,
+      [action]: Math.max(0, previousCounts[action] + delta),
+    }));
+  };
+
+  const runBulkQueue = async () => {
+    if (bulkQueueRunningRef.current) {
+      return;
+    }
+
+    bulkQueueRunningRef.current = true;
+
+    while (bulkQueueRef.current.length > 0) {
+      const queuedOperation = bulkQueueRef.current.shift();
+
+      try {
+        await queuedOperation.run();
+      } catch (error) {
+        queuedOperation.batch.failures.push({
+          label: queuedOperation.label,
+          message: getErrorMessage(error),
+        });
+      } finally {
+        queuedBulkKeysRef.current.delete(queuedOperation.key);
+        changeBulkCount(queuedOperation.action, -1);
+        queuedOperation.batch.remaining -= 1;
+
+        if (queuedOperation.batch.remaining === 0) {
+          summarizeBulkFailures({
+            action: queuedOperation.batch.action,
+            failures: queuedOperation.batch.failures,
+          });
+        }
+      }
+    }
+
+    bulkQueueRunningRef.current = false;
+  };
+
+  const enqueueBulkOperations = ({ action, operations }) => {
+    const batch = {
+      action,
+      failures: [],
+      remaining: 0,
+    };
+
+    let enqueuedCount = 0;
+
+    operations.forEach((operation) => {
+      if (queuedBulkKeysRef.current.has(operation.key)) {
+        return;
+      }
+
+      queuedBulkKeysRef.current.add(operation.key);
+      bulkQueueRef.current.push({
+        ...operation,
+        action,
+        batch,
+      });
+      batch.remaining += 1;
+      enqueuedCount += 1;
+    });
+
+    if (enqueuedCount === 0) {
+      return;
+    }
+
+    changeBulkCount(action, enqueuedCount);
+    runBulkQueue();
+  };
 
   const fetch = async () => {
     try {
@@ -78,7 +164,6 @@ const Transfers = ({ direction, server }) => {
         });
 
         await Promise.allSettled(queuePositionPromises);
-        // Update state with the fresh queue positions
         setTransfers([...response]);
       }
     } catch (error) {
@@ -104,12 +189,6 @@ const Transfers = ({ direction, server }) => {
   }, [direction]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useMemo(() => {
-    // this is used to prevent weird update issues if switching
-    // between uploads and downloads.  useEffect fires _after_ the
-    // prop 'direction' updates, meaning there's a flash where the
-    // screen contents switch to the new direction for a brief moment
-    // before the connecting animation shows.  this memo fires the instant
-    // the direction prop changes, preventing this flash.
     setConnecting(true);
   }, [direction]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -122,7 +201,7 @@ const Transfers = ({ direction, server }) => {
 
     try {
       if (!suppressStateChange) {
-        setRetrying(true);
+        setRetryingSingle(true);
       }
 
       await transfersLibrary.download({
@@ -138,32 +217,25 @@ const Transfers = ({ direction, server }) => {
       throw error;
     } finally {
       if (!suppressStateChange) {
-        setRetrying(false);
+        setRetryingSingle(false);
       }
     }
   };
 
-  const retryAll = async (transfersToRetry) => {
-    setRetrying(true);
-    const failures = [];
-
-    for (const file of transfersToRetry) {
-      try {
-        await retry({
-          file,
-          suppressErrorToast: true,
-          suppressStateChange: true,
-        });
-      } catch (error) {
-        failures.push({
-          label: `${file.username}/${file.filename}`,
-          message: getErrorMessage(error),
-        });
-      }
-    }
-
-    setRetrying(false);
-    summarizeBulkFailures({ action: 'retry', failures });
+  const retryAll = (transfersToRetry) => {
+    enqueueBulkOperations({
+      action: 'retry',
+      operations: transfersToRetry.map((file) => ({
+        key: `retry:${getTransferKey({ file })}`,
+        label: `${file.username}/${file.filename}`,
+        run: () =>
+          retry({
+            file,
+            suppressErrorToast: true,
+            suppressStateChange: true,
+          }),
+      })),
+    });
   };
 
   const cancel = async ({
@@ -175,7 +247,7 @@ const Transfers = ({ direction, server }) => {
 
     try {
       if (!suppressStateChange) {
-        setCancelling(true);
+        setCancellingSingle(true);
       }
 
       await transfersLibrary.cancel({ direction, id, username });
@@ -188,32 +260,25 @@ const Transfers = ({ direction, server }) => {
       throw error;
     } finally {
       if (!suppressStateChange) {
-        setCancelling(false);
+        setCancellingSingle(false);
       }
     }
   };
 
-  const cancelAll = async (transfersToCancel) => {
-    setCancelling(true);
-    const failures = [];
-
-    for (const file of transfersToCancel) {
-      try {
-        await cancel({
-          file,
-          suppressErrorToast: true,
-          suppressStateChange: true,
-        });
-      } catch (error) {
-        failures.push({
-          label: `${file.username}/${file.filename}`,
-          message: getErrorMessage(error),
-        });
-      }
-    }
-
-    setCancelling(false);
-    summarizeBulkFailures({ action: 'cancel', failures });
+  const cancelAll = (transfersToCancel) => {
+    enqueueBulkOperations({
+      action: 'cancel',
+      operations: transfersToCancel.map((file) => ({
+        key: `cancel:${getTransferKey({ file })}`,
+        label: `${file.username}/${file.filename}`,
+        run: () =>
+          cancel({
+            file,
+            suppressErrorToast: true,
+            suppressStateChange: true,
+          }),
+      })),
+    });
   };
 
   const remove = async ({
@@ -226,7 +291,7 @@ const Transfers = ({ direction, server }) => {
 
     try {
       if (!suppressStateChange) {
-        setRemoving(true);
+        setRemovingSingle(true);
       }
 
       await transfersLibrary.cancel({
@@ -245,52 +310,46 @@ const Transfers = ({ direction, server }) => {
       throw error;
     } finally {
       if (!suppressStateChange) {
-        setRemoving(false);
+        setRemovingSingle(false);
       }
     }
   };
 
-  const removeAll = async (
+  const removeAll = (
     transfersToRemove,
     deleteFile = false,
     { useBulkClear = false } = {},
   ) => {
-    setRemoving(true);
+    if (useBulkClear && !deleteFile) {
+      enqueueBulkOperations({
+        action: 'remove',
+        operations: [
+          {
+            key: `remove:clear-completed:${direction}`,
+            label: `all completed ${direction}s`,
+            run: () => transfersLibrary.clearCompleted({ direction }),
+          },
+        ],
+      });
+      return;
+    }
 
-    try {
-      if (useBulkClear && !deleteFile) {
-        await transfersLibrary.clearCompleted({ direction });
-        return;
-      }
-
-      const failures = [];
-
-      for (const file of transfersToRemove) {
-        try {
-          await remove({
+    enqueueBulkOperations({
+      action: 'remove',
+      operations: transfersToRemove.map((file) => ({
+        key: `remove:${getTransferKey({ file, suffix: deleteFile ? 'delete' : 'keep' })}`,
+        label: `${file.username}/${file.filename}`,
+        run: () =>
+          remove({
             deleteFile,
             file,
             suppressErrorToast: true,
             suppressStateChange: true,
-          });
-        } catch (error) {
-          failures.push({
-            label: `${file.username}/${file.filename}`,
-            message: getErrorMessage(error),
-          });
-        }
-      }
-
-      summarizeBulkFailures({ action: 'remove', failures });
-    } catch (error) {
-      console.error(error);
-      toast.error(getErrorMessage(error));
-    } finally {
-      setRemoving(false);
-    }
+          }),
+      })),
+    });
   };
 
-  // Fetch auto-replace status from backend on mount
   useEffect(() => {
     const fetchAutoReplaceStatus = async () => {
       if (direction !== 'download') {
@@ -308,7 +367,6 @@ const Transfers = ({ direction, server }) => {
     fetchAutoReplaceStatus();
   }, [direction]);
 
-  // Handle auto-replace toggle via backend API
   const handleAutoReplaceChange = async (enabled) => {
     try {
       if (enabled) {
