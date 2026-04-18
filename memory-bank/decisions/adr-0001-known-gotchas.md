@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z17. Do Not Run UDP Hole-Punch Preflight Against DHT Overlay TCP Endpoints
+
+**The Bug**: `MeshOverlayConnector` took each DHT-discovered overlay endpoint and wrapped it as `udp://host:port` for NAT traversal preflight before the real TCP connect. But DHT peers advertise the mesh overlay TCP listener port, and there is no corresponding UDP responder in that path, so the hole-punch attempts were guaranteed to fail and produced misleading `[HolePunch] ... FAILED` noise even when DHT discovery itself was healthy.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+- `src/slskd/Mesh/Nat/NatTraversalService.cs`
+- `src/slskd/Mesh/Nat/UdpHolePuncher.cs`
+
+**Wrong**:
+```text
+Treat a discovered TCP overlay endpoint as if it were a UDP hole-punch target just because the host and port are available.
+```
+
+**Correct**:
+```text
+Only attempt NAT traversal preflight when you have an actual UDP/relay endpoint contract for that peer. Plain DHT overlay candidates should go straight to the real TCP overlay connect path.
+```
+
+**Why This Keeps Happening**: The code has NAT traversal primitives and DHT-discovered endpoints in the same area, so it is tempting to wire them together speculatively. But transport information matters: a TCP listener port is not automatically a valid UDP hole-punch target. Without an actual UDP responder on the remote side, the preflight can only fail and mislead operators.
+
 ### 0z16. Frontend API Libraries Must Stay On The Same Versioned Route Family As Their Controllers
 
 **The Bug**: The WebUI `userNotes` client called `/api/v0/users/notes`, but `UserNotesController` only advertised API version `1`. That left the UI with a reproducible `GET /api/v0/users/notes -> 404` even though the backend feature existed and the frontend was using the same route shape as the rest of the app.
