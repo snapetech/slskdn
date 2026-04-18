@@ -6831,3 +6831,12 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 **How to prevent it:** When generating full-instance test config, use the exact runtime binder section name that the subprocess honors. Do not assume the example-file alias and the startup binder key are identical without proving it in a live child-process probe first.
 
+
+
+### 0z53. Full-Instance Overlay Smokes Must Not Treat The Inbound Socket Source Port As The Remote Node's Listener Port
+
+**What went wrong:** The new two-instance mesh smoke forced alpha to connect directly to beta's overlay listener, then asserted that beta's `/api/v0/overlay/connections` entry for alpha would report `alpha.OverlayPort`. That was wrong. On the inbound side, the connection registry reports the remote socket endpoint for the accepted TCP session, which uses alpha's ephemeral client source port, not alpha's overlay listener port. The test timed out even though the mesh connection actually existed.
+
+**Why it happened:** We wrote the assertion as if both sides would expose a symmetric "peer listener port" view. The current controller surfaces `MeshOverlayConnection.RemoteEndPoint`, and for accepted inbound sockets that endpoint is the caller's transient outbound port. We were validating the wrong network fact and turned a healthy connection into a false negative.
+
+**How to prevent it:** In full-instance overlay tests, assert on peer identity and connection presence, not the inbound side's remote socket source port. If listener-port identity matters, expose it explicitly in the overlay handshake payload or a dedicated response field instead of inferring it from the accepted TCP socket endpoint.
