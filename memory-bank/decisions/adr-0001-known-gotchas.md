@@ -6794,3 +6794,13 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The implementation moved to `SecurityOptions`/middleware wiring, but the test suite was not updated in the same change set. The test still asserted behavior against a deleted registration contract.
 
 **How to prevent it:** When removing or folding a service during a security refactor, grep the unit suite for the deleted type name and either rewrite those tests to the new registration contract or delete them in the same commit. Never leave compile-broken tests as deferred cleanup.
+
+
+### 0z49. Mesh Releases Need A Deterministic Two-Instance Smoke, Not Just Loopback Pieces And Live DHT Observation
+
+**What went wrong:** We kept shipping mesh fixes after validating isolated pieces like single-process loopback handshakes, DHT counters, or live-host candidate discovery. That still missed the most important proof: two real `slskdn` processes standing up, forming an overlay connection, and reporting each other as connected peers. Without that deterministic two-instance smoke, we repeatedly confused partial signals for real end-to-end mesh success.
+
+**Why it happened:** The repo had lower-level coverage (`MeshSearchLoopbackTests`, connector/server unit tests, live DHT diagnostics), but no stable full-instance path that could force one node to dial another and assert the resulting overlay state. Real-network validation through public DHT was too noisy and peer-quality-dependent to serve as the primary release gate.
+
+**How to prevent it:** Keep a deterministic two-instance full-process mesh smoke in the integration suite. It should boot two `slskdn` instances, force one to connect to the other through the real overlay stack, and assert both sides report the peer/connection. Treat public-DHT/live-host checks as supplemental evidence only, not the main proof that mesh works.
+
