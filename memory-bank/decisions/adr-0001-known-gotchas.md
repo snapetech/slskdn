@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z28. RPM Packages Cannot Mix `%{_libdir}` With A Hard-Coded `/usr/lib/slskd` Service Path
+
+**The Bug**: After fixing the Fedora `liblttng-ust` SONAME issue, the RPM installed successfully but dropped the bundle into `%{_libdir}/slskd` (`/usr/lib64/slskd` on x86_64) while the shared `slskd.service` still executed `/usr/lib/slskd/slskd`. The package looked installed, but the systemd unit pointed at a path that did not exist on Fedora.
+
+**Files Affected**:
+- `packaging/rpm/slskdn.spec`
+- `packaging/aur/slskd.service`
+
+**Wrong**:
+```text
+Use distro-native `%{_libdir}` for the bundled app payload in RPMs while reusing a service file
+that hard-codes `/usr/lib/slskd/slskd` as the executable path.
+```
+
+**Correct**:
+```text
+If the project promises a drop-in `/usr/lib/slskd` runtime path, RPM packaging must install the
+payload there too. Do not let `%{_libdir}` silently move the bundle to `/usr/lib64/slskd` while the
+service and operator docs still target `/usr/lib/slskd`.
+```
+
+**Why This Keeps Happening**: `%{_libdir}` is the normal RPM instinct, but this project intentionally treats `/usr/lib/slskd` as a compatibility contract across installers. Reusing the shared service file without matching the payload path creates a package that installs cleanly yet cannot start.
+
 ### 0z27. Linux Package Builds Must Patch .NET's Old liblttng-ust SONAME Before Shipping Fedora/RPM Artifacts
 
 **The Bug**: The published Linux glibc bundle still contains `libcoreclrtraceptprovider.so` linked against `liblttng-ust.so.0`. Fedora 43 provides `liblttng-ust.so.1`, so the generated RPM ended up with an unsatisfied auto-detected dependency and `dnf` refused to install it on a clean system with `nothing provides liblttng-ust.so.0()(64bit)`.
