@@ -53,6 +53,8 @@ sudo systemctl restart slskd
 
 Your config at `/etc/slskd/slskd.yml` and data at `/var/lib/slskd/` are preserved.
 
+AUR upgrades now prune the managed app payload under `/usr/lib/slskd/` before reinstalling, so stale binaries and compressed web assets from older builds no longer block pacman with file-conflict errors.
+
 ## Fresh Installation
 
 ```bash

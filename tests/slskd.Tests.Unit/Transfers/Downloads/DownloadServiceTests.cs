@@ -2,10 +2,11 @@ namespace slskd.Tests.Unit.Transfers.Downloads;
 
 using System;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Events;
@@ -109,6 +110,88 @@ public class DownloadServiceTests
     }
 
     [Fact]
+    public async Task EnqueueAsync_CancelledTransfer_DoesNotFailFromDisposedBatchSemaphore()
+    {
+        var databasePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<TransfersDbContext>()
+            .UseSqlite($"Data Source={databasePath}")
+            .Options;
+
+        await using (var context = new TransfersDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .SetupGet(client => client.Downloads)
+            .Returns(Array.Empty<Soulseek.Transfer>());
+        soulseekClient
+            .Setup(client => client.DownloadAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Func<Task<Stream>>>(),
+                It.IsAny<long?>(),
+                It.IsAny<long>(),
+                It.IsAny<int?>(),
+                It.IsAny<TransferOptions>(),
+                It.IsAny<CancellationToken?>()))
+            .Returns(async (
+                string username,
+                string remoteFilename,
+                Func<Task<Stream>> outputStreamFactory,
+                long? size,
+                long startOffset,
+                int? token,
+                TransferOptions transferOptions,
+                CancellationToken? cancellationToken) =>
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken ?? CancellationToken.None);
+                return null!;
+            });
+
+        var service = new DownloadService(
+            new TestOptionsMonitor<slskd.Options>(new slskd.Options()),
+            soulseekClient.Object,
+            new TestDbContextFactory(options),
+            new FileService(new TestOptionsMonitor<slskd.Options>(new slskd.Options())),
+            Mock.Of<IRelayService>(),
+            Mock.Of<IFTPService>(),
+            new EventBus(new EventService(Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<EventsDbContext>>())));
+
+        try
+        {
+            var (enqueued, failed) = await service.EnqueueAsync(
+                "alice",
+                new[] { (Filename: @"Music\track.flac", Size: 1234L) },
+                CancellationToken.None);
+
+            Assert.Single(enqueued);
+            Assert.Empty(failed);
+
+            var transferId = enqueued.Single().Id;
+            Assert.True(service.TryCancel(transferId));
+
+            var cancelledTransfer = await WaitForTransferAsync(
+                () => service.Find(t => t.Id == transferId && t.EndedAt != null),
+                TimeSpan.FromSeconds(5));
+
+            Assert.True(cancelledTransfer.State.HasFlag(TransferStates.Completed));
+            Assert.DoesNotContain("SemaphoreSlim", cancelledTransfer.Exception ?? string.Empty, StringComparison.Ordinal);
+            Assert.DoesNotContain("disposed object", cancelledTransfer.Exception ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            service.Dispose();
+
+            if (System.IO.File.Exists(databasePath))
+            {
+                System.IO.File.Delete(databasePath);
+            }
+        }
+    }
+
+    [Fact]
     public void Dispose_UnsubscribesClockMinuteHandler()
     {
         var optionsMonitor = new TestOptionsMonitor<slskd.Options>(new slskd.Options());
@@ -127,6 +210,25 @@ public class DownloadServiceTests
         service.Dispose();
 
         Assert.Equal(clockEveryMinuteListenersBefore, GetStaticEventInvocationCount(typeof(Clock), "EveryMinute"));
+    }
+
+    private static async Task<slskd.Transfers.Transfer> WaitForTransferAsync(Func<slskd.Transfers.Transfer?> finder, TimeSpan timeout)
+    {
+        var startedAt = DateTime.UtcNow;
+
+        while (DateTime.UtcNow - startedAt < timeout)
+        {
+            var transfer = finder();
+
+            if (transfer is not null)
+            {
+                return transfer;
+            }
+
+            await Task.Delay(50);
+        }
+
+        throw new TimeoutException($"Timed out waiting {timeout.TotalSeconds} seconds for transfer state update");
     }
 
     private static int GetStaticEventInvocationCount(Type type, string eventName)

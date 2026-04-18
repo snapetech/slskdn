@@ -94,6 +94,11 @@ expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outpu
 
 expect_line packaging/aur/PKGBUILD '^source=\($'
 expect_literal packaging/aur/PKGBUILD-bin '"slskdn-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip"'
+expect_line packaging/aur/PKGBUILD-bin '^install=slskd\.install$'
+expect_line packaging/aur/PKGBUILD '^install=slskd\.install$'
+expect_line packaging/aur/PKGBUILD-dev '^install=slskd\.install$'
+expect_line packaging/aur/slskd.service '^ExecStart=/usr/lib/slskd/slskd --config /etc/slskd/slskd\.yml$'
+test -f packaging/aur/slskd.install || fail 'packaging/aur/slskd.install is missing'
 reject_line packaging/aur/PKGBUILD-bin 'slskdn-\$\{pkgver\}-linux-x64\.zip::https://github\.com/snapetech/slskdn/releases/download/\${pkgver//\.slskdn/-slskdn}/slskdn-\$\{pkgver\}-linux-x64\.zip'
 expect_literal packaging/aur/PKGBUILD-dev '"slskdn-dev-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/RELEASE_TAG_PLACEHOLDER/slskdn-dev-linux-glibc-x64.zip"'
 

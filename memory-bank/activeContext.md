@@ -20,8 +20,8 @@
   - clarified hole-punch completion logs so operators can see the reported local port is an ephemeral UDP socket, not a configured listener port
   - added focused versioned-route integration coverage for `/api/v0/users/notes`
 - Next steps:
-  1. Deploy the file-permissions fix to `kspls0` and verify downloads start writing bytes instead of failing at file creation.
-  2. After that deploy, re-check whether `kspls0` is still on an older build for the peer-exception classification path, because the current repo already contains the `Connection reset by peer` / `Connection refused` downgrade logic but the host journal still shows the old fatal/noisy behavior.
+  1. Reproduce the remaining post-`InProgress` remote stream failures on `kspls0` across more than one peer so we can separate bad-peer outcomes from any remaining local runtime regression.
+  2. Re-check whether the current `kspls0` build still emits any old fatal/unobserved peer-exception noise after the self-contained redeploy, because the earlier noisy journal slices were from pre-redeploy processes.
 
 # Active Context
 
@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The live `kspls0` transfer audit produced and fixed a concrete file-permissions download bug locally; remaining work is the separate deploy/runtime follow-through on that host.
+- **Current Task**: None. The live `kspls0` transfer audit has now fixed both the empty-permissions download crash and the enqueue `SemaphoreSlim` disposal crash; the remaining host-side follow-up is the narrower post-`InProgress` remote stream failure pattern on some peers.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -62,6 +62,11 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - the top-level `Remove All Completed` path still uses `transfers.clearCompleted(...)`, but that clear request is now queued and deduped too
     - added focused web regression tests proving one-at-a-time draining, duplicate bulk-submission suppression, single-toast failure reporting, and deduped clear-completed behavior
   - Re-checked `kspls0` after that UI fix and found the current concrete host-side transfer blocker:
+  - Deployed the file-permissions fix and the enqueue-semaphore lifetime fix to `kspls0` with a self-contained `linux-x64` publish because the host still only has `.NET 8` installed while the repo targets `.NET 10`:
+    - confirmed the old `The value cannot be an empty string or composed entirely of whitespace. (Parameter 'permissions')` download crash no longer appears after restart
+    - confirmed the old `Task for enqueue ... Cannot access a disposed object. Object name: 'System.Threading.SemaphoreSlim'` crash no longer appears after restart
+    - verified the host now reaches `DHT state changed to: Ready` immediately on restart and a re-enqueued download advances through `Queued, Remotely -> Initializing -> InProgress` again
+    - identified the new remaining boundary: some peers still fail later with remote-side closure / timeout outcomes (`Remote connection closed`, `Download reported as failed by remote client`, `The wait timed out after 15000 milliseconds`), while at least one earlier transfer did complete successfully, so the host is no longer globally stuck at zero-byte local queue failures
     - downloads are failing inside `FileService.CreateFile(...)` because the default empty `permissions.file.mode` string is still being parsed as if it were a real chmod value
     - fixed `FileService.CreateFile(...)` and `MoveFile(...)` so unset/whitespace permission modes fall back to the OS umask instead of throwing, and added focused unit coverage for both paths
 

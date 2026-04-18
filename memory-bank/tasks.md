@@ -933,3 +933,10 @@
 - [x] Fix issue `#209` mesh split-brain where DHT neighbors never reached circuit maintenance
   - Status: done
   - Notes: Added `MeshNeighborPeerSyncService` so successful `MeshNeighborRegistry` add/remove events mirror into `IMeshPeerManager`; added unit coverage that reproduces the old empty-peer state without the sync service and proves the peer inventory populates when the service is running.
+
+- [x] Fix `DownloadService.EnqueueAsync(...)` semaphore lifetime so live enqueue cleanup cannot crash after `Queued, Remotely`
+  - Status: done
+  - Notes: Stopped disposing the per-batch enqueue semaphore while background enqueue observer tasks still release it, added focused `DownloadServiceTests` regression coverage for the cancelled-transfer path, redeployed a self-contained build to `kspls0`, and verified the old `ObjectDisposedException` / `SemaphoreSlim` crash is gone.
+- [ ] Investigate post-enqueue remote stream failures on `kspls0`
+  - Status: pending
+  - Notes: After the enqueue and file-permissions fixes, transfers now reach `InProgress` again on `kspls0`, but some peers still fail later with `Transfer failed: Read error: Remote connection closed` or remote-side failure/timeout outcomes. Distinguish bad peers from any remaining host/runtime regression before changing code again.

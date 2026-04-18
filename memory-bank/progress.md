@@ -6252,3 +6252,17 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`
   - `git diff --check`
 - Host note: the repo already contains the newer peer-exception classification for `Connection reset by peer` / `Connection refused`, so the still-noisy `kspls0` journal strongly suggests that host is not yet running the latest build for that part. The fresh journal slice after restart did not show new DHT/search-timeout failures, but it did repeatedly show the empty-permissions download crash.
+
+## 2026-04-18 07:35:00Z
+
+- Fixed the live `kspls0` enqueue crash after downloads reached `Queued, Remotely`: `DownloadService.EnqueueAsync(...)` was disposing its per-batch `SemaphoreSlim` while background enqueue observer tasks still released it in `finally`, which produced the host-side `ObjectDisposedException` / `Cannot access a disposed object. Object name: System.Threading.SemaphoreSlim.`
+- Changed the enqueue path to keep that per-batch semaphore alive for the background task lifecycle instead of disposing it at the end of the parent method, and added focused `DownloadServiceTests` coverage that cancels an enqueued transfer and asserts the terminal exception does not regress to `SemaphoreSlim` / `disposed object`.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~DownloadServiceTests" -v minimal`
+  - `bash ./bin/lint`
+  - `git diff --check`
+- Deployed a fresh self-contained `linux-x64` publish to `kspls0` and verified the old enqueue crash is gone live:
+  - DHT reached `Ready` immediately after restart
+  - the re-enqueued download advanced `Queued, Remotely -> Initializing -> InProgress`
+  - the old `Task for enqueue ... Cannot access a disposed object` error did not return
+- The remaining live `kspls0` transfer problem is narrower now: at least one older transfer completed successfully, but some peers still fail later in the stream with remote-side closure / timeout outcomes (`Remote connection closed`, `Download reported as failed by remote client`, `The wait timed out after 15000 milliseconds`).

@@ -384,7 +384,7 @@ namespace slskd.Transfers.Downloads
                 }
 
                 var maxTimeToWaitForEnqueueRequestAck = TimeSpan.FromMinutes(3);
-                using var enqueueSemaphore = new SemaphoreSlim(initialCount: concurrentEnqueueRequests, maxCount: concurrentEnqueueRequests);
+                var enqueueSemaphore = new SemaphoreSlim(initialCount: concurrentEnqueueRequests, maxCount: concurrentEnqueueRequests);
 
                 /*
                     iterate over each of the files in the request.  each file must be dispositioned as one of the following:
