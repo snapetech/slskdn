@@ -152,27 +152,47 @@ namespace slskd.Core.API
             var normalizedPassword = login.Password;
             var remoteIp = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
 
-            // Check for active lockout
+            // Check for active lockout by IP (defends single-source spam)
             if (_loginAttempts.TryGetValue(remoteIp, out var existing) && existing.LockoutUntil.HasValue && existing.LockoutUntil.Value > DateTimeOffset.UtcNow)
             {
                 Log.Warning("Login from {RemoteIp} rejected; IP is locked out until {LockoutUntil}", remoteIp, existing.LockoutUntil.Value);
                 return StatusCode(429, "Too many failed login attempts. Try again later.");
             }
 
+            // Check for active lockout by username (defends distributed password spray
+            // where an attacker rotates IPs but targets a single account).
+            if (_userLoginAttempts.TryGetValue(normalizedUsername, out var userExisting) && userExisting.LockoutUntil.HasValue && userExisting.LockoutUntil.Value > DateTimeOffset.UtcNow)
+            {
+                Log.Warning("Login for {User} rejected; username is locked out until {LockoutUntil}", normalizedUsername, userExisting.LockoutUntil.Value);
+                return StatusCode(429, "Too many failed login attempts. Try again later.");
+            }
+
             if (Security.AuthenticateAdminCredentials(normalizedUsername, normalizedPassword))
             {
-                // Successful login: clear failed attempt counter
+                // Successful login: clear both IP and username counters
                 _loginAttempts.TryRemove(remoteIp, out _);
+                _userLoginAttempts.TryRemove(normalizedUsername, out _);
                 return Ok(new TokenResponse(Security.GenerateJwt(normalizedUsername, Role.Administrator)));
             }
 
-            // Failed login: increment counter and potentially lock out
+            // Failed login: increment IP counter and potentially lock out
             _loginAttempts.AddOrUpdate(
                 remoteIp,
                 _ => (1, DateTimeOffset.UtcNow, null),
                 (_, prev) =>
                 {
                     // Reset window if last failure was outside the window
+                    var failures = (DateTimeOffset.UtcNow - prev.LastFailure) > WindowDuration ? 1 : prev.Failures + 1;
+                    DateTimeOffset? lockout = failures >= MaxFailures ? DateTimeOffset.UtcNow.Add(LockoutDuration) : null;
+                    return (failures, DateTimeOffset.UtcNow, lockout);
+                });
+
+            // Failed login: also increment per-username counter independently
+            _userLoginAttempts.AddOrUpdate(
+                normalizedUsername,
+                _ => (1, DateTimeOffset.UtcNow, null),
+                (_, prev) =>
+                {
                     var failures = (DateTimeOffset.UtcNow - prev.LastFailure) > WindowDuration ? 1 : prev.Failures + 1;
                     DateTimeOffset? lockout = failures >= MaxFailures ? DateTimeOffset.UtcNow.Add(LockoutDuration) : null;
                     return (failures, DateTimeOffset.UtcNow, lockout);

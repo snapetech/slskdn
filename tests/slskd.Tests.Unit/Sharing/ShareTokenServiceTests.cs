@@ -5,9 +5,13 @@
 namespace slskd.Tests.Unit.Sharing;
 
 using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Moq;
 using slskd;
 using slskd.Sharing;
@@ -56,6 +60,33 @@ public class ShareTokenServiceTests
         Assert.True(claims.AllowStream);
         Assert.False(claims.AllowDownload);
         Assert.Equal(3, claims.MaxConcurrentStreams);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MismatchedAudienceAndCollectionClaim_ReturnsNull()
+    {
+        var svc = CreateService();
+        var now = DateTime.UtcNow;
+        var claims = new[]
+        {
+            new Claim("share_id", "s1"),
+            new Claim("collection_id", "c1"),
+            new Claim("stream", "1"),
+            new Claim("download", "1"),
+            new Claim("max_concurrent_streams", "1"),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        };
+        var key = new SymmetricSecurityKey(Convert.FromBase64String(ValidSigningKeyBase64));
+        var token = new JwtSecurityToken(
+            issuer: slskd.Program.AppName,
+            audience: "c2",
+            claims: claims,
+            notBefore: now,
+            expires: now.AddHours(1),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+        var encoded = new JwtSecurityTokenHandler().WriteToken(token);
+
+        Assert.Null(await svc.ValidateAsync(encoded));
     }
 
     [Fact]

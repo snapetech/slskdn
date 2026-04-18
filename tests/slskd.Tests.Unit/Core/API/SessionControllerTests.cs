@@ -4,7 +4,13 @@
 
 namespace slskd.Tests.Unit.Core.API;
 
+using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Reflection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -18,6 +24,7 @@ public class SessionControllerTests
     [Fact]
     public void Login_WhenRequestIsNullInHeadlessMode_ReturnsBadRequest()
     {
+        ResetLoginState();
         var controller = CreateController(headless: true);
 
         var result = controller.Login(null!);
@@ -28,6 +35,7 @@ public class SessionControllerTests
     [Fact]
     public void Login_TrimsCredentialsBeforeAuthenticationAndJwtCreation()
     {
+        ResetLoginState();
         var security = new Mock<ISecurityService>();
         security
             .Setup(service => service.AuthenticateAdminCredentials("admin", "secret"))
@@ -52,6 +60,7 @@ public class SessionControllerTests
     [Fact]
     public void Login_TrimsConfiguredCredentialsBeforeComparison()
     {
+        ResetLoginState();
         var security = new Mock<ISecurityService>();
         security
             .Setup(service => service.AuthenticateAdminCredentials("admin", "secret"))
@@ -74,6 +83,38 @@ public class SessionControllerTests
         Assert.IsType<OkObjectResult>(result);
         security.Verify(service => service.AuthenticateAdminCredentials("admin", "secret"), Times.Once);
         security.Verify(service => service.GenerateJwt("admin", Role.Administrator, null), Times.Once);
+    }
+
+    [Fact]
+    public void Login_LocksOutUsernameAcrossDifferentIps()
+    {
+        ResetLoginState();
+        var security = new Mock<ISecurityService>();
+        security.Setup(service => service.AuthenticateAdminCredentials("admin", "wrong")).Returns(false);
+        var controller = CreateController(security: security);
+
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            controller.ControllerContext.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse($"203.0.113.{attempt + 1}");
+            var result = controller.Login(new LoginRequest
+            {
+                Username = "admin",
+                Password = "wrong",
+            });
+
+            Assert.IsType<UnauthorizedResult>(result);
+        }
+
+        controller.ControllerContext.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.250");
+        var lockout = controller.Login(new LoginRequest
+        {
+            Username = "admin",
+            Password = "wrong",
+        });
+
+        var objectResult = Assert.IsType<ObjectResult>(lockout);
+        Assert.Equal(429, objectResult.StatusCode);
+        Assert.Equal("Too many failed login attempts. Try again later.", objectResult.Value);
     }
 
     private static SessionController CreateController(
@@ -100,9 +141,31 @@ public class SessionControllerTests
         var optionsSnapshot = new Mock<IOptionsSnapshot<slskd.Options>>();
         optionsSnapshot.SetupGet(snapshot => snapshot.Value).Returns(options);
 
-        return new SessionController(
+        var controller = new SessionController(
             security.Object,
             optionsSnapshot.Object,
             new OptionsAtStartup { Headless = headless });
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext(),
+        };
+        controller.ControllerContext.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.1");
+        return controller;
+    }
+
+    private static void ResetLoginState()
+    {
+        ClearConcurrentDictionary("_loginAttempts");
+        ClearConcurrentDictionary("_userLoginAttempts");
+    }
+
+    private static void ClearConcurrentDictionary(string fieldName)
+    {
+        var field = typeof(SessionController).GetField(fieldName, BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        var dictionary = field!.GetValue(null) as IDictionary;
+        Assert.NotNull(dictionary);
+        dictionary!.Clear();
     }
 }

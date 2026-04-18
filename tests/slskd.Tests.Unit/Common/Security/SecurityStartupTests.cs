@@ -4,67 +4,40 @@
 
 namespace slskd.Tests.Unit.Common.Security;
 
-using System.IO;
-using System.Reflection;
-using slskd.Tests.Unit;
+using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using slskd.Common.Security;
 using Xunit;
 
-[Collection("ProgramAppDirectory")]
 public class SecurityStartupTests
 {
     [Fact]
-    public void AddSlskdnSecurity_NormalizesRelativeTransferSecurityPaths_AgainstAppDirectory()
+    public void AddSlskdnSecurity_BindsConfiguredSecurityOptions()
     {
-        var originalAppDirectory = Program.AppDirectory;
-        var tempAppDirectory = Path.Combine(Path.GetTempPath(), "slskdn-security-startup-tests", Guid.NewGuid().ToString("N"));
-
-        Directory.CreateDirectory(tempAppDirectory);
-
-        try
-        {
-            SetAppDirectory(tempAppDirectory);
-
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["slskd:security:enabled"] = "true",
-                    ["slskd:security:pathguard:downloadroot"] = "downloads-root",
-                    ["slskd:security:pathguard:shareroot"] = "shares-root",
-                    ["slskd:security:contentsafety:quarantinedirectory"] = "quarantine",
-                    ["slskd:security:contentsafety:quarantinesuspicious"] = "true",
-                })
-                .Build();
-
-            var services = new ServiceCollection();
-            services.AddLogging();
-
-            services.AddSlskdnSecurity(configuration);
-
-            using var provider = services.BuildServiceProvider();
-            var transferSecurity = provider.GetRequiredService<TransferSecurity>();
-
-            Assert.Equal(Path.Combine(tempAppDirectory, "downloads-root"), transferSecurity.DownloadRoot);
-            Assert.Equal(Path.Combine(tempAppDirectory, "shares-root"), transferSecurity.ShareRoot);
-            Assert.Equal(Path.Combine(tempAppDirectory, "quarantine"), transferSecurity.QuarantineDirectory);
-            Assert.True(transferSecurity.QuarantineSuspicious);
-        }
-        finally
-        {
-            SetAppDirectory(originalAppDirectory);
-
-            if (Directory.Exists(tempAppDirectory))
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                Directory.Delete(tempAppDirectory, true);
-            }
-        }
-    }
+                ["slskd:security:enabled"] = "true",
+                ["slskd:security:pathguard:downloadroot"] = "downloads-root",
+                ["slskd:security:pathguard:shareroot"] = "shares-root",
+                ["slskd:security:contentsafety:quarantinedirectory"] = "quarantine",
+                ["slskd:security:contentsafety:quarantinesuspicious"] = "true",
+            })
+            .Build();
 
-    private static void SetAppDirectory(string? value)
-    {
-        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-        field!.SetValue(null, value ?? string.Empty);
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        services.AddSlskdnSecurity(configuration);
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<SecurityOptions>>().Value;
+
+        Assert.Equal("downloads-root", options.PathGuard.DownloadRoot);
+        Assert.Equal("shares-root", options.PathGuard.ShareRoot);
+        Assert.Equal("quarantine", options.ContentSafety.QuarantineDirectory);
+        Assert.True(options.ContentSafety.QuarantineSuspicious);
     }
 }

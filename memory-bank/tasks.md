@@ -36,6 +36,11 @@
  - Priority: P1
  - Notes: Live `kspls0` validation on 2026-04-18 now exposes classified outbound overlay failures. The current post-fix state is mostly `connectTimeout` plus occasional `noRoute`, and the discovered candidate set is still heavy on likely-bad `:50306` endpoints. Follow up by deciding whether to suppress obviously non-overlay candidates, add longer-lived backoff, or enrich DHT metadata so the connector does not keep retrying junk endpoints.
 
+- [x] **security**: Add focused unit coverage for username lockout and share-token audience binding.
+ - Status: completed (2026-04-18)
+ - Priority: P2
+ - Notes: Added focused unit coverage for per-username login lockout, share-token audience/collection binding, the Chromaprint PCM buffer cap helper, and updated stale security startup tests to the current `SecurityOptions` registration contract so the security regression slice now compiles and catches the intended abuse cases.
+
 - [x] **chore**: Add a reproduce-first verification workflow for tester-reported bugfix releases.
  - Status: completed (2026-04-14)
  - Priority: P1

@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The latest issue `#209` live diagnostics follow-up is validated on `kspls0` and ready to commit/push.
+- **Current Task**: None. The remaining concurrent security hardening follow-up is complete locally and ready to push/tag.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -57,9 +57,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Found and fixed a separate DHT diagnostics bug exposed during that same host validation: `/api/v0/dht/status` was reporting `isEnabled` from readiness instead of config, which made the UI lie that DHT was disabled during bootstrap.
   - Revalidated the updated build on `kspls0`: `GET /api/v0/dht/status` now reports `isEnabled: true` while bootstrap is still in progress, and the stale-cookie curl repro no longer produces antiforgery spam in the journal.
 - **Next Steps**:
-  1. Keep watching `kspls0` for the next real DHT discovery cycle so we can tell whether any remaining `#209` complaints are about mesh peer formation rather than stale cookies or bad status reporting.
-  2. If a new live symptom appears, reproduce it on `kspls0` first and add a host-backed smoke to the release gate before another build.
-  3. Push and tag only after this host-validated fix set is committed and explicitly requested by the user.
+  1. Push the current `main` tree so the completed security follow-up and concurrent Claude changes land on `origin/main`.
+  2. Cut the next stable build tag after the push so the current hardening batch goes through the tagged release pipeline.
+  3. Continue watching `kspls0` and the new build outputs for any remaining real `#209` symptoms after this release ships.
 
 ## Recent Context
 

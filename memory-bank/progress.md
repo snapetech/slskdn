@@ -6371,3 +6371,23 @@ Code quality improvements were completed as part of Option A:
 - Installed the missing `aspnet-runtime 10.0` package on `kspls0`, restarted the host on the latest framework-dependent build, and validated the new diagnostics against a real DHT discovery cycle. The live node now reports `successfulConnections: 0`, `failedConnections: 8`, with `failureReasons = { connectTimeouts: 7, noRouteFailures: 1 }` and zero TLS/protocol failures on that run.
 - Confirmed from live API state that the remaining issue `#209` behavior is now dominated by bad remote candidates rather than another hidden local regression: DHT is healthy (`dhtNodeCount: 95`), the overlay listener is up, security peer stats no longer overstate onion-capable peers, and the candidate list is still full of unverified `dht-discovered` endpoints.
 - Folded in the concurrent security changes in the same working tree: `WebSocketTransport` now only skips WSS certificate validation when a new explicit lab-only option is enabled, `ShareScanner` now skips `ReparsePoint` symlinks/junctions, and `docs/security/full-app-audit-2026-04.md` was added to capture the broader audit snapshot.
+
+## 2026-04-18 18:03:00Z
+
+- Picked up the last concurrent security edits before release instead of leaving them dirty in the tree. Session login throttling now tracks both remote IP and normalized username to slow distributed password spray, and share-token issuance/validation now binds JWT `aud` to `collection_id` so replay against the wrong collection fails audience validation.
+- Added ADR-0001 entries documenting both auth gotchas before shipping them, then rolled those changes into the final release-prep commit so the pushed tree and the docs stay aligned.
+
+## 2026-04-18 15:35 - Security hardening follow-up completed
+
+### Completed
+- Finished the remaining concurrent security follow-ups that were still only partially landed in the tree: per-username session login lockout, JWT share-token audience binding, and a bounded Chromaprint PCM read path so ffmpeg fingerprint extraction cannot buffer unbounded audio into memory.
+- Added focused unit coverage for the actual abuse cases the code is supposed to stop: distributed username lockout across rotating IPs, mismatched share-token audience vs collection replay, and Chromaprint buffer-limit enforcement.
+- Fixed a stale security regression test that still resolved the deleted `TransferSecurity` service, rewriting it to assert the current `SecurityOptions` binding contract so the security slice compiles and validates the live registration path again.
+
+### Verification
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~FingerprintExtractionServiceTests|FullyQualifiedName~ShareTokenServiceTests|FullyQualifiedName~SessionControllerTests|FullyQualifiedName~SecurityStartupTests" -v q`
+- `bash ./bin/lint`
+- `git diff --check`
+
+### Notes
+- The filtered security slice now passes cleanly (`15` targeted tests). The remaining build noise in this repo is existing analyzer warning debt outside this hardening batch, not a blocker in the changed paths.

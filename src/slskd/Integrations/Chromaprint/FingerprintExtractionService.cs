@@ -5,6 +5,7 @@
 namespace slskd.Integrations.Chromaprint
 {
     using System;
+    using System.Buffers;
     using System.Diagnostics;
     using System.Globalization;
     using System.IO;
@@ -20,6 +21,7 @@ namespace slskd.Integrations.Chromaprint
     /// </summary>
     public class FingerprintExtractionService : IFingerprintExtractionService
     {
+        internal const int CopyBufferSize = 81920;
         private readonly ILogger<FingerprintExtractionService> log;
         private readonly IChromaprintService chromaprint;
         private readonly IOptionsMonitor<slskdOptions> optionsMonitor;
@@ -65,8 +67,8 @@ namespace slskd.Integrations.Chromaprint
             var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
             process.Start();
 
-            await using var ms = new MemoryStream();
-            await process.StandardOutput.BaseStream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+            var maxPcmBytes = GetMaximumPcmBytes(options);
+            var bytes = await ReadBoundedPcmAsync(process.StandardOutput.BaseStream, maxPcmBytes, cancellationToken).ConfigureAwait(false);
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             var stderr = await stderrTask.ConfigureAwait(false);
 
@@ -75,7 +77,6 @@ namespace slskd.Integrations.Chromaprint
                 log.LogWarning("ffmpeg exited with code {Code} ({Message}) while decoding {File}", process.ExitCode, stderr.Trim(), filePath);
             }
 
-            var bytes = ms.ToArray();
             if (bytes.Length == 0)
             {
                 throw new InvalidOperationException($"ffmpeg produced no PCM output for {filePath}. ffmpeg stderr: {stderr}");
@@ -93,6 +94,53 @@ namespace slskd.Integrations.Chromaprint
             Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
 
             return chromaprint.GenerateFingerprint(samples, options.SampleRate, options.Channels);
+        }
+
+        internal static int GetMaximumPcmBytes(ChromaprintOptions options)
+        {
+            checked
+            {
+                return options.SampleRate * options.Channels * options.DurationSeconds * sizeof(short);
+            }
+        }
+
+        internal static async Task<byte[]> ReadBoundedPcmAsync(Stream stream, int maxBytes, CancellationToken cancellationToken)
+        {
+            if (maxBytes <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxBytes), "The PCM buffer limit must be positive.");
+            }
+
+            await using var memoryStream = new MemoryStream(capacity: Math.Min(maxBytes, CopyBufferSize));
+            var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferSize);
+
+            try
+            {
+                var totalBytesRead = 0;
+
+                while (true)
+                {
+                    var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+
+                    if (totalBytesRead > maxBytes - bytesRead)
+                    {
+                        throw new InvalidOperationException($"ffmpeg produced more PCM output than expected ({maxBytes} bytes).");
+                    }
+
+                    await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                    totalBytesRead += bytesRead;
+                }
+
+                return memoryStream.ToArray();
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         private static ProcessStartInfo CreateProcessStartInfo(ChromaprintOptions options, string filePath)

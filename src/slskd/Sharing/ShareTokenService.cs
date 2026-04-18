@@ -64,8 +64,13 @@ public sealed class ShareTokenService : IShareTokenService
             claims.Add(new Claim(ClaimAudienceId, audienceId));
 
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        // Bind the token cryptographically to the collection by setting the JWT `aud`
+        // claim to the collection id. Validation below requires aud == collection_id,
+        // so a token stripped of its audience or issued for another collection fails.
         var token = new JwtSecurityToken(
             issuer: slskd.Program.AppName,
+            audience: collectionId ?? string.Empty,
             claims: claims,
             notBefore: now,
             expires: expires,
@@ -99,7 +104,27 @@ public sealed class ShareTokenService : IShareTokenService
             {
                 ValidateIssuer = true,
                 ValidIssuer = slskd.Program.AppName,
-                ValidateAudience = false,
+                ValidateAudience = true,
+                AudienceValidator = (audiences, securityToken, parameters) =>
+                {
+                    // Accept only tokens whose audience matches the collection_id claim.
+                    // This enforces the collection binding at the JWT layer; the claim
+                    // itself is already signature-protected.
+                    if (securityToken is not JwtSecurityToken jwtToken)
+                        return false;
+
+                    var collectionClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimCollectionId)?.Value;
+                    if (string.IsNullOrEmpty(collectionClaim))
+                        return false;
+
+                    foreach (var aud in audiences)
+                    {
+                        if (string.Equals(aud, collectionClaim, StringComparison.Ordinal))
+                            return true;
+                    }
+
+                    return false;
+                },
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = key,
