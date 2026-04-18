@@ -6804,3 +6804,12 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 **How to prevent it:** Keep a deterministic two-instance full-process mesh smoke in the integration suite. It should boot two `slskdn` instances, force one to connect to the other through the real overlay stack, and assert both sides report the peer/connection. Treat public-DHT/live-host checks as supplemental evidence only, not the main proof that mesh works.
 
+
+### 0z50. Full-Instance Runner Must Pass `--app-dir`, Not Just `APP_DIR`, To Avoid Colliding With A Live User Install
+
+**What went wrong:** The new two-instance mesh smoke started real `slskd` processes with a temporary config file and `APP_DIR` set in the child environment, but the process still exited immediately with `An instance of slskd is already running in app directory: /home/keith/.local/share/slskd`. The runtime singleton guard was checking the default app directory because the harness never passed the explicit `--app-dir` CLI argument.
+
+**Why it happened:** The harness assumed the environment variable alone would override the app directory early enough in startup. In practice, the running process resolved the default appdir before the test harness intent took effect, so the test collided with the developer's live install instead of the temporary sandbox.
+
+**How to prevent it:** Any full-instance test harness that launches `slskd` must pass both `--config` and `--app-dir` explicitly on the command line. Do not rely on environment-only appdir overrides for subprocess isolation when the product has singleton/appdir locking during startup.
+
