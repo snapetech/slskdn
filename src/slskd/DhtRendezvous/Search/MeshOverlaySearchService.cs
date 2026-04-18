@@ -97,13 +97,13 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
 
             if (resp.RequestId != requestId)
             {
-                _logger.LogDebug("Mesh search response request_id mismatch from {Username}, ignoring", connection.Username);
+                _logger.LogDebug("Mesh search response request_id mismatch from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
                 return null;
             }
 
             if (!string.IsNullOrEmpty(resp.Error))
             {
-                _logger.LogDebug("Mesh search error from {Username}: {Error}", connection.Username, resp.Error);
+                _logger.LogDebug("Mesh search error from {Username}: {Error}", OverlayLogSanitizer.Username(connection.Username), resp.Error);
                 return null;
             }
 
@@ -144,7 +144,7 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Mesh overlay search to {Username} failed: {Message}", connection.Username, ex.Message);
+            _logger.LogDebug(ex, "Mesh overlay search to {Username} failed: {Message}", OverlayLogSanitizer.Username(connection.Username), ex.Message);
             return null;
         }
     }

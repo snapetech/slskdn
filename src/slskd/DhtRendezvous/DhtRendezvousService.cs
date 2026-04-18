@@ -482,7 +482,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 // SECURITY: Cap discovered peers to prevent memory exhaustion
                 if (_discoveredPeers.Count >= MaxDiscoveredPeers)
                 {
-                    _logger.LogDebug("Discovered peers at capacity ({Max}), skipping {Endpoint}", MaxDiscoveredPeers, endpoint);
+                    _logger.LogDebug("Discovered peers at capacity ({Max}), skipping {Endpoint}", MaxDiscoveredPeers, OverlayLogSanitizer.Endpoint(endpoint));
                     continue;
                 }
 
@@ -490,7 +490,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 if (_discoveredPeers.TryAdd(endpointKey, endpoint))
                 {
                     Interlocked.Increment(ref _totalPeersDiscovered);
-                    _logger.LogDebug("Discovered new mesh peer: {Endpoint}", endpoint);
+                    _logger.LogDebug("Discovered new mesh peer: {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
                 }
 
                 PublishDiscoveredPeer(endpointKey, endpoint);
@@ -563,7 +563,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         catch (Exception ex)
         {
             _peerManager.RecordConnectionFailure(peerId);
-            _logger.LogDebug(ex, "Failed to connect to discovered peer {Endpoint}", endpoint);
+            _logger.LogDebug(ex, "Failed to connect to discovered peer {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
         }
         finally
         {
@@ -706,7 +706,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         var key = $"{endpoint.Address}:{endpoint.Port}";
         if (_discoveredPeers.TryAdd(key, endpoint))
         {
-            _logger.LogDebug("Added manual peer endpoint {Endpoint}", endpoint);
+            _logger.LogDebug("Added manual peer endpoint {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
         }
     }
 

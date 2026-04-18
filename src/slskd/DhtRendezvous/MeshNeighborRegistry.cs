@@ -88,28 +88,39 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         var registered = false;
         var firstNeighborConnected = false;
         MeshNeighborEventArgs? eventArgs = null;
+        MeshOverlayConnection? replacedConnection = null;
 
         await _registrationLock.WaitAsync();
         try
         {
-            // Check capacity
-            if (IsFull)
+            // Check capacity. Replacing an existing inbound connection with an outbound one does not increase count.
+            if (IsFull && !_connectionsByUsername.ContainsKey(connection.Username))
             {
-                _logger.LogDebug("Registry full, rejecting {Username}", connection.Username);
+                _logger.LogDebug("Registry full, rejecting {Username}", OverlayLogSanitizer.Username(connection.Username));
                 return false;
             }
 
-            // Check for duplicate username
-            if (_connectionsByUsername.ContainsKey(connection.Username))
+            // Prefer outbound connections so request/response mesh RPCs do not compete with the inbound server read loop.
+            if (_connectionsByUsername.TryGetValue(connection.Username, out var existingForUser))
             {
-                _logger.LogDebug("Already connected to {Username}", connection.Username);
-                return false;
+                if (!existingForUser.IsOutbound && connection.IsOutbound)
+                {
+                    _connectionsByUsername.TryRemove(connection.Username, out _);
+                    _connectionsByEndpoint.TryRemove(existingForUser.RemoteEndPoint, out _);
+                    replacedConnection = existingForUser;
+                    _logger.LogInformation("Replacing inbound mesh neighbor {Username} with reciprocal outbound connection", OverlayLogSanitizer.Username(connection.Username));
+                }
+                else
+                {
+                    _logger.LogDebug("Already connected to {Username}", OverlayLogSanitizer.Username(connection.Username));
+                    return false;
+                }
             }
 
             // Check for duplicate endpoint
             if (_connectionsByEndpoint.ContainsKey(connection.RemoteEndPoint))
             {
-                _logger.LogDebug("Already connected to {Endpoint}", connection.RemoteEndPoint);
+                _logger.LogDebug("Already connected to {Endpoint}", OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint));
                 return false;
             }
 
@@ -121,8 +132,8 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
 
             _logger.LogInformation(
                 "Registered mesh neighbor {Username} from {Endpoint} (total: {Count}){First}",
-                connection.Username,
-                connection.RemoteEndPoint,
+                OverlayLogSanitizer.Username(connection.Username),
+                OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint),
                 Count,
                 isFirstNeighbor ? " 🎉 First neighbor connected!" : string.Empty);
 
@@ -139,6 +150,11 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         finally
         {
             _registrationLock.Release();
+        }
+
+        if (replacedConnection is not null)
+        {
+            await replacedConnection.DisposeAsync();
         }
 
         if (registered && eventArgs is not null)
@@ -165,18 +181,24 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         await _registrationLock.WaitAsync();
         try
         {
-            if (connection.Username is not null)
+            if (connection.Username is not null &&
+                _connectionsByUsername.TryGetValue(connection.Username, out var registeredByUsername) &&
+                ReferenceEquals(registeredByUsername, connection))
             {
                 removed |= _connectionsByUsername.TryRemove(connection.Username, out _);
             }
 
-            removed |= _connectionsByEndpoint.TryRemove(connection.RemoteEndPoint, out _);
+            if (_connectionsByEndpoint.TryGetValue(connection.RemoteEndPoint, out var registeredByEndpoint) &&
+                ReferenceEquals(registeredByEndpoint, connection))
+            {
+                removed |= _connectionsByEndpoint.TryRemove(connection.RemoteEndPoint, out _);
+            }
 
             if (removed)
             {
                 _logger.LogInformation(
                     "Unregistered mesh neighbor {Username} (remaining: {Count})",
-                    connection.Username ?? connection.RemoteEndPoint.ToString(),
+                    connection.Username is not null ? OverlayLogSanitizer.Username(connection.Username) : OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint),
                     Count);
 
                 eventArgs = new MeshNeighborEventArgs(connection);

@@ -6417,3 +6417,15 @@ Code quality improvements were completed as part of Option A:
 
 - Fixed the latest issue `#209` search regression root cause seen in tester logs: normal searches no longer default into experimental ScenePodBridge aggregation, which could return `0` results despite a working Soulseek login and DHT bootstrap. Backend defaults, Web UI feature detection, capability reporting, example config, and feature docs now all agree that bridge search is opt-in.
 - Validation: focused unit slice for feature defaults/capabilities/DHT controller passed, `npm --prefix src/web run lint` passed, and `git diff --check` passed before the final repo lint/mesh smoke pass.
+
+## Update 2026-04-18T23:04:44Z
+
+- Re-read the latest issue `#209` build `151` report and reproduced the exact mesh timing failure in the full-instance smoke path: the tester's inbound neighbor was healthy at handshake, then the server treated the 30-second message-read timeout as a fatal `OperationCanceledException` before the keepalive interval could fire.
+- Fixed the root path by keeping idle read timeouts non-fatal, advertising the local overlay listener in HELLO/ACK, and starting a reciprocal outbound connection when an inbound peer supplies an overlay port or, for older peers, when our configured overlay port is the likely listener. The neighbor registry now prefers outbound replacements for the same username and ignores stale inbound cleanup if a newer connection has already replaced it.
+- Validation: rebuilt and passed the focused integration slice (`TwoNodeMeshFullInstanceTests` plus `MeshSearchLoopbackTests`), passed the focused unit slice (`MeshNeighborRegistryTests`, `MeshOverlayConnectorTests`, `DhtRendezvousControllerTests`, `MeshOverlayServerTests`), passed `bash ./bin/lint`, and passed `git diff --check`.
+
+## Update 2026-04-18T23:35:00Z
+
+- Investigated why issue `#209` tester logs still showed raw remote usernames after earlier privacy work. The privacy layer was not global log redaction; it protected selected VirtualSoulfind/capture paths and some mesh transport helpers, while the newer DHT rendezvous overlay path logged raw `hello.Username`, `ack.Username`, `connection.Username`, peer IDs, and public endpoints.
+- Added `OverlayLogSanitizer` for DHT/overlay logs and wired the overlay server, connector, registry, peer sync, peer verification, blocklist, DHT discovery, NAT discovery, certificate pinning, greeting, and mesh search diagnostics through sanitized username/peer-id/endpoint values.
+- Documented the gotcha in ADR-0001 and committed that note as `08b62f835`. Validation passed: focused unit sanitizer/overlay slice, rebuilt two-test mesh integration slice, `bash ./bin/lint`, and `git diff --check`.

@@ -48,17 +48,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Finish latest issue `#209` follow-up: keep experimental ScenePodBridge search opt-in so normal searches stay on the proven Soulseek path.
+- **Current Task**: None. Issue `#209` mesh idle-disconnect and DHT/overlay log privacy follow-ups are implemented locally and validated.
 - **Branch**: `main`
-- **Environment**: Local dev; live `kspls0` diagnostics showed ordinary searches returning results while tester build `149` logs showed `[ScenePodBridge]` returning `0` files for `beatles`.
+- **Environment**: Local dev; issue `#209` tester logs showed raw mesh usernames in accepted/registered neighbor logs and the build `151` overlay path dropped quiet inbound neighbors at the 30-second read timeout.
 - **Last Activity**:
-  - Confirmed the newest issue `#209` report is not the original DHT bootstrap failure: DHT bootstraps, Soulseek connects/logs in, then search is routed through `[ScenePodBridge]` and returns `0`.
-  - Changed backend, Web UI, capability reporting, example config, and feature docs so ScenePodBridge is opt-in and normal searches remain upstream-compatible by default.
-  - Added focused unit coverage for the backend default and capability advertisement.
+  - Fixed the overlay idle timeout and reciprocal outbound connection path so quiet mesh neighbors remain connected and usable for request/response mesh search.
+  - Confirmed the existing privacy work was not a global log redaction layer; DHT rendezvous overlay logs bypassed it.
+  - Added `OverlayLogSanitizer` and routed DHT/overlay username, peer id, and endpoint log arguments through it.
+  - Documented the privacy bug in ADR-0001 and committed that gotcha as `08b62f835`.
+  - Validation passed: focused unit sanitizer/overlay slice, rebuilt two-test mesh integration slice, `bash ./bin/lint`, and `git diff --check`.
 - **Next Steps**:
-  1. Run final repo lint and two-node mesh smoke before committing this fix.
-  2. If issue `#209` still reports failures after this default-search fix, reproduce the next symptom from tester-equivalent logs before changing code.
-  3. Push/tag only when explicitly requested.
+  1. Commit the code/doc fix set if desired.
+  2. Push/tag only when explicitly requested.
 
 ## Recent Context
 

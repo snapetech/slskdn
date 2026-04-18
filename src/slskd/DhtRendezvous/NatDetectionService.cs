@@ -241,7 +241,7 @@ public sealed class NatDetectionService : IAsyncDisposable
             void OnDeviceFound(object? sender, DeviceEventArgs e)
             {
                 _logger.LogDebug("Discovered NAT device: {Protocol} at {Endpoint}",
-                    e.Device.NatProtocol, e.Device.DeviceEndpoint);
+                    e.Device.NatProtocol, OverlayLogSanitizer.Endpoint(e.Device.DeviceEndpoint));
                 _discoveredDevices.Add(e.Device);
             }
 

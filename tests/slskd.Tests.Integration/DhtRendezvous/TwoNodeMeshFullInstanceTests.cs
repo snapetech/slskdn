@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using slskd.Common.Security.API;
 using slskd.DhtRendezvous.API;
+using slskd.DhtRendezvous.Security;
 using slskd.Mesh;
 using slskd.Tests.Integration.Harness;
 using Xunit;
@@ -94,6 +95,26 @@ public class TwoNodeMeshFullInstanceTests
             },
             TimeSpan.FromSeconds(20),
             () => "mesh peer inventory did not reflect the full-instance overlay connection\n" + peerStatsFailureDetails);
+
+        await Task.Delay(OverlayTimeouts.MessageRead + TimeSpan.FromSeconds(5));
+
+        string? idleFailureDetails = null;
+        await WaitForAsync(
+            async () =>
+            {
+                var alphaConnections = await alphaClient.GetFromJsonAsync<List<MeshPeerInfoResponse>>("/api/v0/overlay/connections");
+                var betaConnections = await betaClient.GetFromJsonAsync<List<MeshPeerInfoResponse>>("/api/v0/overlay/connections");
+
+                var alphaStillConnected = alphaConnections?.Exists(peer =>
+                    string.Equals(peer.Username, "mesh-beta", StringComparison.OrdinalIgnoreCase)) == true;
+                var betaStillConnected = betaConnections?.Exists(peer =>
+                    string.Equals(peer.Username, "mesh-alpha", StringComparison.OrdinalIgnoreCase)) == true;
+
+                idleFailureDetails = await BuildFailureDetailsAsync(alphaClient, betaClient, alphaConnections, betaConnections);
+                return alphaStillConnected && betaStillConnected;
+            },
+            TimeSpan.FromSeconds(5),
+            () => "overlay mesh neighbors disconnected after one message-read timeout\n" + idleFailureDetails);
     }
 
     private static async Task WaitForAsync(Func<Task<bool>> predicate, TimeSpan timeout, Func<string> failureMessageFactory)

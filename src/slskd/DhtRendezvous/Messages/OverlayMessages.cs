@@ -107,6 +107,12 @@ public sealed class MeshHelloMessage : OverlayMessage
     public SoulseekPorts? SoulseekPorts { get; set; }
 
     /// <summary>
+    /// Public overlay listener port for reciprocal outbound connections.
+    /// </summary>
+    [JsonPropertyName("overlay_port")]
+    public int? OverlayPort { get; set; }
+
+    /// <summary>
     /// Optional nonce for replay attack prevention.
     /// </summary>
     [JsonPropertyName("nonce")]
@@ -138,6 +144,12 @@ public sealed class MeshHelloAckMessage : OverlayMessage
     /// </summary>
     [JsonPropertyName("soulseek_ports")]
     public SoulseekPorts? SoulseekPorts { get; set; }
+
+    /// <summary>
+    /// Public overlay listener port for reciprocal outbound connections.
+    /// </summary>
+    [JsonPropertyName("overlay_port")]
+    public int? OverlayPort { get; set; }
 
     /// <summary>
     /// Echo of client's nonce if provided.

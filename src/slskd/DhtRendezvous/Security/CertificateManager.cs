@@ -12,6 +12,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
+using slskd.DhtRendezvous;
 
 /// <summary>
 /// Manages TLS certificates for the overlay protocol.
@@ -300,7 +301,7 @@ public sealed class CertificatePinStore
             };
 
             Save();
-            _logger.LogInformation("Pinned certificate for {Username}", username);
+            _logger.LogInformation("Pinned certificate for {Username}", OverlayLogSanitizer.Username(username));
         }
     }
 
@@ -345,7 +346,7 @@ public sealed class CertificatePinStore
             };
 
             Save();
-            _logger.LogWarning("Rotated certificate pin for {Username}", username);
+            _logger.LogWarning("Rotated certificate pin for {Username}", OverlayLogSanitizer.Username(username));
         }
     }
 
@@ -360,7 +361,7 @@ public sealed class CertificatePinStore
             if (removed)
             {
                 Save();
-                _logger.LogInformation("Removed certificate pin for {Username}", username);
+                _logger.LogInformation("Removed certificate pin for {Username}", OverlayLogSanitizer.Username(username));
             }
 
             return removed;

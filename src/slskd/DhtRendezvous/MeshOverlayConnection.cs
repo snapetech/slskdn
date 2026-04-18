@@ -63,6 +63,11 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public IReadOnlyList<string> Features { get; private set; } = Array.Empty<string>();
 
     /// <summary>
+    /// Remote peer's advertised overlay listener port, if supplied during handshake.
+    /// </summary>
+    public int? RemoteOverlayPort { get; private set; }
+
+    /// <summary>
     /// Whether handshake has completed successfully.
     /// </summary>
     public bool IsHandshakeComplete { get; private set; }
@@ -240,6 +245,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public async Task<MeshHelloAckMessage> PerformClientHandshakeAsync(
         string username,
         SoulseekPorts? ports = null,
+        int? overlayPort = null,
         CancellationToken cancellationToken = default)
     {
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -254,6 +260,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             Username = username,
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
+            OverlayPort = overlayPort,
             Nonce = nonce,
         };
 
@@ -279,6 +286,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
 
         Username = ack.Username;
         Features = ack.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
+        RemoteOverlayPort = ack.OverlayPort;
         IsHandshakeComplete = true;
         State = ConnectionState.Active;
 
@@ -291,6 +299,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     public async Task<MeshHelloMessage> PerformServerHandshakeAsync(
         string username,
         SoulseekPorts? ports = null,
+        int? overlayPort = null,
         CancellationToken cancellationToken = default)
     {
         using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -313,6 +322,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             Username = username,
             Features = OverlayFeatures.All.ToList(),
             SoulseekPorts = ports,
+            OverlayPort = overlayPort,
             NonceEcho = hello.Nonce,
         };
 
@@ -321,6 +331,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
 
         Username = hello.Username;
         Features = hello.Features?.AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
+        RemoteOverlayPort = hello.OverlayPort;
         IsHandshakeComplete = true;
         State = ConnectionState.Active;
 

@@ -68,6 +68,7 @@ public class MeshSearchLoopbackTests
 
             var handler = new MeshSearchRpcHandler(share.Object, logFact.CreateLogger<MeshSearchRpcHandler>());
 
+            var overlayConnector = new Mock<IMeshOverlayConnector>();
             var server = new MeshOverlayServer(
                 logFact.CreateLogger<MeshOverlayServer>(),
                 optsMonitor.Object,
@@ -76,6 +77,7 @@ public class MeshSearchLoopbackTests
                 rateLimiter,
                 blocklist,
                 registry,
+                overlayConnector.Object,
                 meshSync.Object,
                 handler,
                 dhtOpts);

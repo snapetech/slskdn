@@ -129,19 +129,19 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     {
         if (_registry.IsConnectedTo(endpoint))
         {
-            _logger.LogDebug("Already connected to {Endpoint}", endpoint);
+            _logger.LogDebug("Already connected to {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
             return null;
         }
 
         if (_blocklist.IsBlocked(endpoint.Address))
         {
-            _logger.LogDebug("Endpoint {Endpoint} is blocked", endpoint);
+            _logger.LogDebug("Endpoint {Endpoint} is blocked", OverlayLogSanitizer.Endpoint(endpoint));
             return null;
         }
 
         if (_pendingConnections >= MaxConcurrentAttempts)
         {
-            _logger.LogDebug("Too many pending connections, skipping {Endpoint}", endpoint);
+            _logger.LogDebug("Too many pending connections, skipping {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
             return null;
         }
 
@@ -149,18 +149,21 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
         try
         {
-            _logger.LogDebug("Connecting to mesh peer at {Endpoint}", endpoint);
+            _logger.LogDebug("Connecting to mesh peer at {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
 
             var clientCert = _certificateManager.GetOrCreateServerCertificate();
             var connection = await MeshOverlayConnection.ConnectAsync(endpoint, clientCert, cancellationToken);
 
             try
             {
-                var ack = await connection.PerformClientHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
+                var ack = await connection.PerformClientHandshakeAsync(
+                    LocalUsername,
+                    overlayPort: _optionsMonitor.CurrentValue?.DhtRendezvous?.OverlayPort,
+                    cancellationToken: cancellationToken);
 
                 if (_blocklist.IsBlocked(ack.Username))
                 {
-                    _logger.LogWarning("Connected to blocked user {Username}, disconnecting", ack.Username);
+                    _logger.LogWarning("Connected to blocked user {Username}, disconnecting", OverlayLogSanitizer.Username(ack.Username));
                     await connection.DisconnectAsync("Blocked", cancellationToken);
                     RecordFailure(OverlayConnectionFailureReason.BlockedPeer, endpoint, ack.Username);
                     return null;
@@ -175,7 +178,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                         case PinCheckResult.NotPinned:
                             _logger.LogInformation(
                                 "TOFU: First connection to {Username}, pinning certificate {Thumbprint}",
-                                ack.Username,
+                                OverlayLogSanitizer.Username(ack.Username),
                                 connection.CertificateThumbprint?[..16] + "...");
                             _pinStore.SetPin(ack.Username, connection.CertificateThumbprint ?? string.Empty);
                             break;
@@ -187,7 +190,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                         case PinCheckResult.Mismatch:
                             _logger.LogWarning(
                                 "Certificate pin mismatch for {Username}; rotating stored pin to newly presented certificate.",
-                                ack.Username);
+                                OverlayLogSanitizer.Username(ack.Username));
                             _pinStore.RotatePin(ack.Username, connection.CertificateThumbprint ?? string.Empty);
                             break;
                     }
@@ -195,7 +198,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
                 if (!await _registry.RegisterAsync(connection))
                 {
-                    _logger.LogDebug("Failed to register connection to {Username}", ack.Username);
+                    _logger.LogDebug("Failed to register connection to {Username}", OverlayLogSanitizer.Username(ack.Username));
                     await connection.DisconnectAsync("Registration failed", cancellationToken);
                     RecordFailure(OverlayConnectionFailureReason.RegistrationFailed, endpoint, ack.Username);
                     return null;
@@ -205,8 +208,8 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
                 _logger.LogInformation(
                     "Connected to mesh peer {Username}@{Endpoint} (features: {Features})",
-                    ack.Username,
-                    endpoint,
+                    OverlayLogSanitizer.Username(ack.Username),
+                    OverlayLogSanitizer.Endpoint(endpoint),
                     string.Join(", ", (IEnumerable<string>?)ack.Features ?? Array.Empty<string>()));
 
                 return connection;
@@ -214,7 +217,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             catch (Exception ex)
             {
                 var reason = ClassifyFailure(ex);
-                _logger.LogDebug(ex, "Handshake failed with {Endpoint} ({FailureReason})", endpoint, reason);
+                _logger.LogDebug(ex, "Handshake failed with {Endpoint} ({FailureReason})", OverlayLogSanitizer.Endpoint(endpoint), reason);
                 _rateLimiter.RecordViolation(endpoint.Address);
                 if (connection != null)
                 {
@@ -229,7 +232,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         catch (Exception ex)
         {
             var reason = ClassifyFailure(ex);
-            _logger.LogDebug(ex, "Failed to connect to {Endpoint} ({FailureReason})", endpoint, reason);
+            _logger.LogDebug(ex, "Failed to connect to {Endpoint} ({FailureReason})", OverlayLogSanitizer.Endpoint(endpoint), reason);
             RecordFailure(reason, endpoint);
             return null;
         }
@@ -389,11 +392,11 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
         if (username is not null)
         {
-            _logger.LogDebug("Recorded overlay failure {FailureReason} for {Username}@{Endpoint}", reason, username, endpoint);
+            _logger.LogDebug("Recorded overlay failure {FailureReason} for {Username}@{Endpoint}", reason, OverlayLogSanitizer.Username(username), OverlayLogSanitizer.Endpoint(endpoint));
             return;
         }
 
-        _logger.LogDebug("Recorded overlay failure {FailureReason} for {Endpoint}", reason, endpoint);
+        _logger.LogDebug("Recorded overlay failure {FailureReason} for {Endpoint}", reason, OverlayLogSanitizer.Endpoint(endpoint));
     }
 
     private sealed class IPEndPointComparer : IEqualityComparer<IPEndPoint>

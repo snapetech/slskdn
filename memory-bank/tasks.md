@@ -11,6 +11,16 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Sanitize DHT/overlay usernames and public endpoints in logs.
+ - Status: completed (2026-04-18)
+ - Priority: P1
+ - Notes: Issue `#209` tester logs exposed raw mesh usernames and public endpoints because DHT rendezvous used `hello.Username`, `ack.Username`, `connection.Username`, and raw `IPEndPoint` values directly in logger calls. Added `OverlayLogSanitizer`, wired DHT/overlay logging through it, and added unit coverage for username/peer-id/public-endpoint redaction.
+
+- [x] **bug**: Keep quiet mesh neighbors connected and usable after issue `#209` build `151`.
+ - Status: completed (2026-04-18)
+ - Priority: P1
+ - Notes: Tester logs showed DHT ready and Soulseek logged in, then an inbound mesh neighbor disconnected exactly 30 seconds later with `OperationCanceledException` from the overlay read loop. The server now treats per-read idle timeout as a keepalive interval instead of a fatal loop error, peers advertise their overlay listener in HELLO/ACK so inbound-only neighbors can be promoted through a reciprocal outbound connection with a configured-port fallback for old peers, and registry cleanup is identity-safe so stale inbound disposal cannot remove the replacement outbound connection. Focused unit coverage and the two-full-instance mesh smoke reproduce the old timing window and prove the nodes remain connected past `OverlayTimeouts.MessageRead`.
+
 - [x] **bug**: Keep ScenePodBridge opt-in so normal searches stay Soulseek-compatible.
  - Status: completed (2026-04-18)
  - Priority: P1

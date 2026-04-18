@@ -4,7 +4,11 @@
 
 namespace slskd.Tests.Unit.DhtRendezvous;
 
+using System.IO;
 using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Threading;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -68,18 +72,57 @@ public class MeshNeighborRegistryTests
         await registry.UnregisterAsync(connection);
     }
 
-    private static MeshOverlayConnection CreateConnection(string username, string address, int port)
+
+    [Fact]
+    public async Task RegisterAsync_WhenOutboundReplacesInbound_KeepsOutboundAfterInboundCleanup()
+    {
+        await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
+        var inbound = CreateConnection("peer-1", "127.0.0.1", 5100, isOutbound: false);
+        var outbound = CreateConnection("peer-1", "127.0.0.1", 5101, isOutbound: true);
+
+        Assert.True(await registry.RegisterAsync(inbound));
+        Assert.True(await registry.RegisterAsync(outbound));
+
+        await registry.UnregisterAsync(inbound);
+
+        Assert.Equal(1, registry.Count);
+        Assert.Same(outbound, registry.GetConnection("peer-1"));
+    }
+
+    [Fact]
+    public async Task UnregisterAsync_WhenStaleConnectionSharesUsername_DoesNotRemoveReplacement()
+    {
+        await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
+        var stale = CreateConnection("peer-1", "127.0.0.1", 5200, isOutbound: false);
+        var replacement = CreateConnection("peer-1", "127.0.0.1", 5201, isOutbound: true);
+
+        Assert.True(await registry.RegisterAsync(stale));
+        Assert.True(await registry.RegisterAsync(replacement));
+
+        await registry.UnregisterAsync(stale);
+
+        Assert.Equal(1, registry.Count);
+        Assert.Same(replacement, registry.GetConnection("peer-1"));
+    }
+
+    private static MeshOverlayConnection CreateConnection(string username, string address, int port, bool isOutbound = false)
     {
         var connection = (MeshOverlayConnection)RuntimeHelpers.GetUninitializedObject(typeof(MeshOverlayConnection));
 
+        SetField(connection, "_cts", new CancellationTokenSource());
+        SetField(connection, "_tcpClient", new TcpClient());
+        SetField(connection, "_sslStream", new SslStream(new MemoryStream()));
         SetBackingField(connection, "<ConnectionId>k__BackingField", $"conn-{port}");
         SetBackingField(connection, "<RemoteEndPoint>k__BackingField", new IPEndPoint(IPAddress.Parse(address), port));
         SetBackingField(connection, "<Username>k__BackingField", username);
+        SetBackingField(connection, "<IsOutbound>k__BackingField", isOutbound);
 
         return connection;
     }
 
-    private static void SetBackingField(object target, string fieldName, object? value)
+    private static void SetBackingField(object target, string fieldName, object? value) => SetField(target, fieldName, value);
+
+    private static void SetField(object target, string fieldName, object? value)
     {
         var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException($"Field '{fieldName}' was not found.");

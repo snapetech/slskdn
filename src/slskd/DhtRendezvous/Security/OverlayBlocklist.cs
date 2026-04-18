@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using slskd.DhtRendezvous;
 
 /// <summary>
 /// Manages a blocklist of IPs and usernames that are banned from overlay connections.
@@ -167,7 +168,7 @@ public sealed class OverlayBlocklist : IDisposable
         var removed = _usernameBlocklist.TryRemove(normalizedUsername, out _);
         if (removed)
         {
-            _logger.LogInformation("Unblocked username {Username}", username);
+            _logger.LogInformation("Unblocked username {Username}", OverlayLogSanitizer.Username(username));
         }
 
         return removed;

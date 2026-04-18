@@ -79,8 +79,8 @@ public sealed class MeshNeighborPeerSyncService : BackgroundService
 
         _logger.LogDebug(
             "Mirrored mesh neighbor {PeerId} from {Endpoint} into mesh peer inventory (circuit-capable: {SupportsCircuitRouting})",
-            peerId,
-            e.Connection.RemoteEndPoint,
+            OverlayLogSanitizer.PeerId(peerId),
+            OverlayLogSanitizer.Endpoint(e.Connection.RemoteEndPoint),
             supportsCircuitRouting);
     }
 
@@ -96,7 +96,7 @@ public sealed class MeshNeighborPeerSyncService : BackgroundService
 
         _logger.LogDebug(
             "Removed mesh neighbor {PeerId} from mesh peer inventory",
-            peerId);
+            OverlayLogSanitizer.PeerId(peerId));
     }
 
     private static string GetPeerId(MeshNeighborEventArgs e)

@@ -160,6 +160,11 @@ public static partial class MessageValidator
             }
         }
 
+        if (message.OverlayPort is not null && !IsValidPort(message.OverlayPort.Value))
+        {
+            return ValidationResult.Fail($"Invalid overlay port: {message.OverlayPort}");
+        }
+
         // Nonce validation (optional)
         if (message.Nonce is not null)
         {
@@ -212,6 +217,11 @@ public static partial class MessageValidator
             {
                 return portsResult;
             }
+        }
+
+        if (message.OverlayPort is not null && !IsValidPort(message.OverlayPort.Value))
+        {
+            return ValidationResult.Fail($"Invalid overlay port: {message.OverlayPort}");
         }
 
         if (message.NonceEcho is not null)
@@ -357,14 +367,16 @@ public static partial class MessageValidator
     /// <summary>
     /// Validates Soulseek ports.
     /// </summary>
+    private static bool IsValidPort(int port) => port >= 0 && port <= MaxPort;
+
     public static ValidationResult ValidatePorts(SoulseekPorts ports)
     {
-        if (ports.Peer < 0 || ports.Peer > MaxPort)
+        if (!IsValidPort(ports.Peer))
         {
             return ValidationResult.Fail($"Invalid peer port: {ports.Peer}");
         }
 
-        if (ports.File < 0 || ports.File > MaxPort)
+        if (!IsValidPort(ports.File))
         {
             return ValidationResult.Fail($"Invalid file port: {ports.File}");
         }

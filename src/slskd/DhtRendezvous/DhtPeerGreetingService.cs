@@ -123,14 +123,14 @@ public sealed class DhtPeerGreetingService : BackgroundService
         // Only auto-greet the first few peers
         if (_greetingCount >= MaxAutoGreetings)
         {
-            _logger.LogDebug("Skipping auto-greeting for {Username} (limit reached)", e.Username);
+            _logger.LogDebug("Skipping auto-greeting for {Username} (limit reached)", OverlayLogSanitizer.Username(e.Username));
             return;
         }
 
         // Don't greet the same peer twice
         if (_greetedPeers.ContainsKey(e.Username))
         {
-            _logger.LogDebug("Already greeted {Username}, skipping", e.Username);
+            _logger.LogDebug("Already greeted {Username}, skipping", OverlayLogSanitizer.Username(e.Username));
             return;
         }
 
@@ -141,7 +141,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
     {
         if (!_soulseekClient.State.HasFlag(SoulseekClientStates.Connected))
         {
-            _logger.LogDebug("Not connected to Soulseek, skipping greeting to {Username}", username);
+            _logger.LogDebug("Not connected to Soulseek, skipping greeting to {Username}", OverlayLogSanitizer.Username(username));
             _greetedPeers.TryRemove(username, out _);
             return;
         }
@@ -152,7 +152,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
             var messages = isFirstEver ? FirstConnectionMessages : RegularGreetings;
             var message = messages[Random.Shared.Next(messages.Length)];
 
-            _logger.LogInformation("Sending mesh greeting to {Username}: {Message}", username, message);
+            _logger.LogInformation("Sending mesh greeting to {Username}: {Message}", OverlayLogSanitizer.Username(username), message);
 
             await _soulseekClient.SendPrivateMessageAsync(username, message);
 
@@ -160,12 +160,12 @@ public sealed class DhtPeerGreetingService : BackgroundService
             Interlocked.Increment(ref _greetingCount);
 
             _logger.LogDebug("Greeting sent successfully to {Username} (total: {Count})",
-                username, _greetingCount);
+                OverlayLogSanitizer.Username(username), _greetingCount);
         }
         catch (Exception ex)
         {
             _greetedPeers.TryRemove(username, out _);
-            _logger.LogWarning(ex, "Failed to send greeting to {Username}", username);
+            _logger.LogWarning(ex, "Failed to send greeting to {Username}", OverlayLogSanitizer.Username(username));
         }
     }
 
@@ -173,7 +173,7 @@ public sealed class DhtPeerGreetingService : BackgroundService
     {
         if (!_greetedPeers.TryAdd(username, DateTimeOffset.MinValue))
         {
-            _logger.LogDebug("Already greeted {Username}, skipping", username);
+            _logger.LogDebug("Already greeted {Username}, skipping", OverlayLogSanitizer.Username(username));
             return;
         }
 

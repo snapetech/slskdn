@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using slskd.DhtRendezvous;
 using Soulseek;
 
 /// <summary>
@@ -79,7 +80,7 @@ public sealed class PeerVerificationService
         {
             if (DateTimeOffset.UtcNow - cached.VerifiedAt < _cacheExpiry)
             {
-                _logger.LogDebug("Using cached verification for {Username}", claimedUsername);
+                _logger.LogDebug("Using cached verification for {Username}", OverlayLogSanitizer.Username(claimedUsername));
                 return cached.Result;
             }
             else
@@ -98,7 +99,7 @@ public sealed class PeerVerificationService
 
             if (userInfo is null)
             {
-                _logger.LogWarning("Could not get UserInfo for {Username}", claimedUsername);
+                _logger.LogWarning("Could not get UserInfo for {Username}", OverlayLogSanitizer.Username(claimedUsername));
                 return VerificationResult.Failed("User not found on Soulseek");
             }
 
@@ -107,7 +108,7 @@ public sealed class PeerVerificationService
 
             if (description.Contains(expectedChallenge))
             {
-                _logger.LogInformation("Verified username {Username} via Soulseek UserInfo challenge", claimedUsername);
+                _logger.LogInformation("Verified username {Username} via Soulseek UserInfo challenge", OverlayLogSanitizer.Username(claimedUsername));
                 var result = VerificationResult.Success();
                 CacheVerification(claimedUsername, result);
                 return result;
@@ -116,32 +117,32 @@ public sealed class PeerVerificationService
             // Check if they have any slskdn capability tag (weaker verification)
             if (description.Contains("slskdn_caps:") || description.Contains("slskdn/"))
             {
-                _logger.LogDebug("Username {Username} has slskdn tags but not our specific challenge", claimedUsername);
+                _logger.LogDebug("Username {Username} has slskdn tags but not our specific challenge", OverlayLogSanitizer.Username(claimedUsername));
                 var result = VerificationResult.Partial("Has slskdn tags but challenge not found");
                 return result;
             }
 
-            _logger.LogWarning("Username verification failed for {Username}: challenge not found in description", claimedUsername);
+            _logger.LogWarning("Username verification failed for {Username}: challenge not found in description", OverlayLogSanitizer.Username(claimedUsername));
             return VerificationResult.Failed("Challenge not found in user description");
         }
         catch (UserOfflineException)
         {
-            _logger.LogDebug("User {Username} is offline, cannot verify", claimedUsername);
+            _logger.LogDebug("User {Username} is offline, cannot verify", OverlayLogSanitizer.Username(claimedUsername));
             return VerificationResult.Failed("User is offline");
         }
         catch (TimeoutException)
         {
-            _logger.LogWarning("Verification timed out for {Username}", claimedUsername);
+            _logger.LogWarning("Verification timed out for {Username}", OverlayLogSanitizer.Username(claimedUsername));
             return VerificationResult.Failed("Verification timed out");
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Verification timed out for {Username}", claimedUsername);
+            _logger.LogWarning("Verification timed out for {Username}", OverlayLogSanitizer.Username(claimedUsername));
             return VerificationResult.Failed("Verification timed out");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying username {Username}", claimedUsername);
+            _logger.LogError(ex, "Error verifying username {Username}", OverlayLogSanitizer.Username(claimedUsername));
             return VerificationResult.Failed("Verification failed");
         }
     }
