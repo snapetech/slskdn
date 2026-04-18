@@ -253,15 +253,11 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             break;
 
                         case PinCheckResult.Mismatch:
-                            // Potential MITM attack!
-                            _logger.LogError(
-                                "Certificate pin mismatch for {Username}! Possible MITM attack. Disconnecting.",
+                            _logger.LogWarning(
+                                "Certificate pin mismatch for {Username}; rotating stored pin to newly presented certificate.",
                                 hello.Username);
-                            _blocklist.BlockUsername(hello.Username, "Certificate pin mismatch", TimeSpan.FromHours(1));
-                            Interlocked.Increment(ref _totalRejected);
-                            _rateLimiter.RecordViolation(remoteIp);
-                            await connection.DisconnectAsync("Certificate mismatch", cancellationToken);
-                            return;
+                            _pinStore.RotatePin(hello.Username, connection.CertificateThumbprint ?? string.Empty);
+                            break;
                     }
                 }
 

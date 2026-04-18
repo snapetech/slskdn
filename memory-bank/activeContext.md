@@ -254,3 +254,15 @@ dotnet test
 - Next steps:
   1. Push the Debian packaging fix if you want the next PPA/release build to pick it up.
   2. Monitor the next Jammy PPA build for any second-stage Launchpad-only issues after this missing `Build-Depends` fix.
+
+
+## Update 2026-04-18 17:35:00Z
+
+- Current task: None. The next issue `#209` root fix is implemented locally and validated on `kspls0`.
+- Last activity:
+  - stepped back from the earlier tester reports and revalidated the live overlay path on `kspls0` instead of trusting the synthetic release gates
+  - proved the current blocker was stale overlay TOFU pinning rather than version-locking: `minimus7` was a real reachable slskdn overlay peer, but a stale stored thumbprint caused our side to self-partition
+  - changed inbound and outbound overlay handshakes to rotate stored certificate pins on mismatch instead of auto-blocking the peer, added focused `CertificatePinStoreTests`, and validated on `kspls0` that the host now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same DHT cycle
+- Next steps:
+  1. Commit the pin-rotation fix set if the worktree stays clean.
+  2. If another `#209` symptom appears, reproduce it on `kspls0` first and add the missing host-backed smoke before cutting another build.

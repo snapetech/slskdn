@@ -321,6 +321,35 @@ public sealed class CertificatePinStore
     }
 
     /// <summary>
+    /// Rotate an existing certificate pin to a newly observed thumbprint.
+    /// </summary>
+    public void RotatePin(string username, string thumbprint)
+    {
+        lock (_lock)
+        {
+            var normalizedUsername = username.ToLowerInvariant();
+            var now = DateTimeOffset.UtcNow;
+            var firstSeen = now;
+
+            if (_pins.TryGetValue(normalizedUsername, out var existingPin))
+            {
+                firstSeen = existingPin.FirstSeen;
+            }
+
+            _pins[normalizedUsername] = new CertificatePin
+            {
+                Username = username,
+                Thumbprint = thumbprint,
+                FirstSeen = firstSeen,
+                LastSeen = now,
+            };
+
+            Save();
+            _logger.LogWarning("Rotated certificate pin for {Username}", username);
+        }
+    }
+
+    /// <summary>
     /// Remove a certificate pin.
     /// </summary>
     public bool RemovePin(string username)

@@ -971,3 +971,7 @@
 - [x] Fix issue `#209` stale antiforgery GET spam and DHT enabled-status drift
   - Status: done
   - Notes: Reproduced the stale XSRF cookie spam directly on `kspls0`, moved safe-request antiforgery cleanup ahead of `GetAndStoreTokens()` so ASP.NET never deserializes stale cookies on token-minting GETs, and corrected `/api/v0/dht/status` so `isEnabled` reflects configured DHT enablement instead of current readiness. Validated on `kspls0`: the stale-cookie curl no longer emits decrypt stack traces, and the DHT status API now reports `isEnabled: true` during bootstrap instead of falsely claiming DHT is disabled.
+
+- [x] Fix issue `#209` overlay pin-mismatch recovery so stale TOFU pins do not partition the mesh
+  - Status: done
+  - Notes: Reproduced the live failure on `kspls0` with a stale stored pin for `minimus7`, proved the old behavior hard-blocked the peer after a normal cert rotation, changed inbound and outbound overlay handshakes to rotate stored TOFU pins instead of auto-banning on mismatch, added focused `CertificatePinStoreTests`, and validated on `kspls0` that the stale-pin path now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same run.
