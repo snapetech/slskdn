@@ -54,6 +54,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ### 0z24. Successful Soulseek Transfers Can Still Emit A Terminal "Transfer complete" Exception That Must Be Treated As Expected Churn
 
+### 0z25. DHT Bootstrap Can Take Longer Than 30 Seconds Even When The Network Path Is Healthy
+
+**The Bug**: On `kspls0`, once router forwarding and host firewall rules were both correct, the MonoTorrent DHT still took about 90 seconds to move from `Initialising` to `Ready`. Our startup path treated 30 seconds as the failure threshold, logged a warning that implied misconfiguration, and started spamming `Cannot announce` / `Cannot discover peers` even though the same process later became healthy without any further changes.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+
+**Wrong**:
+```text
+Assume DHT bootstrap should always reach `Ready` within 30 seconds and warn about
+firewall/forwarding problems immediately when it does not.
+```
+
+**Correct**:
+```text
+Allow a longer bootstrap grace period before treating DHT startup as suspicious.
+Slow public-router bootstrap is normal on some hosts; do not emit operator-facing
+misconfiguration warnings until the grace period has actually elapsed.
+```
+
+**Why This Keeps Happening**: Once DHT has zero or only a few nodes at startup, the public bootstrap routers can seed slowly even on a healthy network path. A short static timeout turns that normal warm-up into a misleading product error and sends debugging in the wrong direction.
+
+
 **The Bug**: On `kspls0`, downloads were succeeding end to end, but the process still emitted `[FATAL] Unobserved task exception` with `Soulseek.ConnectionException: Transfer failed: Transfer complete` immediately after the successful transfer state transition. The transfer was already done; only the trailing connection teardown surfaced as an exception name/message we were not classifying as expected Soulseek transport churn.
 
 **Files Affected**:
