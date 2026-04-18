@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z21. Background Enqueue Tasks Must Finish Before Their Shared Semaphore Goes Out Of Scope
+
+**The Bug**: `DownloadService.EnqueueAsync(...)` created a per-batch `SemaphoreSlim` with `using var enqueueSemaphore`, then spawned background enqueue tasks that released that semaphore in their `finally` blocks. The method only waited for the transfer to reach `Queued, Remotely` and then moved on, so the scope could end and dispose `enqueueSemaphore` while those background tasks were still unwinding. On the live host this surfaced as `ObjectDisposedException: Cannot access a disposed object. Object name: 'System.Threading.SemaphoreSlim'.` immediately after downloads entered `Queued, Remotely`.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```text
+Create a shared synchronization primitive in a local scope, fire background tasks that
+use it in their finally blocks, and return before those tasks have definitely completed.
+```
+
+**Correct**:
+```text
+If background tasks share a scoped semaphore or similar disposable primitive, keep track of
+those tasks and await their completion before disposing the primitive or leaving the scope.
+```
+
+**Why This Keeps Happening**: The transfer enqueue path mixes synchronous local bookkeeping with asynchronous background task observation. It is easy to think "the important work is done once the transfer reaches Queued, Remotely" and forget that the background task still has cleanup logic that touches shared synchronization objects. Scoped disposal and async finally blocks do not mix unless the parent explicitly waits for the child tasks to finish.
+
 ### 0z20. Empty Permission Defaults Must Fall Back To Umask Instead Of Being Parsed As A Real chmod Value
 
 **The Bug**: `permissions.file.mode` defaults to `string.Empty` to mean "no explicit Unix mode; let the host umask apply." But `FileService.CreateFile(...)` and `MoveFile(...)` still called `Mode?.ToUnixFileMode()`, so the empty default string was treated like a real permission value and downloads failed at file-creation time with `The value cannot be an empty string or composed entirely of whitespace. (Parameter 'permissions')`.
