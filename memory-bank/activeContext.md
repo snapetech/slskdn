@@ -20,8 +20,8 @@
   - clarified hole-punch completion logs so operators can see the reported local port is an ephemeral UDP socket, not a configured listener port
   - added focused versioned-route integration coverage for `/api/v0/users/notes`
 - Next steps:
-  1. Keep digging on the live `kspls0` runtime failures separately from the UI storm fix: the host still shows search resolution timeouts, Soulseek peer refusal/reset churn, and DHT / circuit health back in a bad state.
-  2. If the queue issues are still reproducible after this UI fix lands, inspect the authenticated live transfer state on `kspls0` to separate queue corruption from pure peer-connectivity failure.
+  1. Deploy the file-permissions fix to `kspls0` and verify downloads start writing bytes instead of failing at file creation.
+  2. After that deploy, re-check whether `kspls0` is still on an older build for the peer-exception classification path, because the current repo already contains the `Connection reset by peer` / `Connection refused` downgrade logic but the host journal still shows the old fatal/noisy behavior.
 
 # Active Context
 
@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The Transfers UI bulk queue/dedupe fix for the live `kspls0` audit is implemented locally and validated; remaining work is the separate host/runtime investigation.
+- **Current Task**: None. The live `kspls0` transfer audit produced and fixed a concrete file-permissions download bug locally; remaining work is the separate deploy/runtime follow-through on that host.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -61,6 +61,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
     - queued and in-flight work is deduped by transfer/action key, so repeated clicks while a drain is running do not reschedule the same transfers
     - the top-level `Remove All Completed` path still uses `transfers.clearCompleted(...)`, but that clear request is now queued and deduped too
     - added focused web regression tests proving one-at-a-time draining, duplicate bulk-submission suppression, single-toast failure reporting, and deduped clear-completed behavior
+  - Re-checked `kspls0` after that UI fix and found the current concrete host-side transfer blocker:
+    - downloads are failing inside `FileService.CreateFile(...)` because the default empty `permissions.file.mode` string is still being parsed as if it were a real chmod value
+    - fixed `FileService.CreateFile(...)` and `MoveFile(...)` so unset/whitespace permission modes fall back to the OS umask instead of throwing, and added focused unit coverage for both paths
 
   - Re-opened issue `#209` after the reporter said the same DHT error remained and verified the shipped release artifacts directly:
     - downloaded the published `0.24.5-slskdn.130` and `.131` ARM64 zip assets locally and confirmed `.131` contains the newer `slskd.dll` / `MonoTorrent.dll` bits

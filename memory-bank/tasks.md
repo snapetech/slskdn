@@ -76,6 +76,11 @@
  - Priority: P1
  - Notes: The startup listener race is fixed, the blanket benign-refusal suppression is removed, startup patching now configures `incomingConnectionOptions`, and `DownloadService.EnqueueAsync(...)` no longer aborts on an unnecessary `GetUserEndPointAsync(...)` / `ConnectToUserAsync(...)` peer preflight. The release smoke script now includes focused startup/transfer unit regressions in addition to the versioned integration slice. Remaining work is to trace any still-live upload-side or lower-level Soulseek `Connection.ConnectAsync(...)` refusals if testers can reproduce them after those fixes, and add focused coverage around the actual producer instead of the global unobserved-task handler.
 
+- [x] **bug**: Stop empty permission defaults from hard-failing Linux downloads.
+ - Status: completed (2026-04-18)
+ - Priority: P1
+ - Notes: `permissions.file.mode` defaults to an empty string to mean "use the OS umask", but `FileService.CreateFile(...)` and `MoveFile(...)` were still parsing that empty default as a chmod string. Both paths now only parse a configured non-whitespace mode, with focused unit coverage proving unset permissions no longer abort download file creation or move handling.
+
 - [x] **bug**: Queue and dedupe Transfers bulk actions instead of running them inline.
  - Status: completed (2026-04-18)
  - Priority: P1

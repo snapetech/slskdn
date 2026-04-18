@@ -6239,3 +6239,16 @@ Code quality improvements were completed as part of Option A:
   - `npm --prefix src/web run lint`
   - `git diff --check`
   - `bash ./bin/lint`
+
+## 2026-04-18 06:45:00Z
+
+- Re-audited the live `kspls0` journal after the transfer UI queue fix and found the current host-side transfer killer is a repo bug in file creation, not just peer churn:
+  - downloads on `kspls0` are failing immediately in `FileService.CreateFile(...)` with `The value cannot be an empty string or composed entirely of whitespace. (Parameter 'permissions')`
+  - host config does not set `permissions.file.mode`, so this is the normal empty-string default path, not a bad local config override
+- Fixed the bug in `FileService` by treating empty/whitespace permission defaults as "no explicit mode" so Linux falls back to the host umask instead of trying to parse an empty chmod string during create/move operations.
+- Added focused file-service unit coverage proving unset permissions no longer break `CreateFile(...)` or `MoveFile(...)`.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~FileServiceTests|FullyQualifiedName~FileExtensionsTests" -v minimal`
+  - `bash ./bin/lint`
+  - `git diff --check`
+- Host note: the repo already contains the newer peer-exception classification for `Connection reset by peer` / `Connection refused`, so the still-noisy `kspls0` journal strongly suggests that host is not yet running the latest build for that part. The fresh journal slice after restart did not show new DHT/search-timeout failures, but it did repeatedly show the empty-permissions download crash.

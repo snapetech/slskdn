@@ -105,6 +105,68 @@ namespace slskd.Tests.Unit.Files
             Assert.IsType<UnauthorizedException>(ex);
         }
 
+
+        [Fact]
+        public void CreateFile_Does_Not_Throw_When_Permission_Mode_Is_Unset()
+        {
+            OptionsMonitorMock.Setup(o => o.CurrentValue).Returns(new Options
+            {
+                Directories = new Options.DirectoriesOptions
+                {
+                    Downloads = Path.Combine(Temp, "downloads"),
+                    Incomplete = Path.Combine(Temp, "incomplete"),
+                },
+                Permissions = new Options.PermissionsOptions
+                {
+                    File = new Options.PermissionsOptions.FileOptions
+                    {
+                        Mode = string.Empty,
+                    },
+                },
+            });
+
+            var filename = Path.Combine(Temp, "incomplete", "test.bin");
+
+            using var stream = FileService.CreateFile(filename);
+
+            Assert.True(File.Exists(filename));
+        }
+
+        [Fact]
+        public void MoveFile_Does_Not_Throw_When_Permission_Mode_Is_Unset()
+        {
+            var downloads = Path.Combine(Temp, "downloads");
+            var incomplete = Path.Combine(Temp, "incomplete");
+
+            Directory.CreateDirectory(downloads);
+            Directory.CreateDirectory(incomplete);
+
+            OptionsMonitorMock.Setup(o => o.CurrentValue).Returns(new Options
+            {
+                Directories = new Options.DirectoriesOptions
+                {
+                    Downloads = downloads,
+                    Incomplete = incomplete,
+                },
+                Permissions = new Options.PermissionsOptions
+                {
+                    File = new Options.PermissionsOptions.FileOptions
+                    {
+                        Mode = string.Empty,
+                    },
+                },
+            });
+
+            var sourceFilename = Path.Combine(incomplete, "move-me.bin");
+            File.WriteAllText(sourceFilename, "test");
+
+            var movedFilename = FileService.MoveFile(sourceFilename, downloads);
+
+            Assert.Equal(Path.Combine(downloads, "move-me.bin"), movedFilename);
+            Assert.True(File.Exists(movedFilename));
+            Assert.False(File.Exists(sourceFilename));
+        }
+
         [Fact]
         public async Task DeleteFilesAsync_Throws_ArgumentException_Given_Relative_Path()
         {

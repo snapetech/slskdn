@@ -382,7 +382,9 @@ namespace slskd.Files
                 throw new IOException($"Failed to determine directory for file {Path.GetFileName(filename)}");
             }
 
-            UnixFileMode? unixCreateMode = options?.UnixCreateMode ?? OptionsMonitor.CurrentValue.Permissions.File.Mode?.ToUnixFileMode();
+            var configuredFileMode = OptionsMonitor.CurrentValue.Permissions.File.Mode;
+            UnixFileMode? unixCreateMode = options?.UnixCreateMode
+                ?? (!string.IsNullOrWhiteSpace(configuredFileMode) ? configuredFileMode.ToUnixFileMode() : null);
 
             if (!Directory.Exists(path))
             {
@@ -456,7 +458,9 @@ namespace slskd.Files
                 throw new FileNotFoundException($"The specified source file does not exist", fileName: sourceFilename);
             }
 
-            UnixFileMode? unixCreateMode = unixFileMode ?? OptionsMonitor.CurrentValue.Permissions.File.Mode?.ToUnixFileMode();
+            var configuredFileMode = OptionsMonitor.CurrentValue.Permissions.File.Mode;
+            UnixFileMode? unixCreateMode = unixFileMode
+                ?? (!string.IsNullOrWhiteSpace(configuredFileMode) ? configuredFileMode.ToUnixFileMode() : null);
 
             if (!Directory.Exists(destinationDirectory))
             {

@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the live Linux download failure that was aborting transfers before any bytes could be written: an unset `permissions.file.mode` now correctly falls back to the host umask in `FileService` instead of being parsed as an empty chmod string, which was throwing `The value cannot be an empty string or composed entirely of whitespace. (Parameter 'permissions')` during download file creation and move handling.
+
 - Fixed the Transfers page bulk-action storm that was turning queue cleanup into its own failure mode: bulk retry/remove/cancel now enqueue into a background queue that drains one request at a time, duplicate submissions are ignored while the same work is already queued or running, `Remove All Completed` still uses the dedicated bulk-clear endpoint but now goes through the same deduped queue, and bulk failures surface as one summary toast instead of one popup per file.
 
 - Fixed the newest issue `#209` mesh follow-up where DHT bootstrap/discovery succeeded but `Circuit maintenance` still stayed at `0 circuits, 0 total peers`. Live overlay neighbors are now mirrored into the circuit peer inventory through `MeshNeighborPeerSyncService`, and unit coverage reproduces the old empty-peer state without the sync service and the corrected populated-peer state with it.
