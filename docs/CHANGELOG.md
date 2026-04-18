@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed another live issue `#209` mesh regression on `kspls0`: DHT-discovered overlay endpoints are no longer one-shot connection attempts. The rendezvous service now tracks retry/backoff state separately from the discovered-peer cache, so a first timeout or refusal does not suppress all future retries for that endpoint. Host validation confirmed the fix by forcing a post-backoff discovery cycle and observing `totalConnectionsAttempted` increase for the same discovered-peer set instead of staying stranded at the first-attempt count.
 - Fixed issue `#209`'s remaining direct-mode circuit failure: `AnonymityMode.Direct` now registers and prioritizes a real direct transport instead of still depending on a local Tor SOCKS proxy, so DHT-ready peers no longer immediately fail circuit establishment with `No anonymity transport is available` just because Tor is absent.
 ### Fixed
 

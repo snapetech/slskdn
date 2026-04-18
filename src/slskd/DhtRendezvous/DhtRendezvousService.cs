@@ -45,7 +45,10 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
     // SECURITY: Use a bounded collection to prevent memory exhaustion
     private readonly ConcurrentDictionary<string, IPEndPoint> _discoveredPeers = new();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _peerConnectionAttemptedAt = new();
+    private readonly ConcurrentDictionary<string, byte> _pendingPeerConnections = new();
     private const int MaxDiscoveredPeers = 1000;
+    private static readonly TimeSpan PeerReconnectInterval = TimeSpan.FromMinutes(5);
     private DateTimeOffset? _lastAnnounceTime;
     private DateTimeOffset? _lastDiscoveryTime;
     private DateTimeOffset? _startedAt;
@@ -488,16 +491,10 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 {
                     Interlocked.Increment(ref _totalPeersDiscovered);
                     _logger.LogDebug("Discovered new mesh peer: {Endpoint}", endpoint);
-
-                    PublishDiscoveredPeer(endpointKey, endpoint);
-
-                    // Try to connect asynchronously
-                    _ = TryConnectToPeerAsync(endpointKey, endpoint);
                 }
-                else
-                {
-                    PublishDiscoveredPeer(endpointKey, endpoint);
-                }
+
+                PublishDiscoveredPeer(endpointKey, endpoint);
+                SchedulePeerConnection(endpointKey, endpoint);
             }
             catch (Exception ex)
             {
@@ -513,6 +510,32 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             new List<IPEndPoint> { endpoint },
             version: "dht-discovered",
             supportsOnionRouting: false);
+    }
+
+    private void SchedulePeerConnection(string peerId, IPEndPoint endpoint)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var peer = _peerManager.GetPeer(peerId);
+        _peerConnectionAttemptedAt.TryGetValue(peerId, out var lastAttempt);
+
+        if (!ShouldRetryPeerConnection(
+                now,
+                _peerConnectionAttemptedAt.ContainsKey(peerId) ? lastAttempt : null,
+                _registry.IsConnectedTo(endpoint),
+                peer?.SupportsOnionRouting == true,
+                _pendingPeerConnections.ContainsKey(peerId),
+                PeerReconnectInterval))
+        {
+            return;
+        }
+
+        if (!_pendingPeerConnections.TryAdd(peerId, 0))
+        {
+            return;
+        }
+
+        _peerConnectionAttemptedAt[peerId] = now;
+        _ = TryConnectToPeerAsync(peerId, endpoint);
     }
 
     private async Task TryConnectToPeerAsync(string peerId, IPEndPoint endpoint)
@@ -542,6 +565,26 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             _peerManager.RecordConnectionFailure(peerId);
             _logger.LogDebug(ex, "Failed to connect to discovered peer {Endpoint}", endpoint);
         }
+        finally
+        {
+            _pendingPeerConnections.TryRemove(peerId, out _);
+        }
+    }
+
+    internal static bool ShouldRetryPeerConnection(
+        DateTimeOffset now,
+        DateTimeOffset? lastAttempt,
+        bool isConnected,
+        bool isVerified,
+        bool isPending,
+        TimeSpan reconnectInterval)
+    {
+        if (isConnected || isVerified || isPending)
+        {
+            return false;
+        }
+
+        return !lastAttempt.HasValue || now - lastAttempt.Value >= reconnectInterval;
     }
 
     private void OnDhtStateChanged(object? sender, EventArgs e)

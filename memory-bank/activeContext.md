@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The live mesh self-descriptor audit/fix is implemented locally, validated on `kspls0`, and ready to commit/push if desired.
+- **Current Task**: None. The DHT rendezvous retry/backoff fix for live mesh discovery is implemented, validated locally, and proven on `kspls0`.
 - **Branch**: `main`
 - **Environment**: Local dev + live validation on `kspls0`
 - **Last Activity**:
@@ -57,9 +57,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Added focused unit tests for the explicit UDP endpoint formatting and the unsupported-QUIC direct-transport decision rule, then redeployed the exact patched tree to `kspls0` and verified startup now logs `Published self descriptor ... endpoints=4 transports=0`.
   - Confirmed a deeper follow-up remains: QUIC-unsupported hosts still cannot build direct mesh circuits because `TransportSelector` only has `DirectQuicDialer` for clearnet mesh transport. The new fix stops the host from lying about impossible direct candidates, but it does not yet add a non-QUIC direct dialer path.
 - **Next Steps**:
-  1. Commit the mesh self-descriptor fix if the worktree stays clean.
-  2. Decide whether to wire the existing direct TLS transport into the mesh transport selector or to add an explicit startup/package gate for QUIC-unsupported hosts before another release.
-  3. Keep validating future `#209` work on `kspls0` first so the tagged builds reflect real host behavior instead of synthetic green gates.
+  1. Commit the DHT rendezvous retry/backoff fix and keep future `#209` work host-validated on `kspls0` first.
+  2. Continue the remaining live follow-up on candidate quality: filter or deprioritize clearly bad/non-overlay DHT endpoints (`:50306`, repeated timeouts/refusals/TLS EOF) before they dominate retry budget.
+  3. Treat the older `Mesh.Transport` / self-descriptor QUIC gap as separate cleanup unless it becomes part of the live `kspls0` path again.
 
 ## Recent Context
 
@@ -289,3 +289,15 @@ dotnet test
 - Next steps:
   1. Push the latest commits if you want the peer-stat cleanup and pin-store durability fix on `origin/main`.
   2. If `#209` still persists after that, focus on why the discovered candidates fail TLS/HELLO rather than on DHT discovery, pin rotation, or peer-count reporting.
+
+
+## Update 2026-04-18 19:05:00Z
+
+- Current task: None. The live DHT rendezvous retry/backoff fix is implemented and host-validated on `kspls0`.
+- Last activity:
+  - traced the active mesh issue back to `DhtRendezvousService` using `_discoveredPeers.TryAdd(...)` as a once-ever outbound connect trigger, which meant the host never retried already-seen endpoints after a single timeout/refusal
+  - split discovery caching from retry scheduling by adding explicit attempt timestamps and in-flight tracking with a 5-minute backoff for unverified peers
+  - validated the change on `kspls0` by forcing a post-backoff discovery cycle and observing `totalConnectionsAttempted` rise from `26` to `31` while `discoveredPeerCount` stayed at `26`, proving rediscovered candidates now re-enter the connector instead of staying stranded
+- Next steps:
+  1. Commit/push the retry/backoff fix if the worktree stays clean.
+  2. Continue narrowing the live peer pool by filtering or deprioritizing clearly bad/non-overlay endpoints before they dominate mesh retries.

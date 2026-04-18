@@ -31,6 +31,11 @@
  - Priority: P2
  - Notes: The April 14 dependency/release chore pass restored green release-gate validation, but a broad `dotnet test -v minimal` run in this environment still stops returning output after the unit suite reports passing counts. The release gate and focused smoke slices pass, so this remains a separate harness/cleanup problem to isolate before relying on the broad solution-level test command as a hard release signal.
 
+- [x] **bug**: Retry failed DHT overlay candidates after backoff instead of only on first discovery.
+ - Status: completed (2026-04-18)
+ - Priority: P1
+ - Notes: `DhtRendezvousService` no longer uses `_discoveredPeers.TryAdd(...)` as the once-ever trigger for outbound overlay connect attempts. Discovery cache, in-flight tracking, and retry timing are now separate, with a 5-minute backoff before re-attempting unverified peers. Validated with focused unit tests and on `kspls0`, where the same discovered-peer set advanced from `26` to `31` total connection attempts after a post-backoff forced discovery instead of remaining stuck at the first-attempt count.
+
 - [ ] **bug**: Filter or deprioritize non-overlay DHT candidates before repeated overlay retries.
  - Status: pending
  - Priority: P1
