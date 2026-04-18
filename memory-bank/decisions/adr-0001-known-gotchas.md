@@ -6725,3 +6725,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 ---
 
 *Last updated: 2026-03-21*
+
+### 0z46. Security Refactors Must Delete Or Rewrite Tests That Still Resolve Removed Service Types
+
+**What went wrong:** A security refactor removed the old `TransferSecurity` service, but `SecurityStartupTests` still tried to resolve it from DI. The whole targeted unit pass then failed at compile time, which hid the actual status of the new hardening work.
+
+**Why it happened:** The implementation moved to `SecurityOptions`/middleware wiring, but the test suite was not updated in the same change set. The test still asserted behavior against a deleted registration contract.
+
+**How to prevent it:** When removing or folding a service during a security refactor, grep the unit suite for the deleted type name and either rewrite those tests to the new registration contract or delete them in the same commit. Never leave compile-broken tests as deferred cleanup.
