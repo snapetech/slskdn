@@ -2294,6 +2294,7 @@ namespace slskd
             services.AddSingleton<DhtRendezvous.Search.IMeshOverlaySearchService, DhtRendezvous.Search.MeshOverlaySearchService>();
             services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();
             services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
+            services.AddHostedService<MeshNeighborPeerSyncService>();
 
             services.AddSingleton<IDhtRendezvousService, DhtRendezvousService>();
             services.AddHostedService(p =>

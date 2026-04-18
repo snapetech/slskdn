@@ -6214,3 +6214,12 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~VersionedApiRoutesIntegrationTests" -v minimal`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-18 03:45:00Z
+
+- Investigated the newest issue `#209` tester feedback after DHT bootstrap and peer discovery were already healthy but `Circuit maintenance` still reported `0 circuits, 0 total peers, 0 active, 0 onion-capable`.
+- Reproduced the real gap locally in unit tests: registering a live overlay neighbor in `MeshNeighborRegistry` did not change `MeshPeerManager` stats at all, so the circuit builder was reading an empty peer inventory even while DHT overlay neighbors existed.
+- Fixed the split-brain state by adding `MeshNeighborPeerSyncService`, which subscribes to `MeshNeighborRegistry` add/remove events and mirrors those neighbors into `IMeshPeerManager` for circuit maintenance and circuit building.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~MeshNeighborPeerSyncServiceTests" -v minimal`
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~CircuitMaintenanceServiceTests" -v minimal`

@@ -919,3 +919,7 @@
 - [x] Fix issue `#209` follow-up route mismatch and bogus overlay hole-punch preflight
   - Status: done
   - Notes: Restored `GET /api/v0/users/notes` by versioning `UserNotesController` for `v0`, added integration coverage for that route, removed the mesh connector's fake UDP hole-punch preflight against DHT-discovered TCP overlay endpoints, and clarified that hole-punch logs report ephemeral local UDP sockets rather than randomized configured listener ports.
+
+- [x] Fix issue `#209` mesh split-brain where DHT neighbors never reached circuit maintenance
+  - Status: done
+  - Notes: Added `MeshNeighborPeerSyncService` so successful `MeshNeighborRegistry` add/remove events mirror into `IMeshPeerManager`; added unit coverage that reproduces the old empty-peer state without the sync service and proves the peer inventory populates when the service is running.

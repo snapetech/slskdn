@@ -475,3 +475,16 @@ dotnet test
   1. Commit and push the stable metadata fix.
   2. Delete the stale `build-main-0.24.5-slskdn.133` tag locally and on origin.
   3. Re-run a fresh stable tag build only after the metadata fix is on `main`.
+
+
+## Update 2026-04-18 03:45:00Z
+
+- Current task: None. Issue `#209` circuit peer sync follow-up is implemented locally and validated.
+- Last activity:
+  - traced the latest `#209` report past DHT bootstrap into a split-brain state between `MeshNeighborRegistry` and `IMeshPeerManager`
+  - reproduced the old failure in unit tests: live overlay neighbors alone left circuit peer stats at zero
+  - added `MeshNeighborPeerSyncService` so DHT overlay neighbor add/remove events populate and prune the circuit peer inventory used by `CircuitMaintenanceService` and `MeshCircuitBuilder`
+  - added focused unit tests proving the old empty-peer state without the sync service and the corrected populated-peer state with it
+- Next steps:
+  1. Commit the code/test/docs fix set if lint and diff checks stay green.
+  2. If `#209` still reports zero circuits after this, inspect actual outbound overlay connection success/failure rates and remote peer feature compatibility rather than local peer inventory wiring.
