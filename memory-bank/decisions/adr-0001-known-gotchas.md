@@ -149,6 +149,29 @@ files already exist there.
 
 **Why This Keeps Happening**: The old layout made the root appdir both the compatibility surface and the payload dump. That works until a manual copy, release-asset experiment, or previous package version leaves behind one unowned file. Once that happens, pacman sees the conflict before any package cleanup code can run. The only reliable same-path fix is to stop spraying versioned payload files directly into the root compatibility directory.
 
+### 0z30. Bash EXIT Traps Cannot Reference Function-Local `mktemp` Variables Under `set -u`
+
+**The Bug**: `packaging/linux/install-from-release.sh` successfully installed the published Linux bundle, but still exited nonzero at the end with `/tmp/install-from-release.sh: line 1: work_dir: unbound variable`. The script set `trap '''rm -rf "$work_dir"''' EXIT` inside `main()` after declaring `local work_dir`. By the time the shell processed the EXIT trap, `main()` had returned and the local variable was out of scope, so `set -u` turned cleanup into a hard failure.
+
+**Files Affected**:
+- `packaging/linux/install-from-release.sh`
+
+**Wrong**:
+```bash
+local work_dir
+work_dir="$(mktemp -d)"
+trap '''rm -rf "$work_dir"''' EXIT
+```
+
+**Correct**:
+```bash
+local work_dir
+work_dir="$(mktemp -d)"
+trap "rm -rf '$work_dir'" EXIT
+```
+
+**Why This Keeps Happening**: In Bash, an EXIT trap runs after the function scope is gone. If the trap body relies on a function-local variable being expanded later, `set -u` can turn a successful script into a failing one during cleanup. Expand the `mktemp` path into the trap string up front, or use a global variable if the trap must dereference at shell exit.
+
 ### 0z24. Successful Soulseek Transfers Can Still Emit A Terminal "Transfer complete" Exception That Must Be Treated As Expected Churn
 
 ### 0z25. DHT Bootstrap Can Take Longer Than 30 Seconds Even When The Network Path Is Healthy
