@@ -52,6 +52,25 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z45. FFmpeg Fingerprint Extraction Cannot Buffer Unlimited PCM In Memory
+
+**The Bug**: `FingerprintExtractionService` piped ffmpeg PCM output into a plain `MemoryStream` with no size cap. A long or malformed decode stream could keep growing until the process consumed far more memory than intended before Chromaprint ever saw a sample.
+
+**Files Affected**:
+- `src/slskd/Integrations/Chromaprint/FingerprintExtractionService.cs`
+
+**Wrong**:
+```text
+Read ffmpeg stdout into an unbounded MemoryStream and assume `-t` alone is enough to keep memory usage safe.
+```
+
+**Correct**:
+```text
+Apply an internal byte cap derived from the configured sample rate/channel count/duration and abort the decode once ffmpeg exceeds the maximum PCM payload needed for fingerprinting.
+```
+
+**Why This Keeps Happening**: Audio decode helpers look harmless because the happy path is short, but piping raw PCM means every extra second is a linear memory increase. If the stream is not bounded explicitly, one bad input or tool behavior change turns a utility decode into an unbounded buffer sink.
+
 ### 0z43. IP-Only Login Lockouts Do Not Stop Distributed Password Spray Against One Username
 
 **The Bug**: Session login throttling only tracked failed attempts by remote IP. That blocked single-source brute force but did nothing against a distributed spray where an attacker rotates IPs while hammering the same admin username. The account could be tested indefinitely as long as each source stayed under the per-IP threshold.
