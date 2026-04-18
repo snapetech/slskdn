@@ -53,6 +53,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
 
+### 0z50. DHT Discovery Must Not Treat "Seen Once" As "Tried Forever"
+
+**The Bug**: `DhtRendezvousService` stored discovered overlay endpoints in `_discoveredPeers` and only attempted an outbound overlay connection when `TryAdd(...)` succeeded. Once an endpoint had been seen once, every later discovery cycle skipped the connect path entirely, even if the first attempt failed because of a transient timeout, stale local state, or a later code fix. The node kept a growing list of candidates but never retried them.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+
+**Wrong**:
+```text
+Use one dictionary as both the discovered-peer cache and the retry gate, so a single failed first connection attempt suppresses all future retries for that endpoint.
+```
+
+**Correct**:
+```text
+Track discovery separately from outbound attempt timing. Keep discovered endpoints cached, but maintain explicit retry/backoff state so unverified peers can be retried on later discovery cycles until they either connect or age out.
+```
+
+**Why This Keeps Happening**: It is tempting to use `TryAdd` as a cheap dedupe and trigger point, but discovery dedupe and connection-attempt scheduling are different concerns. A mesh node operates in a flaky network, so “we already saw this endpoint” is not the same thing as “we should never try it again.”
+
+
 ### 0z49. QUIC-Less Mesh Hosts Need A Real Advertised Direct Path Or They Publish Zero Usable Direct Candidates
 
 **The Bug**: While hardening mesh issue `#209`, we correctly stopped QUIC-unsupported hosts from advertising impossible `DirectQuic` transports, but that left them with `transports=0` and no usable direct path at all. At the same time, `TransportSelector` only parsed legacy `quic://...` endpoints, so publishing `udp://...` legacy endpoints did nothing for direct mesh dialing. The host became more honest but still could not form mesh connections.
