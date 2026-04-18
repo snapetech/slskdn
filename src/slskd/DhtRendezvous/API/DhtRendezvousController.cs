@@ -149,8 +149,46 @@ public class DhtRendezvousController : ControllerBase
     }
 
     /// <summary>
-    /// Get overlay network statistics.
+    /// Connect to a specific overlay endpoint.
     /// </summary>
+    [HttpPost("overlay/connect")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<ActionResult<OverlayConnectResultResponse>> ConnectOverlayPeer([FromBody] ConnectOverlayPeerRequest request, CancellationToken cancellationToken)
+    {
+        var addressText = request.Address?.Trim() ?? string.Empty;
+        if (!System.Net.IPAddress.TryParse(addressText, out var address))
+        {
+            return BadRequest(new { error = "Invalid IP address" });
+        }
+
+        if (request.Port <= 0 || request.Port > 65535)
+        {
+            return BadRequest(new { error = "Invalid port" });
+        }
+
+        var endpoint = new System.Net.IPEndPoint(address, request.Port);
+        var connection = await _overlayConnector.ConnectToEndpointAsync(endpoint, cancellationToken);
+        if (connection is null)
+        {
+            return StatusCode(502, new OverlayConnectResultResponse
+            {
+                Connected = false,
+                Address = endpoint.Address.ToString(),
+                Port = endpoint.Port,
+                ActiveConnections = _dhtService.ActiveMeshConnections,
+            });
+        }
+
+        return Ok(new OverlayConnectResultResponse
+        {
+            Connected = true,
+            Address = endpoint.Address.ToString(),
+            Port = endpoint.Port,
+            Username = connection.Username,
+            ActiveConnections = _dhtService.ActiveMeshConnections,
+        });
+    }
+
     [HttpGet("overlay/stats")]
     public ActionResult<OverlayStatsResponse> GetOverlayStats()
     {
@@ -382,6 +420,15 @@ public sealed class MeshPeerInfoResponse
     public int? Version { get; init; }
 }
 
+public sealed class OverlayConnectResultResponse
+{
+    public bool Connected { get; init; }
+    public required string Address { get; init; }
+    public int Port { get; init; }
+    public string? Username { get; init; }
+    public int ActiveConnections { get; init; }
+}
+
 public sealed class OverlayStatsResponse
 {
     public required ServerStatsResponse Server { get; init; }
@@ -459,6 +506,12 @@ public sealed class BlockedEntryResponse
 }
 
 // Request DTOs
+public sealed class ConnectOverlayPeerRequest
+{
+    public required string Address { get; init; }
+    public int Port { get; init; }
+}
+
 public sealed class BlockIpRequest
 {
     public required string Ip { get; init; }

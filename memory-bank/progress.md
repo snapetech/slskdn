@@ -6406,3 +6406,10 @@ Code quality improvements were completed as part of Option A:
 - Added focused `DhtRendezvousServiceTests` covering immediate no-hammer behavior, successful rediscovery after backoff, and the retry-decision helper.
 - Redeployed the patched tree to `kspls0` and validated the fix live. Before the backoff-window rediscovery, the host showed `26` discovered peers and `26` total attempts. After a forced discovery more than 5 minutes later, the same discovered-peer set still counted `26` peers but `totalConnectionsAttempted` increased to `31`, proving already-known failed candidates now re-enter the connector instead of being stranded forever after first failure.
 - The remaining live mesh issue is now narrower and external-facing: the candidate pool is still heavy on junk/unreachable endpoints (`:50306`, timeouts, refusals, TLS EOF), so the next follow-up stays on candidate quality filtering / deprioritization rather than another local one-shot retry bug.
+
+## 2026-04-18 20:15:00Z
+
+- Added the missing deterministic two-full-instance mesh proof for issue `#209` instead of relying on public-DHT peer quality or single-process loopback tests. The new integration test starts two real `slskd` subprocesses with isolated appdirs/configs, forces alpha to connect to beta through the real overlay API, and asserts both nodes report the mesh neighbor and onion-capable peer inventory.
+- Hardened `SlskdnFullInstanceRunner` so mesh tests do not collide with a live developer install: it now passes `--app-dir`, disables HTTPS, assigns unique overlay/DHT/UDP/QUIC ports, and writes the runtime binder section `dhtRendezvous`.
+- Added an administrator-only `/api/v0/overlay/connect` diagnostic endpoint plus focused controller unit tests, and added a gitignored local-account env scaffold for future live Soulseek account smokes without putting credentials in git.
+- Validation: `DhtRendezvousControllerTests`, `TwoNodeMeshFullInstanceTests`, `bash ./bin/lint`, and `git diff --check` passed.

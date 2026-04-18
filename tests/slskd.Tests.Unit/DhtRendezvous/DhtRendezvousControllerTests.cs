@@ -4,6 +4,8 @@
 
 namespace slskd.Tests.Unit.DhtRendezvous;
 
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -14,6 +16,46 @@ using Xunit;
 
 public class DhtRendezvousControllerTests
 {
+
+    [Fact]
+    public async Task ConnectOverlayPeer_WithInvalidPort_ReturnsBadRequest()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var controller = CreateController(blocklist);
+
+        var result = await controller.ConnectOverlayPeer(new ConnectOverlayPeerRequest
+        {
+            Address = "127.0.0.1",
+            Port = 70000,
+        }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task ConnectOverlayPeer_WhenConnectorFails_ReturnsBadGateway()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+        connector.Setup(x => x.ConnectToEndpointAsync(It.IsAny<System.Net.IPEndPoint>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MeshOverlayConnection?)null);
+
+        var controller = CreateController(blocklist, overlayConnector: connector.Object);
+
+        var result = await controller.ConnectOverlayPeer(new ConnectOverlayPeerRequest
+        {
+            Address = "127.0.0.1",
+            Port = 50305,
+        }, CancellationToken.None);
+
+        var response = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(502, response.StatusCode);
+        var body = Assert.IsType<OverlayConnectResultResponse>(response.Value);
+        Assert.False(body.Connected);
+        Assert.Equal("127.0.0.1", body.Address);
+        Assert.Equal(50305, body.Port);
+    }
+
     [Fact]
     public void GetDhtStatus_UsesConfiguredEnabledFlag_InsteadOfReadiness()
     {

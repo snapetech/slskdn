@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a deterministic two-full-instance mesh smoke for issue `#209`: the integration harness now launches isolated `slskd` subprocesses with unique appdirs and listener ports, forces one node to dial the other through the real overlay stack, and asserts both nodes report the live neighbor plus circuit peer inventory. Added an admin-only `/api/v0/overlay/connect` diagnostic endpoint for forced local/full-instance overlay probes and a gitignored `local-mesh-accounts.env` scaffold for optional live Soulseek account tests.
 - Fixed another live issue `#209` mesh regression on `kspls0`: DHT-discovered overlay endpoints are no longer one-shot connection attempts. The rendezvous service now tracks retry/backoff state separately from the discovered-peer cache, so a first timeout or refusal does not suppress all future retries for that endpoint. Host validation confirmed the fix by forcing a post-backoff discovery cycle and observing `totalConnectionsAttempted` increase for the same discovered-peer set instead of staying stranded at the first-attempt count.
 - Fixed issue `#209`'s remaining direct-mode circuit failure: `AnonymityMode.Direct` now registers and prioritizes a real direct transport instead of still depending on a local Tor SOCKS proxy, so DHT-ready peers no longer immediately fail circuit establishment with `No anonymity transport is available` just because Tor is absent.
 ### Fixed

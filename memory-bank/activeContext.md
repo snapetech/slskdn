@@ -48,18 +48,17 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The DHT rendezvous retry/backoff fix for live mesh discovery is implemented, validated locally, and proven on `kspls0`.
+- **Current Task**: None. Deterministic two-instance mesh validation is implemented and passing locally.
 - **Branch**: `main`
-- **Environment**: Local dev + live validation on `kspls0`
+- **Environment**: Local dev; full-instance integration harness uses isolated subprocess appdirs/listener ports.
 - **Last Activity**:
-  - Continued the host-backed `#209` audit and confirmed the current live failure is split between two systems: DHT rendezvous/TCP overlay on `50305` is healthy, while the older mesh descriptor publisher was still advertising fake `2234/2235` endpoints and impossible `DirectQuic` transport candidates from the separate mesh stack.
-  - Fixed `PeerDescriptorPublisher` so auto-detected legacy endpoints now derive from the real UDP overlay listen port (`udp://...:50400` on `kspls0`) and direct QUIC transport advertisement is suppressed entirely when `QuicListener.IsSupported` is false on the running host.
-  - Added focused unit tests for the explicit UDP endpoint formatting and the unsupported-QUIC direct-transport decision rule, then redeployed the exact patched tree to `kspls0` and verified startup now logs `Published self descriptor ... endpoints=4 transports=0`.
-  - Confirmed a deeper follow-up remains: QUIC-unsupported hosts still cannot build direct mesh circuits because `TransportSelector` only has `DirectQuicDialer` for clearnet mesh transport. The new fix stops the host from lying about impossible direct candidates, but it does not yet add a non-QUIC direct dialer path.
+  - Added a deterministic issue `#209` mesh smoke that starts two real `slskd` processes, forces one node to connect to the other through `/api/v0/overlay/connect`, and proves both nodes report the overlay neighbor and circuit peer inventory.
+  - Hardened the full-instance runner to pass `--app-dir`, disable HTTPS, override all socket listeners, and use the `dhtRendezvous` binder section so test processes no longer collide with a live install.
+  - Added controller unit coverage for the forced overlay-connect endpoint and a gitignored `local-mesh-accounts.env` scaffold for future optional live Soulseek account smokes.
 - **Next Steps**:
-  1. Commit the DHT rendezvous retry/backoff fix and keep future `#209` work host-validated on `kspls0` first.
-  2. Continue the remaining live follow-up on candidate quality: filter or deprioritize clearly bad/non-overlay DHT endpoints (`:50306`, repeated timeouts/refusals/TLS EOF) before they dominate retry budget.
-  3. Treat the older `Mesh.Transport` / self-descriptor QUIC gap as separate cleanup unless it becomes part of the live `kspls0` path again.
+  1. If `#209` still reports failures, reproduce the next symptom with this two-node smoke or live `kspls0` diagnostics before changing code.
+  2. Consider adding an opt-in live-network mesh smoke that reads `tests/slskd.Tests.Integration/local-mesh-accounts.env` after dedicated test Soulseek accounts are created.
+  3. Push/tag only when explicitly requested.
 
 ## Recent Context
 

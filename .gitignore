@@ -50,3 +50,4 @@ opencode.json
 .cursor/
 target/
 SECURITY-AUDIT*.md
+/tests/slskd.Tests.Integration/local-mesh-accounts.env

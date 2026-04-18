@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **test**: Add deterministic two-instance mesh smoke for DHT overlay validation.
+ - Status: completed (2026-04-18)
+ - Priority: P1
+ - Notes: Added a full-process integration proof that starts two isolated `slskd` subprocesses, forces alpha to connect to beta through the real TCP/TLS/HELLO overlay stack, and waits for both overlay connections plus peer inventory to show the live neighbor. The harness now passes `--app-dir`, disables HTTPS, overrides every bound listener, emits the runtime `dhtRendezvous` binder key, and leaves a gitignored local-account env scaffold for future public Soulseek account smokes.
+
 ### Fastest Release Path
 
 - 1. Close the last SongID backend output gaps that materially change ranking or evidence reuse.

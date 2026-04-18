@@ -33,6 +33,10 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
     private Process? slskdnProcess;
     private int apiPort;
     private int? bridgePort;
+    private int? overlayPort;
+    private int? dhtPort;
+    private int? udpOverlayPort;
+    private int? dataOverlayPort;
     private bool isRunning;
 
     public SlskdnFullInstanceRunner(ILogger<SlskdnFullInstanceRunner> logger, string testId)
@@ -51,6 +55,8 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
     public string AppDirectory => appDir;
     public int ApiPort => apiPort;
     public int? BridgePort => bridgePort;
+    public int? OverlayPort => overlayPort;
+    public int? DhtPort => dhtPort;
     public bool IsRunning => isRunning;
     public string ApiUrl => $"http://127.0.0.1:{apiPort}";
 
@@ -61,12 +67,21 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         bool enableBridge = false,
         int? bridgePortOverride = null,
         bool disableAuthentication = false,
+        int? overlayPortOverride = null,
+        int? dhtPortOverride = null,
+        bool noConnect = true,
+        string? soulseekUsername = null,
+        string? soulseekPassword = null,
         CancellationToken ct = default)
     {
         logger.LogInformation("[TEST-SLSKDN-FULL] Starting full instance {TestId}", testId);
 
         // Allocate ephemeral ports
         apiPort = AllocateEphemeralPort();
+        overlayPort = overlayPortOverride ?? AllocateEphemeralPort();
+        dhtPort = dhtPortOverride ?? AllocateEphemeralPortUdp();
+        udpOverlayPort = AllocateEphemeralPortUdp();
+        dataOverlayPort = AllocateEphemeralPort();
         if (enableBridge)
         {
             bridgePort = bridgePortOverride ?? AllocateEphemeralPort();
@@ -80,7 +95,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
 
         // Write configuration file
         var configPath = Path.Combine(appDir, "config", "slskd.yml");
-        var configYaml = BuildConfigYaml(enableBridge, disableAuthentication);
+        var configYaml = BuildConfigYaml(enableBridge, disableAuthentication, noConnect, soulseekUsername, soulseekPassword);
         await File.WriteAllTextAsync(configPath, configYaml, ct);
 
         // Find slskdn binary
@@ -95,7 +110,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = binaryPath,
-            Arguments = $"--config \"{configPath}\"",
+            Arguments = $"--config \"{configPath}\" --app-dir \"{appDir}\"",
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -184,12 +199,20 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         }
     }
 
-    private string BuildConfigYaml(bool enableBridge, bool disableAuthentication)
+    private string BuildConfigYaml(
+        bool enableBridge,
+        bool disableAuthentication,
+        bool noConnect,
+        string? soulseekUsername,
+        string? soulseekPassword)
     {
         var sb = new StringBuilder();
         sb.AppendLine("web:");
         sb.AppendLine($"  port: {apiPort}");
         sb.AppendLine("  host: 127.0.0.1");
+        sb.AppendLine("  https:");
+        sb.AppendLine("    disabled: true");
+        sb.AppendLine("    force: false");
         sb.AppendLine("  authentication:");
         sb.AppendLine($"    disabled: {disableAuthentication.ToString().ToLowerInvariant()}");
         sb.AppendLine("    username: admin");
@@ -204,6 +227,26 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         sb.AppendLine("  identityFriends: true");
         sb.AppendLine("  collectionsSharing: true");
         sb.AppendLine("  scenePodBridge: true");
+        sb.AppendLine("soulseek:");
+        sb.AppendLine($"  username: {YamlEscape(soulseekUsername ?? testId)}");
+        sb.AppendLine($"  password: {YamlEscape(soulseekPassword ?? "test-password")}");
+        sb.AppendLine("dhtRendezvous:");
+        sb.AppendLine("  enabled: true");
+        sb.AppendLine($"  overlay_port: {overlayPort ?? 50305}");
+        sb.AppendLine($"  dht_port: {dhtPort ?? 50306}");
+        sb.AppendLine("  bootstrap_routers:");
+        sb.AppendLine("    - router.bittorrent.com");
+        sb.AppendLine("    - router.utorrent.com");
+        sb.AppendLine("    - dht.transmissionbt.com");
+        sb.AppendLine("  announce_interval_seconds: 900");
+        sb.AppendLine("  discovery_interval_seconds: 600");
+        sb.AppendLine("  min_neighbors: 1");
+        sb.AppendLine("overlay:");
+        sb.AppendLine("  enable: false");
+        sb.AppendLine($"  listen_port: {udpOverlayPort ?? 50400}");
+        sb.AppendLine("overlayData:");
+        sb.AppendLine("  enable: false");
+        sb.AppendLine($"  listen_port: {dataOverlayPort ?? 50401}");
 
         if (enableBridge && bridgePort.HasValue)
         {
@@ -215,7 +258,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         }
 
         sb.AppendLine("flags:");
-        sb.AppendLine("  no_connect: true"); // Don't connect to real Soulseek for tests
+        sb.AppendLine($"  no_connect: {noConnect.ToString().ToLowerInvariant()}");
 
         return sb.ToString();
     }
@@ -402,6 +445,16 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         return port;
     }
 
+    private int AllocateEphemeralPortUdp()
+    {
+        using var socket = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        return ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
+    }
+
+    private static string YamlEscape(string value)
+    {
+        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    }
     private static void CaptureProcessLogLine(ConcurrentQueue<string> lines, string? line)
     {
         if (string.IsNullOrWhiteSpace(line))
