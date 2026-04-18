@@ -6857,3 +6857,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** `OverlayTimeouts.MessageRead` was 30 seconds, while `OverlayTimeouts.KeepaliveInterval` was 2 minutes and `OverlayTimeouts.Idle` was 5 minutes. `MeshOverlayConnection.ReadRawMessageAsync()` creates an internal timeout token, but `MeshOverlayServer.HandleMessagesAsync()` only treated cancellation as expected when the outer server token was canceled. A normal no-message interval therefore looked like an error and disconnected the neighbor.
 
 **How to prevent it:** Blocking overlay reads in long-lived message loops must treat internal read timeout as "no message yet" and continue to the next loop iteration so keepalive and idle checks can make the lifecycle decision. Per-read timeouts can still protect request/response reads, but they must not be shorter than or semantically override keepalive/idle policy for persistent peer connections.
+
+### 0z56. Connection Registries Must Remove The Same Object They Registered
+
+**What went wrong:** While fixing issue `#209` mesh search after inbound-only neighbor discovery, the registry needed to replace an inbound connection with a reciprocal outbound connection for the same username. The existing unregister path removed entries by username and endpoint without verifying that the stored value was the same connection being cleaned up. A stale inbound message loop could therefore unregister a newer outbound replacement and make the peer disappear again.
+
+**Why it happened:** `MeshNeighborRegistry` keyed connections by username and endpoint, but cleanup was written as if a username could only ever refer to one connection for the lifetime of the cleanup call. Once replacement/promotion exists, stale cleanup must be object-identity-aware.
+
+**How to prevent it:** Any registry that allows replacing a value under the same key must remove by key + expected object identity, not key alone. Add tests where an old connection is replaced and then old cleanup runs; the replacement must remain registered.
