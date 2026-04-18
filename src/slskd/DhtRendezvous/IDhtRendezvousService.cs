@@ -118,6 +118,7 @@ public sealed class MeshPeerInfo
 /// </summary>
 public sealed class DhtRendezvousStats
 {
+    public bool IsEnabled { get; init; }
     public bool IsBeaconCapable { get; init; }
     public bool IsDhtRunning { get; init; }
     public int DhtNodeCount { get; init; }

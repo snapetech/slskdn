@@ -48,18 +48,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The latest issue `#209` retrospective/root-cause fix is implemented locally and validated.
+- **Current Task**: Issue `#209` live-runtime follow-up is fixed locally and validated on `kspls0`; ready to commit/push when requested.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
-  - Re-ran issue `#209` from the tester's actual current failure path instead of from our previous fixes and confirmed the remaining break was not DHT bootstrap anymore: the runtime was reaching `Ready`, discovering peers, and then failing circuit establishment on `Tor SOCKS proxy not available at 127.0.0.1:9050`.
-  - Traced that to a selector bug: `AnonymityMode.Direct` still initialized only `TorSocksTransport`, and `GetTransportPriorityOrder(...)` also prioritized `Tor` for direct mode.
-  - Fixed the root cause by adding a real `DirectTransport` and changing `AnonymityTransportSelector` so `AnonymityMode.Direct` registers and prioritizes that transport instead of Tor.
-  - Added focused unit coverage proving the old direct-mode failure path no longer collapses into `No anonymity transport is available` just because Tor is absent.
+  - Reproduced the stale-antiforgery part of issue `#209` directly on `kspls0` with a GET carrying stale `XSRF-COOKIE-5030` / `XSRF-TOKEN-5030` cookies and confirmed the journal still logged ASP.NET decrypt errors before our cleanup ran.
+  - Fixed the safe-request CSRF path so known antiforgery cookies are stripped from the incoming request before `GetAndStoreTokens()` reads them, then confirmed on `kspls0` that the same stale-cookie GET no longer emits any antiforgery decrypt stack trace.
+  - Found and fixed a separate DHT diagnostics bug exposed during that same host validation: `/api/v0/dht/status` was reporting `isEnabled` from readiness instead of config, which made the UI lie that DHT was disabled during bootstrap.
+  - Revalidated the updated build on `kspls0`: `GET /api/v0/dht/status` now reports `isEnabled: true` while bootstrap is still in progress, and the stale-cookie curl repro no longer produces antiforgery spam in the journal.
 - **Next Steps**:
-  1. If `#209` still reports failures after this, reproduce the next symptom from live logs before changing anything else.
-  2. Validate whether circuit usage beyond the current placeholder builder needs to move onto the overlay connection path instead of raw transport streams.
-  3. Push and tag only after this direct-mode fix is committed and the user wants another release.
+  1. Keep watching `kspls0` for the next real DHT discovery cycle so we can tell whether any remaining `#209` complaints are about mesh peer formation rather than stale cookies or bad status reporting.
+  2. If a new live symptom appears, reproduce it on `kspls0` first and add a host-backed smoke to the release gate before another build.
+  3. Push and tag only after this host-validated fix set is committed and explicitly requested by the user.
 
 ## Recent Context
 

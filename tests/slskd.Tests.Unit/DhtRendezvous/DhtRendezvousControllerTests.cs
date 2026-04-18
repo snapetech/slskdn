@@ -15,6 +15,30 @@ using Xunit;
 public class DhtRendezvousControllerTests
 {
     [Fact]
+    public void GetDhtStatus_UsesConfiguredEnabledFlag_InsteadOfReadiness()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var dhtService = new Mock<IDhtRendezvousService>();
+        dhtService.Setup(x => x.GetStats()).Returns(new DhtRendezvousStats
+        {
+            IsEnabled = true,
+            IsBeaconCapable = true,
+            IsDhtRunning = false,
+            DhtNodeCount = 9,
+        });
+
+        var controller = CreateController(blocklist, dhtService.Object);
+
+        var result = controller.GetDhtStatus();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<DhtStatusResponse>(ok.Value);
+        Assert.True(response.IsEnabled);
+        Assert.False(response.IsDhtRunning);
+        Assert.Equal(9, response.DhtNodeCount);
+    }
+
+    [Fact]
     public void BlockUsername_Trims_Request_Before_Blocking()
     {
         using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
@@ -112,10 +136,10 @@ public class DhtRendezvousControllerTests
         Assert.DoesNotContain("alice", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DhtRendezvousController CreateController(OverlayBlocklist blocklist)
+    private static DhtRendezvousController CreateController(OverlayBlocklist blocklist, IDhtRendezvousService? dhtService = null)
     {
         return new DhtRendezvousController(
-            Mock.Of<IDhtRendezvousService>(),
+            dhtService ?? Mock.Of<IDhtRendezvousService>(),
             Mock.Of<IMeshOverlayServer>(),
             Mock.Of<IMeshOverlayConnector>(),
             new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),

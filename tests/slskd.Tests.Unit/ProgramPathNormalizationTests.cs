@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Moq;
 using Soulseek;
 using Xunit;
@@ -240,6 +241,27 @@ public class ProgramPathNormalizationTests
         var exception = new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring."));
 
         Assert.True(Program.IsStaleAntiforgeryTokenException(exception));
+    }
+
+    [Fact]
+    public void StripKnownAntiforgeryCookiesFromRequest_RemovesXsrfCookies_AndResetsParsedRequestCookies()
+    {
+        var port = GetProgramValue<OptionsAtStartup>("OptionsAtStartup").Web.Port;
+        var context = new DefaultHttpContext();
+        context.Request.Headers.Cookie = $"session=keep; XSRF-COOKIE-{port}=stale-cookie; theme=dark; XSRF-TOKEN-{port}=stale-request; XSRF-TOKEN=legacy";
+
+        _ = context.Request.Cookies;
+        Assert.NotNull(context.Features.Get<IRequestCookiesFeature>());
+
+        var stripped = Program.StripKnownAntiforgeryCookiesFromRequest(context);
+
+        Assert.True(stripped);
+        Assert.Equal("session=keep; theme=dark", context.Request.Headers.Cookie.ToString());
+        Assert.Equal("keep", context.Request.Cookies["session"]);
+        Assert.Equal("dark", context.Request.Cookies["theme"]);
+        Assert.False(context.Request.Cookies.ContainsKey($"XSRF-COOKIE-{port}"));
+        Assert.False(context.Request.Cookies.ContainsKey($"XSRF-TOKEN-{port}"));
+        Assert.False(context.Request.Cookies.ContainsKey("XSRF-TOKEN"));
     }
 
     [Fact]

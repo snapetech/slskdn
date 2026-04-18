@@ -967,3 +967,7 @@
 - [x] Fix issue `#209` direct-mode circuit selection so DHT-ready peers do not still depend on a local Tor SOCKS proxy
   - Status: done
   - Notes: Added a real `DirectTransport`, changed `AnonymityTransportSelector` so `AnonymityMode.Direct` registers and prioritizes that transport instead of Tor, and added focused unit coverage that reproduces the old `No anonymity transport is available` failure path when Tor is absent.
+
+- [x] Fix issue `#209` stale antiforgery GET spam and DHT enabled-status drift
+  - Status: done
+  - Notes: Reproduced the stale XSRF cookie spam directly on `kspls0`, moved safe-request antiforgery cleanup ahead of `GetAndStoreTokens()` so ASP.NET never deserializes stale cookies on token-minting GETs, and corrected `/api/v0/dht/status` so `isEnabled` reflects configured DHT enablement instead of current readiness. Validated on `kspls0`: the stale-cookie curl no longer emits decrypt stack traces, and the DHT status API now reports `isEnabled: true` during bootstrap instead of falsely claiming DHT is disabled.

@@ -3069,6 +3069,11 @@ namespace slskd
                     {
                         var antiforgery = context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Antiforgery.IAntiforgery>();
 
+                        if (StripKnownAntiforgeryCookiesFromRequest(context))
+                        {
+                            ClearKnownAntiforgeryCookies(context);
+                        }
+
                         // Only mint/store tokens on safe requests. Rotating them on the same unsafe request that
                         // later validates them can invalidate the frontend's header/cookie pair mid-flight.
                         var tokens = TryGetAndStoreAntiforgeryTokens(context, antiforgery);
@@ -4072,6 +4077,51 @@ namespace slskd
                 innerException is CryptographicException ||
                 innerException.Message.Contains("could not be decrypted", StringComparison.OrdinalIgnoreCase) ||
                 innerException.Message.Contains("key ring", StringComparison.OrdinalIgnoreCase));
+        }
+
+        internal static bool StripKnownAntiforgeryCookiesFromRequest(HttpContext context)
+        {
+            var filteredSegments = new List<string>();
+            var removed = false;
+
+            foreach (var headerValue in context.Request.Headers.Cookie)
+            {
+                foreach (var segment in headerValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var separatorIndex = segment.IndexOf('=');
+                    var cookieName = separatorIndex >= 0 ? segment[..separatorIndex].Trim() : segment.Trim();
+
+                    if (string.Equals(cookieName, $"XSRF-COOKIE-{OptionsAtStartup.Web.Port}", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(cookieName, $"XSRF-TOKEN-{OptionsAtStartup.Web.Port}", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(cookieName, "XSRF-COOKIE", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(cookieName, "XSRF-TOKEN", StringComparison.OrdinalIgnoreCase))
+                    {
+                        removed = true;
+                        continue;
+                    }
+
+                    filteredSegments.Add(segment);
+                }
+            }
+
+            if (!removed)
+            {
+                return false;
+            }
+
+            if (filteredSegments.Count == 0)
+            {
+                context.Request.Headers.Remove("Cookie");
+            }
+            else
+            {
+                context.Request.Headers.Cookie = string.Join("; ", filteredSegments);
+            }
+
+            context.Features.Set<Microsoft.AspNetCore.Http.Features.IRequestCookiesFeature>(
+                new Microsoft.AspNetCore.Http.Features.RequestCookiesFeature(context.Features));
+
+            return true;
         }
 
         internal static void ClearKnownAntiforgeryCookies(HttpContext context)

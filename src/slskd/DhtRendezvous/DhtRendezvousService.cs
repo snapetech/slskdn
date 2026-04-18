@@ -628,6 +628,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     {
         return new DhtRendezvousStats
         {
+            IsEnabled = _options.Enabled,
             IsBeaconCapable = IsBeaconCapable,
             IsDhtRunning = IsDhtRunning,
             DhtNodeCount = DhtNodeCount,

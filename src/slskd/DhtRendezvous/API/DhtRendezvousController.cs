@@ -60,7 +60,7 @@ public class DhtRendezvousController : ControllerBase
 
         return Ok(new DhtStatusResponse
         {
-            IsEnabled = stats.IsDhtRunning,
+            IsEnabled = stats.IsEnabled,
             IsBeaconCapable = stats.IsBeaconCapable,
             IsDhtRunning = stats.IsDhtRunning,
             DhtNodeCount = stats.DhtNodeCount,
