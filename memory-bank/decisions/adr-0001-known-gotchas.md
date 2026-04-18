@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z16. Frontend API Libraries Must Stay On The Same Versioned Route Family As Their Controllers
+
+**The Bug**: The WebUI `userNotes` client called `/api/v0/users/notes`, but `UserNotesController` only advertised API version `1`. That left the UI with a reproducible `GET /api/v0/users/notes -> 404` even though the backend feature existed and the frontend was using the same route shape as the rest of the app.
+
+**Files Affected**:
+- `src/web/src/lib/userNotes.js`
+- `src/slskd/Users/Notes/API/UserNotesController.cs`
+
+**Wrong**:
+```text
+Add a new controller on a different API version than the existing frontend route family and assume versioned routing will just line up.
+```
+
+**Correct**:
+```text
+When a WebUI lib already targets `/api/v0/...`, the controller must either support `v0` too or the frontend route must be updated in the same change, with an integration test proving the versioned route actually resolves.
+```
+
+**Why This Keeps Happening**: Most of the app still uses `v0` routes, so a controller that defaults to `v1` looks valid in isolation but breaks only when exercised through the frontend. Route/version mismatches are easy to miss unless the exact versioned URL is covered in integration tests.
+
 ### 0z15. Public Overlay Exposure Creates Follow-On Noise Unless We Classify Expected Handshake Churn And Clear Stale CSRF Cookies
 
 **The Bug**: After issue `#209` finally fixed DHT bootstrap, the first public test node immediately started logging three follow-on problems as if the feature were still broken: `Connection reset by peer` surfaced as a `[FATAL]` unobserved task exception, stale antiforgery cookies from a reinstall spammed decrypt/key-ring errors on every safe request, and random internet junk hitting the overlay port showed up as warning-stack traces from the TLS handshake path.
