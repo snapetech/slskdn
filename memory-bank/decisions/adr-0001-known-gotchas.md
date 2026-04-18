@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z32. DHT Discovery Must Feed `IMeshPeerManager`, Not Just Fire Opportunistic Overlay Connect Attempts
+
+**The Bug**: Issue `#209` kept reporting `DHT state changed to: Ready` and nonzero peers discovered, but the runtime still logged `Circuit maintenance: 0 circuits, 0 total peers, 0 active, 0 onion-capable`. `DhtRendezvousService.OnPeersFound(...)` stored discovered endpoints in `_discoveredPeers` and kicked off `TryConnectToPeerAsync(...)`, but it never published those discovered candidates into `IMeshPeerManager`. The circuit layer only reads `IMeshPeerManager`, so DHT discovery could be healthy while circuit building stayed blind.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `src/slskd/Mesh/CircuitMaintenanceService.cs`
+- `src/slskd/Mesh/MeshCircuitBuilder.cs`
+
+**Wrong**:
+```text
+Treat DHT peer discovery as a fire-and-forget connection hint only. If the immediate overlay
+connect attempt does not already succeed, leave the discovered peer out of the mesh peer
+inventory entirely.
+```
+
+**Correct**:
+```text
+When DHT discovery yields a candidate overlay endpoint, publish it into `IMeshPeerManager`
+immediately as an onion-capable peer candidate, then let later overlay success/failure update
+its quality. Circuit maintenance must see the same discovered peers that DHT already found.
+```
+
+**Why This Keeps Happening**: The code split neighbor state and circuit-peer state into two separate inventories. `MeshNeighborPeerSyncService` only mirrors peers after a successful overlay registration, but `CircuitMaintenanceService` and `MeshCircuitBuilder` never look at the DHT discovery cache or neighbor registry directly. That makes it easy to believe “DHT found peers” means the routing layer can use them, when in reality the peer manager is still empty.
+
 ### 0z31. Launchpad Only Installs Debian `Build-Depends`, So DEB Rules Cannot Assume CI-Only Tooling Like `patchelf`
 
 **The Bug**: The Jammy PPA build for `slskdn 0.24.5.slskdn.141` failed in `override_dh_auto_install` with `make[1]: patchelf: No such file or directory`. We had updated the DEB package recipe to patch `libcoreclrtraceptprovider.so` with `patchelf`, and we installed `patchelf` in GitHub Actions, but `packaging/debian/control` still only declared `debhelper-compat (= 13)` in `Build-Depends`.
