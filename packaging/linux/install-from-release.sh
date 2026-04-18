@@ -156,7 +156,7 @@ main() {
   echo "[2/7] Downloading slskdn ${SLSKDN_VERSION}..."
   local work_dir
   work_dir="$(mktemp -d)"
-  trap 'rm -rf "$work_dir"' EXIT
+  trap "rm -rf '$work_dir'" EXIT
   cd "$work_dir"
 
   local zip=""

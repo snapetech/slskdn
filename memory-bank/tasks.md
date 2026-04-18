@@ -951,3 +951,5 @@
 - [x] **chore (2026-04-18):** Rework the AUR package layout so `/usr/lib/slskd` remains the drop-in launcher path while packaged releases install under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current`, preventing future pacman upgrades from colliding with stale root-level bundle files.
 - [x] **fix (2026-04-18):** Patch the Linux DEB/RPM package builds so Fedora-family installs do not fail on `liblttng-ust.so.0`, and keep the RPM payload on the same `/usr/lib/slskd` drop-in path as the shared service file instead of drifting to `%{_libdir}`.
 - [x] **fix (2026-04-18):** Add explicit ICU runtime dependencies to the DEB and RPM package metadata so clean installs can actually start `slskd` instead of failing on missing globalization libraries.
+
+- [x] **fix (2026-04-18):** Fix `packaging/linux/install-from-release.sh` cleanup so successful installs do not exit nonzero from an out-of-scope `EXIT` trap, and re-smoke the published raw Linux release installer on a clean Ubuntu container.

@@ -6305,3 +6305,10 @@ Code quality improvements were completed as part of Option A:
 
 - Extended the non-AUR package validation to actually run `/usr/bin/slskd --version` on clean Ubuntu and Fedora containers after package install, which exposed another latent issue: both package families installed successfully but failed immediately without ICU because .NET loads globalization support dynamically.
 - Added explicit ICU runtime dependencies to `packaging/debian/control` and `packaging/rpm/slskdn.spec` so clean distro installs pull the required globalization library before first launch.
+
+## 2026-04-18 09:45:00Z
+
+- Smoked the Docker shipper directly on the current tree: local `docker build` passed and the built image reported `0.24.5-slskdn.141` when running `./slskd --version` inside the container.
+- Smoked the published raw Linux release installer on a clean `ubuntu:24.04` container and found a real script bug: the install finished but the script exited nonzero because `trap 'rm -rf "$work_dir"' EXIT` referenced a function-local variable after `main()` returned under `set -u`.
+- Fixed `packaging/linux/install-from-release.sh` to freeze the `mktemp` path into the `EXIT` trap at definition time, then reran the clean Ubuntu smoke successfully against the latest published release (`0.24.5-slskdn.140`). The installer now exits cleanly, leaves a runnable `/opt/slskdn/slskd.dll`, and writes the expected systemd unit.
+- Confirmed the current host still lacks local tooling for deeper install-smokes of `flatpak-builder`, `snapcraft`, and `brew`, so those package paths remain un-smoked from this machine.

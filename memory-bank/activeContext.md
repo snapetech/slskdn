@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The AUR upgrade-path regression is fixed locally and validated; the next packaging step is deciding when to release/publish the new AUR layout, while the remaining live-transfer work on `kspls0` is still the narrower post-`InProgress` remote stream failure pattern on some peers.
+- **Current Task**: None. Docker and the published raw Linux installer are now smoke-tested; the remaining unsmoked release paths from this machine are Flatpak, Snap, Homebrew, Chocolatey, Winget, Helm, and Proxmox LXC.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -532,3 +532,16 @@ dotnet test
   1. Commit and push the current `Program` / DHT bootstrap follow-up if the worktree stays clean.
   2. Watch the next `kspls0` runtime window for a successful transfer on the patched process and confirm the `Transfer complete` fatal log never returns.
   3. If DHT still shows slow `Initialising` windows on other hosts, consider making the bootstrap diagnostics adaptive instead of static.
+
+
+## Update 2026-04-18 09:45:00Z
+
+- Current task: None. The Docker and raw Linux release-installer smoke pass is complete locally.
+- Last activity:
+  - built the current Docker image locally and verified the shipped container reports `0.24.5-slskdn.141` when running the embedded `slskd` binary
+  - smoke-tested `packaging/linux/install-from-release.sh` against the latest published stable release on a clean `ubuntu:24.04` container and found a real cleanup bug in the installer's `EXIT` trap
+  - fixed the installer trap so cleanup no longer references an out-of-scope function-local `work_dir`, then reran the published-release smoke successfully and verified `/usr/bin/dotnet /opt/slskdn/slskd.dll --version` plus the generated `slskd.service`
+  - confirmed this machine still lacks `flatpak-builder`, `snapcraft`, and `brew`, so those package-manager paths remain un-smoked here
+- Next steps:
+  1. Push the installer trap fix if you want it included in the next release.
+  2. Use a machine with `flatpak-builder`, `snapcraft`, or `brew` available to add real install-smokes for those remaining ship methods.
