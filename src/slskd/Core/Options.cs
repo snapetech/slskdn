@@ -1530,7 +1530,7 @@ namespace slskd
             public bool Solid { get; init; } = true;
 
             /// <summary>Scene ↔ Pod Bridging: Unified search aggregation from Pod/Mesh and Soulseek Scene. When false, search behaves as before.</summary>
-            public bool ScenePodBridge { get; init; } = true;
+            public bool ScenePodBridge { get; init; } = false;
 
             /// <summary>Scene ↔ Pod Bridging options.</summary>
             public ScenePodBridgeOptions ScenePodBridgeOptions { get; init; } = new ScenePodBridgeOptions();

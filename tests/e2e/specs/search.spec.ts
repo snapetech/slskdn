@@ -18,7 +18,7 @@ test.describe('Search - Scene ↔ Pod Bridging', () => {
     await harness.stopAll();
   });
 
-  test('should show provider selection checkboxes when ScenePodBridge is enabled', async ({ page }) => {
+  test('should load search page with ScenePodBridge opt-in controls', async ({ page }) => {
     const alice = harness.getNode('alice');
     await waitForHealth(alice.apiUrl);
     await login(page, alice.apiUrl, 'admin', 'admin');
@@ -27,13 +27,12 @@ test.describe('Search - Scene ↔ Pod Bridging', () => {
     await page.goto(`${alice.apiUrl}/searches`);
     await page.waitForSelector('[data-testid="search-input"]', { timeout: 10000 });
 
-    // Check if provider selection checkboxes are visible
-    // They should be visible when ScenePodBridge is enabled (default: true)
+    // Check whether provider selection controls are present when the UI exposes the opt-in bridge path.
+    // ScenePodBridge is disabled by default so normal searches stay on the proven Soulseek path.
     const podCheckbox = page.locator('text=Pod').first();
     const sceneCheckbox = page.locator('text=Scene').first();
 
-    // Provider checkboxes should be visible (feature enabled by default)
-    // Note: In a real test, we'd check the actual UI, but this verifies the feature flag is working
+    // Provider checkboxes may be hidden when the bridge is not opted in; the page still needs to load.
     await expect(podCheckbox.or(sceneCheckbox)).toBeVisible({ timeout: 5000 }).catch(() => {
       // If checkboxes aren't visible, feature might be disabled or UI not updated yet
       // This is acceptable for now - the test verifies the page loads

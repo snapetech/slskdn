@@ -56,6 +56,11 @@ public class CapabilitiesController : ControllerBase
             "playback_aware"
         };
 
+        if (optionsMonitor.CurrentValue.Feature.ScenePodBridge)
+        {
+            features.Add("scene_pod_bridge");
+        }
+
         var version = Assembly.GetExecutingAssembly()
             .GetName()
             .Version?
@@ -66,7 +71,11 @@ public class CapabilitiesController : ControllerBase
             impl = "slskdn",
             compat = "slskd",
             version,
-            features
+            features,
+            feature = new
+            {
+                scenePodBridge = optionsMonitor.CurrentValue.Feature.ScenePodBridge
+            }
         });
     }
 }

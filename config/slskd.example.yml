@@ -267,11 +267,11 @@
 #   MeshParallelSearch: true  # Run mesh overlay search in parallel with Soulseek and merge results (default: true)
 #   MeshPublishAvailability: true  # Publish availability to mesh/DHT (default: true)
 #   IdentityFriends: true      # Enable Identity & Friends (profiles, contacts, invites) (default: true)
-#   ScenePodBridge: true        # Enable Scene ↔ Pod Bridging: unified search aggregation from Pod/Mesh and Soulseek Scene (default: true)
+#   ScenePodBridge: false       # Opt in to experimental Scene ↔ Pod Bridging (default: false).
 #                                # When enabled, search results from both Pod/Mesh and Soulseek Scene are merged and deduplicated.
+#                                # Keep disabled if you want the proven upstream-compatible Soulseek search path.
 #                                # Pod results can be downloaded from remote mesh peers if not available locally.
 #                                # Scene results use the standard Soulseek download pipeline.
-#                                # This is the default dual-network behavior; it does not require legacy fallback/disaster mode.
 #   ScenePodBridgeOptions:
 #     ProxyTransfers: false     # Proxy scene downloads through pod (future feature, intentionally disabled)
 #     ExportPodAvailability: false  # Export pod availability to scene (future feature, intentionally disabled)

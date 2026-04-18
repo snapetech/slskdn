@@ -6413,3 +6413,7 @@ Code quality improvements were completed as part of Option A:
 - Hardened `SlskdnFullInstanceRunner` so mesh tests do not collide with a live developer install: it now passes `--app-dir`, disables HTTPS, assigns unique overlay/DHT/UDP/QUIC ports, and writes the runtime binder section `dhtRendezvous`.
 - Added an administrator-only `/api/v0/overlay/connect` diagnostic endpoint plus focused controller unit tests, and added a gitignored local-account env scaffold for future live Soulseek account smokes without putting credentials in git.
 - Validation: `DhtRendezvousControllerTests`, `TwoNodeMeshFullInstanceTests`, `bash ./bin/lint`, and `git diff --check` passed.
+## Update 2026-04-18T19:56:28Z
+
+- Fixed the latest issue `#209` search regression root cause seen in tester logs: normal searches no longer default into experimental ScenePodBridge aggregation, which could return `0` results despite a working Soulseek login and DHT bootstrap. Backend defaults, Web UI feature detection, capability reporting, example config, and feature docs now all agree that bridge search is opt-in.
+- Validation: focused unit slice for feature defaults/capabilities/DHT controller passed, `npm --prefix src/web run lint` passed, and `git diff --check` passed before the final repo lint/mesh smoke pass.

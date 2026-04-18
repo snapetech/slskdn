@@ -514,13 +514,13 @@ Unified search experience that aggregates results from both the Pod/Mesh network
 
 ```yaml
 Feature:
-  ScenePodBridge: true  # Enable Scene ↔ Pod Bridging (default: true)
+  ScenePodBridge: false  # Opt in to experimental Scene ↔ Pod Bridging (default: false)
   ScenePodBridgeOptions:
     ProxyTransfers: false     # Proxy scene downloads through pod (future feature, intentionally disabled)
     ExportPodAvailability: false  # Export pod availability to scene (future feature, intentionally disabled)
 ```
 
-**Default**: Enabled (opt-out)
+**Default**: Disabled (opt-in). Normal searches stay on the upstream-compatible Soulseek search path unless this feature is explicitly enabled.
 
 #### Use Cases
 

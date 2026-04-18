@@ -48,16 +48,16 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Deterministic two-instance mesh validation is implemented and passing locally.
+- **Current Task**: Finish latest issue `#209` follow-up: keep experimental ScenePodBridge search opt-in so normal searches stay on the proven Soulseek path.
 - **Branch**: `main`
-- **Environment**: Local dev; full-instance integration harness uses isolated subprocess appdirs/listener ports.
+- **Environment**: Local dev; live `kspls0` diagnostics showed ordinary searches returning results while tester build `149` logs showed `[ScenePodBridge]` returning `0` files for `beatles`.
 - **Last Activity**:
-  - Added a deterministic issue `#209` mesh smoke that starts two real `slskd` processes, forces one node to connect to the other through `/api/v0/overlay/connect`, and proves both nodes report the overlay neighbor and circuit peer inventory.
-  - Hardened the full-instance runner to pass `--app-dir`, disable HTTPS, override all socket listeners, and use the `dhtRendezvous` binder section so test processes no longer collide with a live install.
-  - Added controller unit coverage for the forced overlay-connect endpoint and a gitignored `local-mesh-accounts.env` scaffold for future optional live Soulseek account smokes.
+  - Confirmed the newest issue `#209` report is not the original DHT bootstrap failure: DHT bootstraps, Soulseek connects/logs in, then search is routed through `[ScenePodBridge]` and returns `0`.
+  - Changed backend, Web UI, capability reporting, example config, and feature docs so ScenePodBridge is opt-in and normal searches remain upstream-compatible by default.
+  - Added focused unit coverage for the backend default and capability advertisement.
 - **Next Steps**:
-  1. If `#209` still reports failures, reproduce the next symptom with this two-node smoke or live `kspls0` diagnostics before changing code.
-  2. Consider adding an opt-in live-network mesh smoke that reads `tests/slskd.Tests.Integration/local-mesh-accounts.env` after dedicated test Soulseek accounts are created.
+  1. Run final repo lint and two-node mesh smoke before committing this fix.
+  2. If issue `#209` still reports failures after this default-search fix, reproduce the next symptom from tester-equivalent logs before changing code.
   3. Push/tag only when explicitly requested.
 
 ## Recent Context

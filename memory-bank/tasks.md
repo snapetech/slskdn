@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Keep ScenePodBridge opt-in so normal searches stay Soulseek-compatible.
+ - Status: completed (2026-04-18)
+ - Priority: P1
+ - Notes: Issue `#209` testing on build `149` showed DHT and Soulseek login healthy but popular searches returning `0` through `[ScenePodBridge]`. `Feature.ScenePodBridge` now defaults to `false`, `/api/slskdn/capabilities` only advertises `scene_pod_bridge` when explicitly enabled, and the Web UI no longer flips bridge providers on from generic capability success.
+
 - [x] **test**: Add deterministic two-instance mesh smoke for DHT overlay validation.
  - Status: completed (2026-04-18)
  - Priority: P1

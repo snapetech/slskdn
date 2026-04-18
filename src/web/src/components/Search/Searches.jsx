@@ -87,8 +87,8 @@ const Searches = ({ server } = {}) => {
   const [stopping, setStopping] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Scene ↔ Pod Bridging provider selection (enabled by default)
-  const [scenePodBridgeEnabled, setScenePodBridgeEnabled] = useState(true);
+  // Scene ↔ Pod Bridging provider selection (opt-in; normal search stays Soulseek-compatible by default)
+  const [scenePodBridgeEnabled, setScenePodBridgeEnabled] = useState(false);
   const [providerPod, setProviderPod] = useState(true);
   const [providerScene, setProviderScene] = useState(true); // Enabled by default when feature is on
   const [showProviderOptions, setShowProviderOptions] = useState(false);
@@ -189,23 +189,15 @@ const Searches = ({ server } = {}) => {
 
     connect();
 
-    // Check if Scene ↔ Pod Bridging is enabled
+    // Scene ↔ Pod Bridging is opt-in. Do not infer it from generic capabilities,
+    // otherwise ordinary searches silently leave the proven Soulseek path.
     const checkFeatureFlag = async () => {
       try {
-        // Check if Scene ↔ Pod Bridging is enabled (default: true)
-        // For now, we'll enable UI by default and check capabilities
-        // In a full implementation, we'd check a specific flag from options
-        try {
-          await getCapabilities();
-          setScenePodBridgeEnabled(true);
-        } catch (error_) {
-          // Feature flag check failed - assume enabled by default
-          console.debug(
-            'Scene ↔ Pod Bridging feature flag check failed:',
-            error_,
-          );
-          setScenePodBridgeEnabled(true);
-        }
+        const capabilities = await getCapabilities();
+        const enabled =
+          capabilities?.feature?.scenePodBridge === true ||
+          capabilities?.features?.includes('scene_pod_bridge') === true;
+        setScenePodBridgeEnabled(enabled);
       } catch (error_) {
         // Feature flag check failed - assume disabled
         console.debug(
