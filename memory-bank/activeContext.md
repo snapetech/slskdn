@@ -48,10 +48,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The live `kspls0` transfer audit has now fixed both the empty-permissions download crash and the enqueue `SemaphoreSlim` disposal crash; the remaining host-side follow-up is the narrower post-`InProgress` remote stream failure pattern on some peers, plus making sure those expected peer-side failures do not still surface as fake fatal host telemetry.
+- **Current Task**: None. The AUR upgrade-path regression is fixed locally and validated; the next packaging step is deciding when to release/publish the new AUR layout, while the remaining live-transfer work on `kspls0` is still the narrower post-`InProgress` remote stream failure pattern on some peers.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+
+  - Reproduced the real `slskdn-bin` AUR upgrade failure on `kspls0`, proved pacman checks file conflicts before `pre_upgrade()` can run, and reworked the AUR package layout so `/usr/lib/slskd/slskd` remains the drop-in launcher while bundled releases live under `/usr/lib/slskd/releases/<version>` and `/usr/lib/slskd/current`.
+  - Built and installed a local `slskdn-bin 0.24.5.slskdn.140-2` on `kspls0` after planting fake unowned junk files directly under `/usr/lib/slskd`; pacman upgraded cleanly, `/usr/bin/slskd --version` still reported `0.24.5-slskdn.140`, and `slskd.service` stayed active.
+  - Reproduced the real `slskdn-bin` AUR failure on `kspls0`: `yay` built `0.24.5.slskdn.140-1` correctly, but pacman aborted with root-level `/usr/lib/slskd` file conflicts before any package scriptlet could run.
+  - Verified the key packaging gotcha: pacman checks filesystem conflicts before `slskd.install` `pre_upgrade()`, so the previous root-prune hook could never rescue an already-conflicting upgrade.
+  - Reworked the AUR package layout to keep the drop-in launcher path `/usr/lib/slskd/slskd` and service/config names unchanged while moving each bundled release payload under `/usr/lib/slskd/releases/<version>` and `/usr/lib/slskd/current`.
+  - Simplified `packaging/aur/slskd.install` back to sysusers + daemon-reload hooks only, updated AUR docs/metadata validation, and added the packaging gotcha to ADR-0001.
+  - Proved the new layout on `kspls0` by building a local `slskdn-bin 0.24.5.slskdn.140-2`, creating unowned junk files directly under `/usr/lib/slskd`, and confirming pacman upgraded cleanly with the stale root files still present. The launcher now execs `/usr/lib/slskd/current/slskd`, `/usr/bin/slskd --version` still reports `0.24.5-slskdn.140`, and `slskd.service` stayed active.
 
   - Audited `kspls0` directly and confirmed the transfer/runtime complaints have two layers:
     - the live service is up, but the journal shows repeated Soulseek `Connection refused` / `Connection reset by peer` exceptions, search endpoint resolution timeouts, and DHT / mesh logs back in `NotReady` / `0 circuits` state

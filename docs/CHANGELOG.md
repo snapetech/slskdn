@@ -28,7 +28,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 - Fixed the live download enqueue crash on Linux hosts after transfers reached `Queued, Remotely`: `DownloadService.EnqueueAsync(...)` no longer disposes its shared per-batch `SemaphoreSlim` while background enqueue tasks still release it, which removes the host-side `Cannot access a disposed object. Object name: 'System.Threading.SemaphoreSlim'.` failure and lets transfers proceed into real `InProgress` socket work again.
 
-- Fixed the Arch/AUR packaging path so upgrades stop failing with stale `/usr/lib/slskd` file conflicts: the repo now ships a real `slskd.install` pacman hook that prunes the managed app payload directory before install/upgrade, the shared `slskd.service` runs the packaged `/usr/lib/slskd/slskd` apphost instead of `dotnet slskd.dll`, and the source PKGBUILD is aligned to `.NET 10` with correct per-arch runtime IDs.
+- Fixed the Arch/AUR packaging path so upgrades stop failing with stale `/usr/lib/slskd` file conflicts: the drop-in launcher path stays `/usr/lib/slskd/slskd`, but packaged releases now live under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current`, the shared `slskd.service` still runs the packaged apphost, and the source PKGBUILD remains aligned to `.NET 10` with correct per-arch runtime IDs.
 
 - Fixed the live Linux download failure that was aborting transfers before any bytes could be written: an unset `permissions.file.mode` now correctly falls back to the host umask in `FileService` instead of being parsed as an empty chmod string, which was throwing `The value cannot be an empty string or composed entirely of whitespace. (Parameter 'permissions')` during download file creation and move handling.
 

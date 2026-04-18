@@ -947,3 +947,5 @@
 - [x] Downgrade remote peer transfer rejections from fake fatal host telemetry
   - Status: done
   - Notes: Extended the expected Soulseek-network classifier so remote-declared transfer failures (`TransferReportedFailedException` / `Download reported as failed by remote client`) are treated as expected peer churn for unobserved-task logging instead of `[FATAL]` crash noise.
+- [x] **chore (2026-04-18):** Rework AUR package layout so `/usr/lib/slskd` stays the drop-in launcher path while bundled releases install under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current`, preventing pacman upgrade conflicts from stale root-level payload files.
+- [x] **chore (2026-04-18):** Rework the AUR package layout so `/usr/lib/slskd` remains the drop-in launcher path while packaged releases install under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current`, preventing future pacman upgrades from colliding with stale root-level bundle files.

@@ -31,32 +31,39 @@ source=(
 sha256sums=('SKIP' 'SHA256_SERVICE_PLACEHOLDER' 'SHA256_YML_PLACEHOLDER' 'SHA256_SYSUSERS_PLACEHOLDER')
 
 package() {
-    # Install application to /usr/lib/slskd
-    install -dm755 "${pkgdir}/usr/lib/${_pkgname}"
-    cp -r "${srcdir}"/* "${pkgdir}/usr/lib/${_pkgname}/"
-    
-    # Remove non-application files that were extracted
-    rm -f "${pkgdir}/usr/lib/${_pkgname}/slskd.service"
-    rm -f "${pkgdir}/usr/lib/${_pkgname}/slskd.yml"
-    rm -f "${pkgdir}/usr/lib/${_pkgname}/slskd.sysusers"
-    
-    # Make binary executable
-    chmod +x "${pkgdir}/usr/lib/${_pkgname}/slskd"
-    
-    # Create symlink /usr/bin/slskd -> /usr/lib/slskd/slskd
+    local app_root="${pkgdir}/usr/lib/${_pkgname}"
+    local release_root="${app_root}/releases/${pkgver}"
+
+    install -dm755 "${release_root}"
+
+    for f in "${srcdir}"/*; do
+        fname=$(basename "$f")
+        case "$fname" in
+            slskd.service|slskd.yml|slskd.sysusers|*.zip)
+                continue
+                ;;
+            *)
+                cp -r "$f" "${release_root}/"
+                ;;
+        esac
+    done
+
+    chmod +x "${release_root}/slskd"
+    ln -sfn "releases/${pkgver}" "${app_root}/current"
+
+    cat > "${app_root}/slskd" <<'EOF'
+#!/bin/sh
+exec /usr/lib/slskd/current/slskd "$@"
+EOF
+    chmod 755 "${app_root}/slskd"
+
     install -dm755 "${pkgdir}/usr/bin"
     ln -sf "/usr/lib/${_pkgname}/slskd" "${pkgdir}/usr/bin/${_pkgname}"
-    
-    # Install systemd service
+
     install -Dm644 "${srcdir}/slskd.service" "${pkgdir}/usr/lib/systemd/system/${_pkgname}.service"
-    
-    # Install sysusers config
     install -Dm644 "${srcdir}/slskd.sysusers" "${pkgdir}/usr/lib/sysusers.d/${_pkgname}.conf"
-    
-    # Install default config
     install -Dm644 "${srcdir}/slskd.yml" "${pkgdir}/etc/${_pkgname}/${_pkgname}.yml"
-    
-    # Create data directories
+
     install -dm755 "${pkgdir}/var/lib/${_pkgname}"
     install -dm755 "${pkgdir}/var/lib/${_pkgname}/downloads"
     install -dm755 "${pkgdir}/var/lib/${_pkgname}/incomplete"

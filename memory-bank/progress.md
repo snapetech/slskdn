@@ -6287,3 +6287,13 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`
   - `git diff --check`
   - live `kspls0` redeploy + journal verification of DHT reaching `Ready` after the host firewall change
+## 2026-04-18 01:33:00Z
+
+- Fixed the AUR upgrade path without changing the public slskd install surface: `slskdn`, `slskdn-bin`, and `slskdn-dev` now keep `/usr/lib/slskd/slskd` as the launcher path but install each bundled release under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current` pointing at the active payload.
+- Dropped the ineffective `pre_upgrade()` pruning from `slskd.install` after proving pacman checks file conflicts before scriptlets run.
+- Validated the new layout with packaging metadata checks and a live Arch upgrade on `kspls0`: built a local `slskdn-bin 0.24.5.slskdn.140-2`, created unowned junk files directly under `/usr/lib/slskd`, and confirmed pacman upgraded cleanly while the launcher still resolved to the real binary and the `slskd` service stayed active.
+## 2026-04-18 01:33:00Z
+
+- Reworked the AUR package layout without changing the public slskd install surface: `slskdn`, `slskdn-bin`, and `slskdn-dev` now keep `/usr/lib/slskd/slskd` as the launcher path but install each bundled release under `/usr/lib/slskd/releases/<version>` with `/usr/lib/slskd/current` pointing at the active payload.
+- Removed the ineffective `pre_upgrade()` pruning from `packaging/aur/slskd.install` after proving pacman checks file conflicts before scriptlets run.
+- Validated the new layout on `kspls0` by building a local `slskdn-bin 0.24.5.slskdn.140-2`, creating unowned junk files directly under `/usr/lib/slskd`, and confirming pacman upgraded cleanly while the stale root files remained in place and `slskd.service` stayed active.

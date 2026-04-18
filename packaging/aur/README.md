@@ -8,7 +8,8 @@ This directory contains PKGBUILD files for the Arch User Repository (AUR).
 
 | Resource | Path |
 |----------|------|
-| Binary | `/usr/lib/slskd/slskd` |
+| Binary launcher | `/usr/lib/slskd/slskd` |
+| Bundled release payload | `/usr/lib/slskd/current/` |
 | Symlink | `/usr/bin/slskd` |
 | Config | `/etc/slskd/slskd.yml` |
 | Data | `/var/lib/slskd/` |
@@ -53,7 +54,7 @@ sudo systemctl restart slskd
 
 Your config at `/etc/slskd/slskd.yml` and data at `/var/lib/slskd/` are preserved.
 
-AUR upgrades now prune the managed app payload under `/usr/lib/slskd/` before reinstalling, so stale binaries and compressed web assets from older builds no longer block pacman with file-conflict errors.
+AUR packages keep the drop-in launcher path at `/usr/lib/slskd/slskd`, but the bundled release payload now lives under `/usr/lib/slskd/current/` (backed by a versioned `releases/` directory). That keeps the compatibility path stable while avoiding pacman upgrade collisions with stale root-level payload files from older/manual installs.
 
 ## Fresh Installation
 
