@@ -6849,3 +6849,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** `Feature.ScenePodBridge` defaulted to `true`, so normal searches were diverted into the aggregation path whenever providers were registered. That changed the baseline behavior of an upgrade from upstream `slskd`; users expected the proven Soulseek network search path, but the app ran the newer Scene/Pod bridge path unless disabled.
 
 **How to prevent it:** Keep core Soulseek search as the default user path. Experimental bridge/provider aggregation must be explicit opt-in until it has end-to-end field proof and separate diagnostics. New mesh/bridge features may run as supplemental parallel paths only when they cannot suppress or replace normal Soulseek results.
+
+### 0z55. Overlay Message Read Timeout Must Not Be Shorter Than Keepalive
+
+**What went wrong:** Issue `#209` build `151` finally established an inbound mesh neighbor, then dropped it exactly 30 seconds later with `OperationCanceledException` from `SecureMessageFramer.ReadExactlyAsync`. The connection was healthy but quiet; the server read loop treated its own per-read timeout as a fatal message-loop error and unregistered the peer before keepalive could run.
+
+**Why it happened:** `OverlayTimeouts.MessageRead` was 30 seconds, while `OverlayTimeouts.KeepaliveInterval` was 2 minutes and `OverlayTimeouts.Idle` was 5 minutes. `MeshOverlayConnection.ReadRawMessageAsync()` creates an internal timeout token, but `MeshOverlayServer.HandleMessagesAsync()` only treated cancellation as expected when the outer server token was canceled. A normal no-message interval therefore looked like an error and disconnected the neighbor.
+
+**How to prevent it:** Blocking overlay reads in long-lived message loops must treat internal read timeout as "no message yet" and continue to the next loop iteration so keepalive and idle checks can make the lifecycle decision. Per-read timeouts can still protect request/response reads, but they must not be shorter than or semantically override keepalive/idle policy for persistent peer connections.
