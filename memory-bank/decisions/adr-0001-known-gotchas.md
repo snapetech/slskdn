@@ -76,6 +76,29 @@ ASP.NET has already logged the decrypt failure.
 
 **Why This Keeps Happening**: It is easy to think “we catch the stale-cookie exception, so we fixed it,” but antiforgery token deserialization and logging happen inside ASP.NET before the exception reaches our code. That means post-failure cleanup can repair browser state while still leaving the exact noisy log spam the user reported. The only way to stop that path is to prevent the framework from seeing the stale cookie on the minting request in the first place.
 
+### 0z38. DHT Status APIs Cannot Report `IsEnabled` From `IsDhtRunning` Or The UI Lies During Bootstrap
+
+**The Bug**: While rechecking issue `#209` on `kspls0`, the live `/api/v0/dht/status` response reported `isEnabled: false` and `isDhtRunning: false` even though the configured DHT service was running, had a node count, and was actively transitioning through bootstrap states. `DhtRendezvousController.GetDhtStatus()` incorrectly mapped `IsEnabled` from `stats.IsDhtRunning` instead of the actual configured enabled flag.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+- `src/slskd/DhtRendezvous/IDhtRendezvousService.cs`
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+
+**Wrong**:
+```text
+Treat "enabled in config" and "currently Ready" as the same field in the API response.
+```
+
+**Correct**:
+```text
+Expose both values separately: one flag for whether DHT rendezvous is configured/enabled, and one
+for whether the live engine is currently running/Ready. Bootstrap and degraded states must not
+masquerade as "disabled" in diagnostics.
+```
+
+**Why This Keeps Happening**: Status DTOs are easy to wire by copying the nearest-looking property, but bootstrap state, configured enablement, and actual readiness are different concepts. When the API collapses them together, the UI and troubleshooting output become misleading precisely when operators most need accurate state.
+
 ### 0z36. `AnonymityMode.Direct` Cannot Still Bootstrap Only Tor Or Circuit Building Will Fail Exactly Like A Missing Tor Proxy
 
 **The Bug**: Issue `#209` kept advancing from `DHT state changed to: Ready` and `DHT discovery found ... peers` straight into `Tor SOCKS proxy not available at 127.0.0.1:9050`, `No available anonymity transports found`, and `Circuit establishment failed - not all hops connected`. The root cause was that `AnonymityTransportSelector` treated `AnonymityMode.Direct` as if it should initialize the Tor transport, and `GetTransportPriorityOrder(...)` also prioritized `Tor` for direct mode. So the default direct configuration still depended on a local Tor SOCKS proxy even though no real direct transport existed in the selector at all.
