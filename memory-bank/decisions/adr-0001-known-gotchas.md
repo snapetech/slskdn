@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+
+### 0z49. QUIC-Less Mesh Hosts Need A Real Advertised Direct Path Or They Publish Zero Usable Direct Candidates
+
+**The Bug**: While hardening mesh issue `#209`, we correctly stopped QUIC-unsupported hosts from advertising impossible `DirectQuic` transports, but that left them with `transports=0` and no usable direct path at all. At the same time, `TransportSelector` only parsed legacy `quic://...` endpoints, so publishing `udp://...` legacy endpoints did nothing for direct mesh dialing. The host became more honest but still could not form mesh connections.
+
+**Files Affected**:
+- `src/slskd/Mesh/Dht/PeerDescriptorPublisher.cs`
+- `src/slskd/Mesh/Transport/TransportSelector.cs`
+- `src/slskd/Mesh/Transport/DirectTlsDialer.cs`
+
+**Wrong**:
+```text
+Treat honest descriptor publication as sufficient: suppress QUIC-only transports on unsupported hosts,
+publish only legacy UDP endpoints, and assume the selector or dialer stack still has a usable direct path.
+```
+
+**Correct**:
+```text
+If a QUIC-less host still supports direct mesh over the TCP/TLS overlay listener, advertise that direct path
+through the mesh transport endpoint model and teach the selector to fall back across multiple dialers for the
+same logical direct transport type.
+```
+
+**Why This Keeps Happening**: The codebase has two overlapping systems: the older mesh transport stack and the newer DHT rendezvous/TCP overlay path. Fixing one layer to stop lying did not automatically make the other layer usable. If the published descriptor model and the selector's parser disagree about what counts as a direct endpoint, mesh stays broken while the logs look cleaner.
+
 ### 0z45. FFmpeg Fingerprint Extraction Cannot Buffer Unlimited PCM In Memory
 
 **The Bug**: `FingerprintExtractionService` piped ffmpeg PCM output into a plain `MemoryStream` with no size cap. A long or malformed decode stream could keep growing until the process consumed far more memory than intended before Chromaprint ever saw a sample.
