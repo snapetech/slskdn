@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z20. Empty Permission Defaults Must Fall Back To Umask Instead Of Being Parsed As A Real chmod Value
+
+**The Bug**: `permissions.file.mode` defaults to `string.Empty` to mean "no explicit Unix mode; let the host umask apply." But `FileService.CreateFile(...)` and `MoveFile(...)` still called `Mode?.ToUnixFileMode()`, so the empty default string was treated like a real permission value and downloads failed at file-creation time with `The value cannot be an empty string or composed entirely of whitespace. (Parameter 'permissions')`.
+
+**Files Affected**:
+- `src/slskd/Files/FileService.cs`
+- `src/slskd/Core/Options.cs`
+
+**Wrong**:
+```text
+Treat an unset permission option (`""` / whitespace) like a configured chmod mode and
+parse it anyway in low-level file creation/move helpers.
+```
+
+**Correct**:
+```text
+Only parse `permissions.file.mode` when it contains a real non-whitespace chmod string.
+Otherwise pass `null` and let the OS default umask govern file and directory creation.
+```
+
+**Why This Keeps Happening**: The option model uses an empty string as the "not configured" default, which is fine at the boundary, but callers that rely on null-conditional access (`Mode?.ToUnixFileMode()`) accidentally still invoke the parser on empty strings. Any low-level file path that skips the explicit `IsNullOrWhiteSpace` guard can turn the harmless default into a hard runtime failure.
+
 ### 0z19. Serialized Bulk Actions Still Need A Real Background Queue With De-Dupe
 
 **The Bug**: Simply changing transfer bulk actions from `Promise.all(...)` to a serial `for ... await` loop stopped the immediate `429` storm, but it still kept the whole bulk action bound to the click handler and allowed the same files to be re-enqueued if the user clicked the same bulk action again while the first drain was still in progress. That meant the UI could still create duplicate background work and repeated retries/removals against the same transfer set.
