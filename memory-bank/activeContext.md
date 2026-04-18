@@ -20,8 +20,8 @@
   - clarified hole-punch completion logs so operators can see the reported local port is an ephemeral UDP socket, not a configured listener port
   - added focused versioned-route integration coverage for `/api/v0/users/notes`
 - Next steps:
-  1. Reproduce the remaining post-`InProgress` remote stream failures on `kspls0` across more than one peer so we can separate bad-peer outcomes from any remaining local runtime regression.
-  2. Re-check whether the current `kspls0` build still emits any old fatal/unobserved peer-exception noise after the self-contained redeploy, because the earlier noisy journal slices were from pre-redeploy processes.
+  1. Redeploy the latest `Program` classifier fix to `kspls0` and verify that remote-declared transfer failures no longer emit fake `[FATAL] Unobserved task exception` noise on the new process.
+  2. Keep sampling multi-peer downloads on `kspls0` to see whether any remaining post-`InProgress` failures cluster around one transport/peer pattern or are just normal remote-side churn.
 
 # Active Context
 
@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. The live `kspls0` transfer audit has now fixed both the empty-permissions download crash and the enqueue `SemaphoreSlim` disposal crash; the remaining host-side follow-up is the narrower post-`InProgress` remote stream failure pattern on some peers.
+- **Current Task**: None. The live `kspls0` transfer audit has now fixed both the empty-permissions download crash and the enqueue `SemaphoreSlim` disposal crash; the remaining host-side follow-up is the narrower post-`InProgress` remote stream failure pattern on some peers, plus making sure those expected peer-side failures do not still surface as fake fatal host telemetry.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:

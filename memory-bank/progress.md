@@ -6266,3 +6266,10 @@ Code quality improvements were completed as part of Option A:
   - the re-enqueued download advanced `Queued, Remotely -> Initializing -> InProgress`
   - the old `Task for enqueue ... Cannot access a disposed object` error did not return
 - The remaining live `kspls0` transfer problem is narrower now: at least one older transfer completed successfully, but some peers still fail later in the stream with remote-side closure / timeout outcomes (`Remote connection closed`, `Download reported as failed by remote client`, `The wait timed out after 15000 milliseconds`).
+
+## 2026-04-18 08:10:00Z
+
+- Continued the post-queue transfer audit on `kspls0` and confirmed the remaining behavior is mixed remote-peer outcome, not another local all-transfers-broken regression: on the same build, some downloads still fail with remote-side rejection/timeout/stream-close outcomes, while others complete successfully (`InProgress => Completed, Succeeded`).
+- Fixed one remaining product-level telemetry bug in that path: `Soulseek.TransferReportedFailedException` / `Download reported as failed by remote client` now falls into the same expected Soulseek-network classifier as read/reset/timeout churn, so unobserved task handling will stop reporting those as fake `[FATAL]` host failures.
+- Validation:
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`

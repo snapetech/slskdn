@@ -940,3 +940,7 @@
 - [ ] Investigate post-enqueue remote stream failures on `kspls0`
   - Status: pending
   - Notes: After the enqueue and file-permissions fixes, transfers now reach `InProgress` again on `kspls0`, but some peers still fail later with `Transfer failed: Read error: Remote connection closed` or remote-side failure/timeout outcomes. Distinguish bad peers from any remaining host/runtime regression before changing code again.
+
+- [x] Downgrade remote peer transfer rejections from fake fatal host telemetry
+  - Status: done
+  - Notes: Extended the expected Soulseek-network classifier so remote-declared transfer failures (`TransferReportedFailedException` / `Download reported as failed by remote client`) are treated as expected peer churn for unobserved-task logging instead of `[FATAL]` crash noise.

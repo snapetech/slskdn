@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Downgraded remote peer transfer rejections (`Download reported as failed by remote client`) into the expected Soulseek-network telemetry bucket so those peer-side failures no longer surface as fake `[FATAL] Unobserved task exception` host noise.
+
 - Fixed the live download enqueue crash on Linux hosts after transfers reached `Queued, Remotely`: `DownloadService.EnqueueAsync(...)` no longer disposes its shared per-batch `SemaphoreSlim` while background enqueue tasks still release it, which removes the host-side `Cannot access a disposed object. Object name: 'System.Threading.SemaphoreSlim'.` failure and lets transfers proceed into real `InProgress` socket work again.
 
 - Fixed the Arch/AUR packaging path so upgrades stop failing with stale `/usr/lib/slskd` file conflicts: the repo now ships a real `slskd.install` pacman hook that prunes the managed app payload directory before install/upgrade, the shared `slskd.service` runs the packaged `/usr/lib/slskd/slskd` apphost instead of `dotnet slskd.dll`, and the source PKGBUILD is aligned to `.NET 10` with correct per-arch runtime IDs.

@@ -4126,7 +4126,9 @@ namespace slskd
                 (exception is ObjectDisposedException objectDisposedException && string.Equals(objectDisposedException.ObjectName, "Connection", StringComparison.Ordinal)) ||
                 exception is System.Net.Sockets.SocketException ||
                 typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal) ||
-                typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal);
+                typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal) ||
+                typeName.Contains("Soulseek.TransferException", StringComparison.Ordinal) ||
+                typeName.Contains("Soulseek.TransferReportedFailedException", StringComparison.Ordinal);
 
             if (!isNetworkFailure)
             {
@@ -4140,6 +4142,7 @@ namespace slskd
                 details.Contains("Connection refused", StringComparison.Ordinal) ||
                 details.Contains("Connection reset by peer", StringComparison.Ordinal) ||
                 details.Contains("Remote connection closed", StringComparison.Ordinal) ||
+                details.Contains("Download reported as failed by remote client", StringComparison.Ordinal) ||
                 details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||
                 details.Contains("The wait timed out", StringComparison.Ordinal) ||

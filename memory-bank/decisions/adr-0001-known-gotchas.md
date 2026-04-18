@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z23. Remote Peer Transfer Rejections Are Expected Soulseek Churn, Not Fatal Host Errors
+
+**The Bug**: After the local queue and DHT fixes, `kspls0` showed both successful downloads and normal remote-peer failures on the same build. One remaining bad behavior was that `Soulseek.TransferReportedFailedException` (`Download reported as failed by remote client`) could still fall through the unobserved-task classifier and show up as fake `[FATAL] Unobserved task exception` noise, even though the remote peer simply declined or aborted that one transfer.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```text
+Classify socket resets/timeouts as expected Soulseek network churn but leave remote-declared transfer failures outside the same expected-exception bucket.
+```
+
+**Correct**:
+```text
+If the exception chain shows Soulseek transfer-layer failures like `TransferReportedFailedException` /
+`Download reported as failed by remote client`, treat them as expected peer/runtime churn for unobserved-task telemetry so the host does not emit fake fatal crash noise.
+```
+
+**Why This Keeps Happening**: Soulseek peer interactions fail in several layers: pure socket errors, read/write timeouts, and explicit transfer-layer rejections from the remote client. It is easy to stop once the socket-layer cases are downgraded, but operators still see the same scary `[FATAL]` signal unless the transfer-layer failure names/messages are folded into the same expected-churn classifier.
+
 ### 0z22. Package-Managed App Payload Directories Must Be Pruned On Upgrade If Builds Can Leave Unowned Files Behind
 
 **The Bug**: The AUR `slskdn-bin` package installs the entire app payload under `/usr/lib/slskd`, but older builds and manual/runtime copy flows left extra files there that pacman did not own. On the next package upgrade, pacman refused to install the new package with `failed to commit transaction (conflicting files)` because stale unowned files like `Microsoft.AspNetCore.StaticAssets.dll`, native runtime libraries, and compressed `wwwroot` assets were still present in `/usr/lib/slskd`. The repo also referenced an `install=slskd.install` hook file that no longer existed, so there was no package-script chance to clean the directory before upgrade.
