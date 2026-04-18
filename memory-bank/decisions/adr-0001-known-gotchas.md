@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z36. `AnonymityMode.Direct` Cannot Still Bootstrap Only Tor Or Circuit Building Will Fail Exactly Like A Missing Tor Proxy
+
+**The Bug**: Issue `#209` kept advancing from `DHT state changed to: Ready` and `DHT discovery found ... peers` straight into `Tor SOCKS proxy not available at 127.0.0.1:9050`, `No available anonymity transports found`, and `Circuit establishment failed - not all hops connected`. The root cause was that `AnonymityTransportSelector` treated `AnonymityMode.Direct` as if it should initialize the Tor transport, and `GetTransportPriorityOrder(...)` also prioritized `Tor` for direct mode. So the default direct configuration still depended on a local Tor SOCKS proxy even though no real direct transport existed in the selector at all.
+
+**Files Affected**:
+- `src/slskd/Common/Security/AnonymityTransportSelector.cs`
+- `src/slskd/Mesh/MeshCircuitBuilder.cs`
+- `tests/slskd.Tests.Unit/Mesh/Transport/AnonymityTransportSelectionTests.cs`
+
+**Wrong**:
+```text
+Treat `Direct` mode as a naming alias for "try Tor first and maybe fall back later" while never
+actually registering a usable direct transport. That makes circuit building fail as soon as Tor is
+not running, even though the logs and defaults say the node is in direct mode.
+```
+
+**Correct**:
+```text
+`AnonymityMode.Direct` must register and prioritize a real direct transport. A failed direct dial in
+that mode should fail as a direct connection attempt, not as "no anonymity transport available"
+because Tor is absent.
+```
+
+**Why This Keeps Happening**: The selector mixed two concepts: "anonymity transport selection" and "how circuit builder gets any stream at all." Because `Direct` was appended as a fallback token without a concrete implementation, the code looked like it supported direct mode while the runtime still hard-required Tor. The only reliable guard here is a focused test that reproduces the tester's exact path: DHT peers exist, Tor is absent, and direct mode must still choose a usable transport candidate.
+
 ### 0z35. Shell Command Substitution Inside `debian/rules` Needs `$$(` So `make` Does Not Eat It
 
 **The Bug**: While fixing the Jammy PPA path drift, we changed `packaging/debian/rules` to discover `libcoreclrtraceptprovider.so` dynamically with `tracept_provider=$(find ...)`. Under `make`, that expanded as a make variable reference instead of shell command substitution, so the staged DEB install always saw an empty `tracept_provider` and silently skipped the SONAME patch even when the file was present.
