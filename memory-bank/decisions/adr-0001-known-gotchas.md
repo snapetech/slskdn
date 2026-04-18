@@ -52,6 +52,25 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z35. Shell Command Substitution Inside `debian/rules` Needs `$$(` So `make` Does Not Eat It
+
+**The Bug**: While fixing the Jammy PPA path drift, we changed `packaging/debian/rules` to discover `libcoreclrtraceptprovider.so` dynamically with `tracept_provider=$(find ...)`. Under `make`, that expanded as a make variable reference instead of shell command substitution, so the staged DEB install always saw an empty `tracept_provider` and silently skipped the SONAME patch even when the file was present.
+
+**Files Affected**:
+- `packaging/debian/rules`
+
+**Wrong**:
+```make
+tracept_provider=$(find debian/slskdn/usr/lib/slskd -name libcoreclrtraceptprovider.so -print -quit); \
+```
+
+**Correct**:
+```make
+tracept_provider=$$(find debian/slskdn/usr/lib/slskd -name libcoreclrtraceptprovider.so -print -quit); \
+```
+
+**Why This Keeps Happening**: `debian/rules` is a makefile, not a plain shell script. Single `$(` means “expand a make function/variable now,” while `$$(` is what leaves `$(` intact for the shell inside the recipe. Packaging fixes that look right in shell syntax can be wrong once they are embedded in make recipes.
+
 ### 0z34. Standalone PPA/COPR/Linux Release Workflows Must Track The Main Release Toolchain And Bundle Layout
 
 **The Bug**: The Jammy PPA build for `0.24.5.slskdn.144` still failed after we fixed `patchelf` build-depends, because the standalone `release-ppa.yml` path had drifted behind the main release flow. It was still pinned to `.NET 8` and the Debian rules hard-coded `debian/slskdn/usr/lib/slskd/libcoreclrtraceptprovider.so`, even though these distro-packaging flows are repackaging prebuilt publish output whose exact runtime file layout can change when the toolchain or bundling strategy changes. Launchpad ended up trying to patch a file path that did not exist in the staged package tree.
