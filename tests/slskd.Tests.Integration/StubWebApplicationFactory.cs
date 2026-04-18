@@ -162,6 +162,7 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                         .AddApplicationPart(typeof(global::slskd.API.VirtualSoulfind.BridgeAdminController).Assembly)
                         .AddApplicationPart(typeof(SecurityController).Assembly)
                         .AddApplicationPart(typeof(ContentIdController).Assembly)
+                        .AddApplicationPart(typeof(global::slskd.Users.Notes.API.UserNotesController).Assembly)
                         .ConfigureApplicationPartManager(manager =>
                         {
                             // Exclude conflicting controllers - use JobsController instead
@@ -180,6 +181,9 @@ public class StubWebApplicationFactory : WebApplicationFactory<ProgramStub>
                     var discographyService = new StubDiscographyJobService();
                     var labelCrateService = new StubLabelCrateJobService();
 
+                    services.AddSingleton<global::slskd.Users.Notes.IUserNoteService>(_ => Mock.Of<global::slskd.Users.Notes.IUserNoteService>(service =>
+                        service.GetAllNotesAsync(It.IsAny<CancellationToken>()) ==
+                            Task.FromResult<IEnumerable<global::slskd.Users.Notes.UserNote>>(Array.Empty<global::slskd.Users.Notes.UserNote>())));
                     services.AddSingleton<IOptionsMonitor<OptionsModel>>(_ => new StaticOptionsMonitor<OptionsModel>(new OptionsModel
                     {
                         WarmCache = new global::slskd.WarmCacheOptions

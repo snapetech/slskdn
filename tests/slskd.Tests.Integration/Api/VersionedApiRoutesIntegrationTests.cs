@@ -56,4 +56,14 @@ public class VersionedApiRoutesIntegrationTests : IClassFixture<StubWebApplicati
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task UserNotesList_VersionedRoute_ShouldSucceed()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v0/users/notes");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }

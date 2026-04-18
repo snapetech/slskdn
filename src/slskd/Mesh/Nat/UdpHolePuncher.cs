@@ -112,7 +112,7 @@ public class UdpHolePuncher : IUdpHolePuncher
             var bound = (IPEndPoint)udp.Client.LocalEndPoint!;
 
             logger.LogInformation(
-                "[HolePunch] Completed in {Duration}ms - {Result} (Local: {Local})",
+                "[HolePunch] Completed in {Duration}ms - {Result} (Ephemeral local UDP socket: {Local})",
                 duration.TotalMilliseconds, success ? "SUCCESS" : "FAILED", bound);
 
             return new UdpHolePunchResult(success, bound, duration);

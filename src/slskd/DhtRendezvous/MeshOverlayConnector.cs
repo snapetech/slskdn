@@ -28,8 +28,6 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private readonly OverlayRateLimiter _rateLimiter;
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
-    private readonly Mesh.Nat.INatTraversalService _natTraversal;
-
     private int _pendingConnections;
     private long _successfulConnections;
     private long _failedConnections;
@@ -48,8 +46,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         CertificatePinStore pinStore,
         OverlayRateLimiter rateLimiter,
         OverlayBlocklist blocklist,
-        MeshNeighborRegistry registry,
-        Mesh.Nat.INatTraversalService natTraversal)
+        MeshNeighborRegistry registry)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
@@ -58,7 +55,6 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         _rateLimiter = rateLimiter;
         _blocklist = blocklist;
         _registry = registry;
-        _natTraversal = natTraversal;
     }
 
     public int PendingConnections => _pendingConnections;
@@ -122,25 +118,6 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         IPEndPoint endpoint,
         CancellationToken cancellationToken = default)
     {
-        // Best-effort NAT traversal pre-flight (UDP hole punch / relay keepalive)
-        try
-        {
-            var epStr = $"udp://{endpoint.Address}:{endpoint.Port}";
-            var natResult = await _natTraversal.ConnectAsync(endpoint.ToString(), new List<string> { epStr }, cancellationToken);
-            if (!natResult.Success)
-            {
-                _logger.LogDebug("NAT traversal pre-flight failed for {Endpoint}: {Reason}", endpoint, natResult.Reason);
-            }
-            else
-            {
-                _logger.LogDebug("NAT traversal pre-flight succeeded for {Endpoint} (relay={Relay})", endpoint, natResult.UsedRelay);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "NAT traversal pre-flight errored for {Endpoint}", endpoint);
-        }
-
         // Check if already connected
         if (_registry.IsConnectedTo(endpoint))
         {

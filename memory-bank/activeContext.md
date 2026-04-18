@@ -10,19 +10,18 @@
   2. Cut a fresh stable tag to replace the failed `build-main-0.24.5-slskdn.135` run.
   3. Monitor the replacement tag for COPR, Docker, and metadata-update success before closing out the release.
 
-## Update 2026-04-17 23:55:00Z
+## Update 2026-04-18 01:18:23Z
 
-- Current task: None. Issue `#209` follow-on runtime-noise regressions are fixed locally and validated.
+- Current task: None. The next round of issue `#209` follow-up fixes are implemented locally and validated.
 - Last activity:
-  - confirmed the tester's newest `#209` report is no longer about DHT bootstrap; the node is reaching `Ready`, announcing, and discovering peers
-  - fixed three follow-on runtime issues from that public-node state:
-    - classified `Connection reset by peer` as expected Soulseek peer/distributed network churn instead of `[FATAL]`
-    - taught the antiforgery token middleware/filter to clear stale cookies after reinstall/key-ring mismatch and reissue fresh tokens on safe requests
-    - downgraded corrupted-frame TLS garbage on the mesh overlay port to debug noise in `MeshOverlayServer`
-  - added focused regression coverage in `ProgramPathNormalizationTests`, `MeshOverlayServerTests`, and `CsrfPortScopedTokenIntegrationTests`
+  - inspected the newer `#209` tester logs after DHT bootstrap started succeeding and separated remaining failures from misleading noise
+  - fixed the real `GET /api/v0/users/notes` regression by advertising both API versions `0` and `1` on `UserNotesController`
+  - removed the mesh overlay connector's bogus UDP hole-punch preflight against DHT-discovered TCP overlay endpoints, which was producing guaranteed `FAILED` logs with ephemeral local UDP ports that looked like randomized listeners
+  - clarified hole-punch completion logs so operators can see the reported local port is an ephemeral UDP socket, not a configured listener port
+  - added focused versioned-route integration coverage for `/api/v0/users/notes`
 - Next steps:
-  1. Push the fix set when a new `#209` verification build is wanted.
-  2. If the tester still reports issues after this, focus on functional mesh connectivity or hole-punch behavior rather than the old bootstrap/token/logging noise.
+  1. Commit the code/test/docs fix set if the current validation remains green.
+  2. If the tester still reports zero overlay circuits after this, focus on real external reachability of overlay TCP `50305` and DHT UDP `50306` rather than the removed preflight noise.
 
 # Active Context
 

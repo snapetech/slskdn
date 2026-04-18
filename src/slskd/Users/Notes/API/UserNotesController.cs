@@ -29,6 +29,7 @@ namespace slskd.Users.Notes.API
     ///     Controller for managing user notes.
     /// </summary>
     [ApiController]
+    [ApiVersion("0")]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/users/notes")]
     [Authorize(Policy = AuthPolicy.Any)]

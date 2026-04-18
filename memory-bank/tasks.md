@@ -915,3 +915,7 @@
 - [x] Fix issue `#209` follow-on noise after DHT bootstrap succeeds
   - Status: done
   - Notes: Classified `Connection reset by peer` as expected Soulseek network churn, made safe requests clear and reissue stale antiforgery cookies after reinstall/key-ring changes, downgraded obvious non-overlay TLS garbage on the public mesh port to debug noise, and added focused unit/integration coverage for all three regressions.
+
+- [x] Fix issue `#209` follow-up route mismatch and bogus overlay hole-punch preflight
+  - Status: done
+  - Notes: Restored `GET /api/v0/users/notes` by versioning `UserNotesController` for `v0`, added integration coverage for that route, removed the mesh connector's fake UDP hole-punch preflight against DHT-discovered TCP overlay endpoints, and clarified that hole-punch logs report ephemeral local UDP sockets rather than randomized configured listener ports.

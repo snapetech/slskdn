@@ -6198,3 +6198,19 @@ Code quality improvements were completed as part of Option A:
   - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~CsrfPortScopedTokenIntegrationTests|FullyQualifiedName~MeshSearchLoopbackTests" -v minimal`
   - `bash ./bin/lint`
   - `git diff --check`
+
+## 2026-04-18 01:18:23Z
+
+- Investigated the next round of issue `#209` tester feedback after DHT bootstrap started succeeding and split the remaining symptoms into one real API bug and one misleading overlay-health signal:
+  - `GET /api/v0/users/notes` was genuinely broken because `UserNotesController` only advertised API version `1` while the Web UI client requests `v0`
+  - the mesh overlay connector was pre-emptively calling UDP NAT traversal against DHT-discovered TCP overlay endpoints, creating guaranteed `[HolePunch] ... FAILED` noise with ephemeral local UDP ports that looked like random listener ports
+- Fixed both locally:
+  - added API version `0` support to `UserNotesController`
+  - added a focused integration test proving `/api/v0/users/notes` resolves again
+  - removed the bogus UDP hole-punch preflight from `MeshOverlayConnector`
+  - clarified `UdpHolePuncher` completion logs so the reported local port is explicitly described as an ephemeral UDP socket
+- Validation:
+  - `dotnet build src/slskd/slskd.csproj -v minimal`
+  - `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~VersionedApiRoutesIntegrationTests" -v minimal`
+  - `bash ./bin/lint`
+  - `git diff --check`
