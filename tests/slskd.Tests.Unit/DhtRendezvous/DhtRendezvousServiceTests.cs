@@ -19,7 +19,7 @@ using Xunit;
 public class DhtRendezvousServiceTests
 {
     [Fact]
-    public void OnPeersFound_WhenRendezvousPeersAreDiscovered_PopulatesCircuitPeerInventoryImmediately()
+    public void OnPeersFound_WhenRendezvousPeersAreDiscovered_TracksUnverifiedCandidateWithoutClaimingCircuitCapability()
     {
         var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
         var connector = new Mock<IMeshOverlayConnector>();
@@ -43,12 +43,14 @@ public class DhtRendezvousServiceTests
         Assert.NotNull(peer);
         Assert.Equal(1, stats.TotalPeers);
         Assert.Equal(1, stats.ActivePeers);
-        Assert.Equal(1, stats.OnionRoutingPeers);
-        Assert.Equal(IPAddress.Parse("203.0.113.10"), peer!.GetBestAddress().Address);
+        Assert.Equal(0, stats.OnionRoutingPeers);
+        Assert.Equal("dht-discovered", peer!.Version);
+        Assert.False(peer.SupportsOnionRouting);
+        Assert.Equal(IPAddress.Parse("203.0.113.10"), peer.GetBestAddress().Address);
     }
 
     [Fact]
-    public async Task OnPeersFound_WhenImmediateOverlayConnectFails_PeerStillRemainsAvailableForCircuitBuilding()
+    public async Task OnPeersFound_WhenImmediateOverlayConnectFails_PeerRemainsTrackedButNotCircuitCapable()
     {
         var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
         var connector = new Mock<IMeshOverlayConnector>();
@@ -68,9 +70,12 @@ public class DhtRendezvousServiceTests
         await Task.Delay(100);
 
         var circuitPeers = await peerManager.GetCircuitPeersAsync();
+        var peer = peerManager.GetPeer("203.0.113.11:50305");
 
-        Assert.Single(circuitPeers);
-        Assert.Equal("203.0.113.11:50305", circuitPeers[0].PeerId);
+        Assert.Empty(circuitPeers);
+        Assert.NotNull(peer);
+        Assert.Equal("dht-discovered", peer!.Version);
+        Assert.False(peer.SupportsOnionRouting);
     }
 
     private static void InvokeOnPeersFound(DhtRendezvousService service, PeersFoundEventArgs eventArgs)
@@ -79,6 +84,33 @@ public class DhtRendezvousServiceTests
             ?? throw new InvalidOperationException("OnPeersFound was not found.");
 
         method.Invoke(service, new object?[] { null, eventArgs });
+    }
+
+    [Fact]
+    public async Task OnPeersFound_WhenOverlayConnectSucceeds_PeerBecomesCircuitCapable()
+    {
+        var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+        connector
+            .Setup(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()))
+            .ReturnsAsync(1);
+
+        var service = new DhtRendezvousService(
+            NullLogger<DhtRendezvousService>.Instance,
+            Mock.Of<IMeshOverlayServer>(),
+            connector.Object,
+            new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
+            peerManager,
+            new DhtRendezvousOptions { Enabled = true });
+
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.12:50305"));
+        await Task.Delay(100);
+
+        var circuitPeers = await peerManager.GetCircuitPeersAsync();
+        var peer = Assert.Single(circuitPeers);
+        Assert.Equal("203.0.113.12:50305", peer.PeerId);
+        Assert.True(peer.SupportsOnionRouting);
+        Assert.Equal("overlay-verified", peer.Version);
     }
 
     private static PeersFoundEventArgs CreatePeersFoundEventArgs(string connectionUri)

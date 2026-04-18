@@ -266,3 +266,15 @@ dotnet test
 - Next steps:
   1. Commit the pin-rotation fix set if the worktree stays clean.
   2. If another `#209` symptom appears, reproduce it on `kspls0` first and add the missing host-backed smoke before cutting another build.
+
+
+## Update 2026-04-18 17:55:00Z
+
+- Current task: None. The next issue `#209` cleanup pass is implemented locally and validated on `kspls0`.
+- Last activity:
+  - proved the live node was still overstating peer health after DHT discovery by counting raw DHT endpoints as onion-capable peers before overlay verification
+  - changed DHT rendezvous publishing so discovered endpoints stay as `dht-discovered` candidates until a real overlay connect succeeds, and updated focused DHT rendezvous tests to cover candidate, failed-connect, and verified-connect states
+  - redeployed the cleanup build to `kspls0` and verified that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while `/api/v0/dht/status` still shows the raw discovered candidate count separately
+- Next steps:
+  1. Push this peer-stats cleanup if you want it in the next release.
+  2. If `#209` continues, the next investigation should focus on why the discovered candidates are not handshaking, not on inflated peer counters.

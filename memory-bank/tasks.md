@@ -975,3 +975,7 @@
 - [x] Fix issue `#209` overlay pin-mismatch recovery so stale TOFU pins do not partition the mesh
   - Status: done
   - Notes: Reproduced the live failure on `kspls0` with a stale stored pin for `minimus7`, proved the old behavior hard-blocked the peer after a normal cert rotation, changed inbound and outbound overlay handshakes to rotate stored TOFU pins instead of auto-banning on mismatch, added focused `CertificatePinStoreTests`, and validated on `kspls0` that the stale-pin path now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same run.
+
+- [x] Fix issue `#209` peer stats so DHT candidates do not masquerade as verified onion-capable peers
+  - Status: done
+  - Notes: Stopped marking DHT-discovered endpoints as `supportsOnionRouting=true` before any overlay handshake succeeds, updated DHT rendezvous tests so failed immediate connects stay tracked as `dht-discovered` candidates instead of circuit-capable peers, and validated on `kspls0` that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while raw DHT candidates are still visible separately.

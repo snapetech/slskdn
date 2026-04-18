@@ -512,7 +512,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             peerId,
             new List<IPEndPoint> { endpoint },
             version: "dht-discovered",
-            supportsOnionRouting: true);
+            supportsOnionRouting: false);
     }
 
     private async Task TryConnectToPeerAsync(string peerId, IPEndPoint endpoint)
@@ -527,6 +527,10 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             {
                 Interlocked.Increment(ref _totalConnectionsSucceeded);
                 var latencyMs = Math.Max(1, (int)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds);
+                _peerManager.UpdatePeerInfo(
+                    peerId,
+                    version: "overlay-verified",
+                    supportsOnionRouting: true);
                 _peerManager.RecordConnectionSuccess(peerId, latencyMs);
                 return;
             }
