@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z29. Clean DEB/RPM Installs Need Explicit ICU Runtime Dependencies Because .NET Loads It Dynamically
+
+**The Bug**: Clean Ubuntu 24.04 and Fedora 43 package installs completed, but `/usr/bin/slskd --version` immediately failed with `Couldn't find a valid ICU package installed on the system.` The bundled apphost does not record ICU as a normal ELF dependency, so DEB/RPM metadata generation never pulled it in automatically.
+
+**Files Affected**:
+- `packaging/debian/control`
+- `packaging/rpm/slskdn.spec`
+
+**Wrong**:
+```text
+Assume a self-contained .NET bundle will automatically generate package-manager dependencies for
+runtime libraries that it dlopens at startup, especially ICU/globalization support.
+```
+
+**Correct**:
+```text
+For distro packages built from the published bundle, declare ICU explicitly in package metadata.
+Clean-package smoke must include actually running `/usr/bin/slskd --version`, not just verifying
+that the package installed.
+```
+
+**Why This Keeps Happening**: Package managers only see normal link-time dependencies by default, but .NET discovers ICU dynamically at runtime. A package can install perfectly and still be dead on first launch unless ICU is listed explicitly.
+
 ### 0z28. RPM Packages Cannot Mix `%{_libdir}` With A Hard-Coded `/usr/lib/slskd` Service Path
 
 **The Bug**: After fixing the Fedora `liblttng-ust` SONAME issue, the RPM installed successfully but dropped the bundle into `%{_libdir}/slskd` (`/usr/lib64/slskd` on x86_64) while the shared `slskd.service` still executed `/usr/lib/slskd/slskd`. The package looked installed, but the systemd unit pointed at a path that did not exist on Fedora.
