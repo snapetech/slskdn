@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z22. Package-Managed App Payload Directories Must Be Pruned On Upgrade If Builds Can Leave Unowned Files Behind
+
+**The Bug**: The AUR `slskdn-bin` package installs the entire app payload under `/usr/lib/slskd`, but older builds and manual/runtime copy flows left extra files there that pacman did not own. On the next package upgrade, pacman refused to install the new package with `failed to commit transaction (conflicting files)` because stale unowned files like `Microsoft.AspNetCore.StaticAssets.dll`, native runtime libraries, and compressed `wwwroot` assets were still present in `/usr/lib/slskd`. The repo also referenced an `install=slskd.install` hook file that no longer existed, so there was no package-script chance to clean the directory before upgrade.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-dev`
+- `packaging/aur/slskd.install`
+
+**Wrong**:
+```text
+Treat `/usr/lib/slskd` like a normal package payload directory even though release/runtime copy flows can leave extra unowned files behind, and assume pacman upgrades will overwrite the directory cleanly without a package hook.
+```
+
+**Correct**:
+```text
+Ship a real pacman install script and prune the managed app payload directory before upgrade/reinstall so stale unowned binaries and compressed asset files cannot block the next package install. Keep mutable config/data outside `/usr/lib/slskd`.
+```
+
+**Why This Keeps Happening**: App bundles install hundreds of files under one directory, and release/runtime packaging changes can add or remove files between versions. Pacman only replaces files it owns; anything left behind by older builds, manual deploys, or missing package metadata becomes a hard conflict later unless the package explicitly cleans that managed application directory during upgrade.
+
 ### 0z21. Background Enqueue Tasks Must Finish Before Their Shared Semaphore Goes Out Of Scope
 
 **The Bug**: `DownloadService.EnqueueAsync(...)` created a per-batch `SemaphoreSlim` with `using var enqueueSemaphore`, then spawned background enqueue tasks that released that semaphore in their `finally` blocks. The method only waited for the transfer to reach `Queued, Remotely` and then moved on, so the scope could end and dispose `enqueueSemaphore` while those background tasks were still unwinding. On the live host this surfaced as `ObjectDisposedException: Cannot access a disposed object. Object name: 'System.Threading.SemaphoreSlim'.` immediately after downloads entered `Queued, Remotely`.
