@@ -6822,3 +6822,12 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 **How to prevent it:** Full-instance test config must explicitly set or disable every listener that can bind a socket: HTTP, HTTPS, overlay TCP, DHT UDP, UDP overlay, and QUIC/data overlay. Do not rely on product defaults when launching subprocesses on a developer machine with another instance already running.
 
+
+### 0z52. Full-Instance Harness YAML Must Use The Binder Section Name `dhtRendezvous`, Not The Short Alias `dht`
+
+**What went wrong:** The two-instance mesh smoke wrote a top-level `dht:` section because the human-facing example config documents DHT that way. In the full subprocess startup path, that left the child process on the default overlay/DHT ports (`50305`/`50306`) even though the HTTP port from the same file was honored. The result was a fake mesh failure caused by both instances accidentally sharing the same default DHT overlay listener.
+
+**Why it happened:** The harness assumed the example/YAML alias and the runtime configuration binder were interchangeable. In this code path the binder key that actually drives `OptionsAtStartup.DhtRendezvous` is `dhtRendezvous`, so the short alias was ignored for the full-process child.
+
+**How to prevent it:** When generating full-instance test config, use the exact runtime binder section name that the subprocess honors. Do not assume the example-file alias and the startup binder key are identical without proving it in a live child-process probe first.
+
