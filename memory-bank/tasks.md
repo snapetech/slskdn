@@ -955,3 +955,7 @@
 - [x] **fix (2026-04-18):** Fix `packaging/linux/install-from-release.sh` cleanup so successful installs do not exit nonzero from an out-of-scope `EXIT` trap, and re-smoke the published raw Linux release installer on a clean Ubuntu container.
 
 - [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.
+
+- [x] Fix issue `#209` root split between DHT discovery, circuit peer inventory, and stale antiforgery recovery
+  - Status: done
+  - Notes: DHT-discovered rendezvous peers now publish into `IMeshPeerManager` immediately so circuit maintenance sees nonzero onion-capable peers even before overlay neighbor registration completes, connection success/failure updates now refine those peer records, and stale antiforgery cookie recovery now retries on any key-ring/decryption exception shape instead of only `AntiforgeryValidationException`.

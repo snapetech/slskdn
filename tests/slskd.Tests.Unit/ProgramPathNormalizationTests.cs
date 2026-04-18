@@ -243,6 +243,30 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void TryGetAndStoreAntiforgeryTokens_Retries_AfterClearingDirectCryptographicFailure()
+    {
+        var port = GetProgramValue<OptionsAtStartup>("OptionsAtStartup").Web.Port;
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "https";
+        context.Request.Path = "/api/v0/session/enabled";
+        context.Request.Headers.Cookie = $"XSRF-COOKIE-{port}=stale-cookie; XSRF-TOKEN-{port}=stale-request";
+
+        var expectedTokens = new AntiforgeryTokenSet("fresh-request", "fresh-cookie", "X-CSRF-TOKEN", $"XSRF-COOKIE-{port}");
+        var antiforgery = new Mock<IAntiforgery>();
+        antiforgery
+            .SetupSequence(mock => mock.GetAndStoreTokens(context))
+            .Throws(new CryptographicException("The key {abc} was not found in the key ring."))
+            .Returns(expectedTokens);
+
+        var tokens = Program.TryGetAndStoreAntiforgeryTokens(context, antiforgery.Object);
+
+        Assert.Same(expectedTokens, tokens);
+        antiforgery.Verify(mock => mock.GetAndStoreTokens(context), Times.Exactly(2));
+        Assert.Contains(context.Response.Headers["Set-Cookie"], value => value.Contains($"XSRF-COOKIE-{port}=;", StringComparison.Ordinal));
+        Assert.Contains(context.Response.Headers["Set-Cookie"], value => value.Contains($"XSRF-TOKEN-{port}=;", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void TryGetAndStoreAntiforgeryTokens_Retries_AfterClearingStaleCookies()
     {
         var port = GetProgramValue<OptionsAtStartup>("OptionsAtStartup").Web.Port;

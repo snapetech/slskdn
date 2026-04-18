@@ -4058,7 +4058,7 @@ namespace slskd
             {
                 return antiforgery.GetAndStoreTokens(context);
             }
-            catch (Microsoft.AspNetCore.Antiforgery.AntiforgeryValidationException ex) when (IsStaleAntiforgeryTokenException(ex))
+            catch (Exception ex) when (IsStaleAntiforgeryTokenException(ex))
             {
                 ClearKnownAntiforgeryCookies(context);
                 Log.Warning("[CSRF Middleware] Cleared stale antiforgery cookies for {Path} after key-ring mismatch", context.Request.Path);

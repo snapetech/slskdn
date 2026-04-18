@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using MonoTorrent.Dht;
 using Moq;
 using slskd.DhtRendezvous;
+using slskd.Mesh;
 using slskd.HashDb.Optimization;
 using slskd.Mesh.Realm;
 using slskd.VirtualSoulfind.DisasterMode;
@@ -93,6 +94,7 @@ public class HostedServiceLifecycleTests
             Mock.Of<IMeshOverlayServer>(),
             Mock.Of<IMeshOverlayConnector>(),
             new MeshNeighborRegistry(Mock.Of<ILogger<MeshNeighborRegistry>>()),
+            Mock.Of<IMeshPeerManager>(),
             new DhtRendezvousOptions
             {
                 Enabled = true,
@@ -116,6 +118,7 @@ public class HostedServiceLifecycleTests
             Mock.Of<IMeshOverlayServer>(),
             Mock.Of<IMeshOverlayConnector>(),
             new MeshNeighborRegistry(Mock.Of<ILogger<MeshNeighborRegistry>>()),
+            Mock.Of<IMeshPeerManager>(),
             new DhtRendezvousOptions
             {
                 Enabled = true,

@@ -6318,3 +6318,10 @@ Code quality improvements were completed as part of Option A:
 - Investigated the Jammy PPA failure for `slskdn 0.24.5.slskdn.141-1ppa...` using the Launchpad build log and confirmed the failure was not ICU or runtime packaging: `debian/rules` now invokes `patchelf`, but `packaging/debian/control` did not declare `patchelf` in `Build-Depends`, so Launchpad never installed it.
 - Added the packaging gotcha to `ADR-0001`, then updated the Debian source metadata to `Build-Depends: debhelper-compat (= 13), patchelf`.
 - Reproduced the Launchpad-style DEB build locally in a clean `ubuntu:22.04` container by assembling the same source tree shape used by `release-ppa.yml` (published Linux payload under `usr/lib/slskd` plus `packaging/debian` and the AUR service/config/sysusers files). The Jammy `dpkg-buildpackage -b` run now completes successfully.
+
+## 2026-04-18 11:20:00Z
+
+- Re-investigated issue `#209` from the latest tester logs and separated the remaining functional bug from the noise: DHT bootstrap/discovery was already healthy, but `DhtRendezvousService` only cached discovered endpoints and fired opportunistic overlay connects, while `CircuitMaintenanceService` still read peers exclusively from `IMeshPeerManager`.
+- Fixed that split-brain by publishing each DHT-discovered overlay endpoint into `IMeshPeerManager` immediately as an onion-capable peer candidate and then updating its quality on connection success/failure, which closes the exact `Ready + peers found + 0 circuits / 0 total peers` gap from the tester report.
+- Tightened stale antiforgery recovery so `TryGetAndStoreAntiforgeryTokens(...)` retries after any flattened key-ring/decryption exception shape, not just `AntiforgeryValidationException`, which should stop repeated stale-cookie decrypt warnings after reinstall/key rotation paths that surface as raw `CryptographicException`.
+- Added focused unit coverage for both regressions in `DhtRendezvousServiceTests` and `ProgramPathNormalizationTests`, and reran the DHT/circuit/hosted-service/security unit slices plus `./bin/lint` and `git diff --check`.

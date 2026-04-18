@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Docker and the published raw Linux installer are now smoke-tested; the remaining unsmoked release paths from this machine are Flatpak, Snap, Homebrew, Chocolatey, Winget, Helm, and Proxmox LXC.
+- **Current Task**: None. Issue `#209` has a new root-level fix staged locally: DHT-discovered peers now feed the circuit peer inventory directly, and stale antiforgery token recovery now catches the full key-ring/decryption failure family instead of one exception type.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
@@ -546,6 +546,18 @@ dotnet test
   1. Push the installer trap fix if you want it included in the next release.
   2. Use a machine with `flatpak-builder`, `snapcraft`, or `brew` available to add real install-smokes for those remaining ship methods.
 
+
+## Update 2026-04-18 11:20:00Z
+
+- Current task: None. The latest issue `#209` root-cause follow-up is implemented locally and validated.
+- Last activity:
+  - traced the newest `#209` tester state past successful DHT bootstrap into a real inventory split: `DhtRendezvousService` discovered peers and attempted overlay connects, but never populated `IMeshPeerManager`, leaving `CircuitMaintenanceService` and `MeshCircuitBuilder` at `0 total peers` even when DHT had already found candidates
+  - fixed that split by publishing DHT-discovered overlay endpoints into `IMeshPeerManager` immediately as onion-capable peer candidates and recording connection success/failure back onto the same peer records
+  - broadened stale antiforgery token recovery so key-ring/decryption mismatches surfaced as raw `CryptographicException` (or other wrapped exception shapes) still clear the known cookies and retry token minting once
+  - added focused unit coverage for both regressions and reran the DHT/circuit/hosted-service/security slices plus `./bin/lint`
+- Next steps:
+  1. Push the current fix set and cut a new build if you want the latest `#209` root fix in a tester-facing release.
+  2. If the tester still reports trouble after this build, inspect live overlay connection success/failure rates and remote peer compatibility rather than DHT bootstrap or peer inventory wiring.
 
 ## Update 2026-04-18 10:05:00Z
 

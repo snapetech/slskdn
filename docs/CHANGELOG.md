@@ -24,6 +24,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ### Fixed
 
+- Fixed the current root cause behind the latest issue `#209` reports: DHT-discovered rendezvous peers now publish into `IMeshPeerManager` immediately instead of only triggering a one-shot overlay connect attempt, so circuit maintenance can see real onion-capable peer candidates as soon as DHT discovery succeeds. Stale antiforgery cookie recovery now also retries on any key-ring/decryption exception shape, not just `AntiforgeryValidationException`, which stops repeated stale-token decrypt spam after reinstall or key rotation.
+
 - Debian/PPA source packaging now declares `patchelf` in `Build-Depends`, so Launchpad installs the tool required by `debian/rules` when patching the bundled .NET runtime during package assembly.
 
 - Added explicit ICU runtime dependencies to the DEB and RPM packages so clean Ubuntu/Fedora installs can actually launch `slskd` instead of dying on first start with .NET globalization errors.

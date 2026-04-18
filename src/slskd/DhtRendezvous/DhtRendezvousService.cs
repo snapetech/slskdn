@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using MonoTorrent;
 using MonoTorrent.Connections.Dht;
 using MonoTorrent.Dht;
+using slskd.Mesh;
 
 /// <summary>
 /// Service for discovering and connecting to mesh peers via BitTorrent DHT rendezvous.
@@ -35,6 +36,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private readonly IMeshOverlayServer _overlayServer;
     private readonly IMeshOverlayConnector _overlayConnector;
     private readonly MeshNeighborRegistry _registry;
+    private readonly IMeshPeerManager _peerManager;
     private readonly DhtRendezvousOptions _options;
 
     // MonoTorrent DHT components
@@ -64,12 +66,14 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         IMeshOverlayServer overlayServer,
         IMeshOverlayConnector overlayConnector,
         MeshNeighborRegistry registry,
+        IMeshPeerManager peerManager,
         DhtRendezvousOptions options)
     {
         _logger = logger;
         _overlayServer = overlayServer;
         _overlayConnector = overlayConnector;
         _registry = registry;
+        _peerManager = peerManager;
         _options = options;
     }
 
@@ -485,8 +489,14 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                     Interlocked.Increment(ref _totalPeersDiscovered);
                     _logger.LogDebug("Discovered new mesh peer: {Endpoint}", endpoint);
 
+                    PublishDiscoveredPeer(endpointKey, endpoint);
+
                     // Try to connect asynchronously
-                    _ = TryConnectToPeerAsync(endpoint);
+                    _ = TryConnectToPeerAsync(endpointKey, endpoint);
+                }
+                else
+                {
+                    PublishDiscoveredPeer(endpointKey, endpoint);
                 }
             }
             catch (Exception ex)
@@ -496,8 +506,19 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         }
     }
 
-    private async Task TryConnectToPeerAsync(IPEndPoint endpoint)
+    private void PublishDiscoveredPeer(string peerId, IPEndPoint endpoint)
     {
+        _peerManager.UpdatePeerInfo(
+            peerId,
+            new List<IPEndPoint> { endpoint },
+            version: "dht-discovered",
+            supportsOnionRouting: true);
+    }
+
+    private async Task TryConnectToPeerAsync(string peerId, IPEndPoint endpoint)
+    {
+        var startedAt = DateTimeOffset.UtcNow;
+
         try
         {
             Interlocked.Increment(ref _totalConnectionsAttempted);
@@ -505,10 +526,16 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             if (connected > 0)
             {
                 Interlocked.Increment(ref _totalConnectionsSucceeded);
+                var latencyMs = Math.Max(1, (int)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds);
+                _peerManager.RecordConnectionSuccess(peerId, latencyMs);
+                return;
             }
+
+            _peerManager.RecordConnectionFailure(peerId);
         }
         catch (Exception ex)
         {
+            _peerManager.RecordConnectionFailure(peerId);
             _logger.LogDebug(ex, "Failed to connect to discovered peer {Endpoint}", endpoint);
         }
     }
