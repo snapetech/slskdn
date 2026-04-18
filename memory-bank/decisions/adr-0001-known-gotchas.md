@@ -76,6 +76,25 @@ ASP.NET has already logged the decrypt failure.
 
 **Why This Keeps Happening**: It is easy to think “we catch the stale-cookie exception, so we fixed it,” but antiforgery token deserialization and logging happen inside ASP.NET before the exception reaches our code. That means post-failure cleanup can repair browser state while still leaving the exact noisy log spam the user reported. The only way to stop that path is to prevent the framework from seeing the stale cookie on the minting request in the first place.
 
+### 0z41. Writing `cert_pins.json` In-Place Can Corrupt The Whole TOFU Store On Crash Or Concurrent Interruption
+
+**The Bug**: `CertificatePinStore.Save()` previously serialized the pin set straight to `cert_pins.json` with `File.WriteAllText(...)`. If the process crashed or the write was interrupted mid-update, the file could be left truncated or partially written. On the next startup, `Load()` would treat the malformed JSON as unreadable and effectively drop every pin, degrading TOFU pinning into first-use-on-every-restart.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/CertificateManager.cs`
+
+**Wrong**:
+```text
+Rewrite the live pin store file in place and assume the full JSON payload always reaches disk atomically.
+```
+
+**Correct**:
+```text
+Write the serialized pins to a sibling temp file, flush it to disk, and atomically rename it over the real `cert_pins.json`. Clean up the temp file on failure.
+```
+
+**Why This Keeps Happening**: Small JSON stores look harmless, so it is easy to treat them like config writes instead of durability-sensitive identity state. But the pin store is part of overlay identity continuity. Once it is corrupted, the node forgets every peer pin and starts re-learning trust from scratch.
+
 ### 0z40. DHT-Discovered Endpoints Cannot Be Counted As Onion-Capable Peers Before An Overlay Handshake Proves Them
 
 **The Bug**: While validating issue `#209` on `kspls0`, `Circuit maintenance` reported `11 total peers, 11 onion-capable` even though live overlay stats still showed `successfulConnections = 1` and `activeMeshConnections = 0`. The cause was `DhtRendezvousService.PublishDiscoveredPeer(...)`: it inserted every DHT-discovered endpoint into `IMeshPeerManager` with `supportsOnionRouting: true` immediately, before any overlay handshake succeeded.
