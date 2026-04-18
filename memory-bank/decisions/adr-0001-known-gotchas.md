@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z27. Linux Package Builds Must Patch .NET's Old liblttng-ust SONAME Before Shipping Fedora/RPM Artifacts
+
+**The Bug**: The published Linux glibc bundle still contains `libcoreclrtraceptprovider.so` linked against `liblttng-ust.so.0`. Fedora 43 provides `liblttng-ust.so.1`, so the generated RPM ended up with an unsatisfied auto-detected dependency and `dnf` refused to install it on a clean system with `nothing provides liblttng-ust.so.0()(64bit)`.
+
+**Files Affected**:
+- `packaging/rpm/slskdn.spec`
+- `packaging/debian/rules`
+- `.github/workflows/release-packages.yml`
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```text
+Assume the published Linux zip is package-manager ready as-is on every glibc distro and
+ship it into RPM/DEB builds without the same SONAME patching we already apply in Nix.
+```
+
+**Correct**:
+```text
+Before building Linux distro packages from the published bundle, patch
+`libcoreclrtraceptprovider.so` to replace `liblttng-ust.so.0` with `liblttng-ust.so.1`.
+Install-time package smoke on Fedora should pass on a clean host before trusting RPM/COPR.
+```
+
+**Why This Keeps Happening**: The binary zip looks runnable on Ubuntu-like systems where the bundled runtime otherwise works, so it is easy to forget that RPM dependency scanning sees the old SONAME directly. We already encoded the fix in `flake.nix`; any distro package path that repackages the same zip must apply the same patch or Fedora-family installs will fail before users ever start the service.
+
 ### 0z26. Pacman File Conflicts Are Checked Before AUR pre_upgrade Scriptlets, So A Loose Root App Bundle Cannot Repair Its Own Upgrade Path
 
 **The Bug**: `slskdn-bin` tried to solve stale `/usr/lib/slskd` file conflicts with a `slskd.install` `pre_upgrade()` cleanup, but pacman checks filesystem conflicts before it runs that scriptlet. On a real `0.24.5.slskdn.129 -> 0.24.5.slskdn.140` upgrade, the package still aborted with `failed to commit transaction (conflicting files)` because unmanaged runtime DLLs and compressed web assets already existed directly under `/usr/lib/slskd`.
