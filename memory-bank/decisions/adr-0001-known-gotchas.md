@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z42. Overlay Connector Stats That Only Count Success/Failure Hide The Actual Failing Layer
+
+**The Bug**: While validating issue `#209` on `kspls0`, `/api/v0/overlay/stats` only exposed aggregate `successfulConnections` and `failedConnections`. That made the live system look like “overlay is broken” even after our inbound TLS/HELLO path was proven healthy, because the stats could not distinguish `connect timeout`, `no route`, `TCP refused`, `TLS EOF`, or protocol-handshake failures. We kept reaching for broad fixes because the product diagnostics were too coarse to tell whether the current failure was ours or the remote candidate's.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnectorStats.cs`
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+
+**Wrong**:
+```text
+Track only "successful" and "failed" outbound overlay connections and expect operators to infer the
+real failure layer from raw debug logs or manual probes.
+```
+
+**Correct**:
+```text
+Classify outbound overlay failures at the connector boundary and expose reason counts in the API.
+At minimum, distinguish reachability failures from TLS failures and protocol-handshake failures so
+live diagnostics can tell whether the current problem is local, remote, or just bad DHT candidates.
+```
+
+**Why This Keeps Happening**: Aggregate failure counters are enough for happy-path dashboards, but they are not enough for live mesh triage. Without typed failure reasons, every new report looks like "maybe the fix didn't work" even when the remaining problem is a different layer entirely. The connector must turn exception shapes into stable operational categories, or we will keep shipping blind.
+
 ### 0z37. Clearing Stale Antiforgery Cookies After `GetAndStoreTokens()` Is Too Late To Stop Framework Log Spam
 
 **The Bug**: Issue `#209` kept showing repeated `An exception was thrown while deserializing the token` / `The antiforgery token could not be decrypted` errors even after we added stale-cookie cleanup and retry logic. The real problem was ordering: on safe GET requests we still let `IAntiforgery.GetAndStoreTokens()` read the incoming stale `XSRF-COOKIE-*` first, and ASP.NET logged the decryption failure inside `DefaultAntiforgery.GetCookieTokenDoesNotThrow(...)` before our catch block could clear and replace the cookies.
