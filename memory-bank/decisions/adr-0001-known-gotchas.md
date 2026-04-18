@@ -76,6 +76,27 @@ ASP.NET has already logged the decrypt failure.
 
 **Why This Keeps Happening**: It is easy to think “we catch the stale-cookie exception, so we fixed it,” but antiforgery token deserialization and logging happen inside ASP.NET before the exception reaches our code. That means post-failure cleanup can repair browser state while still leaving the exact noisy log spam the user reported. The only way to stop that path is to prevent the framework from seeing the stale cookie on the minting request in the first place.
 
+### 0z40. DHT-Discovered Endpoints Cannot Be Counted As Onion-Capable Peers Before An Overlay Handshake Proves Them
+
+**The Bug**: While validating issue `#209` on `kspls0`, `Circuit maintenance` reported `11 total peers, 11 onion-capable` even though live overlay stats still showed `successfulConnections = 1` and `activeMeshConnections = 0`. The cause was `DhtRendezvousService.PublishDiscoveredPeer(...)`: it inserted every DHT-discovered endpoint into `IMeshPeerManager` with `supportsOnionRouting: true` immediately, before any overlay handshake succeeded.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `src/slskd/Mesh/MeshPeerManager.cs`
+- `src/slskd/Mesh/CircuitMaintenanceService.cs`
+
+**Wrong**:
+```text
+Treat every DHT-discovered rendezvous endpoint as an onion-capable mesh peer the moment it is discovered.
+```
+
+**Correct**:
+```text
+Track DHT-discovered endpoints as unverified candidates first. Only mark a peer onion-capable after a successful overlay connect or a live neighbor registration proves it actually speaks the overlay protocol.
+```
+
+**Why This Keeps Happening**: DHT discovery and overlay verification are separate stages, but the current peer-manager model only has one `SupportsOnionRouting` bit. It is tempting to set that bit early so circuit code can “see” candidates, but that makes peer stats, circuit-maintenance logs, and operator troubleshooting overstate reality. Candidate discovery and verified overlay capability must stay distinct.
+
 ### 0z39. Auto-Banning Peers On Overlay Certificate Pin Mismatch Can Partition The Mesh After Normal Cert Rotation
 
 **The Bug**: While live-testing issue `#209` on `kspls0`, DHT discovery found real peers and at least one real slskdn overlay endpoint, but the node still never formed a neighbor because `CertificatePinStore` had a stale pin for `minimus7`. The connector treated the mismatch as a possible MITM, blocked that username for an hour, and stopped trying. Clearing the stale pin immediately produced the first successful overlay neighbor.
