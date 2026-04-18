@@ -31,6 +31,11 @@
  - Priority: P2
  - Notes: The April 14 dependency/release chore pass restored green release-gate validation, but a broad `dotnet test -v minimal` run in this environment still stops returning output after the unit suite reports passing counts. The release gate and focused smoke slices pass, so this remains a separate harness/cleanup problem to isolate before relying on the broad solution-level test command as a hard release signal.
 
+- [ ] **bug**: Filter or deprioritize non-overlay DHT candidates before repeated overlay retries.
+ - Status: pending
+ - Priority: P1
+ - Notes: Live `kspls0` validation on 2026-04-18 now exposes classified outbound overlay failures. The current post-fix state is mostly `connectTimeout` plus occasional `noRoute`, and the discovered candidate set is still heavy on likely-bad `:50306` endpoints. Follow up by deciding whether to suppress obviously non-overlay candidates, add longer-lived backoff, or enrich DHT metadata so the connector does not keep retrying junk endpoints.
+
 - [x] **chore**: Add a reproduce-first verification workflow for tester-reported bugfix releases.
  - Status: completed (2026-04-14)
  - Priority: P1

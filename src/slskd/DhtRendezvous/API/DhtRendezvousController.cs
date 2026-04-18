@@ -184,6 +184,19 @@ public class DhtRendezvousController : ControllerBase
                 TotalSlskdnPeers = slskdnPeersWithVersion + slskdnPeersWithoutVersion,
                 SlskdnPeersWithVersion = slskdnPeersWithVersion,
                 SlskdnPeersWithoutVersion = slskdnPeersWithoutVersion,
+                FailureReasons = new ConnectorFailureReasonStatsResponse
+                {
+                    ConnectTimeouts = connectorStats.FailureReasons.ConnectTimeouts,
+                    NoRouteFailures = connectorStats.FailureReasons.NoRouteFailures,
+                    ConnectionRefusedFailures = connectorStats.FailureReasons.ConnectionRefusedFailures,
+                    ConnectionResetFailures = connectorStats.FailureReasons.ConnectionResetFailures,
+                    TlsEofFailures = connectorStats.FailureReasons.TlsEofFailures,
+                    TlsHandshakeFailures = connectorStats.FailureReasons.TlsHandshakeFailures,
+                    ProtocolHandshakeFailures = connectorStats.FailureReasons.ProtocolHandshakeFailures,
+                    RegistrationFailures = connectorStats.FailureReasons.RegistrationFailures,
+                    BlockedPeerFailures = connectorStats.FailureReasons.BlockedPeerFailures,
+                    UnknownFailures = connectorStats.FailureReasons.UnknownFailures,
+                },
             },
             RateLimiter = new RateLimiterStatsResponse
             {
@@ -396,6 +409,21 @@ public sealed class ConnectorStatsResponse
     public int TotalSlskdnPeers { get; init; }
     public int SlskdnPeersWithVersion { get; init; }
     public int SlskdnPeersWithoutVersion { get; init; }
+    public required ConnectorFailureReasonStatsResponse FailureReasons { get; init; }
+}
+
+public sealed class ConnectorFailureReasonStatsResponse
+{
+    public long ConnectTimeouts { get; init; }
+    public long NoRouteFailures { get; init; }
+    public long ConnectionRefusedFailures { get; init; }
+    public long ConnectionResetFailures { get; init; }
+    public long TlsEofFailures { get; init; }
+    public long TlsHandshakeFailures { get; init; }
+    public long ProtocolHandshakeFailures { get; init; }
+    public long RegistrationFailures { get; init; }
+    public long BlockedPeerFailures { get; init; }
+    public long UnknownFailures { get; init; }
 }
 
 public sealed class RateLimiterStatsResponse

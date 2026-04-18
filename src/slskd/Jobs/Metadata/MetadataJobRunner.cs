@@ -17,7 +17,12 @@ namespace slskd.Jobs.Metadata;
 public class MetadataJobRunner : BackgroundService
 {
     private readonly ILogger<MetadataJobRunner> logger;
-    private readonly Channel<IMetadataJob> channel = Channel.CreateUnbounded<IMetadataJob>();
+    private readonly Channel<IMetadataJob> channel = Channel.CreateBounded<IMetadataJob>(new BoundedChannelOptions(2048)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite,
+        SingleReader = true,
+        SingleWriter = false,
+    });
 
     public MetadataJobRunner(ILogger<MetadataJobRunner> logger)
     {

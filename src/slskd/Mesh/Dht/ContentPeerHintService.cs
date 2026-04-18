@@ -20,7 +20,12 @@ public class ContentPeerHintService : BackgroundService, IContentPeerHintService
 {
     private readonly ILogger<ContentPeerHintService> logger;
     private readonly IContentPeerPublisher publisher;
-    private readonly Channel<string> queue = Channel.CreateUnbounded<string>();
+    private readonly Channel<string> queue = Channel.CreateBounded<string>(new BoundedChannelOptions(1024)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite,
+        SingleReader = true,
+        SingleWriter = false,
+    });
     private readonly TimeSpan delayBetween = TimeSpan.FromSeconds(1);
 
     public ContentPeerHintService(ILogger<ContentPeerHintService> logger, IContentPeerPublisher publisher)

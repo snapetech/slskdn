@@ -26,6 +26,11 @@ public class MeshOverlayConnectorStats
     public long FailedConnections { get; set; }
 
     /// <summary>
+    /// Gets or sets the classified outbound failure counts.
+    /// </summary>
+    public OverlayConnectionFailureStats FailureReasons { get; set; } = new();
+
+    /// <summary>
     /// Gets the connection success rate (0.0 to 1.0).
     /// </summary>
     public double SuccessRate
@@ -36,4 +41,21 @@ public class MeshOverlayConnectorStats
             return total > 0 ? (double)SuccessfulConnections / total : 0.0;
         }
     }
+}
+
+/// <summary>
+/// Classified outbound failure counts for the mesh overlay connector.
+/// </summary>
+public class OverlayConnectionFailureStats
+{
+    public long ConnectTimeouts { get; set; }
+    public long NoRouteFailures { get; set; }
+    public long ConnectionRefusedFailures { get; set; }
+    public long ConnectionResetFailures { get; set; }
+    public long TlsEofFailures { get; set; }
+    public long TlsHandshakeFailures { get; set; }
+    public long ProtocolHandshakeFailures { get; set; }
+    public long RegistrationFailures { get; set; }
+    public long BlockedPeerFailures { get; set; }
+    public long UnknownFailures { get; set; }
 }

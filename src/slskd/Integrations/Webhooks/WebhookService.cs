@@ -28,8 +28,10 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
+using slskd.Common.Security;
 using slskd.Events;
 
 public class WebhookService
@@ -103,6 +105,22 @@ public class WebhookService
                 try
                 {
                     Log.Debug("Calling webhook '{Name}': {Url}", webhook.Key, webhook.Value.Call.Url);
+
+                    // SSRF guard: refuse to POST to loopback/private/link-local/cloud-metadata
+                    // hosts so a hostile config cannot pivot the daemon into internal services.
+                    if (!Uri.TryCreate(call.Url, UriKind.Absolute, out var targetUri))
+                    {
+                        Log.Warning("Webhook '{Name}' URL '{Url}' is not a valid absolute URI; skipping", webhook.Key, call.Url);
+                        return;
+                    }
+
+                    using var ssrfCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    var (safe, reason) = await OutboundUriGuard.CheckAsync(targetUri, ssrfCts.Token);
+                    if (!safe)
+                    {
+                        Log.Warning("Webhook '{Name}' URL blocked by SSRF guard: {Reason}", webhook.Key, reason);
+                        return;
+                    }
 
                     var sw = Stopwatch.StartNew();
 

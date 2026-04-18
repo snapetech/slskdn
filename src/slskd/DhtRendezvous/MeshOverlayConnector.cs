@@ -8,8 +8,11 @@ namespace slskd.DhtRendezvous;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -31,6 +34,16 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private int _pendingConnections;
     private long _successfulConnections;
     private long _failedConnections;
+    private long _connectTimeoutFailures;
+    private long _noRouteFailures;
+    private long _connectionRefusedFailures;
+    private long _connectionResetFailures;
+    private long _tlsEofFailures;
+    private long _tlsHandshakeFailures;
+    private long _protocolHandshakeFailures;
+    private long _registrationFailures;
+    private long _blockedPeerFailures;
+    private long _unknownFailures;
 
     /// <summary>
     /// Maximum concurrent connection attempts.
@@ -70,7 +83,6 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             .Distinct(IPEndPointComparer.Instance)
             .ToList();
 
-        // SECURITY: Use cryptographic RNG for peer selection to prevent prediction attacks
         for (var i = shuffled.Count - 1; i > 0; i--)
         {
             var j = System.Security.Cryptography.RandomNumberGenerator.GetInt32(i + 1);
@@ -84,20 +96,17 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 break;
             }
 
-            // Stop if we have enough neighbors
             if (_registry.Count >= MeshNeighborRegistry.MaxNeighbors)
             {
                 _logger.LogDebug("Registry at max capacity, stopping connection attempts");
                 break;
             }
 
-            // Skip if already connected
             if (_registry.IsConnectedTo(endpoint))
             {
                 continue;
             }
 
-            // Skip blocked endpoints
             if (_blocklist.IsBlocked(endpoint.Address))
             {
                 continue;
@@ -118,21 +127,18 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         IPEndPoint endpoint,
         CancellationToken cancellationToken = default)
     {
-        // Check if already connected
         if (_registry.IsConnectedTo(endpoint))
         {
             _logger.LogDebug("Already connected to {Endpoint}", endpoint);
             return null;
         }
 
-        // Check blocklist
         if (_blocklist.IsBlocked(endpoint.Address))
         {
             _logger.LogDebug("Endpoint {Endpoint} is blocked", endpoint);
             return null;
         }
 
-        // Limit concurrent attempts
         if (_pendingConnections >= MaxConcurrentAttempts)
         {
             _logger.LogDebug("Too many pending connections, skipping {Endpoint}", endpoint);
@@ -145,27 +151,21 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         {
             _logger.LogDebug("Connecting to mesh peer at {Endpoint}", endpoint);
 
-            // Get our certificate
             var clientCert = _certificateManager.GetOrCreateServerCertificate();
-
-            // Connect with TLS
             var connection = await MeshOverlayConnection.ConnectAsync(endpoint, clientCert, cancellationToken);
 
             try
             {
-                // Perform handshake
                 var ack = await connection.PerformClientHandshakeAsync(LocalUsername, cancellationToken: cancellationToken);
 
-                // Check if username is blocked
                 if (_blocklist.IsBlocked(ack.Username))
                 {
                     _logger.LogWarning("Connected to blocked user {Username}, disconnecting", ack.Username);
                     await connection.DisconnectAsync("Blocked", cancellationToken);
-                    Interlocked.Increment(ref _failedConnections);
+                    RecordFailure(OverlayConnectionFailureReason.BlockedPeer, endpoint, ack.Username);
                     return null;
                 }
 
-                // Check certificate pin (TOFU)
                 if (connection.CertificateThumbprint is not null)
                 {
                     var pinResult = _pinStore.CheckPin(ack.Username, connection.CertificateThumbprint);
@@ -173,7 +173,6 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     switch (pinResult)
                     {
                         case PinCheckResult.NotPinned:
-                            // SECURITY: Log at INFO level for TOFU visibility
                             _logger.LogInformation(
                                 "TOFU: First connection to {Username}, pinning certificate {Thumbprint}",
                                 ack.Username,
@@ -194,12 +193,11 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     }
                 }
 
-                // Register the connection
                 if (!await _registry.RegisterAsync(connection))
                 {
                     _logger.LogDebug("Failed to register connection to {Username}", ack.Username);
                     await connection.DisconnectAsync("Registration failed", cancellationToken);
-                    Interlocked.Increment(ref _failedConnections);
+                    RecordFailure(OverlayConnectionFailureReason.RegistrationFailed, endpoint, ack.Username);
                     return null;
                 }
 
@@ -215,7 +213,8 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "Handshake failed with {Endpoint}", endpoint);
+                var reason = ClassifyFailure(ex);
+                _logger.LogDebug(ex, "Handshake failed with {Endpoint} ({FailureReason})", endpoint, reason);
                 _rateLimiter.RecordViolation(endpoint.Address);
                 if (connection != null)
                 {
@@ -223,14 +222,15 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     connection = null;
                 }
 
-                Interlocked.Increment(ref _failedConnections);
+                RecordFailure(reason, endpoint);
                 return null;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to connect to {Endpoint}", endpoint);
-            Interlocked.Increment(ref _failedConnections);
+            var reason = ClassifyFailure(ex);
+            _logger.LogDebug(ex, "Failed to connect to {Endpoint} ({FailureReason})", endpoint, reason);
+            RecordFailure(reason, endpoint);
             return null;
         }
         finally
@@ -246,7 +246,154 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             PendingConnections = _pendingConnections,
             SuccessfulConnections = _successfulConnections,
             FailedConnections = _failedConnections,
+            FailureReasons = new OverlayConnectionFailureStats
+            {
+                ConnectTimeouts = _connectTimeoutFailures,
+                NoRouteFailures = _noRouteFailures,
+                ConnectionRefusedFailures = _connectionRefusedFailures,
+                ConnectionResetFailures = _connectionResetFailures,
+                TlsEofFailures = _tlsEofFailures,
+                TlsHandshakeFailures = _tlsHandshakeFailures,
+                ProtocolHandshakeFailures = _protocolHandshakeFailures,
+                RegistrationFailures = _registrationFailures,
+                BlockedPeerFailures = _blockedPeerFailures,
+                UnknownFailures = _unknownFailures,
+            },
         };
+    }
+
+    internal static OverlayConnectionFailureReason ClassifyFailure(Exception exception)
+    {
+        var exceptions = Flatten(exception).ToList();
+
+        if (exceptions.OfType<slskd.DhtRendezvous.Security.ProtocolViolationException>().Any())
+        {
+            return OverlayConnectionFailureReason.ProtocolHandshake;
+        }
+
+        if (exceptions.OfType<SocketException>().Any(se =>
+                se.SocketErrorCode is SocketError.NetworkUnreachable or SocketError.HostUnreachable))
+        {
+            return OverlayConnectionFailureReason.NoRoute;
+        }
+
+        if (exceptions.OfType<SocketException>().Any(se => se.SocketErrorCode == SocketError.ConnectionRefused))
+        {
+            return OverlayConnectionFailureReason.ConnectionRefused;
+        }
+
+        if (exceptions.OfType<SocketException>().Any(se => se.SocketErrorCode == SocketError.ConnectionReset))
+        {
+            return OverlayConnectionFailureReason.ConnectionReset;
+        }
+
+        if (exceptions.OfType<OperationCanceledException>().Any())
+        {
+            return OverlayConnectionFailureReason.ConnectTimeout;
+        }
+
+        if (exceptions.Any(IsTlsEofFailure))
+        {
+            return OverlayConnectionFailureReason.TlsEof;
+        }
+
+        if (exceptions.Any(ex => ex is AuthenticationException) ||
+            exceptions.Any(ex => ex is IOException && ex.Message.Contains("authentication", StringComparison.OrdinalIgnoreCase)))
+        {
+            return OverlayConnectionFailureReason.TlsHandshake;
+        }
+
+        return OverlayConnectionFailureReason.Unknown;
+    }
+
+    private static bool IsTlsEofFailure(Exception exception)
+    {
+        if (exception is EndOfStreamException)
+        {
+            return true;
+        }
+
+        if (exception is IOException or AuthenticationException)
+        {
+            var message = exception.Message ?? string.Empty;
+            return message.Contains("unexpected eof", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("0 bytes from the transport stream", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("received an unexpected EOF", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("EOF", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<Exception> Flatten(Exception exception)
+    {
+        var queue = new Queue<Exception>();
+        queue.Enqueue(exception);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            yield return current;
+
+            if (current is AggregateException aggregate)
+            {
+                foreach (var inner in aggregate.InnerExceptions)
+                {
+                    queue.Enqueue(inner);
+                }
+            }
+            else if (current.InnerException is not null)
+            {
+                queue.Enqueue(current.InnerException);
+            }
+        }
+    }
+
+    private void RecordFailure(OverlayConnectionFailureReason reason, IPEndPoint endpoint, string? username = null)
+    {
+        Interlocked.Increment(ref _failedConnections);
+
+        switch (reason)
+        {
+            case OverlayConnectionFailureReason.ConnectTimeout:
+                Interlocked.Increment(ref _connectTimeoutFailures);
+                break;
+            case OverlayConnectionFailureReason.NoRoute:
+                Interlocked.Increment(ref _noRouteFailures);
+                break;
+            case OverlayConnectionFailureReason.ConnectionRefused:
+                Interlocked.Increment(ref _connectionRefusedFailures);
+                break;
+            case OverlayConnectionFailureReason.ConnectionReset:
+                Interlocked.Increment(ref _connectionResetFailures);
+                break;
+            case OverlayConnectionFailureReason.TlsEof:
+                Interlocked.Increment(ref _tlsEofFailures);
+                break;
+            case OverlayConnectionFailureReason.TlsHandshake:
+                Interlocked.Increment(ref _tlsHandshakeFailures);
+                break;
+            case OverlayConnectionFailureReason.ProtocolHandshake:
+                Interlocked.Increment(ref _protocolHandshakeFailures);
+                break;
+            case OverlayConnectionFailureReason.RegistrationFailed:
+                Interlocked.Increment(ref _registrationFailures);
+                break;
+            case OverlayConnectionFailureReason.BlockedPeer:
+                Interlocked.Increment(ref _blockedPeerFailures);
+                break;
+            default:
+                Interlocked.Increment(ref _unknownFailures);
+                break;
+        }
+
+        if (username is not null)
+        {
+            _logger.LogDebug("Recorded overlay failure {FailureReason} for {Username}@{Endpoint}", reason, username, endpoint);
+            return;
+        }
+
+        _logger.LogDebug("Recorded overlay failure {FailureReason} for {Endpoint}", reason, endpoint);
     }
 
     private sealed class IPEndPointComparer : IEqualityComparer<IPEndPoint>

@@ -75,8 +75,9 @@ public sealed class SongIdService : ISongIdService
     private readonly ILogger<SongIdService> _logger;
     private readonly IOptionsMonitor<slskd.Options> _optionsMonitor;
     private readonly Func<string, CancellationToken, Task<bool>>? _commandExistsOverride;
-    private readonly Channel<Guid> _queue = Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions
+    private readonly Channel<Guid> _queue = Channel.CreateBounded<Guid>(new BoundedChannelOptions(4096)
     {
+        FullMode = BoundedChannelFullMode.DropWrite,
         SingleReader = false,
         SingleWriter = false,
     });

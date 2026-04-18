@@ -119,37 +119,6 @@ public static class SecurityStartup
             EventSink = sp.GetService<ISecurityEventSink>(),
         });
 
-        // Register TransferSecurity for file transfer integration
-        services.AddSingleton<TransferSecurity>(sp =>
-        {
-            var transferSecurity = new TransferSecurity(
-                sp.GetRequiredService<ILogger<TransferSecurity>>(),
-                sp.GetService<ISecurityEventSink>(),
-                sp.GetService<ViolationTracker>(),
-                sp.GetService<PeerReputation>(),
-                sp.GetService<TemporalConsistency>(),
-                sp.GetService<Honeypot>());
-
-            // Apply path configuration
-            if (!string.IsNullOrEmpty(options.PathGuard.DownloadRoot))
-            {
-                transferSecurity.DownloadRoot = Program.ResolveOptionalAppRelativePath(options.PathGuard.DownloadRoot);
-            }
-
-            if (!string.IsNullOrEmpty(options.PathGuard.ShareRoot))
-            {
-                transferSecurity.ShareRoot = Program.ResolveOptionalAppRelativePath(options.PathGuard.ShareRoot);
-            }
-
-            if (!string.IsNullOrEmpty(options.ContentSafety.QuarantineDirectory))
-            {
-                transferSecurity.QuarantineDirectory = Program.ResolveOptionalAppRelativePath(options.ContentSafety.QuarantineDirectory);
-                transferSecurity.QuarantineSuspicious = options.ContentSafety.QuarantineSuspicious;
-            }
-
-            return transferSecurity;
-        });
-
         return services;
     }
 

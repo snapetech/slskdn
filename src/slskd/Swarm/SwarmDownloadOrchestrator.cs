@@ -32,7 +32,12 @@ public class SwarmDownloadOrchestrator : BackgroundService
     private readonly IVerificationEngine verifier;
     private readonly IChunkScheduler chunkScheduler;
     private readonly ISoulseekClient soulseekClient;
-    private readonly Channel<SwarmJob> jobs = Channel.CreateUnbounded<SwarmJob>();
+    private readonly Channel<SwarmJob> jobs = Channel.CreateBounded<SwarmJob>(new BoundedChannelOptions(1024)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite,
+        SingleReader = true,
+        SingleWriter = false,
+    });
     private readonly ConcurrentDictionary<string, SwarmJobStatus> activeJobs = new();
 
     public SwarmDownloadOrchestrator(

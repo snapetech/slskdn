@@ -146,13 +146,32 @@ public static class SecurityUtils
     {
         using var sha256 = SHA256.Create();
 
-        // Combine input and salt
+        // Combine input and salt. Cap stackalloc to avoid stack overflow on
+        // pathological caller-controlled lengths; fall back to a pooled heap
+        // buffer for anything larger than the stack budget.
+        const int StackBudget = 1024;
         var combinedLength = input.Length + salt.Length;
-        Span<byte> combined = stackalloc byte[combinedLength];
-        input.CopyTo(combined);
-        salt.CopyTo(combined[input.Length..]);
 
-        return sha256.ComputeHash(combined.ToArray());
+        if (combinedLength <= StackBudget)
+        {
+            Span<byte> combined = stackalloc byte[combinedLength];
+            input.CopyTo(combined);
+            salt.CopyTo(combined[input.Length..]);
+            return sha256.ComputeHash(combined.ToArray());
+        }
+
+        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(combinedLength);
+        try
+        {
+            var combined = buffer.AsSpan(0, combinedLength);
+            input.CopyTo(combined);
+            salt.CopyTo(combined[input.Length..]);
+            return sha256.ComputeHash(buffer, 0, combinedLength);
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+        }
     }
 
     /// <summary>

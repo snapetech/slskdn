@@ -483,6 +483,14 @@ public sealed class WebSocketTransportOptions
     public bool UseWss { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether to skip TLS certificate validation on WSS connections.
+    /// DANGEROUS: only enable for controlled lab environments where the server uses a
+    /// self-signed cert that cannot be added to the system trust store. A hostile network
+    /// path can MITM the transport when this is true.
+    /// </summary>
+    public bool IgnoreCertificateErrors { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets WebSocket sub-protocol.
     /// </summary>
     public string? SubProtocol { get; set; }

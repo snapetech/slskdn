@@ -214,7 +214,9 @@ namespace slskd.Shares
                         {
                             var directories = System.IO.Directory.GetDirectories(share.LocalPath, "*", new EnumerationOptions()
                             {
-                                AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
+                                // ReparsePoint skips symlinks and junctions so a symlink inside a share
+                                // cannot index files outside the share root (e.g. `share/x -> /etc`).
+                                AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
                                 IgnoreInaccessible = true,
                                 RecurseSubdirectories = true,
                             });
@@ -280,7 +282,8 @@ namespace slskd.Shares
                                 // that can't be accessed due to security restrictions
                                 var newFiles = System.IO.Directory.GetFiles(directory, "*", new EnumerationOptions()
                                 {
-                                    AttributesToSkip = FileAttributes.Hidden | FileAttributes.System,
+                                    // Skip symlinks so a file symlink like `share/leak -> /etc/passwd` is not served to peers.
+                                    AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
                                     IgnoreInaccessible = true,
                                     RecurseSubdirectories = false,
                                 });

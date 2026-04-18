@@ -27,7 +27,7 @@ public class DhtRendezvousControllerTests
             DhtNodeCount = 9,
         });
 
-        var controller = CreateController(blocklist, dhtService.Object);
+        var controller = CreateController(blocklist, dhtService: dhtService.Object);
 
         var result = controller.GetDhtStatus();
 
@@ -36,6 +36,39 @@ public class DhtRendezvousControllerTests
         Assert.True(response.IsEnabled);
         Assert.False(response.IsDhtRunning);
         Assert.Equal(9, response.DhtNodeCount);
+    }
+
+    [Fact]
+    public void GetOverlayStats_ExposesConnectorFailureReasons()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+        connector.Setup(x => x.GetStats()).Returns(new MeshOverlayConnectorStats
+        {
+            PendingConnections = 1,
+            SuccessfulConnections = 2,
+            FailedConnections = 3,
+            FailureReasons = new OverlayConnectionFailureStats
+            {
+                ConnectTimeouts = 4,
+                TlsEofFailures = 5,
+                ProtocolHandshakeFailures = 6,
+            },
+        });
+
+        var dhtService = new Mock<IDhtRendezvousService>();
+        dhtService.Setup(x => x.GetMeshPeers()).Returns(System.Array.Empty<MeshPeerInfo>());
+
+        var controller = CreateController(blocklist, dhtService: dhtService.Object, overlayConnector: connector.Object);
+
+        var result = controller.GetOverlayStats();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<OverlayStatsResponse>(ok.Value);
+        Assert.Equal(1, response.Connector.PendingConnections);
+        Assert.Equal(4, response.Connector.FailureReasons.ConnectTimeouts);
+        Assert.Equal(5, response.Connector.FailureReasons.TlsEofFailures);
+        Assert.Equal(6, response.Connector.FailureReasons.ProtocolHandshakeFailures);
     }
 
     [Fact]
@@ -67,7 +100,7 @@ public class DhtRendezvousControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Contains("IP address blocked", ok.Value?.ToString() ?? string.Empty);
-        Assert.DoesNotContain("127.0.0.1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("127.0.0.1", ok.Value?.ToString() ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -83,7 +116,7 @@ public class DhtRendezvousControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Contains("Username blocked", ok.Value?.ToString() ?? string.Empty);
-        Assert.DoesNotContain("user-1", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("user-1", ok.Value?.ToString() ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -119,7 +152,7 @@ public class DhtRendezvousControllerTests
 
         var notFound = Assert.IsType<NotFoundObjectResult>(result);
         Assert.Contains("Blocklist entry not found", notFound.Value?.ToString() ?? string.Empty);
-        Assert.DoesNotContain("alice", notFound.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("alice", notFound.Value?.ToString() ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -133,15 +166,21 @@ public class DhtRendezvousControllerTests
 
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Contains("Blocklist entry removed", ok.Value?.ToString() ?? string.Empty);
-        Assert.DoesNotContain("alice", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("alice", ok.Value?.ToString() ?? string.Empty, System.StringComparison.OrdinalIgnoreCase);
     }
 
-    private static DhtRendezvousController CreateController(OverlayBlocklist blocklist, IDhtRendezvousService? dhtService = null)
+    private static DhtRendezvousController CreateController(
+        OverlayBlocklist blocklist,
+        IDhtRendezvousService? dhtService = null,
+        IMeshOverlayConnector? overlayConnector = null)
     {
+        var overlayServer = new Mock<IMeshOverlayServer>();
+        overlayServer.Setup(x => x.GetStats()).Returns(new MeshOverlayServerStats());
+
         return new DhtRendezvousController(
             dhtService ?? Mock.Of<IDhtRendezvousService>(),
-            Mock.Of<IMeshOverlayServer>(),
-            Mock.Of<IMeshOverlayConnector>(),
+            overlayServer.Object,
+            overlayConnector ?? Mock.Of<IMeshOverlayConnector>(),
             new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
             new OverlayRateLimiter(),
             blocklist);

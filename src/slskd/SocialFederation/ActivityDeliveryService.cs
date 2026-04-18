@@ -18,6 +18,7 @@ namespace slskd.SocialFederation
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using NSec.Cryptography;
+    using slskd.Common.Security;
 
     /// <summary>
     ///     Service for delivering ActivityPub activities to remote servers.
@@ -129,6 +130,21 @@ namespace slskd.SocialFederation
                     if (IsRateLimited(inboxUrl))
                     {
                         _logger.LogDebug("[Delivery] Rate limited for {InboxUrl}, skipping", inboxUrl);
+                        return;
+                    }
+
+                    // SSRF guard: refuse delivery to loopback/private/link-local/cloud-metadata
+                    // hosts so a malicious remote follower cannot coerce us into probing internal services.
+                    if (!Uri.TryCreate(inboxUrl, UriKind.Absolute, out var inboxUri))
+                    {
+                        _logger.LogWarning("[Delivery] Inbox URL '{InboxUrl}' is not a valid absolute URI; skipping", inboxUrl);
+                        return;
+                    }
+
+                    var (safe, reason) = await OutboundUriGuard.CheckAsync(inboxUri, cancellationToken);
+                    if (!safe)
+                    {
+                        _logger.LogWarning("[Delivery] Inbox URL '{InboxUrl}' blocked by SSRF guard: {Reason}", inboxUrl, reason);
                         return;
                     }
 
