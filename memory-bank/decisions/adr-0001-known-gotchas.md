@@ -6726,6 +6726,14 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 *Last updated: 2026-03-21*
 
+### 0z47. Mesh Self-Descriptors Must Not Advertise Impossible Direct Transports Or Wrong Default Ports
+
+**What went wrong:** Live auditing on `kspls0` showed `PeerDescriptorPublisher` still auto-detected clearnet endpoints as bare `ip:2234` / `ip:2235` and also emitted `DirectQuic` transport endpoints even when `QuicListener.IsSupported` was false on the host. That poisoned our own published descriptor with ports we were not actually listening on and advertised a direct QUIC transport that the node could not accept. Operators then saw DHT peers and circuit-maintenance churn without any realistic path to a working direct mesh connection.
+
+**Why it happened:** The descriptor publisher mixed old Soulseek default ports with the newer mesh transport model, and it never cross-checked advertised transports against the runtime transport capability on the current host. Because DHT discovery and peer stats already looked busy, the impossible advertisement path hid behind noisy remote-candidate failures.
+
+**How to prevent it:** Mesh self-descriptor publication must derive advertised ports from the real configured listeners, not hard-coded legacy defaults. Do not publish `DirectQuic` endpoints unless QUIC is actually supported on the running host, and never publish bare `ip:port` legacy endpoints when the consuming code expects explicit `udp://` / `quic://` schemes. Add regression coverage for both the configured port selection and the unsupported-QUIC path.
+
 ### 0z46. Security Refactors Must Delete Or Rewrite Tests That Still Resolve Removed Service Types
 
 **What went wrong:** A security refactor removed the old `TransferSecurity` service, but `SecurityStartupTests` still tried to resolve it from DI. The whole targeted unit pass then failed at compile time, which hid the actual status of the new hardening work.
