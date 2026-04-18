@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z34. Standalone PPA/COPR/Linux Release Workflows Must Track The Main Release Toolchain And Bundle Layout
+
+**The Bug**: The Jammy PPA build for `0.24.5.slskdn.144` still failed after we fixed `patchelf` build-depends, because the standalone `release-ppa.yml` path had drifted behind the main release flow. It was still pinned to `.NET 8` and the Debian rules hard-coded `debian/slskdn/usr/lib/slskd/libcoreclrtraceptprovider.so`, even though these distro-packaging flows are repackaging prebuilt publish output whose exact runtime file layout can change when the toolchain or bundling strategy changes. Launchpad ended up trying to patch a file path that did not exist in the staged package tree.
+
+**Files Affected**:
+- `.github/workflows/release-ppa.yml`
+- `.github/workflows/release-copr.yml`
+- `.github/workflows/release-linux.yml`
+- `packaging/debian/rules`
+
+**Wrong**:
+```text
+Treat the standalone distro workflows as if they can keep their own stale SDK version and
+assume a single hard-coded runtime-library path inside the packaged appdir forever.
+```
+
+**Correct**:
+```text
+Keep every distro/release workflow on the same supported .NET target as the main release path,
+and patch bundled runtime files by discovering them inside the staged package tree rather than
+assuming one flat path. If a package workflow repackages a prebuilt publish directory, it must
+validate the real staged payload before mutating it.
+```
+
+**Why This Keeps Happening**: The main release workflow gets the most attention, so it is easy for side workflows like PPA/COPR/raw Linux release jobs to keep older SDK pins and older path assumptions. Once the packaging logic starts mutating bundled runtime files, those stale assumptions become hard failures that only show up when a user or Launchpad tries the neglected path.
+
 ### 0z33. Stale Antiforgery Cookie Recovery Cannot Only Catch `AntiforgeryValidationException`
 
 **The Bug**: Issue `#209` still showed repeated `The antiforgery token could not be decrypted` / `The key ... was not found in the key ring` noise even after we added stale-cookie cleanup. The recovery helper only caught `AntiforgeryValidationException`, but `GetAndStoreTokens(...)` can surface the same stale key-ring condition as a different wrapped exception, including raw `CryptographicException`. That meant the stale-cookie path sometimes bypassed cleanup entirely and fell into the generic warning path again and again.
