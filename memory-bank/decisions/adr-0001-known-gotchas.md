@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z31. Launchpad Only Installs Debian `Build-Depends`, So DEB Rules Cannot Assume CI-Only Tooling Like `patchelf`
+
+**The Bug**: The Jammy PPA build for `slskdn 0.24.5.slskdn.141` failed in `override_dh_auto_install` with `make[1]: patchelf: No such file or directory`. We had updated the DEB package recipe to patch `libcoreclrtraceptprovider.so` with `patchelf`, and we installed `patchelf` in GitHub Actions, but `packaging/debian/control` still only declared `debhelper-compat (= 13)` in `Build-Depends`.
+
+**Files Affected**:
+- `packaging/debian/control`
+- `packaging/debian/rules`
+
+**Wrong**:
+```text
+Teach the Debian packaging rules to invoke `patchelf`, but rely on CI job setup to provide the tool instead of declaring it in Debian source metadata.
+```
+
+**Correct**:
+```text
+Any tool invoked from `debian/rules` must be listed in `Build-Depends` so Launchpad/sbuild install it automatically.
+```
+
+**Why This Keeps Happening**: GitHub Actions package jobs can hide missing source-package metadata because they install extra build tools out-of-band. Launchpad only trusts the Debian source package metadata, so if a tool is missing from `Build-Depends`, the PPA build fails even though CI looked green.
+
 ### 0z29. Clean DEB/RPM Installs Need Explicit ICU Runtime Dependencies Because .NET Loads It Dynamically
 
 **The Bug**: Clean Ubuntu 24.04 and Fedora 43 package installs completed, but `/usr/bin/slskd --version` immediately failed with `Couldn't find a valid ICU package installed on the system.` The bundled apphost does not record ICU as a normal ELF dependency, so DEB/RPM metadata generation never pulled it in automatically.
