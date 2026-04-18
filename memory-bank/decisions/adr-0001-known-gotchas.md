@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z19. Serialized Bulk Actions Still Need A Real Background Queue With De-Dupe
+
+**The Bug**: Simply changing transfer bulk actions from `Promise.all(...)` to a serial `for ... await` loop stopped the immediate `429` storm, but it still kept the whole bulk action bound to the click handler and allowed the same files to be re-enqueued if the user clicked the same bulk action again while the first drain was still in progress. That meant the UI could still create duplicate background work and repeated retries/removals against the same transfer set.
+
+**Files Affected**:
+- `src/web/src/components/Transfers/Transfers.jsx`
+- `src/web/src/components/Transfers/TransferGroup.jsx`
+
+**Wrong**:
+```text
+Replace parallel bulk transfer requests with a serial loop inside the button
+handler and assume that is enough to make the action queue-safe.
+```
+
+**Correct**:
+```text
+Bulk retry/remove should enqueue work into a background queue that:
+- drains at a controlled rate
+- keeps in-flight items deduped by transfer/action key
+- ignores repeated submissions for work already queued or running
+- reports failures once per batch instead of once per file
+```
+
+**Why This Keeps Happening**: It is easy to treat "not parallel anymore" as the same thing as "properly queued." It is not. If the user can trigger the same bulk action again before the first drain finishes, the UI still needs explicit queue ownership and de-dupe semantics or it will recreate the same storm more slowly.
+
 ### 0z18. Transfer Bulk Actions Must Respect The Backend Request Shape Instead Of Spamming Per-File Calls
 
 **The Bug**: The Transfers page implemented `Retry All` and `Remove All` as `Promise.all(...)` over one API request per selected file. That looked simple in the UI, but the backend download enqueue path is intentionally concurrency-limited and returns `429` when hit in parallel, while completed-transfer cleanup already has dedicated bulk-clear endpoints. In practice, bulk retry turned into a toast storm of self-inflicted `429` failures, and bulk remove completed created unnecessary request floods instead of one clear operation.
