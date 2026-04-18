@@ -278,3 +278,14 @@ dotnet test
 - Next steps:
   1. Push this peer-stats cleanup if you want it in the next release.
   2. If `#209` continues, the next investigation should focus on why the discovered candidates are not handshaking, not on inflated peer counters.
+
+## Update 2026-04-18 18:10:00Z
+
+- Current task: None. The latest DHT/overlay investigation and concurrent security hardening are committed locally and ready to push.
+- Last activity:
+  - continued the live `#209` investigation past the peer-count cleanup and confirmed the next real gap is handshake success for raw DHT candidates, not inflated counters
+  - folded in the concurrent `CertificatePinStore` durability hardening so pin-store writes are now atomic and cannot silently corrupt `cert_pins.json` on partial write
+  - added a DHT / mesh overlay audit note under `docs/security/` capturing the current threat-surface review and security decisions
+- Next steps:
+  1. Push the latest commits if you want the peer-stat cleanup and pin-store durability fix on `origin/main`.
+  2. If `#209` still persists after that, focus on why the discovered candidates fail TLS/HELLO rather than on DHT discovery, pin rotation, or peer-count reporting.

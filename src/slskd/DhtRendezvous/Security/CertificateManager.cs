@@ -411,14 +411,52 @@ public sealed class CertificatePinStore
 
     private void Save()
     {
+        var tempPath = _pinStorePath + ".tmp";
+
         try
         {
             var json = System.Text.Json.JsonSerializer.Serialize(_pins.Values.ToList());
-            File.WriteAllText(_pinStorePath, json);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+
+            // Write to a sibling temp file, fsync, then atomically rename over the real file.
+            // Why: a crash or concurrent writer mid-WriteAllText would otherwise leave cert_pins.json
+            // truncated or partially written, which Load() would then drop as malformed JSON and we'd
+            // silently lose every pin (degrading TOFU to first-use-on-every-reboot).
+            using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush(flushToDisk: true);
+            }
+
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                try
+                {
+                    File.SetUnixFileMode(tempPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Could not set pin store file permissions");
+                }
+            }
+
+            File.Move(tempPath, _pinStorePath, overwrite: true);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to save certificate pins");
+
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch
+            {
+                // best-effort cleanup; ignore.
+            }
         }
     }
 }

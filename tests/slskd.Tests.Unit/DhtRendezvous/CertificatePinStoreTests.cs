@@ -53,6 +53,21 @@ public class CertificatePinStoreTests
         Assert.Equal(PinCheckResult.Valid, store.CheckPin("alice", "PIN1"));
     }
 
+    [Fact]
+    public void SetPin_PersistsPinsWithoutLeavingTempFile()
+    {
+        using var tempDir = new TempDir();
+        var store = new CertificatePinStore(NullLogger<CertificatePinStore>.Instance, tempDir.Path);
+
+        store.SetPin("alice", "PIN1");
+
+        var reloaded = new CertificatePinStore(NullLogger<CertificatePinStore>.Instance, tempDir.Path);
+        var pin = Assert.Single(reloaded.GetAllPins());
+        Assert.Equal("alice", pin.Username);
+        Assert.Equal("PIN1", pin.Thumbprint);
+        Assert.False(System.IO.File.Exists(System.IO.Path.Combine(tempDir.Path, "cert_pins.json.tmp")));
+    }
+
     private sealed class TempDir : IDisposable
     {
         public TempDir()

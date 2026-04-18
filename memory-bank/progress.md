@@ -6358,3 +6358,9 @@ Code quality improvements were completed as part of Option A:
 - Cleaned up the next issue `#209` diagnostics lie after live probing showed the node was still overstating peer health: `DhtRendezvousService` was publishing every DHT-discovered endpoint into `IMeshPeerManager` as `supportsOnionRouting=true` immediately, so `Circuit maintenance` and peer stats claimed 10-11 onion-capable peers even when overlay stats still showed zero active mesh connections.
 - Changed DHT discovery to track endpoints as `version = "dht-discovered"` candidates with `supportsOnionRouting = false` until an actual overlay connect succeeds, at which point the peer record is upgraded to `overlay-verified` and becomes circuit-capable.
 - Reworked the focused DHT rendezvous tests to prove all three states: unverified candidate on discovery, still-not-circuit-capable after failed connect, and circuit-capable only after a successful overlay connect. Redeployed this exact build to `kspls0` and verified through `/api/v0/security/peers/stats` that the host now reports `totalPeers: 10` and `onionRoutingPeers: 0` instead of falsely claiming all DHT candidates are verified onion peers.
+
+## 2026-04-18 18:10:00Z
+
+- Folded in the concurrent security hardening work in `CertificatePinStore`: pin-store saves now write to `cert_pins.json.tmp`, flush to disk, and atomically rename over the live file, which closes the durability bug where an interrupted in-place write could corrupt the whole TOFU pin database and silently reset peer trust on restart.
+- Added a focused `CertificatePinStoreTests` persistence check proving the pin file reloads correctly and no stray `.tmp` file is left behind after save.
+- Added `docs/security/dht-mesh-audit-2026-04.md` documenting the current DHT / mesh overlay threat-surface review, the attack-surface gates, and the decisions explicitly kept as-is versus fixed.
