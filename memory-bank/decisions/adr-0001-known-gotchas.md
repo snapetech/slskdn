@@ -52,6 +52,44 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z43. IP-Only Login Lockouts Do Not Stop Distributed Password Spray Against One Username
+
+**The Bug**: Session login throttling only tracked failed attempts by remote IP. That blocked single-source brute force but did nothing against a distributed spray where an attacker rotates IPs while hammering the same admin username. The account could be tested indefinitely as long as each source stayed under the per-IP threshold.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/SessionController.cs`
+
+**Wrong**:
+```text
+Treat per-IP lockout as sufficient for the web login surface and assume brute-force attempts always come from one address.
+```
+
+**Correct**:
+```text
+Track failed login windows by both remote IP and normalized username. Clear both counters on successful authentication, and reject requests when either the source or the target username is currently locked out.
+```
+
+**Why This Keeps Happening**: Rate limiting naturally starts with network identity, but authentication abuse targets accounts as well as origins. A password-spray attacker only needs many low-volume IPs to bypass IP-only lockouts. Login throttling needs both dimensions.
+
+### 0z44. Share Tokens Need JWT Audience Binding Or Cross-Collection Replay Stays Valid
+
+**The Bug**: Share tokens carried `collection_id` as a signed claim, but JWT validation still had `ValidateAudience = false`. That meant a token could be replayed without any JWT-layer audience check, and the cryptographic token envelope itself was not asserting that it belonged to the intended collection.
+
+**Files Affected**:
+- `src/slskd/Sharing/ShareTokenService.cs`
+
+**Wrong**:
+```text
+Store the target collection only as a custom claim while disabling JWT audience validation entirely.
+```
+
+**Correct**:
+```text
+Set the JWT `aud` value to the collection id and require validation to prove that the token audience matches the signed `collection_id` claim. This binds the token envelope itself to the intended collection and rejects replay against mismatched targets.
+```
+
+**Why This Keeps Happening**: Custom claims feel “good enough” once they are signed, but JWT already has a first-class audience concept for exactly this binding problem. If audience validation is left off, the token shape looks correct while one of the protocol’s main anti-replay checks is silently unused.
+
 ### 0z42. Overlay Connector Stats That Only Count Success/Failure Hide The Actual Failing Layer
 
 **The Bug**: While validating issue `#209` on `kspls0`, `/api/v0/overlay/stats` only exposed aggregate `successfulConnections` and `failedConnections`. That made the live system look like “overlay is broken” even after our inbound TLS/HELLO path was proven healthy, because the stats could not distinguish `connect timeout`, `no route`, `TCP refused`, `TLS EOF`, or protocol-handshake failures. We kept reaching for broad fixes because the product diagnostics were too coarse to tell whether the current failure was ours or the remote candidate's.
