@@ -20,8 +20,8 @@
   - clarified hole-punch completion logs so operators can see the reported local port is an ephemeral UDP socket, not a configured listener port
   - added focused versioned-route integration coverage for `/api/v0/users/notes`
 - Next steps:
-  1. Commit the code/test/docs fix set if the current validation remains green.
-  2. If the tester still reports zero overlay circuits after this, focus on real external reachability of overlay TCP `50305` and DHT UDP `50306` rather than the removed preflight noise.
+  1. Keep digging on the live `kspls0` runtime failures separately from the UI storm fix: the host still shows search resolution timeouts, Soulseek peer refusal/reset churn, and DHT / circuit health back in a bad state.
+  2. If the queue issues are still reproducible after this UI fix lands, inspect the authenticated live transfer state on `kspls0` to separate queue corruption from pure peer-connectivity failure.
 
 # Active Context
 
@@ -48,10 +48,19 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Reproduce the shipped release/install path around issue #209 and make stable releases ship a supported Linux installer path so upgrades cannot silently keep running an older `slskd` service binary.
+- **Current Task**: None. The Transfers UI bulk-action fix for the live `kspls0` audit is implemented locally and validated; remaining work is the separate host/runtime investigation.
 - **Branch**: `main`
 - **Environment**: Local dev
 - **Last Activity**:
+
+  - Audited `kspls0` directly and confirmed the transfer/runtime complaints have two layers:
+    - the live service is up, but the journal shows repeated Soulseek `Connection refused` / `Connection reset by peer` exceptions, search endpoint resolution timeouts, and DHT / mesh logs back in `NotReady` / `0 circuits` state
+    - the Transfers page itself was compounding that by issuing per-file `Promise.all(...)` bulk retry/remove requests that trip the backend download limiter and create one toast per failed request
+  - Fixed the Transfers UI bulk-action regression locally:
+    - serialized bulk retry/cancel/remove requests in `Transfers.jsx`
+    - switched the top-level `Remove All Completed` path onto `transfers.clearCompleted(...)`
+    - changed `TransferGroup.jsx` to delegate grouped retry/cancel/remove actions to the parent handlers so the same throttled behavior applies there too
+    - added focused web regression tests proving sequential retry, single-toast bulk failure reporting, and bulk clear-completed endpoint usage
 
   - Re-opened issue `#209` after the reporter said the same DHT error remained and verified the shipped release artifacts directly:
     - downloaded the published `0.24.5-slskdn.130` and `.131` ARM64 zip assets locally and confirmed `.131` contains the newer `slskd.dll` / `MonoTorrent.dll` bits

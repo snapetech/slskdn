@@ -154,7 +154,11 @@ const TransfersHeader = ({
           mediaQuery="(max-width: 715px)"
           onChange={(_, data) => setRemoveOption(data.value)}
           onClick={() =>
-            onRemoveAll(getRemovableFiles({ files, removeOption }))
+            onRemoveAll(
+              getRemovableFiles({ files, removeOption }),
+              false,
+              { useBulkClear: removeOption === 'Completed' },
+            )
           }
           options={[
             { key: 'succeeded', text: 'Succeeded', value: 'Succeeded' },

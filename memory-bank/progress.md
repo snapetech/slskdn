@@ -6223,3 +6223,19 @@ Code quality improvements were completed as part of Option A:
 - Validation:
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~MeshNeighborPeerSyncServiceTests" -v minimal`
   - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~CircuitMaintenanceServiceTests" -v minimal`
+
+## 2026-04-18 06:15:00Z
+
+- Audited the live `kspls0` transfer/runtime state and found two layers of failure:
+  - host logs show real network/runtime instability (`Connection refused`, `Connection reset by peer`, search endpoint resolution timeouts, DHT `NotReady`, and `0 circuits`)
+  - the Transfers page itself was making that look even worse by storming the backend with per-file bulk retry/remove requests
+- Fixed the Transfers UI bulk-action regressions locally:
+  - `Retry All` and group retry now serialize download enqueue requests so they stop tripping the backend `429` limiter
+  - bulk actions aggregate failures into one summary toast instead of one toast per file
+  - the top-level `Remove All Completed` path now calls the dedicated bulk-clear endpoint instead of issuing one remove request per completed transfer
+  - `TransferGroup` now delegates bulk retry/cancel/remove to the parent handlers so the same throttled behavior applies to grouped selections too
+- Validation:
+  - `npm --prefix src/web test -- --run src/components/Transfers/Transfers.test.jsx`
+  - `npm --prefix src/web run lint`
+  - `git diff --check`
+  - `bash ./bin/lint`

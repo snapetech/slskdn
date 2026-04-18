@@ -48,32 +48,15 @@ class TransferGroup extends Component {
       .filter((s) => s !== undefined);
   };
 
-  removeFileSelection = (file) => {
-    const { selections } = this.state;
-
-    const match = Array.from(selections)
-      .map((s) => JSON.parse(s))
-      .find((s) => s.filename === file.filename);
-
-    if (match) {
-      selections.delete(JSON.stringify(match));
-      this.setState({ selections });
-    }
+  handleRetryAll = async (selected) => {
+    await this.props.retryAll(selected);
   };
 
-  retryAll = async (selected) => {
-    await Promise.all(selected.map((file) => this.handleRetry(file)));
+  handleCancelAll = async (selected) => {
+    await this.props.cancelAll(selected);
   };
 
-  cancelAll = async (direction, username, selected) => {
-    await Promise.all(
-      selected.map((file) =>
-        transfers.cancel({ direction, id: file.id, username }),
-      ),
-    );
-  };
-
-  removeAll = async (direction, username, selected, deleteFile = false) => {
+  handleRemoveAll = async (selected, deleteFile = false) => {
     if (
       deleteFile &&
       // eslint-disable-next-line no-alert
@@ -84,28 +67,14 @@ class TransferGroup extends Component {
       return;
     }
 
-    await Promise.all(
-      selected.map((file) =>
-        transfers
-          .cancel({
-            deleteFile,
-            direction,
-            id: file.id,
-            remove: true,
-            username,
-          })
-          .then(() => this.removeFileSelection(file)),
-      ),
-    );
+    await this.props.removeAll(selected, deleteFile);
   };
 
   handleRetry = async (file) => {
-    const { filename, size, username } = file;
-
     try {
-      await transfers.download({ files: [{ filename, size }], username });
-    } catch (error) {
-      console.error(error);
+      await this.props.retry({ file });
+    } catch {
+      // parent handler already logs/toasts the error
     }
   };
 
@@ -181,7 +150,7 @@ class TransferGroup extends Component {
                   color="green"
                   content={`Retry${all}`}
                   icon="redo"
-                  onClick={() => this.retryAll(selected)}
+                  onClick={() => this.handleRetryAll(selected)}
                 />
               )}
               {allRetryable && anyCancellable && <Button.Or />}
@@ -190,9 +159,7 @@ class TransferGroup extends Component {
                   color="red"
                   content={`Cancel${all}`}
                   icon="x"
-                  onClick={() =>
-                    this.cancelAll(direction, user.username, selected)
-                  }
+                  onClick={() => this.handleCancelAll(selected)}
                 />
               )}
               {(allRetryable || anyCancellable) && allRemovable && (
@@ -203,17 +170,13 @@ class TransferGroup extends Component {
                   <Button
                     content={`Remove${all}`}
                     icon="trash alternate"
-                    onClick={() =>
-                      this.removeAll(direction, user.username, selected)
-                    }
+                    onClick={() => this.handleRemoveAll(selected)}
                   />
                   {direction === 'download' && (
                     <Button
                       color="red"
                       icon="trash"
-                      onClick={() =>
-                        this.removeAll(direction, user.username, selected, true)
-                      }
+                      onClick={() => this.handleRemoveAll(selected, true)}
                       title="Remove and Delete File(s) from Disk"
                     />
                   )}

@@ -9,6 +9,22 @@ import { toast } from 'react-toastify';
 
 const AUTO_REPLACE_THRESHOLD = 0; // 0% = exact match only (configurable on backend)
 
+const getErrorMessage = (error) =>
+  error?.response?.data ?? error?.message ?? `${error}`;
+
+const summarizeBulkFailures = ({ action, failures }) => {
+  if (failures.length === 0) {
+    return;
+  }
+
+  const [firstFailure] = failures;
+  toast.error(
+    failures.length === 1
+      ? `Failed to ${action} ${firstFailure.label}: ${firstFailure.message}`
+      : `Failed to ${action} ${failures.length} transfer(s). First error: ${firstFailure.label}: ${firstFailure.message}`,
+  );
+};
+
 const Transfers = ({ direction, server }) => {
   const testId = direction === 'download' ? 'downloads-root' : 'uploads-root';
   const [connecting, setConnecting] = useState(true);
@@ -67,7 +83,7 @@ const Transfers = ({ direction, server }) => {
       }
     } catch (error) {
       console.error(error);
-      toast.error(error?.response?.data ?? error?.message ?? error);
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -97,7 +113,11 @@ const Transfers = ({ direction, server }) => {
     setConnecting(true);
   }, [direction]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const retry = async ({ file, suppressStateChange = false }) => {
+  const retry = async ({
+    file,
+    suppressErrorToast = false,
+    suppressStateChange = false,
+  }) => {
     const { filename, size, username } = file;
 
     try {
@@ -109,12 +129,14 @@ const Transfers = ({ direction, server }) => {
         files: [{ filename, size }],
         username,
       });
-      if (!suppressStateChange) {
-        setRetrying(false);
-      }
     } catch (error) {
       console.error(error);
-      toast.error(error?.response?.data ?? error?.message ?? error);
+      if (!suppressErrorToast) {
+        toast.error(getErrorMessage(error));
+      }
+
+      throw error;
+    } finally {
       if (!suppressStateChange) {
         setRetrying(false);
       }
@@ -123,15 +145,32 @@ const Transfers = ({ direction, server }) => {
 
   const retryAll = async (transfersToRetry) => {
     setRetrying(true);
-    await Promise.all(
-      transfersToRetry.map((file) =>
-        retry({ file, suppressStateChange: true }),
-      ),
-    );
+    const failures = [];
+
+    for (const file of transfersToRetry) {
+      try {
+        await retry({
+          file,
+          suppressErrorToast: true,
+          suppressStateChange: true,
+        });
+      } catch (error) {
+        failures.push({
+          label: `${file.username}/${file.filename}`,
+          message: getErrorMessage(error),
+        });
+      }
+    }
+
     setRetrying(false);
+    summarizeBulkFailures({ action: 'retry', failures });
   };
 
-  const cancel = async ({ file, suppressStateChange = false }) => {
+  const cancel = async ({
+    file,
+    suppressErrorToast = false,
+    suppressStateChange = false,
+  }) => {
     const { id, username } = file;
 
     try {
@@ -140,12 +179,14 @@ const Transfers = ({ direction, server }) => {
       }
 
       await transfersLibrary.cancel({ direction, id, username });
-      if (!suppressStateChange) {
-        setCancelling(false);
-      }
     } catch (error) {
       console.error(error);
-      toast.error(error?.response?.data ?? error?.message ?? error);
+      if (!suppressErrorToast) {
+        toast.error(getErrorMessage(error));
+      }
+
+      throw error;
+    } finally {
       if (!suppressStateChange) {
         setCancelling(false);
       }
@@ -154,17 +195,31 @@ const Transfers = ({ direction, server }) => {
 
   const cancelAll = async (transfersToCancel) => {
     setCancelling(true);
-    await Promise.all(
-      transfersToCancel.map((file) =>
-        cancel({ file, suppressStateChange: true }),
-      ),
-    );
+    const failures = [];
+
+    for (const file of transfersToCancel) {
+      try {
+        await cancel({
+          file,
+          suppressErrorToast: true,
+          suppressStateChange: true,
+        });
+      } catch (error) {
+        failures.push({
+          label: `${file.username}/${file.filename}`,
+          message: getErrorMessage(error),
+        });
+      }
+    }
+
     setCancelling(false);
+    summarizeBulkFailures({ action: 'cancel', failures });
   };
 
   const remove = async ({
     deleteFile = false,
     file,
+    suppressErrorToast = false,
     suppressStateChange = false,
   }) => {
     const { id, username } = file;
@@ -181,26 +236,58 @@ const Transfers = ({ direction, server }) => {
         remove: true,
         username,
       });
-      if (!suppressStateChange) {
-        setRemoving(false);
-      }
     } catch (error) {
       console.error(error);
-      toast.error(error?.response?.data ?? error?.message ?? error);
+      if (!suppressErrorToast) {
+        toast.error(getErrorMessage(error));
+      }
+
+      throw error;
+    } finally {
       if (!suppressStateChange) {
         setRemoving(false);
       }
     }
   };
 
-  const removeAll = async (transfersToRemove, deleteFile = false) => {
+  const removeAll = async (
+    transfersToRemove,
+    deleteFile = false,
+    { useBulkClear = false } = {},
+  ) => {
     setRemoving(true);
-    await Promise.all(
-      transfersToRemove.map((file) =>
-        remove({ deleteFile, file, suppressStateChange: true }),
-      ),
-    );
-    setRemoving(false);
+
+    try {
+      if (useBulkClear && !deleteFile) {
+        await transfersLibrary.clearCompleted({ direction });
+        return;
+      }
+
+      const failures = [];
+
+      for (const file of transfersToRemove) {
+        try {
+          await remove({
+            deleteFile,
+            file,
+            suppressErrorToast: true,
+            suppressStateChange: true,
+          });
+        } catch (error) {
+          failures.push({
+            label: `${file.username}/${file.filename}`,
+            message: getErrorMessage(error),
+          });
+        }
+      }
+
+      summarizeBulkFailures({ action: 'remove', failures });
+    } catch (error) {
+      console.error(error);
+      toast.error(getErrorMessage(error));
+    } finally {
+      setRemoving(false);
+    }
   };
 
   // Fetch auto-replace status from backend on mount

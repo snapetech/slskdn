@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the Transfers page bulk-action storm that was turning queue cleanup into its own failure mode: bulk retry now serializes download enqueue requests instead of tripping the backend `429` limiter, grouped retry/cancel/remove actions delegate to the same throttled handlers, `Remove All Completed` now uses the dedicated bulk-clear endpoint, and bulk failures surface as one summary toast instead of one popup per file.
+
 - Fixed the newest issue `#209` mesh follow-up where DHT bootstrap/discovery succeeded but `Circuit maintenance` still stayed at `0 circuits, 0 total peers`. Live overlay neighbors are now mirrored into the circuit peer inventory through `MeshNeighborPeerSyncService`, and unit coverage reproduces the old empty-peer state without the sync service and the corrected populated-peer state with it.
 
 - Followed up on the newer issue `#209` feedback after DHT bootstrap started succeeding: versioned `GET /api/v0/users/notes` now resolves correctly again, and the mesh overlay connector no longer runs a guaranteed-to-fail UDP hole-punch preflight against DHT-discovered TCP overlay endpoints. Hole-punch completion logs now also label their local port as an ephemeral UDP socket so operators do not mistake it for a randomized listener port.
