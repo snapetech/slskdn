@@ -1,6 +1,6 @@
 name: slskdn
 base: core22
-version: '0.24.5-slskdn.139'
+version: '0.24.5-slskdn.140'
 summary: 🔋 The batteries included fork of slskd with 24+ new features
 description: |
   The batteries included fork of slskd with 24+ new features: decentralized pods,
@@ -22,8 +22,8 @@ apps:
 parts:
   slskdn:
     plugin: dump
-    source: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.139/slskdn-main-linux-glibc-x64.zip
-    source-checksum: sha256/80dc61e564c5ea30268264f97986d81497048518f77c87ea0a51e9361aa33904
+    source: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.140/slskdn-main-linux-glibc-x64.zip
+    source-checksum: sha256/eccd219b7858e4e2f97ac9c6e3178c3c047dd4bb124e74aea83c02b73801f61d
     stage-packages:
       - libicu70
       - libssl3
