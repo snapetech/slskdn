@@ -52,6 +52,55 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z67. Auto-Replace Must Wait For SearchService Background Finalization
+
+**The Bug**: Live `kspls0` build `159` logs showed `AutoReplaceService` warning `No search responses found` for a track, then `SearchService` logging the same search completed with 14-17 responses one second later. Auto-replace started a search with `SearchService.StartAsync()`, but that method returns after creating the search record while a background task later persists the final responses. The fixed 30-second poll could expire just before finalization, causing auto-replace to skip valid alternatives.
+
+**Files Affected**:
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+- `tests/slskd.Tests.Unit/Transfers/AutoReplace/AutoReplaceServiceTests.cs`
+
+**Wrong**:
+```csharp
+while (waited < TimeSpan.FromSeconds(30))
+{
+    searchWithResponses = await Searches.FindAsync(s => s.Id == searchId, includeResponses: true);
+    if (searchWithResponses?.State.HasFlag(SearchStates.Completed) == true)
+    {
+        break;
+    }
+}
+
+if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any())
+{
+    return candidates;
+}
+```
+
+**Correct**:
+```csharp
+while (waited < SearchCompletionTimeout)
+{
+    searchWithResponses = await Searches.FindAsync(s => s.Id == searchId, includeResponses: true);
+    if (searchWithResponses?.State.HasFlag(SearchStates.Completed) == true)
+    {
+        break;
+    }
+}
+
+if (searchWithResponses?.State.HasFlag(SearchStates.Completed) != true)
+{
+    return candidates;
+}
+
+if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any())
+{
+    return candidates;
+}
+```
+
+**Why This Keeps Happening**: `SearchService.StartAsync()` sounds like it returns the completed search, but the normal search path returns the newly created record and finalizes responses asynchronously. Any workflow that needs search responses must poll for the persisted `Completed` state with enough finalization grace and must not equate "not completed yet" with "completed with no responses."
+
 ### 0z66. User Directory Browse Must Gate The Soulseek Logged-In State
 
 **The Bug**: Live `kspls0` startup logs showed `POST /api/v0/users/{username}/directory` throwing through the ASP.NET pipeline when the frontend/browser requested a directory while the Soulseek client was `Connected, LoggingIn`. The endpoint only handled offline users, so a normal startup race became a noisy 500 with repeated security middleware and exception-handler errors.
