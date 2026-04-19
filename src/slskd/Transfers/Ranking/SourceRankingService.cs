@@ -118,50 +118,22 @@ namespace slskd.Transfers.Ranking
 
         private async Task RecordHistoryAsync(string username, bool isSuccess, CancellationToken cancellationToken)
         {
-            const int maxRetries = 3;
-            for (int attempt = 0; attempt < maxRetries; attempt++)
-            {
-                try
-                {
-                    await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-                    var entry = await context.DownloadHistory.FindAsync(new object[] { username }, cancellationToken);
-                    if (entry == null)
-                    {
-                        entry = new DownloadHistoryEntry { Username = username };
-                        context.DownloadHistory.Add(entry);
-                    }
+            var successes = isSuccess ? 1 : 0;
+            var failures = isSuccess ? 0 : 1;
+            var lastUpdated = DateTime.UtcNow;
 
-                    if (isSuccess)
-                    {
-                        entry.Successes++;
-                    }
-                    else
-                    {
-                        entry.Failures++;
-                    }
+            await context.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO ""DownloadHistory"" (""Username"", ""Successes"", ""Failures"", ""LastUpdated"")
+                VALUES ({username}, {successes}, {failures}, {lastUpdated})
+                ON CONFLICT(""Username"") DO UPDATE SET
+                    ""Successes"" = ""DownloadHistory"".""Successes"" + {successes},
+                    ""Failures"" = ""DownloadHistory"".""Failures"" + {failures},
+                    ""LastUpdated"" = {lastUpdated}",
+                cancellationToken);
 
-                    entry.LastUpdated = DateTime.UtcNow;
-
-                    await context.SaveChangesAsync(cancellationToken);
-                    logger.LogDebug("Recorded {Type} for {Username}: {Successes}/{Failures}",
-                        isSuccess ? "success" : "failure", username, entry.Successes, entry.Failures);
-                    return;
-                }
-                catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE constraint") == true)
-                {
-                    // Race condition: another thread inserted first, retry to update
-                    logger.LogDebug("Retrying history update for {Username} due to race condition (attempt {Attempt})", username, attempt + 1);
-
-                    // Small delay before retry to let database settle
-                    await Task.Delay(50 * (attempt + 1), cancellationToken);
-
-                    if (attempt == maxRetries - 1)
-                    {
-                        logger.LogWarning(ex, "Failed to record history for {Username} after {MaxRetries} attempts", username, maxRetries);
-                    }
-                }
-            }
+            logger.LogDebug("Recorded {Type} for {Username}", isSuccess ? "success" : "failure", username);
         }
 
         /// <inheritdoc/>

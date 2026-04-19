@@ -48,18 +48,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. `kspls0` live install/logs were checked, the host was restarted onto the installed build, and the local DHT diagnostics API-key fix is implemented and validated.
+- **Current Task**: Manual validation build on `kspls0`; source-ranking history race fixed locally and focused tests pass. Next step is to deploy the updated manual build and watch logs.
 - **Branch**: `main`
 - **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0`; no release tags were created.
 - **Last Activity**:
-  - Found `kspls0` had `slskdn-bin 0.24.5.slskdn.154-1` installed, but the running service was still executing `0.24.5.slskdn.147`; restarted `slskd` so the live process now reports `0.24.5-slskdn.154`.
-  - Verified Soulseek login, shares, listener ports, firewall allowance, DHT bootstrap to `Ready`, DHT discovery, and a broad search returning 250 responses.
-  - Confirmed the remaining DHT/overlay weakness is candidate quality: discovered peers exist, but overlay connections are mostly timeouts/no-route/refused/TLS EOF and active mesh connections are often zero.
-  - Found and fixed the diagnostics auth bug where DHT/overlay endpoints rejected API keys because `DhtRendezvousController` used bare `[Authorize]`.
+  - Published and installed a local manual build on `kspls0`, confirmed the running process is the manual release path/version, and verified the DHT diagnostics API-key fix live.
+  - Verified Soulseek login, shares, listener ports, DHT bootstrap/discovery, broad search completion, and resumed transfer activity on the manual build.
+  - Found a live transfer-load race in `SourceRankingService`: concurrent first writes to `DownloadHistory` for the same username could trip SQLite unique-key errors.
+  - Replaced the source-ranking read-then-insert/update path with an atomic SQLite upsert, added concurrent regression coverage, documented the gotcha in ADR-0001, and validated `SourceRankingServiceTests`.
 - **Next Steps**:
-  1. Push the DHT diagnostics API-key fix when ready.
-  2. Keep the existing follow-up on candidate filtering/deprioritization for DHT-discovered non-overlay endpoints.
-  3. Watch `kspls0` for recurrence of the Soulseek.NET `Timer.Reset` unobserved `NullReferenceException` during peer response/write paths.
+  1. Commit the source-ranking upsert fix.
+  2. Publish/install a new manual build on `kspls0` and watch logs for recurrence of `DownloadHistory.Username` unique constraint errors or transfer-related fatal noise.
+  3. Keep the existing follow-up on candidate filtering/deprioritization for DHT-discovered non-overlay endpoints.
 
 ## Recent Context
 

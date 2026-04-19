@@ -6490,3 +6490,10 @@ Code quality improvements were completed as part of Option A:
 - Ran live search checks. A narrow search immediately after restart timed out with zero results, but a broad `nirvana nevermind` search completed with 250 responses and 8448 files, proving search is working after the restart.
 - Found two real issues while checking logs/API: the pre-restart process emitted repeated unobserved `NullReferenceException` noise from `Soulseek.Extensions.Reset(Timer timer)` during peer write/search-response handling, and DHT/overlay diagnostic endpoints rejected configured API keys because `DhtRendezvousController` used bare `[Authorize]`.
 - Fixed the DHT diagnostics auth bug locally by switching the controller to `AuthPolicy.Any`, added unit coverage, documented the gotcha in ADR-0001, and validated `DhtRendezvousControllerTests` (`12` passed). The remaining DHT/overlay concern is candidate quality: DHT discovery works, but most overlay connection attempts still fail as timeout/no-route/refused/TLS EOF against unverified public candidates.
+
+## 2026-04-19 03:35:00Z
+
+- Built and manually installed `0.24.5-slskdn.154+manual.d194bb421` on `kspls0` under `/usr/lib/slskd/releases/manual-d194bb421`, then restarted `slskd` and confirmed the live process path/version through `/api/v0/application`.
+- Revalidated the DHT diagnostics API-key fix on the live manual build: `/api/v0/dht/status` and `/api/v0/overlay/stats` now return `200` with the configured `X-API-Key`. DHT bootstrap and discovery are healthy, broad Soulseek search completed with 250 responses, and transfers resumed.
+- Found the next real live bug under transfer load: source-ranking history writes can race on first insert for the same username and emit `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username`.
+- Fixed the source-ranking race by replacing the EF read-then-insert/update sequence with an atomic SQLite upsert and added focused concurrent regression coverage. Validation: `SourceRankingServiceTests` (`2` passed).

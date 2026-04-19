@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Make source-ranking download history updates atomic under concurrent transfer events.
+ - Status: completed (2026-04-19)
+ - Priority: P1
+ - Notes: Live manual-build validation on `kspls0` exposed `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username` while concurrent transfer completion/failure handlers recorded source-ranking history. Replaced EF read-then-insert/update with a single SQLite `INSERT ... ON CONFLICT DO UPDATE` counter upsert, added concurrent regression coverage, and documented the gotcha in ADR-0001.
+
 - [x] **bug**: Allow API-key access to DHT rendezvous diagnostics.
  - Status: completed (2026-04-19)
  - Priority: P1
