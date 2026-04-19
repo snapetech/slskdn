@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z65. Mesh Content Downloads Need A Real Overlay Service Transport, Not Just Service DTOs
+
+**The Bug**: The DHT rendezvous overlay could connect peers and run mesh search, and the content service/fetcher classes existed, but `MeshServiceClient.CallAsync()` always returned `ServiceUnavailable` because service-fabric transport over the DHT overlay was not implemented. Search results could look available while `/api/v0/searches/{id}/items/{item}/download` could never fetch bytes from a mesh peer.
+
+**Files Affected**:
+- `src/slskd/Mesh/ServiceFabric/MeshServiceClient.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayRequestRouter.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+- `src/slskd/Streaming/MeshContentFetcher.cs`
+
+**Wrong**:
+```csharp
+_logger.LogWarning("[ServiceClient] Mesh service transport is not implemented...");
+return Task.FromResult(new ServiceReply
+{
+    StatusCode = ServiceStatusCodes.ServiceUnavailable,
+    ErrorMessage = "Mesh service transport is not implemented."
+});
+```
+
+**Correct**:
+```csharp
+var replyTask = _requestRouter.WaitForMeshServiceReplyAsync(connection, correlationId, timeout.Token);
+await connection.WriteMessageAsync(new MeshServiceCallMessage { CorrelationId = correlationId, ... }, timeout.Token);
+var reply = await replyTask;
+```
+
+**Why This Keeps Happening**: The project has several mesh layers with similar names: DHT rendezvous overlay connections, mesh search RPCs, service-fabric DTOs, and `MeshContent` handlers. Having the service and fetcher classes present does not mean the transport path is wired. Any feature that claims end-to-end mesh transfer must verify a real peer-to-peer call crosses an overlay connection and returns file bytes, not just that both endpoint classes compile.
+
 ### 0z64. Soulseek TransferRejectedException Remote Enqueue Failures Are Expected Network Churn
 
 **The Bug**: Live `kspls0` validation still emitted `[FATAL] Unobserved task exception ... (Enqueue failed due to internal error)` after downloads were already recorded as `Completed, Rejected`. The unobserved exception was `Soulseek.TransferRejectedException`, which the expected-network classifier did not recognize even though the app had already handled it as a remote transfer rejection.
