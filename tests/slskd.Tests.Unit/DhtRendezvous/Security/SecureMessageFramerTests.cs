@@ -32,10 +32,9 @@ public class SecureMessageFramerTests
     [Fact]
     public void DeserializeMessage_WhenJsonIsMalformed_ThrowsSanitizedProtocolViolation()
     {
-        var framer = new SecureMessageFramer(new MemoryStream());
         var payload = Encoding.UTF8.GetBytes("{bad json");
 
-        var ex = Assert.Throws<ProtocolViolationException>(() => framer.DeserializeMessage<TestMessage>(payload));
+        var ex = Assert.Throws<ProtocolViolationException>(() => SecureMessageFramer.DeserializeMessage<TestMessage>(payload));
 
         Assert.Equal("Invalid JSON", ex.Message);
         Assert.DoesNotContain("LineNumber", ex.Message, System.StringComparison.OrdinalIgnoreCase);
