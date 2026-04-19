@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the AUR binary package source cache trap: the GitHub Linux glibc zips for `slskdn-bin` and `slskdn-dev` are now saved under versioned local source filenames, so yay/makepkg cannot build a package labeled with a newer `pkgver` while silently reusing an older cached release zip.
 - Fixed the issue `#209` privacy leak in DHT/overlay logs: mesh usernames, peer ids, and public endpoints now go through `OverlayLogSanitizer` before operator logs, so pasted remote logs no longer expose raw Soulseek names like the earlier `Accepted mesh connection from ...` messages.
 - Fixed the newest issue `#209` mesh failure reproduced from build `151`: quiet overlay neighbors no longer disconnect after the 30-second message-read timeout, inbound handshakes advertise the peer's overlay listener so the server can start a reciprocal outbound connection for request/response mesh RPCs, old peers fall back to the configured overlay port, and stale inbound cleanup can no longer unregister a newer outbound replacement. The two-full-instance mesh smoke now waits past the read timeout and proves both nodes stay connected.
 - Added a Web UI regression test proving normal searches create requests without bridge providers unless `/api/slskdn/capabilities` explicitly advertises `scene_pod_bridge`, covering the issue `#209` zero-result failure mode from the browser path.

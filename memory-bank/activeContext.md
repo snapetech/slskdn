@@ -48,18 +48,19 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Issue `#209` mesh idle-disconnect and DHT/overlay log privacy follow-ups are implemented locally and validated.
+- **Current Task**: None. `kspls0` AUR binary install mismatch was diagnosed and the packaging cache-staleness fix is implemented locally.
 - **Branch**: `main`
-- **Environment**: Local dev; issue `#209` tester logs showed raw mesh usernames in accepted/registered neighbor logs and the build `151` overlay path dropped quiet inbound neighbors at the 30-second read timeout.
+- **Environment**: Local dev plus SSH to `kspls0`; `kspls0` has `slskdn-bin 0.24.5.slskdn.152-1` installed, but the packaged `/usr/bin/slskd --version` reports `0.24.5-slskdn.145` because yay/makepkg reused the cached `.145` `slskdn-main-linux-glibc-x64.zip`.
 - **Last Activity**:
-  - Fixed the overlay idle timeout and reciprocal outbound connection path so quiet mesh neighbors remain connected and usable for request/response mesh search.
-  - Confirmed the existing privacy work was not a global log redaction layer; DHT rendezvous overlay logs bypassed it.
-  - Added `OverlayLogSanitizer` and routed DHT/overlay username, peer id, and endpoint log arguments through it.
-  - Documented the privacy bug in ADR-0001 and committed that gotcha as `08b62f835`.
-  - Validation passed: focused unit sanitizer/overlay slice, rebuilt two-test mesh integration slice, `bash ./bin/lint`, and `git diff --check`.
+  - Confirmed the user-visible `error: segmentation fault` came from pacman itself during/after the `rebuild-detector.hook` phase; `checkrebuild` exits cleanly when rerun and no slskd coredump was present.
+  - Confirmed the published GitHub `.152` Linux glibc x64 asset is correct and reports `0.24.5-slskdn.152`.
+  - Fixed `packaging/aur/PKGBUILD-bin` so the binary zip is saved as `slskdn-${pkgver}-main-linux-glibc-x64.zip`, preventing makepkg from reusing an older cached channel asset when checksums are skipped.
+  - Updated packaging validation, metadata refresh docs, and ADR-0001 gotchas for the AUR stale-source cache failure.
+  - Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `makepkg --printsrcinfo` smoke for `PKGBUILD-bin`, and `git diff --check`.
 - **Next Steps**:
-  1. Commit the code/doc fix set if desired.
-  2. Push/tag only when explicitly requested.
+  1. Commit and push the AUR cache-staleness fix if desired.
+  2. Publish the corrected AUR `slskdn-bin` PKGBUILD, then rebuild/reinstall on `kspls0` from a clean source cache.
+  3. Restart `slskd.service` on `kspls0` only when ready to move the live daemon onto the corrected `.152` payload.
 
 ## Recent Context
 

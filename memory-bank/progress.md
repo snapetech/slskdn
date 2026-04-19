@@ -1,3 +1,21 @@
+## 2026-04-19 00:07 - Fixed stale AUR binary source cache risk
+
+### Completed
+- Diagnosed the `kspls0` `slskdn-bin 0.24.5.slskdn.152-1` install mismatch: pacman showed `.152`, but `/usr/bin/slskd --version` reported `0.24.5-slskdn.145`.
+- Confirmed packages labeled `.147`, `.149`, and `.152` in the yay cache all contained the `.145` payload because `PKGBUILD-bin` used a constant local source filename, `slskdn-main-linux-glibc-x64.zip`, with `sha256sums=('SKIP' ...)`.
+- Confirmed the published GitHub `.152` Linux glibc x64 asset is correct and reports `0.24.5-slskdn.152`; the bad local package was caused by makepkg source cache reuse, not a bad release asset.
+- Changed `packaging/aur/PKGBUILD-bin` and `packaging/aur/PKGBUILD-dev` to save binary zips under `${pkgver}`-qualified local filenames, and updated packaging validation, metadata refresh docs, and ADR-0001.
+
+### Verification
+- `bash packaging/scripts/validate-packaging-metadata.sh`
+- `makepkg --printsrcinfo` smoke for `packaging/aur/PKGBUILD-bin`
+- Fresh download of `0.24.5-slskdn.152/slskdn-main-linux-glibc-x64.zip` reports `0.24.5-slskdn.152`
+- `git diff --check`
+
+### Findings
+- The user-visible pacman `error: segmentation fault` was recorded as a pacman coredump during/after `rebuild-detector.hook`; rerunning `/usr/bin/checkrebuild` exits cleanly and no slskd coredump was present.
+- `slskd.service` on `kspls0` remained running from before the package transaction, so a restart is still required before the live daemon can use any corrected `.152` payload.
+
 ## 2026-04-17 23:05 - Repaired the failed `build-main-0.24.5-slskdn.135` package pipeline
 
 ### Completed

@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z58. AUR Binary Sources Need Versioned Local Filenames Or Makepkg Can Repackage An Older Zip
+
+**The Bug**: `slskdn-bin` used a constant local source filename, `slskdn-main-linux-glibc-x64.zip`, with `sha256sums=('SKIP' ...)`. On `kspls0`, yay built packages labeled `0.24.5.slskdn.147`, `.149`, and `.152`, but makepkg reused the cached `.145` zip because the local filename never changed and checksum validation was skipped. Pacman showed the new package version while `/usr/bin/slskd --version` still reported `0.24.5-slskdn.145`.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/PKGBUILD-dev`
+- `packaging/scripts/validate-packaging-metadata.sh`
+- `packaging/scripts/update-stable-release-metadata.sh`
+
+**Wrong**:
+```bash
+source=(
+    "slskdn-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip"
+)
+sha256sums=('SKIP' ...)
+```
+
+**Correct**:
+```bash
+source=(
+    "slskdn-${pkgver}-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip"
+)
+sha256sums=('SKIP' ...)
+```
+
+**Why This Keeps Happening**: The GitHub release asset name is stable by channel, so it feels natural to use that same name locally. With `SKIP`, however, makepkg has no hash reason to reject an existing cached file. The local source filename must include the package version whenever a binary release asset is versioned only by its URL path. This applies to both stable and dev binary AUR packages.
+
 
 ### 0z57. Overlay Logs Must Sanitize Remote Usernames And Public Endpoints Before Operator Output
 
