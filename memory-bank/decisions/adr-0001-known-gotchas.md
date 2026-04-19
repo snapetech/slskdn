@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z59. Reciprocal Overlay Connections Need Independent Inbound And Outbound Lifecycles
+
+**The Bug**: Issue `#209` kept reaching DHT `Ready` and discovering peers, but mesh health fell back to DHT-only candidates (`0 onion-capable`) because the overlay registry treated a peer as one socket and preferred outbound connections. When two reachable nodes formed reciprocal connections, each side could reject or dispose the other side's live server-side socket. Outbound sockets also had no read loop, so they could not answer keepalive pings or mesh RPCs and were later cleaned up as stale.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshNeighborRegistry.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayRequestRouter.cs`
+- `src/slskd/DhtRendezvous/Search/MeshOverlaySearchService.cs`
+
+**Wrong**:
+```text
+Store one connection per username, replace inbound with outbound, and let mesh search read directly from outbound sockets while no background loop owns those reads.
+```
+
+**Correct**:
+```text
+Track inbound and outbound overlay connections separately for the same peer. Run a message loop for outbound sockets too, and route request/response RPC replies through a pending-request coordinator so one reader owns each socket.
+```
+
+**Why This Keeps Happening**: It is tempting to collapse peer identity to one "best" connection, but this overlay uses directional sockets for different jobs: inbound server loops answer remote requests and outbound sockets initiate local RPCs. Replacing one with the other makes simultaneous reciprocal dialing destroy the working path. Any future overlay registry change must preserve direction-specific lifecycle and avoid competing readers on the same stream.
+
 ### 0z58. AUR Binary Sources Need Versioned Local Filenames Or Makepkg Can Repackage An Older Zip
 
 **The Bug**: `slskdn-bin` used a constant local source filename, `slskdn-main-linux-glibc-x64.zip`, with `sha256sums=('SKIP' ...)`. On `kspls0`, yay built packages labeled `0.24.5.slskdn.147`, `.149`, and `.152`, but makepkg reused the cached `.145` zip because the local filename never changed and checksum validation was skipped. Pacman showed the new package version while `/usr/bin/slskd --version` still reported `0.24.5-slskdn.145`.
