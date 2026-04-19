@@ -34,6 +34,8 @@ namespace slskd.Search
         public int? SampleRate { get; init; }
         public long Size { get; init; }
         public bool IsLocked { get; init; }
+        public string? ContentId { get; init; }
+        public string? Hash { get; init; }
 
         public static File FromSoulseekFile(SoulseekFile file)
         {

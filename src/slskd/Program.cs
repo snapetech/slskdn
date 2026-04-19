@@ -2061,6 +2061,8 @@ namespace slskd
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDescriptorValidator, Mesh.ServiceFabric.MeshServiceDescriptorValidator>();
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceDirectory, Mesh.ServiceFabric.DhtMeshServiceDirectory>();
             services.AddSingleton<Mesh.ServiceFabric.IMeshServiceClient, Mesh.ServiceFabric.MeshServiceClient>();
+            services.AddOptions<Mesh.ServiceFabric.MeshServiceFabricOptions>().Bind(Configuration.GetSlskdSection("MeshServiceFabric"));
+            services.AddSingleton<Mesh.ServiceFabric.MeshServiceRouter>();
 
             // MeshContentFetcher requires IMeshServiceClient, so register after it
             services.AddSingleton<IMeshContentFetcher, MeshContentFetcher>();

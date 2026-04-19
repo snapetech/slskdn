@@ -77,6 +77,10 @@ public static class SearchResponseMerger
                     Files = keptFiles,
                     LockedFileCount = keptLocked.Count,
                     LockedFiles = keptLocked,
+                    SourceProviders = r.SourceProviders,
+                    PrimarySource = r.PrimarySource,
+                    PodContentRef = r.PodContentRef,
+                    SceneContentRef = r.SceneContentRef,
                 });
             }
         }

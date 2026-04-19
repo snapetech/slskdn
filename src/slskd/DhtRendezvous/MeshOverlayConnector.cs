@@ -21,6 +21,7 @@ using slskd.DhtRendezvous.Messages;
 using slskd.DhtRendezvous.Search;
 using slskd.DhtRendezvous.Security;
 using slskd.Mesh;
+using slskd.Mesh.ServiceFabric;
 
 /// <summary>
 /// Makes outbound overlay connections to mesh peers discovered via DHT.
@@ -37,6 +38,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private readonly IMeshSyncService _meshSyncService;
     private readonly IMeshSearchRpcHandler _meshSearchRpcHandler;
     private readonly MeshOverlayRequestRouter _requestRouter;
+    private readonly MeshServiceRouter? _serviceRouter;
     private readonly SecureMessageFramer _framerInstance = new(Stream.Null);
     private int _pendingConnections;
     private long _successfulConnections;
@@ -69,7 +71,8 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         MeshNeighborRegistry registry,
         IMeshSyncService meshSyncService,
         IMeshSearchRpcHandler meshSearchRpcHandler,
-        MeshOverlayRequestRouter requestRouter)
+        MeshOverlayRequestRouter requestRouter,
+        MeshServiceRouter? serviceRouter = null)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
@@ -81,6 +84,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         _meshSyncService = meshSyncService;
         _meshSearchRpcHandler = meshSearchRpcHandler;
         _requestRouter = requestRouter;
+        _serviceRouter = serviceRouter;
     }
 
     public int PendingConnections => _pendingConnections;
@@ -318,6 +322,19 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
                             break;
 
+                        case OverlayMessageType.MeshServiceCall:
+                            await HandleMeshServiceCallAsync(connection, rawMessage, cancellationToken).ConfigureAwait(false);
+                            break;
+
+                        case OverlayMessageType.MeshServiceReply:
+                            var meshServiceReply = _framerInstance.DeserializeMessage<MeshServiceReplyMessage>(rawMessage);
+                            if (!_requestRouter.TryCompleteMeshServiceReply(connection, ToServiceReply(meshServiceReply)))
+                            {
+                                _logger.LogDebug("Unexpected mesh_service_reply from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
+                            }
+
+                            break;
+
                         default:
                             if (connection.Username is not null)
                             {
@@ -396,6 +413,54 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         {
             _logger.LogWarning(ex, "Error handling mesh message from {Username}", OverlayLogSanitizer.Username(connection.Username));
         }
+    }
+
+    private async Task HandleMeshServiceCallAsync(MeshOverlayConnection connection, byte[] rawMessage, CancellationToken cancellationToken)
+    {
+        var callMessage = _framerInstance.DeserializeMessage<MeshServiceCallMessage>(rawMessage);
+        if (_serviceRouter == null)
+        {
+            await connection.WriteMessageAsync(ToMeshServiceReplyMessage(new ServiceReply
+            {
+                CorrelationId = callMessage.CorrelationId,
+                StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                ErrorMessage = "Mesh service router unavailable",
+            }), cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var call = new ServiceCall
+        {
+            CorrelationId = callMessage.CorrelationId,
+            ServiceName = callMessage.ServiceName,
+            Method = callMessage.Method,
+            Payload = callMessage.Payload,
+        };
+
+        var reply = await _serviceRouter.RouteAsync(call, connection.Username ?? connection.ConnectionId, connection.CertificateThumbprint, cancellationToken).ConfigureAwait(false);
+        await connection.WriteMessageAsync(ToMeshServiceReplyMessage(reply), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static ServiceReply ToServiceReply(MeshServiceReplyMessage message)
+    {
+        return new ServiceReply
+        {
+            CorrelationId = message.CorrelationId,
+            StatusCode = message.StatusCode,
+            Payload = message.Payload,
+            ErrorMessage = message.ErrorMessage,
+        };
+    }
+
+    private static MeshServiceReplyMessage ToMeshServiceReplyMessage(ServiceReply reply)
+    {
+        return new MeshServiceReplyMessage
+        {
+            CorrelationId = reply.CorrelationId,
+            StatusCode = reply.StatusCode,
+            Payload = reply.Payload,
+            ErrorMessage = reply.ErrorMessage,
+        };
     }
 
     public MeshOverlayConnectorStats GetStats()

@@ -19,6 +19,7 @@ using Microsoft.Extensions.Options;
 using slskd.DhtRendezvous.Search;
 using slskd.DhtRendezvous.Security;
 using slskd.Mesh;
+using slskd.Mesh.ServiceFabric;
 
 using ProtocolViolationException = slskd.DhtRendezvous.Security.ProtocolViolationException;
 
@@ -39,6 +40,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private readonly IMeshSyncService _meshSyncService;
     private readonly IMeshSearchRpcHandler _meshSearchRpcHandler;
     private readonly MeshOverlayRequestRouter _requestRouter;
+    private readonly MeshServiceRouter? _serviceRouter;
     private readonly DhtRendezvousOptions _dhtOptions;
 
     private TcpListener? _listener;
@@ -66,7 +68,8 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         IMeshSyncService meshSyncService,
         IMeshSearchRpcHandler meshSearchRpcHandler,
         MeshOverlayRequestRouter requestRouter,
-        DhtRendezvousOptions dhtOptions)
+        DhtRendezvousOptions dhtOptions,
+        MeshServiceRouter? serviceRouter = null)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
@@ -80,6 +83,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _meshSearchRpcHandler = meshSearchRpcHandler ?? throw new ArgumentNullException(nameof(meshSearchRpcHandler));
         _requestRouter = requestRouter ?? throw new ArgumentNullException(nameof(requestRouter));
         _dhtOptions = dhtOptions;
+        _serviceRouter = serviceRouter;
     }
 
     public bool IsListening => _listener is not null;
@@ -472,6 +476,19 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 
                             break;
 
+                        case Messages.OverlayMessageType.MeshServiceCall:
+                            await HandleMeshServiceCallAsync(connection, rawMessage, cancellationToken);
+                            break;
+
+                        case Messages.OverlayMessageType.MeshServiceReply:
+                            var meshServiceReply = _framerInstance.DeserializeMessage<Messages.MeshServiceReplyMessage>(rawMessage);
+                            if (!_requestRouter.TryCompleteMeshServiceReply(connection, ToServiceReply(meshServiceReply)))
+                            {
+                                _logger.LogDebug("Unexpected mesh_service_reply from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
+                            }
+
+                            break;
+
                         default:
                             // Forward to mesh sync service for handling
                             if (connection.Username is not null)
@@ -561,6 +578,54 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         {
             _logger.LogWarning(ex, "Error handling mesh message from {Username}", OverlayLogSanitizer.Username(connection.Username));
         }
+    }
+
+    private async Task HandleMeshServiceCallAsync(MeshOverlayConnection connection, byte[] rawMessage, CancellationToken cancellationToken)
+    {
+        var callMessage = _framerInstance.DeserializeMessage<Messages.MeshServiceCallMessage>(rawMessage);
+        if (_serviceRouter == null)
+        {
+            await connection.WriteMessageAsync(ToMeshServiceReplyMessage(new ServiceReply
+            {
+                CorrelationId = callMessage.CorrelationId,
+                StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                ErrorMessage = "Mesh service router unavailable",
+            }), cancellationToken);
+            return;
+        }
+
+        var call = new ServiceCall
+        {
+            CorrelationId = callMessage.CorrelationId,
+            ServiceName = callMessage.ServiceName,
+            Method = callMessage.Method,
+            Payload = callMessage.Payload,
+        };
+
+        var reply = await _serviceRouter.RouteAsync(call, connection.Username ?? connection.ConnectionId, connection.CertificateThumbprint, cancellationToken);
+        await connection.WriteMessageAsync(ToMeshServiceReplyMessage(reply), cancellationToken);
+    }
+
+    private static ServiceReply ToServiceReply(Messages.MeshServiceReplyMessage message)
+    {
+        return new ServiceReply
+        {
+            CorrelationId = message.CorrelationId,
+            StatusCode = message.StatusCode,
+            Payload = message.Payload,
+            ErrorMessage = message.ErrorMessage,
+        };
+    }
+
+    private static Messages.MeshServiceReplyMessage ToMeshServiceReplyMessage(ServiceReply reply)
+    {
+        return new Messages.MeshServiceReplyMessage
+        {
+            CorrelationId = reply.CorrelationId,
+            StatusCode = reply.StatusCode,
+            Payload = reply.Payload,
+            ErrorMessage = reply.ErrorMessage,
+        };
     }
 
     internal static bool IsExpectedHandshakeNoise(Exception exception)

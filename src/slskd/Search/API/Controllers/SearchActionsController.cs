@@ -136,7 +136,11 @@ public class SearchActionsController : ControllerBase
         if (primarySource == "pod" && response.PodContentRef != null)
         {
             // Pod download - use ContentId-based download
-            return await HandlePodDownloadAsync(response.PodContentRef.ContentId, file, response.Username, cancellationToken);
+            var contentId = !string.IsNullOrWhiteSpace(file.ContentId)
+                ? file.ContentId
+                : response.PodContentRef.ContentId;
+
+            return await HandlePodDownloadAsync(contentId, file, response.Username, cancellationToken);
         }
         else if (primarySource == "scene" && response.SceneContentRef != null)
         {

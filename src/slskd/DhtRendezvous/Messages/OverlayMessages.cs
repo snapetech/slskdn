@@ -51,6 +51,16 @@ public static class OverlayMessageType
     /// Mesh search response (overlay RPC).
     /// </summary>
     public const string MeshSearchResp = "mesh_search_resp";
+
+    /// <summary>
+    /// Mesh service-fabric request (overlay RPC).
+    /// </summary>
+    public const string MeshServiceCall = "mesh_service_call";
+
+    /// <summary>
+    /// Mesh service-fabric response (overlay RPC).
+    /// </summary>
+    public const string MeshServiceReply = "mesh_service_reply";
 }
 
 /// <summary>
@@ -220,6 +230,11 @@ public static class OverlayFeatures
     public const string MeshSearch = "mesh_search";
 
     /// <summary>
+    /// Mesh service-fabric RPC over the DHT rendezvous overlay.
+    /// </summary>
+    public const string MeshService = "mesh_service";
+
+    /// <summary>
     /// All features supported by this client.
     /// </summary>
     public static readonly IReadOnlyList<string> All = new[]
@@ -230,6 +245,7 @@ public static class OverlayFeatures
         Swarm,
         DeltaSync,
         MeshSearch,
+        MeshService,
     };
 }
 
@@ -315,4 +331,46 @@ public sealed class MeshSearchResponseMessage : OverlayMessage
 
     [JsonPropertyName("error")]
     public string? Error { get; set; }
+}
+
+/// <summary>
+/// Mesh service request sent over overlay (initiator -> peer).
+/// </summary>
+public sealed class MeshServiceCallMessage : OverlayMessage
+{
+    [JsonPropertyName("type")]
+    public override string Type => OverlayMessageType.MeshServiceCall;
+
+    [JsonPropertyName("correlation_id")]
+    public string CorrelationId { get; set; } = string.Empty;
+
+    [JsonPropertyName("service_name")]
+    public string ServiceName { get; set; } = string.Empty;
+
+    [JsonPropertyName("method")]
+    public string Method { get; set; } = string.Empty;
+
+    [JsonPropertyName("payload")]
+    public byte[] Payload { get; set; } = Array.Empty<byte>();
+}
+
+/// <summary>
+/// Mesh service response sent over overlay (peer -> initiator).
+/// </summary>
+public sealed class MeshServiceReplyMessage : OverlayMessage
+{
+    [JsonPropertyName("type")]
+    public override string Type => OverlayMessageType.MeshServiceReply;
+
+    [JsonPropertyName("correlation_id")]
+    public string CorrelationId { get; set; } = string.Empty;
+
+    [JsonPropertyName("status_code")]
+    public int StatusCode { get; set; }
+
+    [JsonPropertyName("payload")]
+    public byte[] Payload { get; set; } = Array.Empty<byte>();
+
+    [JsonPropertyName("error_message")]
+    public string? ErrorMessage { get; set; }
 }

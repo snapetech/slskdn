@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using slskd.DhtRendezvous.Messages;
 using slskd.Search;
+using slskd.Search.Providers;
 using SlskdSearchFile = slskd.Search.File;
 
 /// <summary>
@@ -128,8 +129,12 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
                     BitRate = f.Bitrate,
                     Length = f.Duration,
                     IsLocked = false,
+                    ContentId = f.ContentId,
+                    Hash = f.Hash,
                 })
                 .ToList();
+
+            var firstContentFile = resp.Files.FirstOrDefault(f => !string.IsNullOrWhiteSpace(f.ContentId));
 
             return new Response
             {
@@ -142,6 +147,15 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
                 Files = files,
                 LockedFileCount = 0,
                 LockedFiles = new List<SlskdSearchFile>(),
+                SourceProviders = new List<string> { "pod" },
+                PrimarySource = firstContentFile == null ? string.Empty : "pod",
+                PodContentRef = firstContentFile == null
+                    ? null
+                    : new PodContentRef
+                    {
+                        ContentId = firstContentFile.ContentId!,
+                        Hash = firstContentFile.Hash,
+                    },
             };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -53,6 +53,10 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
     }
 
     public string AppDirectory => appDir;
+    public string DataDirectory => Path.Combine(appDir, "data");
+    public string DownloadsDirectory => Path.Combine(appDir, "downloads");
+    public string IncompleteDirectory => Path.Combine(appDir, "incomplete");
+    public string SharesDirectory => Path.Combine(appDir, "shares");
     public int ApiPort => apiPort;
     public int? BridgePort => bridgePort;
     public int? OverlayPort => overlayPort;
@@ -223,6 +227,8 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         sb.AppendLine("shares:");
         sb.AppendLine("  directories:");
         sb.AppendLine($"    - {Path.Combine(appDir, "shares")}");
+        sb.AppendLine("  cache:");
+        sb.AppendLine("    storage_mode: disk");
         sb.AppendLine("feature:");
         sb.AppendLine("  identityFriends: true");
         sb.AppendLine("  collectionsSharing: true");

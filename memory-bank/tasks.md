@@ -1047,3 +1047,7 @@
 - [ ] Add a non-QUIC direct mesh transport path or runtime dependency gate
   - Status: pending
   - Notes: The audit on `kspls0` showed a deeper architecture gap remains after the descriptor fix: `TransportSelector` still only has `DirectQuicDialer` for clearnet mesh transport, so QUIC-unsupported hosts cannot build direct circuits at all. Either wire the existing direct TLS transport into mesh dialing or add a startup/package gate that makes this unsupported state explicit before release.
+
+- [x] Verify DHT rendezvous overlay search and transfer between two full local slskdN instances
+  - Status: done
+  - Notes: Added a deterministic full-instance integration test that starts alpha/beta subprocesses, connects alpha to beta through the real overlay API, searches beta's advertised pod content over mesh search, downloads the content through `MeshContent.GetByContentId` service calls over the DHT overlay, and byte-compares the downloaded file. Fixed missing overlay service transport, pod routing metadata preservation, and service router DI registration uncovered by the test.

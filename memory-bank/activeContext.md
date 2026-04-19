@@ -48,20 +48,19 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Manual validation build on `kspls0` is complete; two live-log fixes are committed and final manual build `0.24.5-slskdn.154+manual.9044cb5e5` is running.
+- **Current Task**: None. Local two-full-instance DHT overlay search and transfer are implemented and validated; code changes are ready to commit/push.
 - **Branch**: `main`
 - **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0`; no release tags were created.
 - **Last Activity**:
-  - Published and installed a local manual build on `kspls0`, confirmed the running process is the manual release path/version, and verified the DHT diagnostics API-key fix live.
-  - Verified Soulseek login, shares, listener ports, DHT bootstrap/discovery, broad search completion, and resumed transfer activity on the manual build.
-  - Found a live transfer-load race in `SourceRankingService`: concurrent first writes to `DownloadHistory` for the same username could trip SQLite unique-key errors.
-  - Replaced the source-ranking read-then-insert/update path with an atomic SQLite upsert, added concurrent regression coverage, documented the gotcha in ADR-0001, and validated `SourceRankingServiceTests`.
-  - Found and fixed the remaining fake-fatal transfer noise where `Soulseek.TransferRejectedException: Enqueue failed due to internal error` reached the global unobserved-task handler as `[FATAL]` despite being an expected remote rejection.
-  - Deployed final manual build `0.24.5-slskdn.154+manual.9044cb5e5` to `kspls0`; validated service health, DHT bootstrap/discovery, broad search completion, and successful transfer completion with no recurrence of the two fixed errors.
+  - Confirmed the previous `kspls0` manual build has healthy Soulseek login, DHT bootstrap/discovery, broad search, and normal transfer behavior; remaining public overlay failures are candidate quality (`timeout`, `no route`, `refused`) rather than local DHT search/peer discovery failure.
+  - Added a deterministic full-instance integration test that starts two real slskdN nodes, connects them over the DHT rendezvous overlay, searches beta from alpha, downloads beta's advertised pod content through mesh service RPC, and byte-compares the result.
+  - Fixed the uncovered gaps: overlay service-fabric transport now exists, inbound service calls dispatch through a registered `MeshServiceRouter`, pod content routing metadata survives search response merging, and large overlay content fetches are chunked under the frame limit.
+  - Documented the new gotchas in ADR-0001 and committed the doc-only entries immediately as required.
+  - Validation passed: focused mesh unit tests, full-instance mesh integration, broader overlay/search integration slice, `bash ./bin/lint`, `git diff --check`, and top-level `dotnet test --no-restore -v minimal`.
 - **Next Steps**:
-  1. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
-  2. Keep the existing follow-up on candidate filtering/deprioritization for DHT-discovered non-overlay endpoints.
-  3. Investigate the remaining `SearchResponse ... Cannot access a disposed object` warning if it becomes frequent or user-visible.
+  1. Commit the code/test/memory-bank fix set.
+  2. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
+  3. Keep candidate filtering/deprioritization for bad DHT-discovered overlay endpoints as the remaining DHT mesh follow-up.
 
 ## Recent Context
 

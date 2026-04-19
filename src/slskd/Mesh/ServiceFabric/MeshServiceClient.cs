@@ -4,6 +4,8 @@
 
 using MessagePack;
 using Microsoft.Extensions.Logging;
+using slskd.DhtRendezvous;
+using slskd.DhtRendezvous.Messages;
 using slskd.Mesh.Overlay;
 using System;
 using System.Collections.Concurrent;
@@ -22,10 +24,9 @@ public class MeshServiceClient : IMeshServiceClient
     private readonly ILogger<MeshServiceClient> _logger;
     private readonly IMeshServiceDirectory _serviceDirectory;
     private readonly IControlSigner _signer;
+    private readonly MeshNeighborRegistry? _neighborRegistry;
+    private readonly MeshOverlayRequestRouter? _requestRouter;
     private readonly MeshStatsCollector? _statsCollector;
-
-    // TODO: Inject actual overlay sender when available
-    // private readonly IOverlaySender _overlaySender;
 
     // Pending calls: correlationId -> TaskCompletionSource
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ServiceReply>> _pendingCalls = new();
@@ -42,15 +43,19 @@ public class MeshServiceClient : IMeshServiceClient
         ILogger<MeshServiceClient> logger,
         IMeshServiceDirectory serviceDirectory,
         IControlSigner signer,
+        MeshNeighborRegistry? neighborRegistry = null,
+        MeshOverlayRequestRouter? requestRouter = null,
         MeshStatsCollector? statsCollector = null)
     {
         _logger = logger;
         _serviceDirectory = serviceDirectory;
         _signer = signer;
+        _neighborRegistry = neighborRegistry;
+        _requestRouter = requestRouter;
         _statsCollector = statsCollector;
     }
 
-    public Task<ServiceReply> CallAsync(
+    public async Task<ServiceReply> CallAsync(
         string targetPeerId,
         ServiceCall call,
         CancellationToken cancellationToken = default)
@@ -84,12 +89,12 @@ public class MeshServiceClient : IMeshServiceClient
                 "[ServiceClient] Max total pending calls reached: {Count}",
                 _pendingCalls.Count);
 
-            return Task.FromResult(new ServiceReply
+            return new ServiceReply
             {
                 CorrelationId = normalizedCall.CorrelationId,
                 StatusCode = ServiceStatusCodes.RateLimited,
                 ErrorMessage = "Too many pending calls (global limit)"
-            });
+            };
         }
 
         // MEDIUM-3 FIX 2: Check per-peer concurrent call limit
@@ -100,12 +105,12 @@ public class MeshServiceClient : IMeshServiceClient
                 normalizedTargetPeerId,
                 _perPeerCallCounts.GetValueOrDefault(normalizedTargetPeerId));
 
-            return Task.FromResult(new ServiceReply
+            return new ServiceReply
             {
                 CorrelationId = normalizedCall.CorrelationId,
                 StatusCode = ServiceStatusCodes.RateLimited,
                 ErrorMessage = "Too many concurrent calls to this peer"
-            });
+            };
         }
 
         var peerCallReserved = true;
@@ -120,12 +125,12 @@ public class MeshServiceClient : IMeshServiceClient
                 _logger.LogWarning(
                     "[ServiceClient] Duplicate correlation ID: {CorrelationId}",
                     normalizedCall.CorrelationId);
-                return Task.FromResult(new ServiceReply
+                return new ServiceReply
                 {
                     CorrelationId = normalizedCall.CorrelationId,
                     StatusCode = ServiceStatusCodes.InvalidPayload,
                     ErrorMessage = "Duplicate correlation ID"
-                });
+                };
             }
 
             if (cancellationToken.IsCancellationRequested)
@@ -134,29 +139,81 @@ public class MeshServiceClient : IMeshServiceClient
                     "[ServiceClient] Call cancelled: {Service}.{Method}",
                     normalizedCall.ServiceName, normalizedCall.Method);
                 _pendingCalls.TryRemove(normalizedCall.CorrelationId, out _);
-                return Task.FromCanceled<ServiceReply>(cancellationToken);
+                return await Task.FromCanceled<ServiceReply>(cancellationToken);
             }
 
-            var callBytes = MessagePackSerializer.Serialize(normalizedCall, cancellationToken: CancellationToken.None);
-            var envelope = new ControlEnvelope
+            var connection = _neighborRegistry?.GetAllConnections()
+                .Where(candidate =>
+                    candidate.IsOutbound
+                    && candidate.IsHandshakeComplete
+                    && candidate.IsConnected
+                    && string.Equals(candidate.Username, normalizedTargetPeerId, StringComparison.OrdinalIgnoreCase)
+                    && candidate.Features.Contains(OverlayFeatures.MeshService, StringComparer.OrdinalIgnoreCase))
+                .OrderByDescending(candidate => candidate.ConnectedAt)
+                .FirstOrDefault();
+
+            if (connection == null || _requestRouter == null)
             {
-                Type = OverlayControlTypes.ServiceCall,
-                Payload = callBytes,
-                TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            };
+                _logger.LogWarning(
+                    "[ServiceClient] No outbound mesh service transport to {PeerId} for {Service}.{Method}",
+                    normalizedTargetPeerId,
+                    normalizedCall.ServiceName,
+                    normalizedCall.Method);
 
-            _signer.Sign(envelope);
-            _statsCollector?.RecordMessageSent();
+                return new ServiceReply
+                {
+                    CorrelationId = normalizedCall.CorrelationId,
+                    StatusCode = ServiceStatusCodes.ServiceUnavailable,
+                    ErrorMessage = "Mesh service transport is unavailable."
+                };
+            }
 
-            _logger.LogWarning(
-                "[ServiceClient] Mesh service transport is not implemented for {Service}.{Method} to {PeerId}",
-                normalizedCall.ServiceName, normalizedCall.Method, normalizedTargetPeerId);
-            return Task.FromResult(new ServiceReply
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(_defaultTimeout);
+
+            try
+            {
+                var replyTask = _requestRouter.WaitForMeshServiceReplyAsync(connection, normalizedCall.CorrelationId, timeoutCts.Token);
+                await connection.WriteMessageAsync(new MeshServiceCallMessage
+                {
+                    CorrelationId = normalizedCall.CorrelationId,
+                    ServiceName = normalizedCall.ServiceName,
+                    Method = normalizedCall.Method,
+                    Payload = normalizedCall.Payload,
+                }, timeoutCts.Token).ConfigureAwait(false);
+
+                _statsCollector?.RecordMessageSent();
+                var reply = await replyTask.ConfigureAwait(false);
+                _statsCollector?.RecordMessageReceived();
+                return reply;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                return new ServiceReply
+                {
+                    CorrelationId = normalizedCall.CorrelationId,
+                    StatusCode = ServiceStatusCodes.Timeout,
+                    ErrorMessage = "Mesh service call timed out"
+                };
+            }
+            finally
+            {
+                _requestRouter.RemoveMeshServiceReply(connection, normalizedCall.CorrelationId);
+            }
+        }
+        catch (DhtRendezvous.Security.ProtocolViolationException ex)
+        {
+            _logger.LogDebug(ex, "[ServiceClient] Mesh service frame rejected for {Service}.{Method}", normalizedCall.ServiceName, normalizedCall.Method);
+            return new ServiceReply
             {
                 CorrelationId = normalizedCall.CorrelationId,
                 StatusCode = ServiceStatusCodes.ServiceUnavailable,
-                ErrorMessage = "Mesh service transport is not implemented."
-            });
+                ErrorMessage = "Mesh service transport rejected the payload."
+            };
         }
         finally
         {

@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed DHT rendezvous overlay pod transfers: mesh service-fabric calls now route over established overlay connections, inbound calls dispatch through the real mesh service router, pod search results preserve content-routing metadata, and the full-instance integration suite now proves two local slskdN nodes can connect, mesh-search, download, and byte-verify content over the overlay.
 - Downgraded remote Soulseek `TransferRejectedException` enqueue failures from fake `[FATAL] Unobserved task exception` noise into the expected peer-network bucket. Downloads rejected with `Enqueue failed due to internal error` are still recorded as failed/rejected transfers, but no longer look like host-side fatal crashes.
 - Fixed a live `kspls0` source-ranking database race where concurrent transfer history updates could trip `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username`. Download success/failure counters now use a single atomic SQLite upsert, with regression coverage proving concurrent first writes for the same username preserve every counter update.
 - Fixed DHT rendezvous diagnostics authentication so configured API keys can access `/api/v0/dht/status`, `/api/v0/dht/peers`, and `/api/v0/overlay/stats` instead of those endpoints falling through to bearer-only auth despite the rest of the operator API accepting API keys.

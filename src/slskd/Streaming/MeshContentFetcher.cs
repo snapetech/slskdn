@@ -19,6 +19,8 @@ using slskd.Mesh.ServiceFabric;
 /// </summary>
 public sealed class MeshContentFetcher : IMeshContentFetcher
 {
+    private const int OverlaySafeChunkBytes = 2048;
+
     private readonly IMeshServiceClient _meshClient;
     private readonly ILogger<MeshContentFetcher> _logger;
 
@@ -47,6 +49,11 @@ public sealed class MeshContentFetcher : IMeshContentFetcher
 
         try
         {
+            if (expectedSize.HasValue && expectedSize.Value > OverlaySafeChunkBytes && offset == 0 && length == 0)
+            {
+                return await FetchChunkedAsync(peerId, contentId, expectedSize.Value, expectedHash, cancellationToken).ConfigureAwait(false);
+            }
+
             // Build request payload
             var request = new
             {
@@ -135,5 +142,63 @@ public sealed class MeshContentFetcher : IMeshContentFetcher
                 HashValid = false
             };
         }
+    }
+
+    private async Task<MeshContentFetchResult> FetchChunkedAsync(
+        string peerId,
+        string contentId,
+        long expectedSize,
+        string? expectedHash,
+        CancellationToken cancellationToken)
+    {
+        await using var data = new MemoryStream(capacity: expectedSize > int.MaxValue ? 0 : (int)expectedSize);
+        long offset = 0;
+
+        while (offset < expectedSize)
+        {
+            var remaining = expectedSize - offset;
+            var chunkLength = (int)Math.Min(OverlaySafeChunkBytes, remaining);
+            var chunk = await FetchAsync(
+                peerId,
+                contentId,
+                expectedSize: chunkLength,
+                expectedHash: null,
+                offset: offset,
+                length: chunkLength,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (chunk.Error != null || chunk.Data == null)
+            {
+                return new MeshContentFetchResult
+                {
+                    Error = chunk.Error ?? "Mesh content fetch failed",
+                    SizeValid = false,
+                    HashValid = false,
+                };
+            }
+
+            await chunk.Data.CopyToAsync(data, cancellationToken).ConfigureAwait(false);
+            chunk.Data.Dispose();
+            offset += chunkLength;
+        }
+
+        data.Position = 0;
+        var result = new MeshContentFetchResult
+        {
+            Data = new MemoryStream(data.ToArray()),
+            Size = data.Length,
+            SizeValid = data.Length == expectedSize,
+        };
+
+        if (!string.IsNullOrEmpty(expectedHash))
+        {
+            using var sha256 = SHA256.Create();
+            var hashBytes = sha256.ComputeHash(result.Data);
+            result.Data.Position = 0;
+            result.Hash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            result.HashValid = string.Equals(result.Hash, expectedHash, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return result;
     }
 }

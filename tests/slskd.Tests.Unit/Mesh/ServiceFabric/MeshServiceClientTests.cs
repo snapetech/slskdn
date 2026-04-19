@@ -72,6 +72,6 @@ public class MeshServiceClientTests
             CancellationToken.None);
 
         Assert.Equal(ServiceStatusCodes.ServiceUnavailable, reply.StatusCode);
-        Assert.Equal("Mesh service transport is not implemented.", reply.ErrorMessage);
+        Assert.Equal("Mesh service transport is unavailable.", reply.ErrorMessage);
     }
 }

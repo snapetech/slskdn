@@ -6512,3 +6512,11 @@ Code quality improvements were completed as part of Option A:
 - Confirmed transfer path is functional on the final build: re-enqueued downloads reached `InProgress`, and one completed successfully during the observation window.
 - No recurrence of `DownloadHistory.Username` SQLite unique-constraint errors or transfer-rejection `[FATAL] Unobserved task exception` after the final deploy. Remaining notable log noise is the existing SIGTERM-as-fatal shutdown line from the previous process and one `SearchResponse ... Cannot access a disposed object` warning after the search completed.
 - DHT peer discovery works, but mesh overlay still has `0` active connections. Connector failures are classified as remote candidate quality (`6` timeouts, `1` no-route, `1` refused), so the existing follow-up on filtering/deprioritizing bad DHT-discovered overlay candidates remains the next DHT mesh item.
+
+## 2026-04-19 05:35:00Z
+
+- Built the missing deterministic two-full-instance proof for DHT rendezvous overlay transfer. The new integration test starts two real slskdN subprocesses, makes alpha connect to beta through `/api/v0/overlay/connect`, searches beta over mesh/DHT overlay search, downloads beta's advertised content through `MeshContent.GetByContentId`, and verifies exact bytes on disk.
+- Fixed the failures exposed by that end-to-end path: `MeshServiceClient` now sends service-fabric calls over an outbound overlay connection, server/connector message loops handle `mesh_service_call` and `mesh_service_reply`, `MeshOverlayRequestRouter` correlates service replies, and `MeshServiceRouter` is registered in DI so inbound calls can dispatch to `MeshContentMeshService`.
+- Preserved pod routing metadata through mesh search persistence by carrying file-level `ContentId`/`Hash`, response `PrimarySource`, and `PodContentRef` through overlay search and `SearchResponseMerger`.
+- Kept HTTP fetch errors sanitized after the full `dotnet test` run caught a potential error-message leak in the action controller.
+- Validation: focused mesh unit tests passed, focused full-instance mesh integration passed, broader overlay/search integration slice passed, `bash ./bin/lint` passed, `git diff --check` passed, and top-level `dotnet test --no-restore -v minimal` passed (`slskd.Tests`: 46, `slskd.Tests.Unit`: 3451, `slskd.Tests.Integration`: 275).
