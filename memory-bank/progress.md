@@ -6520,3 +6520,10 @@ Code quality improvements were completed as part of Option A:
 - Preserved pod routing metadata through mesh search persistence by carrying file-level `ContentId`/`Hash`, response `PrimarySource`, and `PodContentRef` through overlay search and `SearchResponseMerger`.
 - Kept HTTP fetch errors sanitized after the full `dotnet test` run caught a potential error-message leak in the action controller.
 - Validation: focused mesh unit tests passed, focused full-instance mesh integration passed, broader overlay/search integration slice passed, `bash ./bin/lint` passed, `git diff --check` passed, and top-level `dotnet test --no-restore -v minimal` passed (`slskd.Tests`: 46, `slskd.Tests.Unit`: 3451, `slskd.Tests.Integration`: 275).
+
+## 2026-04-19 23:24:46Z
+
+- Picked up the live `kspls0` validation after build `0.24.5-slskdn.159` was installed. The framer/write-lock fix held past the 2-minute keepalive threshold and through the later sample: one mesh peer remained connected, with zero `Protocol violation`, zero `Unregistered`, and no reconnect churn in the observed window.
+- Found one real non-framer bug in the same live logs: `POST /api/v0/users/{username}/directory` can arrive while Soulseek is `Connected, LoggingIn`, which previously threw an `InvalidOperationException` through the ASP.NET pipeline and logged repeated 500/security-middleware errors.
+- Fixed `UsersController.Directory` to return `503 Soulseek server connection is not ready` until the Soulseek client is both connected and logged in, added focused unit coverage, and documented the gotcha in ADR-0001 with doc-only commit `a8cbd874c`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter FullyQualifiedName~UsersControllerTests -v minimal` passed (`5` tests), `git diff --check` passed, and `bash ./bin/lint` passed.

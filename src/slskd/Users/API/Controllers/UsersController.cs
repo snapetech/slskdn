@@ -211,6 +211,7 @@ namespace slskd.Users.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(IEnumerable<Directory>), 200)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(503)]
         public async Task<IActionResult> Directory([FromRoute, Required] string username, [FromBody, Required] DirectoryContentsRequest request)
         {
             if (Program.IsRelayAgent)
@@ -233,6 +234,11 @@ namespace slskd.Users.API
             if (string.IsNullOrWhiteSpace(request.Directory))
             {
                 return BadRequest();
+            }
+
+            if (!Client.State.HasFlag(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn))
+            {
+                return StatusCode(503, "Soulseek server connection is not ready");
             }
 
             try

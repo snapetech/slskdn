@@ -1051,3 +1051,7 @@
 - [x] Verify DHT rendezvous overlay search and transfer between two full local slskdN instances
   - Status: done
   - Notes: Added a deterministic full-instance integration test that starts alpha/beta subprocesses, connects alpha to beta through the real overlay API, searches beta's advertised pod content over mesh search, downloads the content through `MeshContent.GetByContentId` service calls over the DHT overlay, and byte-compares the downloaded file. Fixed missing overlay service transport, pod routing metadata preservation, and service router DI registration uncovered by the test.
+
+- [x] Fix startup directory browse noise when Soulseek is still logging in
+  - Status: done
+  - Notes: Live `kspls0` build `0.24.5-slskdn.159` held the mesh framer fix past the keepalive window, but a frontend/API directory request during `Connected, LoggingIn` still produced a noisy 500. `UsersController.Directory` now returns 503 until the Soulseek client is connected and logged in, with focused unit coverage.

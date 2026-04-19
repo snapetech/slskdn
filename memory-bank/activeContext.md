@@ -48,15 +48,15 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Local two-full-instance DHT overlay search and transfer are implemented and validated; code changes are ready to commit/push.
+- **Current Task**: None. Live `kspls0` mesh framer validation passed; startup directory-browse 500 fix is implemented and validated locally.
 - **Branch**: `main`
-- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0`; no release tags were created.
+- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159`; no release tags were created.
 - **Last Activity**:
-  - Confirmed the previous `kspls0` manual build has healthy Soulseek login, DHT bootstrap/discovery, broad search, and normal transfer behavior; remaining public overlay failures are candidate quality (`timeout`, `no route`, `refused`) rather than local DHT search/peer discovery failure.
-  - Added a deterministic full-instance integration test that starts two real slskdN nodes, connects them over the DHT rendezvous overlay, searches beta from alpha, downloads beta's advertised pod content through mesh service RPC, and byte-compares the result.
-  - Fixed the uncovered gaps: overlay service-fabric transport now exists, inbound service calls dispatch through a registered `MeshServiceRouter`, pod content routing metadata survives search response merging, and large overlay content fetches are chunked under the frame limit.
-  - Documented the new gotchas in ADR-0001 and committed the doc-only entries immediately as required.
-  - Validation passed: focused mesh unit tests, full-instance mesh integration, broader overlay/search integration slice, `bash ./bin/lint`, `git diff --check`, and top-level `dotnet test --no-restore -v minimal`.
+  - Verified on `kspls0` that build `0.24.5-slskdn.159` kept the outbound mesh peer connected past the 2-minute keepalive threshold and through the later 17:24 CST sample: zero `Protocol violation`, zero `Unregistered`, one `Connected to mesh peer`, and no reconnect churn.
+  - Found one real live-log bug unrelated to the framer fix: `POST /api/v0/users/{username}/directory` during Soulseek `Connected, LoggingIn` produced a noisy 500 and repeated security middleware exception logs.
+  - Fixed `UsersController.Directory` to return 503 until the Soulseek client is both connected and logged in, and added focused `UsersControllerTests` coverage.
+  - Documented the gotcha in ADR-0001 and committed that doc-only entry as `a8cbd874c`.
+  - Validation passed: focused `UsersControllerTests`, `git diff --check`, and `bash ./bin/lint`.
 - **Next Steps**:
   1. Commit the code/test/memory-bank fix set.
   2. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
