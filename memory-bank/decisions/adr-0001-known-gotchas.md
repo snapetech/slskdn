@@ -82,6 +82,41 @@ var reply = await replyTask;
 
 **Why This Keeps Happening**: The project has several mesh layers with similar names: DHT rendezvous overlay connections, mesh search RPCs, service-fabric DTOs, and `MeshContent` handlers. Having the service and fetcher classes present does not mean the transport path is wired. Any feature that claims end-to-end mesh transfer must verify a real peer-to-peer call crosses an overlay connection and returns file bytes, not just that both endpoint classes compile.
 
+### 0z65a. Search Response Merging Must Preserve Pod Routing Metadata
+
+**The Bug**: Mesh overlay search responses were tagged with `PrimarySource = "pod"` and `PodContentRef`, but `SearchResponseMerger.Deduplicate()` rebuilt each `Response` and copied only Soulseek-style counters/files. The final persisted search result lost the pod routing metadata, so the action controller could not route a mesh result to `MeshContentFetcher`.
+
+**Files Affected**:
+- `src/slskd/Search/SearchResponseMerger.cs`
+- `src/slskd/Search/API/Controllers/SearchActionsController.cs`
+- `src/slskd/DhtRendezvous/Search/MeshOverlaySearchService.cs`
+
+**Wrong**:
+```csharp
+merged.Add(new Response
+{
+    Username = r.Username,
+    Files = keptFiles,
+    LockedFiles = keptLocked,
+});
+```
+
+**Correct**:
+```csharp
+merged.Add(new Response
+{
+    Username = r.Username,
+    Files = keptFiles,
+    LockedFiles = keptLocked,
+    SourceProviders = r.SourceProviders,
+    PrimarySource = r.PrimarySource,
+    PodContentRef = r.PodContentRef,
+    SceneContentRef = r.SceneContentRef,
+});
+```
+
+**Why This Keeps Happening**: Search responses started as Soulseek-only DTOs, but pod/scene bridging added routing metadata at the response layer. Any code that clones, deduplicates, serializes, or adapts `Search.Response` must carry source metadata forward, or downstream action routing silently falls back to the wrong path.
+
 ### 0z64. Soulseek TransferRejectedException Remote Enqueue Failures Are Expected Network Churn
 
 **The Bug**: Live `kspls0` validation still emitted `[FATAL] Unobserved task exception ... (Enqueue failed due to internal error)` after downloads were already recorded as `Completed, Rejected`. The unobserved exception was `Soulseek.TransferRejectedException`, which the expected-network classifier did not recognize even though the app had already handled it as a remote transfer rejection.
