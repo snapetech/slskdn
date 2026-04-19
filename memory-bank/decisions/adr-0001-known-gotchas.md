@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z62. DHT Diagnostic Controllers Must Use AuthPolicy.Any, Not Bare Authorize
+
+**The Bug**: Live `kspls0` diagnostics accepted the configured API key for `/api/v0/session` and `/api/v0/searches`, but `/api/v0/dht/status` and `/api/v0/overlay/stats` returned `401` with `WWW-Authenticate: Bearer`. `DhtRendezvousController` used bare `[Authorize]`, which followed the default JWT bearer scheme instead of the repo's API-key-or-JWT policy.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/DhtRendezvousControllerTests.cs`
+
+**Wrong**:
+```csharp
+[Authorize]
+public class DhtRendezvousController : ControllerBase
+```
+
+**Correct**:
+```csharp
+[Authorize(Policy = AuthPolicy.Any)]
+public class DhtRendezvousController : ControllerBase
+```
+
+**Why This Keeps Happening**: `[Authorize]` looks equivalent to "authenticated user required", but this app has multiple authentication schemes. Operator and automation endpoints that should work with configured API keys must opt into `AuthPolicy.Any` (or a narrower explicit policy) instead of relying on the default bearer scheme.
+
 ### 0z61. Pending Overlay Request Router Entries Must Be Removed On Write Failure Too
 
 **The Bug**: The first `MeshOverlayRequestRouter` implementation registered a pending mesh-search response before writing the request to the peer, but only removed the entry when a response arrived, the timeout token canceled, or the whole connection closed. If `WriteMessageAsync` failed after registration, disposing the linked timeout source did not invoke cancellation callbacks, so the pending request could stay in memory until disconnect.
