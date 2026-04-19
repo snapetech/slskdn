@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 public sealed class MeshNeighborRegistry : IAsyncDisposable
 {
     private readonly ILogger<MeshNeighborRegistry> _logger;
-    private readonly ConcurrentDictionary<string, MeshOverlayConnection> _connectionsByUsername = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, MeshNeighborConnectionSet> _connectionsByUsername = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<IPEndPoint, MeshOverlayConnection> _connectionsByEndpoint = new();
     private readonly SemaphoreSlim _registrationLock = new(1, 1);
 
@@ -60,7 +60,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// <summary>
     /// Number of active neighbors.
     /// </summary>
-    public int Count => _connectionsByUsername.Count;
+    public int Count => _connectionsByUsername.Count(kvp => kvp.Value.HasAny);
 
     /// <summary>
     /// Whether we need more neighbors.
@@ -88,50 +88,47 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         var registered = false;
         var firstNeighborConnected = false;
         MeshNeighborEventArgs? eventArgs = null;
-        MeshOverlayConnection? replacedConnection = null;
 
         await _registrationLock.WaitAsync();
         try
         {
-            // Check capacity. Replacing an existing inbound connection with an outbound one does not increase count.
-            if (IsFull && !_connectionsByUsername.ContainsKey(connection.Username))
+            var hasExistingSet = _connectionsByUsername.TryGetValue(connection.Username, out var existingSetForCapacity);
+            if (IsFull && !hasExistingSet)
             {
                 _logger.LogDebug("Registry full, rejecting {Username}", OverlayLogSanitizer.Username(connection.Username));
                 return false;
             }
 
-            // Prefer outbound connections so request/response mesh RPCs do not compete with the inbound server read loop.
-            if (_connectionsByUsername.TryGetValue(connection.Username, out var existingForUser))
+            var set = existingSetForCapacity ?? _connectionsByUsername.GetOrAdd(connection.Username, _ => new MeshNeighborConnectionSet());
+            var existingForDirection = connection.IsOutbound ? set.Outbound : set.Inbound;
+            if (existingForDirection is not null)
             {
-                if (!existingForUser.IsOutbound && connection.IsOutbound)
-                {
-                    _connectionsByUsername.TryRemove(connection.Username, out _);
-                    _connectionsByEndpoint.TryRemove(existingForUser.RemoteEndPoint, out _);
-                    replacedConnection = existingForUser;
-                    _logger.LogInformation("Replacing inbound mesh neighbor {Username} with reciprocal outbound connection", OverlayLogSanitizer.Username(connection.Username));
-                }
-                else
-                {
-                    _logger.LogDebug("Already connected to {Username}", OverlayLogSanitizer.Username(connection.Username));
-                    return false;
-                }
+                _logger.LogDebug("Already connected to {Username} with {Direction} overlay connection", OverlayLogSanitizer.Username(connection.Username), connection.IsOutbound ? "outbound" : "inbound");
+                return false;
             }
 
-            // Check for duplicate endpoint
             if (_connectionsByEndpoint.ContainsKey(connection.RemoteEndPoint))
             {
                 _logger.LogDebug("Already connected to {Endpoint}", OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint));
                 return false;
             }
 
-            // Register
-            _connectionsByUsername[connection.Username] = connection;
+            if (connection.IsOutbound)
+            {
+                set.Outbound = connection;
+            }
+            else
+            {
+                set.Inbound = connection;
+            }
+
             _connectionsByEndpoint[connection.RemoteEndPoint] = connection;
 
             var isFirstNeighbor = Count == 1 && !_firstNeighborEventFired;
 
             _logger.LogInformation(
-                "Registered mesh neighbor {Username} from {Endpoint} (total: {Count}){First}",
+                "Registered {Direction} mesh neighbor {Username} from {Endpoint} (total peers: {Count}){First}",
+                connection.IsOutbound ? "outbound" : "inbound",
                 OverlayLogSanitizer.Username(connection.Username),
                 OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint),
                 Count,
@@ -150,11 +147,6 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         finally
         {
             _registrationLock.Release();
-        }
-
-        if (replacedConnection is not null)
-        {
-            await replacedConnection.DisposeAsync();
         }
 
         if (registered && eventArgs is not null)
@@ -182,10 +174,25 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
         try
         {
             if (connection.Username is not null &&
-                _connectionsByUsername.TryGetValue(connection.Username, out var registeredByUsername) &&
-                ReferenceEquals(registeredByUsername, connection))
+                _connectionsByUsername.TryGetValue(connection.Username, out var set))
             {
-                removed |= _connectionsByUsername.TryRemove(connection.Username, out _);
+                if (ReferenceEquals(set.Inbound, connection))
+                {
+                    set.Inbound = null;
+                    removed = true;
+                }
+
+                if (ReferenceEquals(set.Outbound, connection))
+                {
+                    set.Outbound = null;
+                    removed = true;
+                }
+
+                if (!set.HasAny)
+                {
+                    _connectionsByUsername.TryRemove(connection.Username, out _);
+                    eventArgs = new MeshNeighborEventArgs(connection);
+                }
             }
 
             if (_connectionsByEndpoint.TryGetValue(connection.RemoteEndPoint, out var registeredByEndpoint) &&
@@ -201,7 +208,6 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                     connection.Username is not null ? OverlayLogSanitizer.Username(connection.Username) : OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint),
                     Count);
 
-                eventArgs = new MeshNeighborEventArgs(connection);
             }
         }
         finally
@@ -220,9 +226,13 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public async Task<bool> UnregisterByUsernameAsync(string username)
     {
-        if (_connectionsByUsername.TryGetValue(username, out var connection))
+        if (_connectionsByUsername.TryGetValue(username, out var set))
         {
-            await UnregisterAsync(connection);
+            foreach (var connection in set.GetAll().ToList())
+            {
+                await UnregisterAsync(connection);
+            }
+
             return true;
         }
 
@@ -232,10 +242,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// <summary>
     /// Check if we're connected to a username.
     /// </summary>
-    public bool IsConnectedTo(string username)
-    {
-        return _connectionsByUsername.ContainsKey(username);
-    }
+    public bool IsConnectedTo(string username) => _connectionsByUsername.TryGetValue(username, out var set) && set.HasAny;
 
     /// <summary>
     /// Check if we're connected to an endpoint.
@@ -250,8 +257,8 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public MeshOverlayConnection? GetConnection(string username)
     {
-        _connectionsByUsername.TryGetValue(username, out var connection);
-        return connection;
+        _connectionsByUsername.TryGetValue(username, out var set);
+        return set?.Outbound ?? set?.Inbound;
     }
 
     /// <summary>
@@ -268,7 +275,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<MeshOverlayConnection> GetAllConnections()
     {
-        return _connectionsByUsername.Values.ToList();
+        return _connectionsByUsername.Values.SelectMany(set => set.GetAll()).ToList();
     }
 
     /// <summary>
@@ -276,7 +283,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<MeshPeerInfo> GetPeerInfo()
     {
-        return _connectionsByUsername.Values
+        return GetAllConnections()
             .Where(c => c.Username is not null)
             .Select(c => new MeshPeerInfo
             {
@@ -288,6 +295,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                 LastActivity = c.LastActivity,
                 CertificateThumbprint = c.CertificateThumbprint,
                 PeerVersion = null, // TODO: Add PeerVersion to MeshOverlayConnection
+                IsOutbound = c.IsOutbound,
             })
             .ToList();
     }
@@ -298,7 +306,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
     /// <returns>Number of connections removed.</returns>
     public async Task<int> CleanupStaleConnectionsAsync()
     {
-        var stale = _connectionsByUsername.Values
+        var stale = GetAllConnections()
             .Where(c => !c.IsConnected || c.IsIdle())
             .ToList();
 
@@ -319,7 +327,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var connection in _connectionsByUsername.Values)
+        foreach (var connection in GetAllConnections())
         {
             try
             {
@@ -356,6 +364,26 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
             {
                 _logger.LogWarning(ex, "Mesh neighbor subscriber failed for {EventName}", eventName);
             }
+        }
+    }
+}
+
+internal sealed class MeshNeighborConnectionSet
+{
+    public MeshOverlayConnection? Inbound { get; set; }
+    public MeshOverlayConnection? Outbound { get; set; }
+    public bool HasAny => Inbound is not null || Outbound is not null;
+
+    public IEnumerable<MeshOverlayConnection> GetAll()
+    {
+        if (Inbound is not null)
+        {
+            yield return Inbound;
+        }
+
+        if (Outbound is not null)
+        {
+            yield return Outbound;
         }
     }
 }

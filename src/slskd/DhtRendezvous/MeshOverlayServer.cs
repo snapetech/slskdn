@@ -38,6 +38,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private readonly IMeshOverlayConnector _overlayConnector;
     private readonly IMeshSyncService _meshSyncService;
     private readonly IMeshSearchRpcHandler _meshSearchRpcHandler;
+    private readonly MeshOverlayRequestRouter _requestRouter;
     private readonly DhtRendezvousOptions _dhtOptions;
 
     private TcpListener? _listener;
@@ -64,6 +65,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         IMeshOverlayConnector overlayConnector,
         IMeshSyncService meshSyncService,
         IMeshSearchRpcHandler meshSearchRpcHandler,
+        MeshOverlayRequestRouter requestRouter,
         DhtRendezvousOptions dhtOptions)
     {
         _logger = logger;
@@ -76,6 +78,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         _overlayConnector = overlayConnector ?? throw new ArgumentNullException(nameof(overlayConnector));
         _meshSyncService = meshSyncService;
         _meshSearchRpcHandler = meshSearchRpcHandler ?? throw new ArgumentNullException(nameof(meshSearchRpcHandler));
+        _requestRouter = requestRouter ?? throw new ArgumentNullException(nameof(requestRouter));
         _dhtOptions = dhtOptions;
     }
 
@@ -460,6 +463,15 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             await connection.WriteMessageAsync(meshSearchResp, cancellationToken);
                             break;
 
+                        case Messages.OverlayMessageType.MeshSearchResp:
+                            var meshSearchResponse = _framerInstance.DeserializeMessage<Messages.MeshSearchResponseMessage>(rawMessage);
+                            if (!_requestRouter.TryCompleteMeshSearchResponse(connection, meshSearchResponse))
+                            {
+                                _logger.LogDebug("Unexpected mesh_search_resp from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
+                            }
+
+                            break;
+
                         default:
                             // Forward to mesh sync service for handling
                             if (connection.Username is not null)
@@ -499,6 +511,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 
     cleanup:
         await _registry.UnregisterAsync(connection);
+        _requestRouter.RemoveConnection(connection);
         _rateLimiter.RecordDisconnection(connection.RemoteAddress);
         _rateLimiter.RemoveConnection(connection.ConnectionId);
         await connection.DisposeAsync();

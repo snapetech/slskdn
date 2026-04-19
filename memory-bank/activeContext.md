@@ -48,19 +48,22 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. `kspls0` AUR binary install mismatch was diagnosed and the packaging cache-staleness fix is implemented locally.
+- **Current Task**: None. Latest issue `#209` reciprocal overlay lifecycle fix is implemented locally and validated.
 - **Branch**: `main`
-- **Environment**: Local dev plus SSH to `kspls0`; `kspls0` has `slskdn-bin 0.24.5.slskdn.152-1` installed, but the packaged `/usr/bin/slskd --version` reports `0.24.5-slskdn.145` because yay/makepkg reused the cached `.145` `slskdn-main-linux-glibc-x64.zip`.
+- **Environment**: Local dev; no GitHub issue/PR writes or release tags were created.
 - **Last Activity**:
-  - Confirmed the user-visible `error: segmentation fault` came from pacman itself during/after the `rebuild-detector.hook` phase; `checkrebuild` exits cleanly when rerun and no slskd coredump was present.
-  - Confirmed the published GitHub `.152` Linux glibc x64 asset is correct and reports `0.24.5-slskdn.152`.
-  - Fixed `packaging/aur/PKGBUILD-bin` so the binary zip is saved as `slskdn-${pkgver}-main-linux-glibc-x64.zip`, preventing makepkg from reusing an older cached channel asset when checksums are skipped.
-  - Updated packaging validation, metadata refresh docs, and ADR-0001 gotchas for the AUR stale-source cache failure.
-  - Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `makepkg --printsrcinfo` smoke for `PKGBUILD-bin`, and `git diff --check`.
+  - Re-read issue `#209` build `152` logs and traced the remaining failure past DHT bootstrap/discovery into overlay peer lifecycle.
+  - Fixed `MeshNeighborRegistry` so inbound and outbound connections for the same username have independent lifetimes instead of replacing and disposing each other.
+  - Added `MeshOverlayRequestRouter` so mesh search responses are correlated without multiple code paths reading the same TLS stream.
+  - Started a full outbound overlay message loop so outbound sockets answer ping/pong, mesh sync, and mesh search RPCs like inbound sockets.
+  - Added a repeated real `MeshOverlaySearchService` loopback proof that searches three times over the same outbound overlay connection and verifies the connection remains live.
+  - Documented the gotcha in ADR-0001 and committed that documentation checkpoint as `bfe8bb631`.
+  - Repaired the stale direct-anonymity integration assertion found by the broad suite and documented that gotcha in ADR-0001 as commit `a4ee297c3`.
+  - Tightened pending mesh-search router cleanup on write failure and documented that gotcha in ADR-0001 as commit `d3c08dff1`.
+  - Validation passed for backend build, focused unit coverage, focused loopback/full-instance mesh integration, repo lint, whitespace checks, and the broad `dotnet test` run.
 - **Next Steps**:
-  1. Commit and push the AUR cache-staleness fix if desired.
-  2. Publish the corrected AUR `slskdn-bin` PKGBUILD, then rebuild/reinstall on `kspls0` from a clean source cache.
-  3. Restart `slskd.service` on `kspls0` only when ready to move the live daemon onto the corrected `.152` payload.
+  1. Commit and push the code/test/docs fix set when ready.
+  2. Only create a build tag if the user explicitly asks for another release build.
 
 ## Recent Context
 

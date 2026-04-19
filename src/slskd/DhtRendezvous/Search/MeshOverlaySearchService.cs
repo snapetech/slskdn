@@ -39,11 +39,16 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
     private const int DefaultMaxResults = 200;
 
     private readonly MeshNeighborRegistry _registry;
+    private readonly MeshOverlayRequestRouter _requestRouter;
     private readonly ILogger<MeshOverlaySearchService> _logger;
 
-    public MeshOverlaySearchService(MeshNeighborRegistry registry, ILogger<MeshOverlaySearchService> logger)
+    public MeshOverlaySearchService(
+        MeshNeighborRegistry registry,
+        MeshOverlayRequestRouter requestRouter,
+        ILogger<MeshOverlaySearchService> logger)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _requestRouter = requestRouter ?? throw new ArgumentNullException(nameof(requestRouter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -92,8 +97,9 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(PerPeerTimeoutSeconds));
 
+            var responseTask = _requestRouter.WaitForMeshSearchResponseAsync(connection, requestId, timeoutCts.Token);
             await connection.WriteMessageAsync(req, timeoutCts.Token).ConfigureAwait(false);
-            var resp = await connection.ReadMessageAsync<MeshSearchResponseMessage>(timeoutCts.Token).ConfigureAwait(false);
+            var resp = await responseTask.ConfigureAwait(false);
 
             if (resp.RequestId != requestId)
             {
@@ -146,6 +152,10 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
         {
             _logger.LogDebug(ex, "Mesh overlay search to {Username} failed: {Message}", OverlayLogSanitizer.Username(connection.Username), ex.Message);
             return null;
+        }
+        finally
+        {
+            _requestRouter.RemoveMeshSearchResponse(connection, requestId);
         }
     }
 }

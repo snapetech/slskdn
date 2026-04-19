@@ -2291,6 +2291,7 @@ namespace slskd
             services.AddSingleton<OverlayRateLimiter>();
             services.AddSingleton<OverlayBlocklist>();
             services.AddSingleton<MeshNeighborRegistry>();
+            services.AddSingleton<MeshOverlayRequestRouter>();
             services.AddSingleton<DhtRendezvous.Search.IMeshSearchRpcHandler, DhtRendezvous.Search.MeshSearchRpcHandler>();
             services.AddSingleton<DhtRendezvous.Search.IMeshOverlaySearchService, DhtRendezvous.Search.MeshOverlaySearchService>();
             services.AddSingleton<IMeshOverlayServer, MeshOverlayServer>();

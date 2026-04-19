@@ -74,7 +74,7 @@ public class MeshNeighborRegistryTests
 
 
     [Fact]
-    public async Task RegisterAsync_WhenOutboundReplacesInbound_KeepsOutboundAfterInboundCleanup()
+    public async Task RegisterAsync_WhenOutboundArrivesForInboundPeer_KeepsBothDirections()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
         var inbound = CreateConnection("peer-1", "127.0.0.1", 5100, isOutbound: false);
@@ -83,26 +83,36 @@ public class MeshNeighborRegistryTests
         Assert.True(await registry.RegisterAsync(inbound));
         Assert.True(await registry.RegisterAsync(outbound));
 
+        Assert.Equal(1, registry.Count);
+        Assert.Same(outbound, registry.GetConnection("peer-1"));
+        Assert.Equal(2, registry.GetAllConnections().Count);
+
         await registry.UnregisterAsync(inbound);
 
         Assert.Equal(1, registry.Count);
+        Assert.Single(registry.GetAllConnections());
         Assert.Same(outbound, registry.GetConnection("peer-1"));
     }
 
     [Fact]
-    public async Task UnregisterAsync_WhenStaleConnectionSharesUsername_DoesNotRemoveReplacement()
+    public async Task UnregisterAsync_WhenOneDirectionIsRemoved_DoesNotRemoveRemainingDirection()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
-        var stale = CreateConnection("peer-1", "127.0.0.1", 5200, isOutbound: false);
-        var replacement = CreateConnection("peer-1", "127.0.0.1", 5201, isOutbound: true);
+        var inbound = CreateConnection("peer-1", "127.0.0.1", 5200, isOutbound: false);
+        var outbound = CreateConnection("peer-1", "127.0.0.1", 5201, isOutbound: true);
 
-        Assert.True(await registry.RegisterAsync(stale));
-        Assert.True(await registry.RegisterAsync(replacement));
+        Assert.True(await registry.RegisterAsync(inbound));
+        Assert.True(await registry.RegisterAsync(outbound));
 
-        await registry.UnregisterAsync(stale);
+        await registry.UnregisterAsync(inbound);
 
         Assert.Equal(1, registry.Count);
-        Assert.Same(replacement, registry.GetConnection("peer-1"));
+        Assert.Same(outbound, registry.GetConnection("peer-1"));
+
+        await registry.UnregisterAsync(outbound);
+
+        Assert.Equal(0, registry.Count);
+        Assert.Null(registry.GetConnection("peer-1"));
     }
 
     private static MeshOverlayConnection CreateConnection(string username, string address, int port, bool isOutbound = false)

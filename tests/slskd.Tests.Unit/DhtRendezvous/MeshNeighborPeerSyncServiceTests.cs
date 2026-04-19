@@ -75,7 +75,37 @@ public class MeshNeighborPeerSyncServiceTests
         await service.StopAsync(CancellationToken.None);
     }
 
-    private static MeshOverlayConnection CreateConnection(string username, string address, int port, IReadOnlyList<string> features)
+    [Fact]
+    public async Task UnregisterAsync_WhenOneDirectionRemains_KeepsPeerInventory()
+    {
+        await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
+        var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
+        var service = new MeshNeighborPeerSyncService(
+            NullLogger<MeshNeighborPeerSyncService>.Instance,
+            registry,
+            peerManager);
+
+        var inbound = CreateConnection("peer-3", "127.0.0.3", 50305, new[] { OverlayFeatures.Mesh }, isOutbound: false);
+        var outbound = CreateConnection("peer-3", "127.0.0.3", 50306, new[] { OverlayFeatures.Mesh }, isOutbound: true);
+
+        await service.StartAsync(CancellationToken.None);
+        await registry.RegisterAsync(inbound);
+        await registry.RegisterAsync(outbound);
+        await registry.UnregisterAsync(inbound);
+
+        Assert.NotNull(peerManager.GetPeer("peer-3"));
+        Assert.Equal(1, peerManager.GetStatistics().TotalPeers);
+        Assert.Equal(1, peerManager.GetStatistics().OnionRoutingPeers);
+
+        await registry.UnregisterAsync(outbound);
+
+        Assert.Null(peerManager.GetPeer("peer-3"));
+        Assert.Equal(0, peerManager.GetStatistics().TotalPeers);
+
+        await service.StopAsync(CancellationToken.None);
+    }
+
+    private static MeshOverlayConnection CreateConnection(string username, string address, int port, IReadOnlyList<string> features, bool isOutbound = false)
     {
         var connection = (MeshOverlayConnection)RuntimeHelpers.GetUninitializedObject(typeof(MeshOverlayConnection));
 
@@ -84,6 +114,7 @@ public class MeshNeighborPeerSyncServiceTests
         SetBackingField(connection, "<Username>k__BackingField", username);
         SetBackingField(connection, "<Features>k__BackingField", features);
         SetBackingField(connection, "<ConnectedAt>k__BackingField", DateTimeOffset.UtcNow);
+        SetBackingField(connection, "<IsOutbound>k__BackingField", isOutbound);
 
         return connection;
     }

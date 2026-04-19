@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Fix reciprocal overlay lifecycle so DHT-ready peers can answer mesh search RPCs.
+ - Status: completed (2026-04-19)
+ - Priority: P1
+ - Notes: Issue `#209` build `152` showed DHT discovery and 9 active peers but `0 onion-capable` and `0 responses` because reciprocal overlay dialing could replace/dispose the only live read loop and outbound sockets never processed incoming pings or mesh RPCs. The registry now keeps separate inbound and outbound connections per username, outbound connections run a full message loop, and mesh search responses are correlated through `MeshOverlayRequestRouter` so only one reader owns each TLS stream. Regression coverage now proves repeated `MeshOverlaySearchService` searches work over the same real outbound overlay connection and leave it connected.
+
 - [x] **bug**: Sanitize DHT/overlay usernames and public endpoints in logs.
  - Status: completed (2026-04-18)
  - Priority: P1

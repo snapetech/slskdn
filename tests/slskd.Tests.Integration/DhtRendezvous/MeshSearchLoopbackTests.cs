@@ -51,12 +51,12 @@ public class MeshSearchLoopbackTests
             var optsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();
             optsMonitor.Setup(m => m.CurrentValue).Returns(opts);
 
-            var logFact = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Warning));
+            using var logFact = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Warning));
             var certMgr = new CertificateManager(logFact.CreateLogger<CertificateManager>(), tempDir);
             var pinStore = new CertificatePinStore(NullLoggerFactory.Instance.CreateLogger<CertificatePinStore>(), tempDir);
             using var rateLimiter = new OverlayRateLimiter();
             using var blocklist = new OverlayBlocklist(logFact.CreateLogger<OverlayBlocklist>());
-            var registry = new MeshNeighborRegistry(logFact.CreateLogger<MeshNeighborRegistry>());
+            await using var registry = new MeshNeighborRegistry(logFact.CreateLogger<MeshNeighborRegistry>());
 
             var meshSync = new Mock<slskd.Mesh.IMeshSyncService>();
             meshSync.Setup(m => m.HandleMessageAsync(It.IsAny<string>(), It.IsAny<slskd.Mesh.Messages.MeshMessage>(), It.IsAny<CancellationToken>()))
@@ -69,7 +69,7 @@ public class MeshSearchLoopbackTests
             var handler = new MeshSearchRpcHandler(share.Object, logFact.CreateLogger<MeshSearchRpcHandler>());
 
             var overlayConnector = new Mock<IMeshOverlayConnector>();
-            var server = new MeshOverlayServer(
+            await using var server = new MeshOverlayServer(
                 logFact.CreateLogger<MeshOverlayServer>(),
                 optsMonitor.Object,
                 certMgr,
@@ -80,6 +80,7 @@ public class MeshSearchLoopbackTests
                 overlayConnector.Object,
                 meshSync.Object,
                 handler,
+                new MeshOverlayRequestRouter(),
                 dhtOpts);
 
             await server.StartAsync(CancellationToken.None);
@@ -116,6 +117,122 @@ public class MeshSearchLoopbackTests
             finally
             {
                 await server.StopAsync();
+            }
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(tempDir))
+            {
+                try { System.IO.Directory.Delete(tempDir, recursive: true); } catch { /* best effort */ }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task MeshOverlaySearchService_OverOutboundLoop_ReturnsRepeatedResponsesAndKeepsConnection()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "slskdn-mesh-search-" + Guid.NewGuid().ToString("N")[..8]);
+        System.IO.Directory.CreateDirectory(tempDir);
+        try
+        {
+            var port = GetAvailablePort(TestOverlayPort + 100, 50);
+            var dhtOpts = new DhtRendezvousOptions { OverlayPort = port };
+
+            var serverOptions = new slskd.Options { Soulseek = new slskd.Options.SoulseekOptions { Username = "loopback-server" } };
+            var serverOptionsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();
+            serverOptionsMonitor.Setup(m => m.CurrentValue).Returns(serverOptions);
+
+            var clientOptions = new slskd.Options
+            {
+                Soulseek = new slskd.Options.SoulseekOptions { Username = "loopback-client" },
+                DhtRendezvous = new DhtRendezvousOptions { OverlayPort = port + 1 },
+            };
+            var clientOptionsMonitor = new Mock<IOptionsMonitor<slskd.Options>>();
+            clientOptionsMonitor.Setup(m => m.CurrentValue).Returns(clientOptions);
+
+            using var logFact = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Warning));
+            var serverCertMgr = new CertificateManager(logFact.CreateLogger<CertificateManager>(), Path.Combine(tempDir, "server"));
+            var serverPinStore = new CertificatePinStore(NullLoggerFactory.Instance.CreateLogger<CertificatePinStore>(), Path.Combine(tempDir, "server"));
+            using var serverRateLimiter = new OverlayRateLimiter();
+            using var serverBlocklist = new OverlayBlocklist(logFact.CreateLogger<OverlayBlocklist>());
+            await using var serverRegistry = new MeshNeighborRegistry(logFact.CreateLogger<MeshNeighborRegistry>());
+            var requestRouter = new MeshOverlayRequestRouter();
+
+            var meshSync = new Mock<slskd.Mesh.IMeshSyncService>();
+            meshSync.Setup(m => m.HandleMessageAsync(It.IsAny<string>(), It.IsAny<slskd.Mesh.Messages.MeshMessage>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((slskd.Mesh.Messages.MeshMessage)null!);
+
+            var share = new Mock<IShareService>();
+            share.Setup(s => s.SearchLocalAsync(It.IsAny<Soulseek.SearchQuery>()))
+                .ReturnsAsync(new List<Soulseek.File> { new Soulseek.File(1, "loop\\beatles.flac", 1000, ".flac") });
+
+            var handler = new MeshSearchRpcHandler(share.Object, logFact.CreateLogger<MeshSearchRpcHandler>());
+            var overlayConnector = new Mock<IMeshOverlayConnector>();
+            await using var server = new MeshOverlayServer(
+                logFact.CreateLogger<MeshOverlayServer>(),
+                serverOptionsMonitor.Object,
+                serverCertMgr,
+                serverPinStore,
+                serverRateLimiter,
+                serverBlocklist,
+                serverRegistry,
+                overlayConnector.Object,
+                meshSync.Object,
+                handler,
+                requestRouter,
+                dhtOpts);
+
+            var clientCertMgr = new CertificateManager(logFact.CreateLogger<CertificateManager>(), Path.Combine(tempDir, "client"));
+            var clientPinStore = new CertificatePinStore(NullLoggerFactory.Instance.CreateLogger<CertificatePinStore>(), Path.Combine(tempDir, "client"));
+            using var clientRateLimiter = new OverlayRateLimiter();
+            using var clientBlocklist = new OverlayBlocklist(logFact.CreateLogger<OverlayBlocklist>());
+            await using var clientRegistry = new MeshNeighborRegistry(logFact.CreateLogger<MeshNeighborRegistry>());
+            var connector = new MeshOverlayConnector(
+                logFact.CreateLogger<MeshOverlayConnector>(),
+                clientOptionsMonitor.Object,
+                clientCertMgr,
+                clientPinStore,
+                clientRateLimiter,
+                clientBlocklist,
+                clientRegistry,
+                meshSync.Object,
+                handler,
+                requestRouter);
+            var search = new MeshOverlaySearchService(clientRegistry, requestRouter, logFact.CreateLogger<MeshOverlaySearchService>());
+
+            await server.StartAsync(CancellationToken.None);
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
+                var connection = await connector.ConnectToEndpointAsync(new IPEndPoint(IPAddress.Loopback, port), cts.Token);
+
+                Assert.NotNull(connection);
+                Assert.Equal(1, clientRegistry.Count);
+                Assert.Single(clientRegistry.GetAllConnections());
+                Assert.True(connection.IsOutbound);
+
+                for (var i = 0; i < 3; i++)
+                {
+                    var responses = await search.SearchAsync("beatles", cts.Token);
+
+                    var response = Assert.Single(responses);
+                    Assert.Equal("loopback-server", response.Username);
+                    var file = Assert.Single(response.Files);
+                    Assert.Equal("loop\\beatles.flac", file.Filename);
+                }
+
+                Assert.Equal(1, clientRegistry.Count);
+                Assert.Single(clientRegistry.GetAllConnections());
+                Assert.True(connection.IsConnected);
+            }
+            finally
+            {
+                await server.StopAsync();
+                foreach (var connection in clientRegistry.GetAllConnections())
+                {
+                    await connection.DisposeAsync();
+                }
             }
         }
         finally

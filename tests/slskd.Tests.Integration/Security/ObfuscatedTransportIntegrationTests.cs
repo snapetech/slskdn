@@ -152,9 +152,10 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             new XunitLogger<AnonymityTransportSelector>(_output),
             NullLoggerFactory.Instance);
 
-        // Act & Assert - Should throw when all transports fail (InvalidOperationException when none available)
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        // Act & Assert - Direct mode has a transport, so connection failures are wrapped as all-transports-failed.
+        var exception = await Assert.ThrowsAsync<AggregateException>(() =>
             selector.SelectAndConnectAsync("peer123", null, "example.com", 80, null, CancellationToken.None));
+        Assert.NotNull(exception.InnerException);
     }
 
     [Fact]
@@ -251,4 +252,3 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
         }
     }
 }
-

@@ -111,6 +111,9 @@ public sealed class MeshPeerInfo
 
     /// <summary>Peer protocol version (if exchanged during handshake).</summary>
     public int? PeerVersion { get; init; }
+
+    /// <summary>Whether this is an outbound connection initiated by this node.</summary>
+    public bool IsOutbound { get; init; }
 }
 
 /// <summary>

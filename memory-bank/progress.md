@@ -1,3 +1,31 @@
+## 2026-04-19 01:20 - Fixed reciprocal overlay lifecycle behind issue `#209`
+
+### Completed
+- Re-read the latest issue `#209` build `152` report and followed the failure past DHT bootstrap: discovery was healthy, but reciprocal overlay connections could still leave peers unable to answer mesh RPCs or keepalive traffic.
+- Changed `MeshNeighborRegistry` to keep independent inbound and outbound connections per username instead of replacing one direction with the other, so reciprocal dialing no longer disposes the only active socket for a peer.
+- Added `MeshOverlayRequestRouter` and moved mesh search response correlation behind it, then gave outbound overlay connections their own read/message loop for ping/pong, disconnect, mesh sync, and mesh search request/response handling. This removes competing reads from the same TLS stream while keeping outbound sockets usable as real RPC peers.
+- Updated peer-info diagnostics to expose connection direction and extended registry/peer-sync tests plus the loopback/full-instance smoke coverage for the corrected lifecycle.
+- Repaired the stale anonymity transport integration assertion uncovered by the full suite: direct mode now has an available transport, so connection failure is reported as `AggregateException("All anonymity transports failed", inner)` rather than the no-transport `InvalidOperationException` path.
+- Tightened the new router cleanup path so a failed write after pending-request registration removes and cancels the mesh-search response waiter immediately instead of keeping it until connection teardown.
+- Added a deeper loopback integration proof using the real outbound connector plus `MeshOverlaySearchService`, then ran three consecutive searches over the same outbound overlay connection and asserted the connection remained registered and connected afterward.
+
+### Verification
+- `dotnet build src/slskd/slskd.csproj -v minimal`
+- `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~MeshOverlayRequestRouterTests|FullyQualifiedName~MeshNeighborRegistryTests|FullyQualifiedName~MeshNeighborPeerSyncServiceTests|FullyQualifiedName~DhtRendezvousServiceTests" -v minimal`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~MeshSearchLoopbackTests|FullyQualifiedName~TwoFullInstances_CanFormOverlayMeshConnection" -v minimal`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~MeshSearchLoopbackTests" -v minimal`
+- `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~ObfuscatedTransportIntegrationTests.AnonymityTransportSelector_FallbackLogic_Works" -v minimal`
+- `bash ./bin/lint`
+- `git diff --check`
+- `timeout 300s dotnet test -v minimal` (`46` app tests, `3446` unit tests, `274` integration tests passed)
+
+### Findings
+- The remaining symptom was not another DHT bootstrap issue. The overlay could discover peers and still fail searches because connection ownership was wrong after reciprocal dialing.
+- Outbound overlay sockets must be treated as long-lived protocol participants, not just write-only request channels.
+- A one-shot `mesh_search_req` loopback was not enough proof; the failure mode was about long-lived outbound ownership, so the regression now repeats searches over one outbound connection and checks it stays live.
+- Direct anonymity transport tests need to distinguish no-transport selection failures from all-transports connection failures; that gotcha is documented in ADR-0001 and committed as `a4ee297c3`.
+- Pending request routers need explicit removal for write-failure paths; that gotcha is documented in ADR-0001 and committed as `d3c08dff1`.
+
 ## 2026-04-19 00:07 - Fixed stale AUR binary source cache risk
 
 ### Completed

@@ -17,7 +17,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.DhtRendezvous.Messages;
+using slskd.DhtRendezvous.Search;
 using slskd.DhtRendezvous.Security;
+using slskd.Mesh;
 
 /// <summary>
 /// Makes outbound overlay connections to mesh peers discovered via DHT.
@@ -31,6 +34,10 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private readonly OverlayRateLimiter _rateLimiter;
     private readonly OverlayBlocklist _blocklist;
     private readonly MeshNeighborRegistry _registry;
+    private readonly IMeshSyncService _meshSyncService;
+    private readonly IMeshSearchRpcHandler _meshSearchRpcHandler;
+    private readonly MeshOverlayRequestRouter _requestRouter;
+    private readonly SecureMessageFramer _framerInstance = new(Stream.Null);
     private int _pendingConnections;
     private long _successfulConnections;
     private long _failedConnections;
@@ -59,7 +66,10 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         CertificatePinStore pinStore,
         OverlayRateLimiter rateLimiter,
         OverlayBlocklist blocklist,
-        MeshNeighborRegistry registry)
+        MeshNeighborRegistry registry,
+        IMeshSyncService meshSyncService,
+        IMeshSearchRpcHandler meshSearchRpcHandler,
+        MeshOverlayRequestRouter requestRouter)
     {
         _logger = logger;
         _optionsMonitor = optionsMonitor;
@@ -68,6 +78,9 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         _rateLimiter = rateLimiter;
         _blocklist = blocklist;
         _registry = registry;
+        _meshSyncService = meshSyncService;
+        _meshSearchRpcHandler = meshSearchRpcHandler;
+        _requestRouter = requestRouter;
     }
 
     public int PendingConnections => _pendingConnections;
@@ -212,7 +225,10 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                     OverlayLogSanitizer.Endpoint(endpoint),
                     string.Join(", ", (IEnumerable<string>?)ack.Features ?? Array.Empty<string>()));
 
-                return connection;
+                var registeredConnection = connection;
+                _ = RunOutboundMessageLoopAsync(registeredConnection, CancellationToken.None);
+                connection = null;
+                return registeredConnection;
             }
             catch (Exception ex)
             {
@@ -239,6 +255,146 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         finally
         {
             Interlocked.Decrement(ref _pendingConnections);
+        }
+    }
+
+    private async Task RunOutboundMessageLoopAsync(MeshOverlayConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && connection.IsConnected)
+            {
+                if (connection.IsIdle())
+                {
+                    _logger.LogDebug("Outbound connection to {Username} idle, disconnecting", OverlayLogSanitizer.Username(connection.Username));
+                    break;
+                }
+
+                try
+                {
+                    var rawMessage = await connection.ReadRawMessageAsync(cancellationToken).ConfigureAwait(false);
+                    var messageType = SecureMessageFramer.ExtractMessageType(rawMessage);
+
+                    switch (messageType)
+                    {
+                        case OverlayMessageType.Ping:
+                            var ping = _framerInstance.DeserializeMessage<PingMessage>(rawMessage);
+                            await connection.WriteMessageAsync(new PongMessage { Timestamp = ping.Timestamp }, cancellationToken).ConfigureAwait(false);
+                            break;
+
+                        case OverlayMessageType.Pong:
+                            break;
+
+                        case OverlayMessageType.Disconnect:
+                            goto cleanup;
+
+                        case OverlayMessageType.MeshSearchReq:
+                            var meshSearchReq = _framerInstance.DeserializeMessage<MeshSearchRequestMessage>(rawMessage);
+                            var reqVal = MessageValidator.ValidateMeshSearchReq(meshSearchReq);
+                            if (!reqVal.IsValid)
+                            {
+                                _logger.LogWarning("Invalid mesh_search_req from {Username}: {Error}", OverlayLogSanitizer.Username(connection.Username), reqVal.Error);
+                                _rateLimiter.RecordViolation(connection.RemoteAddress);
+                                break;
+                            }
+
+                            var meshRl = _rateLimiter.CheckMeshSearchRequest(connection.ConnectionId);
+                            if (!meshRl)
+                            {
+                                _logger.LogWarning("Mesh search rate limit exceeded for {Username}: {Reason}", OverlayLogSanitizer.Username(connection.Username), meshRl.Reason);
+                                break;
+                            }
+
+                            var meshSearchResp = await _meshSearchRpcHandler.HandleAsync(meshSearchReq, cancellationToken).ConfigureAwait(false);
+                            await connection.WriteMessageAsync(meshSearchResp, cancellationToken).ConfigureAwait(false);
+                            break;
+
+                        case OverlayMessageType.MeshSearchResp:
+                            var meshSearchResponse = _framerInstance.DeserializeMessage<MeshSearchResponseMessage>(rawMessage);
+                            if (!_requestRouter.TryCompleteMeshSearchResponse(connection, meshSearchResponse))
+                            {
+                                _logger.LogDebug("Unexpected mesh_search_resp from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
+                            }
+
+                            break;
+
+                        default:
+                            if (connection.Username is not null)
+                            {
+                                await HandleMeshMessageAsync(connection, rawMessage, messageType, cancellationToken).ConfigureAwait(false);
+                            }
+
+                            break;
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    continue;
+                }
+                catch (EndOfStreamException)
+                {
+                    _logger.LogDebug("Outbound connection closed by {Username}", OverlayLogSanitizer.Username(connection.Username));
+                    break;
+                }
+                catch (slskd.DhtRendezvous.Security.ProtocolViolationException ex)
+                {
+                    _logger.LogWarning("Protocol violation from {Username}: {Error}", OverlayLogSanitizer.Username(connection.Username), ex.Message);
+                    _rateLimiter.RecordViolation(connection.RemoteAddress);
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Error in outbound message loop for {Username}", OverlayLogSanitizer.Username(connection.Username));
+        }
+
+    cleanup:
+        await _registry.UnregisterAsync(connection).ConfigureAwait(false);
+        _requestRouter.RemoveConnection(connection);
+        _rateLimiter.RecordDisconnection(connection.RemoteAddress);
+        _rateLimiter.RemoveConnection(connection.ConnectionId);
+        await connection.DisposeAsync().ConfigureAwait(false);
+    }
+
+    private async Task HandleMeshMessageAsync(MeshOverlayConnection connection, byte[] rawMessage, string? messageType, CancellationToken cancellationToken)
+    {
+        try
+        {
+            Mesh.Messages.MeshMessage? meshMessage = messageType switch
+            {
+                "mesh_sync_hello" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshHelloMessage>(rawMessage),
+                "mesh_req_delta" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshReqDeltaMessage>(rawMessage),
+                "mesh_push_delta" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshPushDeltaMessage>(rawMessage),
+                "mesh_req_key" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshReqKeyMessage>(rawMessage),
+                "mesh_ack" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshAckMessage>(rawMessage),
+                _ => null,
+            };
+
+            if (meshMessage == null)
+            {
+                _logger.LogDebug("Unknown message type {Type} from {Username}, ignoring", messageType, OverlayLogSanitizer.Username(connection.Username));
+                return;
+            }
+
+            var response = await _meshSyncService.HandleMessageAsync(connection.Username!, meshMessage, cancellationToken).ConfigureAwait(false);
+            if (response != null)
+            {
+                await connection.WriteMessageAsync(response, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (slskd.DhtRendezvous.Security.ProtocolViolationException ex)
+        {
+            _logger.LogWarning("Protocol violation parsing mesh message from {Username}: {Error}", OverlayLogSanitizer.Username(connection.Username), ex.Message);
+            _rateLimiter.RecordViolation(connection.RemoteAddress);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error handling mesh message from {Username}", OverlayLogSanitizer.Username(connection.Username));
         }
     }
 

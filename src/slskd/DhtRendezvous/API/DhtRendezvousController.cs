@@ -143,6 +143,7 @@ public class DhtRendezvousController : ControllerBase
                 LastActivity = p.LastActivity,
                 CertificateThumbprint = p.CertificateThumbprint?[..16] + "...", // Truncate for display
                 Version = p.PeerVersion,
+                IsOutbound = p.IsOutbound,
             });
 
         return Ok(peers);
@@ -418,6 +419,7 @@ public sealed class MeshPeerInfoResponse
     public DateTimeOffset LastActivity { get; init; }
     public string? CertificateThumbprint { get; init; }
     public int? Version { get; init; }
+    public bool IsOutbound { get; init; }
 }
 
 public sealed class OverlayConnectResultResponse
