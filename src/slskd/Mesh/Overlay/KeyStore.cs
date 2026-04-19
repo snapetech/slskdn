@@ -62,6 +62,20 @@ public class FileKeyStore : IKeyStore
         }
 
         var existing = ReadFromFile(path);
+
+        // Heal key files written by earlier versions that serialized a DateTimeOffset
+        // instead of CreatedMs, resulting in CreatedAt=epoch and an immediate rotation
+        // on every restart.
+        if (existing.CreatedAt == DateTimeOffset.FromUnixTimeMilliseconds(0))
+        {
+            existing = Ed25519KeyPair.FromBase64(
+                Convert.ToBase64String(existing.PublicKey),
+                Convert.ToBase64String(existing.PrivateKey),
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            WriteToFile(path, existing);
+            logger.LogInformation("[Overlay] Healed key file at {Path} (no valid createdMs found; stamping to now)", path);
+        }
+
         if (ShouldRotate(existing))
         {
             if (prev == null)
@@ -72,10 +86,14 @@ public class FileKeyStore : IKeyStore
 
             var fresh = Ed25519KeyPair.Generate();
             WriteToFile(path, fresh);
-            logger.LogInformation("[Overlay] Rotated keypair at {Path}", path);
+            var ageDays = (DateTimeOffset.UtcNow - existing.CreatedAt).TotalDays;
+            logger.LogInformation(
+                "[Overlay] Rotated keypair at {Path} (previous key age: {AgeDays:F1} days, threshold: {Threshold})",
+                path, ageDays, options.RotateDays);
             return (fresh, prev);
         }
 
+        logger.LogInformation("[Overlay] Loaded existing keypair from {Path} (created {CreatedAt:u})", path, existing.CreatedAt);
         return (existing, prev);
     }
 
@@ -88,7 +106,13 @@ public class FileKeyStore : IKeyStore
 
     private static void WriteToFile(string path, Ed25519KeyPair pair)
     {
-        var json = JsonSerializer.Serialize(pair);
+        var model = new KeyFileModel
+        {
+            PublicKey = Convert.ToBase64String(pair.PublicKey),
+            PrivateKey = Convert.ToBase64String(pair.PrivateKey),
+            CreatedMs = pair.CreatedAt.ToUnixTimeMilliseconds(),
+        };
+        var json = JsonSerializer.Serialize(model);
         File.WriteAllText(path, json);
         if (!OperatingSystem.IsWindows())
             File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);

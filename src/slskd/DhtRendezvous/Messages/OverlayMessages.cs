@@ -28,7 +28,8 @@ public static class OverlayProtocol
     /// <summary>
     /// Maximum message size in bytes.
     /// </summary>
-    public const int MaxMessageSize = 4096;
+    // Must hold a full mesh_search_resp with up to MaxResults=200 file DTOs; 4 KiB is not enough.
+    public const int MaxMessageSize = 64 * 1024;
 }
 
 /// <summary>

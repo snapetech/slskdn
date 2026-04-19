@@ -71,16 +71,18 @@ public sealed class MeshOverlaySearchService : IMeshOverlaySearchService
 
         if (connections.Count == 0)
         {
-            _logger.LogDebug("No outbound mesh peers with MeshSearch feature for overlay search");
+            _logger.LogInformation("[MeshSearch] No outbound mesh peers with MeshSearch feature; skipping overlay search for '{Query}'", searchText);
             return Array.Empty<Response>();
         }
 
-        _logger.LogDebug("Mesh overlay search for '{Query}' across {Count} peers", searchText, connections.Count);
+        _logger.LogInformation("[MeshSearch] Fanning out '{Query}' to {Count} mesh peer(s)", searchText, connections.Count);
 
         var tasks = connections.Select(c => QueryPeerAsync(c, searchText, cancellationToken));
         var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        return results.Where(r => r != null).Cast<Response>().ToList();
+        var nonEmpty = results.Where(r => r != null).Cast<Response>().ToList();
+        _logger.LogInformation("[MeshSearch] '{Query}' returned results from {Hits}/{Total} peer(s)", searchText, nonEmpty.Count, connections.Count);
+        return nonEmpty;
     }
 
     private async Task<Response?> QueryPeerAsync(MeshOverlayConnection connection, string searchText, CancellationToken cancellationToken)

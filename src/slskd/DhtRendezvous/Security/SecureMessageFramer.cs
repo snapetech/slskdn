@@ -33,7 +33,7 @@ public sealed class SecureMessageFramer
     public const int HeaderSize = 4;
 
     /// <summary>
-    /// Maximum message size (4KB).
+    /// Maximum message size (see <see cref="OverlayProtocol.MaxMessageSize"/>).
     /// </summary>
     public const int MaxMessageSize = OverlayProtocol.MaxMessageSize;
 

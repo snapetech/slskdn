@@ -42,16 +42,19 @@ namespace slskd.Mesh.API
         public MeshController(
             IMeshSyncService meshSync,
             MeshStatsCollector transportStatsCollector,
-            INatDetector natDetector)
+            INatDetector natDetector,
+            slskd.DhtRendezvous.MeshNeighborRegistry? neighborRegistry = null)
         {
             MeshSync = meshSync;
             TransportStatsCollector = transportStatsCollector;
             NatDetector = natDetector;
+            NeighborRegistry = neighborRegistry;
         }
 
         private IMeshSyncService MeshSync { get; }
         private MeshStatsCollector TransportStatsCollector { get; }
         private INatDetector NatDetector { get; }
+        private slskd.DhtRendezvous.MeshNeighborRegistry? NeighborRegistry { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<MeshController>();
 
         /// <summary>
@@ -111,17 +114,20 @@ namespace slskd.Mesh.API
         }
 
         /// <summary>
-        ///     Gets list of mesh-capable peers.
+        ///     Gets list of mesh-capable peers (hash-sync registry + live overlay neighbors).
         /// </summary>
         [HttpGet("peers")]
         [Authorize(Policy = AuthPolicy.Any)]
         public IActionResult GetPeers()
         {
-            var peers = MeshSync.GetMeshPeers();
+            var syncPeers = MeshSync.GetMeshPeers().ToList();
+            var overlayPeers = NeighborRegistry?.GetPeerInfo() ?? Array.Empty<slskd.DhtRendezvous.MeshPeerInfo>();
+
             return Ok(new
             {
-                count = peers.Count(),
-                peers,
+                count = syncPeers.Count + overlayPeers.Count,
+                peers = syncPeers,
+                overlay = overlayPeers,
             });
         }
 
