@@ -6504,3 +6504,11 @@ Code quality improvements were completed as part of Option A:
 - Verified the source-ranking fix in the live journal: transfer activity resumed and no `DownloadHistory.Username` unique-constraint errors appeared after restart.
 - Found the remaining fake-fatal transfer noise: `Soulseek.TransferRejectedException: Enqueue failed due to internal error` was already recorded as a remote `Completed, Rejected` transfer, but the global unobserved-task classifier did not recognize that sibling exception type and still logged it as `[FATAL]`.
 - Fixed the classifier to treat that exact remote enqueue-rejection signature as expected Soulseek network churn. Validation: focused `ProgramPathNormalizationTests` rejection classifier test plus `SourceRankingServiceTests` (`3` passed).
+
+## 2026-04-19 04:30:00Z
+
+- Deployed final manual build `0.24.5-slskdn.154+manual.9044cb5e5` to `kspls0` and restarted `slskd`.
+- Confirmed live health after the final restart: service active, Soulseek connected/logged in, DHT running with `80` nodes and `15` discovered peers, overlay listener active on `50305`, and broad search `radiohead ok computer` completed at the response cap (`250` responses, `6180` files).
+- Confirmed transfer path is functional on the final build: re-enqueued downloads reached `InProgress`, and one completed successfully during the observation window.
+- No recurrence of `DownloadHistory.Username` SQLite unique-constraint errors or transfer-rejection `[FATAL] Unobserved task exception` after the final deploy. Remaining notable log noise is the existing SIGTERM-as-fatal shutdown line from the previous process and one `SearchResponse ... Cannot access a disposed object` warning after the search completed.
+- DHT peer discovery works, but mesh overlay still has `0` active connections. Connector failures are classified as remote candidate quality (`6` timeouts, `1` no-route, `1` refused), so the existing follow-up on filtering/deprioritizing bad DHT-discovered overlay candidates remains the next DHT mesh item.
