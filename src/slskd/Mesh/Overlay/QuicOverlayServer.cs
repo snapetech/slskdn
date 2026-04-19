@@ -86,7 +86,7 @@ public class QuicOverlayServer : BackgroundService
 
             var listenerOptions = new QuicListenerOptions
             {
-                ListenEndPoint = new IPEndPoint(IPAddress.Any, options.ListenPort),
+                ListenEndPoint = new IPEndPoint(IPAddress.Any, options.QuicListenPort),
                 ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
                 ConnectionOptionsCallback = (connection, hello, token) =>
                 {
@@ -110,7 +110,7 @@ public class QuicOverlayServer : BackgroundService
             try
             {
                 listener = await QuicListener.ListenAsync(listenerOptions, stoppingToken);
-                logger.LogInformation("[Overlay-QUIC] Listening on port {Port}", options.ListenPort);
+                logger.LogInformation("[Overlay-QUIC] Listening on port {Port}", options.QuicListenPort);
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
@@ -118,7 +118,7 @@ public class QuicOverlayServer : BackgroundService
                     "[Overlay-QUIC] QUIC overlay port {Port} is already in use. Continuing without QUIC overlay server. " +
                     "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
                     "but direct inbound QUIC connections will be unavailable.",
-                    options.ListenPort);
+                    options.QuicListenPort);
                 return; // Gracefully exit - mesh can still function via other transports
             }
             catch (SocketException ex)
@@ -130,7 +130,7 @@ public class QuicOverlayServer : BackgroundService
                 logger.LogWarning(
                     ex,
                     message,
-                    options.ListenPort,
+                    options.QuicListenPort,
                     ex.SocketErrorCode);
                 return; // Gracefully exit - mesh can still function via other transports
             }

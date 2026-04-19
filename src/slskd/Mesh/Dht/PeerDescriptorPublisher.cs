@@ -219,7 +219,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
                 {
                     TransportType = TransportType.DirectQuic,
                     Host = host,
-                    Port = overlayOptions.ListenPort,
+                    Port = overlayOptions.QuicListenPort,
                     Scope = TransportScope.ControlAndData,
                     Preference = 0,
                     Cost = 0

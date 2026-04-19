@@ -1202,13 +1202,29 @@ namespace slskd
 
             var logger = Loggers.GetOrAdd(source, Log.ForContext("Context", "Soulseek").ForContext("SubContext", source));
 
+            var level = TranslateLogLevel(args.Level);
+
+            // Soulseek.NET races a Timer dispose against late SearchResponses after a search
+            // completes; the resulting ObjectDisposedException on System.Timers.Timer is
+            // surfaced as a Warning "Error handling peer message: SearchResponse ...". It is
+            // benign — the search is already finished — so quiet it to Debug to keep the log
+            // signal-to-noise high. Upstream library bug (Soulseek v10.0.0).
+            if (level == LogEventLevel.Warning
+                && args.Exception is ObjectDisposedException ode
+                && ode.ObjectName == "System.Timers.Timer"
+                && !string.IsNullOrEmpty(args.Message)
+                && args.Message.Contains("handling peer message", StringComparison.OrdinalIgnoreCase))
+            {
+                level = LogEventLevel.Debug;
+            }
+
             if (args.IncludesException && OptionsAtStartup.Debug)
             {
-                logger.Write(TranslateLogLevel(args.Level), exception: args.Exception, "{@Message}", args.Message);
+                logger.Write(level, exception: args.Exception, "{@Message}", args.Message);
                 return;
             }
 
-            logger.Write(TranslateLogLevel(args.Level), "{@Message}", args.Message);
+            logger.Write(level, "{@Message}", args.Message);
         }
 
         private void Client_Disconnected(object? sender, SoulseekClientDisconnectedEventArgs args)

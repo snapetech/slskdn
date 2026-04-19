@@ -2584,7 +2584,18 @@ namespace slskd
             var jwtSigningKey = new SymmetricSecurityKey(
                 System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(OptionsAtStartup.Web.Authentication.Jwt.Key)));
 
-            Log.Warning("JWT signing key is ephemeral (auto-generated per-process start). All sessions will be invalidated on restart. Set web.authentication.jwt.key in configuration to persist sessions.");
+            // JwtOptions.Key defaults to a freshly generated random value when unset in config, so we
+            // can't distinguish "configured" from "ephemeral" by inspecting the Options object itself.
+            // Check the raw configuration tree instead — the warning only fires when no value was
+            // actually provided by the user.
+            var jwtKeyConfigured = !string.IsNullOrWhiteSpace(Configuration?["slskd:web:authentication:jwt:key"])
+                || !string.IsNullOrWhiteSpace(Configuration?["web:authentication:jwt:key"])
+                || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable($"{EnvironmentVariablePrefix}JWT_KEY"));
+
+            if (!jwtKeyConfigured)
+            {
+                Log.Warning("JWT signing key is ephemeral (auto-generated per-process start). All sessions will be invalidated on restart. Set web.authentication.jwt.key in configuration to persist sessions.");
+            }
 
             services.AddSingleton(jwtSigningKey);
             services.AddSingleton<ISecurityService, SecurityService>();
