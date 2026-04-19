@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z66. User Directory Browse Must Gate The Soulseek Logged-In State
+
+**The Bug**: Live `kspls0` startup logs showed `POST /api/v0/users/{username}/directory` throwing through the ASP.NET pipeline when the frontend/browser requested a directory while the Soulseek client was `Connected, LoggingIn`. The endpoint only handled offline users, so a normal startup race became a noisy 500 with repeated security middleware and exception-handler errors.
+
+**Files Affected**:
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+- `tests/slskd.Tests.Unit/Users/UsersControllerTests.cs`
+
+**Wrong**:
+```csharp
+var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
+return Ok(result);
+```
+
+**Correct**:
+```csharp
+if (!Client.State.HasFlag(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn))
+{
+    return StatusCode(503, "Soulseek server connection is not ready");
+}
+
+var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
+return Ok(result);
+```
+
+**Why This Keeps Happening**: A Soulseek TCP connection being established is not enough for peer browse operations; the client also has to finish login. UI requests can replay immediately after a service restart, so controller actions that call Soulseek peer APIs need a ready-state gate instead of relying on lower-level `InvalidOperationException` messages.
+
 ### 0z65. Mesh Content Downloads Need A Real Overlay Service Transport, Not Just Service DTOs
 
 **The Bug**: The DHT rendezvous overlay could connect peers and run mesh search, and the content service/fetcher classes existed, but `MeshServiceClient.CallAsync()` always returned `ServiceUnavailable` because service-fabric transport over the DHT overlay was not implemented. Search results could look available while `/api/v0/searches/{id}/items/{item}/download` could never fetch bytes from a mesh peer.
