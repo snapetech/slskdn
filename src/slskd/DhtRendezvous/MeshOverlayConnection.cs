@@ -506,6 +506,7 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
             Log.Warning(ex, "[MeshOverlayConnection] SSL stream dispose failed for {RemoteEndpoint}", RemoteEndPoint);
         }
 
+        _framer.Dispose();
         _tcpClient.Dispose();
     }
 }

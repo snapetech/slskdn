@@ -22,10 +22,24 @@ using slskd.DhtRendezvous.Messages;
 ///
 /// SECURITY: This prevents unbounded reads that could exhaust memory.
 /// </summary>
-public sealed class SecureMessageFramer
+public sealed class SecureMessageFramer : IDisposable
 {
+    private static readonly JsonSerializerOptions DefaultJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
+
     private readonly Stream _stream;
     private readonly JsonSerializerOptions _jsonOptions;
+
+    // Serializes writes so concurrent callers (outbound read loop sending a Pong,
+    // MeshOverlaySearchService sending mesh_search_req, MeshServiceClient sending a
+    // service call) cannot interleave the 4-byte length header and JSON payload on the
+    // shared SslStream. SslStream.WriteAsync is not thread-safe; torn frames show up
+    // on the peer as a bogus length prefix (e.g. JSON "{" bytes 0x7B2BF939 being
+    // interpreted as an int32 length), which triggers an immediate disconnect.
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     /// <summary>
     /// Length header size in bytes.
@@ -45,11 +59,7 @@ public sealed class SecureMessageFramer
     public SecureMessageFramer(Stream stream)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false,
-        };
+        _jsonOptions = DefaultJsonOptions;
     }
 
     /// <summary>
@@ -124,11 +134,11 @@ public sealed class SecureMessageFramer
     /// <summary>
     /// Deserialize raw bytes to a specific message type.
     /// </summary>
-    public T DeserializeMessage<T>(byte[] data)
+    public static T DeserializeMessage<T>(byte[] data)
     {
         try
         {
-            var message = JsonSerializer.Deserialize<T>(data, _jsonOptions);
+            var message = JsonSerializer.Deserialize<T>(data, DefaultJsonOptions);
             if (message is null)
             {
                 throw new ProtocolViolationException("Deserialized message is null");
@@ -168,22 +178,32 @@ public sealed class SecureMessageFramer
     /// </summary>
     public async Task WriteMessageAsync<T>(T message, CancellationToken cancellationToken = default)
     {
-        // Serialize to JSON
         var json = JsonSerializer.SerializeToUtf8Bytes(message, _jsonOptions);
 
-        // Check size BEFORE sending
         if (json.Length > MaxMessageSize)
         {
             throw new ProtocolViolationException($"Message too large to send: {json.Length} > {MaxMessageSize}");
         }
 
-        // Write length header (big-endian)
         var header = new byte[HeaderSize];
         BinaryPrimitives.WriteInt32BigEndian(header, json.Length);
 
-        await _stream.WriteAsync(header, cancellationToken);
-        await _stream.WriteAsync(json, cancellationToken);
-        await _stream.FlushAsync(cancellationToken);
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
+            await _stream.WriteAsync(json, cancellationToken).ConfigureAwait(false);
+            await _stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _writeLock.Dispose();
     }
 
     /// <summary>

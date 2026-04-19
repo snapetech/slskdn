@@ -50,9 +50,6 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
     private long _totalAccepted;
     private long _totalRejected;
 
-    // Helper for deserializing raw messages (stateless, just need the JSON options)
-    private readonly SecureMessageFramer _framerInstance = new(Stream.Null);
-
     private string LocalUsername => _optionsMonitor.CurrentValue?.Soulseek?.Username ?? "unknown";
     private int ListenPortConfig => _dhtOptions.OverlayPort;
 
@@ -414,7 +411,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     switch (messageType)
                     {
                         case Messages.OverlayMessageType.Ping:
-                            var ping = _framerInstance.DeserializeMessage<Messages.PingMessage>(rawMessage);
+                            var ping = SecureMessageFramer.DeserializeMessage<Messages.PingMessage>(rawMessage);
 
                             // SECURITY: Validate ping message before responding
                             var pingValidation = MessageValidator.ValidatePing(ping);
@@ -433,7 +430,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             break;
 
                         case Messages.OverlayMessageType.Disconnect:
-                            var disconnect = _framerInstance.DeserializeMessage<Messages.DisconnectMessage>(rawMessage);
+                            var disconnect = SecureMessageFramer.DeserializeMessage<Messages.DisconnectMessage>(rawMessage);
                             var disconnectValidation = MessageValidator.ValidateDisconnect(disconnect);
                             if (!disconnectValidation.IsValid)
                             {
@@ -447,7 +444,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             goto cleanup;
 
                         case Messages.OverlayMessageType.MeshSearchReq:
-                            var meshSearchReq = _framerInstance.DeserializeMessage<Messages.MeshSearchRequestMessage>(rawMessage);
+                            var meshSearchReq = SecureMessageFramer.DeserializeMessage<Messages.MeshSearchRequestMessage>(rawMessage);
                             var reqVal = MessageValidator.ValidateMeshSearchReq(meshSearchReq);
                             if (!reqVal.IsValid)
                             {
@@ -468,7 +465,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             break;
 
                         case Messages.OverlayMessageType.MeshSearchResp:
-                            var meshSearchResponse = _framerInstance.DeserializeMessage<Messages.MeshSearchResponseMessage>(rawMessage);
+                            var meshSearchResponse = SecureMessageFramer.DeserializeMessage<Messages.MeshSearchResponseMessage>(rawMessage);
                             if (!_requestRouter.TryCompleteMeshSearchResponse(connection, meshSearchResponse))
                             {
                                 _logger.LogDebug("Unexpected mesh_search_resp from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
@@ -481,7 +478,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             break;
 
                         case Messages.OverlayMessageType.MeshServiceReply:
-                            var meshServiceReply = _framerInstance.DeserializeMessage<Messages.MeshServiceReplyMessage>(rawMessage);
+                            var meshServiceReply = SecureMessageFramer.DeserializeMessage<Messages.MeshServiceReplyMessage>(rawMessage);
                             if (!_requestRouter.TryCompleteMeshServiceReply(connection, ToServiceReply(meshServiceReply)))
                             {
                                 _logger.LogDebug("Unexpected mesh_service_reply from {Username}, ignoring", OverlayLogSanitizer.Username(connection.Username));
@@ -544,11 +541,11 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             // Try to parse as a mesh message
             Mesh.Messages.MeshMessage? meshMessage = messageType switch
             {
-                "mesh_sync_hello" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshHelloMessage>(rawMessage),
-                "mesh_req_delta" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshReqDeltaMessage>(rawMessage),
-                "mesh_push_delta" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshPushDeltaMessage>(rawMessage),
-                "mesh_req_key" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshReqKeyMessage>(rawMessage),
-                "mesh_ack" => _framerInstance.DeserializeMessage<Mesh.Messages.MeshAckMessage>(rawMessage),
+                "mesh_sync_hello" => SecureMessageFramer.DeserializeMessage<Mesh.Messages.MeshHelloMessage>(rawMessage),
+                "mesh_req_delta" => SecureMessageFramer.DeserializeMessage<Mesh.Messages.MeshReqDeltaMessage>(rawMessage),
+                "mesh_push_delta" => SecureMessageFramer.DeserializeMessage<Mesh.Messages.MeshPushDeltaMessage>(rawMessage),
+                "mesh_req_key" => SecureMessageFramer.DeserializeMessage<Mesh.Messages.MeshReqKeyMessage>(rawMessage),
+                "mesh_ack" => SecureMessageFramer.DeserializeMessage<Mesh.Messages.MeshAckMessage>(rawMessage),
                 _ => null,
             };
 
@@ -582,7 +579,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 
     private async Task HandleMeshServiceCallAsync(MeshOverlayConnection connection, byte[] rawMessage, CancellationToken cancellationToken)
     {
-        var callMessage = _framerInstance.DeserializeMessage<Messages.MeshServiceCallMessage>(rawMessage);
+        var callMessage = SecureMessageFramer.DeserializeMessage<Messages.MeshServiceCallMessage>(rawMessage);
         if (_serviceRouter == null)
         {
             await connection.WriteMessageAsync(ToMeshServiceReplyMessage(new ServiceReply
