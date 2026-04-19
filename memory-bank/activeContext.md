@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Live `kspls0` mesh framer validation passed; startup directory-browse 500 fix is implemented and validated locally.
+- **Current Task**: None. Live `kspls0` mesh framer validation passed; startup directory-browse and auto-replace search-finalization fixes are implemented and validated locally.
 - **Branch**: `main`
 - **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159`; no release tags were created.
 - **Last Activity**:
@@ -56,7 +56,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Found one real live-log bug unrelated to the framer fix: `POST /api/v0/users/{username}/directory` during Soulseek `Connected, LoggingIn` produced a noisy 500 and repeated security middleware exception logs.
   - Fixed `UsersController.Directory` to return 503 until the Soulseek client is both connected and logged in, and added focused `UsersControllerTests` coverage.
   - Documented the gotcha in ADR-0001 and committed that doc-only entry as `a8cbd874c`.
-  - Validation passed: focused `UsersControllerTests`, `git diff --check`, and `bash ./bin/lint`.
+  - Continued log inspection and found auto-replace was declaring "No search responses found" before `SearchService` finished persisting completed responses; fixed the wait logic and added focused `AutoReplaceServiceTests` coverage.
+  - Documented the auto-replace gotcha in ADR-0001 and committed that doc-only entry as `399ee079e`.
+  - Validation passed so far: focused `UsersControllerTests`, focused `AutoReplaceServiceTests`, `git diff --check`, and `bash ./bin/lint`.
 - **Next Steps**:
   1. Commit the code/test/memory-bank fix set.
   2. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.

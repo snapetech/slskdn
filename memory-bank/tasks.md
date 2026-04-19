@@ -1055,3 +1055,7 @@
 - [x] Fix startup directory browse noise when Soulseek is still logging in
   - Status: done
   - Notes: Live `kspls0` build `0.24.5-slskdn.159` held the mesh framer fix past the keepalive window, but a frontend/API directory request during `Connected, LoggingIn` still produced a noisy 500. `UsersController.Directory` now returns 503 until the Soulseek client is connected and logged in, with focused unit coverage.
+
+- [x] Fix auto-replace search finalization race seen on `kspls0`
+  - Status: done
+  - Notes: Build `159` logged `No search responses found` for auto-replace searches that completed with responses seconds later. `AutoReplaceService` now waits for the persisted completed search state before treating responses as absent, with focused unit coverage for delayed finalization.

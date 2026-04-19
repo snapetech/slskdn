@@ -255,6 +255,9 @@ namespace slskd.Transfers.AutoReplace
             TransferStates.Completed | TransferStates.Cancelled,
         };
 
+        private static readonly TimeSpan DefaultSearchCompletionTimeout = TimeSpan.FromSeconds(45);
+        private static readonly TimeSpan DefaultSearchPollInterval = TimeSpan.FromSeconds(1);
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="AutoReplaceService"/> class.
         /// </summary>
@@ -263,18 +266,24 @@ namespace slskd.Transfers.AutoReplace
         /// <param name="soulseekClient">The Soulseek client.</param>
         /// <param name="optionsMonitor">The options monitor.</param>
         /// <param name="rankingService">The source ranking service.</param>
+        /// <param name="searchCompletionTimeout">How long to wait for the search finalizer to persist responses.</param>
+        /// <param name="searchPollInterval">How often to poll for finalized search responses.</param>
         public AutoReplaceService(
             ITransferService transferService,
             ISearchService searchService,
             ISoulseekClient soulseekClient,
             IOptionsMonitor<slskd.Options> optionsMonitor,
-            ISourceRankingService rankingService)
+            ISourceRankingService rankingService,
+            TimeSpan? searchCompletionTimeout = null,
+            TimeSpan? searchPollInterval = null)
         {
             Transfers = transferService;
             Searches = searchService;
             Client = soulseekClient;
             OptionsMonitor = optionsMonitor;
             RankingService = rankingService;
+            SearchCompletionTimeout = searchCompletionTimeout ?? DefaultSearchCompletionTimeout;
+            SearchPollInterval = searchPollInterval ?? DefaultSearchPollInterval;
         }
 
         private ITransferService Transfers { get; }
@@ -286,6 +295,10 @@ namespace slskd.Transfers.AutoReplace
         private IOptionsMonitor<slskd.Options> OptionsMonitor { get; }
 
         private ISourceRankingService RankingService { get; }
+
+        private TimeSpan SearchCompletionTimeout { get; }
+
+        private TimeSpan SearchPollInterval { get; }
 
         private ILogger Log { get; } = Serilog.Log.ForContext<AutoReplaceService>();
 
@@ -327,16 +340,13 @@ namespace slskd.Transfers.AutoReplace
                     SearchScope.Network,
                     searchOptions);
 
-                // Poll for search completion (up to 30 seconds)
-                var maxWait = TimeSpan.FromSeconds(30);
-                var pollInterval = TimeSpan.FromMilliseconds(1000);
                 var waited = TimeSpan.Zero;
                 slskd.Search.Search? searchWithResponses = null;
 
-                while (waited < maxWait)
+                while (waited < SearchCompletionTimeout)
                 {
-                    await Task.Delay(pollInterval, cancellationToken);
-                    waited += pollInterval;
+                    await Task.Delay(SearchPollInterval, cancellationToken);
+                    waited += SearchPollInterval;
 
                     searchWithResponses = await Searches.FindAsync(s => s.Id == searchId, includeResponses: true);
 
@@ -344,6 +354,12 @@ namespace slskd.Transfers.AutoReplace
                     {
                         break;
                     }
+                }
+
+                if (searchWithResponses?.State.HasFlag(SearchStates.Completed) != true)
+                {
+                    Log.Warning("Search for alternatives did not complete within {TimeoutSeconds}s: {SearchText}", SearchCompletionTimeout.TotalSeconds, searchText);
+                    return candidates;
                 }
 
                 if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any())

@@ -6527,3 +6527,10 @@ Code quality improvements were completed as part of Option A:
 - Found one real non-framer bug in the same live logs: `POST /api/v0/users/{username}/directory` can arrive while Soulseek is `Connected, LoggingIn`, which previously threw an `InvalidOperationException` through the ASP.NET pipeline and logged repeated 500/security-middleware errors.
 - Fixed `UsersController.Directory` to return `503 Soulseek server connection is not ready` until the Soulseek client is both connected and logged in, added focused unit coverage, and documented the gotcha in ADR-0001 with doc-only commit `a8cbd874c`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter FullyQualifiedName~UsersControllerTests -v minimal` passed (`5` tests), `git diff --check` passed, and `bash ./bin/lint` passed.
+
+## 2026-04-19 23:31:10Z
+
+- Continued inspecting live build `0.24.5-slskdn.159` on `kspls0`. The old framer signature still did not recur (`Protocol violation` / `Invalid message length` absent), but the single mesh peer later unregistered twice and remained down until a DHT retry; local overlay stats stayed healthy, pointing at remote close/candidate churn rather than the prior torn-frame bug.
+- Found a separate real auto-replace race in the same logs: `AutoReplaceService` logged `No search responses found` at its 30-second poll limit, while `SearchService` finalized the same search with 14-17 responses one second later.
+- Fixed auto-replace so it waits for the persisted `Completed` search state before deciding responses are absent, extended the default finalization wait to 45 seconds, and added a focused unit test that reproduces delayed response persistence without a slow test.
+- Documented the gotcha in ADR-0001 and committed that doc-only entry as `399ee079e`.
