@@ -228,6 +228,14 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForRemoteTransferRejectedEnqueueFailures()
+    {
+        var exception = new AggregateException(new TransferRejectedException("Enqueue failed due to internal error"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
     public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForTransferCompleteTeardownFailures()
     {
         var exception = new AggregateException(new ConnectionException("Transfer failed: Transfer complete"));

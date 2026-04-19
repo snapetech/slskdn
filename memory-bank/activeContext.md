@@ -48,7 +48,7 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Manual validation build on `kspls0`; source-ranking history race fixed locally and focused tests pass. Next step is to deploy the updated manual build and watch logs.
+- **Current Task**: Manual validation build on `kspls0`; source-ranking history race and remote-transfer fake fatal classifier are fixed locally. Next step is to deploy the newest manual build and watch logs.
 - **Branch**: `main`
 - **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0`; no release tags were created.
 - **Last Activity**:
@@ -56,8 +56,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Verified Soulseek login, shares, listener ports, DHT bootstrap/discovery, broad search completion, and resumed transfer activity on the manual build.
   - Found a live transfer-load race in `SourceRankingService`: concurrent first writes to `DownloadHistory` for the same username could trip SQLite unique-key errors.
   - Replaced the source-ranking read-then-insert/update path with an atomic SQLite upsert, added concurrent regression coverage, documented the gotcha in ADR-0001, and validated `SourceRankingServiceTests`.
+  - Found and fixed the remaining fake-fatal transfer noise where `Soulseek.TransferRejectedException: Enqueue failed due to internal error` reached the global unobserved-task handler as `[FATAL]` despite being an expected remote rejection.
 - **Next Steps**:
-  1. Commit the source-ranking upsert fix.
+  1. Commit the remote-transfer rejection classifier fix.
   2. Publish/install a new manual build on `kspls0` and watch logs for recurrence of `DownloadHistory.Username` unique constraint errors or transfer-related fatal noise.
   3. Keep the existing follow-up on candidate filtering/deprioritization for DHT-discovered non-overlay endpoints.
 

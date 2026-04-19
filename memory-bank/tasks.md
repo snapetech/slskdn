@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
+ - Status: completed (2026-04-19)
+ - Priority: P1
+ - Notes: Manual `kspls0` validation still showed `[FATAL] Unobserved task exception ... Enqueue failed due to internal error` after the download service had already classified the transfer as `Completed, Rejected`. Added `Soulseek.TransferRejectedException` plus the exact enqueue-failure signature to the expected Soulseek network classifier, added focused coverage, and documented the gotcha in ADR-0001.
+
 - [x] **bug**: Make source-ranking download history updates atomic under concurrent transfer events.
  - Status: completed (2026-04-19)
  - Priority: P1

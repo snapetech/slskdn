@@ -6497,3 +6497,10 @@ Code quality improvements were completed as part of Option A:
 - Revalidated the DHT diagnostics API-key fix on the live manual build: `/api/v0/dht/status` and `/api/v0/overlay/stats` now return `200` with the configured `X-API-Key`. DHT bootstrap and discovery are healthy, broad Soulseek search completed with 250 responses, and transfers resumed.
 - Found the next real live bug under transfer load: source-ranking history writes can race on first insert for the same username and emit `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username`.
 - Fixed the source-ranking race by replacing the EF read-then-insert/update sequence with an atomic SQLite upsert and added focused concurrent regression coverage. Validation: `SourceRankingServiceTests` (`2` passed).
+
+## 2026-04-19 04:10:00Z
+
+- Deployed the source-ranking upsert build `0.24.5-slskdn.154+manual.49c1b6784` to `kspls0` and confirmed the live process through `/api/v0/application`.
+- Verified the source-ranking fix in the live journal: transfer activity resumed and no `DownloadHistory.Username` unique-constraint errors appeared after restart.
+- Found the remaining fake-fatal transfer noise: `Soulseek.TransferRejectedException: Enqueue failed due to internal error` was already recorded as a remote `Completed, Rejected` transfer, but the global unobserved-task classifier did not recognize that sibling exception type and still logged it as `[FATAL]`.
+- Fixed the classifier to treat that exact remote enqueue-rejection signature as expected Soulseek network churn. Validation: focused `ProgramPathNormalizationTests` rejection classifier test plus `SourceRankingServiceTests` (`3` passed).
