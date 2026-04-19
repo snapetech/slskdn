@@ -138,7 +138,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Configuration**: New `telemetry.tracing` options in config:
     - `enabled`: Enable/disable tracing (default: false)
     - `exporter`: Exporter type - console, jaeger, or otlp (default: console)
-    - `jaeger_endpoint` and `jaeger_port`: Jaeger agent configuration
+    - `jaeger_endpoint` and `jaeger_port`: Jaeger OTLP collector configuration
     - `otlp_endpoint`: OTLP collector endpoint URL
   - **Activity Sources**: Dedicated activity sources for different components:
     - `slskdn.Transfers.MultiSource`: Swarm download operations

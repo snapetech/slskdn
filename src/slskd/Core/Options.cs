@@ -3867,20 +3867,20 @@ namespace slskd
                 public string Exporter { get; init; } = "console";
 
                 /// <summary>
-                ///     Gets the Jaeger endpoint (host:port or host).
+                ///     Gets the Jaeger OTLP collector endpoint (URL, host:port, or host).
                 /// </summary>
                 [Argument(default, "telemetry-jaeger-endpoint")]
                 [EnvironmentVariable("TELEMETRY_JAEGER_ENDPOINT")]
-                [Description("Jaeger endpoint (host:port or host)")]
+                [Description("Jaeger OTLP collector endpoint (URL, host:port, or host)")]
                 [RequiresRestart]
                 public string? JaegerEndpoint { get; init; }
 
                 /// <summary>
-                ///     Gets the Jaeger port (if not specified in endpoint).
+                ///     Gets the Jaeger OTLP collector port (if not specified in endpoint).
                 /// </summary>
                 [Argument(default, "telemetry-jaeger-port")]
                 [EnvironmentVariable("TELEMETRY_JAEGER_PORT")]
-                [Description("Jaeger port (if not specified in endpoint)")]
+                [Description("Jaeger OTLP collector port (if not specified in endpoint)")]
                 [RequiresRestart]
                 public int? JaegerPort { get; init; }
 

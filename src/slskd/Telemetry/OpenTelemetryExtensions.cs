@@ -58,24 +58,11 @@ public static class OpenTelemetryExtensions
                             builder.AddConsoleExporter();
                             break;
                         case "jaeger":
-                            if (!string.IsNullOrEmpty(tracingOptions.JaegerEndpoint))
-                            {
-                                builder.AddJaegerExporter(options =>
-                                {
-                                    options.AgentHost = tracingOptions.JaegerEndpoint;
-                                    options.AgentPort = tracingOptions.JaegerPort ?? 6831;
-                                });
-                            }
+                            AddOtlpExporter(builder, GetJaegerOtlpEndpoint(tracingOptions));
 
                             break;
                         case "otlp":
-                            if (!string.IsNullOrEmpty(tracingOptions.OtlpEndpoint))
-                            {
-                                builder.AddOtlpExporter(options =>
-                                {
-                                    options.Endpoint = new Uri(tracingOptions.OtlpEndpoint);
-                                });
-                            }
+                            AddOtlpExporter(builder, tracingOptions.OtlpEndpoint);
 
                             break;
                     }
@@ -88,6 +75,45 @@ public static class OpenTelemetryExtensions
             });
 
         return services;
+    }
+
+    private static void AddOtlpExporter(TracerProviderBuilder builder, string? endpoint)
+    {
+        if (!string.IsNullOrEmpty(endpoint))
+        {
+            builder.AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri(endpoint);
+            });
+        }
+    }
+
+    private static string? GetJaegerOtlpEndpoint(slskdOptions.TelemetryOptions.TracingOptions tracingOptions)
+    {
+        if (!string.IsNullOrEmpty(tracingOptions.OtlpEndpoint))
+        {
+            return tracingOptions.OtlpEndpoint;
+        }
+
+        if (string.IsNullOrEmpty(tracingOptions.JaegerEndpoint))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(tracingOptions.JaegerEndpoint, UriKind.Absolute, out var uri))
+        {
+            return uri.ToString();
+        }
+
+        var host = tracingOptions.JaegerEndpoint;
+        var port = tracingOptions.JaegerPort ?? 4317;
+
+        if (host.Contains(':', StringComparison.Ordinal))
+        {
+            return $"http://{host}";
+        }
+
+        return $"http://{host}:{port}";
     }
 }
 

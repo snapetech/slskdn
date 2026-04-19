@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **security**: Resolve the remaining Dependabot alert without suppressions.
+ - Status: completed (2026-04-19)
+ - Priority: P1
+ - Notes: GitHub had no open Dependabot PRs, but one open Dependabot security alert remained for `OpenTelemetry.Exporter.Jaeger` in `src/slskd/slskd.csproj`. Removed the deprecated vulnerable Jaeger exporter package instead of ignoring it, kept `exporter: jaeger` compatibility by routing Jaeger collector exports through the supported OTLP exporter, bumped `AWSSDK.S3` to `4.0.21.2`, refreshed npm lockfiles for active Dependabot-managed ranges, and verified the main project has no vulnerable or outdated NuGet packages in current sources.
+
 - [x] **bug**: Fix reciprocal overlay lifecycle so DHT-ready peers can answer mesh search RPCs.
  - Status: completed (2026-04-19)
  - Priority: P1

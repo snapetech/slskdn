@@ -6418,6 +6418,13 @@ Code quality improvements were completed as part of Option A:
 - Confirmed from live API state that the remaining issue `#209` behavior is now dominated by bad remote candidates rather than another hidden local regression: DHT is healthy (`dhtNodeCount: 95`), the overlay listener is up, security peer stats no longer overstate onion-capable peers, and the candidate list is still full of unverified `dht-discovered` endpoints.
 - Folded in the concurrent security changes in the same working tree: `WebSocketTransport` now only skips WSS certificate validation when a new explicit lab-only option is enabled, `ShareScanner` now skips `ReparsePoint` symlinks/junctions, and `docs/security/full-app-audit-2026-04.md` was added to capture the broader audit snapshot.
 
+## 2026-04-19 02:00:00Z
+
+- Checked GitHub Dependabot state for `snapetech/slskdn`: there were no open Dependabot PRs, but alert `78` remained open for vulnerable `OpenTelemetry.Exporter.Jaeger` in `src/slskd/slskd.csproj`.
+- Removed the deprecated Jaeger exporter package instead of suppressing the alert. `exporter: jaeger` now uses the supported OTLP exporter path so Jaeger collector deployments can still work without carrying the vulnerable package.
+- Bumped the only outdated main-project NuGet package (`AWSSDK.S3` to `4.0.21.2`) and refreshed npm lockfiles for the active Dependabot-managed package ranges in the root, `src/web`, and `tests/e2e`.
+- Local dependency checks now show no vulnerable packages for `src/slskd` and no remaining root npm outdated entries; remaining `src/web` / `tests/e2e` `npm outdated` entries are major-version lines outside the configured Dependabot nonbreaking PR scope.
+
 ## 2026-04-18 18:03:00Z
 
 - Picked up the last concurrent security edits before release instead of leaving them dirty in the tree. Session login throttling now tracks both remote IP and normalized username to slow distributed password spray, and share-token issuance/validation now binds JWT `aud` to `collection_id` so replay against the wrong collection fails audience validation.

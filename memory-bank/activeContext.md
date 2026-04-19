@@ -48,22 +48,19 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Latest issue `#209` reciprocal overlay lifecycle fix is implemented locally and validated.
+- **Current Task**: Dependabot alert cleanup is implemented locally; validation and publish are in progress.
 - **Branch**: `main`
-- **Environment**: Local dev; no GitHub issue/PR writes or release tags were created.
+- **Environment**: Local dev on `snapetech/slskdn`; no release tags were created for this dependency cleanup.
 - **Last Activity**:
-  - Re-read issue `#209` build `152` logs and traced the remaining failure past DHT bootstrap/discovery into overlay peer lifecycle.
-  - Fixed `MeshNeighborRegistry` so inbound and outbound connections for the same username have independent lifetimes instead of replacing and disposing each other.
-  - Added `MeshOverlayRequestRouter` so mesh search responses are correlated without multiple code paths reading the same TLS stream.
-  - Started a full outbound overlay message loop so outbound sockets answer ping/pong, mesh sync, and mesh search RPCs like inbound sockets.
-  - Added a repeated real `MeshOverlaySearchService` loopback proof that searches three times over the same outbound overlay connection and verifies the connection remains live.
-  - Documented the gotcha in ADR-0001 and committed that documentation checkpoint as `bfe8bb631`.
-  - Repaired the stale direct-anonymity integration assertion found by the broad suite and documented that gotcha in ADR-0001 as commit `a4ee297c3`.
-  - Tightened pending mesh-search router cleanup on write failure and documented that gotcha in ADR-0001 as commit `d3c08dff1`.
-  - Validation passed for backend build, focused unit coverage, focused loopback/full-instance mesh integration, repo lint, whitespace checks, and the broad `dotnet test` run.
+  - Verified GitHub currently has no open Dependabot PRs in `snapetech/slskdn`.
+  - Found the remaining open Dependabot security alert `78` for vulnerable `OpenTelemetry.Exporter.Jaeger` in `src/slskd/slskd.csproj`.
+  - Removed the deprecated Jaeger exporter package instead of suppressing it and kept `exporter: jaeger` compatibility by sending to Jaeger collectors through the supported OTLP exporter path.
+  - Bumped `AWSSDK.S3` to `4.0.21.2` and refreshed npm lockfiles for the active Dependabot-managed package ranges.
+  - Local dependency checks show no vulnerable or outdated NuGet packages for `src/slskd` and no remaining root npm outdated entries.
 - **Next Steps**:
-  1. Commit and push the code/test/docs fix set when ready.
-  2. Only create a build tag if the user explicitly asks for another release build.
+  1. Run build/test/lint/audit validation for the dependency cleanup.
+  2. Commit and push the dependency fix set to `main` if validation stays green.
+  3. Re-check the Dependabot alert after GitHub processes the pushed dependency graph.
 
 ## Recent Context
 
