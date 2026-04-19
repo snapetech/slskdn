@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z68. DHT Rendezvous Must Not Dial Its Own DHT UDP Port As A TCP Overlay Endpoint
+
+**The Bug**: Live `kspls0` manual build testing showed DHT discovery returning many candidates on port `50306`, which is the slskdn DHT UDP port, while the TCP overlay listener was on `50305`. `DhtRendezvousService.OnPeersFound(...)` treated every `PeerInfo.ConnectionUri` as a TCP overlay endpoint and scheduled outbound TLS overlay dials immediately. The node then spent connection attempts/backoff on DHT-port candidates, producing timeouts/refusals/TLS EOFs and leaving mesh search with no usable outbound peers.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/DhtRendezvousServiceTests.cs`
+
+**Wrong**:
+```csharp
+var endpoint = new IPEndPoint(ip, uri.Port);
+PublishDiscoveredPeer(endpointKey, endpoint);
+SchedulePeerConnection(endpointKey, endpoint);
+```
+
+**Correct**:
+```csharp
+var endpoint = new IPEndPoint(ip, uri.Port);
+if (IsLikelyDhtPort(endpoint.Port))
+{
+    // Do not treat a DHT UDP contact as a TCP overlay listener.
+    return;
+}
+
+PublishDiscoveredPeer(endpointKey, endpoint);
+SchedulePeerConnection(endpointKey, endpoint);
+```
+
+**Why This Keeps Happening**: BitTorrent DHT peer results only carry an IP and port; they do not prove the endpoint is a slskdn TCP overlay listener. slskdn also runs a stable DHT UDP port next to the overlay port, so stale or malformed announcements can look plausible enough to dial. Discovery, candidate tracking, and overlay verification must stay separate, and obvious DHT-port candidates should be filtered before consuming overlay connection budget.
+
 ### 0z67. Auto-Replace Must Wait For SearchService Background Finalization
 
 **The Bug**: Live `kspls0` build `159` logs showed `AutoReplaceService` warning `No search responses found` for a track, then `SearchService` logging the same search completed with 14-17 responses one second later. Auto-replace started a search with `SearchService.StartAsync()`, but that method returns after creating the search record while a background task later persists the final responses. The fixed 30-second poll could expire just before finalization, causing auto-replace to skip valid alternatives.
