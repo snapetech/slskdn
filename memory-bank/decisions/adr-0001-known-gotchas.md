@@ -117,6 +117,32 @@ merged.Add(new Response
 
 **Why This Keeps Happening**: Search responses started as Soulseek-only DTOs, but pod/scene bridging added routing metadata at the response layer. Any code that clones, deduplicates, serializes, or adapts `Search.Response` must carry source metadata forward, or downstream action routing silently falls back to the wrong path.
 
+### 0z65b. Overlay Service Call Handlers Need MeshServiceRouter Registered In DI
+
+**The Bug**: DHT overlay service-call message handling was added to `MeshOverlayServer` and `MeshOverlayConnector`, but `MeshServiceRouter` was only looked up opportunistically and was not registered in DI. Peers could connect and mesh-search successfully, then every pod download failed with `Mesh service router unavailable` because incoming `mesh_service_call` messages had no router to dispatch `MeshContent.GetByContentId`.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+
+**Wrong**:
+```csharp
+public MeshOverlayConnector(..., MeshServiceRouter? serviceRouter = null)
+{
+    _serviceRouter = serviceRouter; // null if the router was never registered
+}
+```
+
+**Correct**:
+```csharp
+services.AddOptions<MeshServiceFabricOptions>().Bind(Configuration.GetSlskdSection("MeshServiceFabric"));
+services.AddSingleton<MeshServiceRouter>();
+services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
+```
+
+**Why This Keeps Happening**: Optional constructor parameters make missing DI registrations look intentional and allow the app to boot with half-wired behavior. Any overlay protocol feature that handles inbound RPCs must have its dispatcher registered explicitly and covered by a full-instance request test, not just constructor defaults.
+
 ### 0z64. Soulseek TransferRejectedException Remote Enqueue Failures Are Expected Network Churn
 
 **The Bug**: Live `kspls0` validation still emitted `[FATAL] Unobserved task exception ... (Enqueue failed due to internal error)` after downloads were already recorded as `Completed, Rejected`. The unobserved exception was `Soulseek.TransferRejectedException`, which the expected-network classifier did not recognize even though the app had already handled it as a remote transfer rejection.
