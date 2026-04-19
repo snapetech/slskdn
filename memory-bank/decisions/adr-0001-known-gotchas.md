@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z64. Soulseek TransferRejectedException Remote Enqueue Failures Are Expected Network Churn
+
+**The Bug**: Live `kspls0` validation still emitted `[FATAL] Unobserved task exception ... (Enqueue failed due to internal error)` after downloads were already recorded as `Completed, Rejected`. The unobserved exception was `Soulseek.TransferRejectedException`, which the expected-network classifier did not recognize even though the app had already handled it as a remote transfer rejection.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+typeName.Contains("Soulseek.TransferException", StringComparison.Ordinal) ||
+typeName.Contains("Soulseek.TransferReportedFailedException", StringComparison.Ordinal);
+```
+
+**Correct**:
+```csharp
+typeName.Contains("Soulseek.TransferException", StringComparison.Ordinal) ||
+typeName.Contains("Soulseek.TransferRejectedException", StringComparison.Ordinal) ||
+typeName.Contains("Soulseek.TransferReportedFailedException", StringComparison.Ordinal);
+```
+
+**Why This Keeps Happening**: Soulseek.NET uses several sibling exception types for remote peer transfer failures. A message like `Enqueue failed due to internal error` sounds local, but when it arrives as `Soulseek.TransferRejectedException` from the download path it represents a remote client rejection and should be treated like other expected peer churn in the global unobserved-task handler.
+
 ### 0z63. Download History Counters Need Atomic Upserts Under Transfer Concurrency
 
 **The Bug**: Live `kspls0` transfer activity hit `SQLite Error 19: 'UNIQUE constraint failed: DownloadHistory.Username'` while recording source-ranking history. Multiple transfer-completion handlers can see no row for the same username, race to insert it, and make EF log database errors or lose counter updates if the retry path exhausts.
