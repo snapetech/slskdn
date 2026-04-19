@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z60. Direct Anonymity Transport Failures Are Not The Same As No Available Transport
+
+**The Bug**: The broad integration suite failed because `AnonymityTransportSelector_FallbackLogic_Works` still expected `InvalidOperationException` after direct-mode transport support was added. In direct mode, a transport is available; if the TLS connection fails, `AnonymityTransportSelector` wraps the actual failure in `AggregateException("All anonymity transports failed", inner)`. `InvalidOperationException` only describes the separate "no transport is available" path.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Security/ObfuscatedTransportIntegrationTests.cs`
+- `src/slskd/Common/Security/AnonymityTransportSelector.cs`
+
+**Wrong**:
+```csharp
+await Assert.ThrowsAsync<InvalidOperationException>(() =>
+    selector.SelectAndConnectAsync("peer123", null, "example.com", 80, null, CancellationToken.None));
+```
+
+**Correct**:
+```csharp
+var exception = await Assert.ThrowsAsync<AggregateException>(() =>
+    selector.SelectAndConnectAsync("peer123", null, "example.com", 80, null, CancellationToken.None));
+Assert.NotNull(exception.InnerException);
+```
+
+**Why This Keeps Happening**: Direct mode used to look like "no usable anonymity transport" in some test paths, but it now registers a real direct transport. Tests and callers must distinguish selection failures from connection failures; collapsing both into `InvalidOperationException` hides useful root-cause details and makes the integration suite drift behind production behavior.
+
 ### 0z59. Reciprocal Overlay Connections Need Independent Inbound And Outbound Lifecycles
 
 **The Bug**: Issue `#209` kept reaching DHT `Ready` and discovering peers, but mesh health fell back to DHT-only candidates (`0 onion-capable`) because the overlay registry treated a peer as one socket and preferred outbound connections. When two reachable nodes formed reciprocal connections, each side could reject or dispose the other side's live server-side socket. Outbound sockets also had no read loop, so they could not answer keepalive pings or mesh RPCs and were later cleaned up as stale.
