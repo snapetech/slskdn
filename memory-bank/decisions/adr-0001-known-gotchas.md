@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z63. Download History Counters Need Atomic Upserts Under Transfer Concurrency
+
+**The Bug**: Live `kspls0` transfer activity hit `SQLite Error 19: 'UNIQUE constraint failed: DownloadHistory.Username'` while recording source-ranking history. Multiple transfer-completion handlers can see no row for the same username, race to insert it, and make EF log database errors or lose counter updates if the retry path exhausts.
+
+**Files Affected**:
+- `src/slskd/Transfers/Ranking/SourceRankingService.cs`
+- `tests/slskd.Tests.Unit/Transfers/Ranking/SourceRankingServiceTests.cs`
+
+**Wrong**:
+```csharp
+var entry = await context.DownloadHistory.FindAsync(new object[] { username }, cancellationToken);
+if (entry == null)
+{
+    entry = new DownloadHistoryEntry { Username = username };
+    context.DownloadHistory.Add(entry);
+}
+
+entry.Failures++;
+await context.SaveChangesAsync(cancellationToken);
+```
+
+**Correct**:
+```csharp
+await context.Database.ExecuteSqlInterpolatedAsync($@"
+    INSERT INTO ""DownloadHistory"" (""Username"", ""Successes"", ""Failures"", ""LastUpdated"")
+    VALUES ({username}, {successes}, {failures}, {lastUpdated})
+    ON CONFLICT(""Username"") DO UPDATE SET
+        ""Successes"" = ""DownloadHistory"".""Successes"" + {successes},
+        ""Failures"" = ""DownloadHistory"".""Failures"" + {failures},
+        ""LastUpdated"" = {lastUpdated}",
+    cancellationToken);
+```
+
+**Why This Keeps Happening**: EF read-then-add code looks natural for single-row counters, but event handlers run concurrently during real transfer activity. Any SQLite-backed counter keyed by a natural key must use one atomic database operation, or it will race exactly when many transfer events arrive together.
+
 ### 0z62. DHT Diagnostic Controllers Must Use AuthPolicy.Any, Not Bare Authorize
 
 **The Bug**: Live `kspls0` diagnostics accepted the configured API key for `/api/v0/session` and `/api/v0/searches`, but `/api/v0/dht/status` and `/api/v0/overlay/stats` returned `401` with `WWW-Authenticate: Bearer`. `DhtRendezvousController` used bare `[Authorize]`, which followed the default JWT bearer scheme instead of the repo's API-key-or-JWT policy.
