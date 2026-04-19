@@ -4,8 +4,10 @@
 
 namespace slskd.Tests.Unit.DhtRendezvous;
 
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -16,6 +18,17 @@ using Xunit;
 
 public class DhtRendezvousControllerTests
 {
+    [Fact]
+    public void Controller_Allows_ApiKey_Or_Jwt_Authentication()
+    {
+        var authorize = typeof(DhtRendezvousController)
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .Cast<AuthorizeAttribute>()
+            .SingleOrDefault();
+
+        Assert.NotNull(authorize);
+        Assert.Equal(AuthPolicy.Any, authorize!.Policy);
+    }
 
     [Fact]
     public async Task ConnectOverlayPeer_WithInvalidPort_ReturnsBadRequest()

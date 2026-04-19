@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Allow API-key access to DHT rendezvous diagnostics.
+ - Status: completed (2026-04-19)
+ - Priority: P1
+ - Notes: Live `kspls0` validation showed configured API keys worked for `/api/v0/session` and `/api/v0/searches` but not `/api/v0/dht/status` or `/api/v0/overlay/stats`, because `DhtRendezvousController` used bare `[Authorize]` and fell through to bearer-only auth. Updated the controller to `AuthPolicy.Any`, added reflection coverage, and documented the gotcha in ADR-0001.
+
 - [x] **security**: Resolve the remaining Dependabot alert without suppressions.
  - Status: completed (2026-04-19)
  - Priority: P1

@@ -48,19 +48,18 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Dependabot alert cleanup is implemented locally; validation and publish are in progress.
+- **Current Task**: None. `kspls0` live install/logs were checked, the host was restarted onto the installed build, and the local DHT diagnostics API-key fix is implemented and validated.
 - **Branch**: `main`
-- **Environment**: Local dev on `snapetech/slskdn`; no release tags were created for this dependency cleanup.
+- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0`; no release tags were created.
 - **Last Activity**:
-  - Verified GitHub currently has no open Dependabot PRs in `snapetech/slskdn`.
-  - Found the remaining open Dependabot security alert `78` for vulnerable `OpenTelemetry.Exporter.Jaeger` in `src/slskd/slskd.csproj`.
-  - Removed the deprecated Jaeger exporter package instead of suppressing it and kept `exporter: jaeger` compatibility by sending to Jaeger collectors through the supported OTLP exporter path.
-  - Bumped `AWSSDK.S3` to `4.0.21.2` and refreshed npm lockfiles for the active Dependabot-managed package ranges.
-  - Local dependency checks show no vulnerable or outdated NuGet packages for `src/slskd` and no remaining root npm outdated entries.
+  - Found `kspls0` had `slskdn-bin 0.24.5.slskdn.154-1` installed, but the running service was still executing `0.24.5.slskdn.147`; restarted `slskd` so the live process now reports `0.24.5-slskdn.154`.
+  - Verified Soulseek login, shares, listener ports, firewall allowance, DHT bootstrap to `Ready`, DHT discovery, and a broad search returning 250 responses.
+  - Confirmed the remaining DHT/overlay weakness is candidate quality: discovered peers exist, but overlay connections are mostly timeouts/no-route/refused/TLS EOF and active mesh connections are often zero.
+  - Found and fixed the diagnostics auth bug where DHT/overlay endpoints rejected API keys because `DhtRendezvousController` used bare `[Authorize]`.
 - **Next Steps**:
-  1. Run build/test/lint/audit validation for the dependency cleanup.
-  2. Commit and push the dependency fix set to `main` if validation stays green.
-  3. Re-check the Dependabot alert after GitHub processes the pushed dependency graph.
+  1. Push the DHT diagnostics API-key fix when ready.
+  2. Keep the existing follow-up on candidate filtering/deprioritization for DHT-discovered non-overlay endpoints.
+  3. Watch `kspls0` for recurrence of the Soulseek.NET `Timer.Reset` unobserved `NullReferenceException` during peer response/write paths.
 
 ## Recent Context
 
