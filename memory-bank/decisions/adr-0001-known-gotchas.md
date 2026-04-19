@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z61. Pending Overlay Request Router Entries Must Be Removed On Write Failure Too
+
+**The Bug**: The first `MeshOverlayRequestRouter` implementation registered a pending mesh-search response before writing the request to the peer, but only removed the entry when a response arrived, the timeout token canceled, or the whole connection closed. If `WriteMessageAsync` failed after registration, disposing the linked timeout source did not invoke cancellation callbacks, so the pending request could stay in memory until disconnect.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayRequestRouter.cs`
+- `src/slskd/DhtRendezvous/Search/MeshOverlaySearchService.cs`
+
+**Wrong**:
+```csharp
+var responseTask = _requestRouter.WaitForMeshSearchResponseAsync(connection, requestId, timeoutCts.Token);
+await connection.WriteMessageAsync(req, timeoutCts.Token);
+var resp = await responseTask;
+```
+
+**Correct**:
+```csharp
+try
+{
+    var responseTask = _requestRouter.WaitForMeshSearchResponseAsync(connection, requestId, timeoutCts.Token);
+    await connection.WriteMessageAsync(req, timeoutCts.Token);
+    var resp = await responseTask;
+}
+finally
+{
+    _requestRouter.RemoveMeshSearchResponse(connection, requestId);
+}
+```
+
+**Why This Keeps Happening**: Request routers are easy to reason about on the happy response/timeout paths and easy to leak on pre-response write failures. Any code that registers pending stream work before an awaited write needs an explicit `finally` removal path; do not rely on `CancellationTokenRegistration` cleanup from disposing a linked `CancellationTokenSource`.
+
 ### 0z60. Direct Anonymity Transport Failures Are Not The Same As No Available Transport
 
 **The Bug**: The broad integration suite failed because `AnonymityTransportSelector_FallbackLogic_Works` still expected `InvalidOperationException` after direct-mode transport support was added. In direct mode, a transport is available; if the TLS connection fails, `AnonymityTransportSelector` wraps the actual failure in `AggregateException("All anonymity transports failed", inner)`. `InvalidOperationException` only describes the separate "no transport is available" path.
