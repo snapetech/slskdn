@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z92. Soulseek Timer-Reset Write Loop Races Must Be Classified Too, Not Just Read Loops
+
+**The Bug**: After classifying the `Soulseek.Extensions.Reset(Timer)` teardown race for `ReadInternalAsync`/`MessageConnection.ReadContinuouslyAsync`, live `kspls0` logs still emitted fake `[FATAL] Unobserved task exception` entries from the same third-party timer-reset `NullReferenceException` occurring in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The process kept running, but the logs still looked like a fatal crash.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+var isSoulseekTimerResetRace =
+    exception is NullReferenceException &&
+    details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
+```
+
+**Correct**:
+```csharp
+var isSoulseekTimerResetReadRace =
+    exception is NullReferenceException &&
+    details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
+
+var isSoulseekTimerResetWriteRace =
+    exception is NullReferenceException &&
+    details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.Tcp.Connection.WriteInternalAsync", StringComparison.Ordinal);
+```
+
+**Why This Keeps Happening**: The original live sample only showed the read-loop teardown, so the classifier was narrowed to that exact stack shape. But the third-party `Timer` reset race can happen on both read and write paths. Matching only one side leaves the same benign bug producing fake fatal telemetry from the other side.
+
 ### 0z91. Manual Publish Must Match The Tagged Release Publish Shape
 
 **The Bug**: `bin/publish` was producing a materially different Linux artifact than the tagged release workflows: self-contained, single-file, `ReadyToRun=true`, and `IncludeNativeLibrariesForSelfExtract=true`. Live manual deploys on `kspls0` then exercised a different native runtime/extraction path than the official release builds, and the resulting crashes showed up as kernel `general protection fault` events in `.NET Server GC` inside the apphost image. That made manual soak results untrustworthy because they were not validating the same publish shape that CI ships.
