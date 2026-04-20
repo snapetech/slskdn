@@ -1,3 +1,14 @@
+## 2026-04-20 01:31Z - Validated QUIC mesh on kspls0 and fixed follow-up live bugs
+
+- Kept QUIC enabled rather than disabling it: `kspls0` now uses Microsoft MsQuic `v2.5.7`, and the deployed manual build binds overlay TCP `50305`, DHT UDP `50306`, UDP overlay `50400`, QUIC data `50401`, and QUIC overlay `50402`.
+- Fixed the two-minute mesh disconnect by accepting capped unframed JSON overlay control frames in the secure framer. Live validation on `kspls0` connected to `m***7` with `mesh_search` and held past the two-minute keepalive threshold without protocol violation or unregister noise.
+- Fixed rendezvous accounting/backoff so candidates deferred by connector capacity are not counted as real attempts. The live stats now align: connector attempts/failures are no longer inflated by skipped work.
+- Fixed noisy user directory browse failures by returning controlled 503 responses for expected remote peer connection failures instead of letting `SoulseekClientException(ConnectionException)` escape through the middleware stack.
+- Fixed service SIGTERM handling so `systemctl restart slskd` on the new build logs expected shutdown and exits cleanly instead of marking the service failed with status 1.
+- Deployed `0.24.5-slskdn.159+manual.0a542e1c9` to `kspls0`. No release tag was created.
+- Follow-up found during the deliberate restart: transfer shutdown cleanup still logs `ObjectDisposedException` / global semaphore release warnings for cancelled downloads after DI disposal. Service recovery is healthy, but the shutdown transfer cleanup ordering needs a separate fix.
+- Validation: focused `DhtRendezvousServiceTests|SecureMessageFramerTests`, focused `UsersControllerTests`, `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, `bash ./bin/lint`, `git diff --check`, manual publish, and live API/journal probes on `kspls0`.
+
 ## 2026-04-20 00:57:17Z
 
 - Continued live build `0.24.5-slskdn.159` validation on `kspls0` and found two more real issues beyond the earlier framer fixes.

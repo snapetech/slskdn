@@ -1067,3 +1067,23 @@
 - [x] Restore QUIC mesh runtime compatibility on `kspls0`
   - Status: done
   - Notes: Replaced crashing AUR `msquic 2.4.11` with Microsoft MsQuic `v2.5.7`, removed the temporary systemd QUIC-disable override, and deployed `manual.90257b10d`. QUIC listeners `50401/50402`, overlay `50305`, DHT, and one mesh connection are healthy after restart. App code now gates QUIC service registration and direct-QUIC publication on `QuicRuntime.IsAvailable()`.
+
+- [x] Fix live overlay framer compatibility with unframed JSON control messages
+  - Status: done
+  - Notes: Live `kspls0` build `159` disconnected `m***7` at the two-minute keepalive with `Invalid message length: 2065855609` (`{"ty`). `SecureMessageFramer` now accepts capped unframed JSON objects at frame boundaries, with focused unit coverage and live validation past the keepalive threshold.
+
+- [x] Fix DHT rendezvous connector-capacity accounting
+  - Status: done
+  - Notes: Live stats showed DHT attempts exceeding real connector attempts when more candidates arrived than the connector's concurrent-attempt limit. Rendezvous now defers candidates before stamping retry/backoff state when connector capacity is full, with focused unit coverage.
+
+- [x] Fix user directory browse connection-failure API noise
+  - Status: done
+  - Notes: Live `kspls0` logs showed remote peer directory connection failures escaping as repeated middleware stack traces. `UsersController.Directory` now returns a controlled 503 for `SoulseekClientException` wrapping `ConnectionException`, with focused unit coverage.
+
+- [x] Fix systemd restart SIGTERM handling
+  - Status: done
+  - Notes: Manual deployments showed normal `systemctl restart slskd` stops recorded as `status=1/FAILURE`. POSIX signal handlers now request generic-host shutdown instead of `Environment.Exit(1)`, and `ProcessExit` logs expected shutdown as informational. Validated on `kspls0` with a deliberate restart of `manual.0a542e1c9`.
+
+- [ ] Fix transfer cleanup ordering during service shutdown
+  - Status: pending
+  - Notes: Deliberate `kspls0` restart of `manual.0a542e1c9` exited cleanly at the systemd level, but active downloads cancelled during shutdown still logged global semaphore release warnings and `ObjectDisposedException` while resolving transfer cleanup after DI disposal. Treat this as shutdown cleanup ordering noise; service recovery remained healthy.

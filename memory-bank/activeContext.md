@@ -60,21 +60,22 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Live `kspls0` mesh framer validation passed; startup directory-browse and auto-replace search-finalization fixes are implemented and validated locally.
+- **Current Task**: None. Live `kspls0` QUIC/mesh validation and follow-up bug fixes are implemented, committed, deployed, and host-validated.
 - **Branch**: `main`
-- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159`; no release tags were created.
+- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159+manual.0a542e1c9`; no release tags were created.
 - **Last Activity**:
-  - Verified on `kspls0` that build `0.24.5-slskdn.159` kept the outbound mesh peer connected past the 2-minute keepalive threshold and through the later 17:24 CST sample: zero `Protocol violation`, zero `Unregistered`, one `Connected to mesh peer`, and no reconnect churn.
-  - Found one real live-log bug unrelated to the framer fix: `POST /api/v0/users/{username}/directory` during Soulseek `Connected, LoggingIn` produced a noisy 500 and repeated security middleware exception logs.
-  - Fixed `UsersController.Directory` to return 503 until the Soulseek client is both connected and logged in, and added focused `UsersControllerTests` coverage.
-  - Documented the gotcha in ADR-0001 and committed that doc-only entry as `a8cbd874c`.
-  - Continued log inspection and found auto-replace was declaring "No search responses found" before `SearchService` finished persisting completed responses; fixed the wait logic and added focused `AutoReplaceServiceTests` coverage.
-  - Documented the auto-replace gotcha in ADR-0001 and committed that doc-only entry as `399ee079e`.
-  - Validation passed so far: focused `UsersControllerTests`, focused `AutoReplaceServiceTests`, `git diff --check`, and `bash ./bin/lint`.
+  - Kept QUIC enabled by installing Microsoft MsQuic `v2.5.7` on `kspls0`; QUIC overlay/data listeners bind on `50402/50401` with no temporary systemd disable override.
+  - Fixed live mesh compatibility with unframed JSON overlay frames; `kspls0` connected to `m***7` and held past the 2-minute keepalive threshold without `Protocol violation`, `Invalid message length`, `Unregistered`, or disconnect logs.
+  - Fixed DHT rendezvous accounting so connector-capacity deferrals are not counted as real attempts or pushed into retry backoff.
+  - Fixed user directory browse API handling so expected remote peer connection failures return controlled 503 responses instead of unhandled middleware stack traces.
+  - Fixed service SIGTERM handling so normal `systemctl restart` stops the host cleanly; validated on `kspls0` that a deliberate restart logs expected shutdown, not status 1/failure.
+  - Deployed `0.24.5-slskdn.159+manual.0a542e1c9` to `kspls0`.
+  - Validation passed: focused `DhtRendezvousServiceTests|SecureMessageFramerTests`, focused `UsersControllerTests`, `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, `bash ./bin/lint`, `git diff --check`, release publish, and live API/log probes.
 - **Next Steps**:
-  1. Commit the code/test/memory-bank fix set.
-  2. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
+  1. Fix shutdown-only transfer cleanup noise: during the validation restart, cancelled downloads still tried to release global semaphores / resolve transfer cleanup after DI disposal, logging `ObjectDisposedException`.
+  2. Keep sampling `kspls0` for longer-run QUIC stability and any recurrence of `libmsquic` core dumps.
   3. Keep candidate filtering/deprioritization for bad DHT-discovered overlay endpoints as the remaining DHT mesh follow-up.
+  4. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
 
 ## Recent Context
 
