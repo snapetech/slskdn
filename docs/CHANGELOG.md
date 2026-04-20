@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed AudioSketch ffmpeg detection so the default `FfmpegPath: ffmpeg` resolves through `PATH` instead of being rejected by `File.Exists("ffmpeg")`, removing repeated false missing-ffmpeg warnings and allowing sketch hashes on hosts with ffmpeg installed normally.
 - Downgraded another expected Soulseek peer teardown shape from fake fatal telemetry: unobserved `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync` now falls into the expected network-churn classifier.
 - Fixed a DHT startup race where a temporary overlay-port bind probe could decide the node was not beacon-capable during a fast restart, leaving TCP overlay `50305` offline until the next service restart. The real overlay listener start now determines beacon capability directly.
 - Fixed overlay keepalive reads competing with the persistent message dispatcher: inbound mesh loops now send keepalive pings without doing a direct pong read, so all overlay frames continue through the single read loop even while mesh search or service traffic is active.

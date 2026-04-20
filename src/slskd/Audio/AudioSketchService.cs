@@ -7,6 +7,7 @@ namespace slskd.Audio
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.Linq;
     using System.Security.Cryptography;
     using Microsoft.Extensions.Options;
     using Serilog;
@@ -36,7 +37,8 @@ namespace slskd.Audio
         public string? ComputeSketchHash(string filePath)
         {
             var ffmpegPath = optionsMonitor.CurrentValue.Integration.Chromaprint.FfmpegPath;
-            if (string.IsNullOrWhiteSpace(ffmpegPath) || !File.Exists(ffmpegPath))
+            var resolvedFfmpegPath = ResolveExecutablePath(ffmpegPath);
+            if (resolvedFfmpegPath is null)
             {
                 log.Warning("[AudioSketch] ffmpeg not configured or missing: {Path}", ffmpegPath);
                 return null;
@@ -51,7 +53,7 @@ namespace slskd.Audio
             {
                 var psi = new ProcessStartInfo
                 {
-                    FileName = ffmpegPath,
+                    FileName = resolvedFfmpegPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -110,6 +112,65 @@ namespace slskd.Audio
                 log.Warning(ex, "[AudioSketch] Failed to compute sketch hash for {File}", filePath);
                 return null;
             }
+        }
+
+        internal static string? ResolveExecutablePath(string? executablePath)
+        {
+            if (string.IsNullOrWhiteSpace(executablePath))
+            {
+                return null;
+            }
+
+            var trimmed = executablePath.Trim();
+            if (HasDirectoryComponent(trimmed))
+            {
+                return File.Exists(trimmed) ? trimmed : null;
+            }
+
+            var path = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            var candidateNames = GetCandidateExecutableNames(trimmed);
+            foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                foreach (var candidateName in candidateNames)
+                {
+                    var candidate = Path.Combine(directory, candidateName);
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasDirectoryComponent(string executablePath)
+        {
+            return Path.IsPathRooted(executablePath) ||
+                executablePath.Contains(Path.DirectorySeparatorChar) ||
+                executablePath.Contains(Path.AltDirectorySeparatorChar);
+        }
+
+        private static string[] GetCandidateExecutableNames(string executableName)
+        {
+            if (!OperatingSystem.IsWindows() || Path.HasExtension(executableName))
+            {
+                return new[] { executableName };
+            }
+
+            var pathExt = Environment.GetEnvironmentVariable("PATHEXT");
+            var extensions = string.IsNullOrWhiteSpace(pathExt)
+                ? new[] { ".EXE", ".BAT", ".CMD", ".COM" }
+                : pathExt.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+            return new[] { executableName }
+                .Concat(extensions.Select(ext => executableName + ext))
+                .ToArray();
         }
     }
 }
