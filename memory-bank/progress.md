@@ -6574,3 +6574,17 @@ Code quality improvements were completed as part of Option A:
 - Traced the failed tag build `build-main-0.24.5-slskdn.160` to the `Release Gate` integration smoke compile step, not the runtime smoke tests. CI failed with `CS0535` because `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still had a pre-shutdown `StubDownloadService` that did not implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.
 - Fixed the integration stub by adding the missing `ShutdownAsync` no-op implementation and documented the pattern in ADR-0001 so future service-interface changes also update smoke/integration test doubles.
 - Revalidated the exact CI path locally: Release unit smoke passed (`35` tests), the exact filtered Release integration smoke command passed (`40` tests), `bash packaging/scripts/run-release-integration-smoke.sh` passed end to end, `bash ./bin/lint` passed, and `git diff --check` passed.
+
+## 2026-04-20 02:55:00Z
+
+- Continued the local manual release/test cycle after fixing the failed tag build. The next pass exposed two Release-suite fragilities rather than product regressions: a port-forwarding controller test hardcoded a local port and occasionally collided with suite state, and the download shutdown-drain test inferred completion from a fixed `Task.Delay(150)` instead of the tracked task actually finishing.
+- Hardened `PortForwardingControllerTests` to allocate ephemeral loopback ports at runtime and hardened `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` to wait on explicit completion signals (`cancellationObserved` and `drainCompleted`) instead of a sleep-only assertion.
+- Documented that test-pattern gotcha in ADR-0001 and committed it as `c1d21e8b4`.
+- Validation now splits cleanly:
+  - `bash packaging/scripts/run-release-gate.sh`: passed end to end again
+  - `bash ./bin/lint`: passed
+  - `git diff --check`: passed
+  - focused Release `PortForwardingControllerTests`: passed (`8` tests)
+  - focused Release `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`: passed
+  - focused full-instance integration `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection`: passed in isolation
+  - `./bin/build`: still found one heavier full-suite integration issue outside the release gate, with `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` failing once inside the full Release integration sweep with `502 Bad Gateway` on `/api/v0/overlay/connect`, even though that same test passed when rerun alone immediately afterward

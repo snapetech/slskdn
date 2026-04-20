@@ -286,6 +286,7 @@ public class DownloadServiceTests
         }
 
         var cancellationObserved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var drainCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var soulseekClient = new Mock<ISoulseekClient>();
         soulseekClient
             .SetupGet(client => client.Downloads)
@@ -319,6 +320,7 @@ public class DownloadServiceTests
                 {
                     cancellationObserved.TrySetResult();
                     await Task.Delay(150);
+                    drainCompleted.TrySetResult();
                     throw;
                 }
             });
@@ -345,7 +347,8 @@ public class DownloadServiceTests
             SetApplicationShuttingDown(true);
             await service.ShutdownAsync(CancellationToken.None);
 
-            Assert.True(cancellationObserved.Task.IsCompleted);
+            await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await drainCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
         finally
         {

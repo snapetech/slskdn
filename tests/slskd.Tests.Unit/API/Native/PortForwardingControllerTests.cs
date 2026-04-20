@@ -16,6 +16,13 @@ using Xunit;
 
 public class PortForwardingControllerTests
 {
+    private static int GetFreeLocalPort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
     [Fact]
     public async Task StartForwarding_WithWhitespacePodId_ReturnsBadRequest()
     {
@@ -99,6 +106,7 @@ public class PortForwardingControllerTests
     [Fact]
     public async Task StartForwarding_WhenPortAlreadyForwarded_DoesNotLeakExceptionMessage()
     {
+        var localPort = GetFreeLocalPort();
         var forwarder = new LocalPortForwarder(
             NullLogger<LocalPortForwarder>.Instance,
             Mock.Of<IMeshServiceClient>());
@@ -108,7 +116,7 @@ public class PortForwardingControllerTests
         {
             var first = await controller.StartForwarding(new StartPortForwardingRequest
             {
-                LocalPort = 12346,
+                LocalPort = localPort,
                 PodId = "pod-1",
                 DestinationHost = "example.com",
                 DestinationPort = 80
@@ -117,7 +125,7 @@ public class PortForwardingControllerTests
 
             var second = await controller.StartForwarding(new StartPortForwardingRequest
             {
-                LocalPort = 12346,
+                LocalPort = localPort,
                 PodId = "pod-1",
                 DestinationHost = "example.com",
                 DestinationPort = 80
@@ -129,7 +137,7 @@ public class PortForwardingControllerTests
         }
         finally
         {
-            await forwarder.StopForwardingAsync(12346);
+            await forwarder.StopForwardingAsync(localPort);
             forwarder.Dispose();
         }
     }
@@ -137,6 +145,7 @@ public class PortForwardingControllerTests
     [Fact]
     public async Task StartForwarding_ReturnsSanitizedSuccessMessage()
     {
+        var localPort = GetFreeLocalPort();
         var forwarder = new LocalPortForwarder(
             NullLogger<LocalPortForwarder>.Instance,
             Mock.Of<IMeshServiceClient>());
@@ -146,7 +155,7 @@ public class PortForwardingControllerTests
         {
             var result = await controller.StartForwarding(new StartPortForwardingRequest
             {
-                LocalPort = 12347,
+                LocalPort = localPort,
                 PodId = "pod-1",
                 DestinationHost = "example.com",
                 DestinationPort = 80
@@ -154,11 +163,11 @@ public class PortForwardingControllerTests
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.Contains("Port forwarding started", ok.Value?.ToString() ?? string.Empty);
-            Assert.DoesNotContain("12347", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(localPort.ToString(), ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
-            await forwarder.StopForwardingAsync(12347);
+            await forwarder.StopForwardingAsync(localPort);
             forwarder.Dispose();
         }
     }
@@ -166,6 +175,7 @@ public class PortForwardingControllerTests
     [Fact]
     public async Task StopForwarding_ReturnsSanitizedSuccessMessage()
     {
+        var localPort = GetFreeLocalPort();
         var forwarder = new LocalPortForwarder(
             NullLogger<LocalPortForwarder>.Instance,
             Mock.Of<IMeshServiceClient>());
@@ -173,13 +183,13 @@ public class PortForwardingControllerTests
 
         try
         {
-            await forwarder.StartForwardingAsync(12348, "pod-1", "example.com", 80);
+            await forwarder.StartForwardingAsync(localPort, "pod-1", "example.com", 80);
 
-            var result = await controller.StopForwarding(12348);
+            var result = await controller.StopForwarding(localPort);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.Contains("Port forwarding stopped", ok.Value?.ToString() ?? string.Empty);
-            Assert.DoesNotContain("12348", ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(localPort.ToString(), ok.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

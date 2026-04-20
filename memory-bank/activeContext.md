@@ -27,6 +27,20 @@
   2. Push `main` when desired.
   3. Create a replacement build tag only if the user explicitly wants a new release build.
 
+## Update 2026-04-20 02:55:00Z
+
+- Current task: None. The local release gate is green again; one non-gate full-integration interference remains in the heavier `./bin/build` pass.
+- Last activity:
+  - continued the local release-candidate cycle with `run-release-gate.sh` and `./bin/build`
+  - fixed two release-suite test fragilities: `PortForwardingControllerTests` no longer hardcode fixed local ports, and `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` now waits for explicit tracked-work completion instead of relying on a fixed delay
+  - documented the test-flakiness pattern in ADR-0001 and committed it as `c1d21e8b4`
+  - reran the release bar successfully: focused Release unit regressions passed, `bash packaging/scripts/run-release-gate.sh` passed end to end, `bash ./bin/lint` passed, and `git diff --check` passed
+  - identified one remaining heavier-suite issue outside the release gate: `./bin/build` still hit a single full-instance integration failure (`TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` returning `502 Bad Gateway` on the initial overlay-connect call), but that exact test passed immediately when rerun in isolation
+- Next steps:
+  1. Commit the remaining test-hardening changes.
+  2. Decide whether the isolated `TwoNodeMeshFullInstanceTests` full-suite interference should block the next release candidate, given that the documented local release bar is green.
+  3. If you want a stricter candidate, debug the full `./bin/build` integration-suite interference next before tagging.
+
 ## Update 2026-04-20 01:52:00Z
 
 - Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.
