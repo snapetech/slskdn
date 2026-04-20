@@ -52,6 +52,43 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z89. Cached QUIC Connections Must Be Explicitly Disposed On Replacement, Failure, And Host Shutdown
+
+**The Bug**: The QUIC overlay/data clients cached `QuicConnection` instances in dictionaries, but when a connect race created duplicates, or when `OpenOutboundStreamAsync`/send failed and the connection was removed from the cache, the underlying `QuicConnection` was not disposed. The QUIC hosted services also did not explicitly close/drain active connections on stop. That leaves native MsQuic handles alive longer than intended and can destabilize long-running hosts in ways that only surface as native crashes or core dumps.
+
+**Files Affected**:
+- `src/slskd/Mesh/Overlay/QuicOverlayClient.cs`
+- `src/slskd/Mesh/Overlay/QuicDataClient.cs`
+- `src/slskd/Mesh/Overlay/QuicOverlayServer.cs`
+- `src/slskd/Mesh/Overlay/QuicDataServer.cs`
+
+**Wrong**:
+```csharp
+connection = await CreateConnectionAsync(endpoint, ct);
+connections.TryAdd(endpoint, connection);
+
+// ...
+connections.TryRemove(endpoint, out _);
+return false;
+```
+
+**Correct**:
+```csharp
+connection = await CreateConnectionAsync(endpoint, ct);
+if (!connections.TryAdd(endpoint, connection))
+{
+    await connection.DisposeAsync();
+}
+
+// ...
+if (connections.TryRemove(endpoint, out var removed))
+{
+    await removed.DisposeAsync();
+}
+```
+
+**Why This Keeps Happening**: `ConcurrentDictionary.TryRemove` only updates the cache; it does not release the native QUIC handle. With `System.Net.Quic`, leaked or duplicated `QuicConnection` instances are much riskier than ordinary managed objects because the real state lives in MsQuic/native runtime resources. Any code path that replaces, evicts, or abandons a cached QUIC connection must dispose it explicitly, and hosted services must actively close/drain live QUIC state during shutdown instead of relying on process teardown.
+
 ### 0z88. Soulseek Timer-Reset Read Loop NullReferenceExceptions Must Be Classified As Expected Network Teardown
 
 **The Bug**: Live `kspls0` logs still emitted `[FATAL] Unobserved task exception` entries during normal peer/read-loop churn with `System.NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `Soulseek.Network.Tcp.Connection.ReadInternalAsync` and `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`. The process kept running, but the log looked like a real fatal crash/disconnect.
