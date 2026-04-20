@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z98. OpenAPI `IOpenApiResponse.Content` Is Read-Only Through The Interface
+
+**The Bug**: A nullability cleanup in `ContentNegotiationOperationFilter` changed response handling to assign `response.Content ??= ...` after `operation.Responses.TryGetValue(...)`; the value was typed as `IOpenApiResponse`, where `Content` is read-only, so Release builds failed with `CS0200`.
+
+**Files Affected**:
+- `src/slskd/Common/OpenAPI/ContentNegotiationOperationFilter.cs`
+
+**Wrong**:
+```csharp
+if (operation.Responses.TryGetValue(statusCode, out var response))
+{
+    response.Content ??= new Dictionary<string, OpenApiMediaType>();
+}
+```
+
+**Correct**:
+```csharp
+if (operation.Responses.TryGetValue(statusCode, out var response) &&
+    response is OpenApiResponse openApiResponse &&
+    openApiResponse.Content is { } content)
+{
+    content[contentType] = new OpenApiMediaType();
+}
+```
+
+**Why This Keeps Happening**: Microsoft.OpenApi exposes response values through interfaces in some call paths, and those interfaces do not allow replacing the `Content` collection. When hardening nullable OpenAPI code, keep the concrete `OpenApiResponse` path and mutate the existing content dictionary instead of assigning through the interface.
+
 ### 0z96. React Hook Order Must Not Change Across Conditional Render Paths
 
 **The Bug**: Moving `useEffect` after an early `return` introduced different hook counts between loading and loaded renders in `Network`, which caused `Rendered more hooks than during previous render` and unstable component behavior in production.
