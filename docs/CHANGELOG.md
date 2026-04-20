@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Downgraded the remaining Soulseek timer-reset teardown race on `Tcp.Connection.WriteInternalAsync(...)` so that benign third-party write-loop `NullReferenceException` noise no longer logs as fake fatal unobserved-task crashes.
 - Aligned `bin/publish` with the tagged release publish profile so manual/live deploys no longer use a different self-contained single-file `ReadyToRun` runtime shape than CI ships.
 - Hardened mesh QUIC lifecycle management: cached/orphaned `QuicConnection` instances are now explicitly disposed, duplicate connection-creation races no longer leak live connections, and QUIC overlay/data hosted services close and drain active connection handlers during shutdown.
 - Fixed the TCP mesh overlay listener failing to rebind `50305` on fast restarts with `Address already in use` even when no live listener remained by enabling socket address reuse and fully clearing stop-state after shutdown.

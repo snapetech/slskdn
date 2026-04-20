@@ -4220,10 +4220,14 @@ namespace slskd
                 exception is InvalidOperationException &&
                 details.Contains("The underlying Tcp connection is closed", StringComparison.Ordinal) &&
                 details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
-            var isSoulseekTimerResetRace =
+            var isSoulseekTimerResetReadRace =
                 exception is NullReferenceException &&
                 details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
                 details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
+            var isSoulseekTimerResetWriteRace =
+                exception is NullReferenceException &&
+                details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+                details.Contains("Soulseek.Network.Tcp.Connection.WriteInternalAsync", StringComparison.Ordinal);
 
             var isNetworkFailure =
                 exception is TimeoutException ||
@@ -4232,7 +4236,8 @@ namespace slskd
                 (exception is ObjectDisposedException objectDisposedException && string.Equals(objectDisposedException.ObjectName, "Connection", StringComparison.Ordinal)) ||
                 exception is System.Net.Sockets.SocketException ||
                 isSoulseekMessageConnectionClosed ||
-                isSoulseekTimerResetRace ||
+                isSoulseekTimerResetReadRace ||
+                isSoulseekTimerResetWriteRace ||
                 typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal) ||
                 typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal) ||
                 typeName.Contains("Soulseek.TransferException", StringComparison.Ordinal) ||

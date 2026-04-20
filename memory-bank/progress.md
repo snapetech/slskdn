@@ -1,3 +1,11 @@
+## 2026-04-20 16:40Z - Covered the remaining Soulseek timer-reset write-loop false fatal
+
+- Rechecked the old pre-`manual-nor2r` live journal and found one remaining app-side logging miss: `Soulseek.Extensions.Reset(Timer)` on `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)` was still surfacing as `[FATAL] Unobserved task exception`, even though the matching read-loop variant had already been downgraded as expected network churn.
+- Documented that write-loop gotcha in ADR-0001 and committed it immediately as `b121d5da3`.
+- Extended `Program.IsExpectedSoulseekNetworkException(...)` so the same third-party timer-reset `NullReferenceException` is treated as expected teardown churn on the write path too, not only on `ReadContinuouslyAsync`.
+- Added focused unit coverage in `ProgramPathNormalizationTests` for the exact live `WriteInternalAsync(...)` stack shape.
+- Validation passed: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests" -v minimal`, `bash ./bin/lint`, and `git diff --check`.
+
 ## 2026-04-20 16:25Z - Aligned manual publish profile with tagged releases and revalidated live startup
 
 - Investigated the remaining live startup `SIGSEGV` beyond app code and found a concrete tooling mismatch: `bin/publish` was producing a self-contained single-file `ReadyToRun` artifact with native self-extraction, while the tagged release workflows publish the normal multi-file self-contained layout without that runtime shape.
