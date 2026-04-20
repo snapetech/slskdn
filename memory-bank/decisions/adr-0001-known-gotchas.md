@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z83. Full-Instance Harness Startup Must Wait For Overlay Listeners, Not Just The API
+
+**The Bug**: The next manual release/test cycle showed `./bin/build` failing the full Release integration sweep with `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` returning `502 Bad Gateway` on `/api/v0/overlay/connect`, while the exact same test passed immediately in isolation. The full-instance runner marked nodes ready once `/api/v0/session/enabled` responded, but did not wait for the configured overlay TCP listener to start accepting connections.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/Harness/SlskdnFullInstanceRunner.cs`
+
+**Wrong**:
+```csharp
+await WaitForApiReadyAsync(ct);
+```
+
+**Correct**:
+```csharp
+await WaitForApiReadyAsync(ct);
+await WaitForTcpPortReadyAsync(overlayPort.Value, "overlay", ct);
+```
+
+**Why This Keeps Happening**: Generic-host/API readiness does not guarantee transport listeners owned by background services are bound yet. In lighter isolated runs the overlay listener often comes up before the test reaches `/api/v0/overlay/connect`, but in heavier optimized suites the timing window widens and the first explicit connect attempt can legitimately race listener startup. Full-instance harnesses must wait for every transport the test immediately depends on, not just the HTTP control plane.
+
 ### 0z82. Release-Suite Tests Must Not Depend On Fixed Local Ports Or Sleep-Only Drain Timing
 
 **The Bug**: The next local release-candidate cycle after `build-main-0.24.5-slskdn.160` cleared CI exposed two test-only release blockers: `PortForwardingControllerTests.StartForwarding_WhenPortAlreadyForwarded_DoesNotLeakExceptionMessage` occasionally failed in the full Release suite because it hardcoded local port `12346`, and `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` occasionally failed because it only checked whether cancellation had been observed after a fixed `Task.Delay(150)` instead of waiting for the tracked task to finish unwinding.
