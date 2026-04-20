@@ -25,7 +25,7 @@ public class BridgeProtocolValidationTests
     public BridgeProtocolValidationTests(ITestOutputHelper output)
     {
         this.output = output;
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         parser = new SoulseekProtocolParser(loggerFactory.CreateLogger<SoulseekProtocolParser>());
     }
 
@@ -126,7 +126,7 @@ public class BridgeProtocolValidationTests
     public async Task ReadMessageAsync_Should_Handle_Invalid_Length()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         // Write invalid length (negative or too large)
         var invalidLength = BitConverter.GetBytes(-1);
         await stream.WriteAsync(invalidLength, 0, 4);
@@ -142,7 +142,7 @@ public class BridgeProtocolValidationTests
     public async Task ReadMessageAsync_Should_Handle_Truncated_Message()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         // Write valid length but incomplete message
         var length = BitConverter.GetBytes(100);
         await stream.WriteAsync(length, 0, 4);
@@ -162,11 +162,11 @@ public class BridgeProtocolValidationTests
     public async Task ReadMessageAsync_Should_Handle_Partial_Reads()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var payload = BuildLoginPayload("testuser", "password");
         await parser.WriteMessageAsync(stream, SoulseekProtocolParser.MessageType.Login, payload);
 
-        var fragmented = new FragmentedReadStream(stream.ToArray(), 2);
+        using var fragmented = new FragmentedReadStream(stream.ToArray(), 2);
 
         // Act
         var result = await parser.ReadMessageAsync(fragmented);
@@ -184,7 +184,7 @@ public class BridgeProtocolValidationTests
     public async Task WriteMessageAsync_ReadMessageAsync_Should_Roundtrip()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var originalType = SoulseekProtocolParser.MessageType.SearchRequest;
         var originalPayload = BuildSearchPayload("test query", 12345);
 
@@ -205,7 +205,7 @@ public class BridgeProtocolValidationTests
     public async Task WriteMessageAsync_ReadMessageAsync_Should_Roundtrip_Login()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var originalType = SoulseekProtocolParser.MessageType.Login;
         var originalPayload = BuildLoginPayload("testuser", "testpass");
 
@@ -231,7 +231,7 @@ public class BridgeProtocolValidationTests
     public async Task WriteMessageAsync_ReadMessageAsync_Should_Roundtrip_Empty_Payload()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var originalType = SoulseekProtocolParser.MessageType.RoomListRequest;
         var originalPayload = Array.Empty<byte>();
 
@@ -316,7 +316,7 @@ public class BridgeProtocolValidationTests
         // Test that parser can read all defined message types
         foreach (SoulseekProtocolParser.MessageType messageType in Enum.GetValues(typeof(SoulseekProtocolParser.MessageType)))
         {
-            var stream = new MemoryStream();
+            using var stream = new MemoryStream();
             var payload = Array.Empty<byte>();
             await parser.WriteMessageAsync(stream, messageType, payload);
             stream.Position = 0;
@@ -332,7 +332,7 @@ public class BridgeProtocolValidationTests
     public async Task ReadMessageAsync_Should_Reject_Message_Length_Exceeding_Max()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var maxLength = 1024 * 1024 + 1; // Exceeds 1MB limit
         var lengthBytes = BitConverter.GetBytes(maxLength);
         await stream.WriteAsync(lengthBytes, 0, 4);
@@ -384,7 +384,7 @@ public class BridgeProtocolValidationTests
     public async Task WriteMessageAsync_ReadMessageAsync_Should_Handle_Large_Payloads()
     {
         // Arrange
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var largePayload = new byte[100 * 1024]; // 100KB payload
         new Random().NextBytes(largePayload);
         var originalType = SoulseekProtocolParser.MessageType.FileTransfer;

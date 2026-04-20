@@ -388,10 +388,24 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 }
             }
 
-            // Start DHT engine (will bootstrap from saved nodes or public bootstrap nodes)
-            var bootstrapRouters = _options.BootstrapRouters?.Where(router => !string.IsNullOrWhiteSpace(router)).ToArray() ?? Array.Empty<string>();
+            // Start DHT engine (will bootstrap from saved nodes or public bootstrap nodes).
+            // HARDENING-2026-04-20 H12: LanOnly suppresses all public bootstraps so the DHT
+            // engine never contacts router.bittorrent.com / router.utorrent.com / dht.transmissionbt.com
+            // and never publishes this node's (ip, port) to the public rendezvous. Saved node
+            // tables are also skipped in this mode to avoid re-leaking a previously announced IP.
+            var bootstrapRouters = _options.LanOnly
+                ? Array.Empty<string>()
+                : _options.BootstrapRouters?.Where(router => !string.IsNullOrWhiteSpace(router)).ToArray() ?? Array.Empty<string>();
 
-            if (initialNodes.Length > 0)
+            if (_options.LanOnly)
+            {
+                _logger.LogWarning(
+                    "[DHT] HARDENING-2026-04-20 H12: LanOnly=true — public DHT bootstrap is DISABLED. " +
+                    "This node will not appear on the public BitTorrent DHT and cannot be discovered " +
+                    "via DHT rendezvous. Mesh peer discovery is confined to local / already-known peers.");
+                await dhtEngine.StartAsync(Array.Empty<string>());
+            }
+            else if (initialNodes.Length > 0)
             {
                 await dhtEngine.StartAsync(initialNodes, bootstrapRouters);
             }
@@ -717,6 +731,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         return new DhtRendezvousStats
         {
             IsEnabled = _options.Enabled,
+            LanOnly = _options.LanOnly,
             IsBeaconCapable = IsBeaconCapable,
             IsDhtRunning = IsDhtRunning,
             DhtNodeCount = DhtNodeCount,
@@ -914,6 +929,16 @@ public sealed class DhtRendezvousOptions
         "router.utorrent.com",
         "dht.transmissionbt.com",
     };
+
+    /// <summary>
+    /// HARDENING-2026-04-20 H12: disable all contact with the public BitTorrent DHT. Skips the
+    /// bootstrap router list on engine start, so this node will not publish (ip, port) to any
+    /// public rendezvous server — peer discovery is confined to whatever local / private
+    /// transports (LAN multicast, locally-known peers, etc.) are still configured.
+    /// Default <c>false</c>; operators who don't want their residential IP enumerable via the
+    /// public DHT should flip this to <c>true</c>.
+    /// </summary>
+    public bool LanOnly { get; set; } = false;
 
     /// <summary>
     /// Interval between DHT announcements (seconds).

@@ -16,7 +16,7 @@ public class RescueModeTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         soulfind = new SoulfindRunner(loggerFactory.CreateLogger<SoulfindRunner>());
         await soulfind.StartAsync();
 
@@ -63,7 +63,7 @@ public class CanonicalSelectionTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         soulfind = new SoulfindRunner(loggerFactory.CreateLogger<SoulfindRunner>());
         await soulfind.StartAsync();
 
@@ -143,7 +143,7 @@ public class LibraryHealthTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         soulfind = new SoulfindRunner(loggerFactory.CreateLogger<SoulfindRunner>());
         await soulfind.StartAsync();
 

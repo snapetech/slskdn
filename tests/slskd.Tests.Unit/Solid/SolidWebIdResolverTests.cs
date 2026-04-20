@@ -20,13 +20,18 @@ using slskd.Solid;
 using TestOptionsMonitor = slskd.Tests.Unit.TestOptionsMonitor<slskd.Options>;
 using Xunit;
 
-public class SolidWebIdResolverTests
+public class SolidWebIdResolverTests : IDisposable
 {
     private readonly Mock<ILogger<SolidWebIdResolver>> _loggerMock = new();
     private readonly Mock<ISolidFetchPolicy> _policyMock = new();
     private IOptionsMonitor<slskd.Options> _options;
     private HttpClient _httpClient;
     private IHttpClientFactory _httpFactory;
+
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+    }
 
     private SolidWebIdResolver CreateResolver()
     {

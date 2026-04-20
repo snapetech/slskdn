@@ -18,7 +18,7 @@ public class RelayClientTests
     {
         var client = CreateClient(new Options());
 
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         SetStartCancellationTokenSource(client, cts);
 
         await client.StopAsync();
@@ -45,7 +45,7 @@ public class RelayClientTests
         };
 
         var client = CreateClient(options);
-        var previousCts = new CancellationTokenSource();
+        using var previousCts = new CancellationTokenSource();
         SetStartCancellationTokenSource(client, previousCts);
 
         using var startTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));

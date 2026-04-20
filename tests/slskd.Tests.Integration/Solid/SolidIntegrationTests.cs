@@ -52,7 +52,7 @@ public class SolidIntegrationTests
     public async Task Status_WhenFeatureDisabled_Returns404()
     {
         // Arrange
-        var factory = new SolidTestWebApplicationFactory(false);
+        using var factory = new SolidTestWebApplicationFactory(false);
         var client = factory.CreateClient();
 
         // Act
@@ -88,7 +88,7 @@ public class SolidIntegrationTests
     public async Task ClientIdDocument_WhenFeatureDisabled_Returns404()
     {
         // Arrange
-        var factory = new SolidTestWebApplicationFactory(false);
+        using var factory = new SolidTestWebApplicationFactory(false);
         var client = factory.CreateClient();
 
         // Act
@@ -108,7 +108,7 @@ public class SolidIntegrationTests
         {
             webId = "https://example.com/profile/card#me"
         };
-        var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
         // Act - This will fail SSRF policy (host not in AllowedHosts), but tests the endpoint
         var response = await client.PostAsync("/api/v0/solid/resolve-webid", content);
@@ -123,13 +123,13 @@ public class SolidIntegrationTests
     public async Task ResolveWebId_WhenFeatureDisabled_Returns404()
     {
         // Arrange
-        var factory = new SolidTestWebApplicationFactory(false);
+        using var factory = new SolidTestWebApplicationFactory(false);
         var client = factory.CreateClient();
         var request = new
         {
             webId = "https://example.com/profile/card#me"
         };
-        var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
         // Act
         var response = await client.PostAsync("/api/v0/solid/resolve-webid", content);
@@ -148,7 +148,7 @@ public class SolidIntegrationTests
         {
             webId = "not-a-valid-uri"
         };
-        var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        using var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
 
         // Act
         var response = await client.PostAsync("/api/v0/solid/resolve-webid", content);
@@ -233,6 +233,7 @@ public class SolidTestWebApplicationFactory : IDisposable
                             {
                                 AllowInsecureHttp = true, // Allow http:// for localhost testing
                                 AllowedHosts = solidEnabled ? new[] { "example.com", "localhost" } : Array.Empty<string>(),
+                                ClientIdUrl = "https://localhost/solid/clientid.jsonld",
                                 MaxFetchBytes = 1_000_000,
                                 TimeoutSeconds = 10
                             }

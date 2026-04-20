@@ -57,9 +57,11 @@ public class ApplicationControllerTests
 
     private static void SetProgramValue(string propertyName, string value)
     {
-        var field = typeof(Program).GetField($"<{propertyName}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        field!.SetValue(null, value);
+        var property = typeof(Program).GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(property);
+        var setter = property!.GetSetMethod(nonPublic: true);
+        Assert.NotNull(setter);
+        setter!.Invoke(null, new object[] { value });
     }
 
     private static ApplicationController CreateController()

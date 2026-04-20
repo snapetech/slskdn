@@ -313,5 +313,24 @@ namespace slskd.Mesh.Messages
         /// </summary>
         [JsonPropertyName("meta_flags")]
         public int? MetaFlags { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the base64-encoded Ed25519 public key (32 bytes) of the signer.
+        /// </summary>
+        /// <remarks>
+        ///     HARDENING-2026-04-20 H7: self-certifying signer identity. The recipient derives the
+        ///     peer id from this key and verifies the <see cref="Signature"/> over the canonical
+        ///     identity fields (FlacKey, ByteHash, Size, MetaFlags). Optional during rollout; required
+        ///     once <c>Mesh.SyncSecurity.RequireSignedEntries</c> flips to <c>true</c>.
+        /// </remarks>
+        [JsonPropertyName("signer_pk")]
+        public string? SignerPublicKey { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the base64-encoded Ed25519 signature (64 bytes) over the entry's
+        ///     canonical signing bytes.
+        /// </summary>
+        [JsonPropertyName("sig")]
+        public string? Signature { get; set; }
     }
 }

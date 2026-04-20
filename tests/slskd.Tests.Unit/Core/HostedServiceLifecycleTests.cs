@@ -58,7 +58,7 @@ public class HostedServiceLifecycleTests
             new TestOptionsMonitor<MultiRealmConfig>(new MultiRealmConfig()),
             Mock.Of<ILogger<RealmHostedService>>());
 
-        var initializationCts = new CancellationTokenSource();
+        using var initializationCts = new CancellationTokenSource();
         SetPrivateField(service, "_initializationCts", initializationCts);
         SetPrivateField(service, "_initializationTask", Task.Delay(Timeout.Infinite, initializationCts.Token));
 
@@ -77,7 +77,7 @@ public class HostedServiceLifecycleTests
             new TestOptionsMonitor<MultiRealmConfig>(new MultiRealmConfig()),
             Mock.Of<ILogger<MultiRealmHostedService>>());
 
-        var initializationCts = new CancellationTokenSource();
+        using var initializationCts = new CancellationTokenSource();
         SetPrivateField(service, "_initializationCts", initializationCts);
         SetPrivateField(service, "_initializationTask", Task.Delay(Timeout.Infinite, initializationCts.Token));
 
@@ -100,7 +100,7 @@ public class HostedServiceLifecycleTests
                 Enabled = true,
             });
 
-        var previousInitializationCts = new CancellationTokenSource();
+        using var previousInitializationCts = new CancellationTokenSource();
         SetPrivateField(service, "_backgroundInitializationCts", previousInitializationCts);
 
         await service.StartAsync(CancellationToken.None);
@@ -124,7 +124,7 @@ public class HostedServiceLifecycleTests
                 Enabled = true,
             });
 
-        var initializationCts = new CancellationTokenSource();
+        using var initializationCts = new CancellationTokenSource();
         var dhtEngine = new DhtEngine();
 
         var onPeersFoundMethod = typeof(DhtRendezvousService).GetMethod("OnPeersFound", BindingFlags.Instance | BindingFlags.NonPublic)
@@ -167,7 +167,7 @@ public class HostedServiceLifecycleTests
             Mock.Of<IRescueService>(),
             optionsMonitor.Object);
 
-        var previousLoopCts = new CancellationTokenSource();
+        using var previousLoopCts = new CancellationTokenSource();
         SetPrivateField(service, "loopCts", previousLoopCts);
 
         await service.StartAsync(CancellationToken.None);
@@ -185,7 +185,7 @@ public class HostedServiceLifecycleTests
             Mock.Of<Soulseek.ISoulseekClient>(),
             new TestOptionsMonitor<slskd.Options>(new slskd.Options()));
 
-        var previousMonitoringCts = new CancellationTokenSource();
+        using var previousMonitoringCts = new CancellationTokenSource();
         SetPrivateField(service, "monitoringCts", previousMonitoringCts);
 
         await service.StartAsync(CancellationToken.None);

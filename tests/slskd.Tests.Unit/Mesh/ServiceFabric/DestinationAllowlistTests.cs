@@ -70,7 +70,7 @@ public class DestinationAllowlistTests
     [Fact]
     public async Task OpenTunnel_WildcardHostnameMatch_Allowed()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
         var service = CreateService(new TestTunnelConnectivity(port));
@@ -84,8 +84,7 @@ public class DestinationAllowlistTests
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
         // Sync connect already put the connection in the kernel backlog; accept it synchronously.
-        listener.AcceptTcpClient().Dispose();
-        listener.Stop();
+        using var acceptedClient = listener.AcceptTcpClient();
     }
 
     [Fact]
@@ -122,7 +121,7 @@ public class DestinationAllowlistTests
     [Fact]
     public async Task OpenTunnel_PrivateIpWithPrivateAllowed_Allowed()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
         var service = CreateService(new TestTunnelConnectivity(port));
@@ -137,8 +136,7 @@ public class DestinationAllowlistTests
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
         // Sync connect already put the connection in the kernel backlog; accept it synchronously.
-        listener.AcceptTcpClient().Dispose();
-        listener.Stop();
+        using var acceptedClient = listener.AcceptTcpClient();
     }
 
     [Fact]
@@ -184,7 +182,7 @@ public class DestinationAllowlistTests
     [Fact]
     public async Task OpenTunnel_RegisteredServiceMatch_Allowed()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
         // Mock DNS to avoid real network resolution which is slow/flaky under parallel load.
@@ -214,8 +212,7 @@ public class DestinationAllowlistTests
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
         // Sync connect already put the connection in the kernel backlog; accept it synchronously.
-        listener.AcceptTcpClient().Dispose();
-        listener.Stop();
+        using var acceptedClient = listener.AcceptTcpClient();
     }
 
     [Fact]
@@ -296,7 +293,7 @@ public class DestinationAllowlistTests
     [Fact]
     public async Task OpenTunnel_EmptyAllowlistWithPrivateAllowed_Allowed()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
         var service = CreateService(new TestTunnelConnectivity(port));
@@ -319,8 +316,7 @@ public class DestinationAllowlistTests
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload);
         Assert.True(response?.Accepted == true);
         // Sync connect already put the connection in the kernel backlog; accept it synchronously.
-        listener.AcceptTcpClient().Dispose();
-        listener.Stop();
+        using var acceptedClient = listener.AcceptTcpClient();
     }
 
     [Fact]
@@ -400,13 +396,21 @@ public class DestinationAllowlistTests
         public Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var c = new TcpClient();
-            // Use synchronous connect to bypass the async I/O subsystem. Under heavy parallel
-            // test load, async TCP completions can be delayed 10+ seconds even for loopback;
-            // synchronous Socket.Connect returns as soon as the kernel accepts the SYN.
-            c.Client.Connect("127.0.0.1", _port);
-            var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
-            return Task.FromResult<(NetworkStream, string?)>((c.GetStream(), ip));
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                // Use synchronous connect to bypass the async I/O subsystem. Under heavy parallel
+                // test load, async TCP completions can be delayed 10+ seconds even for loopback;
+                // synchronous Socket.Connect returns as soon as the kernel accepts the SYN.
+                socket.Connect("127.0.0.1", _port);
+                var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
+                return Task.FromResult<(NetworkStream, string?)>((new NetworkStream(socket, ownsSocket: true), ip));
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
         }
     }
 }

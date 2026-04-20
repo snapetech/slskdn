@@ -8,6 +8,7 @@ namespace slskd.Tests.Unit.SocialFederation
     using System.Net.Http;
     using System.Reflection;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging.Abstractions;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -66,7 +67,7 @@ namespace slskd.Tests.Unit.SocialFederation
                 _keyStoreMock.Object,
                 musicActor: null,
                 Mock.Of<ILogger<LibraryActorService>>(),
-                new LoggerFactory());
+                NullLoggerFactory.Instance);
 
             return new FederationService(
                 _federationOptionsMock.Object,

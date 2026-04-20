@@ -143,7 +143,10 @@ public sealed class SongIdRunStoreTests : IDisposable
 
     private static void SetAppDirectory(string? value)
     {
-        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-        field!.SetValue(null, value ?? string.Empty);
+        var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(property);
+        var setter = property!.GetSetMethod(nonPublic: true);
+        Assert.NotNull(setter);
+        setter!.Invoke(null, new object[] { value ?? string.Empty });
     }
 }

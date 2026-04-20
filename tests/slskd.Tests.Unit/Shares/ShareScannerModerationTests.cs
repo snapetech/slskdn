@@ -3,6 +3,7 @@ namespace slskd.Tests.Unit.Shares;
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -351,16 +352,21 @@ public class ShareRepositoryModerationTests : IDisposable
     [Fact]
     public void TryValidate_WithBrokenConnectionString_ReturnsSanitizedProblem()
     {
-        using var repository = new SqliteShareRepository("Data Source=file:share-validate-bad?mode=memory&cache=shared");
+        using var repositoryWithBadPath = new SqliteShareRepository($"Data Source={Path.GetTempFileName()}");
+        SetConnectionString(repositoryWithBadPath, "Data Source=/definitely/missing/share-validation/path/db.sqlite;Mode=ReadOnly");
 
-        var backingField = typeof(SqliteShareRepository).GetField("<ConnectionString>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        backingField!.SetValue(repository, "Data Source=/definitely/missing/share-validation/path/db.sqlite;Mode=ReadOnly");
-
-        var isValid = repository.TryValidate(out var problems);
+        var isValid = repositoryWithBadPath.TryValidate(out var problems);
 
         Assert.False(isValid);
         var problem = Assert.Single(problems);
         Assert.Equal("Failed to validate database", problem);
+    }
+
+    private static void SetConnectionString(SqliteShareRepository repository, string connectionString)
+    {
+        var field = typeof(SqliteShareRepository).GetField("<ConnectionString>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ConnectionString backing field was not found.");
+        field.SetValue(repository, connectionString);
     }
 
     [Fact]

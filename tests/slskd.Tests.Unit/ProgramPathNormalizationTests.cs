@@ -362,15 +362,18 @@ public class ProgramPathNormalizationTests
 
     private static T GetProgramValue<T>(string propertyName)
     {
-        var field = typeof(Program).GetField($"<{propertyName}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        return (T)field!.GetValue(null)!;
+        var property = typeof(Program).GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(property);
+        return (T)property!.GetValue(null)!;
     }
 
 
     private static void SetAppDirectory(string value)
     {
-        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-        field!.SetValue(null, value);
+        var property = typeof(Program).GetProperty(nameof(Program.AppDirectory), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(property);
+        var setter = property!.GetSetMethod(nonPublic: true);
+        Assert.NotNull(setter);
+        setter!.Invoke(null, new object[] { value });
     }
 }

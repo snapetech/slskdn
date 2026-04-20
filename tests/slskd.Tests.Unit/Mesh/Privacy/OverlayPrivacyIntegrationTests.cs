@@ -133,7 +133,7 @@ public class OverlayPrivacyIntegrationTests : IDisposable
             privacyLayer);
 
         var originalPayload = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Step 1: Apply outbound transforms (padding)
         var processedPayload = await privacyLayer.ProcessOutboundMessageAsync(originalPayload, cts.Token);

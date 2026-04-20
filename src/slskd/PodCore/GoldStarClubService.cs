@@ -57,12 +57,20 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
     public const string GoldStarClubPodId = "pod:gold-star-club";
     public const int MaxMembership = 1000;
 
+    // HARDENING-2026-04-20 H6: auto-join is opt-in. Operators must set this env var to "true" to enable
+    // the BackgroundService auto-join and direct TryAutoJoinAsync calls; default is off so dev/test
+    // builds don't silently register their operators into the public Gold Star Club pod.
+    private const string AutoJoinEnvVar = "SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN";
+
     private readonly IPodService podService;
     private readonly ISoulseekClient soulseekClient;
     private readonly ILogger<GoldStarClubService> logger;
     private readonly SemaphoreSlim initializationLock = new(1, 1);
     private bool podInitialized;
     private bool? isAcceptingMembers; // null = not checked yet, true/false = cached result
+
+    private static bool IsAutoJoinEnabled() =>
+        string.Equals(Environment.GetEnvironmentVariable(AutoJoinEnvVar), "true", StringComparison.OrdinalIgnoreCase);
 
     public GoldStarClubService(
         IPodService podService,
@@ -112,6 +120,12 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
 
     public async Task<bool> TryAutoJoinAsync(string peerId, CancellationToken ct = default)
     {
+        if (!IsAutoJoinEnabled())
+        {
+            logger.LogDebug("[GoldStarClub] Auto-join disabled (set {EnvVar}=true to enable)", AutoJoinEnvVar);
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(peerId))
         {
             logger.LogWarning("[GoldStarClub] Cannot auto-join: peerId is null or empty");
@@ -232,6 +246,18 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
     {
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
         await Task.Yield();
+
+        // HARDENING-2026-04-20 H6: pod is still ensured (operators who opt in later shouldn't have to
+        // recreate it), but the auto-join step is skipped unless SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=true.
+        if (!IsAutoJoinEnabled())
+        {
+            logger.LogInformation(
+                "[GoldStarClub] Auto-join disabled (set {EnvVar}=true to enable). Pod will still be ensured.",
+                AutoJoinEnvVar);
+            await WaitForConnectionAsync(stoppingToken);
+            await EnsurePodExistsAsync(stoppingToken);
+            return;
+        }
 
         // Wait for Soulseek client to be connected
         await WaitForConnectionAsync(stoppingToken);

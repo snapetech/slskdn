@@ -42,7 +42,7 @@ public class SecurityIntegrationTests
     public void ViolationTracker_EscalatesBans()
     {
         // Arrange
-        var tracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>())
+        using var tracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>())
         {
             ViolationsBeforeAutoBan = 3,
             BaseBanDuration = TimeSpan.FromMinutes(1),
@@ -144,7 +144,7 @@ public class SecurityIntegrationTests
     {
         // Arrange
         var reputation = new PeerReputation(new Microsoft.Extensions.Logging.Abstractions.NullLogger<PeerReputation>());
-        var violationTracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>());
+        using var violationTracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>());
 
         var services = new SecurityServices
         {
@@ -184,7 +184,7 @@ public class SecurityIntegrationTests
             MaxMessagesPerMinute = 5,
         };
 
-        var tracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>())
+        using var tracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>())
         {
             ViolationsBeforeAutoBan = 2,
         };
@@ -270,7 +270,7 @@ public class SecurityIntegrationTests
         // Arrange
         using var guard = new NetworkGuard(new Microsoft.Extensions.Logging.Abstractions.NullLogger<NetworkGuard>());
         var reputation = new PeerReputation(new Microsoft.Extensions.Logging.Abstractions.NullLogger<PeerReputation>());
-        var tracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>());
+        using var tracker = new ViolationTracker(new Microsoft.Extensions.Logging.Abstractions.NullLogger<ViolationTracker>());
 
         var services = new SecurityServices
         {

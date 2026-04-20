@@ -7,6 +7,7 @@ import {
   Divider,
   Grid,
   Header,
+  Button,
   Icon,
   Label,
   List,
@@ -16,7 +17,10 @@ import {
   Segment,
   Statistic,
   Table,
+  Modal,
 } from 'semantic-ui-react';
+
+const DHT_EXPOSURE_CONSENT_KEY = 'slskdn:ui:dht-public-exposure:consent-v1';
 
 const formatBytes = (bytes) => {
   if (bytes === 0 || bytes === undefined || bytes === null) return '0 B';
@@ -80,6 +84,7 @@ const Network = ({ theme }) => {
   const [syncing, setSyncing] = useState({});
   const [backfilling, setBackfilling] = useState(false);
   const [backfillProgress, setBackfillProgress] = useState(null);
+  const [showDhtExposureConsent, setShowDhtExposureConsent] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -99,6 +104,26 @@ const Network = ({ theme }) => {
       setLoading(false);
     }
   }, []);
+
+  const hasSeenDhtExposureConsent = () => {
+    try {
+      return window.localStorage.getItem(DHT_EXPOSURE_CONSENT_KEY) === 'acknowledged';
+    }
+    catch {
+      return false;
+    }
+  };
+
+  const dismissDhtExposureConsent = () => {
+    try {
+      window.localStorage.setItem(DHT_EXPOSURE_CONSENT_KEY, 'acknowledged');
+    }
+    catch {
+      // LocalStorage may be unavailable in unusual browser modes; still close the modal.
+    }
+
+    setShowDhtExposureConsent(false);
+  };
 
   useEffect(() => {
     fetchData();
@@ -161,6 +186,25 @@ const Network = ({ theme }) => {
     ((mesh?.connectedPeerCount ?? 0) === 0 &&
       (stats?.dht?.dhtNodeCount ?? 0) === 0 &&
       (stats?.dht?.isDhtRunning ?? false));
+  const shouldWarnAboutDhtExposure =
+    (stats?.dht?.isEnabled ?? false) &&
+    !(stats?.dht?.isLanOnly ?? false) &&
+    (stats?.dht?.isDhtRunning ?? false) &&
+    meshPeers.length === 0 &&
+    discoveredPeers.length === 0;
+
+  useEffect(() => {
+    setShowDhtExposureConsent(
+      shouldWarnAboutDhtExposure && !hasSeenDhtExposureConsent(),
+    );
+  }, [
+    shouldWarnAboutDhtExposure,
+    meshPeers.length,
+    discoveredPeers.length,
+    stats?.dht?.isEnabled,
+    stats?.dht?.isLanOnly,
+    stats?.dht?.isDhtRunning,
+  ]);
 
   return (
     <div className="network-dashboard">
@@ -177,6 +221,57 @@ const Network = ({ theme }) => {
             Check local firewall rules, router/NAT forwarding, container port
             publishing, and any reverse-proxy setup that might expose the Web UI
             but not the Soulseek listen port.
+          </p>
+        </Message>
+      )}
+      <Modal
+        closeOnEscape={false}
+        closeOnDimmerClick={false}
+        onClose={dismissDhtExposureConsent}
+        open={showDhtExposureConsent}
+      >
+        <Modal.Header>Public DHT exposure consent</Modal.Header>
+        <Modal.Content>
+          <p>
+            DHT rendezvous is currently enabled and this node can publish your public
+            network endpoint into the public DHT. Any peer able to query the DHT can
+            discover this node as a candidate relay source.
+          </p>
+          <p>
+            On a fresh install with no local mesh peers yet, this means your node is
+            intentionally operating with public discovery by default.
+          </p>
+          <p>
+            If you prefer private-only discovery, set <code>dht.lan_only=true</code>
+            in the configuration and restart the service.
+          </p>
+        </Modal.Content>
+        <Modal.Actions>
+          <Popup
+            content="Acknowledge this warning so it does not appear again on this browser."
+            trigger={
+              <Button
+                onClick={dismissDhtExposureConsent}
+                primary
+              >
+                I understand
+              </Button>
+            }
+          />
+        </Modal.Actions>
+      </Modal>
+      {shouldWarnAboutDhtExposure && (
+        <Message warning>
+          <Message.Header>Public DHT exposure notice</Message.Header>
+          <p>
+            DHT rendezvous is enabled and this node can publish its public
+            endpoint into the public BitTorrent DHT. That means peers can discover
+            your network address for mesh sync discovery.
+          </p>
+          <p>
+            If you want to keep mesh discovery confined to trusted local peers,
+            set <code>dht.lan_only=true</code> in configuration before long-term
+            operation.
           </p>
         </Message>
       )}

@@ -9,6 +9,7 @@ using System.Text.Json;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using slskd.Authentication;
 using slskd.Core.Security;
 
 /// <summary>
@@ -82,8 +83,15 @@ public class NowPlayingController : ControllerBase
     ///     Jellyfin/Emby send application/json directly.
     ///     Tautulli can be configured to POST generic JSON.
     /// </summary>
+    /// <remarks>
+    ///     HARDENING-2026-04-20 H13: this endpoint additionally requires the <c>nowplaying</c>
+    ///     scope, so operators can issue a dedicated scope-restricted API key for their media
+    ///     server instead of handing over a full-access key. A legacy key with <c>scopes="*"</c>
+    ///     (the default) still works unchanged.
+    /// </remarks>
     [HttpPost("webhook")]
     [Authorize(Policy = AuthPolicy.Any)]
+    [RequireScope("nowplaying")]
     [Consumes("application/json", "multipart/form-data", "application/x-www-form-urlencoded")]
     public async Task<IActionResult> Webhook()
     {

@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.SocialFederation
 {
     using System;
+    using Microsoft.Extensions.Logging.Abstractions;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -21,7 +22,7 @@ namespace slskd.Tests.Unit.SocialFederation
         private readonly Mock<IOptionsMonitor<SocialFederationOptions>> _federationOptionsMock = new();
         private readonly Mock<IActivityPubKeyStore> _keyStoreMock = new();
         private readonly Mock<ILogger<LibraryActorService>> _loggerMock = new();
-        private readonly ILoggerFactory _loggerFactory = new LoggerFactory();
+        private readonly ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
         private readonly MusicLibraryActor _musicActor;
 
         public LibraryActorServiceTests()
@@ -163,4 +164,3 @@ namespace slskd.Tests.Unit.SocialFederation
         }
     }
 }
-

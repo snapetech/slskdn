@@ -293,11 +293,18 @@ namespace slskd.Relay
                 StartCancellationTokenSource = null;
                 DisposeHubConnection(previousHubConnection, "[RelayClient] Failed to dispose previous HubConnection during reconfiguration");
 
-                if (options.Relay.Controller.IgnoreCertificateErrors)
+                var pinnedSpkiPins = RelayTlsPinValidator.ParsePins(options.Relay.Controller.PinnedSpki);
+
+                if (options.Relay.Controller.IgnoreCertificateErrors && pinnedSpkiPins.Length == 0)
                 {
                     Log.Warning("[RelayClient] MED-08: relay.controller.ignore_certificate_errors is enabled — " +
                         "TLS certificate validation is DISABLED for the relay controller connection. " +
                         "This is insecure and should only be used in controlled lab environments.");
+                }
+                else if (pinnedSpkiPins.Length > 0)
+                {
+                    Log.Information("[RelayClient] HARDENING-2026-04-20 H8-pin: controller TLS is SPKI-pinned " +
+                        "({PinCount} pin(s) configured). CA/IgnoreCertificateErrors settings are overridden by pinning.", pinnedSpkiPins.Length);
                 }
 
                 HubConnection = new HubConnectionBuilder()
@@ -306,11 +313,21 @@ namespace slskd.Relay
                         builder.AccessTokenProvider = () => Task.FromResult<string?>(options.Relay.Controller.ApiKey);
                         builder.HttpMessageHandlerFactory = (message) =>
                         {
-                            if (message is HttpClientHandler clientHandler && options.Relay.Controller.IgnoreCertificateErrors)
+                            if (message is HttpClientHandler clientHandler)
                             {
+                                if (pinnedSpkiPins.Length > 0)
+                                {
+                                    // HARDENING-2026-04-20 H8-pin: pins are authoritative; reject any cert whose
+                                    // SPKI doesn't match, regardless of IgnoreCertificateErrors.
+                                    clientHandler.ServerCertificateCustomValidationCallback = (_, cert, _, _) =>
+                                        RelayTlsPinValidator.IsPinned(cert, pinnedSpkiPins);
+                                }
+                                else if (options.Relay.Controller.IgnoreCertificateErrors)
+                                {
 #pragma warning disable S4830 // Enable server certificate validation on this SSL/TLS connection
-                                clientHandler.ServerCertificateCustomValidationCallback += (_, _, _, _) => true;
+                                    clientHandler.ServerCertificateCustomValidationCallback += (_, _, _, _) => true;
 #pragma warning restore S4830 // Enable server certificate validation on this SSL/TLS connection
+                                }
                             }
 
                             return message;
@@ -366,9 +383,24 @@ namespace slskd.Relay
         private HttpClient CreateHttpClient()
         {
             var options = OptionsMonitor.CurrentValue.Relay.Controller;
+            var pinnedSpkiPins = RelayTlsPinValidator.ParsePins(options.PinnedSpki);
             HttpClient client;
 
-            if (options.IgnoreCertificateErrors)
+            if (pinnedSpkiPins.Length > 0)
+            {
+                // HARDENING-2026-04-20 H8-pin: pins are authoritative. Use a handler that requires
+                // the controller's SPKI to match one of the configured pins; CA chain state and
+                // IgnoreCertificateErrors no longer matter for the file-upload HTTP client either.
+                var handler = new HttpClientHandler
+                {
+                    ClientCertificateOptions = ClientCertificateOption.Manual,
+                    ServerCertificateCustomValidationCallback = (_, cert, _, _) =>
+                        RelayTlsPinValidator.IsPinned(cert, pinnedSpkiPins),
+                };
+                client = new HttpClient(handler, disposeHandler: true);
+                handler = null!;
+            }
+            else if (options.IgnoreCertificateErrors)
             {
                 var handler = new HttpClientHandler
                 {

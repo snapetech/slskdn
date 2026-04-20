@@ -218,10 +218,75 @@ public class ProfileServiceTests : IDisposable
         Assert.Null(decoded);
     }
 
+    // HARDENING-2026-04-20 H10: operator submits a mix of public and leaky endpoints; only the
+    // public ones must make it into the signed profile served anonymously over GET /profile/{id}.
+    [Fact]
+    public async Task UpdateMyProfile_StripsLeakyEndpoints_H10()
+    {
+        var svc = CreateService();
+        _ = await svc.GetMyProfileAsync(CancellationToken.None);
+
+        var mixed = new List<PeerEndpoint>
+        {
+            new() { Type = "Direct", Address = "https://peer.example.com:5030", Priority = 1 },
+            new() { Type = "Direct", Address = "https://192.168.1.100:5030", Priority = 2 },
+            new() { Type = "Direct", Address = "http://127.0.0.1:5030", Priority = 3 },
+            new() { Type = "Direct", Address = "https://169.254.169.254/", Priority = 4 },
+            new() { Type = "Direct", Address = "https://server.internal:5030", Priority = 5 },
+        };
+
+        var updated = await svc.UpdateMyProfileAsync("TestUser", null, 0, mixed, CancellationToken.None);
+
+        Assert.Single(updated.Endpoints);
+        Assert.Equal("https://peer.example.com:5030", updated.Endpoints[0].Address);
+    }
+
+    // HARDENING-2026-04-20 H10: a pre-hardening profile saved to disk with a LAN-IP endpoint
+    // must be migrated on load (leaky entries dropped, re-signed, persisted).
+    [Fact]
+    public async Task GetMyProfile_MigratesPreHardeningProfileWithLeakyEndpoint_H10()
+    {
+        var profileFile = GetProfileFilePath();
+        var keyFile = Path.ChangeExtension(profileFile, ".key");
+        try { if (File.Exists(profileFile)) File.Delete(profileFile); } catch { }
+        try { if (File.Exists(keyFile)) File.Delete(keyFile); } catch { }
+
+        // Let the service mint a valid keypair and a throwaway profile, then replace its
+        // endpoints with a leaky one and re-sign so the on-disk blob looks like a legacy record.
+        var bootstrap = CreateService();
+        var seed = await bootstrap.GetMyProfileAsync(CancellationToken.None);
+        seed.Endpoints = new List<PeerEndpoint>
+        {
+            new() { Type = "Direct", Address = "https://192.168.50.85:5030", Priority = 1 },
+        };
+        var legacy = bootstrap.SignProfile(seed);
+        await System.IO.File.WriteAllTextAsync(
+            profileFile,
+            System.Text.Json.JsonSerializer.Serialize(legacy, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
+            CancellationToken.None);
+
+        // New service instance (clean cache) — load + migrate.
+        var svc = CreateService();
+        var loaded = await svc.GetMyProfileAsync(CancellationToken.None);
+
+        Assert.Empty(loaded.Endpoints);
+        Assert.True(svc.VerifyProfile(loaded));
+
+        // Disk copy should be the scrubbed, re-signed one.
+        var onDiskJson = await System.IO.File.ReadAllTextAsync(profileFile, CancellationToken.None);
+        var onDisk = System.Text.Json.JsonSerializer.Deserialize<PeerProfile>(onDiskJson);
+        Assert.NotNull(onDisk);
+        Assert.Empty(onDisk!.Endpoints);
+    }
+
     private static void SetAppDirectory(string? value)
     {
-        var field = typeof(Program).GetField($"<{nameof(Program.AppDirectory)}>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-        field!.SetValue(null, value ?? string.Empty);
+        const string propertyName = nameof(Program.AppDirectory);
+        var property = typeof(Program).GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        var setter = property?.GetSetMethod(nonPublic: true);
+        Assert.NotNull(property);
+        Assert.NotNull(setter);
+        setter!.Invoke(null, new object[] { value ?? string.Empty });
     }
 
     private static string GetProfileFilePath() => Path.Combine(Program.GetWriteBaseDirectory(), "peer-profile.json");

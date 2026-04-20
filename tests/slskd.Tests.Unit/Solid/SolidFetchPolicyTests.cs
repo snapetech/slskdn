@@ -194,7 +194,7 @@ public class SolidFetchPolicyTests
         var uri = new Uri("https://192.168.1.1/profile");
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => policy.ValidateAsync(uri, CancellationToken.None));
-        Assert.Contains("private IP not allowed", ex.Message);
+        Assert.Contains("resolves to a private or reserved IP", ex.Message);
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class SolidFetchPolicyTests
         var uri = new Uri("https://127.0.0.1/profile");
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => policy.ValidateAsync(uri, CancellationToken.None));
-        Assert.Contains("loopback IP not allowed", ex.Message);
+        Assert.Contains("resolves to a loopback IP", ex.Message);
     }
 
     // Note: Empty host URI cannot be constructed with Uri constructor (throws UriFormatException)

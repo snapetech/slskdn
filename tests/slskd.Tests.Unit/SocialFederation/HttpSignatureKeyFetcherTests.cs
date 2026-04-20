@@ -31,7 +31,8 @@ public class HttpSignatureKeyFetcherTests
             return Task.FromResult(response);
         });
 
-        var fetcher = new HttpSignatureKeyFetcher(new HttpClient(handler), NullLogger<HttpSignatureKeyFetcher>.Instance);
+        using var httpClient = new HttpClient(handler);
+        var fetcher = new HttpSignatureKeyFetcher(httpClient, NullLogger<HttpSignatureKeyFetcher>.Instance);
 
         var result = await fetcher.FetchPublicKeyPkixAsync($"  {keyId}  ");
 
@@ -54,7 +55,8 @@ public class HttpSignatureKeyFetcherTests
             return Task.FromResult(response);
         });
 
-        var fetcher = new HttpSignatureKeyFetcher(new HttpClient(handler), NullLogger<HttpSignatureKeyFetcher>.Instance);
+        using var httpClient = new HttpClient(handler);
+        var fetcher = new HttpSignatureKeyFetcher(httpClient, NullLogger<HttpSignatureKeyFetcher>.Instance);
 
         var result = await fetcher.FetchPublicKeyPkixAsync(keyId);
 
@@ -77,7 +79,8 @@ public class HttpSignatureKeyFetcherTests
             return Task.FromResult(response);
         });
 
-        var fetcher = new HttpSignatureKeyFetcher(new HttpClient(handler), NullLogger<HttpSignatureKeyFetcher>.Instance);
+        using var httpClient = new HttpClient(handler);
+        var fetcher = new HttpSignatureKeyFetcher(httpClient, NullLogger<HttpSignatureKeyFetcher>.Instance);
 
         var result = await fetcher.FetchPublicKeyPkixAsync(keyId);
 
@@ -99,7 +102,8 @@ public class HttpSignatureKeyFetcherTests
             return Task.FromResult(response);
         });
 
-        var fetcher = new HttpSignatureKeyFetcher(new HttpClient(handler), NullLogger<HttpSignatureKeyFetcher>.Instance);
+        using var httpClient = new HttpClient(handler);
+        var fetcher = new HttpSignatureKeyFetcher(httpClient, NullLogger<HttpSignatureKeyFetcher>.Instance);
 
         var result = await fetcher.FetchPublicKeyPkixAsync(keyId);
 

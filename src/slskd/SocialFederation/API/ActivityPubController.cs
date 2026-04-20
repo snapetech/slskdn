@@ -36,6 +36,8 @@ namespace slskd.SocialFederation.API
     [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
     public class ActivityPubController : ControllerBase
     {
+        private static int _verifySignaturesNoopWarningLogged;
+
         private readonly IOptionsMonitor<SocialFederationOptions> _federationOptions;
         private readonly IActivityPubInboxStore _inboxStore;
         private readonly IActivityPubOutboxStore _outboxStore;
@@ -225,14 +227,16 @@ namespace slskd.SocialFederation.API
                 return StatusCode(413, "Payload too large");
             }
 
-            if (!opts.VerifySignatures)
+            // HARDENING-2026-04-20 H4: signature verification is always enforced. The federation.verify_signatures
+            // escape hatch is retained as a no-op so existing configs don't fail validation, and a one-shot
+            // warning is emitted if set to false.
+            if (!opts.VerifySignatures && Interlocked.Exchange(ref _verifySignaturesNoopWarningLogged, 1) == 0)
             {
-                // MED-03: signature verification is disabled via configuration — all incoming ActivityPub
-                // messages are accepted without cryptographic validation. Only disable in controlled environments.
-                _logger.LogWarning("[ActivityPub] MED-03: HTTP signature verification is DISABLED " +
-                    "(federation.verify_signatures=false). Accepting unauthenticated inbox message.");
+                _logger.LogWarning("[ActivityPub] federation.verify_signatures=false is ignored; " +
+                    "HTTP signature verification is always enforced (HARDENING-2026-04-20 H4).");
             }
-            else if (!await VerifyHttpSignatureAsync(bodyBytes, cancellationToken))
+
+            if (!await VerifyHttpSignatureAsync(bodyBytes, cancellationToken))
             {
                 _logger.LogWarning("[ActivityPub] HTTP signature verification failed");
                 return Unauthorized();

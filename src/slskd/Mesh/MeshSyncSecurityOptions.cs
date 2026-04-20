@@ -41,6 +41,14 @@ public class MeshSyncSecurityOptions
     /// <summary>Require proof-of-possession before accepting new hash entries (T-1434). Default: false.</summary>
     public bool ProofOfPossessionEnabled { get; set; } = false;
 
+    /// <summary>
+    ///     HARDENING-2026-04-20 H7: require every inbound mesh hash entry to carry a valid Ed25519
+    ///     signature from its sender. Default <c>false</c> for one release so the existing tester
+    ///     mesh (which emits unsigned entries) isn't silently partitioned; flip to <c>true</c> once
+    ///     all operators are on a build that signs on the outbound path.
+    /// </summary>
+    public bool RequireSignedEntries { get; set; } = false;
+
     /// <summary>Minimum number of mesh peers to query for consensus (T-1435). Default: 5.</summary>
     public int ConsensusMinPeers { get; set; } = 5;
 

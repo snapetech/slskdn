@@ -62,7 +62,7 @@ public class BridgePerformanceTests : IAsyncLifetime
             var streamIndex = i;
             tasks.Add(Task.Run(async () =>
             {
-                var stream = CreateTestMessageStream(messagesPerStream);
+                using var stream = CreateTestMessageStream(messagesPerStream);
                 for (int j = 0; j < messagesPerStream; j++)
                 {
                     var message = await parser.ReadMessageAsync(stream);
@@ -95,7 +95,7 @@ public class BridgePerformanceTests : IAsyncLifetime
         {
             tasks.Add(Task.Run(async () =>
             {
-                var stream = new MemoryStream();
+                using var stream = new MemoryStream();
                 for (int j = 0; j < messagesPerWriter; j++)
                 {
                     var payload = BuildLoginPayload($"user{j}", "password");
@@ -124,7 +124,7 @@ public class BridgePerformanceTests : IAsyncLifetime
         // Act
         for (int i = 0; i < iterations; i++)
         {
-            var stream = new MemoryStream();
+            using var stream = new MemoryStream();
             var payload = BuildLoginPayload("testuser", "testpass");
 
             var sw = Stopwatch.StartNew();
@@ -155,7 +155,7 @@ public class BridgePerformanceTests : IAsyncLifetime
         // Arrange
         var largeQuery = new string('a', 10000); // 10KB query
         var payload = BuildSearchPayload(largeQuery, 12345);
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
 
         // Act
         await parser.WriteMessageAsync(stream, SoulseekProtocolParser.MessageType.SearchRequest, payload);
@@ -174,7 +174,7 @@ public class BridgePerformanceTests : IAsyncLifetime
     {
         // Arrange
         const int messageCount = 10000;
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
 
         // Act
         var sw = Stopwatch.StartNew();
@@ -250,13 +250,12 @@ public class BridgePerformanceTests : IAsyncLifetime
         {
             tasks.Add(Task.Run(async () =>
             {
-                var stream = new MemoryStream();
+                using var stream = new MemoryStream();
                 var payload = BuildLoginPayload("user", "pass");
                 await parser.WriteMessageAsync(stream, SoulseekProtocolParser.MessageType.Login, payload);
                 stream.Position = 0;
                 var message = await parser.ReadMessageAsync(stream);
                 Assert.NotNull(message);
-                stream.Dispose();
             }));
         }
 

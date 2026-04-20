@@ -14,8 +14,27 @@ using Xunit;
 /// <summary>
 /// Unit tests for Gold Star Club service.
 /// </summary>
+[Collection("GoldStarClubEnv")]
 public class GoldStarClubServiceTests
 {
+    // HARDENING-2026-04-20 H6: auto-join is opt-in via env var. Tests that exercise the join flow
+    // must set it; we wrap in IDisposable to guarantee cleanup even on assertion failure, and
+    // serialize via an xUnit [Collection] since env vars are process-global.
+    private const string AutoJoinEnvVar = "SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN";
+
+    private sealed class EnvScope : IDisposable
+    {
+        private readonly string? previous;
+
+        public EnvScope(string value)
+        {
+            previous = Environment.GetEnvironmentVariable(AutoJoinEnvVar);
+            Environment.SetEnvironmentVariable(AutoJoinEnvVar, value);
+        }
+
+        public void Dispose() => Environment.SetEnvironmentVariable(AutoJoinEnvVar, previous);
+    }
+
     private readonly Mock<IPodService> mockPodService;
     private readonly Mock<ISoulseekClient> mockSoulseekClient;
     private readonly Mock<ILogger<GoldStarClubService>> mockLogger;
@@ -33,6 +52,11 @@ public class GoldStarClubServiceTests
             mockPodService.Object,
             mockSoulseekClient.Object,
             mockLogger.Object);
+    }
+
+    [CollectionDefinition("GoldStarClubEnv", DisableParallelization = true)]
+    public sealed class EnvCollection
+    {
     }
 
     [Fact]
@@ -163,6 +187,8 @@ public class GoldStarClubServiceTests
     [Fact]
     public async Task TryAutoJoinAsync_ShouldJoinWhenUnderLimit()
     {
+        using var _ = new EnvScope("true");
+
         // Arrange
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -195,6 +221,8 @@ public class GoldStarClubServiceTests
     [Fact]
     public async Task TryAutoJoinAsync_ShouldNotJoinWhenAtLimit()
     {
+        using var _ = new EnvScope("true");
+
         // Arrange
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -221,6 +249,8 @@ public class GoldStarClubServiceTests
     [Fact]
     public async Task TryAutoJoinAsync_ShouldReturnTrueIfAlreadyMember()
     {
+        using var _ = new EnvScope("true");
+
         // Arrange
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -248,6 +278,8 @@ public class GoldStarClubServiceTests
     [Fact]
     public async Task TryAutoJoinAsync_ShouldHandleRaceCondition()
     {
+        using var _ = new EnvScope("true");
+
         // Arrange: GetMembers returns 999 (under limit), then Join succeeds.
         // GetMembershipCountAsync after join returns 1000 (we just filled the last slot).
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
@@ -279,6 +311,22 @@ public class GoldStarClubServiceTests
 
         // Assert: Join succeeds; we were under limit and JoinAsync returned true.
         Assert.True(joined);
+    }
+
+    [Fact]
+    public async Task TryAutoJoinAsync_ShouldReturnFalseWhenAutoJoinDisabled()
+    {
+        using var _ = new EnvScope(string.Empty);
+
+        var joined = await goldStarClubService.TryAutoJoinAsync("new-user");
+
+        Assert.False(joined);
+        mockPodService.Verify(
+            s => s.JoinAsync(It.IsAny<string>(), It.IsAny<PodMember>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        mockPodService.Verify(
+            s => s.GetMembersAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }
 

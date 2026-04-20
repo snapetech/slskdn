@@ -784,6 +784,18 @@ namespace slskd
                 public bool IgnoreCertificateErrors { get; init; } = false;
 
                 /// <summary>
+                ///     HARDENING-2026-04-20 H8-pin: comma-separated list of base64 SHA-256 SPKI pins
+                ///     the controller's TLS certificate must match. When set, takes precedence over
+                ///     <see cref="IgnoreCertificateErrors"/> — a certificate whose SPKI doesn't match
+                ///     any configured pin is rejected, even in "ignore errors" mode. Leave empty to
+                ///     preserve legacy CA-only validation.
+                /// </summary>
+                [Argument(default, "controller-pinned-spki")]
+                [EnvironmentVariable("CONTROLLER_PINNED_SPKI")]
+                [Description("optional; comma separated base64 SHA-256 SPKI pins required of the controller certificate")]
+                public string PinnedSpki { get; init; } = string.Empty;
+
+                /// <summary>
                 ///     Gets the controller API key.
                 /// </summary>
                 [Argument(default, "controller-api-key")]
@@ -2793,6 +2805,15 @@ namespace slskd
                     /// </summary>
                     [Description("optional; comma separated list of CIDRs that are authorized to use the key")]
                     public string Cidr { get; init; } = "127.0.0.1/32,::1/128";
+
+                    /// <summary>
+                    ///     Gets the comma-separated list of scopes granted to the key. Use <c>*</c>
+                    ///     (the default) for universal access. HARDENING-2026-04-20 H13: scope a key
+                    ///     to e.g. <c>nowplaying</c> so a Plex/Jellyfin webhook token can only call
+                    ///     the now-playing endpoint, not the whole API.
+                    /// </summary>
+                    [Description("optional; comma separated list of scope tags (e.g., 'nowplaying'). '*' = all scopes")]
+                    public string Scopes { get; init; } = "*";
 
                     /// <summary>
                     ///     Extended validation.

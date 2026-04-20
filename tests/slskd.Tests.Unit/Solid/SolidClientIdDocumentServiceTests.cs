@@ -10,6 +10,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd;
@@ -23,21 +25,24 @@ public class SolidClientIdDocumentServiceTests
 
     private SolidClientIdDocumentService CreateService()
     {
-        return new SolidClientIdDocumentService(_options);
+        return new SolidClientIdDocumentService(_options, NullLogger<SolidClientIdDocumentService>.Instance);
     }
 
-    private HttpContext CreateHttpContext(string scheme = "https", string host = "example.com")
+    private (HttpContext Context, MemoryStream ResponseBody) CreateHttpContext(string scheme = "https", string host = "example.com")
     {
         var context = new DefaultHttpContext();
         context.Request.Scheme = scheme;
         context.Request.Host = new Microsoft.AspNetCore.Http.HostString(host);
-        context.Response.Body = new MemoryStream();
-        return context;
+        var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+        return (context, responseBody);
     }
 
     [Fact]
-    public async Task WriteClientIdDocumentAsync_UsesRequestBaseUrl()
+    public async Task WriteClientIdDocumentAsync_Returns404WhenClientIdUrlNotConfigured()
     {
+        // HARDENING-2026-04-20 H2: deriving the client_id from Request.Host leaked whichever
+        // hostname the caller reached us on. When ClientIdUrl is unset we now refuse the request.
         _options = new TestOptionsMonitor(new slskd.Options
         {
             Solid = new slskd.Options.SolidOptions
@@ -47,17 +52,13 @@ public class SolidClientIdDocumentServiceTests
             }
         });
         var service = CreateService();
-        var context = CreateHttpContext("https", "slskdn.example.com");
+        var (context, responseBody) = CreateHttpContext("https", "slskdn.example.com");
+        using var _ = responseBody;
 
         await service.WriteClientIdDocumentAsync(context, CancellationToken.None);
 
-        context.Response.Body.Position = 0;
-        using var reader = new StreamReader(context.Response.Body);
-        var json = await reader.ReadToEndAsync();
-
-        Assert.Contains("https://slskdn.example.com/solid/clientid.jsonld", json);
-        Assert.Contains("https://slskdn.example.com/solid/callback", json);
-        Assert.Equal("application/ld+json", context.Response.ContentType);
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.Equal(0, context.Response.Body.Length);
     }
 
     [Fact]
@@ -72,7 +73,8 @@ public class SolidClientIdDocumentServiceTests
             }
         });
         var service = CreateService();
-        var context = CreateHttpContext("https", "slskdn.example.com");
+        var (context, responseBody) = CreateHttpContext("https", "slskdn.example.com");
+        using var _ = responseBody;
 
         await service.WriteClientIdDocumentAsync(context, CancellationToken.None);
 
@@ -80,8 +82,12 @@ public class SolidClientIdDocumentServiceTests
         using var reader = new StreamReader(context.Response.Body);
         var json = await reader.ReadToEndAsync();
 
+        // HARDENING-2026-04-20 H2: redirect_uri must be derived from the configured client_id's origin,
+        // not from the request host. The request reached us at slskdn.example.com but the document must
+        // not mention that host.
         Assert.Contains("https://custom.example/clientid.jsonld", json);
-        Assert.Contains("https://slskdn.example.com/solid/callback", json);
+        Assert.Contains("https://custom.example/solid/callback", json);
+        Assert.DoesNotContain("slskdn.example.com", json);
     }
 
     [Fact]
@@ -91,11 +97,13 @@ public class SolidClientIdDocumentServiceTests
         {
             Solid = new slskd.Options.SolidOptions
             {
+                ClientIdUrl = "https://custom.example/clientid.jsonld",
                 RedirectPath = "/solid/callback"
             }
         });
         var service = CreateService();
-        var context = CreateHttpContext();
+        var (context, responseBody) = CreateHttpContext();
+        using var _ = responseBody;
 
         await service.WriteClientIdDocumentAsync(context, CancellationToken.None);
 
@@ -117,13 +125,36 @@ public class SolidClientIdDocumentServiceTests
     {
         _options = new TestOptionsMonitor(new slskd.Options
         {
-            Solid = new slskd.Options.SolidOptions()
+            Solid = new slskd.Options.SolidOptions
+            {
+                ClientIdUrl = "https://custom.example/clientid.jsonld"
+            }
         });
         var service = CreateService();
-        var context = CreateHttpContext();
+        var (context, responseBody) = CreateHttpContext();
+        using var _ = responseBody;
 
         await service.WriteClientIdDocumentAsync(context, CancellationToken.None);
 
         Assert.Equal("application/ld+json", context.Response.ContentType);
+    }
+
+    [Fact]
+    public async Task WriteClientIdDocumentAsync_Returns500WhenClientIdUrlIsMalformed()
+    {
+        _options = new TestOptionsMonitor(new slskd.Options
+        {
+            Solid = new slskd.Options.SolidOptions
+            {
+                ClientIdUrl = "not a url"
+            }
+        });
+        var service = CreateService();
+        var (context, responseBody) = CreateHttpContext();
+        using var _ = responseBody;
+
+        await service.WriteClientIdDocumentAsync(context, CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
     }
 }

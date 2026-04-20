@@ -184,7 +184,7 @@ public class SoulseekProtocolParserTests
         // Arrange
         var messageType = SoulseekProtocolParser.MessageType.Login;
         var payload = BuildLoginRequestPayload("user", "pass");
-        var stream = CreateMessageStream(messageType, payload);
+        using var stream = CreateMessageStream(messageType, payload);
 
         // Act
         var message = await parser.ReadMessageAsync(stream);
@@ -201,7 +201,7 @@ public class SoulseekProtocolParserTests
         // Arrange
         var messageType = SoulseekProtocolParser.MessageType.LoginResponse;
         var payload = parser.BuildLoginResponse(true, "Success");
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
 
         // Act
         await parser.WriteMessageAsync(stream, messageType, payload);

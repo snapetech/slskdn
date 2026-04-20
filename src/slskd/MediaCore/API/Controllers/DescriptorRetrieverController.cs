@@ -44,7 +44,7 @@ public class DescriptorRetrieverController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The descriptor retrieval result.</returns>
     [HttpGet("descriptor/{*contentId}")]
-    [AllowAnonymous]
+    [Authorize(Policy = AuthPolicy.Any)]
     public async Task<IActionResult> RetrieveDescriptor(
         string contentId,
         [FromQuery] bool bypassCache = false,
@@ -125,7 +125,7 @@ public class DescriptorRetrieverController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Query results.</returns>
     [HttpGet("query/domain/{domain}")]
-    [AllowAnonymous]
+    [Authorize(Policy = AuthPolicy.Any)]
     public async Task<IActionResult> QueryByDomain(
         string domain,
         [FromQuery] string? type = null,
@@ -169,7 +169,7 @@ public class DescriptorRetrieverController : ControllerBase
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Verification result.</returns>
     [HttpPost("verify")]
-    [AllowAnonymous]
+    [Authorize(Policy = AuthPolicy.Any)]
     public async Task<IActionResult> VerifyDescriptor([FromBody] VerifyDescriptorRequest request, CancellationToken cancellationToken = default)
     {
         if (request?.Descriptor == null)

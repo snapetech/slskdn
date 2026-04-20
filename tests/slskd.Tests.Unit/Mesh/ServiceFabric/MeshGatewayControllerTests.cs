@@ -78,7 +78,8 @@ public class MeshGatewayControllerTests
         {
             HttpContext = new DefaultHttpContext()
         };
-        controller.HttpContext.Request.Body = new MemoryStream();
+        using var requestBody = new MemoryStream();
+        controller.HttpContext.Request.Body = requestBody;
 
         var result = await controller.CallService(" pods ", " list ", CancellationToken.None);
 
@@ -135,7 +136,8 @@ public class MeshGatewayControllerTests
         {
             HttpContext = new DefaultHttpContext()
         };
-        controller.HttpContext.Request.Body = new MemoryStream();
+        using var requestBody = new MemoryStream();
+        controller.HttpContext.Request.Body = requestBody;
 
         var result = await controller.CallService("pods", "list", CancellationToken.None);
 
@@ -158,7 +160,8 @@ public class MeshGatewayControllerTests
         {
             HttpContext = new DefaultHttpContext()
         };
-        controller.HttpContext.Request.Body = new MemoryStream();
+        using var requestBody = new MemoryStream();
+        controller.HttpContext.Request.Body = requestBody;
 
         var result = await controller.CallService("secret-service", "list", CancellationToken.None);
 
@@ -188,7 +191,8 @@ public class MeshGatewayControllerTests
         {
             HttpContext = new DefaultHttpContext()
         };
-        controller.HttpContext.Request.Body = new MemoryStream();
+        using var requestBody = new MemoryStream();
+        controller.HttpContext.Request.Body = requestBody;
 
         var result = await controller.CallService("pods", "list", CancellationToken.None);
 

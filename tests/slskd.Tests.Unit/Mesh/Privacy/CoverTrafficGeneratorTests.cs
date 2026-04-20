@@ -112,7 +112,7 @@ public class CoverTrafficGeneratorTests : IDisposable
     public async Task GenerateCoverTrafficAsync_WithCancellation_CancelsGracefully()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act & Assert - Should not throw
@@ -268,7 +268,7 @@ public class CoverTrafficGeneratorTests : IDisposable
     {
         // Arrange
         var generator = new CoverTrafficGenerator(_loggerMock.Object, 0.01, 0, 64); // Very short interval
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var messageCount = 0;
 
         // Act - Generate messages but record activity to suppress them; cancel after a short run

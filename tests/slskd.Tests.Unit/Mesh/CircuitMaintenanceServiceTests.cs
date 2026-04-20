@@ -84,7 +84,7 @@ public class CircuitMaintenanceServiceTests : IDisposable
     {
         var builder = CreateCircuitBuilder();
         var service = new CircuitMaintenanceService(_loggerMock.Object, builder, _peerManagerMock.Object);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         _ = service.StartAsync(cts.Token);
 
         await Task.Delay(100);
@@ -98,7 +98,7 @@ public class CircuitMaintenanceServiceTests : IDisposable
     {
         var builder = CreateCircuitBuilder();
         var service = new CircuitMaintenanceService(_loggerMock.Object, builder, _peerManagerMock.Object);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var executeTask = service.StartAsync(cts.Token);
 
         cts.Cancel();
@@ -115,7 +115,7 @@ public class CircuitMaintenanceServiceTests : IDisposable
         circuitBuilderMock.Setup(x => x.GetStatistics()).Returns(new CircuitStatistics());
 
         var service = new CircuitMaintenanceService(_loggerMock.Object, circuitBuilderMock.Object, _peerManagerMock.Object);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var executeTask = service.StartAsync(cts.Token);
 
         await Task.Delay(200);

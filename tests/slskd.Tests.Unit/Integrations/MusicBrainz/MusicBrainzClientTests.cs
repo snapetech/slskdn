@@ -26,7 +26,8 @@ public sealed class MusicBrainzClientTests
               ]
             }
             """);
-        var client = CreateClient(handler);
+        var (client, httpClient) = CreateClient(handler);
+        using var _ = httpClient;
 
         var results = await client.SearchRecordingsAsync("  query text  ", 10);
 
@@ -38,7 +39,7 @@ public sealed class MusicBrainzClientTests
         Assert.DoesNotContain("  ", handler.LastRequestUri, StringComparison.Ordinal);
     }
 
-    private static MusicBrainzClient CreateClient(HttpMessageHandler handler)
+    private static (MusicBrainzClient Client, HttpClient HttpClient) CreateClient(HttpMessageHandler handler)
     {
         var options = new slskd.Options
         {
@@ -54,10 +55,11 @@ public sealed class MusicBrainzClientTests
             },
         };
 
-        return new MusicBrainzClient(
-            new TestHttpClientFactory(new HttpClient(handler)),
+        var httpClient = new HttpClient(handler);
+        return (new MusicBrainzClient(
+            new TestHttpClientFactory(httpClient),
             new TestOptionsMonitor<slskd.Options>(options),
-            Mock.Of<ILogger<MusicBrainzClient>>());
+            Mock.Of<ILogger<MusicBrainzClient>>()), httpClient);
     }
 
     private sealed class CapturingHttpMessageHandler : HttpMessageHandler

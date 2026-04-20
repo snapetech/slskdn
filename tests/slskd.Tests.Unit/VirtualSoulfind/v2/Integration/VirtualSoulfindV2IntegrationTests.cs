@@ -49,7 +49,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
         public async Task EndToEnd_LocalFileExists_PlanIncludesLocal()
         {
             // Arrange: Set up a complete v2 stack
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
 
             // Create artist, release, and track in catalogue
@@ -147,7 +147,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
         public async Task EndToEnd_MCPBlocksContent_PlanIsEmpty()
         {
             // Arrange: Same setup but MCP blocks the content
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
 
             var trackId = ContentItemId.NewId().ToString();
@@ -215,7 +215,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
         public async Task EndToEnd_MatchEngine_VerifiesCorrectFile()
         {
             // Arrange: Match engine with catalogue
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var trackId = ContentItemId.NewId().ToString();
             await catalogueStore.UpsertTrackAsync(new Track
             {
@@ -261,7 +261,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
         public async Task EndToEnd_OfflinePlanning_OnlyLocalSources()
         {
             // Arrange: Multiple backends, but OfflinePlanning mode
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
 
             var trackId = ContentItemId.NewId().ToString();

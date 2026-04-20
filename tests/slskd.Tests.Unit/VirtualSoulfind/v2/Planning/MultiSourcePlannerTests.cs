@@ -42,7 +42,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
         public async Task CreatePlan_NoTrackInCatalogue_ReturnsEmptyPlan()
         {
             // Arrange
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
@@ -74,7 +74,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
         public async Task CreatePlan_LocalCandidates_OrderedFirst()
         {
             // Arrange
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var trackId = ContentItemId.NewId().ToString();
             await catalogueStore.UpsertTrackAsync(new Track
             {
@@ -142,7 +142,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
         public async Task CreatePlan_OfflinePlanning_OnlyLocal()
         {
             // Arrange
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var trackId = ContentItemId.NewId().ToString();
             await catalogueStore.UpsertTrackAsync(new Track
             {
@@ -209,7 +209,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
         public async Task CreatePlan_MeshOnly_NoSoulseek()
         {
             // Arrange
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var trackId = ContentItemId.NewId().ToString();
             await catalogueStore.UpsertTrackAsync(new Track
             {
@@ -276,7 +276,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
         public async Task ValidatePlan_EmptyPlan_ReturnsFalse()
         {
             // Arrange
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();
@@ -304,7 +304,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
         public async Task ValidatePlan_WithSteps_ReturnsTrue()
         {
             // Arrange
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
             var sourceRegistry = new InMemorySourceRegistry();
             var backends = Array.Empty<IContentBackend>();
             var mcp = new NoopModerationProvider();

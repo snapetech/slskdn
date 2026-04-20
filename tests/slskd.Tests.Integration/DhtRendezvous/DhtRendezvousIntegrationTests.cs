@@ -44,7 +44,7 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
             return;
         }
 
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         try
         {
@@ -95,7 +95,7 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
             return;
         }
 
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         try
         {
@@ -147,7 +147,7 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
             return;
         }
 
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
         try
         {

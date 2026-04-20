@@ -43,8 +43,8 @@ public class ReleaseOnDisposeStreamTests
     [Fact]
     public void Dispose_DisposesInner()
     {
-        var inner = new MemoryStream(new byte[] { 1 });
-        var wrapped = new ReleaseOnDisposeStream(inner, () => { });
+        using var inner = new MemoryStream(new byte[] { 1 });
+        using var wrapped = new ReleaseOnDisposeStream(inner, () => { });
         wrapped.Dispose();
         Assert.Throws<ObjectDisposedException>(() => inner.ReadByte());
     }
@@ -53,8 +53,8 @@ public class ReleaseOnDisposeStreamTests
     public void DoubleDispose_InvokesOnDisposeOnce()
     {
         var count = 0;
-        var inner = new MemoryStream(new byte[] { 1 });
-        var wrapped = new ReleaseOnDisposeStream(inner, () => count++);
+        using var inner = new MemoryStream(new byte[] { 1 });
+        using var wrapped = new ReleaseOnDisposeStream(inner, () => count++);
         wrapped.Dispose();
         wrapped.Dispose();
         Assert.Equal(1, count);
@@ -78,8 +78,8 @@ public class ReleaseOnDisposeStreamTests
     public async Task DisposeAsync_InvokesOnDisposeOnce()
     {
         var count = 0;
-        var inner = new MemoryStream(new byte[] { 1, 2, 3 });
-        var wrapped = new ReleaseOnDisposeStream(inner, () => count++);
+        using var inner = new MemoryStream(new byte[] { 1, 2, 3 });
+        using var wrapped = new ReleaseOnDisposeStream(inner, () => count++);
 
         await wrapped.DisposeAsync();
         await wrapped.DisposeAsync();

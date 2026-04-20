@@ -96,17 +96,24 @@ public class DhtPeerGreetingServiceTests
     {
         var connection = (MeshOverlayConnection)RuntimeHelpers.GetUninitializedObject(typeof(MeshOverlayConnection));
 
-        SetBackingField(connection, "<ConnectionId>k__BackingField", $"conn-{port}");
-        SetBackingField(connection, "<RemoteEndPoint>k__BackingField", new IPEndPoint(IPAddress.Parse(address), port));
-        SetBackingField(connection, "<Username>k__BackingField", username);
+        SetPropertyOrField(connection, "ConnectionId", $"conn-{port}");
+        SetPropertyOrField(connection, "RemoteEndPoint", new IPEndPoint(IPAddress.Parse(address), port));
+        SetPropertyOrField(connection, "Username", username);
 
         return connection;
     }
 
-    private static void SetBackingField(object target, string fieldName, object? value)
+    private static void SetPropertyOrField(object target, string memberName, object? value)
     {
-        var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException($"Field '{fieldName}' was not found.");
+        var property = target.GetType().GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (property?.GetSetMethod(true) is { } setMethod)
+        {
+            setMethod.Invoke(target, [value]);
+            return;
+        }
+
+        var field = target.GetType().GetField($"<{memberName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Member '{memberName}' was not found.");
 
         field.SetValue(target, value);
     }

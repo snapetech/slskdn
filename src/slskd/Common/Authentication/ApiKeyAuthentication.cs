@@ -23,6 +23,8 @@ using Microsoft.Extensions.Options;
 namespace slskd.Authentication
 {
     using System;
+    using System.Collections.Generic;
+    using System.Security.Claims;
     using System.Security.Principal;
     using System.Text.Encodings.Web;
     using System.Threading.Tasks;
@@ -93,8 +95,21 @@ namespace slskd.Authentication
 
                 var key = Security.AuthenticateWithApiKey(apiKey, remoteIpAddress);
 
-                var identity = new GenericIdentity(key.Name);
-                var principal = new GenericPrincipal(identity, new[] { key.Role.ToString() });
+                // HARDENING-2026-04-20 H13: embed scopes as claims so RequireScopeAttribute can
+                // enforce per-endpoint restrictions without having to reach back into SecurityService.
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, key.Name),
+                    new Claim(ClaimTypes.Role, key.Role.ToString()),
+                };
+
+                foreach (var scope in key.Scopes ?? new[] { SlskdClaims.ScopeAll })
+                {
+                    claims.Add(new Claim(SlskdClaims.ScopeClaim, scope));
+                }
+
+                var identity = new ClaimsIdentity(claims, ApiKeyAuthentication.AuthenticationScheme);
+                var principal = new ClaimsPrincipal(identity);
                 var ticket = new AuthenticationTicket(principal, new AuthenticationProperties(), ApiKeyAuthentication.AuthenticationScheme);
 
                 return AuthenticateResult.Success(ticket);

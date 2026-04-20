@@ -27,30 +27,18 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
     /// <summary>
     ///     Tests for <see cref="LibraryReconciliationService"/>.
     /// </summary>
-    public class LibraryReconciliationServiceTests : IDisposable
+    public class LibraryReconciliationServiceTests
     {
-        private readonly InMemoryCatalogueStore _catalogue;
-        private readonly LibraryReconciliationService _service;
-
-        public LibraryReconciliationServiceTests()
-        {
-            _catalogue = new InMemoryCatalogueStore();
-            _service = new LibraryReconciliationService(_catalogue);
-        }
-
-        public void Dispose()
-        {
-            _catalogue.Dispose();
-        }
-
         [Fact]
         public async Task FindMissingTracksForRelease_EmptyRelease_ReturnsEmpty()
         {
             // Arrange
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
             var releaseId = Guid.NewGuid().ToString();
 
             // Act
-            var missing = await _service.FindMissingTracksForReleaseAsync(releaseId);
+            var missing = await service.FindMissingTracksForReleaseAsync(releaseId);
 
             // Assert
             Assert.Empty(missing);
@@ -60,17 +48,19 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         public async Task FindMissingTracksForRelease_AllTracksHaveLocalFiles_ReturnsEmpty()
         {
             // Arrange
-            var (release, tracks) = await CreateTestReleaseWithTracks(3);
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+            var (release, tracks) = await CreateTestReleaseWithTracks(catalogue, 3);
 
             // Add local files for all tracks
             foreach (var track in tracks)
             {
                 var localFile = CreateLocalFile(track.TrackId);
-                await _catalogue.UpsertLocalFileAsync(localFile);
+                await catalogue.UpsertLocalFileAsync(localFile);
             }
 
             // Act
-            var missing = await _service.FindMissingTracksForReleaseAsync(release.ReleaseId);
+            var missing = await service.FindMissingTracksForReleaseAsync(release.ReleaseId);
 
             // Assert
             Assert.Empty(missing);
@@ -80,17 +70,19 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         public async Task FindMissingTracksForRelease_SomeTracksMissing_ReturnsOnlyMissing()
         {
             // Arrange
-            var (release, tracks) = await CreateTestReleaseWithTracks(5);
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+            var (release, tracks) = await CreateTestReleaseWithTracks(catalogue, 5);
 
             // Add local files for tracks 0, 1, 2 only
             for (int i = 0; i < 3; i++)
             {
                 var localFile = CreateLocalFile(tracks[i].TrackId);
-                await _catalogue.UpsertLocalFileAsync(localFile);
+                await catalogue.UpsertLocalFileAsync(localFile);
             }
 
             // Act
-            var missing = await _service.FindMissingTracksForReleaseAsync(release.ReleaseId);
+            var missing = await service.FindMissingTracksForReleaseAsync(release.ReleaseId);
 
             // Assert
             Assert.Equal(2, missing.Count);
@@ -102,11 +94,13 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         public async Task FindMissingTracksForRelease_TracksWithVerifiedCopiesNotMissing()
         {
             // Arrange
-            var (release, tracks) = await CreateTestReleaseWithTracks(3);
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+            var (release, tracks) = await CreateTestReleaseWithTracks(catalogue, 3);
 
             // Add verified copy for track 0
             var localFile = CreateLocalFile(tracks[0].TrackId);
-            await _catalogue.UpsertLocalFileAsync(localFile);
+            await catalogue.UpsertLocalFileAsync(localFile);
 
             var verifiedCopy = new VerifiedCopy
             {
@@ -118,10 +112,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
                 VerificationSource = VerificationSource.Manual,
                 VerifiedAt = DateTimeOffset.UtcNow,
             };
-            await _catalogue.UpsertVerifiedCopyAsync(verifiedCopy);
+            await catalogue.UpsertVerifiedCopyAsync(verifiedCopy);
 
             // Act
-            var missing = await _service.FindMissingTracksForReleaseAsync(release.ReleaseId);
+            var missing = await service.FindMissingTracksForReleaseAsync(release.ReleaseId);
 
             // Assert
             Assert.Equal(2, missing.Count);
@@ -132,10 +126,12 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         public async Task FindMissingTracksForRelease_AllTracksMissing_ReturnsAll()
         {
             // Arrange
-            var (release, tracks) = await CreateTestReleaseWithTracks(4);
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+            var (release, tracks) = await CreateTestReleaseWithTracks(catalogue, 4);
 
             // Act
-            var missing = await _service.FindMissingTracksForReleaseAsync(release.ReleaseId);
+            var missing = await service.FindMissingTracksForReleaseAsync(release.ReleaseId);
 
             // Assert
             Assert.Equal(4, missing.Count);
@@ -145,8 +141,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         [Fact]
         public async Task FindTracksWithoutLocalCopies_NoTracks_ReturnsEmpty()
         {
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+
             // Act
-            var result = await _service.FindTracksWithoutLocalCopiesAsync();
+            var result = await service.FindTracksWithoutLocalCopiesAsync();
 
             // Assert
             Assert.Empty(result);
@@ -155,8 +154,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         [Fact]
         public async Task FindOrphanedLocalFiles_NoFiles_ReturnsEmpty()
         {
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+
             // Act
-            var result = await _service.FindOrphanedLocalFilesAsync();
+            var result = await service.FindOrphanedLocalFilesAsync();
 
             // Assert
             Assert.Empty(result);
@@ -165,8 +167,11 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
         [Fact]
         public async Task AnalyzeAllReleases_NoReleases_ReturnsEmpty()
         {
+            using var catalogue = new InMemoryCatalogueStore();
+            var service = new LibraryReconciliationService(catalogue);
+
             // Act
-            var result = await _service.AnalyzeAllReleasesAsync();
+            var result = await service.AnalyzeAllReleasesAsync();
 
             // Assert
             Assert.Empty(result);
@@ -279,7 +284,9 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
 
         // Helper methods
 
-        private async Task<(Release release, Track[] tracks)> CreateTestReleaseWithTracks(int trackCount)
+        private static async Task<(Release release, Track[] tracks)> CreateTestReleaseWithTracks(
+            InMemoryCatalogueStore catalogue,
+            int trackCount)
         {
             // Create artist
             var artist = new Artist
@@ -292,7 +299,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
-            await _catalogue.UpsertArtistAsync(artist);
+            await catalogue.UpsertArtistAsync(artist);
 
             // Create release group
             var releaseGroup = new ReleaseGroup
@@ -306,7 +313,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
-            await _catalogue.UpsertReleaseGroupAsync(releaseGroup);
+            await catalogue.UpsertReleaseGroupAsync(releaseGroup);
 
             // Create release
             var release = new Release
@@ -323,7 +330,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow,
             };
-            await _catalogue.UpsertReleaseAsync(release);
+            await catalogue.UpsertReleaseAsync(release);
 
             // Create tracks
             var tracks = new Track[trackCount];
@@ -343,7 +350,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Reconciliation
                     CreatedAt = DateTimeOffset.UtcNow,
                     UpdatedAt = DateTimeOffset.UtcNow,
                 };
-                await _catalogue.UpsertTrackAsync(tracks[i]);
+                await catalogue.UpsertTrackAsync(tracks[i]);
             }
 
             return (release, tracks);

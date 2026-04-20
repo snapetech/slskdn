@@ -119,7 +119,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
     public void MeshSimulator_ShouldCreateNodes()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var simulator = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         // Act
@@ -138,7 +138,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
     public async Task MeshSimulator_ShouldHandleDhtOperations()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var simulator = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         // Act
@@ -157,7 +157,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
     public async Task MeshSimulator_ShouldSimulateOverlayTransfer()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var simulator = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         var node1 = simulator.AddNode("node1");
@@ -181,7 +181,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
     public void MeshSimulator_ShouldHandleNetworkPartition()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var simulator = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         // Act
@@ -196,7 +196,7 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
     public void MeshSimulator_ShouldHandleMessageDropRate()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var simulator = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         // Act
@@ -474,4 +474,3 @@ public class MeshIntegrationTests : IClassFixture<StubWebApplicationFactory>
         Assert.Equal("newcomer-data"u8.ToArray(), contentFromBootstrap2);
     }
 }
-

@@ -22,7 +22,8 @@ public class WebDavBackendTests
     public async Task ValidateCandidate_WhenHttpClientThrows_ReturnsSanitizedError()
     {
         var handler = new ThrowingHttpMessageHandler(new HttpRequestException("sensitive detail"));
-        var backend = CreateBackend(handler: handler);
+        var (backend, httpClient) = CreateBackend(handler: handler);
+        using var _ = httpClient;
         var candidate = new SourceCandidate
         {
             Id = Guid.NewGuid().ToString(),
@@ -40,7 +41,7 @@ public class WebDavBackendTests
         Assert.DoesNotContain("sensitive detail", result.InvalidityReason);
     }
 
-    private static WebDavBackend CreateBackend(WebDavBackendOptions options = null, HttpMessageHandler handler = null)
+    private static (WebDavBackend Backend, HttpClient HttpClient) CreateBackend(WebDavBackendOptions options = null, HttpMessageHandler handler = null)
     {
         options ??= new WebDavBackendOptions
         {
@@ -56,6 +57,6 @@ public class WebDavBackendTests
         var sourceRegistry = new Mock<ISourceRegistry>();
         optionsMonitor.Setup(o => o.CurrentValue).Returns(options);
 
-        return new WebDavBackend(httpFactory, optionsMonitor.Object, sourceRegistry.Object);
+        return (new WebDavBackend(httpFactory, optionsMonitor.Object, sourceRegistry.Object), httpClient);
     }
 }

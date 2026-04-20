@@ -18,7 +18,7 @@ public class VirtualSoulfindBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         logger = loggerFactory.CreateLogger<MeshSimulator>();
         mesh = new MeshSimulator(logger);
 
@@ -159,7 +159,7 @@ public class PerformanceTests
     public async Task DhtQuery_Should_Complete_Under_200ms()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var mesh = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         await mesh.DhtPutAsync("test-key", new byte[1024]);
@@ -178,7 +178,7 @@ public class PerformanceTests
     public async Task OverlayTransfer_1MB_Should_Complete_Under_1Second()
     {
         // Arrange
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var mesh = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         var node1 = mesh.AddNode("node1");

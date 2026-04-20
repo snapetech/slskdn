@@ -45,7 +45,7 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             SubProtocol = "slskd-tunnel"
         };
 
-        var transport = new WebSocketTransport(options, new XunitLogger<WebSocketTransport>(_output));
+        using var transport = new WebSocketTransport(options, new XunitLogger<WebSocketTransport>(_output));
 
         // Act & Assert
         var status = transport.GetStatus();
@@ -68,23 +68,23 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             Method = "POST"
         };
 
-        var transport = new HttpTunnelTransport(options, new XunitLogger<HttpTunnelTransport>(_output));
+        using var transport = new HttpTunnelTransport(options, new XunitLogger<HttpTunnelTransport>(_output));
 
         // Act & Assert
         var status = transport.GetStatus();
         Assert.Equal(0, status.TotalConnectionsAttempted);
 
-        Stream? stream = null;
+        var connected = false;
         Exception? exception = await Record.ExceptionAsync(async () =>
         {
-            stream = await transport.ConnectAsync("example.com", 80, CancellationToken.None);
+            using var stream = await transport.ConnectAsync("example.com", 80, CancellationToken.None);
+            connected = true;
         });
 
         status = transport.GetStatus();
         Assert.Equal(1, status.TotalConnectionsAttempted);
-        Assert.True(exception != null || stream != null);
+        Assert.True(exception != null || connected);
         Assert.Equal(exception == null ? 1 : 0, status.TotalConnectionsSuccessful);
-        stream?.Dispose();
     }
 
     [Fact]
@@ -118,23 +118,23 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             FrontDomain = "www.example.com"
         };
 
-        var transport = new MeekTransport(options, new XunitLogger<MeekTransport>(_output));
+        using var transport = new MeekTransport(options, new XunitLogger<MeekTransport>(_output));
 
         // Act & Assert
         var status = transport.GetStatus();
         Assert.Equal(0, status.TotalConnectionsAttempted);
 
-        Stream? stream = null;
+        var connected = false;
         Exception? exception = await Record.ExceptionAsync(async () =>
         {
-            stream = await transport.ConnectAsync("example.com", 80, CancellationToken.None);
+            using var stream = await transport.ConnectAsync("example.com", 80, CancellationToken.None);
+            connected = true;
         });
 
         status = transport.GetStatus();
         Assert.Equal(1, status.TotalConnectionsAttempted);
-        Assert.True(exception != null || stream != null);
+        Assert.True(exception != null || connected);
         Assert.Equal(exception == null ? 1 : 0, status.TotalConnectionsSuccessful);
-        stream?.Dispose();
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             ServerUrl = "ws://127.0.0.1:12345/nonexistent"
         };
 
-        var transport = new WebSocketTransport(options, new XunitLogger<WebSocketTransport>(_output));
+        using var transport = new WebSocketTransport(options, new XunitLogger<WebSocketTransport>(_output));
 
         // Act - Multiple failed connection attempts
         for (int i = 0; i < 3; i++)
@@ -191,14 +191,13 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
             ProxyUrl = "http://127.0.0.1:12345/nonexistent"
         };
 
-        var transport = new HttpTunnelTransport(options, new XunitLogger<HttpTunnelTransport>(_output));
+        using var transport = new HttpTunnelTransport(options, new XunitLogger<HttpTunnelTransport>(_output));
 
         // Act - Connect with different isolation keys (simulating different peers)
         for (var i = 0; i < 3; i++)
         {
             var isolationKey = i == 1 ? "peer2" : "peer1";
-            var stream = await transport.ConnectAsync("example.com", 80, isolationKey, CancellationToken.None);
-            stream.Dispose();
+            using var stream = await transport.ConnectAsync("example.com", 80, isolationKey, CancellationToken.None);
         }
 
         // Assert
@@ -209,15 +208,15 @@ public class ObfuscatedTransportIntegrationTests : IDisposable
     [Fact]
     public async Task TransportDispose_CleansUpResources()
     {
-        // Arrange - WebSocketTransport does not implement IDisposable; we verify ConnectAsync completes
-        var transport = new WebSocketTransport(
+        // Arrange - WebSocketTransport implements IDisposable; verify disposal path remains valid after failed connect
+        using var transport = new WebSocketTransport(
             new WebSocketTransportOptions { ServerUrl = "ws://127.0.0.1:12345/test" },
             new XunitLogger<WebSocketTransport>(_output));
 
         // Act - Connection attempt (expected to throw for non-existent server)
         await Assert.ThrowsAnyAsync<Exception>(() => transport.ConnectAsync("example.com", 80, CancellationToken.None));
 
-        // Assert - No Dispose; transport does not implement IDisposable
+        // Assert - ConnectAsync failure is the expected outcome
     }
 
     /// <summary>

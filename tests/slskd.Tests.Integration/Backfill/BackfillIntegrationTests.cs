@@ -44,7 +44,7 @@ public class BackfillIntegrationTests : IClassFixture<StubWebApplicationFactory>
             return;
         }
 
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         try
         {
@@ -90,7 +90,7 @@ public class BackfillIntegrationTests : IClassFixture<StubWebApplicationFactory>
             return;
         }
 
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         try
         {

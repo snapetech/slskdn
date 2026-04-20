@@ -19,7 +19,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public void HttpBackend_HasCorrectType()
         {
-            var backend = CreateBackend();
+            var (backend, httpClient) = CreateBackend();
+            using var _ = httpClient;
             Assert.Equal(ContentBackendType.Http, backend.Type);
             Assert.Null(backend.SupportedDomain);
         }
@@ -28,7 +29,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task FindCandidates_NoAllowlist_ReturnsEmpty()
         {
             var options = new HttpBackendOptions { DomainAllowlist = new List<string>() };
-            var backend = CreateBackend(options);
+            var (backend, httpClient) = CreateBackend(options);
+            using var _ = httpClient;
             var itemId = ContentItemId.NewId();
 
             var candidates = await backend.FindCandidatesAsync(itemId, CancellationToken.None);
@@ -39,7 +41,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_RejectsNonHttp()
         {
-            var backend = CreateBackend();
+            var (backend, httpClient) = CreateBackend();
+            using var _ = httpClient;
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -59,7 +62,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         [Fact]
         public async Task ValidateCandidate_RejectsInvalidUrl()
         {
-            var backend = CreateBackend();
+            var (backend, httpClient) = CreateBackend();
+            using var _ = httpClient;
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -83,7 +87,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             {
                 DomainAllowlist = new List<string> { "allowed.com" }
             };
-            var backend = CreateBackend(options);
+            var (backend, httpClient) = CreateBackend(options);
+            using var _ = httpClient;
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -104,7 +109,8 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
         public async Task ValidateCandidate_WhenHttpClientThrows_ReturnsSanitizedError()
         {
             var handler = new ThrowingHttpMessageHandler(new HttpRequestException("sensitive detail"));
-            var backend = CreateBackend(handler: handler);
+            var (backend, httpClient) = CreateBackend(handler: handler);
+            using var _ = httpClient;
             var candidate = new SourceCandidate
             {
                 Id = Guid.NewGuid().ToString(),
@@ -122,7 +128,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
             Assert.DoesNotContain("sensitive detail", result.InvalidityReason);
         }
 
-        private HttpBackend CreateBackend(HttpBackendOptions options = null, HttpMessageHandler handler = null)
+        private (HttpBackend Backend, HttpClient HttpClient) CreateBackend(HttpBackendOptions options = null, HttpMessageHandler handler = null)
         {
             options ??= new HttpBackendOptions
             {
@@ -141,7 +147,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 
             var registry = new InMemorySourceRegistry();
 
-            return new HttpBackend(httpFactory, optionsMonitor.Object, registry);
+            return (new HttpBackend(httpFactory, optionsMonitor.Object, registry), httpClient);
         }
     }
 

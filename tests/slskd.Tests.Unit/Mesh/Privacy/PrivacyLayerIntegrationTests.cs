@@ -79,7 +79,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
         // Arrange
         var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
         var originalMessage = new byte[] { 1, 2, 3, 4, 5 };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act
         var result = await privacyLayer.ProcessOutboundMessageAsync(originalMessage, cts.Token);
@@ -110,7 +110,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
 
         var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
         var message = new byte[] { 1, 2, 3 };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act - Send multiple messages quickly
         var result1 = await privacyLayer.ProcessOutboundMessageAsync(message, cts.Token);
@@ -136,7 +136,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
 
         var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
         var originalMessage = new byte[] { 1, 2, 3, 4, 5 };
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // First pad the message
         var paddedMessage = await privacyLayer.ProcessOutboundMessageAsync(originalMessage, cts.Token);
@@ -190,7 +190,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
             CoverTraffic = new CoverTrafficOptions { Enabled = true, IntervalSeconds = 1 } // Short interval for test
         };
         var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, options);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var messages = new List<byte[]>();
 
         // Act - Collect a few cover traffic messages
@@ -322,7 +322,7 @@ public class PrivacyLayerIntegrationTests : IDisposable
         // Arrange
         var privacyLayer = new PrivacyLayer(_loggerMock.Object, _loggerFactoryMock.Object, _defaultOptions);
         var originalMessage = new byte[] { 72, 101, 108, 108, 111 }; // "Hello"
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         // Act - Process outbound
         var processedOutbound = await privacyLayer.ProcessOutboundMessageAsync(originalMessage, cts.Token);

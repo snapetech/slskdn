@@ -35,7 +35,7 @@ public class BridgeProxyServerIntegrationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
         // Try to start full instance for bridge tests
         try
@@ -404,7 +404,7 @@ public class BridgeProxyServerIntegrationTests : IAsyncLifetime
 
     private int AllocateEphemeralPort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();

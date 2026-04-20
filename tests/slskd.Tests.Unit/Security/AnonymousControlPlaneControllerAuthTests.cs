@@ -62,11 +62,9 @@ public class AnonymousControlPlaneControllerAuthTests
     [Fact]
     public void ExplicitlyPublicProtocolActions_AreTheOnlyAnonymousActionsOnReviewedControllers()
     {
-        AssertAnonymousActions(
-            typeof(DescriptorRetrieverController),
-            nameof(DescriptorRetrieverController.RetrieveDescriptor),
-            nameof(DescriptorRetrieverController.QueryByDomain),
-            nameof(DescriptorRetrieverController.VerifyDescriptor));
+        // HARDENING-2026-04-20 H3: DescriptorRetrieverController no longer has AllowAnonymous methods.
+        // The class-level [Authorize(Policy = AuthPolicy.Any)] now governs every action.
+        AssertAnonymousActions(typeof(DescriptorRetrieverController));
 
         AssertAnonymousActions(
             typeof(PodDhtController),

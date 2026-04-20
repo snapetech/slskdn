@@ -50,7 +50,7 @@ public class MeshTransferServiceLifecycleTests
         var service = CreateService();
         var transferId = "transfer-1";
         var completed = false;
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         service.SubscribeToProgress(transferId).Subscribe(_ => { }, () => completed = true);
         GetCancellationSources(service)[transferId] = cts;

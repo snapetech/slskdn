@@ -34,11 +34,28 @@ namespace slskd
 
     public interface ISecurityService
     {
-        JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null);
+        JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[] scopes = null);
         bool AuthenticateAdminCredentials(string username, string password);
-        (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress);
+        (string Name, Role Role, string[] Scopes) AuthenticateWithApiKey(string key, IPAddress callerIpAddress);
         void RevokeToken(string jti);
         bool IsTokenRevoked(string jti);
+    }
+
+    /// <summary>
+    ///     Well-known claim types and scope values used by the authentication pipeline.
+    /// </summary>
+    /// <remarks>
+    ///     HARDENING-2026-04-20 H13: scopes let an API key (or a JWT derived from one) be
+    ///     restricted to specific endpoints — e.g., a Plex webhook key that can only POST to
+    ///     <c>/api/v0/NowPlaying/webhook</c>.
+    /// </remarks>
+    public static class SlskdClaims
+    {
+        /// <summary>The JWT / claims key used to carry scope tags. Multi-valued.</summary>
+        public const string ScopeClaim = "slskd:scope";
+
+        /// <summary>Wildcard scope granting access to every scope-gated endpoint.</summary>
+        public const string ScopeAll = "*";
     }
 
     public class SecurityService : ISecurityService
@@ -69,7 +86,7 @@ namespace slskd
             return ConstantTimeEqual(configuredUsername, username) && ConstantTimeEqual(configuredPassword, password);
         }
 
-        public (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress)
+        public (string Name, Role Role, string[] Scopes) AuthenticateWithApiKey(string key, IPAddress callerIpAddress)
         {
             var inputKeyBytes = System.Text.Encoding.UTF8.GetBytes(key ?? string.Empty);
             var record = OptionsMonitor.CurrentValue.Web.Authentication.ApiKeys
@@ -105,7 +122,17 @@ namespace slskd
                 throw new OutOfRangeException("The remote IP address is not within the range specified for the key");
             }
 
-            return (record.Key, record.Value.Role.ToEnum<Role>());
+            var scopes = (record.Value.Scopes ?? SlskdClaims.ScopeAll)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToArray();
+
+            if (scopes.Length == 0)
+            {
+                scopes = new[] { SlskdClaims.ScopeAll };
+            }
+
+            return (record.Key, record.Value.Role.ToEnum<Role>(), scopes);
         }
 
         private static bool ConstantTimeEqual(string expected, string provided)
@@ -147,7 +174,7 @@ namespace slskd
             return _revokedJtis.ContainsKey(jti);
         }
 
-        public JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null)
+        public JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[] scopes = null)
         {
             var issuedUtc = DateTime.UtcNow;
             var expiresUtc = DateTime.UtcNow.AddMilliseconds(ttl ?? OptionsAtStartup.Web.Authentication.Jwt.Ttl);
@@ -162,6 +189,17 @@ namespace slskd
                 new Claim("name", username),
                 new Claim("iat", ((DateTimeOffset)issuedUtc).ToUnixTimeSeconds().ToString()),
             };
+
+            // HARDENING-2026-04-20 H13: persist scopes on the JWT so the API-key→short-JWT promotion
+            // path in Program.cs doesn't accidentally upgrade a scope-limited key into full access.
+            // Tokens with no explicit scopes (e.g. admin password login) are universal.
+            var effectiveScopes = (scopes == null || scopes.Length == 0)
+                ? new[] { SlskdClaims.ScopeAll }
+                : scopes;
+            foreach (var scope in effectiveScopes)
+            {
+                claims.Add(new Claim(SlskdClaims.ScopeClaim, scope));
+            }
 
             var credentials = new SigningCredentials(JwtSigningKey, SecurityAlgorithms.HmacSha256);
 

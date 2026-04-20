@@ -288,7 +288,7 @@ public class SoulfindRunner : IAsyncDisposable
     private int AllocateEphemeralPort()
     {
         // Bind to port 0 to get OS-assigned ephemeral port
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();

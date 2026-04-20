@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Common.Security;
 using slskd.Mesh.Transport;
 
 /// <summary>Implementation of IProfileService. Stores own profile in a JSON file, signs/verifies with Ed25519.</summary>
@@ -111,6 +112,17 @@ public sealed class ProfileService : IProfileService
                 var profile = JsonSerializer.Deserialize<PeerProfile>(json);
                 if (profile != null)
                 {
+                    // HARDENING-2026-04-20 H10: migrate pre-hardening profiles that auto-injected a
+                    // LAN-IP Direct endpoint. Drop leaky endpoints, re-sign with our own key, and
+                    // persist the scrubbed profile so the next serve returns a clean blob.
+                    var scrubbed = StripLeakyEndpoints(profile.Endpoints, logContext: "on-disk profile load");
+                    if (scrubbed.Count != profile.Endpoints.Count)
+                    {
+                        profile.Endpoints = scrubbed;
+                        profile = SignProfile(profile);
+                        await SaveMyProfileAsync(profile, ct).ConfigureAwait(false);
+                    }
+
                     lock (_cacheLock) { _cachedMyProfile = profile; }
                     return profile;
                 }
@@ -129,7 +141,23 @@ public sealed class ProfileService : IProfileService
         {
             var scheme = webOpts.Https?.Disabled != true ? "https" : "http";
             var host = DetectHostname();
-            endpoints.Add(new PeerEndpoint { Type = "Direct", Address = $"{scheme}://{host}:{webOpts.Port}", Priority = 1 });
+            if (!string.IsNullOrEmpty(host))
+            {
+                var candidate = new PeerEndpoint { Type = "Direct", Address = $"{scheme}://{host}:{webOpts.Port}", Priority = 1 };
+                if (!PeerEndpointPolicy.IsLeakyAddress(candidate.Address))
+                {
+                    endpoints.Add(candidate);
+                }
+                else
+                {
+                    // HARDENING-2026-04-20 H10: refuse to auto-publish a LAN IP / link-local / loopback as a
+                    // public Direct endpoint. Operator must set a routable hostname explicitly if they want one.
+                    _log.LogInformation(
+                        "[ProfileService] H10: skipping auto-populated Direct endpoint '{Address}' " +
+                        "because its host is private/reserved. Set a routable hostname via profile update if needed.",
+                        candidate.Address);
+                }
+            }
         }
 
         var profile2 = new PeerProfile
@@ -147,18 +175,53 @@ public sealed class ProfileService : IProfileService
         return profile2;
     }
 
-    public async Task<PeerProfile> UpdateMyProfileAsync(string displayName, string? avatar, int capabilities, List<PeerEndpoint> endpoints, CancellationToken ct = default)
-    {
-        var profile = await GetMyProfileAsync(ct).ConfigureAwait(false);
-        profile.DisplayName = displayName;
-        profile.Avatar = avatar;
-        profile.Capabilities = capabilities;
-        profile.Endpoints = endpoints ?? new List<PeerEndpoint>();
-        profile.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
-        profile = SignProfile(profile);
+        public async Task<PeerProfile> UpdateMyProfileAsync(string displayName, string? avatar, int capabilities, List<PeerEndpoint> endpoints, CancellationToken ct = default)
+        {
+            var profile = await GetMyProfileAsync(ct).ConfigureAwait(false);
+            profile.DisplayName = displayName;
+            profile.Avatar = avatar;
+            profile.Capabilities = capabilities;
+
+            // HARDENING-2026-04-20 H10: strip any endpoint whose host is private/reserved before signing.
+            // The profile is served anonymously; a naïvely-pasted internal URL would be publicly readable.
+            profile.Endpoints = StripLeakyEndpoints(endpoints ?? new List<PeerEndpoint>(), logContext: "UpdateMyProfile");
+            profile.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
+            profile = SignProfile(profile);
         await SaveMyProfileAsync(profile, ct).ConfigureAwait(false);
         lock (_cacheLock) { _cachedMyProfile = profile; }
         return profile;
+    }
+
+    private List<PeerEndpoint> StripLeakyEndpoints(List<PeerEndpoint> endpoints, string logContext)
+    {
+        if (endpoints == null || endpoints.Count == 0)
+        {
+            return new List<PeerEndpoint>();
+        }
+
+        var kept = new List<PeerEndpoint>(endpoints.Count);
+        foreach (var endpoint in endpoints)
+        {
+            if (endpoint == null)
+            {
+                continue;
+            }
+
+            if (PeerEndpointPolicy.IsLeakyAddress(endpoint.Address))
+            {
+                _log.LogWarning(
+                    "[ProfileService] H10: dropping peer endpoint '{Type} {Address}' during {Context} " +
+                    "because its host is private/reserved/unparseable.",
+                    endpoint.Type,
+                    endpoint.Address,
+                    logContext);
+                continue;
+            }
+
+            kept.Add(endpoint);
+        }
+
+        return kept;
     }
 
     private async Task SaveMyProfileAsync(PeerProfile profile, CancellationToken ct)
@@ -198,6 +261,12 @@ public sealed class ProfileService : IProfileService
                 _log.LogWarning(ex, "[ProfileService] Failed to parse cached endpoints for peer {PeerId}", peerId);
             }
         }
+
+        // HARDENING-2026-04-20 H10: contact-supplied endpoints are unsigned at this point (we
+        // return Signature="" below), so stripping leaky ones here doesn't break any integrity
+        // guarantee — and it prevents us from re-disclosing a friend's LAN IP to anonymous
+        // callers of GET /profile/{peerId}.
+        endpoints = StripLeakyEndpoints(endpoints, logContext: $"GetProfile({peerId})");
 
         return new PeerProfile
         {
@@ -312,11 +381,15 @@ public sealed class ProfileService : IProfileService
         return null;
     }
 
-    private string DetectHostname()
+    // HARDENING-2026-04-20 H10: this used to return the first non-loopback IPv4 address — on a
+    // home network, that's a LAN IP like 192.168.x.x, which then got auto-injected into the
+    // anonymously-served PeerProfile as a Direct endpoint. Now we only return addresses that
+    // pass PeerEndpointPolicy (public-routable). If nothing qualifies, return null and let the
+    // caller skip the Direct endpoint entirely; the operator can add a routable hostname later.
+    private string? DetectHostname()
     {
         try
         {
-            // Try to get the first non-loopback IPv4 address from network interfaces
             var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
                 .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
                             ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
@@ -328,20 +401,24 @@ public sealed class ProfileService : IProfileService
                 {
                     if (unicast.Address.AddressFamily == AddressFamily.InterNetwork &&
                         !IPAddress.IsLoopback(unicast.Address) &&
-                        unicast.Address.ToString() != "0.0.0.0")
+                        unicast.Address.ToString() != "0.0.0.0" &&
+                        !IpRangeClassifier.IsPrivate(unicast.Address) &&
+                        !IpRangeClassifier.IsBlocked(unicast.Address))
                     {
                         return unicast.Address.ToString();
                     }
                 }
             }
 
-            // Fallback: try to get hostname
             try
             {
                 var hostname = Dns.GetHostName();
                 var hostEntry = Dns.GetHostEntry(hostname);
-                var ipv4 = hostEntry.AddressList
-                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip));
+                var ipv4 = hostEntry.AddressList.FirstOrDefault(ip =>
+                    ip.AddressFamily == AddressFamily.InterNetwork &&
+                    !IPAddress.IsLoopback(ip) &&
+                    !IpRangeClassifier.IsPrivate(ip) &&
+                    !IpRangeClassifier.IsBlocked(ip));
                 if (ipv4 != null)
                 {
                     return ipv4.ToString();
@@ -354,10 +431,10 @@ public sealed class ProfileService : IProfileService
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "[ProfileService] Failed to detect hostname, using localhost");
+            _log.LogWarning(ex, "[ProfileService] H10: Failed to detect hostname");
         }
 
-        return "localhost";
+        return null;
     }
 
     private static string Base32Encode(byte[] data)

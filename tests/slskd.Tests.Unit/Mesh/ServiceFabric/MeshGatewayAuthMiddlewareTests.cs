@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using slskd.Mesh.ServiceFabric;
 using System.IO;
@@ -34,7 +35,8 @@ public class MeshGatewayAuthMiddlewareTests
         // Arrange
         var (middleware, context) = CreateMiddleware(new MeshGatewayOptions { Enabled = false });
         context.Request.Path = "/mesh/http/pods";
-        context.Response.Body = new MemoryStream();
+        using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
 
         // Act
         await middleware.InvokeAsync(context);
@@ -56,7 +58,8 @@ public class MeshGatewayAuthMiddlewareTests
         var (middleware, context) = CreateMiddleware(options);
         context.Request.Path = "/mesh/http/pods";
         context.Connection.RemoteIpAddress = IPAddress.Parse("192.168.1.100");
-        context.Response.Body = new MemoryStream();
+        using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
 
         // Act
         await middleware.InvokeAsync(context);
@@ -65,7 +68,8 @@ public class MeshGatewayAuthMiddlewareTests
         Assert.Equal((int)HttpStatusCode.Unauthorized, context.Response.StatusCode);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        using var responseReader = new StreamReader(context.Response.Body);
+        var responseText = await responseReader.ReadToEndAsync();
         Assert.Contains("unauthorized", responseText);
     }
 
@@ -106,7 +110,8 @@ public class MeshGatewayAuthMiddlewareTests
         var (middleware, context) = CreateMiddleware(options);
         context.Request.Path = "/mesh/http/pods";
         context.Connection.RemoteIpAddress = IPAddress.Loopback;
-        context.Response.Body = new MemoryStream();
+        using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
 
         // Act
         await middleware.InvokeAsync(context);
@@ -115,7 +120,8 @@ public class MeshGatewayAuthMiddlewareTests
         Assert.Equal((int)HttpStatusCode.Forbidden, context.Response.StatusCode);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        using var responseReader = new StreamReader(context.Response.Body);
+        var responseText = await responseReader.ReadToEndAsync();
         Assert.Contains("csrf_required", responseText);
     }
 
@@ -157,7 +163,8 @@ public class MeshGatewayAuthMiddlewareTests
         context.Request.Path = "/mesh/http/pods";
         context.Connection.RemoteIpAddress = IPAddress.Loopback;
         context.Request.Headers["Origin"] = "https://evil.com";
-        context.Response.Body = new MemoryStream();
+        using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
 
         // Act
         await middleware.InvokeAsync(context);
@@ -166,7 +173,8 @@ public class MeshGatewayAuthMiddlewareTests
         Assert.Equal((int)HttpStatusCode.Forbidden, context.Response.StatusCode);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        using var responseReader = new StreamReader(context.Response.Body);
+        var responseText = await responseReader.ReadToEndAsync();
         Assert.Contains("origin_not_allowed", responseText);
     }
 
@@ -281,7 +289,7 @@ public class MeshGatewayAuthMiddlewareTests
 
     private (MeshGatewayAuthMiddleware, DefaultHttpContext) CreateMiddleware(MeshGatewayOptions options)
     {
-        var logger = new LoggerFactory().CreateLogger<MeshGatewayAuthMiddleware>();
+        var logger = NullLoggerFactory.Instance.CreateLogger<MeshGatewayAuthMiddleware>();
         var optionsWrapper = Microsoft.Extensions.Options.Options.Create(options);
 
         var nextCalled = false;
@@ -294,7 +302,6 @@ public class MeshGatewayAuthMiddlewareTests
 
         var middleware = new MeshGatewayAuthMiddleware(next, logger, optionsWrapper);
         var context = new DefaultHttpContext();
-        context.Response.Body = new MemoryStream();
 
         return (middleware, context);
     }

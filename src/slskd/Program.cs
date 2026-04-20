@@ -2386,6 +2386,12 @@ namespace slskd
 
             services.AddSingleton<IRelayService, RelayService>();
 
+            // HARDENING-2026-04-20 H8: loud, periodic reminder when relay controller TLS is disabled.
+            services.AddHostedService<Relay.RelayTlsWarningService>();
+
+            // HARDENING-2026-04-20 H12: loud, periodic reminder that public DHT rendezvous publishes this node's IP.
+            services.AddHostedService<DhtRendezvous.DhtExposureWarningService>();
+
             services.AddSingleton<IFTPClientFactory, FTPClientFactory>();
             services.AddSingleton<IFTPService, FTPService>();
 
@@ -2736,10 +2742,12 @@ namespace slskd
                                                 throw new InvalidOperationException("API key token or caller IP address was unavailable.");
                                             }
 
-                                            var (name, role) = service.AuthenticateWithApiKey(token, callerIpAddress: remoteIpAddress);
+                                            var (name, role, scopes) = service.AuthenticateWithApiKey(token, callerIpAddress: remoteIpAddress);
 
-                                            // the API key is valid. create a new, short lived jwt for the key name and role
-                                            context.Token = service.GenerateJwt(name, role, ttl: 1000).Serialize();
+                                            // the API key is valid. create a new, short lived jwt for the key name and role.
+                                            // HARDENING-2026-04-20 H13: propagate the key's scopes onto the promoted JWT so
+                                            // RequireScopeAttribute works whether the caller presented an API key or a JWT.
+                                            context.Token = service.GenerateJwt(name, role, ttl: 1000, scopes: scopes).Serialize();
                                         }
                                         catch
                                         {

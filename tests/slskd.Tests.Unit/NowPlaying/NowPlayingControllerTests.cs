@@ -58,9 +58,10 @@ public class NowPlayingControllerTests
             }
         };
 
-        controller.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("""
+        using var body = new MemoryStream(Encoding.UTF8.GetBytes("""
             { "event": " stop ", "artist": "Artist", "title": "Title" }
             """));
+        controller.Request.Body = body;
 
         service.SetTrack("Artist", "Title", null);
 

@@ -46,7 +46,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.v2.Integration
             // ========== ARRANGE: Build the COMPLETE v2 stack ==========
 
             // 1. Catalogue with full hierarchy
-            var catalogueStore = new InMemoryCatalogueStore();
+            using var catalogueStore = new InMemoryCatalogueStore();
 
             var artistId = "artist:radiohead";
             await catalogueStore.UpsertArtistAsync(new Artist

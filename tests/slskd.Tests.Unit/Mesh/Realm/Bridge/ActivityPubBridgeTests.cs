@@ -10,6 +10,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging.Abstractions;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Moq;
@@ -25,6 +26,8 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
     /// </summary>
     public class ActivityPubBridgeTests
     {
+        private static readonly HttpClient StubHttpClient = new(new StubActivityPubHandler());
+
         private static MultiRealmConfig ConfigWithReadAllowedWriteBlocked()
         {
             return new MultiRealmConfig
@@ -70,7 +73,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
             var pubOpts = Mock.Of<IOptionsMonitor<FederationPublishingOptions>>(x => x.CurrentValue == new FederationPublishingOptions());
             var relationshipStore = Mock.Of<IActivityPubRelationshipStore>();
             var keyStore = Mock.Of<IActivityPubKeyStore>();
-            var loggerFactory = new LoggerFactory();
+            var loggerFactory = NullLoggerFactory.Instance;
             var libLogger = loggerFactory.CreateLogger<LibraryActorService>();
             var musicProvider = Mock.Of<IMusicContentDomainProvider>();
             var musicActor = new MusicLibraryActor(
@@ -79,8 +82,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
                 musicProvider,
                 loggerFactory.CreateLogger<MusicLibraryActor>());
             var libActor = new LibraryActorService(fedOpts, keyStore, musicActor, libLogger, loggerFactory);
-            var http = new HttpClient(new StubActivityPubHandler());
-            var delivery = new ActivityDeliveryService(http, fedOpts, pubOpts, keyStore, Mock.Of<ILogger<ActivityDeliveryService>>());
+            var delivery = new ActivityDeliveryService(StubHttpClient, fedOpts, pubOpts, keyStore, Mock.Of<ILogger<ActivityDeliveryService>>());
             return new FederationService(fedOpts, pubOpts, libActor, relationshipStore, keyStore, delivery, Mock.Of<ILogger<FederationService>>());
         }
 

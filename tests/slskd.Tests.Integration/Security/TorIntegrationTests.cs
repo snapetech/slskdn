@@ -505,7 +505,7 @@ public class TorIntegrationTests : IDisposable
 
                     // Read SOCKS5 handshake
                     var handshake = new byte[3];
-                    await stream.ReadAsync(handshake, 0, 3, ct);
+                    await stream.ReadExactlyAsync(handshake, ct);
 
                     if (RequireAuth)
                     {
@@ -515,7 +515,7 @@ public class TorIntegrationTests : IDisposable
 
                         // Read auth request
                         var authRequest = new byte[1];
-                        await stream.ReadAsync(authRequest, 0, 1, ct);
+                        await stream.ReadExactlyAsync(authRequest, ct);
 
                         // Send auth result
                         var authResult = AuthSuccess ? (byte)0x00 : (byte)0x01;
@@ -535,7 +535,7 @@ public class TorIntegrationTests : IDisposable
 
                     // Read connect request (simplified - just consume the data)
                     var connectRequest = new byte[10];
-                    await stream.ReadAsync(connectRequest, 0, 10, ct);
+                    await stream.ReadExactlyAsync(connectRequest, ct);
 
                     // Send success response
                     var connectResponse = ConnectResponse ??

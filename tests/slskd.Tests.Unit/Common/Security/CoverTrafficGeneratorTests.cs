@@ -72,7 +72,7 @@ public class CoverTrafficGeneratorTests
             () => Task.CompletedTask,
             logger);
 
-        var previousGenerationCts = new CancellationTokenSource();
+        using var previousGenerationCts = new CancellationTokenSource();
         SetPrivateField(generator, "_generationCts", previousGenerationCts);
         SetPrivateField(generator, "_generationTask", Task.CompletedTask);
 

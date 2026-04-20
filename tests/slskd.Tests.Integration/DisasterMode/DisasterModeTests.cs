@@ -17,7 +17,7 @@ public class DisasterModeTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
         soulfind = new SoulfindRunner(loggerFactory.CreateLogger<SoulfindRunner>());
         await soulfind.StartAsync();
@@ -147,7 +147,7 @@ public class MeshOnlyTests
     public async Task Pure_Mesh_Discography_Job()
     {
         // Arrange: Create mesh simulator
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var mesh = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         // Add 3 nodes with different parts of discography
@@ -174,7 +174,7 @@ public class MeshOnlyTests
     public async Task Pure_Mesh_Repair_Mission()
     {
         // Arrange: Mesh simulator
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var mesh = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         // Alice has transcode, Bob has lossless
@@ -198,7 +198,7 @@ public class MeshOnlyTests
     public async Task Mesh_Network_Partition_Should_Isolate_Nodes()
     {
         // Arrange: Mesh with 3 nodes
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var mesh = new MeshSimulator(loggerFactory.CreateLogger<MeshSimulator>());
 
         var alice = mesh.AddNode("alice");

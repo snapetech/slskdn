@@ -224,10 +224,43 @@ var peerIdAudit = IdentitySeparationValidator.AuditPodPeerIds(peerIds, logger);
 var validation = IdentitySeparationValidator.ValidateIdentities(identities, logger);
 ```
 
+## Mesh Peer Pinning — TOFU and Re-pin Workflow
+
+slskdN uses Trust On First Use (TOFU) for mesh peer certificates: the first time your node talks to a given peer ID, that peer's SPKI is recorded in `{DataDirectory}/mesh/certificate-pins.json` and enforced on every subsequent connection via `CertificatePinManager`. After the first connection, a changed key (without a ≤30-day previous-pin grace) triggers a rejected connection and a "pin mismatch" warning.
+
+**The TOFU window is the weak point.** An adversary in network position on your *first* contact with a peer can get their own cert pinned instead of the real one. After that, every subsequent session gets validated against the attacker's key. So TOFU is only as strong as the network conditions during the first contact.
+
+### When you are at risk
+
+- **Fresh install on an untrusted network** (hotel / cafe / nation-state-adjacent ISP). Every peer you meet goes through TOFU here.
+- **Wiped or restored `~/.slskd`** — pin file is gone, so every peer you previously pinned goes through TOFU again. Restoring a pre-pin backup has the same effect.
+- **New peer appearing in a pod you don't control** — a peer you haven't seen before is pinned on first sight.
+
+### Pin-before-you-trust workflow
+
+The right workflow for operators who actually care about MITM resistance:
+
+1. **Generate pins on a known-good network.** Do first contact with your trusted peer set from a segment you control (home LAN, VPN to a known-good host). Let slskdN TOFU those peers there, then copy `{DataDirectory}/mesh/certificate-pins.json` into your deployment configuration.
+2. **Commit pins to config management.** Treat `certificate-pins.json` the same as any other deployment artifact: version it, sync it across your nodes, restore it on redeploy. Do not rely on the runtime to re-TOFU the "right" peers on a fresh disk.
+3. **Exchange expected pins out-of-band.** If you know another operator personally, share the SPKI fingerprint through a channel that can't be modified by the mesh (signal, in-person, signed email). On first connection, verify the logged pin against what they sent.
+4. **Treat pin mismatches as incidents, not nuisances.** A "Certificate pin mismatch for peer {PeerId}" warning is the exact message you'd see during an active MITM. Investigate before clearing pins; confirm the peer actually rotated keys through a second channel before accepting.
+5. **Rotate through `Previous` slot, not by wiping.** Use the rotation-with-grace-period path (old pin stays valid for ≤30 days) rather than deleting `certificate-pins.json`. Wiping the file re-opens the TOFU window for every peer at once.
+
+### When a pin is lost
+
+- **Do not accept the new pin silently.** Confirm out-of-band that the peer did rotate keys.
+- **Do not wipe the entire pin file to resolve a single mismatch.** `RemovePeerPins(peerId)` resets only one peer's TOFU state.
+- **If the entire pin file is lost** (disk failure, restore from old backup), treat every subsequent first-contact as an incident window: log the pins you collect, reconcile them against a known-good copy as soon as you get one, and investigate any divergence.
+
+### Known limitation
+
+There is currently no config surface for pre-seeding pins (e.g., a `mesh.peerPins` section in `slskd.yml`). The only supported path is populating `{DataDirectory}/mesh/certificate-pins.json` from a trusted generation run. Adding a declarative pin list is a follow-up.
+
 ## Related Tasks
 
 - **H-GLOBAL01**: Logging and Telemetry Hygiene Audit (this document)
 - **H-ID01**: Identity Separation Enforcement
 - **H-VF01**: VirtualSoulfind Input Validation & Domain Gating
 - **H-TRANSPORT01**: Mesh/DHT/Torrent/HTTP Transport Hardening
+- **HARDENING-2026-04-20 H11**: Mesh TOFU re-pin workflow (this section)
 - **H-MCP01**: Moderation Coverage Audit

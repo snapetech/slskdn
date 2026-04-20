@@ -61,6 +61,7 @@ public class DhtRendezvousController : ControllerBase
         return Ok(new DhtStatusResponse
         {
             IsEnabled = stats.IsEnabled,
+            LanOnly = stats.LanOnly,
             IsBeaconCapable = stats.IsBeaconCapable,
             IsDhtRunning = stats.IsDhtRunning,
             DhtNodeCount = stats.DhtNodeCount,
@@ -401,6 +402,7 @@ public class DhtRendezvousController : ControllerBase
 public sealed class DhtStatusResponse
 {
     public bool IsEnabled { get; init; }
+    public bool LanOnly { get; init; }
     public bool IsBeaconCapable { get; init; }
     public bool IsDhtRunning { get; init; }
     public int DhtNodeCount { get; init; }

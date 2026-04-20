@@ -102,6 +102,7 @@ export const getSwarmJob = async (jobId) => {
 export const getDhtStatus = async () => {
   return safeGet('/dht/status', {
     dhtNodeCount: 0,
+    isLanOnly: false,
     isBeaconCapable: false,
     isDhtRunning: false,
     verifiedBeaconCount: 0,

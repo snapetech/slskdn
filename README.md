@@ -252,6 +252,11 @@ Automated metadata enrichment and quality assurance.
 - **Library Health Scanner** — Detects transcodes, quality issues, missing tracks
 - **Remediation Service** — Auto-fix via automatic re-download of better quality
 
+> **⚠️ Privacy tradeoff.** MusicBrainz and AcoustID are third-party services. When enabled, slskdN sends per-track fingerprints, MBIDs, and/or query terms from your node's IP to `musicbrainz.org` and `api.acoustid.org`. These services log requests. If you don't want your library activity observable by those hosts:
+> - Leave **AcoustID disabled** (`integrations.acoustId.enabled: false`, the default) — this disables fingerprint uploads.
+> - Point **MusicBrainz** at a self-hosted mirror or a VRS/VPN egress by changing `integrations.musicBrainz.baseUrl`.
+> - Or disable the auto-tagging / library-health features that trigger the lookups.
+
 
 📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md)
 

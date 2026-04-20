@@ -1,7 +1,7 @@
 # Security Analysis Report
 
 **Repository:** web
-**Path:** /home/phantasm/git/slskdn/src/web
+**Path:** &lt;slskdn-repo&gt;/src/web
 **Date:** 2026-02-25 20:09:26
 **Model:** huihui_ai/qwen3-coder-abliterated:30b
 **Files Analyzed:** 265
@@ -45,7 +45,7 @@ If an event's data field contains: {"malicious": "<script>alert('XSS')</script>"
 3. Observe if the script executes in the browser
 4. Try injecting more complex payloads like localStorage theft or beacon requests
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_System_Events_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_System_Events_indexjsx.py`
 ---
 
 ### 2. Cross-Site Scripting (CWE-79)
@@ -70,7 +70,7 @@ If a contact has a nickname like "<script>alert('XSS')</script>" or a user ID li
 **How to Test:**
 1. Add a contact with a nickname containing XSS payload like "<script>document.cookie</script>" or "<img src=x onerror=alert('XSS')>" 2. Navigate to Share Groups 3. Click 'View Members' for a group containing this contact 4. Observe if the XSS payload executes
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_ShareGroups_ShareGroupsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_ShareGroups_ShareGroupsjsx.py`
 ---
 
 ### 3. Cross-Site Scripting (CWE-79)
@@ -95,7 +95,7 @@ If an API endpoint returns an error message like "<script>alert('Error')</script
 **How to Test:**
 1. Force an API call to return an error with XSS payload in the error message 2. Navigate to the ShareGroups component 3. Observe if the XSS payload in the error message executes
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_ShareGroups_ShareGroupsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_ShareGroups_ShareGroupsjsx.py`
 ---
 
 ### 4. Cross-Site Scripting (CWE-79)
@@ -120,7 +120,7 @@ If a contact has a nickname like "<script>alert('XSS')</script>", when displayed
 **How to Test:**
 1. Add a contact with a nickname containing XSS payload like "<script>document.cookie</script>" 2. Navigate to Contacts page 3. Observe if the XSS payload in the nickname executes
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_Contacts_Contactsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_Contacts_Contactsjsx.py`
 ---
 
 ## Medium Severity Vulnerabilities
@@ -147,7 +147,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_e2e_helpersts.py`
 ---
 
 ### 2. Improper Input Validation (CWE-20)
@@ -172,7 +172,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_e2e_helpersts.py`
 ---
 
 ### 3. Cross-Site Request Forgery (CWE-352)
@@ -197,7 +197,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_e2e_helpersts.py`
 ---
 
 ### 4. Improper Validation of Array Index (CWE-129)
@@ -222,7 +222,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-129_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-129_e2e_helpersts.py`
 ---
 
 ### 5. Improper Neutralization of Special Elements used in a Command (CWE-74)
@@ -247,7 +247,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-74_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-74_e2e_helpersts.py`
 ---
 
 ### 6. Improper Limitation of a Pathname to a Restricted Directory (CWE-22)
@@ -272,7 +272,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-22_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-22_e2e_helpersts.py`
 ---
 
 ### 7. Use of Externally-Controlled Format String (CWE-134)
@@ -297,7 +297,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-134_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-134_e2e_helpersts.py`
 ---
 
 ### 8. Deserialization of Untrusted Data (CWE-502)
@@ -322,7 +322,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-502_e2e_helpersts.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-502_e2e_helpersts.py`
 ---
 
 ### 9. Improper Input Validation (CWE-20)
@@ -347,7 +347,7 @@ If collectionTitle contained a value like 'Test Collection\n<script>alert(1)</sc
 **How to Test:**
 Test with special characters, SQL injection payloads, and XSS payloads in collection titles to verify proper handling.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_e2e_streamingspects.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_e2e_streamingspects.py`
 ---
 
 ### 10. Cross-site Scripting (XSS) (CWE-79)
@@ -372,7 +372,7 @@ If a malicious share manifest contains JavaScript in the title field, it could b
 **How to Test:**
 Create a share with a malicious title and verify if it gets executed during manifest processing.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_e2e_streamingspects.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_e2e_streamingspects.py`
 ---
 
 ### 11. Improper Authentication (CWE-287)
@@ -397,7 +397,7 @@ If a test environment has a stale token in localStorage, the tests might use an 
 **How to Test:**
 Verify that token expiration is properly handled and that tests fail appropriately with expired tokens.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-287_e2e_streamingspects.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-287_e2e_streamingspects.py`
 ---
 
 ### 12. Improperly Controlled Modification of Dynamically-Determined Object Attributes (CWE-915)
@@ -422,7 +422,7 @@ If a malicious share configuration includes a crafted audienceId or collectionId
 **How to Test:**
 Test with malicious share configurations to verify proper validation of IDs and endpoints.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-915_e2e_streamingspects.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-915_e2e_streamingspects.py`
 ---
 
 ### 13. Cleartext Storage of Sensitive Information (CWE-312)
@@ -447,7 +447,7 @@ If the token is logged or stored in browser history, it could be retrieved by un
 **How to Test:**
 Verify that tokens are properly encoded and that sensitive information is not exposed in logs or browser history.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-312_e2e_streamingspects.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-312_e2e_streamingspects.py`
 ---
 
 ### 14. Use of Insecure or Weak Cryptographic Algorithms (CWE-1295)
@@ -472,7 +472,7 @@ If tokens are generated using weak random number generators, they could be predi
 **How to Test:**
 Verify that token generation uses strong cryptographic algorithms and that tokens are properly randomized.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-1295_e2e_streamingspects.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-1295_e2e_streamingspects.py`
 ---
 
 ### 15. Cross-Site Scripting (CWE-79)
@@ -499,7 +499,7 @@ If an API endpoint returns an error message containing '<script>alert(1)</script
 2. Observe if the script executes in the browser
 3. Test with payloads like '<img src=x onerror=alert(1)>' or '<script>alert(document.cookie)</script>'
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_System_Bridge_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_System_Bridge_indexjsx.py`
 ---
 
 ### 16. Cross-Site Scripting (CWE-79)
@@ -526,7 +526,7 @@ If the username is set to 'test<script>alert(1)</script>', the resulting URL wou
 2. Click 'Get Privileges' button
 3. Check if the script executes in the new tab or if URL is malformed
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_System_Info_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_System_Info_indexjsx.py`
 ---
 
 ### 17. Improper Input Validation (CWE-20)
@@ -554,7 +554,7 @@ If a user enters '99999' as the port, it will be saved as 99999, which is not a 
 3. Verify if the value is accepted without validation
 4. Check if the service fails to start with invalid port
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_System_Bridge_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_System_Bridge_indexjsx.py`
 ---
 
 ### 18. Improper Input Validation (CWE-20)
@@ -582,7 +582,7 @@ If a user enters '1000' as max_clients, it will be saved as 1000, which might be
 3. Verify if the value is accepted without validation
 4. Check if service behaves correctly with extreme values
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_System_Bridge_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_System_Bridge_indexjsx.py`
 ---
 
 ### 19. Cross-Site Request Forgery (CWE-352)
@@ -610,7 +610,7 @@ An attacker could create a malicious page with a hidden form that submits to the
 3. Check if CSRF tokens are included in these requests
 4. Attempt to forge requests using curl or browser developer tools
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Info_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Info_indexjsx.py`
 ---
 
 ### 20. Cross-Site Request Forgery (CWE-352)
@@ -638,7 +638,7 @@ An attacker could create a malicious page that automatically submits start/stop 
 3. Check if CSRF tokens are included in these requests
 4. Attempt to forge requests using curl or browser developer tools
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Bridge_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Bridge_indexjsx.py`
 ---
 
 ### 21. Cross-Site Request Forgery (CWE-352)
@@ -666,7 +666,7 @@ An attacker could create a malicious page that automatically refreshes the secur
 3. Check if CSRF tokens are included in these requests
 4. Attempt to forge refresh requests using curl or browser developer tools
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Security_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Security_indexjsx.py`
 ---
 
 ### 22. Improper Encoding or Escaping of Output (CWE-116)
@@ -693,7 +693,7 @@ If a client's IP address contains '<script>alert(1)</script>', this script would
 2. Observe if the script executes in the browser
 3. Test with payloads like '<img src=x onerror=alert(1)>' or '<script>alert(document.cookie)</script>'
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_System_Bridge_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_System_Bridge_indexjsx.py`
 ---
 
 ### 23. Improper Encoding or Escaping of Output (CWE-116)
@@ -720,7 +720,7 @@ If a security statistic value contains '<script>alert(1)</script>', this script 
 2. Observe if the script executes in the browser
 3. Test with payloads like '<img src=x onerror=alert(1)>' or '<script>alert(document.cookie)</script>'
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_System_Security_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_System_Security_indexjsx.py`
 ---
 
 ### 24. Improper Input Validation (CWE-20)
@@ -747,7 +747,7 @@ If an attacker sends a request with activePage = -5 or activePage = 'invalid', t
 2. Check if the component handles these values gracefully
 3. Verify if invalid page values cause errors or incorrect data display
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_System_Events_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_System_Events_indexjsx.py`
 ---
 
 ### 25. Improper Encoding or Escaping (CWE-116)
@@ -774,7 +774,7 @@ If event data contains special characters or encoding issues, the replacement mi
 2. Check if the hyphen replacement works correctly in all display contexts
 3. Verify encoding consistency across different browsers
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_System_Events_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_System_Events_indexjsx.py`
 ---
 
 ### 26. Cross-Site Request Forgery (CWE-352)
@@ -801,7 +801,7 @@ An attacker could create a page that automatically submits requests to the event
 2. Test if requests can be forged from external domains
 3. Verify if the API endpoint validates request origins or tokens
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Events_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_System_Events_indexjsx.py`
 ---
 
 ### 27. Use of Hard-coded Credentials (CWE-798)
@@ -828,7 +828,7 @@ If the mesh.getStats() API returns data with unexpected fields or malicious cont
 2. Check if the component handles malformed data gracefully
 3. Test with malicious data in the API response
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-798_src_components_System_Mesh_indexjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-798_src_components_System_Mesh_indexjsx.py`
 ---
 
 ### 28. Unknown (N/A)
@@ -853,7 +853,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
 ---
 
 ### 29. Unknown (N/A)
@@ -878,7 +878,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
 ---
 
 ### 30. Unknown (N/A)
@@ -903,7 +903,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
 ---
 
 ### 31. Unknown (N/A)
@@ -928,7 +928,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
 ---
 
 ### 32. Unknown (N/A)
@@ -953,7 +953,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
 ---
 
 ### 33. Cross-Site Request Forgery (CWE-352)
@@ -978,7 +978,7 @@ An attacker could create a malicious page with a hidden form that submits to the
 **How to Test:**
 1. Monitor network requests when deleting groups or removing members 2. Try to manually submit delete requests without proper CSRF tokens 3. Check if the application validates CSRF tokens for these operations
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_ShareGroups_ShareGroupsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_ShareGroups_ShareGroupsjsx.py`
 ---
 
 ### 34. Cross-Site Request Forgery (CWE-352)
@@ -1003,7 +1003,7 @@ An attacker could create a malicious page with a hidden form that submits to the
 **How to Test:**
 1. Monitor network requests when deleting contacts 2. Try to manually submit delete requests without proper CSRF tokens 3. Check if the application validates CSRF tokens for contact deletion
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_Contacts_Contactsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_Contacts_Contactsjsx.py`
 ---
 
 ### 35. Improper Input Validation (CWE-20)
@@ -1028,7 +1028,7 @@ If a user creates a group with a name containing special characters or control s
 **How to Test:**
 1. Try creating groups with various inputs including special characters, control sequences, and long strings 2. Check if the application validates group names for length, characters, and special sequences 3. Monitor API requests for malformed group names
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_ShareGroups_ShareGroupsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_ShareGroups_ShareGroupsjsx.py`
 ---
 
 ### 36. Improper Input Validation (CWE-20)
@@ -1053,7 +1053,7 @@ If a user adds a contact with a nickname containing special characters or contro
 **How to Test:**
 1. Try adding contacts with various nickname inputs including special characters, control sequences, and long strings 2. Check if the application validates nicknames for length, characters, and special sequences 3. Monitor API requests for malformed nicknames
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_Contacts_Contactsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_Contacts_Contactsjsx.py`
 ---
 
 ### 37. Improper Encoding or Escaping (CWE-116)
@@ -1078,7 +1078,7 @@ If a contact has a nickname like "<script>alert('XSS')</script>", the alert() fu
 **How to Test:**
 1. Add contacts with special characters in nicknames 2. Click 'View Members' for groups containing these contacts 3. Observe if special characters are properly escaped or if injection occurs
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_ShareGroups_ShareGroupsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_ShareGroups_ShareGroupsjsx.py`
 ---
 
 ### 38. Improper Encoding or Escaping (CWE-116)
@@ -1103,7 +1103,7 @@ If a contact has a nickname like "<script>alert('XSS')</script>", when displayed
 **How to Test:**
 1. Add contacts with special characters in nicknames 2. Navigate to Contacts page 3. Observe if special characters are properly escaped or if injection occurs
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_Contacts_Contactsjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_Contacts_Contactsjsx.py`
 ---
 
 ### 39. Use of Inconsistent Naming Conventions (CWE-1236)
@@ -1128,7 +1128,7 @@ When updating the VPN policy, the component uses 'privateServicePolicy' in the u
 **How to Test:**
 Examine how data flows between podDetail, vpnPolicy state, and the update call to verify consistency.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-1236_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-1236_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 40. Cross-site Scripting (XSS) (CWE-79)
@@ -1153,7 +1153,7 @@ If an attacker can control the 'hostPattern' field in allowed destinations, they
 **How to Test:**
 Test by adding service names or host patterns containing HTML/JS code and verify if it executes in the UI.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 41. Improper Input Validation (CWE-20)
@@ -1178,7 +1178,7 @@ If a user enters 'abc' in the 'maxMembers' field, 'Number.parseInt('abc', 10)' r
 **How to Test:**
 Enter non-numeric values in numeric input fields and verify how they're handled in the state and API calls.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 42. Insecure Data Storage (CWE-312)
@@ -1203,7 +1203,7 @@ A user with access to the VPN configuration page could inspect the component sta
 **How to Test:**
 Use browser developer tools to inspect component state and verify sensitive data exposure.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-312_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-312_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 43. Cross-Site Request Forgery (CSRF) (CWE-352)
@@ -1228,7 +1228,7 @@ If an attacker can get a user to visit a malicious page that triggers a VPN poli
 **How to Test:**
 Check if API calls in 'handleSavePolicy' include CSRF tokens or if the component implements CSRF protection.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 44. Cross-Site Scripting (CWE-79)
@@ -1253,7 +1253,7 @@ If a pod name contains '<script>alert("XSS")</script>' or a service name contain
 **How to Test:**
 1. Create a pod with a name containing XSS payload like 'TestPod<script>alert(1)</script>' 2. Navigate to the VPN Pods tab 3. Observe if the script executes 4. Also test with service names in forwarding status table
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_PortForwarding_PortForwardingjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-79_src_components_PortForwarding_PortForwardingjsx.py`
 ---
 
 ### 45. Improper Input Validation (CWE-20)
@@ -1278,7 +1278,7 @@ An attacker could input a destinationHost with special characters like '; rm -rf
 **How to Test:**
 1. Try creating a port forwarding rule with destinationHost containing semicolons or special shell characters 2. Try creating with destinationPort containing non-numeric characters 3. Check if backend services handle these inputs gracefully
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_PortForwarding_PortForwardingjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-20_src_components_PortForwarding_PortForwardingjsx.py`
 ---
 
 ### 46. Cross-Site Request Forgery (CWE-352)
@@ -1303,7 +1303,7 @@ An attacker could create a malicious page with a hidden form that submits to the
 **How to Test:**
 1. Monitor network requests when performing port forwarding operations 2. Check if any CSRF tokens are included in requests 3. Try to manually construct requests to the port forwarding endpoints without authentication tokens
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_PortForwarding_PortForwardingjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-352_src_components_PortForwarding_PortForwardingjsx.py`
 ---
 
 ### 47. Improper Encoding or Escaping (CWE-116)
@@ -1328,7 +1328,7 @@ If a pod name contains '<div onclick="alert(1)">Test</div>', this could be execu
 **How to Test:**
 1. Create pods with names containing HTML tags 2. Check if these tags are rendered as HTML elements or as plain text 3. Test with various HTML attributes and event handlers
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_PortForwarding_PortForwardingjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-116_src_components_PortForwarding_PortForwardingjsx.py`
 ---
 
 ## Low Severity Vulnerabilities
@@ -1355,7 +1355,7 @@ No PoC provided
 **How to Test:**
 No testing instructions
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_unknown_unknown.py`
 ---
 
 ### 2. Improper Output Neutralization for Logs (CWE-117)
@@ -1380,7 +1380,7 @@ If an API error message contains user-controlled data, it could include script t
 **How to Test:**
 Trigger API errors with user-controlled input and check console output for potential XSS in logs.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-117_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-117_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 3. Improper Limitation of a Pathname to a Restricted Directory (Path Traversal) (CWE-22)
@@ -1405,7 +1405,7 @@ If host patterns are used in file operations, a pattern like '../etc/passwd' cou
 **How to Test:**
 Test if host patterns are used in file operations or path construction and verify path traversal protection.
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-22_src_components_Pods_VpnGatewayConfigjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-22_src_components_Pods_VpnGatewayConfigjsx.py`
 ---
 
 ### 4. Path Traversal (CWE-22)
@@ -1430,12 +1430,12 @@ If destinationHost contains '../etc/passwd' and backend services use this value 
 **How to Test:**
 1. Test with destinationHost values containing path traversal sequences like '../' 2. Check backend service behavior with these inputs 3. Monitor file access patterns in backend services
 
-**PoC Script:** `/home/phantasm/git/zdfinder/security_reports/022526-web/security_pocs/poc_CWE-22_src_components_PortForwarding_PortForwardingjsx.py`
+**PoC Script:** `&lt;zdfinder-tool&gt;/security_reports/022526-web/security_pocs/poc_CWE-22_src_components_PortForwarding_PortForwardingjsx.py`
 ---
 
 ---
 
 ## Additional Notes
 
-Analyzed 52 chunks. Total vulnerabilities found: 129. Chunk 1: No security vulnerabilities found in the provided code chunk. This chunk contains configuration files (README.md, .nvmrc, craco.config.js, package.json, playwright.config.ts, .eslintrc.js) that primarily handle project setup, build configuration, and development tools. These files don't contain executable code that would introduce runtime security vulnerabilities such as SQL injection, XSS, or command injection. The configuration files appear to be well-structured with no hardcoded credentials, obvious input validation issues, or insecure patterns that would lead to security weaknesses at this level. | Chunk 2: {'total_vulnerabilities': 8, 'critical_severity': 0, 'high_severity': 2, 'medium_severity': 4, 'low_severity': 2, 'affected_packages': ['@babel/plugin-transform-async-generator-functions', '@babel/plugin-transform-arrow-functions']} | Chunk 3: {'total_vulnerabilities': 10, 'severity_distribution': {'low': 2, 'medium': 8}, 'affected_packages': ['@babel/runtime', '@babel/runtime-corejs3', 'regenerator-runtime', '@babel/traverse', '@babel/types', '@codemirror/autocomplete', '@codemirror/commands', '@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript'], 'risk_level': 'medium', 'recommendation': 'Update all affected packages to their latest versions and monitor for new security advisories'} | Chunk 4: Error calling Ollama: HTTPConnectionPool(host='192.168.1.151', port=11434): Read timed out. (read timeout=300) | Chunk 8: {'total_vulnerabilities': 7, 'critical_vulnerabilities': 0, 'high_vulnerabilities': 0, 'medium_vulnerabilities': 6, 'low_vulnerabilities': 1, 'affected_packages': ['es-abstract', 'es-iterator-helpers', 'es-set-tostringtag', 'es-get-iterator', 'es-array-method-boxes-properly', 'es-object-atoms', 'es-define-property']} | Chunk 10: {'total_vulnerabilities': 8, 'high_severity': 1, 'medium_severity': 4, 'low_severity': 3, 'critical_packages': ['fs-extra', 'form-data', 'combined-stream', 'mime-types']} | Chunk 12: {'total_vulnerabilities': 5, 'high_severity': 2, 'medium_severity': 2, 'low_severity': 1, 'affected_packages': ['jquery', 'js-yaml', 'jest-worker', 'jest-watch-typeahead'], 'risk_assessment': 'The most critical vulnerabilities are in jQuery and js-yaml packages, with potential for XSS and ReDoS attacks respectively. The Jest-related packages have medium to low severity issues that could impact test execution stability.'} | Chunk 14: {'total_vulnerabilities': 20, 'high_severity': 0, 'medium_severity': 12, 'low_severity': 8, 'affected_packages': 18, 'recommendation': 'Update all affected packages to their latest versions, particularly focusing on postcss-normalize, postcss-nested, postcss-selector-parser, and postcss-preset-env. Also, ensure all transitive dependencies are updated to address prototype pollution and ReDoS vulnerabilities.'} | Chunk 15: {'total_vulnerabilities': 42, 'critical': 0, 'high': 0, 'medium': 42, 'low': 0} | Chunk 16: {'total_vulnerabilities': 20, 'high_severity': 3, 'medium_severity': 10, 'low_severity': 7, 'packages_affected': 3, 'critical_fixes': 10} | Chunk 17: {'total_vulnerabilities': 8, 'high_severity': 3, 'medium_severity': 5, 'affected_packages': ['webpack', 'webpack-dev-middleware', 'webpack-dev-server', 'schema-utils', 'ajv', 'terser-webpack-plugin'], 'risk_assessment': 'High risk due to multiple vulnerabilities in core webpack development tools, including command injection, path traversal, and SSRF issues that could allow remote code execution.'} | Chunk 20: No security vulnerabilities were identified in the provided code chunk. The code consists primarily of end-to-end test files using Playwright for testing a web application. These tests focus on verifying policy enforcement, search functionality, and library ingestion behavior. The tests themselves don't contain executable code that would introduce security vulnerabilities like SQL injection, XSS, or command injection. The test files primarily interact with the application through HTTP requests and UI interactions, with no direct user input processing or database operations that could introduce security flaws. The code follows good practices with proper error handling, timeouts, and assertions, and there are no obvious security misconfigurations or vulnerable code patterns. | Chunk 22: This code contains several medium-severity vulnerabilities related to input validation, XSS potential, and improper data handling. The main concerns are around logging unvalidated data, API URL construction, array access without bounds checking, and JSON parsing without validation. While these aren't critical vulnerabilities, they could potentially be exploited or lead to application instability if not addressed. | Chunk 23: This test file contains several medium-severity vulnerabilities related to input validation, XSS, authentication, and token handling. While these are primarily in the test code rather than the production application, they could lead to test failures or security issues in the test environment. The most critical concern is the potential for XSS through dynamic JavaScript evaluation and improper handling of tokens in URL parameters. | Chunk 24: The codebase shows several potential security vulnerabilities ranging from IDOR and XSS to configuration mismanagement and state handling issues. While the application appears to be a modern React-based file sharing system with good UI components, there are areas that need attention to ensure robust security and stability. | Chunk 26: The codebase contains several security vulnerabilities including XSS, insecure data storage, missing input validation, and potential race conditions. The application needs better error handling, authentication, and data sanitization to prevent security breaches. | Chunk 27: The provided code contains several vulnerabilities across different components including security issues in the Jobs component, potential XSS vulnerabilities, and missing input validation. Key issues include hardcoded API keys, missing CSRF protection, improper error handling, and potential XSS in dynamic content rendering. | Chunk 28: This code analysis identified 9 security vulnerabilities across the three components. The main issues include multiple XSS vulnerabilities in error message handling and client data rendering, improper input validation for port and max_clients configuration fields, and CSRF vulnerabilities in critical operations like shutdown, restart, bridge control, and dashboard refresh. These vulnerabilities could lead to session hijacking, service disruption, and unauthorized operations. The most critical issues are the XSS vulnerabilities in error handling and client data display, which could allow attackers to execute malicious scripts in users' browsers. | Chunk 30: This code chunk contains several security vulnerabilities including XSS in the Events component due to improper handling of JSON data, potential CSRF issues, and input validation gaps. The Mesh component also has potential data sanitization concerns. These vulnerabilities could allow attackers to execute malicious scripts, manipulate data, or gain unauthorized access to system information. | Chunk 31: {'total_vulnerabilities': 7, 'critical': 0, 'high': 0, 'medium': 4, 'low': 3, 'components_affected': ['src/components/System/Network.jsx', 'src/components/System/Shares/ContentsModal.jsx']} | Chunk 32: {'total_vulnerabilities': 10, 'critical': 0, 'high': 0, 'medium': 9, 'low': 1, 'components_affected': ['LibraryHealth/index.jsx', 'src/components/System/Logs/index.jsx']} | Chunk 33: {'total_vulnerabilities': 10, 'critical': 0, 'high': 0, 'medium': 7, 'low': 3, 'recommendations': ['Implement comprehensive input validation and sanitization for all user inputs', 'Add proper access control checks for membership and pod operations', 'Standardize error handling patterns across all functions', 'Implement transactional guarantees for critical operations', 'Add confirmation dialogs for all critical operations']} | Chunk 36: {'total_vulnerabilities': 10, 'high_severity': 3, 'medium_severity': 6, 'low_severity': 1, 'overall_risk': 'HIGH'} | Chunk 39: No direct security vulnerabilities were found in the provided code chunk from src/components/System/MediaCore/index.jsx. This component appears to be a React component that displays signing statistics and supported hash algorithms. The code primarily handles UI rendering and displays data passed from props without performing any direct input processing, database operations, or external interactions that would introduce typical security vulnerabilities. The component uses React's built-in rendering mechanisms and doesn't contain any obvious injection points, hardcoded credentials, or direct data handling that would lead to security issues in this specific chunk. | Chunk 40: The code contains multiple XSS vulnerabilities due to improper escaping of user input, particularly in error messages and contact/group names. Additionally, there are CSRF vulnerabilities in delete operations and input validation issues in group and contact creation. These vulnerabilities could allow attackers to execute malicious code, modify data, or perform unauthorized actions. | Chunk 41: This component handles VPN gateway configuration for pods and contains several security considerations. The main vulnerabilities include potential XSS issues from direct rendering of user input, improper input validation that could lead to invalid numeric values, and potential CSRF vulnerabilities in the save functionality. The component also stores sensitive data in component state without proper access controls. While there are no critical vulnerabilities like SQL injection or command injection, the medium severity issues could compound to create more significant security problems, especially when combined with other components in the application. | Chunk 44: This component has several medium-severity 
+Analyzed 52 chunks. Total vulnerabilities found: 129. Chunk 1: No security vulnerabilities found in the provided code chunk. This chunk contains configuration files (README.md, .nvmrc, craco.config.js, package.json, playwright.config.ts, .eslintrc.js) that primarily handle project setup, build configuration, and development tools. These files don't contain executable code that would introduce runtime security vulnerabilities such as SQL injection, XSS, or command injection. The configuration files appear to be well-structured with no hardcoded credentials, obvious input validation issues, or insecure patterns that would lead to security weaknesses at this level. | Chunk 2: {'total_vulnerabilities': 8, 'critical_severity': 0, 'high_severity': 2, 'medium_severity': 4, 'low_severity': 2, 'affected_packages': ['@babel/plugin-transform-async-generator-functions', '@babel/plugin-transform-arrow-functions']} | Chunk 3: {'total_vulnerabilities': 10, 'severity_distribution': {'low': 2, 'medium': 8}, 'affected_packages': ['@babel/runtime', '@babel/runtime-corejs3', 'regenerator-runtime', '@babel/traverse', '@babel/types', '@codemirror/autocomplete', '@codemirror/commands', '@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript'], 'risk_level': 'medium', 'recommendation': 'Update all affected packages to their latest versions and monitor for new security advisories'} | Chunk 4: Error calling Ollama: HTTPConnectionPool(host='[REDACTED-LAN-IP]', port=11434): Read timed out. (read timeout=300) | Chunk 8: {'total_vulnerabilities': 7, 'critical_vulnerabilities': 0, 'high_vulnerabilities': 0, 'medium_vulnerabilities': 6, 'low_vulnerabilities': 1, 'affected_packages': ['es-abstract', 'es-iterator-helpers', 'es-set-tostringtag', 'es-get-iterator', 'es-array-method-boxes-properly', 'es-object-atoms', 'es-define-property']} | Chunk 10: {'total_vulnerabilities': 8, 'high_severity': 1, 'medium_severity': 4, 'low_severity': 3, 'critical_packages': ['fs-extra', 'form-data', 'combined-stream', 'mime-types']} | Chunk 12: {'total_vulnerabilities': 5, 'high_severity': 2, 'medium_severity': 2, 'low_severity': 1, 'affected_packages': ['jquery', 'js-yaml', 'jest-worker', 'jest-watch-typeahead'], 'risk_assessment': 'The most critical vulnerabilities are in jQuery and js-yaml packages, with potential for XSS and ReDoS attacks respectively. The Jest-related packages have medium to low severity issues that could impact test execution stability.'} | Chunk 14: {'total_vulnerabilities': 20, 'high_severity': 0, 'medium_severity': 12, 'low_severity': 8, 'affected_packages': 18, 'recommendation': 'Update all affected packages to their latest versions, particularly focusing on postcss-normalize, postcss-nested, postcss-selector-parser, and postcss-preset-env. Also, ensure all transitive dependencies are updated to address prototype pollution and ReDoS vulnerabilities.'} | Chunk 15: {'total_vulnerabilities': 42, 'critical': 0, 'high': 0, 'medium': 42, 'low': 0} | Chunk 16: {'total_vulnerabilities': 20, 'high_severity': 3, 'medium_severity': 10, 'low_severity': 7, 'packages_affected': 3, 'critical_fixes': 10} | Chunk 17: {'total_vulnerabilities': 8, 'high_severity': 3, 'medium_severity': 5, 'affected_packages': ['webpack', 'webpack-dev-middleware', 'webpack-dev-server', 'schema-utils', 'ajv', 'terser-webpack-plugin'], 'risk_assessment': 'High risk due to multiple vulnerabilities in core webpack development tools, including command injection, path traversal, and SSRF issues that could allow remote code execution.'} | Chunk 20: No security vulnerabilities were identified in the provided code chunk. The code consists primarily of end-to-end test files using Playwright for testing a web application. These tests focus on verifying policy enforcement, search functionality, and library ingestion behavior. The tests themselves don't contain executable code that would introduce security vulnerabilities like SQL injection, XSS, or command injection. The test files primarily interact with the application through HTTP requests and UI interactions, with no direct user input processing or database operations that could introduce security flaws. The code follows good practices with proper error handling, timeouts, and assertions, and there are no obvious security misconfigurations or vulnerable code patterns. | Chunk 22: This code contains several medium-severity vulnerabilities related to input validation, XSS potential, and improper data handling. The main concerns are around logging unvalidated data, API URL construction, array access without bounds checking, and JSON parsing without validation. While these aren't critical vulnerabilities, they could potentially be exploited or lead to application instability if not addressed. | Chunk 23: This test file contains several medium-severity vulnerabilities related to input validation, XSS, authentication, and token handling. While these are primarily in the test code rather than the production application, they could lead to test failures or security issues in the test environment. The most critical concern is the potential for XSS through dynamic JavaScript evaluation and improper handling of tokens in URL parameters. | Chunk 24: The codebase shows several potential security vulnerabilities ranging from IDOR and XSS to configuration mismanagement and state handling issues. While the application appears to be a modern React-based file sharing system with good UI components, there are areas that need attention to ensure robust security and stability. | Chunk 26: The codebase contains several security vulnerabilities including XSS, insecure data storage, missing input validation, and potential race conditions. The application needs better error handling, authentication, and data sanitization to prevent security breaches. | Chunk 27: The provided code contains several vulnerabilities across different components including security issues in the Jobs component, potential XSS vulnerabilities, and missing input validation. Key issues include hardcoded API keys, missing CSRF protection, improper error handling, and potential XSS in dynamic content rendering. | Chunk 28: This code analysis identified 9 security vulnerabilities across the three components. The main issues include multiple XSS vulnerabilities in error message handling and client data rendering, improper input validation for port and max_clients configuration fields, and CSRF vulnerabilities in critical operations like shutdown, restart, bridge control, and dashboard refresh. These vulnerabilities could lead to session hijacking, service disruption, and unauthorized operations. The most critical issues are the XSS vulnerabilities in error handling and client data display, which could allow attackers to execute malicious scripts in users' browsers. | Chunk 30: This code chunk contains several security vulnerabilities including XSS in the Events component due to improper handling of JSON data, potential CSRF issues, and input validation gaps. The Mesh component also has potential data sanitization concerns. These vulnerabilities could allow attackers to execute malicious scripts, manipulate data, or gain unauthorized access to system information. | Chunk 31: {'total_vulnerabilities': 7, 'critical': 0, 'high': 0, 'medium': 4, 'low': 3, 'components_affected': ['src/components/System/Network.jsx', 'src/components/System/Shares/ContentsModal.jsx']} | Chunk 32: {'total_vulnerabilities': 10, 'critical': 0, 'high': 0, 'medium': 9, 'low': 1, 'components_affected': ['LibraryHealth/index.jsx', 'src/components/System/Logs/index.jsx']} | Chunk 33: {'total_vulnerabilities': 10, 'critical': 0, 'high': 0, 'medium': 7, 'low': 3, 'recommendations': ['Implement comprehensive input validation and sanitization for all user inputs', 'Add proper access control checks for membership and pod operations', 'Standardize error handling patterns across all functions', 'Implement transactional guarantees for critical operations', 'Add confirmation dialogs for all critical operations']} | Chunk 36: {'total_vulnerabilities': 10, 'high_severity': 3, 'medium_severity': 6, 'low_severity': 1, 'overall_risk': 'HIGH'} | Chunk 39: No direct security vulnerabilities were found in the provided code chunk from src/components/System/MediaCore/index.jsx. This component appears to be a React component that displays signing statistics and supported hash algorithms. The code primarily handles UI rendering and displays data passed from props without performing any direct input processing, database operations, or external interactions that would introduce typical security vulnerabilities. The component uses React's built-in rendering mechanisms and doesn't contain any obvious injection points, hardcoded credentials, or direct data handling that would lead to security issues in this specific chunk. | Chunk 40: The code contains multiple XSS vulnerabilities due to improper escaping of user input, particularly in error messages and contact/group names. Additionally, there are CSRF vulnerabilities in delete operations and input validation issues in group and contact creation. These vulnerabilities could allow attackers to execute malicious code, modify data, or perform unauthorized actions. | Chunk 41: This component handles VPN gateway configuration for pods and contains several security considerations. The main vulnerabilities include potential XSS issues from direct rendering of user input, improper input validation that could lead to invalid numeric values, and potential CSRF vulnerabilities in the save functionality. The component also stores sensitive data in component state without proper access controls. While there are no critical vulnerabilities like SQL injection or command injection, the medium severity issues could compound to create more significant security problems, especially when combined with other components in the application. | Chunk 44: This component has several medium-severity 
 security vulnerabilities related to XSS, input validation, and CSRF protection. The most critical issue is the potential for XSS vulnerabilities due to direct rendering of user-provided data without proper sanitization. Additionally, the component lacks CSRF protection for critical operations and has insufficient input validation for destination host and port values. While the component doesn't directly handle file paths or complex backend operations, the user-provided data could be exploited in backend services that process these values. | Chunk 46: {'total_vulnerabilities': 9, 'high_severity': 1, 'medium_severity': 7, 'low_severity': 1, 'critical_issues': ['Insecure Direct Object Reference (IDOR) vulnerability in search result access', 'Client-side storage vulnerability due to lack of input validation']} | Chunk 48: {'total_vulnerabilities': 10, 'critical': 0, 'high': 0, 'medium': 4, 'low': 6, 'files_affected': 5} | Chunk 49: {'total_vulnerabilities': 8, 'critical': 0, 'high': 0, 'medium': 6, 'low': 2, 'files_affected': 6} | Chunk 50: {'total_vulnerabilities': 10, 'high_severity': 2, 'medium_severity': 5, 'low_severity': 3, 'critical_issues': ['Insecure Direct Object Reference in Pods API', 'Insecure Direct Object Reference in Identity API']} | Chunk 51: {'total_vulnerabilities': 10, 'severity_distribution': {'low': 3, 'medium': 7, 'high': 0}, 'files_affected': 6, 'categories_affected': 6} | Chunk 52: After analyzing the provided source code chunk containing Semantic UI theme configuration files, no direct security vulnerabilities were found. The files are primarily CSS/LESS variable override files that define styling parameters for various UI components. These files do not contain executable code that could lead to traditional security vulnerabilities like SQL injection, XSS, or command injection. The files are purely configuration files that would be processed during the build phase and do not directly handle user input or perform security-sensitive operations. All files are standard CSS/LESS configuration files with no evidence of hardcoded credentials, input validation issues, or security flaws in the code itself.

@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using slskd.DhtRendezvous;
+using slskd.DhtRendezvous.Security;
 using Xunit;
 
 public class MeshNeighborRegistryTests
@@ -21,7 +22,7 @@ public class MeshNeighborRegistryTests
     public async Task RegisterAsync_WhenOneNeighborAddedSubscriberThrows_StillInvokesRemainingSubscribers()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
-        var connection = CreateConnection("peer-1", "127.0.0.1", 5000);
+        await using var connection = CreateConnection("peer-1", "127.0.0.1", 5000);
 
         MeshOverlayConnection? observed = null;
         registry.NeighborAdded += (_, _) => throw new InvalidOperationException("boom");
@@ -40,7 +41,7 @@ public class MeshNeighborRegistryTests
     public async Task UnregisterAsync_WhenOneNeighborRemovedSubscriberThrows_StillInvokesRemainingSubscribers()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
-        var connection = CreateConnection("peer-1", "127.0.0.1", 5001);
+        await using var connection = CreateConnection("peer-1", "127.0.0.1", 5001);
 
         await registry.RegisterAsync(connection);
 
@@ -58,7 +59,7 @@ public class MeshNeighborRegistryTests
     public async Task RegisterAsync_WhenFirstNeighborSubscriberThrows_StillInvokesRemainingSubscribers()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
-        var connection = CreateConnection("peer-1", "127.0.0.1", 5002);
+        await using var connection = CreateConnection("peer-1", "127.0.0.1", 5002);
 
         MeshOverlayConnection? observed = null;
         registry.FirstNeighborConnected += (_, _) => throw new InvalidOperationException("boom");
@@ -77,8 +78,8 @@ public class MeshNeighborRegistryTests
     public async Task RegisterAsync_WhenOutboundArrivesForInboundPeer_KeepsBothDirections()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
-        var inbound = CreateConnection("peer-1", "127.0.0.1", 5100, isOutbound: false);
-        var outbound = CreateConnection("peer-1", "127.0.0.1", 5101, isOutbound: true);
+        await using var inbound = CreateConnection("peer-1", "127.0.0.1", 5100, isOutbound: false);
+        await using var outbound = CreateConnection("peer-1", "127.0.0.1", 5101, isOutbound: true);
 
         Assert.True(await registry.RegisterAsync(inbound));
         Assert.True(await registry.RegisterAsync(outbound));
@@ -98,8 +99,8 @@ public class MeshNeighborRegistryTests
     public async Task UnregisterAsync_WhenOneDirectionIsRemoved_DoesNotRemoveRemainingDirection()
     {
         await using var registry = new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance);
-        var inbound = CreateConnection("peer-1", "127.0.0.1", 5200, isOutbound: false);
-        var outbound = CreateConnection("peer-1", "127.0.0.1", 5201, isOutbound: true);
+        await using var inbound = CreateConnection("peer-1", "127.0.0.1", 5200, isOutbound: false);
+        await using var outbound = CreateConnection("peer-1", "127.0.0.1", 5201, isOutbound: true);
 
         Assert.True(await registry.RegisterAsync(inbound));
         Assert.True(await registry.RegisterAsync(outbound));
@@ -121,16 +122,31 @@ public class MeshNeighborRegistryTests
 
         SetField(connection, "_cts", new CancellationTokenSource());
         SetField(connection, "_tcpClient", new TcpClient());
-        SetField(connection, "_sslStream", new SslStream(new MemoryStream()));
-        SetBackingField(connection, "<ConnectionId>k__BackingField", $"conn-{port}");
-        SetBackingField(connection, "<RemoteEndPoint>k__BackingField", new IPEndPoint(IPAddress.Parse(address), port));
-        SetBackingField(connection, "<Username>k__BackingField", username);
-        SetBackingField(connection, "<IsOutbound>k__BackingField", isOutbound);
+        var sslStream = new SslStream(new MemoryStream());
+        SetField(connection, "_sslStream", sslStream);
+        SetField(connection, "_framer", new SecureMessageFramer(sslStream));
+        SetPropertyOrField(connection, "ConnectionId", $"conn-{port}");
+        SetPropertyOrField(connection, "RemoteEndPoint", new IPEndPoint(IPAddress.Parse(address), port));
+        SetPropertyOrField(connection, "Username", username);
+        SetPropertyOrField(connection, "IsOutbound", isOutbound);
 
         return connection;
     }
 
-    private static void SetBackingField(object target, string fieldName, object? value) => SetField(target, fieldName, value);
+    private static void SetPropertyOrField(object target, string memberName, object? value)
+    {
+        var property = target.GetType().GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (property?.GetSetMethod(true) is { } setMethod)
+        {
+            setMethod.Invoke(target, [value]);
+            return;
+        }
+
+        var field = target.GetType().GetField($"<{memberName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Member '{memberName}' was not found.");
+
+        field.SetValue(target, value);
+    }
 
     private static void SetField(object target, string fieldName, object? value)
     {

@@ -36,6 +36,8 @@ namespace slskd.Mesh
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh.Messages;
+    using slskd.Mesh.Overlay;
+    using slskd.Mesh.Transport;
     using Soulseek;
 
     /// <summary>
@@ -87,6 +89,14 @@ namespace slskd.Mesh
         private const string MeshMessagePrefix = "MESH:";
         private readonly IFlacKeyToPathResolver? _pathResolver;
         private readonly IProofOfPossessionService? _proofOfPossession;
+
+        // HARDENING-2026-04-20 H7: signing/verification for mesh hash entries. Optional: unit tests
+        // and agents running without overlay identity can still participate, they just emit/accept
+        // unsigned entries (subject to RequireSignedEntries).
+        private readonly IKeyStore? _keyStore;
+        private readonly Ed25519Signer? _entrySigner;
+        private readonly ConcurrentDictionary<string, byte> _unsignedPeersLogged = new(StringComparer.OrdinalIgnoreCase);
+
         private bool _disposed;
 
         /// <summary>
@@ -101,7 +111,9 @@ namespace slskd.Mesh
             IManagedState<State>? appState = null,
             IOptions<MeshSyncSecurityOptions>? syncSecurityOptions = null,
             IFlacKeyToPathResolver? pathResolver = null,
-            IProofOfPossessionService? proofOfPossession = null)
+            IProofOfPossessionService? proofOfPossession = null,
+            IKeyStore? keyStore = null,
+            Ed25519Signer? entrySigner = null)
         {
             this.hashDb = hashDb;
             this.capabilities = capabilities;
@@ -112,6 +124,8 @@ namespace slskd.Mesh
             _syncSecurityOptions = syncSecurityOptions;
             _pathResolver = pathResolver;
             _proofOfPossession = proofOfPossession;
+            _keyStore = keyStore;
+            _entrySigner = entrySigner;
             var o = syncSecurityOptions?.Value;
             _maxInvalidEntriesPerWindow = o?.MaxInvalidEntriesPerWindow ?? DefaultMaxInvalidEntriesPerWindow;
             _maxInvalidMessagesPerWindow = o?.MaxInvalidMessagesPerWindow ?? DefaultMaxInvalidMessagesPerWindow;
@@ -926,16 +940,38 @@ namespace slskd.Mesh
                 entryList = entryList.Take(maxEntries).ToList();
             }
 
+            var wireEntries = entryList.Select(e => new MeshHashEntry
+            {
+                SeqId = e.SeqId,
+                FlacKey = e.FlacKey,
+                ByteHash = e.ByteHash,
+                Size = e.Size,
+                MetaFlags = e.MetaFlags,
+            }).ToList();
+
+            // HARDENING-2026-04-20 H7: sign outbound entries with our overlay identity so peers can
+            // pin (flac_key, byte_hash, size) tuples to our self-certifying peer id. Skipped silently
+            // if the overlay key store / Ed25519 signer isn't registered (unit-test paths and agents
+            // without an overlay identity) — receivers will treat those as unsigned legacy entries.
+            if (_keyStore != null && _entrySigner != null)
+            {
+                var kp = _keyStore.Current;
+                foreach (var entry in wireEntries)
+                {
+                    try
+                    {
+                        MeshHashEntrySigner.Sign(entry, kp.PrivateKey, kp.PublicKey, _entrySigner);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warning(ex, "[MESH] Failed to sign hash entry {Key}; emitting unsigned", entry.FlacKey);
+                    }
+                }
+            }
+
             return new MeshPushDeltaMessage
             {
-                Entries = entryList.Select(e => new MeshHashEntry
-                {
-                    SeqId = e.SeqId,
-                    FlacKey = e.FlacKey,
-                    ByteHash = e.ByteHash,
-                    Size = e.Size,
-                    MetaFlags = e.MetaFlags,
-                }).ToList(),
+                Entries = wireEntries,
                 LatestSeqId = hashDb.CurrentSeqId,
                 HasMore = hasMore,
             };
@@ -1008,6 +1044,36 @@ namespace slskd.Mesh
                     log.Debug("[MESH] Skipping entry with negative SeqId from {Peer}: {SeqId}", fromUser, entry.SeqId);
                     skipped++;
                     continue;
+                }
+
+                // HARDENING-2026-04-20 H7: verify per-entry Ed25519 signature.
+                // - Present + valid → accept.
+                // - Present + invalid → always drop (forged or corrupted).
+                // - Absent → drop if RequireSignedEntries=true; otherwise log once-per-peer and accept.
+                var requireSigned = _syncSecurityOptions?.Value?.RequireSignedEntries == true;
+                if (MeshHashEntrySigner.HasSignature(entry))
+                {
+                    if (_entrySigner == null
+                        || !MeshHashEntrySigner.TryVerify(entry, _entrySigner, out _))
+                    {
+                        log.Warning("[MESH] Dropping entry {Key} from {Peer}: signature invalid", entry.FlacKey, fromUser);
+                        skipped++;
+                        lock (statsLock) { stats.SignatureVerificationFailures++; }
+                        continue;
+                    }
+                }
+                else if (requireSigned)
+                {
+                    log.Warning("[MESH] Dropping unsigned entry {Key} from {Peer}: RequireSignedEntries=true", entry.FlacKey, fromUser);
+                    skipped++;
+                    continue;
+                }
+                else if (_unsignedPeersLogged.TryAdd(fromUser, 0))
+                {
+                    log.Warning(
+                        "[MESH] Accepting unsigned hash entries from {Peer}. Upgrade both peers and set " +
+                        "Mesh.SyncSecurity.RequireSignedEntries=true to enforce (HARDENING-2026-04-20 H7).",
+                        fromUser);
                 }
 
                 validatedEntries.Add(new HashDbEntry

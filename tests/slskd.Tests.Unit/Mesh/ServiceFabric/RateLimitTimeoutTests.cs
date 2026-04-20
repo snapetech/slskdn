@@ -59,13 +59,21 @@ public class RateLimitTimeoutTests
         public Task<(NetworkStream Stream, string? ConnectedIP)> ConnectAsync(string host, int port, IReadOnlyList<string> resolvedIPs, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var c = new TcpClient();
-            // Use synchronous connect to bypass the async I/O subsystem. Under heavy parallel
-            // test load, async TCP completions can be delayed 10+ seconds even for loopback;
-            // synchronous Socket.Connect returns as soon as the kernel accepts the SYN.
-            c.Client.Connect("127.0.0.1", _port);
-            var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
-            return Task.FromResult<(NetworkStream, string?)>((c.GetStream(), ip));
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                // Use synchronous connect to bypass the async I/O subsystem. Under heavy parallel
+                // test load, async TCP completions can be delayed 10+ seconds even for loopback;
+                // synchronous Socket.Connect returns as soon as the kernel accepts the SYN.
+                socket.Connect("127.0.0.1", _port);
+                var ip = resolvedIPs.Count > 0 ? resolvedIPs[0] : "127.0.0.1";
+                return Task.FromResult<(NetworkStream, string?)>((new NetworkStream(socket, ownsSocket: true), ip));
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
         }
     }
 
@@ -108,7 +116,7 @@ public class RateLimitTimeoutTests
     [Fact]
     public async Task OpenTunnel_ConcurrentTunnelsPerPeerWithinLimit_Accepted()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
         var service = CreateServiceForOpenTunnelSuccess(new TestTunnelConnectivity(port));
@@ -137,8 +145,7 @@ public class RateLimitTimeoutTests
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload!);
         Assert.True(response?.Accepted == true);
         // Sync connect already put the connection in the kernel backlog; accept it synchronously.
-        listener.AcceptTcpClient().Dispose();
-        listener.Stop();
+        using var acceptedClient = listener.AcceptTcpClient();
     }
 
     [Fact]
@@ -213,7 +220,7 @@ public class RateLimitTimeoutTests
     [Fact]
     public async Task OpenTunnel_NewTunnelsRateLimitWithinLimits_Accepted()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
         var service = CreateServiceForOpenTunnelSuccess(new TestTunnelConnectivity(port));
@@ -242,8 +249,7 @@ public class RateLimitTimeoutTests
         var response = JsonSerializer.Deserialize<slskd.Mesh.ServiceFabric.Services.OpenTunnelResponse>(result.Payload!);
         Assert.True(response?.Accepted == true);
         // Sync connect already put the connection in the kernel backlog; accept it synchronously.
-        listener.AcceptTcpClient().Dispose();
-        listener.Stop();
+        using var acceptedClient = listener.AcceptTcpClient();
     }
 
     [Fact]

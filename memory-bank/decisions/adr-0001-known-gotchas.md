@@ -82,6 +82,57 @@ Assert.True(service.TryCancel(transferId));
 
 **Why This Keeps Happening**: These tests exercise asynchronous transfer orchestration, but `EnqueueAsync()` returning does not guarantee the background download worker has already registered a visible transfer row or reached a cancellable wait. Cancelling before the worker has definitely started makes the test depend on scheduler timing instead of on the behavior it claims to verify.
 
+### 0z94. Disposable Test Stores Should Use `using` in Unit Tests
+
+**The Bug**: Several unit tests in the MultiSource planner suite allocated `InMemoryCatalogueStore` without disposal, which triggered CA2000 warnings and could retain in-memory resources across long test runs.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Planning/MultiSourcePlannerTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Integration/VirtualSoulfindV2IntegrationTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Integration/CompleteV2FlowTests.cs`
+- `tests/slskd.Tests.Unit/VirtualSoulfind/v2/Matching/SimpleMatchEngineTests.cs`
+
+**Wrong**:
+```csharp
+var catalogueStore = new InMemoryCatalogueStore();
+```
+
+**Correct**:
+```csharp
+using var catalogueStore = new InMemoryCatalogueStore();
+```
+
+**Why This Keeps Happening**: Some test fixture objects implement `IDisposable`, but they are easy to miss during iterative test additions and refactors; without `using`, warnings are suppressed by test teardown and resource ownership becomes unclear. Explicit disposal keeps analyzer health clean and avoids cross-test side effects.
+
+### 0z95. `MeshOverlayConnection` Created via Reflection Needs Internal Framer for Async Disposal
+
+**The Bug**: In tests that build `MeshOverlayConnection` via `RuntimeHelpers.GetUninitializedObject` and then dispose those instances with `await using`, test teardown can throw `NullReferenceException` because private disposal fields (especially `_framer`) were not initialized.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/DhtRendezvous/MeshNeighborRegistryTests.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/MeshNeighborPeerSyncServiceTests.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/MeshOverlayRequestRouterTests.cs`
+
+**Wrong**:
+```csharp
+var connection = (MeshOverlayConnection)RuntimeHelpers.GetUninitializedObject(typeof(MeshOverlayConnection));
+SetField(connection, "_cts", new CancellationTokenSource());
+SetField(connection, "_sslStream", new SslStream(...));
+await using var registryConnection = connection;
+```
+
+**Correct**:
+```csharp
+var connection = (MeshOverlayConnection)RuntimeHelpers.GetUninitializedObject(typeof(MeshOverlayConnection));
+var sslStream = new SslStream(...);
+SetField(connection, "_cts", new CancellationTokenSource());
+SetField(connection, "_sslStream", sslStream);
+SetField(connection, "_framer", new SecureMessageFramer(sslStream));
+await using var registryConnection = connection;
+```
+
+**Why This Keeps Happening**: `GetUninitializedObject` skips constructor logic, so any disposal path still expects internal state to be initialized in test-created instances. If async disposal is added to those tests, missing fields become runtime failures even if object behavior in assertions is otherwise unchanged.
+
 ### 0z92. Soulseek Timer-Reset Write Loop Races Must Be Classified Too, Not Just Read Loops
 
 **The Bug**: After classifying the `Soulseek.Extensions.Reset(Timer)` teardown race for `ReadInternalAsync`/`MessageConnection.ReadContinuouslyAsync`, live `kspls0` logs still emitted fake `[FATAL] Unobserved task exception` entries from the same third-party timer-reset `NullReferenceException` occurring in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The process kept running, but the logs still looked like a fatal crash.

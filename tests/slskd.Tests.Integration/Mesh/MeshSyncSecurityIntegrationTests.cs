@@ -60,7 +60,7 @@ public class MeshSyncSecurityIntegrationTests
         var mockSigner = new Mock<IMeshMessageSigner>();
 
         var rep = reputation ?? new PeerReputation(Mock.Of<ILogger<PeerReputation>>());
-        var svc = new MeshSyncService(
+        using var svc = new MeshSyncService(
             mockHashDb.Object,
             mockCapabilities.Object,
             mockSoulseek.Object,
@@ -130,7 +130,7 @@ public class MeshSyncSecurityIntegrationTests
         var mockCap = new Mock<ICapabilityService>();
         mockCap.Setup(c => c.VersionString).Returns("1.0.0");
         mockSigner.Setup(s => s.VerifyMessage(It.IsAny<MeshMessage>())).Returns(false);
-        var svc2 = new MeshSyncService(
+        using var svc2 = new MeshSyncService(
             mockHashDb.Object,
             mockCap.Object,
             Mock.Of<ISoulseekClient>(),
@@ -159,7 +159,7 @@ public class MeshSyncSecurityIntegrationTests
         mockHashDb.Setup(h => h.GetStats()).Returns(new HashDbStats { TotalHashEntries = 1000 });
         var mockCap = new Mock<ICapabilityService>();
         mockCap.Setup(c => c.VersionString).Returns("1.0.0");
-        var svc2 = new MeshSyncService(
+        using var svc2 = new MeshSyncService(
             mockHashDb.Object,
             mockCap.Object,
             Mock.Of<ISoulseekClient>(),

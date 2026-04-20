@@ -78,7 +78,7 @@ public class SoulseekProtocolParserAdditionalTests
     public async Task ReadMessageAsync_Should_Handle_Invalid_Length()
     {
         // Arrange - Create stream with invalid length (too large)
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
         var invalidLength = 10 * 1024 * 1024; // 10MB (exceeds max)
         var lengthBytes = BitConverter.GetBytes(invalidLength);
         stream.Write(lengthBytes, 0, 4);
@@ -106,7 +106,7 @@ public class SoulseekProtocolParserAdditionalTests
             }
         };
         var payload = parser.BuildSearchResponse(12345, files);
-        var stream = new MemoryStream();
+        using var stream = new MemoryStream();
 
         // Act
         await parser.WriteMessageAsync(stream, messageType, payload);

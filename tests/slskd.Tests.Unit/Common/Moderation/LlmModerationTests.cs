@@ -146,7 +146,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         public async Task HttpLlmModerationProvider_IsAvailable_RequiresConfiguration()
         {
             // Arrange
-            var httpClient = new HttpClient();
+            using var httpClient = new HttpClient();
             var optionsMock = new Mock<IOptionsMonitor<LlmModerationOptions>>();
             var loggerMock = new Mock<ILogger<HttpLlmModerationProvider>>();
 
@@ -157,7 +157,7 @@ namespace slskd.Tests.Unit.Common.Moderation
                 Endpoint = string.Empty // Missing endpoint
             });
 
-            var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
+            using var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
 
             // Assert
             Assert.False(provider.IsAvailable);
@@ -169,7 +169,7 @@ namespace slskd.Tests.Unit.Common.Moderation
                 ApiKey = string.Empty // Missing API key
             });
 
-            var provider2 = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
+            using var provider2 = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
 
             // Assert
             Assert.False(provider2.IsAvailable);
@@ -179,7 +179,7 @@ namespace slskd.Tests.Unit.Common.Moderation
         public void HttpLlmModerationProvider_CanHandleSupportedContentTypes()
         {
             // Arrange
-            var httpClient = new HttpClient();
+            using var httpClient = new HttpClient();
             var optionsMock = new Mock<IOptionsMonitor<LlmModerationOptions>>();
             optionsMock.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions
             {
@@ -188,7 +188,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             });
             var loggerMock = new Mock<ILogger<HttpLlmModerationProvider>>();
 
-            var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
+            using var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
 
             // Act & Assert
             Assert.True(provider.CanHandleContentType(LlmModeration.ContentType.Text));
@@ -206,7 +206,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             handler.SetupResponse(req => req.RequestUri?.ToString().Contains("/chat/completions") == true,
                 HttpStatusCode.InternalServerError, "Internal Server Error");
 
-            var httpClient = new HttpClient(handler);
+            using var httpClient = new HttpClient(handler);
             var optionsMock = new Mock<IOptionsMonitor<LlmModerationOptions>>();
             optionsMock.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions
             {
@@ -216,7 +216,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             });
             var loggerMock = new Mock<ILogger<HttpLlmModerationProvider>>();
 
-            var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
+            using var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
 
             var request = new LlmModerationRequest
             {
@@ -248,7 +248,7 @@ namespace slskd.Tests.Unit.Common.Moderation
                 HttpStatusCode.OK,
                 "{\"choices\":[{\"message\":{\"content\":\"not-json\"}}]}");
 
-            var httpClient = new HttpClient(handler);
+            using var httpClient = new HttpClient(handler);
             var optionsMock = new Mock<IOptionsMonitor<LlmModerationOptions>>();
             optionsMock.Setup(x => x.CurrentValue).Returns(new LlmModerationOptions
             {
@@ -258,7 +258,7 @@ namespace slskd.Tests.Unit.Common.Moderation
             });
             var loggerMock = new Mock<ILogger<HttpLlmModerationProvider>>();
 
-            var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
+            using var provider = new HttpLlmModerationProvider(httpClient, optionsMock.Object, loggerMock.Object);
 
             var response = await provider.ModerateAsync(new LlmModerationRequest
             {

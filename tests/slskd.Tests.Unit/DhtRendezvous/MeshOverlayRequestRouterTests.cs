@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using slskd.DhtRendezvous;
+using slskd.DhtRendezvous.Security;
 using slskd.DhtRendezvous.Messages;
 using Xunit;
 
@@ -21,7 +22,7 @@ public class MeshOverlayRequestRouterTests
     public async Task RemoveMeshSearchResponse_WhenRequestWasRegistered_CancelsPendingTask()
     {
         var router = new MeshOverlayRequestRouter();
-        var connection = CreateConnection("conn-1");
+        await using var connection = CreateConnection("conn-1");
 
         var pending = router.WaitForMeshSearchResponseAsync(connection, "req-1", CancellationToken.None);
 
@@ -35,7 +36,7 @@ public class MeshOverlayRequestRouterTests
     public async Task RemoveConnection_WhenRequestsArePending_CancelsAllPendingTasks()
     {
         var router = new MeshOverlayRequestRouter();
-        var connection = CreateConnection("conn-1");
+        await using var connection = CreateConnection("conn-1");
 
         var first = router.WaitForMeshSearchResponseAsync(connection, "req-1", CancellationToken.None);
         var second = router.WaitForMeshSearchResponseAsync(connection, "req-2", CancellationToken.None);
@@ -52,15 +53,30 @@ public class MeshOverlayRequestRouterTests
 
         SetField(connection, "_cts", new CancellationTokenSource());
         SetField(connection, "_tcpClient", new TcpClient());
-        SetField(connection, "_sslStream", new SslStream(new MemoryStream()));
-        SetBackingField(connection, "<ConnectionId>k__BackingField", connectionId);
-        SetBackingField(connection, "<RemoteEndPoint>k__BackingField", new IPEndPoint(IPAddress.Loopback, 5000));
-        SetBackingField(connection, "<Username>k__BackingField", "peer-1");
+        var sslStream = new SslStream(new MemoryStream());
+        SetField(connection, "_sslStream", sslStream);
+        SetField(connection, "_framer", new SecureMessageFramer(sslStream));
+        SetPropertyOrField(connection, "ConnectionId", connectionId);
+        SetPropertyOrField(connection, "RemoteEndPoint", new IPEndPoint(IPAddress.Loopback, 5000));
+        SetPropertyOrField(connection, "Username", "peer-1");
 
         return connection;
     }
 
-    private static void SetBackingField(object target, string fieldName, object? value) => SetField(target, fieldName, value);
+    private static void SetPropertyOrField(object target, string memberName, object? value)
+    {
+        var property = target.GetType().GetProperty(memberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (property?.GetSetMethod(true) is { } setMethod)
+        {
+            setMethod.Invoke(target, [value]);
+            return;
+        }
+
+        var field = target.GetType().GetField($"<{memberName}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException($"Member '{memberName}' was not found.");
+
+        field.SetValue(target, value);
+    }
 
     private static void SetField(object target, string fieldName, object? value)
     {

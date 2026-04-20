@@ -120,7 +120,7 @@ internal class StaticOptionsSnapshot : IOptionsSnapshot<slskd.Options>
 
 internal class StubSecurityService : ISecurityService
 {
-    public JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null) =>
+    public JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[] scopes = null) =>
         new JwtSecurityToken(
             issuer: "test",
             audience: "test",
@@ -133,8 +133,8 @@ internal class StubSecurityService : ISecurityService
 
     public bool AuthenticateAdminCredentials(string username, string password) => true;
 
-    public (string Name, Role Role) AuthenticateWithApiKey(string key, IPAddress callerIpAddress) =>
-        ("test", Role.Administrator);
+    public (string Name, Role Role, string[] Scopes) AuthenticateWithApiKey(string key, IPAddress callerIpAddress) =>
+        ("test", Role.Administrator, new[] { SlskdClaims.ScopeAll });
 
     public void RevokeToken(string jti)
     {

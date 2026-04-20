@@ -23,7 +23,7 @@ public class SearchServiceLifecycleTests
     {
         using var service = CreateService();
         var searchId = Guid.NewGuid();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         GetCancellationTokens(service)[searchId] = cts;
 
@@ -39,8 +39,8 @@ public class SearchServiceLifecycleTests
         var service = CreateService();
         var firstId = Guid.NewGuid();
         var secondId = Guid.NewGuid();
-        var firstCts = new CancellationTokenSource();
-        var secondCts = new CancellationTokenSource();
+        using var firstCts = new CancellationTokenSource();
+        using var secondCts = new CancellationTokenSource();
         var tracked = GetCancellationTokens(service);
         tracked[firstId] = firstCts;
         tracked[secondId] = secondCts;

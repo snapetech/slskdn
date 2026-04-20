@@ -17,7 +17,7 @@ namespace slskd.Tests.Unit.Common.Moderation
     /// <summary>
     ///     Tests for T-MCP-LM03: ExternalModerationClientFactory.
     /// </summary>
-    public class ExternalModerationClientFactoryTests
+    public class ExternalModerationClientFactoryTests : IDisposable
     {
         private readonly Mock<IHttpClientFactory> _httpClientFactoryMock = new();
         private readonly Mock<IOptionsMonitor<ExternalModerationOptions>> _optionsMock = new();
@@ -25,10 +25,11 @@ namespace slskd.Tests.Unit.Common.Moderation
         private readonly Mock<ILogger<LocalExternalModerationClient>> _localLoggerMock = new();
         private readonly Mock<ILogger<RemoteExternalModerationClient>> _remoteLoggerMock = new();
         private readonly Mock<ILogger<ExternalModerationClientFactory.NoopExternalModerationClient>> _noopLoggerMock = new();
+        private readonly HttpClient _httpClient = new();
 
         public ExternalModerationClientFactoryTests()
         {
-            _httpClientFactoryMock.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+            _httpClientFactoryMock.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
             _loggerFactoryMock
                 .Setup(x => x.CreateLogger(It.Is<string>(s => s.Contains("Local"))))
@@ -49,6 +50,11 @@ namespace slskd.Tests.Unit.Common.Moderation
                 _httpClientFactoryMock.Object,
                 _optionsMock.Object,
                 _loggerFactoryMock.Object);
+        }
+
+        public void Dispose()
+        {
+            _httpClient.Dispose();
         }
 
         [Theory]
@@ -173,5 +179,4 @@ namespace slskd.Tests.Unit.Common.Moderation
         }
     }
 }
-
 

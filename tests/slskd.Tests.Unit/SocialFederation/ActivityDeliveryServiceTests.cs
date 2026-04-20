@@ -21,15 +21,18 @@ public class ActivityDeliveryServiceTests
     [Fact]
     public void Constructor_WithSmallHourlyLimit_DoesNotThrow()
     {
-        var ex = Record.Exception(() => CreateService(maxActivitiesPerHour: 2));
-
-        Assert.Null(ex);
+        var (service, httpClient) = CreateService(maxActivitiesPerHour: 2);
+        using var serviceDisposable = service;
+        using var _ = httpClient;
+        Assert.NotNull(service);
     }
 
     [Fact]
     public void IsRateLimited_WithMultipleRecentDeliveriesForSameInbox_RespectsConfiguredLimit()
     {
-        using var service = CreateService(maxActivitiesPerHour: 2);
+        var (service, httpClient) = CreateService(maxActivitiesPerHour: 2);
+        using var serviceDisposable = service;
+        using var _ = httpClient;
         var recordDelivery = typeof(ActivityDeliveryService).GetMethod("RecordDelivery", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var isRateLimited = typeof(ActivityDeliveryService).GetMethod("IsRateLimited", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
@@ -41,9 +44,8 @@ public class ActivityDeliveryServiceTests
         Assert.True(limited);
     }
 
-    private static ActivityDeliveryService CreateService(int maxActivitiesPerHour)
+    private static (ActivityDeliveryService Service, HttpClient HttpClient) CreateService(int maxActivitiesPerHour)
     {
-        var httpClient = new HttpClient();
         var federationOptions = CreateOptions(new SocialFederationOptions
         {
             BaseUrl = "https://local.example",
@@ -54,13 +56,14 @@ public class ActivityDeliveryServiceTests
             DeliveryTimeoutSeconds = 30,
             MaxDeliveryRetries = 0,
         });
+        var httpClient = new HttpClient();
 
-        return new ActivityDeliveryService(
+        return (new ActivityDeliveryService(
             httpClient,
             federationOptions,
             publishingOptions,
             Mock.Of<IActivityPubKeyStore>(),
-            Mock.Of<ILogger<ActivityDeliveryService>>());
+            Mock.Of<ILogger<ActivityDeliveryService>>()), httpClient);
     }
 
     private static IOptionsMonitor<T> CreateOptions<T>(T value)
