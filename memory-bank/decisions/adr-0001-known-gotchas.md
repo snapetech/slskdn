@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z90. Restarted TCP Overlay Listeners Need ReuseAddress Before Binding
+
+**The Bug**: After a clean `systemctl restart` on a live node, `MeshOverlayServer` sometimes failed to rebind port `50305` with `SocketException (98): Address already in use`, even though no other process remained listening on that port by the time the node was inspected. The result was a degraded node that could connect out but could not announce or accept inbound TCP mesh overlay traffic after restart.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+
+**Wrong**:
+```csharp
+_listener = new TcpListener(IPAddress.Any, ListenPortConfig);
+_listener.Start();
+```
+
+**Correct**:
+```csharp
+_listener = new TcpListener(IPAddress.Any, ListenPortConfig);
+_listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+_listener.Start();
+```
+
+**Why This Keeps Happening**: Restart testing often focuses on process lifetime and logs, not on the kernel socket state left behind by a just-closed listener that recently handled live traffic. On Linux, a rapid restart can still collide with the old listener's lingering socket state unless the replacement listener opts into address reuse before binding. If a port must come back immediately after shutdown, set the socket option explicitly instead of assuming the default `TcpListener` behavior will be restart-safe.
+
 ### 0z89. Cached QUIC Connections Must Be Explicitly Disposed On Replacement, Failure, And Host Shutdown
 
 **The Bug**: The QUIC overlay/data clients cached `QuicConnection` instances in dictionaries, but when a connect race created duplicates, or when `OpenOutboundStreamAsync`/send failed and the connection was removed from the cache, the underlying `QuicConnection` was not disposed. The QUIC hosted services also did not explicitly close/drain active connections on stop. That leaves native MsQuic handles alive longer than intended and can destabilize long-running hosts in ways that only surface as native crashes or core dumps.
