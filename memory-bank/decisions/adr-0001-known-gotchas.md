@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z79. Shutdown Cancellation Must Not Use Disposed Transfer Services
+
+**The Bug**: Live `kspls0` validation of a clean `systemctl restart` showed active downloads cancelling during shutdown, then logging global semaphore release warnings and `ObjectDisposedException` while trying to fail/update transfers after the DI provider was already disposing. Shutdown cancellation is expected, but the download observers treated it like a normal transfer failure and kept touching database/services.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+catch (OperationCanceledException ex)
+{
+    Log.Error(ex, "Task for download ... did not complete successfully");
+    TryFail(transferId, exception: ex);
+}
+```
+
+**Correct**:
+```csharp
+catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+{
+    Log.Debug(ex, "Download task cancelled during shutdown");
+}
+```
+
+**Why This Keeps Happening**: User-requested transfer cancellation and host shutdown both surface as `OperationCanceledException`, but they need different cleanup semantics. User cancellation should mark a transfer cancelled; host shutdown should stop background work quietly and leave incomplete records for normal startup recovery. During shutdown, the service provider and semaphores may already be disposing, so failure paths must avoid database updates, event publication, and semaphore disposal races.
+
 ### 0z78. Service SIGTERM Must Stop The Host, Not Exit 1
 
 **The Bug**: Live `kspls0` manual deployments showed `systemctl restart slskd` logging `Received SIGTERM`, `[FATAL] ProcessExit event fired`, and `Main process exited, code=exited, status=1/FAILURE`. `Application` registered POSIX signal handlers that treated normal service stop/restart signals as fatal and called `Environment.Exit(1)`.
