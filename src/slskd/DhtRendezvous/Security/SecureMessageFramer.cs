@@ -8,7 +8,6 @@ namespace slskd.DhtRendezvous.Security;
 using System;
 using System.Buffers.Binary;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,29 +70,8 @@ public sealed class SecureMessageFramer : IDisposable
     /// <exception cref="ProtocolViolationException">If message is invalid.</exception>
     public async Task<T> ReadMessageAsync<T>(CancellationToken cancellationToken = default)
     {
-        // Step 1: Read 4-byte length header
-        var headerBuffer = new byte[HeaderSize];
-        await ReadExactlyAsync(headerBuffer, cancellationToken);
+        var buffer = await ReadPayloadAsync(cancellationToken).ConfigureAwait(false);
 
-        // Step 2: Parse length (big-endian)
-        var length = BinaryPrimitives.ReadInt32BigEndian(headerBuffer);
-
-        // Step 3: VALIDATE length BEFORE allocating buffer
-        if (length < MinMessageSize)
-        {
-            throw new ProtocolViolationException($"Message too small: {length} < {MinMessageSize}");
-        }
-
-        if (length > MaxMessageSize)
-        {
-            throw new ProtocolViolationException($"Message too large: {length} > {MaxMessageSize}");
-        }
-
-        // Step 4: Now safe to allocate and read
-        var buffer = new byte[length];
-        await ReadExactlyAsync(buffer, cancellationToken);
-
-        // Step 5: Deserialize JSON
         try
         {
             var message = JsonSerializer.Deserialize<T>(buffer, _jsonOptions);
@@ -114,22 +92,7 @@ public sealed class SecureMessageFramer : IDisposable
     /// Read raw message bytes (for when you need to determine message type first).
     /// </summary>
     public async Task<byte[]> ReadRawMessageAsync(CancellationToken cancellationToken = default)
-    {
-        var headerBuffer = new byte[HeaderSize];
-        await ReadExactlyAsync(headerBuffer, cancellationToken);
-
-        var length = BinaryPrimitives.ReadInt32BigEndian(headerBuffer);
-
-        if (length < MinMessageSize || length > MaxMessageSize)
-        {
-            throw new ProtocolViolationException($"Invalid message length: {length}");
-        }
-
-        var buffer = new byte[length];
-        await ReadExactlyAsync(buffer, cancellationToken);
-
-        return buffer;
-    }
+        => await ReadPayloadAsync(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// Deserialize raw bytes to a specific message type.
@@ -204,6 +167,86 @@ public sealed class SecureMessageFramer : IDisposable
     public void Dispose()
     {
         _writeLock.Dispose();
+    }
+
+    private async Task<byte[]> ReadPayloadAsync(CancellationToken cancellationToken)
+    {
+        var headerBuffer = new byte[HeaderSize];
+        await ReadExactlyAsync(headerBuffer, cancellationToken).ConfigureAwait(false);
+
+        if (headerBuffer[0] == (byte)'{')
+        {
+            return await ReadUnframedJsonPayloadAsync(headerBuffer, cancellationToken).ConfigureAwait(false);
+        }
+
+        var length = BinaryPrimitives.ReadInt32BigEndian(headerBuffer);
+
+        if (length < MinMessageSize)
+        {
+            throw new ProtocolViolationException($"Message too small: {length} < {MinMessageSize}");
+        }
+
+        if (length > MaxMessageSize)
+        {
+            throw new ProtocolViolationException($"Message too large: {length} > {MaxMessageSize}");
+        }
+
+        var buffer = new byte[length];
+        await ReadExactlyAsync(buffer, cancellationToken).ConfigureAwait(false);
+
+        return buffer;
+    }
+
+    private async Task<byte[]> ReadUnframedJsonPayloadAsync(byte[] prefix, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[MaxMessageSize];
+        Buffer.BlockCopy(prefix, 0, buffer, 0, prefix.Length);
+        var length = prefix.Length;
+
+        while (true)
+        {
+            if (IsCompleteJsonObject(buffer.AsSpan(0, length)))
+            {
+                var payload = new byte[length];
+                Buffer.BlockCopy(buffer, 0, payload, 0, length);
+                return payload;
+            }
+
+            if (length >= MaxMessageSize)
+            {
+                throw new ProtocolViolationException($"Unframed JSON message too large: {length} >= {MaxMessageSize}");
+            }
+
+            var read = await _stream.ReadAsync(buffer.AsMemory(length, 1), cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                throw new EndOfStreamException("Connection closed while reading unframed JSON message");
+            }
+
+            length += read;
+        }
+    }
+
+    private static bool IsCompleteJsonObject(ReadOnlySpan<byte> data)
+    {
+        try
+        {
+            var reader = new Utf8JsonReader(data, isFinalBlock: true, state: default);
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                return false;
+            }
+
+            while (reader.Read())
+            {
+            }
+
+            return reader.BytesConsumed == data.Length;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
