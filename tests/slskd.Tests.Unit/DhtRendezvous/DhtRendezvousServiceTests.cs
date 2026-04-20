@@ -79,6 +79,62 @@ public class DhtRendezvousServiceTests
         Assert.False(peer.SupportsOnionRouting);
     }
 
+    [Fact]
+    public async Task OnPeersFound_WhenCandidateUsesConfiguredDhtPort_IgnoresEndpoint()
+    {
+        var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+
+        var service = new DhtRendezvousService(
+            NullLogger<DhtRendezvousService>.Instance,
+            Mock.Of<IMeshOverlayServer>(),
+            connector.Object,
+            new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
+            peerManager,
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+                OverlayPort = 50305,
+                DhtPort = 50306,
+            });
+
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.15:50306"));
+        await Task.Delay(100);
+
+        connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Never);
+        Assert.Equal(0, service.DiscoveredPeerCount);
+        Assert.Equal(0, peerManager.GetStatistics().TotalPeers);
+    }
+
+    [Fact]
+    public async Task OnPeersFound_WhenOverlayAndDhtPortsMatch_DoesNotFilterCandidate()
+    {
+        var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+        connector
+            .Setup(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()))
+            .ReturnsAsync(0);
+
+        var service = new DhtRendezvousService(
+            NullLogger<DhtRendezvousService>.Instance,
+            Mock.Of<IMeshOverlayServer>(),
+            connector.Object,
+            new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
+            peerManager,
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+                OverlayPort = 50305,
+                DhtPort = 50305,
+            });
+
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.16:50305"));
+        await Task.Delay(100);
+
+        connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Once);
+        Assert.Equal(1, service.DiscoveredPeerCount);
+    }
+
     private static void InvokeOnPeersFound(DhtRendezvousService service, PeersFoundEventArgs eventArgs)
     {
         var method = typeof(DhtRendezvousService).GetMethod("OnPeersFound", BindingFlags.Instance | BindingFlags.NonPublic)

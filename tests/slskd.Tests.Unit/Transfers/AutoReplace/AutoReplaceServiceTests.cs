@@ -20,6 +20,7 @@ using Soulseek;
 using Xunit;
 using SearchFile = slskd.Search.File;
 using SearchModel = slskd.Search.Search;
+using SlskdOptions = slskd.Options;
 
 public class AutoReplaceServiceTests
 {
@@ -90,7 +91,7 @@ public class AutoReplaceServiceTests
             Mock.Of<ITransferService>(),
             searchService.Object,
             Mock.Of<ISoulseekClient>(),
-            Mock.Of<IOptionsMonitor<Options>>(),
+            Mock.Of<IOptionsMonitor<SlskdOptions>>(),
             rankingService.Object,
             searchCompletionTimeout: TimeSpan.FromMilliseconds(50),
             searchPollInterval: TimeSpan.FromMilliseconds(1));

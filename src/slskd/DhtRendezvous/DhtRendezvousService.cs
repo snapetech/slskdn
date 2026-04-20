@@ -479,6 +479,15 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 var endpoint = new IPEndPoint(ip, uri.Port);
                 var endpointKey = $"{ip}:{uri.Port}";
 
+                if (IsLikelyDhtContactPort(endpoint.Port, _options.DhtPort, _options.OverlayPort))
+                {
+                    _logger.LogDebug(
+                        "Ignoring DHT rendezvous candidate {Endpoint} because it uses the configured DHT UDP port, not the TCP overlay port {OverlayPort}",
+                        OverlayLogSanitizer.Endpoint(endpoint),
+                        _options.OverlayPort);
+                    continue;
+                }
+
                 // SECURITY: Cap discovered peers to prevent memory exhaustion
                 if (_discoveredPeers.Count >= MaxDiscoveredPeers)
                 {
@@ -585,6 +594,13 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         }
 
         return !lastAttempt.HasValue || now - lastAttempt.Value >= reconnectInterval;
+    }
+
+    internal static bool IsLikelyDhtContactPort(int candidatePort, int dhtPort, int overlayPort)
+    {
+        return dhtPort > 0 &&
+               candidatePort == dhtPort &&
+               candidatePort != overlayPort;
     }
 
     private void OnDhtStateChanged(object? sender, EventArgs e)
