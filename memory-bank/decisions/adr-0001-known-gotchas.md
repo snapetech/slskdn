@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z70. Overlay Keepalive Must Not Read Outside The Message Loop
+
+**The Bug**: Live `kspls0` manual build testing still dropped a mesh neighbor around the two-minute keepalive window with `Protocol violation ... Invalid message length: 2065855609` after a mesh search had been sent. `MeshOverlayServer.HandleMessagesAsync(...)` called `connection.PingAsync(...)`, and `PingAsync` wrote a ping then performed its own direct read for a `PongMessage`. That creates a second read path outside the normal dispatcher and can consume or race unrelated overlay frames on the same TLS stream.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayConnection.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+
+**Wrong**:
+```csharp
+if (connection.NeedsKeepalive())
+{
+    var rtt = await connection.PingAsync(cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+if (connection.NeedsKeepalive())
+{
+    await connection.SendKeepalivePingAsync(cancellationToken);
+}
+
+// The normal message loop remains the only reader and handles pong frames.
+case OverlayMessageType.Pong:
+    break;
+```
+
+**Why This Keeps Happening**: Request/response helpers are tempting for keepalive logic, but persistent overlay sockets already have a long-lived dispatcher reading the stream. Any second reader can steal the next frame, deserialize the wrong message shape, or desynchronize the protocol when it overlaps with mesh search or service traffic. Keepalive on persistent overlay sockets should write only; all inbound frames must flow through the single message loop.
+
 ### 0z69. Test Code Must Alias `slskd.Options` When Importing `Microsoft.Extensions.Options`
 
 **The Bug**: `AutoReplaceServiceTests` imported `Microsoft.Extensions.Options` and then used `Mock.Of<IOptionsMonitor<Options>>()`. In that scope, `Options` resolved to `Microsoft.Extensions.Options.Options` (a static helper type) instead of the application `slskd.Options`, so a later full test build failed with `CS0718: 'Options': static types cannot be used as type arguments`.
