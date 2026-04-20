@@ -52,6 +52,45 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z96. React Hook Order Must Not Change Across Conditional Render Paths
+
+**The Bug**: Moving `useEffect` after an early `return` introduced different hook counts between loading and loaded renders in `Network`, which caused `Rendered more hooks than during previous render` and unstable component behavior in production.
+
+**Files Affected**:
+- `src/web/src/components/System/Network/index.jsx`
+
+**Wrong**:
+```jsx
+if (loading) {
+  return <LoaderSegment />;
+}
+
+useEffect(() => {
+  setShowDhtExposureConsent(
+    config?.data?.profile?.exposure?.isFirstRun &&
+      !config?.data?.profile?.exposure?.accepted &&
+      hasDhtExposure
+  );
+}, [/* deps... */]);
+```
+
+**Correct**:
+```jsx
+useEffect(() => {
+  setShowDhtExposureConsent(
+    config?.data?.profile?.exposure?.isFirstRun &&
+      !config?.data?.profile?.exposure?.accepted &&
+      hasDhtExposure
+  );
+}, [/* deps... */]);
+
+if (loading) {
+  return <LoaderSegment />;
+}
+```
+
+**Why This Keeps Happening**: React hook order is strictly positional, so any conditional return or branch before hook declarations can silently flip hook execution order. After refactors that add early exits, we can accidentally move hooks below conditionals, so every render path must be linted for stable hook sequencing and ordering.
+
 ### 0z93. Cancellation-Path Download Tests Must Wait Until The Transfer Exists Before Cancelling
 
 **The Bug**: `DownloadServiceTests.EnqueueAsync_CancelledTransfer_DoesNotFailFromDisposedBatchSemaphore` passed locally in isolation but failed in Release CI because the test cancelled the transfer immediately after `EnqueueAsync()` returned, then waited for `service.Find(...)` to show a completed transfer. On slower or differently ordered runs, cancellation could land before the background download path had actually materialized the transfer into the service state, so the test timed out waiting for a row that had never become observable in that window.
