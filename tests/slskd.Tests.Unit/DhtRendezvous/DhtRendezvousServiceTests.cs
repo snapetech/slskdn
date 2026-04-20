@@ -5,6 +5,7 @@
 namespace slskd.Tests.Unit.DhtRendezvous;
 
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -227,6 +228,44 @@ public class DhtRendezvousServiceTests
         connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Once);
     }
 
+    [Fact]
+    public async Task OnPeersFound_WhenConnectorCapacityIsFull_DefersExtraCandidatesWithoutCountingAttempts()
+    {
+        var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+        var pendingConnection = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        connector
+            .Setup(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()))
+            .Returns(pendingConnection.Task);
+
+        var service = new DhtRendezvousService(
+            NullLogger<DhtRendezvousService>.Instance,
+            Mock.Of<IMeshOverlayServer>(),
+            connector.Object,
+            new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
+            peerManager,
+            new DhtRendezvousOptions { Enabled = true });
+
+        InvokeOnPeersFound(
+            service,
+            CreatePeersFoundEventArgs(
+                "ipv4://203.0.113.20:50305",
+                "ipv4://203.0.113.21:50305",
+                "ipv4://203.0.113.22:50305",
+                "ipv4://203.0.113.23:50305"));
+
+        await WaitForAsync(
+            () => service.GetStats().TotalConnectionsAttempted == DhtRendezvousService.MaxConcurrentPeerConnectionAttempts,
+            TimeSpan.FromSeconds(1));
+
+        connector.Verify(
+            x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()),
+            Times.Exactly(DhtRendezvousService.MaxConcurrentPeerConnectionAttempts));
+        Assert.Equal(DhtRendezvousService.MaxConcurrentPeerConnectionAttempts, service.GetStats().TotalConnectionsAttempted);
+
+        pendingConnection.SetResult(0);
+    }
+
     [Theory]
     [InlineData(true, false, false, false, false)]
     [InlineData(false, true, false, false, false)]
@@ -275,10 +314,24 @@ public class DhtRendezvousServiceTests
         attempts[peerId] = lastAttempt;
     }
 
-    private static PeersFoundEventArgs CreatePeersFoundEventArgs(string connectionUri)
+    private static async Task WaitForAsync(Func<bool> predicate, TimeSpan timeout)
+    {
+        var startedAt = DateTimeOffset.UtcNow;
+        while (!predicate())
+        {
+            if (DateTimeOffset.UtcNow - startedAt > timeout)
+            {
+                throw new TimeoutException("Timed out waiting for condition.");
+            }
+
+            await Task.Delay(10);
+        }
+    }
+
+    private static PeersFoundEventArgs CreatePeersFoundEventArgs(params string[] connectionUris)
     {
         var infoHash = InfoHash.FromMemory(SHA1.HashData(Encoding.UTF8.GetBytes("slskdn-mesh-v1")));
-        var peers = new List<PeerInfo> { new(new Uri(connectionUri)) };
+        var peers = connectionUris.Select(uri => new PeerInfo(new Uri(uri))).ToList();
         return new PeersFoundEventArgs(infoHash, peers);
     }
 }

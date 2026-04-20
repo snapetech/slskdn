@@ -48,6 +48,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private readonly ConcurrentDictionary<string, DateTimeOffset> _peerConnectionAttemptedAt = new();
     private readonly ConcurrentDictionary<string, byte> _pendingPeerConnections = new();
     private const int MaxDiscoveredPeers = 1000;
+    internal const int MaxConcurrentPeerConnectionAttempts = MeshOverlayConnector.MaxConcurrentAttempts;
     private static readonly TimeSpan PeerReconnectInterval = TimeSpan.FromMinutes(5);
     private DateTimeOffset? _lastAnnounceTime;
     private DateTimeOffset? _lastDiscoveryTime;
@@ -515,6 +516,16 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         var now = DateTimeOffset.UtcNow;
         var peer = _peerManager.GetPeer(peerId);
         _peerConnectionAttemptedAt.TryGetValue(peerId, out var lastAttempt);
+
+        if (_pendingPeerConnections.Count >= MaxConcurrentPeerConnectionAttempts)
+        {
+            _logger.LogDebug(
+                "Deferring DHT peer connection to {Endpoint}; {PendingCount}/{MaxPending} rendezvous attempts are already pending",
+                OverlayLogSanitizer.Endpoint(endpoint),
+                _pendingPeerConnections.Count,
+                MaxConcurrentPeerConnectionAttempts);
+            return;
+        }
 
         if (!ShouldRetryPeerConnection(
                 now,
