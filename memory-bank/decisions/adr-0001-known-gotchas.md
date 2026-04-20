@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z81. Service Interface Changes Must Update Test Doubles In Smoke Projects
+
+**The Bug**: The `build-main-0.24.5-slskdn.160` tag build failed in CI during release-gate integration smoke compilation because `StubDownloadService` in the integration test host still implemented the old `IDownloadService` surface after `ShutdownAsync(CancellationToken)` was added for shutdown draining.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+- `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs`
+
+**Wrong**:
+```csharp
+internal sealed class StubDownloadService : IDownloadService
+{
+    public bool TryFail(Guid id, Exception exception) => false;
+    public void Update(Transfer transfer) { ... }
+    public void Dispose() { }
+}
+```
+
+**Correct**:
+```csharp
+internal sealed class StubDownloadService : IDownloadService
+{
+    public bool TryFail(Guid id, Exception exception) => false;
+    public Task ShutdownAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public void Update(Transfer transfer) { ... }
+    public void Dispose() { }
+}
+```
+
+**Why This Keeps Happening**: Interface additions compile cleanly in the main app and unit tests if those projects use the concrete implementation, but release-smoke and integration harnesses often register lightweight stubs that are only compiled in CI slices. Any public service interface change must be followed by a repo-wide search for `: I<InterfaceName>` test doubles and smoke-host adapters, then validated with the exact Release smoke commands used by packaging scripts.
+
 ### 0z80. Shutdown Must Tolerate SoulseekClient Disconnect Races
 
 **The Bug**: Live `kspls0` restart validation on `manual.37a745af5` showed `Application.StopAsync()` hitting `SoulseekClient.Disconnect("Shutting down", ...)`, then logging `Application terminated unexpectedly` with `InvalidOperationException: Sequence contains no elements` from `Soulseek.Extensions.RemoveAndDisposeAll`. The service still stopped and restarted, but the shutdown path emitted a false fatal because the third-party client raced its internal connection dictionaries during disconnect.
