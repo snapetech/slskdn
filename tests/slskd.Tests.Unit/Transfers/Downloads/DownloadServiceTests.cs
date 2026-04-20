@@ -273,6 +273,93 @@ public class DownloadServiceTests
     }
 
     [Fact]
+    public async Task ShutdownAsync_WaitsForCancelledDownloadsToDrain()
+    {
+        var databasePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<TransfersDbContext>()
+            .UseSqlite($"Data Source={databasePath}")
+            .Options;
+
+        await using (var context = new TransfersDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+
+        var cancellationObserved = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .SetupGet(client => client.Downloads)
+            .Returns(Array.Empty<Soulseek.Transfer>());
+        soulseekClient
+            .Setup(client => client.DownloadAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Func<Task<Stream>>>(),
+                It.IsAny<long?>(),
+                It.IsAny<long>(),
+                It.IsAny<int?>(),
+                It.IsAny<TransferOptions>(),
+                It.IsAny<CancellationToken?>()))
+            .Returns(async (
+                string username,
+                string remoteFilename,
+                Func<Task<Stream>> outputStreamFactory,
+                long? size,
+                long startOffset,
+                int? token,
+                TransferOptions transferOptions,
+                CancellationToken? cancellationToken) =>
+            {
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, cancellationToken ?? CancellationToken.None);
+                    return null!;
+                }
+                catch (OperationCanceledException)
+                {
+                    cancellationObserved.TrySetResult();
+                    await Task.Delay(150);
+                    throw;
+                }
+            });
+
+        var service = new DownloadService(
+            new TestOptionsMonitor<slskd.Options>(new slskd.Options()),
+            soulseekClient.Object,
+            new TestDbContextFactory(options),
+            new FileService(new TestOptionsMonitor<slskd.Options>(new slskd.Options())),
+            Mock.Of<IRelayService>(),
+            Mock.Of<IFTPService>(),
+            new EventBus(new EventService(Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<EventsDbContext>>())));
+
+        try
+        {
+            var (enqueued, failed) = await service.EnqueueAsync(
+                "alice",
+                new[] { (Filename: @"Music\track.flac", Size: 1234L) },
+                CancellationToken.None);
+
+            Assert.Single(enqueued);
+            Assert.Empty(failed);
+
+            SetApplicationShuttingDown(true);
+            await service.ShutdownAsync(CancellationToken.None);
+
+            Assert.True(cancellationObserved.Task.IsCompleted);
+        }
+        finally
+        {
+            SetApplicationShuttingDown(false);
+            service.Dispose();
+
+            if (System.IO.File.Exists(databasePath))
+            {
+                System.IO.File.Delete(databasePath);
+            }
+        }
+    }
+
+    [Fact]
     public void Dispose_UnsubscribesClockMinuteHandler()
     {
         var optionsMonitor = new TestOptionsMonitor<slskd.Options>(new slskd.Options());

@@ -128,6 +128,13 @@ namespace slskd.Transfers.Downloads
         /// </summary>
         /// <param name="transfer">The transfer to update.</param>
         void Update(Transfer transfer);
+
+        /// <summary>
+        ///     Cancels active downloads and waits for in-flight background tasks to unwind.
+        /// </summary>
+        /// <param name="cancellationToken">A token used to stop waiting for shutdown drain completion.</param>
+        /// <returns>A task representing the shutdown drain operation.</returns>
+        Task ShutdownAsync(CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -182,6 +189,8 @@ namespace slskd.Transfers.Downloads
         ///     or we risk transfers getting stuck with no way for users to get rid of them.
         /// </summary>
         private ConcurrentDictionary<Guid, CancellationTokenSource> CancellationTokens { get; } = new ConcurrentDictionary<Guid, CancellationTokenSource>();
+        private ConcurrentDictionary<Guid, Task> ActiveDownloadTasks { get; } = new ConcurrentDictionary<Guid, Task>();
+        private ConcurrentDictionary<Guid, Task> ActiveEnqueueTasks { get; } = new ConcurrentDictionary<Guid, Task>();
         private ISoulseekClient Client { get; }
         private IDbContextFactory<TransfersDbContext> ContextFactory { get; }
         private IFTPService FTP { get; }
@@ -239,15 +248,28 @@ namespace slskd.Transfers.Downloads
 
             Clock.EveryMinute -= _cleanupEnqueueSemaphoresHandler;
 
-            foreach (var cancellationTokenSource in CancellationTokens.Values)
-            {
-                cancellationTokenSource.Cancel();
-            }
-
-            CancellationTokens.Clear();
+            CancelActiveTransfers();
 
             EnqueueSemaphores.Clear();
             _disposed = true;
+        }
+
+        public async Task ShutdownAsync(CancellationToken cancellationToken = default)
+        {
+            CancelActiveTransfers();
+
+            var activeTasks = ActiveEnqueueTasks.Values
+                .Concat(ActiveDownloadTasks.Values)
+                .Distinct()
+                .ToArray();
+
+            if (activeTasks.Length == 0)
+            {
+                return;
+            }
+
+            Log.Debug("Waiting for {Count} active download tasks to drain during shutdown", activeTasks.Length);
+            await Task.WhenAll(activeTasks).WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -479,7 +501,10 @@ namespace slskd.Transfers.Downloads
 
                         Log.Debug("Scheduling Task for enqueue of {Filename} from {Username}", file.Filename, username);
 
-                        var downloadEnqueueTask = ObserveDownloadEnqueueTaskAsync(Task.Run(async () =>
+                        var downloadEnqueueTask = TrackTransferTask(
+                            ActiveEnqueueTasks,
+                            transferId,
+                            ObserveDownloadEnqueueTaskAsync(Task.Run(async () =>
                         {
                             Log.Debug("Awaiting download enqueue semaphore for {Filename} from {Username}", transfer.Filename, transfer.Username);
                             await enqueueSemaphore.WaitAsync(cts.Token);
@@ -527,11 +552,14 @@ namespace slskd.Transfers.Downloads
 
                                 Log.Debug("Scheduling Task for download of {Filename} from {Username}", transfer.Filename, transfer.Username);
 
-                                var downloadTask = ObserveDownloadTaskAsync(
-                                    Task.Run(() => DownloadAsync(transfer, stateChanged, cancellationToken: cts.Token)),
+                                var downloadTask = TrackTransferTask(
+                                    ActiveDownloadTasks,
                                     transferId,
-                                    file.Filename,
-                                    username);
+                                    ObserveDownloadTaskAsync(
+                                        Task.Run(() => DownloadAsync(transfer, stateChanged, cancellationToken: cts.Token)),
+                                        transferId,
+                                        file.Filename,
+                                        username));
 
                                 Log.Debug("Download Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadTask.Status);
 
@@ -566,9 +594,9 @@ namespace slskd.Transfers.Downloads
                                 ReleaseSemaphore(enqueueSemaphore, "download enqueue", transfer.Filename, transfer.Username);
                             }
                         }, cancellationToken: cts.Token),
-                            transferId,
-                            file.Filename,
-                            username);
+                                transferId,
+                                file.Filename,
+                                username));
 
                         Log.Debug("Download enqueue Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadEnqueueTask.Status);
                         Log.Information("Successfully locally enqueued download of {Filename} from {Username} (id: {Id})", file.Filename, username, transferId);
@@ -1351,6 +1379,27 @@ namespace slskd.Transfers.Downloads
             {
                 Log.Debug(ex, "Skipped releasing disposed semaphore for {Operation} of {Filename} from {Username} during shutdown", operation, filename, username);
             }
+        }
+
+        private void CancelActiveTransfers()
+        {
+            foreach (var cancellationTokenSource in CancellationTokens.Values)
+            {
+                cancellationTokenSource.Cancel();
+            }
+
+            CancellationTokens.Clear();
+        }
+
+        private Task TrackTransferTask(ConcurrentDictionary<Guid, Task> taskMap, Guid transferId, Task task)
+        {
+            taskMap[transferId] = task;
+            _ = task.ContinueWith(
+                _ => taskMap.TryRemove(transferId, out _),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+            return task;
         }
 
         private async Task CleanupEnqueueSemaphoresAsync()

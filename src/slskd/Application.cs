@@ -732,6 +732,7 @@ namespace slskd
 
             Clock.Stop();
 
+            await Transfers.Downloads.ShutdownAsync(cancellationToken).ConfigureAwait(false);
             Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
             Client.Dispose();
             foreach (var registration in _posixSignalRegistrations)
