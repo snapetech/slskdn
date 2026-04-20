@@ -68,6 +68,19 @@
   1. Commit and push the remaining code/test changes if you want the admin-audit fixes on `origin/main`.
   2. If you want another broad product sweep, rerun the full top-level/admin-panel Playwright crawl against this build and then triage any deeper workflow bugs that remain beyond the original hard failures.
 
+## Update 2026-04-20 04:05:00Z
+
+- Current task: None. The failed `build-main-0.24.5-slskdn.161` tag regression is fixed locally and the release gate is green again.
+- Last activity:
+  - pulled the raw `Build on Tag #228` job logs and confirmed the failure was the Release-only `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` timing out again in CI, not a packaging or product regression
+  - documented the recurring startup/cancellation race in ADR-0001 and committed that docs-only entry as `22df366c6`
+  - hardened the shutdown-drain test so it waits for the mocked download worker to actually start before invoking shutdown, verifies shutdown stays blocked until drain completion is permitted, then awaits shutdown completion directly
+  - revalidated with the exact local release gate: the targeted Release test passed, a `5`-run Release loop of that exact test passed, `bash packaging/scripts/run-release-gate.sh` passed, and `bash ./bin/lint` passed
+- Next steps:
+  1. Commit and push the remaining test/doc updates.
+  2. Move the failed `build-main-0.24.5-slskdn.161` tag to the fixed commit or cut `build-main-0.24.5-slskdn.162` if you want the cleanest retry path.
+  3. Watch the next tag build specifically for the `Release Gate` job; that was the only failing segment on `#228`.
+
 ## Update 2026-04-20 01:52:00Z
 
 - Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.

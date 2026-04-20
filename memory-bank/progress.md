@@ -6615,3 +6615,15 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`: passed
   - `git diff --check`: passed
   - manual disposable-node verification on `http://127.0.0.1:5040`: `/`, `/searches`, `/pods`, `/system/info`, and `/system/mediacore` all loaded without page errors; authenticated `/api/v0/pods` returned `200`; a burst of `25` authenticated `/api/v0/session` requests stayed `200`; repeated browser navigation produced no `429`; first-run share bootstrap logged recreate/scan without a fake corruption exception
+
+## 2026-04-20 04:05:00Z
+
+- Investigated the failed tag build `build-main-0.24.5-slskdn.161` and pulled the raw GitHub Actions logs for `Build on Tag #228`.
+- Root cause was still the Release-only unit test `slskd.Tests.Unit.Transfers.Downloads.DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`, but with a narrower race than before: the test called `ShutdownAsync()` right after `EnqueueAsync()` and assumed the mocked `DownloadAsync()` worker had already reached its cancellable wait. On a loaded Release runner the worker sometimes had not started yet, so the test blocked forever waiting for a cancellation callback that never fired.
+- Documented that recurring pattern in ADR-0001 (`0z87. Shutdown-Drain Tests Must Gate On Worker Start Before Expecting Cancellation`) and committed it as `22df366c6`.
+- Hardened the test to wait for an explicit `downloadStarted` signal from the mocked download worker, start `ShutdownAsync()` only after that point, assert shutdown is still blocked until the worker is allowed to finish draining, then release the drain gate and await the shutdown task itself.
+- Validation:
+  - targeted Release test: passed
+  - targeted Release test loop (`5` consecutive runs): passed
+  - `bash packaging/scripts/run-release-gate.sh`: passed end to end
+  - `bash ./bin/lint`: passed
