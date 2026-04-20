@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed QUIC runtime gating so mesh QUIC services and direct-QUIC self-descriptors are enabled only when the current runtime/native MsQuic stack reports both connection and listener support, rather than assuming every Linux/macOS/Windows host has working QUIC.
 - Fixed AudioSketch ffmpeg detection so the default `FfmpegPath: ffmpeg` resolves through `PATH` instead of being rejected by `File.Exists("ffmpeg")`, removing repeated false missing-ffmpeg warnings and allowing sketch hashes on hosts with ffmpeg installed normally.
 - Downgraded another expected Soulseek peer teardown shape from fake fatal telemetry: unobserved `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync` now falls into the expected network-churn classifier.
 - Fixed a DHT startup race where a temporary overlay-port bind probe could decide the node was not beacon-capable during a fast restart, leaving TCP overlay `50305` offline until the next service restart. The real overlay listener start now determines beacon capability directly.

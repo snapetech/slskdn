@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Quic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -211,7 +210,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         var endpoints = new List<TransportEndpoint>();
 
         // Add direct QUIC endpoint only when the running host can actually accept QUIC.
-        if (ShouldAdvertiseDirectTransport(transportOptions.EnableDirect, transportOptions.Tor.PrivacyModeNoClearnetAdvertise, QuicConnection.IsSupported))
+        if (ShouldAdvertiseDirectTransport(transportOptions.EnableDirect, transportOptions.Tor.PrivacyModeNoClearnetAdvertise, QuicRuntime.IsAvailable()))
         {
             foreach (var host in DetectNetworkHosts())
             {

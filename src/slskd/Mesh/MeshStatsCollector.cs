@@ -7,7 +7,6 @@ namespace slskd.Mesh;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
-using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -54,7 +53,7 @@ public class MeshStatsCollector : IMeshStatsCollector
             ResolveInMemoryDhtClient(serviceProvider));
 #pragma warning disable CA1416 // Runtime OS guards already gate QUIC-only service resolution.
         this.overlayServer = new Lazy<Overlay.QuicOverlayServer?>(() =>
-            IsQuicSupportedPlatform()
+            QuicRuntime.IsAvailable()
                 ? GetOverlayServer(serviceProvider)
                 : null);
 #pragma warning restore CA1416 // Runtime OS guards already gate QUIC-only service resolution.
@@ -99,7 +98,7 @@ public class MeshStatsCollector : IMeshStatsCollector
             }
 
             // Overlay connection counts
-            if (IsQuicSupportedPlatform() && overlayServer.Value != null)
+            if (QuicRuntime.IsAvailable() && overlayServer.Value != null)
             {
                 try
                 {
@@ -175,20 +174,12 @@ public class MeshStatsCollector : IMeshStatsCollector
         }
     }
 
-    [SupportedOSPlatformGuard("linux")]
-    [SupportedOSPlatformGuard("macos")]
-    [SupportedOSPlatformGuard("windows")]
-    private static bool IsQuicSupportedPlatform()
-    {
-        return OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
-    }
-
     [System.Runtime.Versioning.SupportedOSPlatform("linux")]
     [System.Runtime.Versioning.SupportedOSPlatform("macos")]
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private static Overlay.QuicOverlayServer? GetOverlayServer(IServiceProvider serviceProvider)
     {
-        if (!IsQuicSupportedPlatform())
+        if (!QuicRuntime.IsAvailable())
         {
             return null;
         }

@@ -2243,7 +2243,7 @@ namespace slskd
                 Log.Information("[DI] UdpOverlayServer constructed");
                 return service;
             });
-            if (IsQuicSupportedPlatform())
+            if (Mesh.QuicRuntime.IsAvailable())
             {
 #pragma warning disable CA1416 // Runtime OS guard ensures QUIC hosted service is only registered on supported platforms.
                 services.AddHostedService(p =>
@@ -2255,6 +2255,10 @@ namespace slskd
                 });
 #pragma warning restore CA1416 // Runtime OS guard ensures QUIC hosted service is only registered on supported platforms.
             }
+            else
+            {
+                Log.Warning("[DI] QUIC runtime unavailable; skipping QuicOverlayServer hosted service");
+            }
 
             services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
             {
@@ -2265,13 +2269,21 @@ namespace slskd
                 return new Mesh.Overlay.QuicOverlayClient(logger, options, signer, privacyLayer);
             });
             services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(slskdSection.GetSection("OverlayData"));
-            services.AddHostedService(p =>
+            if (Mesh.QuicRuntime.IsAvailable())
             {
-                Log.Information("[DI] Constructing QuicDataServer hosted service...");
-                var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicDataServer>(p);
-                Log.Information("[DI] QuicDataServer constructed");
-                return service;
-            });
+                services.AddHostedService(p =>
+                {
+                    Log.Information("[DI] Constructing QuicDataServer hosted service...");
+                    var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicDataServer>(p);
+                    Log.Information("[DI] QuicDataServer constructed");
+                    return service;
+                });
+            }
+            else
+            {
+                Log.Warning("[DI] QUIC runtime unavailable; skipping QuicDataServer hosted service");
+            }
+
             services.AddSingleton<Mesh.Overlay.IOverlayDataPlane, Mesh.Overlay.QuicDataClient>();
 
             // MediaCore publisher
@@ -4229,12 +4241,5 @@ namespace slskd
                 details.Contains("Cannot access a disposed object.", StringComparison.Ordinal);
         }
 
-        [System.Runtime.Versioning.SupportedOSPlatformGuard("linux")]
-        [System.Runtime.Versioning.SupportedOSPlatformGuard("macos")]
-        [System.Runtime.Versioning.SupportedOSPlatformGuard("windows")]
-        private static bool IsQuicSupportedPlatform()
-        {
-            return OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
-        }
     }
 }
