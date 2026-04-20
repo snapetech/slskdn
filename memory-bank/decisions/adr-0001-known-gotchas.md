@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z72. Soulseek MessageConnection Teardown Must Not Log As Fatal
+
+**The Bug**: Live `kspls0` manual build testing emitted `[FATAL] Unobserved task exception ... (The underlying Tcp connection is closed)` while a remote transfer had already been classified as peer-side failure. The flattened exception was `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`, which did not match the existing expected Soulseek network classifier even though it is normal peer connection teardown.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+var isNetworkFailure =
+    exception is IOException ||
+    typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal);
+```
+
+**Correct**:
+```csharp
+var isSoulseekMessageConnectionClosed =
+    exception is InvalidOperationException &&
+    details.Contains("The underlying Tcp connection is closed", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
+```
+
+**Why This Keeps Happening**: Soulseek.NET has multiple asynchronous connection loops, and not all peer teardown escapes as `IOException`, `SocketException`, or a public `Soulseek.*Exception` type. The unobserved-task classifier must recognize exact, stack-anchored teardown signatures; otherwise handled remote failures still look like host-level fatal crashes.
+
 ### 0z71. DHT Beacon Capability Must Be Based On The Real Overlay Listener
 
 **The Bug**: Live `kspls0` manual build testing showed DHT ready, outbound mesh connected, but `/api/v0/overlay/stats` reported `server.isListening=false` and no TCP listener on `50305`. Startup had logged `This client is not beacon-capable (behind NAT)` even though the same host had listened on `50305` minutes earlier. `DhtRendezvousService.DetectBeaconCapabilityAsync(...)` performed a temporary bind probe before starting `MeshOverlayServer`; if that probe failed transiently during a fast restart, the real overlay listener was never started or retried.
