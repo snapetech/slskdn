@@ -135,11 +135,14 @@ namespace slskd
         {
             Log.Information("[Application] Constructor called");
             Log.Information("[Application] Setting up event handlers...");
+            var hostLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
             _cancelKeyPressHandler = (_, args) =>
             {
+                args.Cancel = true;
                 ShuttingDown = true;
                 Program.MasterCancellationTokenSource.Cancel();
-                Log.Warning("Received SIGINT");
+                Log.Warning("Received SIGINT; stopping application");
+                hostLifetime?.StopApplication();
             };
             Console.CancelKeyPress += _cancelKeyPressHandler;
 
@@ -147,10 +150,11 @@ namespace slskd
             {
                 _posixSignalRegistrations.Add(PosixSignalRegistration.Create(signal, context =>
                 {
+                    context.Cancel = true;
                     ShuttingDown = true;
                     Program.MasterCancellationTokenSource.Cancel();
-                    Log.Fatal("Received {Signal}", signal);
-                    Environment.Exit(1);
+                    Log.Warning("Received {Signal}; stopping application", signal);
+                    hostLifetime?.StopApplication();
                 }));
             }
 

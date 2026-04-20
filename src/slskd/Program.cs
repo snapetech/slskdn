@@ -3991,11 +3991,21 @@ namespace slskd
             // This ensures we always know WHY the process terminated
             AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
             {
-                var msg = $"[FATAL] ProcessExit event fired - process terminating";
+                var expectedShutdown = Application.IsShuttingDown;
+                var msg = expectedShutdown
+                    ? "ProcessExit event fired during expected shutdown"
+                    : "[FATAL] ProcessExit event fired - process terminating";
                 Console.Error.WriteLine(msg);
                 try
                 {
-                    Log?.Fatal(msg);
+                    if (expectedShutdown)
+                    {
+                        Log?.Information(msg);
+                    }
+                    else
+                    {
+                        Log?.Fatal(msg);
+                    }
                 }
                 catch
                 {

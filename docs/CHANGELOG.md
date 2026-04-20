@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed service signal handling so normal `systemctl stop`/`restart` SIGTERM requests stop the generic host cleanly instead of logging fatal shutdown telemetry and exiting with status 1.
 - Fixed user directory browse API handling so expected remote peer connection failures return a controlled 503 response instead of escaping as unhandled request exceptions with repeated middleware stack traces.
 - Fixed DHT rendezvous connection accounting so peers deferred by the overlay connector's concurrency limit are not counted as real attempts or pushed into the five-minute retry backoff. This keeps diagnostics aligned with actual socket attempts and prevents a potentially valid candidate from being delayed behind simultaneous junk DHT endpoints.
 - Fixed live mesh compatibility with peers that send unframed JSON control messages after a framed handshake. The overlay reader now recognizes raw JSON starting at a frame boundary, consumes exactly one capped JSON object, and keeps the normal length-prefixed path unchanged, preventing the deterministic two-minute `Invalid message length: 2065855609` disconnect seen on `kspls0`.
