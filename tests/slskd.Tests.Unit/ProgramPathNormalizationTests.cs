@@ -257,6 +257,20 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForSoulseekTimerResetReadLoopRace()
+    {
+        var inner = new NullReferenceException("Object reference not set to an instance of an object.");
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            inner,
+            "   at Soulseek.Extensions.Reset(Timer)\n" +
+            "   at Soulseek.Network.Tcp.Connection.ReadInternalAsync(Int64 length, Stream outputStream, Func`3 governor, Action`3 reporter, CancellationToken cancellationToken)\n" +
+            "   at Soulseek.Network.MessageConnection.ReadContinuouslyAsync()");
+        var exception = new AggregateException(inner);
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
     public void IsStaleAntiforgeryTokenException_ReturnsTrue_ForKeyRingMismatch()
     {
         var exception = new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring."));

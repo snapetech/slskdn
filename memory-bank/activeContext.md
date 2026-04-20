@@ -1,3 +1,18 @@
+## Update 2026-04-20 15:35:00Z
+
+- Current task: None. The live `#201` follow-up investigation found one real current log-classification bug and narrowed the tester report away from the original startup-listener failure.
+- Last activity:
+  - confirmed the historical `#201` signatures are not the current live failure mode: current `main` still contains the startup listener fix, `/system/info` renders locally, `kspls0` is listening on `50300/tcp`, and the live node is currently `Connected, LoggedIn`
+  - inspected authenticated live API state on `kspls0`, including current application, DHT, overlay, transfer, and auto-replace status
+  - pulled targeted journal windows and found a separate current bug: third-party Soulseek read-loop teardown still leaks through as `[FATAL] Unobserved task exception` with `NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `ReadContinuouslyAsync`
+  - documented that gotcha immediately in ADR-0001 as `02ae95e47`
+  - patched `Program.IsExpectedSoulseekNetworkException` to classify that timer-reset/read-loop stack shape as expected network teardown noise and added focused unit coverage; `ProgramPathNormalizationTests` passed locally (`24`)
+  - noted a separate operational concern on the live node: `AutoReplace` is repeatedly hitting the configured Soulseek search safety cap (`10/min`), which is noisy but distinct from the old `#201` listener/connect failure
+- Next steps:
+  1. Commit and push the classifier/test fix if you want it on `origin/main`.
+  2. Redeploy to `kspls0` and verify the fake `[FATAL] Unobserved task exception` entries stop appearing in the journal.
+  3. Decide whether to tune `AutoReplace` pacing/backoff or error aggregation so large stuck-download batches stop dominating logs with search-cap rejections.
+
 ## Update 2026-04-19 20:30:00Z
 
 - Current task: None. DHT/overlay observability and bad-candidate cooldown follow-up is implemented locally and validated.

@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed another live Soulseek teardown noise path by classifying the third-party `Soulseek.Extensions.Reset(Timer)` `NullReferenceException` from `ReadContinuouslyAsync` as expected peer/read-loop churn instead of logging it as a fake fatal unobserved-task crash.
 - Fixed the `/pods` admin panel by putting `PodsController` back on the explicit versioned `api/v{version:apiVersion}/pods` surface that the frontend already calls, with a contract test to keep that route aligned.
 - Fixed the `/system/mediacore` admin panel crash by restoring the missing Semantic UI `Checkbox` import.
 - Fixed fast authenticated admin-panel sweeps self-triggering `429 Too Many Requests` by exempting authenticated requests and non-API web-shell/static requests from the coarse global fixed-window limiter while keeping anonymous API throttling in place.

@@ -6627,3 +6627,12 @@ Code quality improvements were completed as part of Option A:
   - targeted Release test loop (`5` consecutive runs): passed
   - `bash packaging/scripts/run-release-gate.sh`: passed end to end
   - `bash ./bin/lint`: passed
+
+## 2026-04-20 15:35:00Z
+
+- Investigated `snapetech/slskdn#201` live on `kspls0` without touching the issue. Confirmed the historical startup-listener failure signatures from that issue are not what the current host is doing: `/system/info` renders on current `main`, the live host is listening on `50300/tcp`, and the node is currently `Connected, LoggedIn` with DHT/overlay healthy enough to maintain one active mesh peer and complete downloads.
+- Pulled authenticated live API state plus targeted journal windows and found a different current bug: third-party Soulseek read-loop teardown can still surface as `[FATAL] Unobserved task exception` with `NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `Soulseek.Network.Tcp.Connection.ReadInternalAsync` / `ReadContinuouslyAsync`.
+- Documented that classifier gap in ADR-0001 and committed the gotcha immediately as `02ae95e47`.
+- Hardened `Program.IsExpectedSoulseekNetworkException` so that exact timer-reset/read-loop stack shape is treated as expected peer/network teardown noise, and added focused unit coverage in `ProgramPathNormalizationTests`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~ProgramPathNormalizationTests" -v minimal` passed (`24`), and `git diff --check` passed.
+- Separate live operational note: `AutoReplace` is repeatedly exhausting the configured Soulseek search safety cap (`10/min`) and spamming rate-limit errors during large stuck-download batches. That is noisy and worth tuning, but it is distinct from the old `#201` listener/connect failure.
