@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z75. Overlay Readers Must Handle Unframed JSON Compatibility Frames
+
+**The Bug**: Live `kspls0` testing on manual build `90257b10d` connected to mesh peer `m***7`, then dropped the peer exactly at the two-minute keepalive mark with `Protocol violation ... Invalid message length: 2065855609`. That "length" is `0x7b227479`, the ASCII bytes `{"ty`, so the reader saw raw JSON at the frame boundary where it expected a four-byte big-endian length prefix.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/SecureMessageFramer.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/Security/SecureMessageFramerTests.cs`
+
+**Wrong**:
+```csharp
+var length = BinaryPrimitives.ReadInt32BigEndian(headerBuffer);
+if (length < 2 || length > MaxMessageSize)
+{
+    throw new ProtocolViolationException($"Invalid message length: {length}");
+}
+```
+
+**Correct**:
+```csharp
+if (headerBuffer[0] == (byte)'{')
+{
+    return await ReadUnframedJsonPayloadAsync(headerBuffer, cancellationToken);
+}
+
+var length = BinaryPrimitives.ReadInt32BigEndian(headerBuffer);
+```
+
+**Why This Keeps Happening**: The overlay protocol moved to length-prefixed JSON frames, but live peers can still emit unframed JSON control messages after a successful framed handshake. The symptom is deterministic and recognizable: bogus length values whose bytes are the start of JSON (`{"ty` for `{"type"...`). Treating that as corruption disconnects otherwise usable mesh peers; the reader needs a capped compatibility path that consumes exactly one JSON object and keeps normal framed messages unchanged.
+
 ### 0z73. PATH-Based Tool Names Are Not Filesystem Paths
 
 **The Bug**: Live `kspls0` logs emitted `[AudioSketch] ffmpeg not configured or missing: ffmpeg` dozens of times even though `ffmpeg` was installed at `/usr/bin/ffmpeg`. `AudioSketchService` treated the default configured command name `ffmpeg` as a literal relative file path and called `File.Exists("ffmpeg")`, which fails for PATH-resolved executables.
