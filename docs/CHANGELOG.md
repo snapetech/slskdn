@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Hardened mesh QUIC lifecycle management: cached/orphaned `QuicConnection` instances are now explicitly disposed, duplicate connection-creation races no longer leak live connections, and QUIC overlay/data hosted services close and drain active connection handlers during shutdown.
+- Fixed the TCP mesh overlay listener failing to rebind `50305` on fast restarts with `Address already in use` even when no live listener remained by enabling socket address reuse and fully clearing stop-state after shutdown.
 - Fixed another live Soulseek teardown noise path by classifying the third-party `Soulseek.Extensions.Reset(Timer)` `NullReferenceException` from `ReadContinuouslyAsync` as expected peer/read-loop churn instead of logging it as a fake fatal unobserved-task crash.
 - Fixed the `/pods` admin panel by putting `PodsController` back on the explicit versioned `api/v{version:apiVersion}/pods` surface that the frontend already calls, with a contract test to keep that route aligned.
 - Fixed the `/system/mediacore` admin panel crash by restoring the missing Semantic UI `Checkbox` import.

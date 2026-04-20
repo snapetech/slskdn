@@ -1,17 +1,17 @@
-## Update 2026-04-20 15:35:00Z
+## Update 2026-04-20 15:55:00Z
 
-- Current task: None. The live `#201` follow-up investigation found one real current log-classification bug and narrowed the tester report away from the original startup-listener failure.
+- Current task: None. The live `kspls0` redeploy validated the timer-reset log-noise fix and exposed native crash recurrence as the next real host issue.
 - Last activity:
-  - confirmed the historical `#201` signatures are not the current live failure mode: current `main` still contains the startup listener fix, `/system/info` renders locally, `kspls0` is listening on `50300/tcp`, and the live node is currently `Connected, LoggedIn`
-  - inspected authenticated live API state on `kspls0`, including current application, DHT, overlay, transfer, and auto-replace status
-  - pulled targeted journal windows and found a separate current bug: third-party Soulseek read-loop teardown still leaks through as `[FATAL] Unobserved task exception` with `NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `ReadContinuouslyAsync`
-  - documented that gotcha immediately in ADR-0001 as `02ae95e47`
-  - patched `Program.IsExpectedSoulseekNetworkException` to classify that timer-reset/read-loop stack shape as expected network teardown noise and added focused unit coverage; `ProgramPathNormalizationTests` passed locally (`24`)
-  - noted a separate operational concern on the live node: `AutoReplace` is repeatedly hitting the configured Soulseek search safety cap (`10/min`), which is noisy but distinct from the old `#201` listener/connect failure
+  - confirmed the historical `#201` signatures are still not the current live failure mode: current `main` contains the startup-listener fix, `/system/info` renders locally, and `kspls0` remains reachable/listening after deploy
+  - committed and deployed `ffacda09e`, publishing `0.24.5-slskdn.159+manual.ffacda09e` to `kspls0`
+  - verified post-deploy health: service active, Soulseek connected/logged in, DHT ready, overlay and QUIC listeners bound, and one active mesh connection after restart recovery
+  - sampled the live journal and confirmed the targeted fix held: no new `[FATAL] Unobserved task exception` entries and no `Soulseek.Extensions.Reset(Timer)` teardown noise in the observed window
+  - found a different live blocker during soak: the process segfaulted once (`SIGSEGV`) and systemd restarted it automatically; `coredumpctl` shows similar recent native crashes on earlier manual builds too
+  - observed the new DHT/overlay summary logging working as intended on the recovered process, with explicit failure mix and degraded endpoint rollups
 - Next steps:
-  1. Commit and push the classifier/test fix if you want it on `origin/main`.
-  2. Redeploy to `kspls0` and verify the fake `[FATAL] Unobserved task exception` entries stop appearing in the journal.
-  3. Decide whether to tune `AutoReplace` pacing/backoff or error aggregation so large stuck-download batches stop dominating logs with search-cap rejections.
+  1. Investigate the native `SIGSEGV` path on `kspls0`, starting from the recent `coredumpctl` history and any commonality with active `libmsquic` worker threads.
+  2. Decide whether to add crash-oriented symbolization or host-side runtime diagnostics before another manual/live rollout.
+  3. Separately decide whether `AutoReplace` search-cap noise should be tuned, but treat it as secondary to the native crash path.
 
 ## Update 2026-04-19 20:30:00Z
 
@@ -159,9 +159,9 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: None. Live `kspls0` QUIC/mesh validation and follow-up bug fixes are implemented, committed, deployed, and host-validated.
+- **Current Task**: Investigating the recurring native `SIGSEGV` on `kspls0` after live manual redeploys; the latest pass also fixed QUIC lifecycle disposal gaps and the TCP overlay restart bind failure on `50305`.
 - **Branch**: `main`
-- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159+manual.1475cd068`; no release tags were created.
+- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` currently running `0.24.5-slskdn.159+manual.ffacda09e`; no release tags were created.
 - **Last Activity**:
   - Kept QUIC enabled by installing Microsoft MsQuic `v2.5.7` on `kspls0`; QUIC overlay/data listeners bind on `50402/50401` with no temporary systemd disable override.
   - Fixed live mesh compatibility with unframed JSON overlay frames; `kspls0` connected to `m***7` and held past the 2-minute keepalive threshold without `Protocol violation`, `Invalid message length`, `Unregistered`, or disconnect logs.
@@ -170,12 +170,20 @@ This is the #1 most important thing to do before ending a session. Future AI age
   - Fixed service SIGTERM handling so normal `systemctl restart` stops the host cleanly; validated on `kspls0` that a deliberate restart logs expected shutdown, not status 1/failure.
   - Fixed transfer shutdown cleanup ordering so active downloads drain before Soulseek client disposal, removing restart-time semaphore/disposed-object noise.
   - Fixed the remaining third-party `SoulseekClient.Disconnect()` shutdown race so clean restarts do not emit false fatal `Sequence contains no elements` logs.
-  - Deployed `0.24.5-slskdn.159+manual.1475cd068` to `kspls0`.
-  - Validation passed: focused `DhtRendezvousServiceTests|SecureMessageFramerTests`, focused `UsersControllerTests`, focused `DownloadServiceTests`, repeated `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, repeated `bash ./bin/lint`, `git diff --check`, release publishes, and live API/log probes with deliberate restart validation.
+  - Deployed `0.24.5-slskdn.159+manual.ffacda09e` to `kspls0` and confirmed the targeted fake-fatal Soulseek timer-reset teardown noise no longer appeared in the observed journal window.
+  - During soak, observed one native `SIGSEGV` on the deployed process; systemd restarted the service cleanly and the recovered process rejoined the mesh.
+  - `coredumpctl` on `kspls0` shows similar recent native crashes on earlier manual builds, so the crash path predates `ffacda09e` and is now the highest-priority live issue.
+  - Investigated the crash producer and found concrete QUIC connection-lifecycle gaps: cached/orphaned `QuicConnection` instances were not always disposed, and QUIC hosted servers were not explicitly closing active connections or draining active connection tasks on stop.
+  - Documented that QUIC lifecycle gotcha in ADR-0001 (`06ffdca5f`), then hardened `QuicOverlayClient`, `QuicDataClient`, `QuicOverlayServer`, and `QuicDataServer` with explicit connection gates, disposal, close, and stop-drain behavior.
+  - During the first manual redeploy of that hardening, found a separate restart-time bug: `MeshOverlayServer` could fail to rebind port `50305` with `Address already in use` even though no live listener remained.
+  - Documented that listener-reuse gotcha in ADR-0001 (`7a6eca0dd`), then fixed `MeshOverlayServer` to use `ReuseAddress` and to clear/dispose stop state fully on shutdown.
+  - Published and manually deployed `0.24.5-slskdn.159+manual.quicfix2` to `kspls0`; a deliberate restart on the recovered process now rebinds overlay TCP `50305` cleanly and restores overlay/DHT/QUIC listeners as expected.
+  - `coredumpctl` still captured a new startup-time native `SIGSEGV` on PID `572060` during that rollout, but the immediate systemd retry recovered to a healthy process (`572286`) and a later deliberate restart stayed clean.
+  - Validation passed: `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, focused QUIC/transport/program unit slice (`30` passed), `bash ./bin/lint`, `git diff --check`, manual publish/install to `kspls0`, live journal sampling, listener/socket checks, and coredump inspection.
 - **Next Steps**:
-  1. Keep sampling `kspls0` for longer-run QUIC stability and any recurrence of `libmsquic` core dumps.
-  2. Keep candidate filtering/deprioritization for bad DHT-discovered overlay endpoints as the remaining DHT mesh follow-up.
-  3. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
+  1. Commit and push the QUIC lifecycle and overlay-listener restart fixes once the current live investigation notes are recorded.
+  2. Continue the native `SIGSEGV`/core-dump investigation on `kspls0`, now focusing on the intermittent startup-time crash (`572060`) that can happen before normal service logs appear.
+  3. Decide whether to add host-side symbolization/runtime diagnostics or to rebuild the manual binary with extra startup-crash visibility before another soak cycle.
 
 ## Recent Context
 

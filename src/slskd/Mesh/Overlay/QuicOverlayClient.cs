@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using MessagePack;
@@ -21,12 +22,17 @@ using slskd.Mesh.Privacy;
 /// <summary>
 /// QUIC overlay client for control-plane messages (ControlEnvelope).
 /// </summary>
-public class QuicOverlayClient : IOverlayClient
+[SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
+[SupportedOSPlatform("windows")]
+public class QuicOverlayClient : IOverlayClient, IAsyncDisposable
 {
     private readonly ILogger<QuicOverlayClient> logger;
     private readonly OverlayOptions options;
     private readonly IPrivacyLayer? privacyLayer;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> connections = new();
+    private readonly ConcurrentDictionary<IPEndPoint, SemaphoreSlim> connectionLocks = new();
+    private int disposed;
 
     public QuicOverlayClient(
         ILogger<QuicOverlayClient> logger,
@@ -129,24 +135,23 @@ public class QuicOverlayClient : IOverlayClient
 
     private async Task<bool> SendPayloadAsync(byte[] payload, IPEndPoint endpoint, CancellationToken ct)
     {
-        // Get or create connection
-        if (!connections.TryGetValue(endpoint, out var connection) || connection == null)
+        var connection = await GetOrCreateConnectionAsync(endpoint, ct).ConfigureAwait(false);
+        if (connection == null)
         {
-            connection = await CreateConnectionAsync(endpoint, ct);
-            if (connection == null)
-            {
-                return false;
-            }
-
-            connections.TryAdd(endpoint, connection);
+            return false;
         }
 
-        // Open stream and send
-        await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct);
-        await stream.WriteAsync(payload, ct);
-
-        // Stream will be closed when disposed
-        return true;
+        try
+        {
+            await using var stream = await connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, ct).ConfigureAwait(false);
+            await stream.WriteAsync(payload, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch
+        {
+            await RemoveConnectionAsync(endpoint, connection).ConfigureAwait(false);
+            throw;
+        }
     }
 
     private async Task<QuicConnection?> CreateConnectionAsync(IPEndPoint endpoint, CancellationToken ct)
@@ -173,6 +178,105 @@ public class QuicOverlayClient : IOverlayClient
         {
             logger.LogWarning(ex, "[Overlay-QUIC] Failed to connect to {Endpoint}", endpoint);
             return null;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        {
+            return;
+        }
+
+        var endpoints = connections.Keys.ToArray();
+        foreach (var endpoint in endpoints)
+        {
+            await RemoveConnectionAsync(endpoint).ConfigureAwait(false);
+        }
+
+        foreach (var gate in connectionLocks.Values)
+        {
+            gate.Dispose();
+        }
+
+        connectionLocks.Clear();
+    }
+
+    private async Task<QuicConnection?> GetOrCreateConnectionAsync(IPEndPoint endpoint, CancellationToken ct)
+    {
+        if (Volatile.Read(ref disposed) != 0)
+        {
+            return null;
+        }
+
+        var gate = connectionLocks.GetOrAdd(endpoint, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            if (Volatile.Read(ref disposed) != 0)
+            {
+                return null;
+            }
+
+            if (connections.TryGetValue(endpoint, out var existing) && existing != null)
+            {
+                return existing;
+            }
+
+            var created = await CreateConnectionAsync(endpoint, ct).ConfigureAwait(false);
+            if (created == null)
+            {
+                return null;
+            }
+
+            if (connections.TryAdd(endpoint, created))
+            {
+                return created;
+            }
+
+            await SafeDisposeConnectionAsync(created, endpoint, "duplicate cached connection").ConfigureAwait(false);
+            return connections.TryGetValue(endpoint, out existing) ? existing : null;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task RemoveConnectionAsync(IPEndPoint endpoint, QuicConnection? expectedConnection = null)
+    {
+        var gate = connectionLocks.GetOrAdd(endpoint, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+
+        try
+        {
+            if (connections.TryGetValue(endpoint, out var cached) &&
+                (expectedConnection == null || ReferenceEquals(cached, expectedConnection)) &&
+                connections.TryRemove(endpoint, out var removed))
+            {
+                await SafeDisposeConnectionAsync(removed, endpoint, "cached connection removed").ConfigureAwait(false);
+            }
+            else if (expectedConnection != null)
+            {
+                await SafeDisposeConnectionAsync(expectedConnection, endpoint, "orphaned connection removed").ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task SafeDisposeConnectionAsync(QuicConnection connection, IPEndPoint endpoint, string reason)
+    {
+        try
+        {
+            await connection.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "[Overlay-QUIC] Failed to dispose connection to {Endpoint} ({Reason})", endpoint, reason);
         }
     }
 }

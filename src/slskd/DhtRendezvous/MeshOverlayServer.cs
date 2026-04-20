@@ -99,6 +99,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 
         _cts = new CancellationTokenSource();
         _listener = new TcpListener(IPAddress.Any, ListenPortConfig);
+        _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
         try
         {
@@ -151,6 +152,9 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
             }
         }
 
+        _cts?.Dispose();
+        _cts = null;
+        _acceptLoopTask = null;
         _startedAt = null;
     }
 
