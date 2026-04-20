@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z88. Soulseek Timer-Reset Read Loop NullReferenceExceptions Must Be Classified As Expected Network Teardown
+
+**The Bug**: Live `kspls0` logs still emitted `[FATAL] Unobserved task exception` entries during normal peer/read-loop churn with `System.NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `Soulseek.Network.Tcp.Connection.ReadInternalAsync` and `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`. The process kept running, but the log looked like a real fatal crash/disconnect.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+var isNetworkFailure =
+    exception is TimeoutException ||
+    exception is OperationCanceledException ||
+    exception is IOException;
+```
+
+**Correct**:
+```csharp
+var isSoulseekTimerResetRace =
+    exception is NullReferenceException &&
+    details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
+
+var isNetworkFailure =
+    exception is TimeoutException ||
+    exception is OperationCanceledException ||
+    exception is IOException ||
+    isSoulseekTimerResetRace;
+```
+
+**Why This Keeps Happening**: The existing unobserved-task classifier covered common Soulseek socket/transfer exceptions and the older "underlying Tcp connection is closed" teardown, but not this newer third-party timer-reset race. Because the base exception type is `NullReferenceException`, it falls through the network-failure gate and gets logged as fatal even though the stack is still just peer/read-loop teardown noise. Benign Soulseek read-loop races must be matched by stack/message shape, not only by exception type.
+
 ### 0z87. Shutdown-Drain Tests Must Gate On Worker Start Before Expecting Cancellation
 
 **The Bug**: `build-main-0.24.5-slskdn.161` failed in CI again on `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` even after replacing the old sleep-only assertion. The test still called `ShutdownAsync()` immediately after `EnqueueAsync()` and assumed the mocked `DownloadAsync()` body had already reached its cancellable wait. On a busy Release runner, shutdown could race ahead before the worker observed the token, leaving the test blocked on a `TaskCompletionSource` that was never signaled.
