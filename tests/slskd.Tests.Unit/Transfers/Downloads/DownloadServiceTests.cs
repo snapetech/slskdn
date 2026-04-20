@@ -122,6 +122,7 @@ public class DownloadServiceTests
             await context.Database.EnsureCreatedAsync();
         }
 
+        var downloadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var soulseekClient = new Mock<ISoulseekClient>();
         soulseekClient
             .SetupGet(client => client.Downloads)
@@ -146,6 +147,7 @@ public class DownloadServiceTests
                 TransferOptions transferOptions,
                 CancellationToken? cancellationToken) =>
             {
+                downloadStarted.TrySetResult();
                 await Task.Delay(Timeout.Infinite, cancellationToken ?? CancellationToken.None);
                 return null!;
             });
@@ -170,6 +172,11 @@ public class DownloadServiceTests
             Assert.Empty(failed);
 
             var transferId = enqueued.Single().Id;
+            await downloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await WaitForTransferAsync(
+                () => service.Find(t => t.Id == transferId),
+                TimeSpan.FromSeconds(5));
+
             Assert.True(service.TryCancel(transferId));
 
             var cancelledTransfer = await WaitForTransferAsync(
