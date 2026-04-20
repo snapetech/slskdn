@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z71. DHT Beacon Capability Must Be Based On The Real Overlay Listener
+
+**The Bug**: Live `kspls0` manual build testing showed DHT ready, outbound mesh connected, but `/api/v0/overlay/stats` reported `server.isListening=false` and no TCP listener on `50305`. Startup had logged `This client is not beacon-capable (behind NAT)` even though the same host had listened on `50305` minutes earlier. `DhtRendezvousService.DetectBeaconCapabilityAsync(...)` performed a temporary bind probe before starting `MeshOverlayServer`; if that probe failed transiently during a fast restart, the real overlay listener was never started or retried.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+
+**Wrong**:
+```csharp
+IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken);
+if (IsBeaconCapable)
+{
+    await _overlayServer.StartAsync(cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+IsBeaconCapable = await StartOverlayServerIfPossibleAsync(cancellationToken);
+```
+
+**Why This Keeps Happening**: A preflight bind is not the same thing as owning the listener. It can create false negatives during restart races and adds a time-of-check/time-of-use window before the real server binds. Beacon capability for this implementation should be derived from whether the actual overlay listener started successfully; if it fails, log the bind failure and continue as a seeker.
+
 ### 0z70. Overlay Keepalive Must Not Read Outside The Message Loop
 
 **The Bug**: Live `kspls0` manual build testing still dropped a mesh neighbor around the two-minute keepalive window with `Protocol violation ... Invalid message length: 2065855609` after a mesh search had been sent. `MeshOverlayServer.HandleMessagesAsync(...)` called `connection.PingAsync(...)`, and `PingAsync` wrote a ping then performed its own direct read for a `PongMessage`. That creates a second read path outside the normal dispatcher and can consume or race unrelated overlay frames on the same TLS stream.
