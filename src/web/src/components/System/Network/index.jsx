@@ -175,10 +175,6 @@ const Network = ({ theme }) => {
     }
   };
 
-  if (loading) {
-    return <LoaderSegment />;
-  }
-
   const { backfill, capabilities, hashDb, mesh, swarmJobs } = stats;
   const darkTheme = theme === 'dark';
   const shouldWarnAboutConnectivity =
@@ -205,6 +201,10 @@ const Network = ({ theme }) => {
     stats?.dht?.isLanOnly,
     stats?.dht?.isDhtRunning,
   ]);
+
+  if (loading) {
+    return <LoaderSegment />;
+  }
 
   return (
     <div className="network-dashboard">
