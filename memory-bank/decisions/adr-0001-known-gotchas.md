@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z69. Test Code Must Alias `slskd.Options` When Importing `Microsoft.Extensions.Options`
+
+**The Bug**: `AutoReplaceServiceTests` imported `Microsoft.Extensions.Options` and then used `Mock.Of<IOptionsMonitor<Options>>()`. In that scope, `Options` resolved to `Microsoft.Extensions.Options.Options` (a static helper type) instead of the application `slskd.Options`, so a later full test build failed with `CS0718: 'Options': static types cannot be used as type arguments`.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Transfers/AutoReplace/AutoReplaceServiceTests.cs`
+
+**Wrong**:
+```csharp
+using Microsoft.Extensions.Options;
+
+Mock.Of<IOptionsMonitor<Options>>();
+```
+
+**Correct**:
+```csharp
+using SlskdOptions = slskd.Options;
+
+Mock.Of<IOptionsMonitor<SlskdOptions>>();
+```
+
+**Why This Keeps Happening**: The app's root options type has the same short name as the Microsoft.Extensions.Options helper class. Unit tests often need `IOptionsMonitor<T>`, so importing the namespace makes the collision easy to miss until a clean build compiles that test file.
+
 ### 0z68. DHT Rendezvous Must Not Dial Its Own DHT UDP Port As A TCP Overlay Endpoint
 
 **The Bug**: Live `kspls0` manual build testing showed DHT discovery returning many candidates on port `50306`, which is the slskdn DHT UDP port, while the TCP overlay listener was on `50305`. `DhtRendezvousService.OnPeersFound(...)` treated every `PeerInfo.ConnectionUri` as a TCP overlay endpoint and scheduled outbound TLS overlay dials immediately. The node then spent connection attempts/backoff on DHT-port candidates, producing timeouts/refusals/TLS EOFs and leaving mesh search with no usable outbound peers.
@@ -73,7 +96,7 @@ var endpoint = new IPEndPoint(ip, uri.Port);
 if (IsLikelyDhtPort(endpoint.Port))
 {
     // Do not treat a DHT UDP contact as a TCP overlay listener.
-    return;
+    continue;
 }
 
 PublishDiscoveredPeer(endpointKey, endpoint);
