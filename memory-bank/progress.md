@@ -1,3 +1,12 @@
+## 2026-04-20 00:57:17Z
+
+- Continued live build `0.24.5-slskdn.159` validation on `kspls0` and found two more real issues beyond the earlier framer fixes.
+- Fixed `AudioSketchService` so the default `FfmpegPath: ffmpeg` resolves through `PATH` instead of being rejected by `File.Exists("ffmpeg")`; `kspls0` already had `/usr/bin/ffmpeg`, so the old warnings were false missing-tool reports.
+- Replaced the crashing host MsQuic runtime: the installed AUR `msquic 2.4.11` let the service start QUIC listeners and then segfaulted in `libmsquic.so.2`; built and installed Microsoft MsQuic `v2.5.7`, preserved the old library as a timestamped backup, removed the temporary systemd QUIC-disable override, and confirmed `/usr/lib/libmsquic.so.2 -> libmsquic.so.2.5.7`.
+- Added `QuicRuntime.IsAvailable()` and switched QUIC service registration, mesh stats, and direct-QUIC descriptor publication to use real runtime support checks instead of assuming every Linux/macOS/Windows host has working QUIC.
+- Deployed manual build `0.24.5-slskdn.159+manual.90257b10d` to `kspls0`. After 117 seconds: service active, no systemd QUIC-disable environment, DHT ready with 69 nodes, overlay TCP listener active on `50305`, QUIC listeners active on `50401/50402`, one active mesh connection to `m***7`, no post-restart segfault/core dump/protocol violation/invalid frame/ffmpeg warning.
+- Validation: focused unit slice passed (`41` tests), `bash ./bin/lint` passed, `git diff --check` passed, release publish succeeded, and live API probes for `/api/v0/dht/status` plus `/api/v0/overlay/stats` passed on `kspls0`.
+
 ## 2026-04-19 01:20 - Fixed reciprocal overlay lifecycle behind issue `#209`
 
 ### Completed

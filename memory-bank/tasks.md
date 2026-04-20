@@ -1059,3 +1059,11 @@
 - [x] Fix auto-replace search finalization race seen on `kspls0`
   - Status: done
   - Notes: Build `159` logged `No search responses found` for auto-replace searches that completed with responses seconds later. `AutoReplaceService` now waits for the persisted completed search state before treating responses as absent, with focused unit coverage for delayed finalization.
+
+- [x] Fix AudioSketch ffmpeg PATH resolution on `kspls0`
+  - Status: done
+  - Notes: Live build `159` repeatedly logged `[AudioSketch] ffmpeg not configured or missing: ffmpeg` even though `/usr/bin/ffmpeg` was installed. `AudioSketchService` now resolves configured command names through `PATH` before declaring the tool missing, with focused unit coverage.
+
+- [x] Restore QUIC mesh runtime compatibility on `kspls0`
+  - Status: done
+  - Notes: Replaced crashing AUR `msquic 2.4.11` with Microsoft MsQuic `v2.5.7`, removed the temporary systemd QUIC-disable override, and deployed `manual.90257b10d`. QUIC listeners `50401/50402`, overlay `50305`, DHT, and one mesh connection are healthy after restart. App code now gates QUIC service registration and direct-QUIC publication on `QuicRuntime.IsAvailable()`.

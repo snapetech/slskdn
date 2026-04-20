@@ -1,3 +1,15 @@
+## Update 2026-04-20 00:57:17Z
+
+- Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.
+- Last activity:
+  - fixed false AudioSketch `ffmpeg not configured or missing: ffmpeg` warnings by resolving command names through `PATH`
+  - built and installed Microsoft MsQuic `v2.5.7` on `kspls0` to replace the crashing AUR `msquic 2.4.11`, removed the temporary QUIC-disable systemd override, and verified QUIC listeners stay up
+  - added `QuicRuntime.IsAvailable()` so app registration/descriptor logic uses runtime QUIC support instead of OS-only checks
+  - deployed `0.24.5-slskdn.159+manual.90257b10d` to `kspls0`; DHT is ready, overlay TCP and QUIC listeners are active, and one mesh peer is connected
+- Next steps:
+  1. Keep watching `kspls0` for longer-run QUIC stability and any recurrence of `libmsquic` core dumps.
+  2. Continue candidate-quality work if mesh drops again; current local state is healthy, with remaining failures classified as remote timeout/no-route candidates.
+
 ## Update 2026-04-17 23:05:00Z
 
 - Current task: Package/release pipeline regressions from `build-main-0.24.5-slskdn.135` are fixed locally and validated; ready to commit, push, and retag.
