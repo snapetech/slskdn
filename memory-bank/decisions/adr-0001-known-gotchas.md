@@ -70,13 +70,19 @@ catch (OperationCanceledException ex)
 
 **Correct**:
 ```csharp
+await transferService.Downloads.ShutdownAsync(cancellationToken);
+Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
+Client.Dispose();
+```
+
+```csharp
 catch (OperationCanceledException ex) when (Application.IsShuttingDown)
 {
     Log.Debug(ex, "Download task cancelled during shutdown");
 }
 ```
 
-**Why This Keeps Happening**: User-requested transfer cancellation and host shutdown both surface as `OperationCanceledException`, but they need different cleanup semantics. User cancellation should mark a transfer cancelled; host shutdown should stop background work quietly and leave incomplete records for normal startup recovery. During shutdown, the service provider and semaphores may already be disposing, so failure paths must avoid database updates, event publication, and semaphore disposal races.
+**Why This Keeps Happening**: User-requested transfer cancellation and host shutdown both surface as `OperationCanceledException`, but they need different cleanup semantics. User cancellation should mark a transfer cancelled; host shutdown should stop background work quietly and leave incomplete records for normal startup recovery. During shutdown, the service provider and semaphores may already be disposing, so failure paths must avoid database updates, event publication, and semaphore disposal races. Cancelling transfer CTS is not enough by itself: the host must also wait for those download tasks to unwind before disposing the shared Soulseek client, or the client's own transfer semaphores/logging will race with disposal and emit shutdown-only warnings.
 
 ### 0z78. Service SIGTERM Must Stop The Host, Not Exit 1
 
