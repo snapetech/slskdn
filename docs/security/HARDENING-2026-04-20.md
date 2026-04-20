@@ -17,7 +17,7 @@ Each finding references the source location it affects. Follow-ups that are out 
 | H7 | HashDb mesh-merge accepts unsigned peer entries | High | ✅ implemented (opt-in enforcement during rollout) |
 | H8 | `Constants.IgnoreCertificateErrors` / `RelayClient` TLS bypass | High | ✅ periodic warn + optional SPKI pinning shipped |
 | H9 | Auto-replace + wishlist auto-download enabled from README | Medium | ℹ no change — already `false` by default in `Options.cs` |
-| H10 | Profile endpoint `[AllowAnonymous]` by design | Medium | ℹ no change — documented intent; audit payload separately |
+| H10 | Profile endpoint `[AllowAnonymous]` by design | Medium | ✅ fixed (public payload now minimized to non-sensitive fields) |
 | H11 | Mesh TOFU re-pinning on pin-store loss | Medium | ✅ TOFU / re-pin workflow documented in `docs/SECURITY-GUIDELINES.md` |
 | H12 | DHT publishes residential IPs | Medium | ✅ `LanOnly` toggle + periodic warn + UI first-run disclosure shipped |
 | H13 | NowPlaying webhook vs Plex Bearer auth | Medium | ✅ scope-restricted API keys shipped; webhook requires `nowplaying` scope |
@@ -162,10 +162,6 @@ Verified the default state: `SocialFederationOptions.Enabled=false` and `Mode="H
 ---
 
 ## Follow-ups (not in this pass)
-
-### H10 — Profile controller public payload audit
-
-`ProfileController.GetProfile(peerId)` is `[AllowAnonymous]` by product intent (public peer profiles for Identity/Friends). Not a bug, but worth a pass over the `PeerProfile` DTO to confirm it doesn't expose fields that leak location, quota, or enumeration-friendly metadata. Low-effort follow-up, not in this batch.
 
 ### H12 (UI) — DHT first-run disclosure
 

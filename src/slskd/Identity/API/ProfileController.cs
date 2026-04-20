@@ -79,10 +79,14 @@ public class ProfileController : ControllerBase
         return Ok(p);
     }
 
-    /// <summary>Get a peer's profile by PeerId (public, no auth required).</summary>
+    /// <summary>
+    /// Get a peer's profile by PeerId (public, no auth required).
+    /// Only the minimal public-facing fields are returned to avoid leaking internal
+    /// profile metadata.
+    /// </summary>
     [HttpGet("{peerId}")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(PeerProfile), 200)]
+    [ProducesResponseType(typeof(ProfileLookupResponse), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetProfile([FromRoute] string peerId, CancellationToken ct)
     {
@@ -91,7 +95,26 @@ public class ProfileController : ControllerBase
         if (string.IsNullOrWhiteSpace(peerId)) return BadRequest("PeerId is required.");
         var p = await _profile.GetProfileAsync(peerId, ct).ConfigureAwait(false);
         if (p == null) return NotFound();
-        return Ok(p);
+        return Ok(ToProfileLookupResponse(p));
+    }
+
+    private static ProfileLookupResponse ToProfileLookupResponse(PeerProfile profile)
+    {
+        return new ProfileLookupResponse
+        {
+            PeerId = profile.PeerId,
+            DisplayName = profile.DisplayName,
+            Avatar = profile.Avatar,
+            Capabilities = profile.Capabilities,
+            Endpoints = profile.Endpoints?.Select(
+                endpoint => new PeerEndpoint
+                {
+                    Type = endpoint.Type,
+                    Address = endpoint.Address,
+                    Priority = endpoint.Priority
+                })
+                .ToList() ?? new List<PeerEndpoint>()
+        };
     }
 
     /// <summary>Generate an invite link/QR.</summary>
@@ -158,4 +181,22 @@ public class InviteResponse
 {
     public string InviteLink { get; set; } = string.Empty;
     public string FriendCode { get; set; } = string.Empty;
+}
+
+public class ProfileLookupResponse
+{
+    /// <summary>Canonical peer ID (foreign key to PeerProfile).</summary>
+    public string PeerId { get; set; } = string.Empty;
+
+    /// <summary>Public display name.</summary>
+    public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>Optional avatar URL or data URI.</summary>
+    public string? Avatar { get; set; }
+
+    /// <summary>Public capabilities bitmask: stream, download, mesh search, etc.</summary>
+    public int Capabilities { get; set; }
+
+    /// <summary>Endpoints to reach this peer: direct HTTP/QUIC, relay hints, etc.</summary>
+    public List<PeerEndpoint> Endpoints { get; set; } = new();
 }

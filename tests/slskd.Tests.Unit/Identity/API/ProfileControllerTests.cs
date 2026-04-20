@@ -121,6 +121,40 @@ public class ProfileControllerTests
     }
 
     [Fact]
+    public async Task GetProfile_Success_ReturnsPublicProfilePayload()
+    {
+        var c = CreateController();
+        var profile = new PeerProfile
+        {
+            PeerId = "p1",
+            DisplayName = "Alice",
+            Avatar = "https://example.com/avatar.png",
+            Capabilities = 7,
+            PublicKey = "leaky-public-key",
+            Signature = "leaky-signature",
+            CreatedAt = DateTimeOffset.UtcNow,
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(30),
+            Endpoints = new List<PeerEndpoint>
+            {
+                new() { Type = "Direct", Address = "https://peer.example:5030", Priority = 1 }
+            }
+        };
+        _profileMock.Setup(x => x.GetProfileAsync("p1", It.IsAny<CancellationToken>())).ReturnsAsync(profile);
+
+        var r = await c.GetProfile("p1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(r);
+        var publicProfile = Assert.IsType<ProfileLookupResponse>(ok.Value);
+        Assert.Equal("p1", publicProfile.PeerId);
+        Assert.Equal("Alice", publicProfile.DisplayName);
+        Assert.Equal("https://example.com/avatar.png", publicProfile.Avatar);
+        Assert.Equal(7, publicProfile.Capabilities);
+        Assert.Single(publicProfile.Endpoints);
+        Assert.Equal("Direct", publicProfile.Endpoints[0].Type);
+        Assert.Equal("https://peer.example:5030", publicProfile.Endpoints[0].Address);
+    }
+
+    [Fact]
     public async Task GetProfile_NotFound_ReturnsNotFound()
     {
         var c = CreateController();

@@ -23,6 +23,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 ## [Unreleased]
 
 - Broadened the latest pre-existing in-flight sweep into a release-visible changelog entry: this commit ships pending security, mesh, DHT, QUIC, API, UI, and diagnostics fixes accumulated since the last published release.
+- Minimized the anonymous `/api/v0/profile/{peerId}` response payload to a public-safe shape so profile lookups no longer expose internal metadata (`PublicKey`, `Signature`, timing fields) to unauthenticated callers.
 - Fixed a React hook-order regression in `/system/network` after the pre-existing DHT exposure UX changes so modal visibility state updates now run in a stable hook sequence.
 - Downgraded the remaining Soulseek timer-reset teardown race on `Tcp.Connection.WriteInternalAsync(...)` so that benign third-party write-loop `NullReferenceException` noise no longer logs as fake fatal unobserved-task crashes.
 - Aligned `bin/publish` with the tagged release publish profile so manual/live deploys no longer use a different self-contained single-file `ReadyToRun` runtime shape than CI ships.
