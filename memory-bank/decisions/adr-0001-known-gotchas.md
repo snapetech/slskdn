@@ -222,6 +222,35 @@ await using var registryConnection = connection;
 
 **Why This Keeps Happening**: `GetUninitializedObject` skips constructor logic, so any disposal path still expects internal state to be initialized in test-created instances. If async disposal is added to those tests, missing fields become runtime failures even if object behavior in assertions is otherwise unchanged.
 
+### 0z93. Auto-Replace Must Pace Searches Instead Of Treating Safety Rejections As Per-Track Errors
+
+**The Bug**: Live `kspls0` logs showed a single auto-replace cycle issuing many alternative searches in rapid succession until the Soulseek safety limiter hit `Limit=10/min, Current=10`. Every remaining stuck download then logged `Error searching for alternatives: Search rate limit exceeded` with a stack trace and the cycle reported a large failed count. The safety limiter was working, but auto-replace was using it as a noisy brake instead of pacing its own work.
+
+**Files Affected**:
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+- `tests/slskd.Tests.Unit/Transfers/AutoReplace/AutoReplaceServiceTests.cs`
+
+**Wrong**:
+```csharp
+foreach (var stuckDownload in stuckDownloads)
+{
+    var alternatives = await FindAlternativesAsync(...);
+    ...
+}
+```
+
+**Correct**:
+```csharp
+foreach (var stuckDownload in stuckDownloads)
+{
+    await WaitForSearchBudgetAsync(cancellationToken);
+    var alternatives = await FindAlternativesAsync(...);
+    ...
+}
+```
+
+**Why This Keeps Happening**: Auto-replace looks like internal maintenance, but every alternative lookup is still a real Soulseek search. Bulk loops must budget those searches before calling `SearchService.StartAsync(...)`; catching the thrown limiter exception after the fact still creates noisy logs, failed work, and avoidable pressure on the network.
+
 ### 0z92. Soulseek Timer-Reset Write Loop Races Must Be Classified Too, Not Just Read Loops
 
 **The Bug**: After classifying the `Soulseek.Extensions.Reset(Timer)` teardown race for `ReadInternalAsync`/`MessageConnection.ReadContinuouslyAsync`, live `kspls0` logs still emitted fake `[FATAL] Unobserved task exception` entries from the same third-party timer-reset `NullReferenceException` occurring in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The process kept running, but the logs still looked like a fatal crash.
