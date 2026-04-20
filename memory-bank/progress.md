@@ -6554,3 +6554,10 @@ Code quality improvements were completed as part of Option A:
 - Found a separate real auto-replace race in the same logs: `AutoReplaceService` logged `No search responses found` at its 30-second poll limit, while `SearchService` finalized the same search with 14-17 responses one second later.
 - Fixed auto-replace so it waits for the persisted `Completed` search state before deciding responses are absent, extended the default finalization wait to 45 seconds, and added a focused unit test that reproduces delayed response persistence without a slow test.
 - Documented the gotcha in ADR-0001 and committed that doc-only entry as `399ee079e`.
+
+## 2026-04-20 01:52:00Z
+
+- Continued the live `kspls0` pass on build line `159` and fixed the remaining shutdown-path bugs found during deliberate `systemctl restart` validation.
+- `DownloadService` now tracks and drains in-flight enqueue/download observer tasks before `Application.StopAsync` disconnects or disposes the shared Soulseek client. This removed the live restart-time `Failed to release global download semaphore... Cannot access a disposed object`, `Failed to find download`, and `Failed to clean up transfer` noise.
+- Hardened `Application.StopAsync` against a third-party `SoulseekClient.Disconnect()` collection race (`InvalidOperationException: Sequence contains no elements`) seen during one shutdown on `kspls0`; expected shutdown now logs that race as a handled warning instead of a false fatal termination.
+- Deployed and validated live manual builds `manual.37a745af5` and `manual.1475cd068` on `kspls0`. Final validation on `0.24.5-slskdn.159+manual.1475cd068` showed: service active, restart count `0`, DHT running (`72` nodes on sample), overlay listening on `50305`, QUIC listeners active, and one mesh peer connected immediately after deliberate restart with no shutdown cleanup/fatal disconnect regressions.

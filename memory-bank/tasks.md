@@ -1084,6 +1084,6 @@
   - Status: done
   - Notes: Manual deployments showed normal `systemctl restart slskd` stops recorded as `status=1/FAILURE`. POSIX signal handlers now request generic-host shutdown instead of `Environment.Exit(1)`, and `ProcessExit` logs expected shutdown as informational. Validated on `kspls0` with a deliberate restart of `manual.0a542e1c9`.
 
-- [ ] Fix transfer cleanup ordering during service shutdown
-  - Status: pending
-  - Notes: Deliberate `kspls0` restart of `manual.0a542e1c9` exited cleanly at the systemd level, but active downloads cancelled during shutdown still logged global semaphore release warnings and `ObjectDisposedException` while resolving transfer cleanup after DI disposal. Treat this as shutdown cleanup ordering noise; service recovery remained healthy.
+- [x] Fix transfer cleanup ordering during service shutdown
+  - Status: completed (2026-04-19)
+  - Notes: `DownloadService` now drains in-flight download/enqueue tasks before `Application.StopAsync` disposes the shared Soulseek client, which removed the restart-time global semaphore warnings and disposed-object cleanup noise on live `kspls0` restarts. A second live shutdown race in `SoulseekClient.Disconnect()` (`Sequence contains no elements`) is now caught and downgraded during expected shutdown so clean restarts do not emit false fatal termination logs.

@@ -1,14 +1,15 @@
-## Update 2026-04-20 00:57:17Z
+## Update 2026-04-20 01:52:00Z
 
 - Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.
 - Last activity:
-  - fixed false AudioSketch `ffmpeg not configured or missing: ffmpeg` warnings by resolving command names through `PATH`
-  - built and installed Microsoft MsQuic `v2.5.7` on `kspls0` to replace the crashing AUR `msquic 2.4.11`, removed the temporary QUIC-disable systemd override, and verified QUIC listeners stay up
-  - added `QuicRuntime.IsAvailable()` so app registration/descriptor logic uses runtime QUIC support instead of OS-only checks
-  - deployed `0.24.5-slskdn.159+manual.90257b10d` to `kspls0`; DHT is ready, overlay TCP and QUIC listeners are active, and one mesh peer is connected
+  - kept QUIC enabled and healthy on `kspls0`, with overlay/data listeners active and mesh reconnecting after each deliberate restart
+  - fixed `DownloadService` shutdown cleanup ordering by draining in-flight enqueue/download work before the shared Soulseek client is disconnected or disposed
+  - fixed the remaining false-fatal shutdown edge by tolerating the third-party `SoulseekClient.Disconnect()` `Sequence contains no elements` race during expected host shutdown
+  - deployed `0.24.5-slskdn.159+manual.1475cd068` to `kspls0` and validated deliberate restarts with active downloads: no global download semaphore warnings, no transfer cleanup `ObjectDisposedException`, no false fatal shutdown log, restart count `0`, DHT healthy, and one mesh peer connected immediately after restart
 - Next steps:
-  1. Keep watching `kspls0` for longer-run QUIC stability and any recurrence of `libmsquic` core dumps.
-  2. Continue candidate-quality work if mesh drops again; current local state is healthy, with remaining failures classified as remote timeout/no-route candidates.
+  1. Keep sampling `kspls0` for longer-run QUIC and mesh stability, especially whether the single live peer stays connected past the keepalive windows on this final manual build.
+  2. If more mesh issues surface, focus on remote candidate quality and connector failure mix (`timeout`, `no-route`, `tls-eof`) rather than the now-fixed local shutdown and framing paths.
+  3. Push `main` when desired, and only create a build tag if the user explicitly wants a release build.
 
 ## Update 2026-04-17 23:05:00Z
 
@@ -62,20 +63,21 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 - **Current Task**: None. Live `kspls0` QUIC/mesh validation and follow-up bug fixes are implemented, committed, deployed, and host-validated.
 - **Branch**: `main`
-- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159+manual.0a542e1c9`; no release tags were created.
+- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` running `0.24.5-slskdn.159+manual.1475cd068`; no release tags were created.
 - **Last Activity**:
   - Kept QUIC enabled by installing Microsoft MsQuic `v2.5.7` on `kspls0`; QUIC overlay/data listeners bind on `50402/50401` with no temporary systemd disable override.
   - Fixed live mesh compatibility with unframed JSON overlay frames; `kspls0` connected to `m***7` and held past the 2-minute keepalive threshold without `Protocol violation`, `Invalid message length`, `Unregistered`, or disconnect logs.
   - Fixed DHT rendezvous accounting so connector-capacity deferrals are not counted as real attempts or pushed into retry backoff.
   - Fixed user directory browse API handling so expected remote peer connection failures return controlled 503 responses instead of unhandled middleware stack traces.
   - Fixed service SIGTERM handling so normal `systemctl restart` stops the host cleanly; validated on `kspls0` that a deliberate restart logs expected shutdown, not status 1/failure.
-  - Deployed `0.24.5-slskdn.159+manual.0a542e1c9` to `kspls0`.
-  - Validation passed: focused `DhtRendezvousServiceTests|SecureMessageFramerTests`, focused `UsersControllerTests`, `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, `bash ./bin/lint`, `git diff --check`, release publish, and live API/log probes.
+  - Fixed transfer shutdown cleanup ordering so active downloads drain before Soulseek client disposal, removing restart-time semaphore/disposed-object noise.
+  - Fixed the remaining third-party `SoulseekClient.Disconnect()` shutdown race so clean restarts do not emit false fatal `Sequence contains no elements` logs.
+  - Deployed `0.24.5-slskdn.159+manual.1475cd068` to `kspls0`.
+  - Validation passed: focused `DhtRendezvousServiceTests|SecureMessageFramerTests`, focused `UsersControllerTests`, focused `DownloadServiceTests`, repeated `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, repeated `bash ./bin/lint`, `git diff --check`, release publishes, and live API/log probes with deliberate restart validation.
 - **Next Steps**:
-  1. Fix shutdown-only transfer cleanup noise: during the validation restart, cancelled downloads still tried to release global semaphores / resolve transfer cleanup after DI disposal, logging `ObjectDisposedException`.
-  2. Keep sampling `kspls0` for longer-run QUIC stability and any recurrence of `libmsquic` core dumps.
-  3. Keep candidate filtering/deprioritization for bad DHT-discovered overlay endpoints as the remaining DHT mesh follow-up.
-  4. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
+  1. Keep sampling `kspls0` for longer-run QUIC stability and any recurrence of `libmsquic` core dumps.
+  2. Keep candidate filtering/deprioritization for bad DHT-discovered overlay endpoints as the remaining DHT mesh follow-up.
+  3. Push `main` when ready, then create a build tag only if the user explicitly wants a release build.
 
 ## Recent Context
 
