@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed a DHT startup race where a temporary overlay-port bind probe could decide the node was not beacon-capable during a fast restart, leaving TCP overlay `50305` offline until the next service restart. The real overlay listener start now determines beacon capability directly.
 - Fixed overlay keepalive reads competing with the persistent message dispatcher: inbound mesh loops now send keepalive pings without doing a direct pong read, so all overlay frames continue through the single read loop even while mesh search or service traffic is active.
 - Fixed DHT rendezvous wasting overlay connection attempts on peers that advertise the configured DHT UDP port as their endpoint. Those candidates are now ignored unless the deployment intentionally uses the same port for DHT and TCP overlay traffic, so discovery does not fill the peer cache with non-overlay `:50306` contacts on the default split-port setup.
 - Fixed auto-replace missing valid alternatives when search finalization races the polling window. The live symptom was `No search responses found` followed by the same search completing with responses seconds later; auto-replace now waits for the persisted completed search state before deciding whether responses are absent.

@@ -136,18 +136,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 // Initialize MonoTorrent DHT
                 await InitializeDhtAsync(cancellationToken).ConfigureAwait(false);
 
-                // Detect beacon capability
-                IsBeaconCapable = await DetectBeaconCapabilityAsync(cancellationToken).ConfigureAwait(false);
-
-                if (IsBeaconCapable)
-                {
-                    _logger.LogInformation("This client is beacon-capable, starting overlay server on port {Port}", _options.OverlayPort);
-                    await _overlayServer.StartAsync(cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    _logger.LogInformation("This client is not beacon-capable (behind NAT), will connect to beacons");
-                }
+                IsBeaconCapable = await StartOverlayServerIfPossibleAsync(cancellationToken).ConfigureAwait(false);
 
                 _startedAt = DateTimeOffset.UtcNow;
                 _logger.LogInformation("DHT rendezvous service initialization complete");
@@ -746,28 +735,26 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         return DateTimeOffset.UtcNow - _lastDiscoveryTime.Value > TimeSpan.FromSeconds(_options.DiscoveryIntervalSeconds);
     }
 
-    private Task<bool> DetectBeaconCapabilityAsync(CancellationToken cancellationToken)
+    private async Task<bool> StartOverlayServerIfPossibleAsync(CancellationToken cancellationToken)
     {
-        // Simplified beacon detection
-        // In production, this would:
-        // 1. Try UPnP port mapping
-        // 2. Try NAT-PMP
-        // 3. Use STUN to detect public IP and NAT type
-        // 4. Attempt self-connection test
-
-        // For now, check if we can bind to the overlay port
         try
         {
-            using var listener = new System.Net.Sockets.TcpListener(IPAddress.Any, _options.OverlayPort);
-            listener.Start();
-
-            _logger.LogDebug("Successfully bound to overlay port {Port}", _options.OverlayPort);
-            return Task.FromResult(true);
+            _logger.LogInformation("Starting overlay server on port {Port}", _options.OverlayPort);
+            await _overlayServer.StartAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("This client is beacon-capable on overlay port {Port}", _options.OverlayPort);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not bind to overlay port {Port}", _options.OverlayPort);
-            return Task.FromResult(false);
+            _logger.LogWarning(
+                ex,
+                "Could not start overlay server on port {Port}; this node will connect to beacons but will not announce itself",
+                _options.OverlayPort);
+            return false;
         }
     }
 
