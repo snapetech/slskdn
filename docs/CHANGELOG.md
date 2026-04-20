@@ -22,6 +22,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the `/pods` admin panel by putting `PodsController` back on the explicit versioned `api/v{version:apiVersion}/pods` surface that the frontend already calls, with a contract test to keep that route aligned.
+- Fixed the `/system/mediacore` admin panel crash by restoring the missing Semantic UI `Checkbox` import.
+- Fixed fast authenticated admin-panel sweeps self-triggering `429 Too Many Requests` by exempting authenticated requests and non-API web-shell/static requests from the coarse global fixed-window limiter while keeping anonymous API throttling in place.
+- Fixed first-run share bootstrap log noise so missing/out-of-date cache state goes straight into the recreate/scan path instead of throwing a corruption-looking exception before recovering.
+- Fixed the default `/` web route to redirect directly to `/searches` without logging a router miss, and stopped the app from probing session state on every render when no token is present.
 - Added DHT/overlay operator diagnostics that roll up candidate handling (`seen`, `accepted`, skip/defer/backoff counts), expose endpoint cooldown/degradation stats, and log mesh session-end summaries so repeated bad remote endpoints stand out without flooding the logs.
 - Fixed release-smoke integration compilation after the download-shutdown drain change by updating the integration test `StubDownloadService` to implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.
 - Fixed download shutdown cleanup so active downloads cancelled by host shutdown stop quietly without trying to fail transfers through disposed services or release already-disposed enqueue semaphores.

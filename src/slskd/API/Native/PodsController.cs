@@ -4,6 +4,7 @@
 
 namespace slskd.API.Native;
 
+using Asp.Versioning;
 using slskd.Core.Security;
 
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +18,8 @@ using slskd.PodCore;
 /// Provides Pod management API endpoints.
 /// </summary>
 [ApiController]
-[Route("api/v0/pods")]
+[Route("api/v{version:apiVersion}/pods")]
+[ApiVersion("0")]
 [Produces("application/json")]
 [Authorize]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

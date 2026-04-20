@@ -6601,3 +6601,17 @@ Code quality improvements were completed as part of Option A:
   - `./bin/build`: passed end to end
   - `bash ./bin/lint`: passed
   - `git diff --check`: passed
+
+## 2026-04-20 03:45:00Z
+
+- Fixed the full set of UI/runtime issues from the admin/page audit instead of just triaging them.
+- Restored the MediaCore panel by importing the missing Semantic UI `Checkbox`, fixed the Pods admin surface by giving `PodsController` an explicit API versioned route, and added a contract test so the backend route and frontend `/api/v0/pods` call stay aligned.
+- Removed the noisy root-route miss by redirecting `/` straight to `/searches`, and stopped the app from hitting `session.check()` on every render. `session.check()` now also exits quietly when no token is present and downgrades the expected 401-expiry log to debug.
+- Relaxed the global HTTP limiter for authenticated requests and non-API web shell/static requests so a normal fast admin-panel sweep no longer self-trips `429` responses, while leaving the anonymous API limiter in place.
+- Cleaned up first-run share initialization logging so missing/out-of-date cache state falls directly into a scan/rebuild path instead of throwing a corruption-looking exception before recovery.
+- Validation:
+  - `cd src/web && npm test -- --run src/components/App.test.jsx`: passed
+  - `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~PodsControllerContractTests" -v minimal`: passed
+  - `bash ./bin/lint`: passed
+  - `git diff --check`: passed
+  - manual disposable-node verification on `http://127.0.0.1:5040`: `/`, `/searches`, `/pods`, `/system/info`, and `/system/mediacore` all loaded without page errors; authenticated `/api/v0/pods` returned `200`; a burst of `25` authenticated `/api/v0/session` requests stayed `200`; repeated browser navigation produced no `429`; first-run share bootstrap logged recreate/scan without a fake corruption exception

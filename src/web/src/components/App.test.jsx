@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import App from './App';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
 const {
@@ -108,6 +108,22 @@ describe('App', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('redirects the root route to searches without logging a route miss', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Searches')).toBeInTheDocument();
+    });
+
+    expect(consoleError).not.toHaveBeenCalledWith('[Router] Route miss for:', '/');
   });
 
   it('does not keep the initial loader visible while the app hub startup stalls', async () => {

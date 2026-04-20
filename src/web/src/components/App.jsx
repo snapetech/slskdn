@@ -414,8 +414,7 @@ class App extends Component {
   };
 
   withTokenCheck = (component) => {
-    session.check(); // async, runs in the background
-    return component; // Return component directly, not spread object
+    return component;
   };
 
   // eslint-disable-next-line complexity
@@ -786,6 +785,10 @@ class App extends Component {
                 </Routes>
               ) : (
                 <Routes>
+                  <Route
+                    path="/"
+                    element={<Navigate replace to="/searches" />}
+                  />
                   <Route
                     path="/collections"
                     element={(() => {

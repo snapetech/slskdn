@@ -32,12 +32,16 @@ export const logout = () => {
 };
 
 export const check = async () => {
+  if (!isLoggedIn()) {
+    return false;
+  }
+
   try {
     await api.get('/session');
     return true;
   } catch (error) {
     if (error.response.status === 401) {
-      console.error('session error; not logged in or session has expired');
+      console.debug('session expired; clearing stored token');
       logout();
       return false;
     } else {

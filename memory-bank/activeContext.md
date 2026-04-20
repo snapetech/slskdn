@@ -54,6 +54,20 @@
   2. Cut the next official release-candidate/build tag only if explicitly requested.
   3. After the next tag, watch CI/package jobs rather than local release-gate coverage; the local manual bar is currently green.
 
+## Update 2026-04-20 03:45:00Z
+
+- Current task: None. The UI/admin audit findings are fixed locally and revalidated.
+- Last activity:
+  - fixed `/system/mediacore` by restoring the missing `Checkbox` import
+  - fixed `/pods` by putting `PodsController` on the explicit `api/v{version:apiVersion}/pods` route with `[ApiVersion("0")]` and added a unit contract test for that route/version pair
+  - redirected `/` straight to `/searches`, removed the unconditional per-render `session.check()` call, and quieted the expected unauthenticated/session-expiry path in `session.js`
+  - exempted authenticated requests and non-API web shell/static requests from the coarse fixed-window IP limiter so fast admin sweeps no longer self-trigger `429`
+  - changed first-run share bootstrap to log a recreate/scan path instead of throwing a corruption-looking exception before recovery
+  - revalidated with focused tests, `bash ./bin/lint`, `git diff --check`, and a disposable manual browser/api sweep over `/`, `/searches`, `/pods`, `/system/info`, and `/system/mediacore`; all passed with no page errors and no reproduced `429`
+- Next steps:
+  1. Commit and push the remaining code/test changes if you want the admin-audit fixes on `origin/main`.
+  2. If you want another broad product sweep, rerun the full top-level/admin-panel Playwright crawl against this build and then triage any deeper workflow bugs that remain beyond the original hard failures.
+
 ## Update 2026-04-20 01:52:00Z
 
 - Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.

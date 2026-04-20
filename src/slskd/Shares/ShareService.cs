@@ -529,8 +529,8 @@ namespace slskd.Shares
                     }
                     else
                     {
-                        Log.Warning("Share cache backup is missing, corrupt, or is out of date");
-                        throw new ShareInitializationException("Share cache backup is missing, corrupt, or is out of date");
+                        Log.Information("Share cache backup is missing or out of date on initialization; performing initial share scan instead");
+                        await ScanAsync();
                     }
                 }
                 else if (CacheStorageMode == StorageMode.Disk)
@@ -557,8 +557,8 @@ namespace slskd.Shares
                         }
                         else
                         {
-                            Log.Warning("Share cache and backup are both missing, corrupt, or is out of date");
-                            throw new ShareInitializationException("Share cache and backup are both missing, corrupt, or is out of date");
+                            Log.Information("Share cache and backup are both missing or out of date on initialization; performing full share scan instead");
+                            await ScanAsync();
                         }
                     }
                 }

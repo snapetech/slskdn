@@ -2934,6 +2934,16 @@ namespace slskd
                             return RateLimitPartition.GetFixedWindowLimiter("fed:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = fedPermit, Window = fedWindow });
                         }
 
+                        if (context.Request.Headers.ContainsKey("Authorization") || context.Request.Headers.ContainsKey("X-API-Key"))
+                        {
+                            return RateLimitPartition.GetNoLimiter("authenticated");
+                        }
+
+                        if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return RateLimitPartition.GetNoLimiter("web");
+                        }
+
                         return RateLimitPartition.GetFixedWindowLimiter("api:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = apiPermit, Window = apiWindow });
                     });
                 });
