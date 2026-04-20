@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed download shutdown cleanup so active downloads cancelled by host shutdown stop quietly without trying to fail transfers through disposed services or release already-disposed enqueue semaphores.
 - Fixed service signal handling so normal `systemctl stop`/`restart` SIGTERM requests stop the generic host cleanly instead of logging fatal shutdown telemetry and exiting with status 1.
 - Fixed user directory browse API handling so expected remote peer connection failures return a controlled 503 response instead of escaping as unhandled request exceptions with repeated middleware stack traces.
 - Fixed DHT rendezvous connection accounting so peers deferred by the overlay connector's concurrency limit are not counted as real attempts or pushed into the five-minute retry backoff. This keeps diagnostics aligned with actual socket attempts and prevents a potentially valid candidate from being delayed behind simultaneous junk DHT endpoints.

@@ -242,18 +242,11 @@ namespace slskd.Transfers.Downloads
             foreach (var cancellationTokenSource in CancellationTokens.Values)
             {
                 cancellationTokenSource.Cancel();
-                cancellationTokenSource.Dispose();
             }
 
             CancellationTokens.Clear();
 
-            foreach (var enqueueSemaphore in EnqueueSemaphores.Values)
-            {
-                enqueueSemaphore.Dispose();
-            }
-
             EnqueueSemaphores.Clear();
-            EnqueueSemaphoreSyncRoot.Dispose();
             _disposed = true;
         }
 
@@ -556,6 +549,10 @@ namespace slskd.Transfers.Downloads
 
                                 Log.Debug("Download of {Filename} from {Username} successfully entered state {State}", transfer.Filename, transfer.Username, state);
                             }
+                            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+                            {
+                                Log.Debug(ex, "Download enqueue for {File} from {Username} cancelled during shutdown", transfer.Filename, transfer.Username);
+                            }
                             catch (Exception ex)
                             {
                                 Log.Error(ex, "Download of {File} from {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
@@ -566,7 +563,7 @@ namespace slskd.Transfers.Downloads
                             }
                             finally
                             {
-                                enqueueSemaphore.Release();
+                                ReleaseSemaphore(enqueueSemaphore, "download enqueue", transfer.Filename, transfer.Username);
                             }
                         }, cancellationToken: cts.Token),
                             transferId,
@@ -602,7 +599,7 @@ namespace slskd.Transfers.Downloads
             }
             finally
             {
-                userSemaphore.Release();
+                ReleaseSemaphore(userSemaphore, "download enqueue user", null, username);
                 Log.Debug("Released enqueue semaphore for user {Username}", username);
             }
         }
@@ -874,6 +871,12 @@ namespace slskd.Transfers.Downloads
         /// <returns>A value indicating whether the download was successfully failed.</returns>
         public bool TryFail(Guid id, Exception exception)
         {
+            if (Application.IsShuttingDown)
+            {
+                Log.Debug("Ignoring TryFail for {TransferId} because the application is shutting down", id);
+                return false;
+            }
+
             Transfer? t;
             try
             {
@@ -1207,6 +1210,11 @@ namespace slskd.Transfers.Downloads
 
                 return transfer;
             }
+            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+            {
+                Log.Debug(ex, "Download of {Filename} from user {Username} cancelled during shutdown", transfer.Filename, transfer.Username);
+                throw;
+            }
             catch (Exception ex) when (ex is OperationCanceledException || ex is TimeoutException)
             {
                 Log.Error(ex, "Download of {Filename} from user {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
@@ -1278,6 +1286,10 @@ namespace slskd.Transfers.Downloads
                 await downloadTask.ConfigureAwait(false);
                 Log.Information("Task for download of {Filename} from {Username} completed successfully", filename, username);
             }
+            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+            {
+                Log.Debug(ex, "Task for download of {Filename} from {Username} cancelled during shutdown", filename, username);
+            }
             catch (OperationCanceledException ex)
             {
                 Log.Error(ex, "Task for download of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
@@ -1305,6 +1317,10 @@ namespace slskd.Transfers.Downloads
                 await enqueueTask.ConfigureAwait(false);
                 Log.Information("Task for enqueue of {Filename} from {Username} completed successfully", filename, username);
             }
+            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+            {
+                Log.Debug(ex, "Task for enqueue of {Filename} from {Username} cancelled during shutdown", filename, username);
+            }
             catch (OperationCanceledException ex)
             {
                 Log.Error(ex, "Task for enqueue of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
@@ -1322,6 +1338,18 @@ namespace slskd.Transfers.Downloads
                 {
                     Log.Error(ex, "Failed to clean up transfer {Id} after failed enqueue", transferId);
                 }
+            }
+        }
+
+        private void ReleaseSemaphore(SemaphoreSlim semaphore, string operation, string? filename, string username)
+        {
+            try
+            {
+                semaphore.Release();
+            }
+            catch (ObjectDisposedException ex) when (Application.IsShuttingDown || _disposed)
+            {
+                Log.Debug(ex, "Skipped releasing disposed semaphore for {Operation} of {Filename} from {Username} during shutdown", operation, filename, username);
             }
         }
 

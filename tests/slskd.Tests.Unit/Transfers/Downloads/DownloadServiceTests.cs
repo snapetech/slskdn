@@ -192,6 +192,87 @@ public class DownloadServiceTests
     }
 
     [Fact]
+    public async Task Dispose_WhenApplicationIsShuttingDown_DoesNotMarkActiveDownloadFailed()
+    {
+        var databasePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{Guid.NewGuid():N}.db");
+        var options = new DbContextOptionsBuilder<TransfersDbContext>()
+            .UseSqlite($"Data Source={databasePath}")
+            .Options;
+
+        await using (var context = new TransfersDbContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+
+        var soulseekClient = new Mock<ISoulseekClient>();
+        soulseekClient
+            .SetupGet(client => client.Downloads)
+            .Returns(Array.Empty<Soulseek.Transfer>());
+        soulseekClient
+            .Setup(client => client.DownloadAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Func<Task<Stream>>>(),
+                It.IsAny<long?>(),
+                It.IsAny<long>(),
+                It.IsAny<int?>(),
+                It.IsAny<TransferOptions>(),
+                It.IsAny<CancellationToken?>()))
+            .Returns(async (
+                string username,
+                string remoteFilename,
+                Func<Task<Stream>> outputStreamFactory,
+                long? size,
+                long startOffset,
+                int? token,
+                TransferOptions transferOptions,
+                CancellationToken? cancellationToken) =>
+            {
+                await Task.Delay(Timeout.Infinite, cancellationToken ?? CancellationToken.None);
+                return null!;
+            });
+
+        var service = new DownloadService(
+            new TestOptionsMonitor<slskd.Options>(new slskd.Options()),
+            soulseekClient.Object,
+            new TestDbContextFactory(options),
+            new FileService(new TestOptionsMonitor<slskd.Options>(new slskd.Options())),
+            Mock.Of<IRelayService>(),
+            Mock.Of<IFTPService>(),
+            new EventBus(new EventService(Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<EventsDbContext>>())));
+
+        try
+        {
+            var (enqueued, failed) = await service.EnqueueAsync(
+                "alice",
+                new[] { (Filename: @"Music\track.flac", Size: 1234L) },
+                CancellationToken.None);
+
+            Assert.Single(enqueued);
+            Assert.Empty(failed);
+
+            SetApplicationShuttingDown(true);
+            service.Dispose();
+            await Task.Delay(250);
+
+            await using var context = new TransfersDbContext(options);
+            var transfer = await context.Transfers.SingleAsync(t => t.Id == enqueued.Single().Id);
+            Assert.Null(transfer.EndedAt);
+            Assert.False(transfer.State.HasFlag(TransferStates.Completed));
+        }
+        finally
+        {
+            SetApplicationShuttingDown(false);
+            service.Dispose();
+
+            if (System.IO.File.Exists(databasePath))
+            {
+                System.IO.File.Delete(databasePath);
+            }
+        }
+    }
+
+    [Fact]
     public void Dispose_UnsubscribesClockMinuteHandler()
     {
         var optionsMonitor = new TestOptionsMonitor<slskd.Options>(new slskd.Options());
@@ -237,6 +318,14 @@ public class DownloadServiceTests
             ?? throw new InvalidOperationException($"{type.FullName}.{eventName} backing field was not found.");
 
         return (field.GetValue(null) as MulticastDelegate)?.GetInvocationList().Length ?? 0;
+    }
+
+    private static void SetApplicationShuttingDown(bool value)
+    {
+        var property = typeof(slskd.Application).GetProperty("ShuttingDown", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Application.ShuttingDown property was not found.");
+
+        property.SetValue(null, value);
     }
 
     private sealed class TestDbContextFactory : Microsoft.EntityFrameworkCore.IDbContextFactory<TransfersDbContext>
