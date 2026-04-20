@@ -389,6 +389,10 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
     /// <summary>
     /// Send a ping and wait for pong.
     /// </summary>
+    /// <remarks>
+    /// Only use this when no long-lived message loop is already reading the connection.
+    /// Persistent overlay loops must use <see cref="SendKeepalivePingAsync" /> instead.
+    /// </remarks>
     public async Task<TimeSpan> PingAsync(CancellationToken cancellationToken = default)
     {
         var ping = new PingMessage();
@@ -403,6 +407,17 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
 
         var rtt = DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(pong.Timestamp);
         return rtt;
+    }
+
+    /// <summary>
+    /// Send a keepalive ping without reading from the stream.
+    /// </summary>
+    public async Task SendKeepalivePingAsync(CancellationToken cancellationToken = default)
+    {
+        var ping = new PingMessage();
+        _lastPingSent = DateTimeOffset.UtcNow;
+
+        await WriteMessageAsync(ping, cancellationToken);
     }
 
     /// <summary>

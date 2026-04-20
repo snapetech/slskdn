@@ -380,8 +380,8 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 {
                     try
                     {
-                        var rtt = await connection.PingAsync(cancellationToken);
-                        _logger.LogTrace("Ping to {Username}: {Rtt}ms", OverlayLogSanitizer.Username(connection.Username), rtt.TotalMilliseconds);
+                        await connection.SendKeepalivePingAsync(cancellationToken);
+                        _logger.LogTrace("Sent keepalive ping to {Username}", OverlayLogSanitizer.Username(connection.Username));
                     }
                     catch
                     {
