@@ -52,6 +52,46 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z77. Expected Peer Browse Failures Must Not Escape API Controllers
+
+**The Bug**: Live `kspls0` logs showed `POST /api/v0/users/{username}/directory` producing repeated middleware/error-handler stack traces when a remote Soulseek peer could not establish a direct or indirect message connection. `UsersController.Directory` only handled `UserOfflineException`, so ordinary peer reachability failures bubbled as unhandled request exceptions.
+
+**Files Affected**:
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+- `tests/slskd.Tests.Unit/Users/UsersControllerTests.cs`
+
+**Wrong**:
+```csharp
+try
+{
+    var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
+    return Ok(result);
+}
+catch (UserOfflineException)
+{
+    return NotFound("User is offline");
+}
+```
+
+**Correct**:
+```csharp
+try
+{
+    var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
+    return Ok(result);
+}
+catch (UserOfflineException)
+{
+    return NotFound("User is offline");
+}
+catch (SoulseekClientException ex) when (ex.InnerException is ConnectionException)
+{
+    return StatusCode(503, "Unable to retrieve directory contents from user");
+}
+```
+
+**Why This Keeps Happening**: Soulseek browsing depends on remote peer connectivity. A peer can be online enough to appear in search/user data but still fail direct or indirect message connection setup. API endpoints that initiate peer network operations must translate expected Soulseek connection failures into stable HTTP responses, otherwise normal remote-peer behavior looks like an application exception and pollutes logs.
+
 ### 0z76. DHT Rendezvous Must Not Count Connector Capacity Skips As Peer Attempts
 
 **The Bug**: Live `kspls0` testing after manual build `d41ef6335` showed DHT healthy with four discovered peers but no mesh, while status reported `totalConnectionsAttempted=8` and overlay stats reported only six connector failures. `DhtRendezvousService` scheduled one background task per discovered peer and marked each peer attempted before calling the connector; `MeshOverlayConnector` then silently skipped calls when its three-attempt concurrency guard was already full.
