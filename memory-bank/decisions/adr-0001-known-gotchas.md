@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z82. Release-Suite Tests Must Not Depend On Fixed Local Ports Or Sleep-Only Drain Timing
+
+**The Bug**: The next local release-candidate cycle after `build-main-0.24.5-slskdn.160` cleared CI exposed two test-only release blockers: `PortForwardingControllerTests.StartForwarding_WhenPortAlreadyForwarded_DoesNotLeakExceptionMessage` occasionally failed in the full Release suite because it hardcoded local port `12346`, and `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` occasionally failed because it only checked whether cancellation had been observed after a fixed `Task.Delay(150)` instead of waiting for the tracked task to finish unwinding.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/API/Native/PortForwardingControllerTests.cs`
+- `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs`
+
+**Wrong**:
+```csharp
+LocalPort = 12346;
+Assert.True(cancellationObserved.Task.IsCompleted);
+```
+
+**Correct**:
+```csharp
+var localPort = GetFreeLocalPort();
+await drainCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+```
+
+**Why This Keeps Happening**: Release smoke runs the full optimized suite, where leftover listeners, test ordering, and scheduler jitter make fixed-port assumptions and sleep-based async assertions unreliable. Network-facing tests must allocate ephemeral loopback ports at runtime, and shutdown/drain tests must wait on explicit completion signals from the tracked work rather than inferring completion from a short delay.
+
 ### 0z81. Service Interface Changes Must Update Test Doubles In Smoke Projects
 
 **The Bug**: The `build-main-0.24.5-slskdn.160` tag build failed in CI during release-gate integration smoke compilation because `StubDownloadService` in the integration test host still implemented the old `IDownloadService` surface after `ShutdownAsync(CancellationToken)` was added for shutdown draining.
