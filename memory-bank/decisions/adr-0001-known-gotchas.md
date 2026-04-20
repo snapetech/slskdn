@@ -52,6 +52,100 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z86. First-Run Share Bootstrap Must Fall Through To Scan, Not Throw A Corruption-Looking Exception
+
+**The Bug**: A brand-new app directory logged `Share cache backup is missing, corrupt, or is out of date`, threw `ShareInitializationException`, then immediately retried and succeeded with a forced rescan. The startup path was functionally fine, but first-run logs looked like share-cache corruption.
+
+**Files Affected**:
+- `src/slskd/Shares/ShareService.cs`
+
+**Wrong**:
+```csharp
+Log.Warning("Share cache backup is missing, corrupt, or is out of date");
+throw new ShareInitializationException("Share cache backup is missing, corrupt, or is out of date");
+```
+
+**Correct**:
+```csharp
+Log.Information("Share cache backup is missing or out of date on initialization; performing initial share scan instead");
+await ScanAsync();
+```
+
+**Why This Keeps Happening**: The initialization method mixed expected first-run bootstrap conditions with real corruption/failure conditions. When there is no valid cache yet, startup should fall through to an initial scan directly instead of using exception-driven control flow that emits scary warning/error text and a stack trace.
+
+### 0z85. Global HTTP Rate Limiting Must Not Throttle The SPA Shell Or Static Assets
+
+**The Bug**: A fast authenticated page/panel crawl hit repeated `429 Too Many Requests` on `/searches`, `/system/*`, `/api/v0/session`, and static asset requests, causing page-level Axios errors and console noise even though the underlying pages were mostly healthy. The global limiter applied the API policy to every non-mesh/non-federation path, including the SPA shell and assets.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+return RateLimitPartition.GetFixedWindowLimiter("api:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = apiPermit, Window = apiWindow });
+```
+
+**Correct**:
+```csharp
+if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+{
+    return RateLimitPartition.GetNoLimiter("web");
+}
+
+return RateLimitPartition.GetFixedWindowLimiter("api:" + ip, _ => new FixedWindowRateLimiterOptions { PermitLimit = apiPermit, Window = apiWindow });
+```
+
+**Why This Keeps Happening**: The rate-limit policy was described as API/federation/mesh focused, but the implementation used the API bucket as the default catch-all. SPAs burst several HTML, JS, font, and session-check requests during navigation; treating those like untrusted API traffic makes normal operator usage look like a denial-of-service.
+
+### 0z84. Versioned Native Controllers And Frontend Panels Must Stay Wired To The Runtime Surface
+
+**The Bug**: The UI audit found two hard failures: `/pods` called `GET /api/v0/pods` but the backend returned `400 ApiVersionUnspecified` because `PodsController` used a versioned path without declaring an API version, and `/system/mediacore` crashed immediately with `ReferenceError: Checkbox is not defined` because the panel rendered `Checkbox` without importing it. The app also logged a fake route error on every fresh load because `/` fell through the wildcard route before redirecting to `/searches`.
+
+**Files Affected**:
+- `src/slskd/API/Native/PodsController.cs`
+- `src/web/src/components/System/MediaCore/index.jsx`
+- `src/web/src/components/App.jsx`
+
+**Wrong**:
+```csharp
+[Route("api/v0/pods")]
+```
+
+```jsx
+import {
+  Button,
+  Card,
+  Dropdown,
+  // ...
+} from 'semantic-ui-react';
+```
+
+```jsx
+<Route path="*" element={<RouteMissRedirect />} />
+```
+
+**Correct**:
+```csharp
+[Route("api/v{version:apiVersion}/pods")]
+[ApiVersion("0")]
+```
+
+```jsx
+import {
+  Button,
+  Card,
+  Checkbox,
+  Dropdown,
+  // ...
+} from 'semantic-ui-react';
+```
+
+```jsx
+<Route path="/" element={<Navigate replace to="/searches" />} />
+```
+
+**Why This Keeps Happening**: The native API and the React surface are broad enough that compile-time success does not guarantee runtime wiring. Small mismatches like missing `ApiVersion` attributes, missing component imports, or relying on the wildcard redirect for the app root can leave entire panels apparently implemented but dead at runtime. Audit new top-level pages and native controllers through the real browser/API path, not just unit tests.
+
 ### 0z83. Full-Instance Harness Startup Must Wait For Overlay Listeners, Not Just The API
 
 **The Bug**: The next manual release/test cycle showed `./bin/build` failing the full Release integration sweep with `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` returning `502 Bad Gateway` on `/api/v0/overlay/connect`, while the exact same test passed immediately in isolation. The full-instance runner marked nodes ready once `/api/v0/session/enabled` responded, but did not wait for the configured overlay TCP listener to start accepting connections.
