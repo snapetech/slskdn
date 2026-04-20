@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
@@ -239,6 +240,18 @@ public class ProgramPathNormalizationTests
     public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForTransferCompleteTeardownFailures()
     {
         var exception = new AggregateException(new ConnectionException("Transfer failed: Transfer complete"));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForSoulseekMessageConnectionClosedTeardown()
+    {
+        var inner = new InvalidOperationException("The underlying Tcp connection is closed");
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            inner,
+            "   at Soulseek.Network.MessageConnection.ReadContinuouslyAsync()");
+        var exception = new AggregateException(inner);
 
         Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
     }

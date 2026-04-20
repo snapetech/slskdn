@@ -4184,12 +4184,18 @@ namespace slskd
         {
             var typeName = exception.GetType().FullName ?? exception.GetType().Name;
             var details = exception.ToString();
+            var isSoulseekMessageConnectionClosed =
+                exception is InvalidOperationException &&
+                details.Contains("The underlying Tcp connection is closed", StringComparison.Ordinal) &&
+                details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
+
             var isNetworkFailure =
                 exception is TimeoutException ||
                 exception is OperationCanceledException ||
                 exception is IOException ||
                 (exception is ObjectDisposedException objectDisposedException && string.Equals(objectDisposedException.ObjectName, "Connection", StringComparison.Ordinal)) ||
                 exception is System.Net.Sockets.SocketException ||
+                isSoulseekMessageConnectionClosed ||
                 typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal) ||
                 typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal) ||
                 typeName.Contains("Soulseek.TransferException", StringComparison.Ordinal) ||
@@ -4208,6 +4214,7 @@ namespace slskd
                 details.Contains("Connection refused", StringComparison.Ordinal) ||
                 details.Contains("Connection reset by peer", StringComparison.Ordinal) ||
                 details.Contains("Remote connection closed", StringComparison.Ordinal) ||
+                details.Contains("The underlying Tcp connection is closed", StringComparison.Ordinal) ||
                 details.Contains("Download reported as failed by remote client", StringComparison.Ordinal) ||
                 details.Contains("Enqueue failed due to internal error", StringComparison.Ordinal) ||
                 details.Contains("Transfer failed: Transfer complete", StringComparison.Ordinal) ||
