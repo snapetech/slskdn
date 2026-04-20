@@ -1,3 +1,13 @@
+## 2026-04-20 23:55Z - Resampled kspls0 manual build and cleaned local validation issues
+
+- Continued validation of the manually deployed `kspls0` build now running as PID `1335511` from `2026-04-20 17:37:10 CST`.
+- Confirmed the current process is active with `NRestarts=0`, `ExecMainStatus=0`, and no matching `[FATAL] Unobserved task exception`, `Soulseek.Extensions.Reset(Timer)`, `SIGSEGV`, `ObjectDisposedException`, `Address already in use`, protocol-violation, or invalid-frame log lines in the current-process journal sample.
+- Confirmed no new `slskd` coredump entries since the current process start; the older fake-fatal/timer-reset entries belonged to pre-current PIDs.
+- Fixed the local formatter verification loop by running `dotnet format` without verify mode once, then reran `./bin/lint` successfully.
+- Cleaned compile/nullability fallout in changed files: kept OpenAPI response content mutation on the concrete `OpenApiResponse`, avoided nullable task-removal discards in QUIC servers, required a non-null relay pinned certificate before property inspection, and skipped null cookie header values.
+- Documented the OpenAPI response-interface gotcha in ADR-0001 and committed that docs-only entry as `04d071597`.
+- Validation: `dotnet build src/slskd/slskd.csproj --no-restore -c Release -v minimal` passed, focused unit slice passed (`31` tests), `bash ./bin/lint` passed, and `git diff --check` passed. Build/test output still includes pre-existing analyzer warnings in generated MessagePack and older test files.
+
 ## 2026-04-20 16:40Z - Covered the remaining Soulseek timer-reset write-loop false fatal
 
 - Rechecked the old pre-`manual-nor2r` live journal and found one remaining app-side logging miss: `Soulseek.Extensions.Reset(Timer)` on `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)` was still surfacing as `[FATAL] Unobserved task exception`, even though the matching read-loop variant had already been downgraded as expected network churn.

@@ -42,9 +42,9 @@ namespace slskd.Core.API
     {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int Failures, DateTimeOffset LastFailure, DateTimeOffset? LockoutUntil)> _loginAttempts = new();
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int Failures, DateTimeOffset LastFailure, DateTimeOffset? LockoutUntil)> _userLoginAttempts = new(StringComparer.OrdinalIgnoreCase);
-        private const int MaxFailures = 10;
-        private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
-        private static readonly TimeSpan WindowDuration = TimeSpan.FromMinutes(5);
+        private const int MaxFailures = 5;
+        private static readonly TimeSpan LockoutDuration = TimeSpan.FromHours(1);
+        private static readonly TimeSpan WindowDuration = TimeSpan.FromMinutes(15);
 
         public SessionController(
             ISecurityService securityService,

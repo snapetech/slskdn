@@ -175,18 +175,18 @@ public sealed class ProfileService : IProfileService
         return profile2;
     }
 
-        public async Task<PeerProfile> UpdateMyProfileAsync(string displayName, string? avatar, int capabilities, List<PeerEndpoint> endpoints, CancellationToken ct = default)
-        {
-            var profile = await GetMyProfileAsync(ct).ConfigureAwait(false);
-            profile.DisplayName = displayName;
-            profile.Avatar = avatar;
-            profile.Capabilities = capabilities;
+    public async Task<PeerProfile> UpdateMyProfileAsync(string displayName, string? avatar, int capabilities, List<PeerEndpoint> endpoints, CancellationToken ct = default)
+    {
+        var profile = await GetMyProfileAsync(ct).ConfigureAwait(false);
+        profile.DisplayName = displayName;
+        profile.Avatar = avatar;
+        profile.Capabilities = capabilities;
 
-            // HARDENING-2026-04-20 H10: strip any endpoint whose host is private/reserved before signing.
-            // The profile is served anonymously; a naïvely-pasted internal URL would be publicly readable.
-            profile.Endpoints = StripLeakyEndpoints(endpoints ?? new List<PeerEndpoint>(), logContext: "UpdateMyProfile");
-            profile.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
-            profile = SignProfile(profile);
+        // HARDENING-2026-04-20 H10: strip any endpoint whose host is private/reserved before signing.
+        // The profile is served anonymously; a naïvely-pasted internal URL would be publicly readable.
+        profile.Endpoints = StripLeakyEndpoints(endpoints ?? new List<PeerEndpoint>(), logContext: "UpdateMyProfile");
+        profile.ExpiresAt = DateTimeOffset.UtcNow.AddDays(7);
+        profile = SignProfile(profile);
         await SaveMyProfileAsync(profile, ct).ConfigureAwait(false);
         lock (_cacheLock) { _cachedMyProfile = profile; }
         return profile;

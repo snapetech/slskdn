@@ -18,8 +18,8 @@ public class MeshStatsCollector : IMeshStatsCollector
     private readonly ILogger<MeshStatsCollector> logger;
     private readonly Lazy<INatDetector?> natDetector;
     private readonly Lazy<Dht.InMemoryDhtClient?> dhtClient;
-    private readonly Lazy<Overlay.QuicOverlayServer?> overlayServer;
-    private readonly Lazy<Overlay.QuicOverlayClient?> overlayClient;
+    private readonly Lazy<Overlay.IOverlayConnectionMetrics?> overlayServer;
+    private readonly Lazy<Overlay.IOverlayClient?> overlayClient;
 
     // Statistics tracking
     private long messagesSent;
@@ -51,14 +51,12 @@ public class MeshStatsCollector : IMeshStatsCollector
             serviceProvider.GetService(typeof(INatDetector)) as INatDetector);
         this.dhtClient = new Lazy<Dht.InMemoryDhtClient?>(() =>
             ResolveInMemoryDhtClient(serviceProvider));
-#pragma warning disable CA1416 // Runtime OS guards already gate QUIC-only service resolution.
-        this.overlayServer = new Lazy<Overlay.QuicOverlayServer?>(() =>
+        this.overlayServer = new Lazy<Overlay.IOverlayConnectionMetrics?>(() =>
             QuicRuntime.IsAvailable()
                 ? GetOverlayServer(serviceProvider)
                 : null);
-#pragma warning restore CA1416 // Runtime OS guards already gate QUIC-only service resolution.
-        this.overlayClient = new Lazy<Overlay.QuicOverlayClient?>(() =>
-            serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.QuicOverlayClient);
+        this.overlayClient = new Lazy<Overlay.IOverlayClient?>(() =>
+            serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.IOverlayClient);
         dhtOpsTimer.Start();
         this.logger.LogInformation("[MeshStatsCollector] Constructor completed");
     }
@@ -174,17 +172,14 @@ public class MeshStatsCollector : IMeshStatsCollector
         }
     }
 
-    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
-    [System.Runtime.Versioning.SupportedOSPlatform("macos")]
-    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
-    private static Overlay.QuicOverlayServer? GetOverlayServer(IServiceProvider serviceProvider)
+    private static Overlay.IOverlayConnectionMetrics? GetOverlayServer(IServiceProvider serviceProvider)
     {
         if (!QuicRuntime.IsAvailable())
         {
             return null;
         }
 
-        return serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.QuicOverlayServer;
+        return serviceProvider.GetService(typeof(Overlay.QuicOverlayServer)) as Overlay.IOverlayConnectionMetrics;
     }
 
     private static Dht.InMemoryDhtClient? ResolveInMemoryDhtClient(IServiceProvider serviceProvider)

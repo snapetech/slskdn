@@ -776,11 +776,13 @@ namespace slskd
                 public string Address { get; init; } = string.Empty;
 
                 /// <summary>
-                ///     Gets a value indicating whether controller certificate errors should be ignored.
+                ///     Gets a value indicating whether controller certificate validation failures for
+                ///     self-signed/untrusted-root chains should be tolerated. CA validation and other
+                ///     chain failures remain blocked.
                 /// </summary>
                 [Argument(default, "controller-ignore-certificate-errors")]
                 [EnvironmentVariable("CONTROLLER_IGNORE_CERTIFICATE_ERRORS")]
-                [Description("ignore controller certificate errors")]
+                [Description("allow self-signed/untrusted-root controller certificates")]
                 public bool IgnoreCertificateErrors { get; init; } = false;
 
                 /// <summary>
@@ -3150,7 +3152,8 @@ namespace slskd
                 public WebhookHttpHeader[] Headers { get; init; } = [];
 
                 /// <summary>
-                ///     Gets a value indicating whether HTTPS certificate errors should be ignored.
+                ///     Gets a value indicating whether webhook HTTPS certificate validation failures for
+                ///     self-signed/untrusted-root chains should be tolerated.
                 /// </summary>
                 public bool IgnoreCertificateErrors { get; init; } = false;
 
@@ -3300,11 +3303,12 @@ namespace slskd
                 public string EncryptionMode { get; init; } = FtpEncryptionMode.Auto.ToString().ToLowerInvariant();
 
                 /// <summary>
-                ///     Gets a value indicating whether FTP certificate errors should be ignored.
+                ///     Gets a value indicating whether FTP certificate validation failures for
+                ///     self-signed/untrusted-root chains should be tolerated.
                 /// </summary>
                 [Argument(default, "ftp-ignore-certificate-errors")]
                 [EnvironmentVariable("FTP_IGNORE_CERTIFICATE_ERRORS")]
-                [Description("ignore FTP certificate errors")]
+                [Description("allow self-signed/untrusted-root certificates for FTP")]
                 public bool IgnoreCertificateErrors { get; init; } = false;
 
                 /// <summary>

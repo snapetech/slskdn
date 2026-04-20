@@ -12,14 +12,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 /// <summary>
-///     Periodically reminds operators that relay controller TLS validation is disabled.
+///     Periodically reminds operators that relay controller TLS validation is reduced.
 /// </summary>
 /// <remarks>
-///     HARDENING-2026-04-20 H8: <c>Relay.Controller.IgnoreCertificateErrors=true</c> disables TLS
-///     certificate validation wholesale. A one-shot warning at reconfiguration is easy to miss on a
-///     long-running deploy, so this service re-logs at warn level every <see cref="IntervalMinutes"/>
-///     minutes while the flag is set. Operators running labs with self-signed certs can acknowledge
-///     the exposure; operators who flipped it and forgot get a periodic nudge.
+///     HARDENING-2026-04-20 H8: <c>Relay.Controller.IgnoreCertificateErrors=true</c> currently reduces TLS
+///     validation to allow valid TLS chains and the common self-signed/untrusted-root case. A one-shot
+///     warning at reconfiguration is easy to miss on a long-running deploy, so this service re-logs at
+///     warn level every <see cref="IntervalMinutes"/> minutes while the flag is set. Operators running labs
+///     with private certs can acknowledge the exposure; operators who flipped it and forgot get a periodic nudge.
 /// </remarks>
 public sealed class RelayTlsWarningService : BackgroundService
 {
@@ -49,9 +49,9 @@ public sealed class RelayTlsWarningService : BackgroundService
                 {
                     _logger.LogWarning(
                         "[Relay] HARDENING-2026-04-20 H8: relay.controller.ignore_certificate_errors=true — " +
-                        "TLS certificate validation for the relay controller is DISABLED. " +
-                        "Every controller connection is vulnerable to an on-path MitM. " +
-                        "Set a CA-signed controller cert or pin the SPKI; lab-only use is acceptable.");
+                        "TLS certificate validation for the relay controller is REDUCED (valid TLS chains plus self-signed " +
+                        "or untrusted-root chains). On-path MitM remains possible if this is not combined with strong " +
+                        "certificate pinning. Set a CA-signed controller cert or pin the SPKI.");
                 }
             }
             catch (Exception ex)

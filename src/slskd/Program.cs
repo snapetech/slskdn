@@ -1063,15 +1063,6 @@ namespace slskd
             // this is important to prevent memory leaks
             services.AddHttpClient();
 
-            // add a special HttpClientFactory to DI that disables SSL.  access it via:
-            // 'using var http = HttpClientFactory.CreateClient(Constants.IgnoreCertificateErrors)'
-            // thanks Microsoft, makes total sense and surely won't be easy to fuck up later!
-            services.AddHttpClient(Constants.IgnoreCertificateErrors)
-                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-                });
-
             // PR-14: SSRF-safe key fetcher for ActivityPub HTTP Signature (timeout 3s, no redirects to prevent SSRF)
             services.AddHttpClient<SocialFederation.IHttpSignatureKeyFetcher, SocialFederation.HttpSignatureKeyFetcher>(c => c.Timeout = TimeSpan.FromSeconds(3))
                 .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
@@ -2243,48 +2234,78 @@ namespace slskd
                 Log.Information("[DI] UdpOverlayServer constructed");
                 return service;
             });
-            if (Mesh.QuicRuntime.IsAvailable())
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows())
             {
-#pragma warning disable CA1416 // Runtime OS guard ensures QUIC hosted service is only registered on supported platforms.
-                services.AddHostedService(p =>
+                if (Mesh.QuicRuntime.IsAvailable())
                 {
-                    Log.Information("[DI] Constructing QuicOverlayServer hosted service...");
-                    var service = CreateQuicOverlayServer(p);
-                    Log.Information("[DI] QuicOverlayServer constructed");
-                    return service;
-                });
-#pragma warning restore CA1416 // Runtime OS guard ensures QUIC hosted service is only registered on supported platforms.
+#pragma warning disable CA1416 // Runtime platform guards apply in this branch
+                    services.AddHostedService(p =>
+                    {
+                        Log.Information("[DI] Constructing QuicOverlayServer hosted service...");
+                        var service = CreateQuicOverlayServer(p);
+                        Log.Information("[DI] QuicOverlayServer constructed");
+                        return service;
+                    });
+#pragma warning restore CA1416
+                }
+                else
+                {
+                    Log.Warning("[DI] QUIC runtime unavailable; skipping QuicOverlayServer hosted service");
+                }
             }
             else
             {
-                Log.Warning("[DI] QUIC runtime unavailable; skipping QuicOverlayServer hosted service");
+                Log.Warning("[DI] QUIC platform unsupported; skipping QuicOverlayServer hosted service");
             }
 
-            services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
+            if ((OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()) && Mesh.QuicRuntime.IsAvailable())
             {
-                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.QuicOverlayClient>>();
-                var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.Overlay.OverlayOptions>>();
-                var signer = sp.GetRequiredService<Mesh.Overlay.IControlSigner>();
-                var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
-                return new Mesh.Overlay.QuicOverlayClient(logger, options, signer, privacyLayer);
-            });
+                services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
+                {
+#pragma warning disable CA1416 // Runtime platform guards apply in this branch.
+                    return CreateQuicOverlayClient(sp);
+#pragma warning restore CA1416
+                });
+                services.AddSingleton<Mesh.Overlay.IOverlayDataPlane>(sp =>
+                {
+#pragma warning disable CA1416 // Runtime platform guards apply in this branch.
+                    return CreateQuicDataClient(sp);
+#pragma warning restore CA1416
+                });
+            }
+            else
+            {
+                services.AddSingleton<Mesh.Overlay.IOverlayClient>(sp =>
+                {
+                    var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.UdpOverlayClient>>();
+                    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.Overlay.OverlayOptions>>();
+                    var privacyLayer = sp.GetService<Mesh.Privacy.IPrivacyLayer>();
+                    return new Mesh.Overlay.UdpOverlayClient(logger, options, privacyLayer);
+                });
+            }
+
             services.AddOptions<Mesh.Overlay.DataOverlayOptions>().Bind(slskdSection.GetSection("OverlayData"));
-            if (Mesh.QuicRuntime.IsAvailable())
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows())
             {
-                services.AddHostedService(p =>
+                if (Mesh.QuicRuntime.IsAvailable())
                 {
-                    Log.Information("[DI] Constructing QuicDataServer hosted service...");
-                    var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicDataServer>(p);
-                    Log.Information("[DI] QuicDataServer constructed");
-                    return service;
-                });
+                    services.AddHostedService(p =>
+                    {
+                        Log.Information("[DI] Constructing QuicDataServer hosted service...");
+                        var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicDataServer>(p);
+                        Log.Information("[DI] QuicDataServer constructed");
+                        return service;
+                    });
+                }
+                else
+                {
+                    Log.Warning("[DI] QUIC runtime unavailable; skipping QuicDataServer hosted service");
+                }
             }
             else
             {
-                Log.Warning("[DI] QUIC runtime unavailable; skipping QuicDataServer hosted service");
+                Log.Warning("[DI] QUIC platform unsupported; skipping QuicDataServer hosted service");
             }
-
-            services.AddSingleton<Mesh.Overlay.IOverlayDataPlane, Mesh.Overlay.QuicDataClient>();
 
             // MediaCore publisher
             services.AddHostedService(p =>
@@ -2386,7 +2407,7 @@ namespace slskd
 
             services.AddSingleton<IRelayService, RelayService>();
 
-            // HARDENING-2026-04-20 H8: loud, periodic reminder when relay controller TLS is disabled.
+            // HARDENING-2026-04-20 H8: loud, periodic reminder when relay controller TLS validation is reduced.
             services.AddHostedService<Relay.RelayTlsWarningService>();
 
             // HARDENING-2026-04-20 H12: loud, periodic reminder that public DHT rendezvous publishes this node's IP.
@@ -4098,6 +4119,28 @@ namespace slskd
         [System.Runtime.Versioning.SupportedOSPlatform("linux")]
         [System.Runtime.Versioning.SupportedOSPlatform("macos")]
         [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+        private static Mesh.Overlay.QuicOverlayClient CreateQuicOverlayClient(IServiceProvider serviceProvider)
+        {
+            var logger = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.QuicOverlayClient>>();
+            var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.Overlay.OverlayOptions>>();
+            var signer = serviceProvider.GetRequiredService<Mesh.Overlay.IControlSigner>();
+            var privacyLayer = serviceProvider.GetService<Mesh.Privacy.IPrivacyLayer>();
+            return new Mesh.Overlay.QuicOverlayClient(logger, options, signer, privacyLayer);
+        }
+
+        [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+        [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+        private static Mesh.Overlay.QuicDataClient CreateQuicDataClient(IServiceProvider serviceProvider)
+        {
+            var logger = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Mesh.Overlay.QuicDataClient>>();
+            var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Mesh.Overlay.DataOverlayOptions>>();
+            return new Mesh.Overlay.QuicDataClient(logger, options);
+        }
+
+        [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+        [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         private static Mesh.Overlay.QuicOverlayServer CreateQuicOverlayServer(IServiceProvider serviceProvider)
         {
             return ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(serviceProvider);
@@ -4141,6 +4184,11 @@ namespace slskd
 
             foreach (var headerValue in context.Request.Headers.Cookie)
             {
+                if (headerValue is null)
+                {
+                    continue;
+                }
+
                 foreach (var segment in headerValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     var separatorIndex = segment.IndexOf('=');

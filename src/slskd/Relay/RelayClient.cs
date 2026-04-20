@@ -27,8 +27,10 @@ namespace slskd.Relay
     using System.Diagnostics.CodeAnalysis;
     using System.Diagnostics;
     using System.IO;
+    using System.Net.Security;
     using System.Net.Http;
     using System.Security.Cryptography;
+    using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -298,8 +300,9 @@ namespace slskd.Relay
                 if (options.Relay.Controller.IgnoreCertificateErrors && pinnedSpkiPins.Length == 0)
                 {
                     Log.Warning("[RelayClient] MED-08: relay.controller.ignore_certificate_errors is enabled — " +
-                        "TLS certificate validation is DISABLED for the relay controller connection. " +
-                        "This is insecure and should only be used in controlled lab environments.");
+                        "TLS certificate validation is REDUCED for the relay controller connection. " +
+                        "Valid TLS chains and self-signed/untrusted-root certificates are allowed; full CA-chain " +
+                        "validation is still rejected. This should be used only in controlled lab environments.");
                 }
                 else if (pinnedSpkiPins.Length > 0)
                 {
@@ -319,14 +322,13 @@ namespace slskd.Relay
                                 {
                                     // HARDENING-2026-04-20 H8-pin: pins are authoritative; reject any cert whose
                                     // SPKI doesn't match, regardless of IgnoreCertificateErrors.
-                                    clientHandler.ServerCertificateCustomValidationCallback = (_, cert, _, _) =>
-                                        RelayTlsPinValidator.IsPinned(cert, pinnedSpkiPins);
+                                    clientHandler.ServerCertificateCustomValidationCallback = (_, cert, chain, errors) =>
+                                        IsAllowedRelayPinnedCertificate(cert, chain, errors, pinnedSpkiPins);
                                 }
                                 else if (options.Relay.Controller.IgnoreCertificateErrors)
                                 {
-#pragma warning disable S4830 // Enable server certificate validation on this SSL/TLS connection
-                                    clientHandler.ServerCertificateCustomValidationCallback += (_, _, _, _) => true;
-#pragma warning restore S4830 // Enable server certificate validation on this SSL/TLS connection
+                                    clientHandler.ServerCertificateCustomValidationCallback +=
+                                        (_, certificate, chain, errors) => IsAllowedInsecureRelayCertificate(certificate, chain, errors);
                                 }
                             }
 
@@ -394,8 +396,8 @@ namespace slskd.Relay
                 var handler = new HttpClientHandler
                 {
                     ClientCertificateOptions = ClientCertificateOption.Manual,
-                    ServerCertificateCustomValidationCallback = (_, cert, _, _) =>
-                        RelayTlsPinValidator.IsPinned(cert, pinnedSpkiPins),
+                    ServerCertificateCustomValidationCallback = (_, cert, chain, errors) =>
+                        IsAllowedRelayPinnedCertificate(cert, chain, errors, pinnedSpkiPins),
                 };
                 client = new HttpClient(handler, disposeHandler: true);
                 handler = null!;
@@ -405,9 +407,8 @@ namespace slskd.Relay
                 var handler = new HttpClientHandler
                 {
                     ClientCertificateOptions = ClientCertificateOption.Manual,
-#pragma warning disable S4830 // Enable server certificate validation on this SSL/TLS connection
-                    ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
-#pragma warning restore S4830 // Enable server certificate validation on this SSL/TLS connection
+                    ServerCertificateCustomValidationCallback = (_, cert, chain, errors) =>
+                        IsAllowedInsecureRelayCertificate(cert, chain, errors),
                 };
                 client = new HttpClient(handler, disposeHandler: true);
                 handler = null!;
@@ -420,6 +421,84 @@ namespace slskd.Relay
             client.Timeout = TimeSpan.FromMilliseconds(int.MaxValue);
             client.BaseAddress = new(options.Address);
             return client;
+        }
+
+        private static bool IsAllowedInsecureRelayCertificate(X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (certificate == null || sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+            {
+                return false;
+            }
+
+            var certificate2 = certificate as X509Certificate2;
+            if (certificate2 == null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (chain == null || chain.ChainStatus.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (var status in chain.ChainStatus)
+            {
+                if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                    status.Status != X509ChainStatusFlags.PartialChain)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsAllowedRelayPinnedCertificate(
+            X509Certificate2? certificate,
+            X509Chain? chain,
+            SslPolicyErrors sslPolicyErrors,
+            string[] expectedPins)
+        {
+            if (certificate is null || !RelayTlsPinValidator.IsPinned(certificate, expectedPins))
+            {
+                return false;
+            }
+
+            if (sslPolicyErrors == SslPolicyErrors.None)
+            {
+                return true;
+            }
+
+            if (sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+            {
+                return false;
+            }
+
+            if (!string.Equals(certificate.Subject, certificate.Issuer, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (chain == null || chain.ChainStatus.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (var status in chain.ChainStatus)
+            {
+                if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                    status.Status != X509ChainStatusFlags.PartialChain)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private async Task HandleAuthenticationChallenge(string challengeToken)

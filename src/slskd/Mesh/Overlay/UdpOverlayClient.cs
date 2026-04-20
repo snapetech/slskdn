@@ -19,6 +19,11 @@ namespace slskd.Mesh.Overlay;
 public interface IOverlayClient
 {
     Task<bool> SendAsync(ControlEnvelope envelope, IPEndPoint endpoint, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the number of active overlay connections.
+    /// </summary>
+    int GetActiveConnectionCount();
 }
 
 public class UdpOverlayClient : IOverlayClient
@@ -109,6 +114,8 @@ public class UdpOverlayClient : IOverlayClient
             return false;
         }
     }
+
+    public int GetActiveConnectionCount() => 0;
 
     private async Task<bool> SendPayloadAsync(byte[] payload, IPEndPoint endpoint, CancellationToken ct)
     {

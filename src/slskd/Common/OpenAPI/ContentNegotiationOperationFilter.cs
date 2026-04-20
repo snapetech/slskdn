@@ -64,8 +64,20 @@ public class ContentNegotiationOperationFilter : IOperationFilter
 
                 if (attribute is not null)
                 {
-                    var response = operation.Responses[statusCodeGroup.Key.ToString()];
-                    response.Content[contentType] = new OpenApiMediaType
+                    if (operation.Responses is null ||
+                        !operation.Responses.TryGetValue(statusCodeGroup.Key.ToString(), out var response) ||
+                        response is not OpenApiResponse openApiResponse)
+                    {
+                        continue;
+                    }
+
+                    var content = openApiResponse.Content;
+                    if (content is null)
+                    {
+                        continue;
+                    }
+
+                    content[contentType] = new OpenApiMediaType
                     {
                         Schema = context.SchemaGenerator.GenerateSchema(attribute.Type, context.SchemaRepository),
                     };

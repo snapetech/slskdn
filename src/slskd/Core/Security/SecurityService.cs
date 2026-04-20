@@ -34,7 +34,7 @@ namespace slskd
 
     public interface ISecurityService
     {
-        JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[] scopes = null);
+        JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[]? scopes = null);
         bool AuthenticateAdminCredentials(string username, string password);
         (string Name, Role Role, string[] Scopes) AuthenticateWithApiKey(string key, IPAddress callerIpAddress);
         void RevokeToken(string jti);
@@ -174,7 +174,7 @@ namespace slskd
             return _revokedJtis.ContainsKey(jti);
         }
 
-        public JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[] scopes = null)
+        public JwtSecurityToken GenerateJwt(string username, Role role, int? ttl = null, string[]? scopes = null)
         {
             var issuedUtc = DateTime.UtcNow;
             var expiresUtc = DateTime.UtcNow.AddMilliseconds(ttl ?? OptionsAtStartup.Web.Authentication.Jwt.Ttl);

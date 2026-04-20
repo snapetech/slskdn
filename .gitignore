@@ -3,6 +3,7 @@
 .idea/
 .DS_Store
 /src/slskd/bin/
+/src/slskd/dist/
 /src/slskd/obj/
 /src/slskd/wwwroot/
 /src/slskd/slskd.csproj.user

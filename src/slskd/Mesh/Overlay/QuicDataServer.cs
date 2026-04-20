@@ -13,6 +13,7 @@ using System.IO;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +32,7 @@ public class QuicDataServer : BackgroundService
     private readonly ConnectionThrottler connectionThrottler;
     private readonly int maxPayloadBytes;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> activeConnections = new();
+    private readonly ConcurrentDictionary<IPEndPoint, string> _pinnedRemoteCertificates = new();
     private readonly ConcurrentDictionary<int, Task> activeConnectionTasks = new();
     private int nextConnectionTaskId;
 
@@ -88,6 +90,7 @@ public class QuicDataServer : BackgroundService
                 ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay-data") },
                 ConnectionOptionsCallback = (connection, hello, token) =>
                 {
+                    var endpoint = connection.RemoteEndPoint as IPEndPoint;
                     return new ValueTask<QuicServerConnectionOptions>(new QuicServerConnectionOptions
                     {
                         DefaultStreamErrorCode = 0x02,
@@ -99,7 +102,8 @@ public class QuicDataServer : BackgroundService
                             ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay-data") },
                             ServerCertificate = certificate,
                             ClientCertificateRequired = false,
-                            RemoteCertificateValidationCallback = (sender, cert, chain, errors) => true // Accept self-signed certs
+                            RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
+                                ValidatePinnedCertificate(endpoint, certificate, chain, errors)
                         }
                     });
                 }
@@ -303,6 +307,109 @@ public class QuicDataServer : BackgroundService
         }
     }
 
+    private bool ValidatePinnedCertificate(
+        IPEndPoint? endpoint,
+        X509Certificate? certificate,
+        X509Chain? chain,
+        SslPolicyErrors sslPolicyErrors)
+    {
+        if (endpoint is null)
+        {
+            logger.LogDebug("[Overlay-QUIC-DATA] Rejecting TLS handshake: remote endpoint unavailable");
+            return false;
+        }
+
+        if (certificate == null)
+        {
+            logger.LogDebug(
+                "[Overlay-QUIC-DATA] Rejecting TLS handshake from {Endpoint}: no certificate provided",
+                endpoint);
+            return false;
+        }
+
+        if (!IsAllowedInsecurePinnedCertificate(certificate, chain, sslPolicyErrors))
+        {
+            logger.LogDebug(
+                "[Overlay-QUIC-DATA] Rejecting TLS handshake from {Endpoint}: TLS policy errors {Errors} are disallowed",
+                endpoint,
+                sslPolicyErrors);
+            return false;
+        }
+
+        using var cert2 = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+        var presentedPin = Mesh.Transport.SecurityUtils.ExtractSpkiPin(cert2);
+        if (string.IsNullOrWhiteSpace(presentedPin))
+        {
+            logger.LogWarning(
+                "[Overlay-QUIC-DATA] Rejecting TLS handshake from {Endpoint}: failed to extract SPKI pin",
+                endpoint);
+            return false;
+        }
+
+        if (_pinnedRemoteCertificates.TryGetValue(endpoint, out var expectedPin) && expectedPin == presentedPin)
+        {
+            logger.LogDebug(
+                "[Overlay-QUIC-DATA] Accepted pinned certificate for {Endpoint}",
+                endpoint);
+
+            return true;
+        }
+
+        if (_pinnedRemoteCertificates.TryGetValue(endpoint, out var priorPin))
+        {
+            logger.LogWarning(
+                "[Overlay-QUIC-DATA] Rotating pinned certificate for {Endpoint} due mismatch (old={OldPin}, new={NewPin})",
+                endpoint,
+                priorPin,
+                presentedPin);
+        }
+        else
+        {
+            logger.LogInformation(
+                "[Overlay-QUIC-DATA] First contact with {Endpoint}; pinning certificate {Pin}",
+                endpoint,
+                presentedPin);
+        }
+
+        _pinnedRemoteCertificates[endpoint] = presentedPin;
+        return true;
+    }
+
+    private static bool IsAllowedInsecurePinnedCertificate(X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    {
+        if (certificate == null || sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return sslPolicyErrors == SslPolicyErrors.None;
+        }
+
+        if (sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+        {
+            return false;
+        }
+
+        var certificate2 = certificate as X509Certificate2;
+        if (certificate2 == null || !string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (chain == null || chain.ChainStatus.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var status in chain.ChainStatus)
+        {
+            if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                status.Status != X509ChainStatusFlags.PartialChain)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static async Task CopyToAsync(Stream source, Stream target, CancellationToken ct)
     {
         var buf = new byte[8192];
@@ -316,7 +423,13 @@ public class QuicDataServer : BackgroundService
         var taskId = Interlocked.Increment(ref nextConnectionTaskId);
         activeConnectionTasks.TryAdd(taskId, task);
         _ = task.ContinueWith(
-            _ => activeConnectionTasks.TryRemove(taskId, out _),
+            _ =>
+            {
+                if (activeConnectionTasks.TryRemove(taskId, out var removedTask))
+                {
+                    _ = removedTask;
+                }
+            },
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);

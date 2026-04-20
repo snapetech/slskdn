@@ -12,6 +12,7 @@ using System.IO;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,7 @@ public class QuicDataClient : IOverlayDataPlane, IAsyncDisposable
     private readonly DataOverlayOptions options;
     private readonly ConcurrentDictionary<IPEndPoint, QuicConnection> connections = new();
     private readonly ConcurrentDictionary<IPEndPoint, SemaphoreSlim> connectionLocks = new();
+    private readonly ConcurrentDictionary<IPEndPoint, string> _pinnedRemoteCertificates = new();
     private int disposed;
 
     public QuicDataClient(ILogger<QuicDataClient> logger, IOptions<DataOverlayOptions> options)
@@ -121,7 +123,8 @@ public class QuicDataClient : IOverlayDataPlane, IAsyncDisposable
                 ClientAuthenticationOptions = new SslClientAuthenticationOptions
                 {
                     ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay-data") },
-                    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => true // Accept self-signed certs
+                    RemoteCertificateValidationCallback = (_, certificate, chain, errors) =>
+                        ValidatePinnedCertificate(endpoint, certificate, chain, errors)
                 }
             };
 
@@ -134,6 +137,103 @@ public class QuicDataClient : IOverlayDataPlane, IAsyncDisposable
             logger.LogWarning(ex, "[Overlay-QUIC-DATA] Failed to connect to {Endpoint}", endpoint);
             return null;
         }
+    }
+
+    private bool ValidatePinnedCertificate(
+        IPEndPoint endpoint,
+        X509Certificate? certificate,
+        X509Chain? chain,
+        SslPolicyErrors sslPolicyErrors)
+    {
+        if (certificate == null)
+        {
+            logger.LogDebug(
+                "[Overlay-QUIC-DATA] Rejecting TLS handshake for {Endpoint}: no certificate provided",
+                endpoint);
+            return false;
+        }
+
+        if (!IsAllowedInsecurePinnedCertificate(certificate, chain, sslPolicyErrors))
+        {
+            logger.LogDebug(
+                "[Overlay-QUIC-DATA] Rejecting TLS handshake from {Endpoint}: TLS policy errors {Errors} are disallowed",
+                endpoint,
+                sslPolicyErrors);
+            return false;
+        }
+
+        using var cert2 = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+        var presentedPin = Mesh.Transport.SecurityUtils.ExtractSpkiPin(cert2);
+        if (string.IsNullOrWhiteSpace(presentedPin))
+        {
+            logger.LogWarning(
+                "[Overlay-QUIC-DATA] Rejecting TLS handshake for {Endpoint}: failed to extract SPKI pin",
+                endpoint);
+            return false;
+        }
+
+        if (_pinnedRemoteCertificates.TryGetValue(endpoint, out var expectedPin) && expectedPin == presentedPin)
+        {
+            logger.LogDebug(
+                "[Overlay-QUIC-DATA] Accepted pinned certificate for {Endpoint}",
+                endpoint);
+
+            return true;
+        }
+
+        if (_pinnedRemoteCertificates.TryGetValue(endpoint, out var priorPin))
+        {
+            logger.LogWarning(
+                "[Overlay-QUIC-DATA] Rotating pinned certificate for {Endpoint} due mismatch (old={OldPin}, new={NewPin})",
+                endpoint,
+                priorPin,
+                presentedPin);
+        }
+        else
+        {
+            logger.LogInformation(
+                "[Overlay-QUIC-DATA] First contact with {Endpoint}; pinning certificate {Pin}",
+                endpoint,
+                presentedPin);
+        }
+
+        _pinnedRemoteCertificates[endpoint] = presentedPin;
+        return true;
+    }
+
+    private static bool IsAllowedInsecurePinnedCertificate(X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    {
+        if (certificate == null || sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return sslPolicyErrors == SslPolicyErrors.None;
+        }
+
+        if (sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+        {
+            return false;
+        }
+
+        var certificate2 = certificate as X509Certificate2;
+        if (certificate2 == null || !string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (chain == null || chain.ChainStatus.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var status in chain.ChainStatus)
+        {
+            if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                status.Status != X509ChainStatusFlags.PartialChain)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public async ValueTask DisposeAsync()
@@ -174,7 +274,8 @@ public class QuicDataClient : IOverlayDataPlane, IAsyncDisposable
                 return null;
             }
 
-            if (connections.TryGetValue(endpoint, out var existing) && existing != null)
+            QuicConnection? existing = null;
+            if (connections.TryGetValue(endpoint, out existing) && existing != null)
             {
                 return existing;
             }
@@ -203,18 +304,22 @@ public class QuicDataClient : IOverlayDataPlane, IAsyncDisposable
     {
         var gate = connectionLocks.GetOrAdd(endpoint, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        QuicConnection? removed = expectedConnection;
 
         try
         {
-            if (connections.TryGetValue(endpoint, out var cached) &&
+            QuicConnection? cached = null;
+            if (connections.TryGetValue(endpoint, out cached) &&
                 (expectedConnection == null || ReferenceEquals(cached, expectedConnection)) &&
-                connections.TryRemove(endpoint, out var removed))
+                connections.TryRemove(endpoint, out _))
             {
-                await SafeDisposeConnectionAsync(removed, endpoint, "cached connection removed").ConfigureAwait(false);
+                await SafeDisposeConnectionAsync(cached, endpoint, "cached connection removed").ConfigureAwait(false);
+                removed = null;
             }
-            else if (expectedConnection != null)
+
+            if (removed != null)
             {
-                await SafeDisposeConnectionAsync(expectedConnection, endpoint, "orphaned connection removed").ConfigureAwait(false);
+                await SafeDisposeConnectionAsync(removed, endpoint, "orphaned connection removed").ConfigureAwait(false);
             }
         }
         finally

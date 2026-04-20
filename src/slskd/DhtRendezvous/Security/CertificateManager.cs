@@ -22,9 +22,8 @@ public sealed class CertificateManager
 {
     private readonly ILogger<CertificateManager> _logger;
     private readonly string _certificatePath;
-    private readonly string _passwordPath;
+    private readonly string _legacyPasswordPath;
     private X509Certificate2? _serverCertificate;
-    private string? _certificatePassword;
     private readonly object _lock = new();
 
     /// <summary>
@@ -41,7 +40,7 @@ public sealed class CertificateManager
     {
         _logger = logger;
         _certificatePath = Path.Combine(appDirectory, "overlay_cert.pfx");
-        _passwordPath = Path.Combine(appDirectory, "overlay_cert.key");
+        _legacyPasswordPath = Path.Combine(appDirectory, "overlay_cert.key");
     }
 
     /// <summary>
@@ -152,11 +151,15 @@ public sealed class CertificateManager
 
         // Export and reimport to get a certificate with private key in usable form
         var pfxBytes = certificate.Export(X509ContentType.Pfx);
-        return new X509Certificate2(pfxBytes, (string?)null, X509KeyStorageFlags.Exportable);
+        return X509CertificateLoader.LoadPkcs12(
+            pfxBytes,
+            null,
+            X509KeyStorageFlags.Exportable,
+            new Pkcs12LoaderLimits());
     }
 
     /// <summary>
-    /// Save certificate to file with password protection.
+    /// Save certificate to file.
     /// </summary>
     private void SaveCertificate(X509Certificate2 certificate, string path)
     {
@@ -166,15 +169,8 @@ public sealed class CertificateManager
             Directory.CreateDirectory(directory);
         }
 
-        // SECURITY: Generate a random password for the PFX
-        var password = GenerateRandomPassword();
-        _certificatePassword = password;
-
-        var pfxBytes = certificate.Export(X509ContentType.Pfx, password);
+        var pfxBytes = certificate.Export(X509ContentType.Pfx);
         File.WriteAllBytes(path, pfxBytes);
-
-        // Save password to separate file
-        File.WriteAllText(_passwordPath, password);
 
         // Set restrictive permissions (Unix only)
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
@@ -182,7 +178,6 @@ public sealed class CertificateManager
             try
             {
                 File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-                File.SetUnixFileMode(_passwordPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
             }
             catch (Exception ex)
             {
@@ -190,7 +185,20 @@ public sealed class CertificateManager
             }
         }
 
-        _logger.LogDebug("Saved certificate to {Path} with password protection", path);
+        _logger.LogDebug("Saved certificate to {Path}", path);
+
+        if (File.Exists(_legacyPasswordPath))
+        {
+            try
+            {
+                File.Delete(_legacyPasswordPath);
+                _logger.LogDebug("Removed legacy overlay certificate password file {Path}", _legacyPasswordPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not remove legacy overlay certificate password file");
+            }
+        }
     }
 
     /// <summary>
@@ -198,41 +206,65 @@ public sealed class CertificateManager
     /// </summary>
     private X509Certificate2 LoadCertificate(string path)
     {
-        // Try to load password from file
-        string? password = null;
-        if (File.Exists(_passwordPath))
-        {
-            try
-            {
-                password = File.ReadAllText(_passwordPath).Trim();
-                _certificatePassword = password;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not read certificate password file");
-            }
-        }
-
-        // Try loading with password first, then without (for backwards compatibility)
         try
         {
-            return new X509Certificate2(path, password, X509KeyStorageFlags.Exportable);
+            return X509CertificateLoader.LoadPkcs12FromFile(
+                path,
+                null,
+                X509KeyStorageFlags.Exportable,
+                new Pkcs12LoaderLimits());
         }
-        catch (CryptographicException) when (password != null)
+        catch (CryptographicException ex) when (File.Exists(_legacyPasswordPath))
         {
-            _logger.LogWarning("Certificate password mismatch, trying without password (legacy)");
-            return new X509Certificate2(path);
+            _logger.LogDebug(ex, "Loading overlay certificate without password failed, attempting legacy password-protected path");
+
+            var password = TryReadLegacyCertificatePassword();
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                throw;
+            }
+
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+                path,
+                password,
+                X509KeyStorageFlags.Exportable,
+                new Pkcs12LoaderLimits());
+
+            try
+            {
+                // Migrate legacy password-protected overlays to the new passwordless format.
+                SaveCertificate(certificate, path);
+            }
+            catch (Exception migrationEx)
+            {
+                _logger.LogWarning(migrationEx, "Failed to migrate legacy overlay certificate to passwordless format");
+            }
+
+            return certificate;
         }
     }
 
     /// <summary>
-    /// Generate a cryptographically random password.
+    /// Read legacy password file for compatibility with pre-hardening certificate artifacts.
     /// </summary>
-    private static string GenerateRandomPassword()
+    private string? TryReadLegacyCertificatePassword()
     {
-        var bytes = new byte[32];
-        System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
-        return Convert.ToBase64String(bytes);
+        try
+        {
+            var password = File.ReadAllText(_legacyPasswordPath).Trim();
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                _logger.LogWarning("Legacy overlay certificate password file exists but is empty");
+                return null;
+            }
+
+            return password;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not read overlay certificate legacy password file");
+            return null;
+        }
     }
 }
 

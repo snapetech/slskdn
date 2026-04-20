@@ -71,7 +71,7 @@ public sealed class DirectTransport : IAnonymityTransport
             sslStream = new SslStream(
                 client.GetStream(),
                 leaveInnerStreamOpen: false,
-                static (_, _, _, _) => true);
+                (_, certificate, chain, errors) => IsAllowedMeshDirectCertificate(certificate, chain, errors));
 
             using var tlsCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             tlsCts.CancelAfter(TlsHandshakeTimeout);
@@ -115,9 +115,12 @@ public sealed class DirectTransport : IAnonymityTransport
             }
 
             _logger.LogDebug(ex, "Direct TLS transport failed to connect to {Host}:{Port}", host, port);
+            throw;
+        }
+        finally
+        {
             sslStream?.Dispose();
             client?.Dispose();
-            throw;
         }
     }
 
@@ -136,6 +139,46 @@ public sealed class DirectTransport : IAnonymityTransport
                 TotalConnectionsSuccessful = _status.TotalConnectionsSuccessful,
             };
         }
+    }
+
+    private static bool IsAllowedMeshDirectCertificate(X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    {
+        if (certificate == null)
+        {
+            return false;
+        }
+
+        if (sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+
+        if (sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+        {
+            return false;
+        }
+
+        var certificate2 = certificate as X509Certificate2;
+        if (certificate2 == null || !string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (chain == null || chain.ChainStatus.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var status in chain.ChainStatus)
+        {
+            if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                status.Status != X509ChainStatusFlags.PartialChain)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private sealed class TrackedStream : Stream

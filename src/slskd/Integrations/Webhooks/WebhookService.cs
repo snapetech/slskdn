@@ -24,6 +24,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -84,9 +86,7 @@ public class WebhookService
             {
                 var call = webhook.Value.Call;
 
-                using var http = call.IgnoreCertificateErrors
-                    ? HttpClientFactory.CreateClient(Constants.IgnoreCertificateErrors)
-                    : HttpClientFactory.CreateClient();
+                using var http = CreateWebhookHttpClient(call, webhook.Key);
 
                 http.Timeout = TimeSpan.FromMilliseconds(webhook.Value.Timeout);
 
@@ -156,5 +156,62 @@ public class WebhookService
                 }
             });
         }
+    }
+
+    private HttpClient CreateWebhookHttpClient(Options.IntegrationOptions.WebhookHttpOptions call, string webhookName)
+    {
+        if (!call.IgnoreCertificateErrors)
+        {
+            return HttpClientFactory.CreateClient();
+        }
+
+        Log.Warning(
+            "[WebhookService] HARDENING-2026-04-20: webhook '{Name}' has ignore_certificate_errors=true " +
+            "— allowing only self-signed/untrusted-root certificates for this destination.",
+            webhookName);
+
+#pragma warning disable CA2000 // Call System.IDisposable.Dispose on object created by 'new HttpClientHandler' before all references to it are out of scope
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (_, certificate, chain, errors) =>
+                IsAllowedInsecureWebhookCertificate(certificate, chain, errors),
+        };
+#pragma warning restore CA2000 // Call System.IDisposable.Dispose on object created by 'new HttpClientHandler' before all references to it are out of scope
+        return new HttpClient(handler, disposeHandler: true);
+    }
+
+    private static bool IsAllowedInsecureWebhookCertificate(X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    {
+        if (certificate == null || sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+        {
+            return false;
+        }
+
+        if (chain == null || chain.ChainStatus.Length == 0)
+        {
+            return false;
+        }
+
+        var certificate2 = certificate as X509Certificate2;
+        if (certificate2 == null)
+        {
+            return false;
+        }
+
+        if (!string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        foreach (var status in chain.ChainStatus)
+        {
+            if (status.Status != System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.UntrustedRoot &&
+                status.Status != System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.PartialChain)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

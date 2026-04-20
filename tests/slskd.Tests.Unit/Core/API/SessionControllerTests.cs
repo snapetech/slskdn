@@ -92,8 +92,9 @@ public class SessionControllerTests
         var security = new Mock<ISecurityService>();
         security.Setup(service => service.AuthenticateAdminCredentials("admin", "wrong")).Returns(false);
         var controller = CreateController(security: security);
+        const int maxFailures = 5;
 
-        for (var attempt = 0; attempt < 10; attempt++)
+        for (var attempt = 0; attempt < maxFailures; attempt++)
         {
             controller.ControllerContext.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse($"203.0.113.{attempt + 1}");
             var result = controller.Login(new LoginRequest

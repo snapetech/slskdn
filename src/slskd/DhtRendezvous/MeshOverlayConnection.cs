@@ -484,8 +484,53 @@ public sealed class MeshOverlayConnection : IAsyncDisposable
         X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)
     {
-        // We accept self-signed certificates and use certificate pinning (TOFU)
-        // The pin check is done at a higher level after connection is established
+        if (certificate == null)
+        {
+            return false;
+        }
+
+        if (sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+
+        // Allow the overlay to use self-signed certificates during bootstrap, while still rejecting
+        // certificates that are clearly invalid (time-bad, unavailable, or from a wrong hostname with no
+        // self-sign identity).
+        if (!sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateChainErrors) &&
+            !sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch))
+        {
+            return false;
+        }
+
+        if (certificate is not X509Certificate2 certificate2)
+        {
+            return false;
+        }
+
+        if (certificate2.NotAfter <= DateTime.UtcNow || certificate2.NotBefore > DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        var isSelfSigned = string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.OrdinalIgnoreCase);
+        if (!isSelfSigned && sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors)
+        {
+            return false;
+        }
+
+        if (chain is not null)
+        {
+            foreach (var status in chain.ChainStatus)
+            {
+                if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                    status.Status != X509ChainStatusFlags.PartialChain)
+                {
+                    return false;
+                }
+            }
+        }
+
         return true;
     }
 

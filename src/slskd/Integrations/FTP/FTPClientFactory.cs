@@ -22,6 +22,9 @@ using Microsoft.Extensions.Options;
 
 namespace slskd.Integrations.FTP
 {
+    using System;
+    using System.Net.Security;
+    using System.Security.Cryptography.X509Certificates;
     using FluentFTP;
     using static slskd.Options.IntegrationOptions;
 
@@ -51,12 +54,68 @@ namespace slskd.Integrations.FTP
             var config = new FtpConfig
             {
                 EncryptionMode = FtpOptions.EncryptionMode.ToEnum<FtpEncryptionMode>(),
-                ValidateAnyCertificate = FtpOptions.IgnoreCertificateErrors,
             };
 
-            var client = new AsyncFtpClient(FtpOptions.Address, FtpOptions.Username, FtpOptions.Password, FtpOptions.Port, config);
+            var client = new AsyncFtpClient(
+                FtpOptions.Address,
+                FtpOptions.Username,
+                FtpOptions.Password,
+                FtpOptions.Port,
+                config);
+
+            if (FtpOptions.IgnoreCertificateErrors)
+            {
+                if (client.Config.ValidateAnyCertificate is false)
+                {
+                    client.Config.ValidateAnyCertificate = true;
+                }
+
+                client.ValidateCertificate += (_, e) =>
+                {
+                    if (e.PolicyErrors == SslPolicyErrors.None)
+                    {
+                        e.Accept = true;
+                        return;
+                    }
+
+                    if (IsAllowedInsecureFtpCertificate(e.Certificate, e.Chain, e.PolicyErrors))
+                    {
+                        e.Accept = true;
+                    }
+                };
+            }
 
             return client;
+        }
+
+        private static bool IsAllowedInsecureFtpCertificate(X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (certificate == null || sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+            {
+                return false;
+            }
+
+            var certificate2 = certificate as X509Certificate2;
+            if (certificate2 == null || !string.Equals(certificate2.Subject, certificate2.Issuer, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (chain == null || chain.ChainStatus.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (var status in chain.ChainStatus)
+            {
+                if (status.Status != X509ChainStatusFlags.UntrustedRoot &&
+                    status.Status != X509ChainStatusFlags.PartialChain)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

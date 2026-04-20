@@ -41,12 +41,6 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        if (_options.UseWss && _options.IgnoreCertificateErrors)
-        {
-            _logger.LogWarning(
-                "WebSocket transport has IgnoreCertificateErrors=true; TLS certificate validation is disabled. " +
-                "This is insecure and should only be used in controlled lab environments.");
-        }
     }
 
     /// <summary>
@@ -77,11 +71,6 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
 
             using var client = new ClientWebSocket();
             AddSubProtocolIfConfigured(client);
-
-            if (_options.UseWss && _options.IgnoreCertificateErrors)
-            {
-                client.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
-            }
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5)); // Quick connectivity test
@@ -187,11 +176,6 @@ public sealed class WebSocketTransport : IAnonymityTransport, IDisposable
                 {
                     client.Options.SetRequestHeader(header.Key, header.Value);
                 }
-            }
-
-            if (_options.UseWss && _options.IgnoreCertificateErrors)
-            {
-                client.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
             }
 
             await client.ConnectAsync(uri, cancellationToken);

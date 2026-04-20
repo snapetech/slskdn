@@ -1,3 +1,18 @@
+## Update 2026-04-20 23:55:00Z
+
+- Current task: None. The current `kspls0` manual build is stable in the latest sample, and the local formatter/compile cleanup from the validation pass is complete.
+- Last activity:
+  - resampled the current `kspls0` service process (`PID 1335511`, active since `2026-04-20 17:37:10 CST`) and confirmed it remains active with `NRestarts=0` and `ExecMainStatus=0`
+  - found no current-process journal matches for fatal unobserved exceptions, the Soulseek timer-reset classifier, native crash strings, disposed-object shutdown noise, listener bind failures, protocol violations, or invalid-frame logs
+  - confirmed no new `slskd` coredumps since the current process start; the noisy timer-reset/fake-fatal entries were from older PIDs
+  - fixed the local lint/formatter verification loop and cleaned compile/nullability issues in OpenAPI response mutation, QUIC task cleanup, relay pin validation, and cookie header stripping
+  - documented the OpenAPI `IOpenApiResponse.Content` interface gotcha in ADR-0001 and committed that docs-only entry as `04d071597`
+  - revalidated locally with Release build, focused unit slice (`31` tests), `bash ./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Keep soaking `kspls0` and only redeploy if the current process shows fresh crash/log evidence or the remaining local changes need to be promoted.
+  2. Treat older pre-current-PID fatal/timer-reset logs as historical unless they recur on the current PID.
+  3. Do not create a build tag unless explicitly requested.
+
 ## Update 2026-04-20 15:55:00Z
 
 - Current task: None. The live `kspls0` redeploy validated the timer-reset log-noise fix and exposed native crash recurrence as the next real host issue.

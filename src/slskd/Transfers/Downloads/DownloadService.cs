@@ -339,6 +339,8 @@ namespace slskd.Transfers.Downloads
 
             SemaphoreSlim userSemaphore;
             Task userSemaphoreWaitTask;
+            SemaphoreSlim? enqueueSemaphore = null;
+            var trackedEnqueueTasks = new List<Task>();
 
             Log.Debug("Awaiting enqueue semaphore sync root");
             await EnqueueSemaphoreSyncRoot.WaitAsync(cancellationToken);
@@ -399,9 +401,12 @@ namespace slskd.Transfers.Downloads
                 }
 
                 var maxTimeToWaitForEnqueueRequestAck = TimeSpan.FromMinutes(3);
-                var enqueueSemaphore = new SemaphoreSlim(initialCount: concurrentEnqueueRequests, maxCount: concurrentEnqueueRequests);
-
-                /*
+#pragma warning disable CA2000 // Ownership is intentionally transferred to deferred idle-disposal helper.
+                enqueueSemaphore = new SemaphoreSlim(initialCount: concurrentEnqueueRequests, maxCount: concurrentEnqueueRequests);
+#pragma warning restore CA2000
+                try
+                {
+                    /*
                     iterate over each of the files in the request.  each file must be dispositioned as one of the following:
 
                     1. enqueued: passed duplicate checks and successfully kicked off a Task to enqueue the download
@@ -410,215 +415,221 @@ namespace slskd.Transfers.Downloads
                     if we fail to enqueue a file, we must call TryFail() to ensure that if a record was inserted, it is
                     given a final disposition that will keep it from getting 'stuck'
                 */
-                foreach (var file in fileList)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    Guid transferId = Guid.NewGuid();
-
-                    try
+                    foreach (var file in fileList)
                     {
-                        Log.Debug("Checking whether download of {Filename} from {Username} is already in progress", file.Filename, username);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        Guid transferId = Guid.NewGuid();
 
-                        /*
-                            if there are any that haven't ended yet (checking a few ways out of paranoia), then there's already
-                            an existing transfer record covering this file, and we're already enqueued. nothing more to do!
-                        */
-                        existingInProgressRecords.TryGetValue(file.Filename, out var existingInProgressRecord);
-
-                        if (existingInProgressRecord is not null)
+                        try
                         {
-                            Log.Debug("Ignoring concurrent download enqueue attempt; transfer for {Filename} from {Username} already in progress (id: {Id})", file.Filename, username, existingInProgressRecord.Id);
-                            failed.Add(file.Filename);
-                            continue;
-                        }
+                            Log.Debug("Checking whether download of {Filename} from {Username} is already in progress", file.Filename, username);
 
-                        /*
-                            check the tracked download dictionary in Soulseek.NET to see if it knows about this already
-                            it shouldn't, if the slskd database doesn't. but things could get desynced, which is likely a bug
-                            and we'd like to know about it
-                        */
-                        if (Client.Downloads?.Any(u => u.Username == username && u.Filename == file.Filename) ?? false)
-                        {
-                            Log.Warning("Ignoring concurrent download enqueue attempt; transfer for {Filename} from {Username} is tracked by the Soulseek client but not slskd", file.Filename, username);
-                            failed.Add(file.Filename);
-                            continue;
-                        }
+                            /*
+                                if there are any that haven't ended yet (checking a few ways out of paranoia), then there's already
+                                an existing transfer record covering this file, and we're already enqueued. nothing more to do!
+                            */
+                            existingInProgressRecords.TryGetValue(file.Filename, out var existingInProgressRecord);
 
-                        /*
-                            add the transfer record to the database in the Queued | Locally state, and set the 'Removed'
-                            property of any existing transfer to 'true', allowing the new record to supersede any old record(s)
-                            on the UI
-
-                            we have to persist these changes to the database at this time so the record shows up on the UI,
-                            otherwise the transfers only show up as they are enqueued.
-                        */
-                        var transfer = new Transfer()
-                        {
-                            Id = transferId,
-                            Username = username,
-                            Direction = TransferDirection.Download,
-                            Filename = file.Filename, // important! use the remote filename
-                            Size = file.Size,
-                            StartOffset = 0, // todo: maybe implement resumeable downloads?
-                            RequestedAt = DateTime.UtcNow,
-                            State = TransferStates.Queued | TransferStates.Locally,
-                        };
-
-                        context.Add(transfer);
-
-                        Log.Debug("Added Transfer record for download of {Filename} from {Username} (id: {Id})", transfer.Filename, transfer.Username, transfer.Id);
-
-                        foreach (var record in existingRecords.Where(t => t.Filename == file.Filename && !t.Removed))
-                        {
-                            record.Removed = true;
-                            context.Update(record);
-                            Log.Debug("Marked existing download record of {Filename} from {Username} removed (id: {Id})", file.Filename, username, record.Id);
-                        }
-
-                        /*
-                            create a TaskCompletionSource that we can await for one of the following:
-
-                            1. the transfer enters the Queued | Remotely state
-                            2. the transfer enters a state containing Completed
-                            3. the linked CancellationTokenSource we add to CancellationTokens is cancelled
-                            4. the 'max wait time' CancellationTokenSource is cancelled
-
-                            add this to the dictionary before inserting the record, so we are guaranteed to have it
-                            in the right place once the transfer hits the UI
-                        */
-                        var enqueuedTcs = new TaskCompletionSource<Transfer>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-                        // satisfies condition #3; CancellationTokenSource set cancelled by the user (via API call)
-                        var cts = new CancellationTokenSource();
-                        CancellationTokens.TryAdd(transfer.Id, cts);
-                        cts.Token.Register(() => enqueuedTcs.TrySetCanceled());
-
-                        /*
-                            DANGER ZONE! this record is in the database now; we're on the hook for making sure it ends up
-                            with a State that includes the Completed flag, else it remain "stuck" on the UI
-                        */
-                        context.SaveChanges();
-
-                        Log.Debug("Scheduling Task for enqueue of {Filename} from {Username}", file.Filename, username);
-
-                        var downloadEnqueueTask = TrackTransferTask(
-                            ActiveEnqueueTasks,
-                            transferId,
-                            ObserveDownloadEnqueueTaskAsync(Task.Run(async () =>
-                        {
-                            Log.Debug("Awaiting download enqueue semaphore for {Filename} from {Username}", transfer.Filename, transfer.Username);
-                            await enqueueSemaphore.WaitAsync(cts.Token);
-
-                            try
+                            if (existingInProgressRecord is not null)
                             {
-                                Log.Debug("Acquired download enqueue semaphore for {Filename} from {Username}", transfer.Filename, transfer.Username);
+                                Log.Debug("Ignoring concurrent download enqueue attempt; transfer for {Filename} from {Username} already in progress (id: {Id})", file.Filename, username, existingInProgressRecord.Id);
+                                failed.Add(file.Filename);
+                                continue;
+                            }
 
-                                List<string> transitions = [];
-                                TransferStates state = TransferStates.None;
+                            /*
+                                check the tracked download dictionary in Soulseek.NET to see if it knows about this already
+                                it shouldn't, if the slskd database doesn't. but things could get desynced, which is likely a bug
+                                and we'd like to know about it
+                            */
+                            if (Client.Downloads?.Any(u => u.Username == username && u.Filename == file.Filename) ?? false)
+                            {
+                                Log.Warning("Ignoring concurrent download enqueue attempt; transfer for {Filename} from {Username} is tracked by the Soulseek client but not slskd", file.Filename, username);
+                                failed.Add(file.Filename);
+                                continue;
+                            }
 
-                                // satisfies condition #4; remote user doesn't respond after a really long time
-                                using var timeoutCts = new CancellationTokenSource(maxTimeToWaitForEnqueueRequestAck);
-                                timeoutCts.Token.Register(() =>
+                            /*
+                                add the transfer record to the database in the Queued | Locally state, and set the 'Removed'
+                                property of any existing transfer to 'true', allowing the new record to supersede any old record(s)
+                                on the UI
+
+                                we have to persist these changes to the database at this time so the record shows up on the UI,
+                                otherwise the transfers only show up as they are enqueued.
+                            */
+                            var transfer = new Transfer()
+                            {
+                                Id = transferId,
+                                Username = username,
+                                Direction = TransferDirection.Download,
+                                Filename = file.Filename, // important! use the remote filename
+                                Size = file.Size,
+                                StartOffset = 0, // todo: maybe implement resumeable downloads?
+                                RequestedAt = DateTime.UtcNow,
+                                State = TransferStates.Queued | TransferStates.Locally,
+                            };
+
+                            context.Add(transfer);
+
+                            Log.Debug("Added Transfer record for download of {Filename} from {Username} (id: {Id})", transfer.Filename, transfer.Username, transfer.Id);
+
+                            foreach (var record in existingRecords.Where(t => t.Filename == file.Filename && !t.Removed))
+                            {
+                                record.Removed = true;
+                                context.Update(record);
+                                Log.Debug("Marked existing download record of {Filename} from {Username} removed (id: {Id})", file.Filename, username, record.Id);
+                            }
+
+                            /*
+                                create a TaskCompletionSource that we can await for one of the following:
+
+                                1. the transfer enters the Queued | Remotely state
+                                2. the transfer enters a state containing Completed
+                                3. the linked CancellationTokenSource we add to CancellationTokens is cancelled
+                                4. the 'max wait time' CancellationTokenSource is cancelled
+
+                                add this to the dictionary before inserting the record, so we are guaranteed to have it
+                                in the right place once the transfer hits the UI
+                            */
+                            var enqueuedTcs = new TaskCompletionSource<Transfer>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                            // satisfies condition #3; CancellationTokenSource set cancelled by the user (via API call)
+                            var cts = new CancellationTokenSource();
+                            CancellationTokens.TryAdd(transfer.Id, cts);
+                            cts.Token.Register(() => enqueuedTcs.TrySetCanceled());
+
+                            /*
+                                DANGER ZONE! this record is in the database now; we're on the hook for making sure it ends up
+                                with a State that includes the Completed flag, else it remain "stuck" on the UI
+                            */
+                            context.SaveChanges();
+
+                            Log.Debug("Scheduling Task for enqueue of {Filename} from {Username}", file.Filename, username);
+
+                            var downloadEnqueueTask = TrackTransferTask(
+                                ActiveEnqueueTasks,
+                                transferId,
+                                ObserveDownloadEnqueueTaskAsync(Task.Run(async () =>
+                            {
+                                Log.Debug("Awaiting download enqueue semaphore for {Filename} from {Username}", transfer.Filename, transfer.Username);
+                                await enqueueSemaphore.WaitAsync(cts.Token);
+
+                                try
                                 {
-                                    Log.Warning("Download of {Filename} from {Username} failed to enqueue remotely after hard time limit of {Duration} seconds. State transition history: {History}", transfer.Filename, username, maxTimeToWaitForEnqueueRequestAck.TotalSeconds, string.Join(", ", transitions));
-                                    enqueuedTcs.TrySetException(new TimeoutException($"Download failed to enqueue remotely after hard time limit of {maxTimeToWaitForEnqueueRequestAck.TotalSeconds} secs"));
-                                });
+                                    Log.Debug("Acquired download enqueue semaphore for {Filename} from {Username}", transfer.Filename, transfer.Username);
 
-                                // satisfies conditions #1 and #2
-                                void stateChanged(Transfer transfer)
-                                {
-                                    state = transfer.State;
-                                    transitions.Add(transfer.State.ToString());
+                                    List<string> transitions = [];
+                                    TransferStates state = TransferStates.None;
 
-                                    if (transfer.State.HasFlag(TransferStates.Queued) && transfer.State.HasFlag(TransferStates.Remotely))
+                                    // satisfies condition #4; remote user doesn't respond after a really long time
+                                    using var timeoutCts = new CancellationTokenSource(maxTimeToWaitForEnqueueRequestAck);
+                                    timeoutCts.Token.Register(() =>
                                     {
-                                        // satisfies condition #1; transfer is now remotely queued
-                                        enqueuedTcs.TrySetResult(transfer);
-                                    }
+                                        Log.Warning("Download of {Filename} from {Username} failed to enqueue remotely after hard time limit of {Duration} seconds. State transition history: {History}", transfer.Filename, username, maxTimeToWaitForEnqueueRequestAck.TotalSeconds, string.Join(", ", transitions));
+                                        enqueuedTcs.TrySetException(new TimeoutException($"Download failed to enqueue remotely after hard time limit of {maxTimeToWaitForEnqueueRequestAck.TotalSeconds} secs"));
+                                    });
 
-                                    // satisfies condition #2; transfer advanced to a terminal state before being enqueued remotely (probably failed)
-                                    if (transfer.State.HasFlag(TransferStates.Completed))
+                                    // satisfies conditions #1 and #2
+                                    void stateChanged(Transfer transfer)
                                     {
-                                        if (transfer.State.HasFlag(TransferStates.Succeeded))
+                                        state = transfer.State;
+                                        transitions.Add(transfer.State.ToString());
+
+                                        if (transfer.State.HasFlag(TransferStates.Queued) && transfer.State.HasFlag(TransferStates.Remotely))
                                         {
+                                            // satisfies condition #1; transfer is now remotely queued
                                             enqueuedTcs.TrySetResult(transfer);
                                         }
-                                        else
+
+                                        // satisfies condition #2; transfer advanced to a terminal state before being enqueued remotely (probably failed)
+                                        if (transfer.State.HasFlag(TransferStates.Completed))
                                         {
-                                            enqueuedTcs.TrySetException(new TransferException(transfer.Exception));
+                                            if (transfer.State.HasFlag(TransferStates.Succeeded))
+                                            {
+                                                enqueuedTcs.TrySetResult(transfer);
+                                            }
+                                            else
+                                            {
+                                                enqueuedTcs.TrySetException(new TransferException(transfer.Exception));
+                                            }
                                         }
                                     }
-                                }
 
-                                Log.Debug("Scheduling Task for download of {Filename} from {Username}", transfer.Filename, transfer.Username);
+                                    Log.Debug("Scheduling Task for download of {Filename} from {Username}", transfer.Filename, transfer.Username);
 
-                                var downloadTask = TrackTransferTask(
-                                    ActiveDownloadTasks,
-                                    transferId,
-                                    ObserveDownloadTaskAsync(
-                                        Task.Run(() => DownloadAsync(transfer, stateChanged, cancellationToken: cts.Token)),
+                                    var downloadTask = TrackTransferTask(
+                                        ActiveDownloadTasks,
                                         transferId,
-                                        file.Filename,
-                                        username));
+                                        ObserveDownloadTaskAsync(
+                                            Task.Run(() => DownloadAsync(transfer, stateChanged, cancellationToken: cts.Token)),
+                                            transferId,
+                                            file.Filename,
+                                            username));
 
-                                Log.Debug("Download Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadTask.Status);
+                                    Log.Debug("Download Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadTask.Status);
 
-                                Log.Debug("Waiting for download of {Filename} from {Username} to transition into {State}", transfer.Filename, transfer.Username, TransferStates.Queued | TransferStates.Remotely);
+                                    Log.Debug("Waiting for download of {Filename} from {Username} to transition into {State}", transfer.Filename, transfer.Username, TransferStates.Queued | TransferStates.Remotely);
 
-                                /*
-                                    wait for one of the four conditions to be true:
+                                    /*
+                                        wait for one of the four conditions to be true:
 
-                                    1. the transfer enters the Queued | Remotely state
-                                    2. the transfer enters a state containing Completed
-                                    3. the linked CancellationTokenSource we add to CancellationTokens is cancelled
-                                    4. the 'max wait time' CancellationTokenSource is cancelled
-                                */
-                                await enqueuedTcs.Task;
+                                        1. the transfer enters the Queued | Remotely state
+                                        2. the transfer enters a state containing Completed
+                                        3. the linked CancellationTokenSource we add to CancellationTokens is cancelled
+                                        4. the 'max wait time' CancellationTokenSource is cancelled
+                                    */
+                                    await enqueuedTcs.Task;
 
-                                Log.Debug("Download of {Filename} from {Username} successfully entered state {State}", transfer.Filename, transfer.Username, state);
-                            }
-                            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
-                            {
-                                Log.Debug(ex, "Download enqueue for {File} from {Username} cancelled during shutdown", transfer.Filename, transfer.Username);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error(ex, "Download of {File} from {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
-                                if (!TryFail(transferId, exception: ex))
-                                {
-                                    Log.Error(ex, "Failed to clean up transfer {Id} after failed execution: {Message}", transfer.Id, ex.Message);
+                                    Log.Debug("Download of {Filename} from {Username} successfully entered state {State}", transfer.Filename, transfer.Username, state);
                                 }
-                            }
-                            finally
-                            {
-                                ReleaseSemaphore(enqueueSemaphore, "download enqueue", transfer.Filename, transfer.Username);
-                            }
-                        }, cancellationToken: cts.Token),
-                                transferId,
-                                file.Filename,
-                                username));
+                                catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+                                {
+                                    Log.Debug(ex, "Download enqueue for {File} from {Username} cancelled during shutdown", transfer.Filename, transfer.Username);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error(ex, "Download of {File} from {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
+                                    if (!TryFail(transferId, exception: ex))
+                                    {
+                                        Log.Error(ex, "Failed to clean up transfer {Id} after failed execution: {Message}", transfer.Id, ex.Message);
+                                    }
+                                }
+                                finally
+                                {
+                                    ReleaseSemaphore(enqueueSemaphore, "download enqueue", transfer.Filename, transfer.Username);
+                                }
+                            }, cancellationToken: cts.Token),
+                                    transferId,
+                                    file.Filename,
+                                    username));
 
-                        Log.Debug("Download enqueue Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadEnqueueTask.Status);
-                        Log.Information("Successfully locally enqueued download of {Filename} from {Username} (id: {Id})", file.Filename, username, transferId);
-                        enqueued.Add(transfer);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Failed to enqueue download of {Filename} from {Username}: {Message}", file.Filename, username, ex.Message);
-                        TryFail(transferId, exception: ex);
-                        failed.Add(file.Filename);
-
-                        if (CancellationTokens.TryRemove(transferId, out var cts))
-                        {
-                            cts.Dispose();
+                            trackedEnqueueTasks.Add(downloadEnqueueTask);
+                            Log.Debug("Download enqueue Task status for {Filename} from {Username}: {Status}", file.Filename, username, downloadEnqueueTask.Status);
+                            Log.Information("Successfully locally enqueued download of {Filename} from {Username} (id: {Id})", file.Filename, username, transferId);
+                            enqueued.Add(transfer);
                         }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Failed to enqueue download of {Filename} from {Username}: {Message}", file.Filename, username, ex.Message);
+                            TryFail(transferId, exception: ex);
+                            failed.Add(file.Filename);
 
-                        continue;
-                    }
-                } // end foreach()
+                            if (CancellationTokens.TryRemove(transferId, out var cts))
+                            {
+                                cts.Dispose();
+                            }
 
-                Log.Information("Successfully enqueued {Count} files from {Username}", enqueued.Count, username);
-                return (enqueued, failed);
+                            continue;
+                        }
+                    } // end foreach()
+
+                    Log.Information("Successfully enqueued {Count} files from {Username}", enqueued.Count, username);
+                    return (enqueued, failed);
+                }
+                finally
+                {
+                    DisposeEnqueueSemaphoreWhenIdle(enqueueSemaphore, trackedEnqueueTasks);
+                }
             }
             catch (Exception ex)
             {
@@ -1395,7 +1406,13 @@ namespace slskd.Transfers.Downloads
         {
             taskMap[transferId] = task;
             _ = task.ContinueWith(
-                _ => taskMap.TryRemove(transferId, out _),
+                _ =>
+                {
+                    if (taskMap.TryRemove(transferId, out var removedTask))
+                    {
+                        _ = removedTask;
+                    }
+                },
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
@@ -1423,6 +1440,26 @@ namespace slskd.Transfers.Downloads
                     EnqueueSemaphoreSyncRoot.Release();
                 }
             }
+        }
+
+        private static void DisposeEnqueueSemaphoreWhenIdle(SemaphoreSlim? semaphore, IReadOnlyCollection<Task> runningTasks)
+        {
+            if (semaphore is null)
+            {
+                return;
+            }
+
+            if (runningTasks.Count == 0)
+            {
+                semaphore.Dispose();
+                return;
+            }
+
+            _ = Task.WhenAll(runningTasks).ContinueWith(
+                _ => semaphore.Dispose(),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
         }
     }
 }

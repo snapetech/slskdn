@@ -16,18 +16,19 @@ using slskd.Mesh.Transport;
 /// <remarks>
 ///     <para>
 ///         The Relay controller connection historically had two modes: fully CA-validated, or
-///         fully bypassed via <c>IgnoreCertificateErrors=true</c>. The bypass is convenient for
-///         lab setups but unsafe on any network the operator doesn't fully own. Pinning adds a
-///         third mode: "I don't care whether your CA chain verifies, but I *do* care that your
-///         SPKI matches this exact fingerprint." This matches the mesh overlay's TOFU pinning
-///         model and defends against MITM on controller→agent links even when the operator is
-///         using a private CA or self-signed cert.
+///         constrained-bypass mode via <c>IgnoreCertificateErrors=true</c> which allows valid TLS
+///         chains plus self-signed/untrusted-root chains. The bypass is convenient for lab setups
+///         but unsafe on any network the operator doesn't fully own. Pinning adds a third mode:
+///         "I don't care whether your CA chain verifies, but I *do* care that your SPKI matches this
+///         exact fingerprint." This matches the mesh overlay's TOFU pinning model and defends against
+///         MITM on controller→agent links even when the operator is using a private CA or self-signed
+///         cert.
 ///     </para>
 ///     <para>
 ///         When <see cref="ParsePins"/> returns a non-empty array, callers must treat pin
 ///         validation as authoritative: the connection is allowed only if the presented cert's
 ///         SPKI pin matches one of the configured values. When pin list is empty, fall back to
-///         legacy behavior (CA validation, or bypass if <c>IgnoreCertificateErrors=true</c>).
+///         legacy behavior (CA validation, or constrained bypass if <c>IgnoreCertificateErrors=true</c>).
 ///     </para>
 /// </remarks>
 public static class RelayTlsPinValidator
