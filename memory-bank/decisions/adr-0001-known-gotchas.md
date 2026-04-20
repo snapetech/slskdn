@@ -81,6 +81,40 @@ if (resolvedFfmpegPath is null)
 
 **Why This Keeps Happening**: Tool configuration often accepts either absolute paths (`/usr/bin/ffmpeg`) or command names (`ffmpeg`). `File.Exists` only answers the first case. Code that launches external tools must either let `ProcessStartInfo` resolve command names through PATH or explicitly resolve PATH before declaring the tool missing.
 
+### 0z74. QUIC Support Is A Runtime Capability, Not An OS Check
+
+**The Bug**: Live `kspls0` testing on build `15ac295cc` showed `slskd` starting QUIC overlay listeners with the host's AUR `msquic 2.4.11`, then crashing with a native `libmsquic.so.2` segfault. The app registered QUIC hosted services because the OS was Linux, even though QUIC viability depends on the installed native `libmsquic` and its compatibility with the running .NET runtime.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Mesh/MeshStatsCollector.cs`
+- `src/slskd/Mesh/Dht/PeerDescriptorPublisher.cs`
+
+**Wrong**:
+```csharp
+private static bool IsQuicSupportedPlatform()
+{
+    return OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
+}
+```
+
+**Correct**:
+```csharp
+private static bool IsQuicAvailable()
+{
+    try
+    {
+        return QuicConnection.IsSupported && QuicListener.IsSupported;
+    }
+    catch
+    {
+        return false;
+    }
+}
+```
+
+**Why This Keeps Happening**: `System.Net.Quic` has compile-time platform guards, but Linux QUIC also depends on a native MsQuic library supplied by the host/package. OS checks only satisfy the analyzer; they do not prove the native library can initialize. Runtime registration, descriptor publication, and stats collection must use actual `QuicConnection`/`QuicListener` support checks and treat failures as "QUIC unavailable" unless the host dependency is upgraded.
+
 ### 0z72. Soulseek MessageConnection Teardown Must Not Log As Fatal
 
 **The Bug**: Live `kspls0` manual build testing emitted `[FATAL] Unobserved task exception ... (The underlying Tcp connection is closed)` while a remote transfer had already been classified as peer-side failure. The flattened exception was `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`, which did not match the existing expected Soulseek network classifier even though it is normal peer connection teardown.
