@@ -41,6 +41,19 @@
   2. Decide whether the isolated `TwoNodeMeshFullInstanceTests` full-suite interference should block the next release candidate, given that the documented local release bar is green.
   3. If you want a stricter candidate, debug the full `./bin/build` integration-suite interference next before tagging.
 
+## Update 2026-04-20 03:20:00Z
+
+- Current task: None. The local next-release-candidate cycle is clean again, including the heavier full `./bin/build` path.
+- Last activity:
+  - traced the remaining full-suite-only `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` `502 Bad Gateway` failure to `SlskdnFullInstanceRunner` marking instances ready after API health alone
+  - hardened the full-instance harness to wait for the configured overlay TCP listener before tests issue `/api/v0/overlay/connect`, and reused the same helper shape already used for bridge readiness
+  - documented the startup-readiness gotcha in ADR-0001 and committed that doc-only entry as `e26b30713`
+  - reran the focused full-instance mesh test successfully, then reran the heavy local path successfully: `./bin/build` passed end to end; `bash ./bin/lint` and `git diff --check` also passed
+- Next steps:
+  1. Commit the remaining harness/doc updates and push `main` if you want this clean local RC state reflected on origin.
+  2. Cut the next official release-candidate/build tag only if explicitly requested.
+  3. After the next tag, watch CI/package jobs rather than local release-gate coverage; the local manual bar is currently green.
+
 ## Update 2026-04-20 01:52:00Z
 
 - Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.

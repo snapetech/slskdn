@@ -143,10 +143,15 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         // Wait for API to be ready
         await WaitForApiReadyAsync(ct);
 
+        if (overlayPort.HasValue)
+        {
+            await WaitForTcpPortReadyAsync(overlayPort.Value, "overlay", ct);
+        }
+
         // If bridge is enabled, wait for bridge port to be listening
         if (enableBridge && bridgePort.HasValue)
         {
-            await WaitForBridgeReadyAsync(bridgePort.Value, ct);
+            await WaitForTcpPortReadyAsync(bridgePort.Value, "bridge", ct);
         }
 
         isRunning = true;
@@ -415,7 +420,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             $"{Environment.NewLine}STDERR:{Environment.NewLine}{FormatCapturedLogs(stderrLines)}");
     }
 
-    private async Task WaitForBridgeReadyAsync(int port, CancellationToken ct)
+    private async Task WaitForTcpPortReadyAsync(int port, string serviceName, CancellationToken ct)
     {
         const int maxAttempts = 30;
         var attempt = 0;
@@ -427,7 +432,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
                 using var client = new TcpClient();
                 await client.ConnectAsync(IPAddress.Loopback, port);
                 client.Close();
-                logger.LogInformation("[TEST-SLSKDN-FULL] Bridge ready after {Attempts} attempts", attempt + 1);
+                logger.LogInformation("[TEST-SLSKDN-FULL] {ServiceName} ready after {Attempts} attempts", serviceName, attempt + 1);
                 return;
             }
             catch
@@ -439,7 +444,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
             attempt++;
         }
 
-        throw new TimeoutException($"Bridge did not become ready on port {port} after {maxAttempts * 500}ms");
+        throw new TimeoutException($"{serviceName} did not become ready on port {port} after {maxAttempts * 500}ms");
     }
 
     private int AllocateEphemeralPort()

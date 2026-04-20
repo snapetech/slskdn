@@ -6588,3 +6588,16 @@ Code quality improvements were completed as part of Option A:
   - focused Release `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`: passed
   - focused full-instance integration `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection`: passed in isolation
   - `./bin/build`: still found one heavier full-suite integration issue outside the release gate, with `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` failing once inside the full Release integration sweep with `502 Bad Gateway` on `/api/v0/overlay/connect`, even though that same test passed when rerun alone immediately afterward
+
+## 2026-04-20 03:20:00Z
+
+- Continued the strict local release-candidate cycle by debugging the one remaining non-gate `./bin/build` failure in the full Release integration sweep.
+- Root cause was startup-readiness drift in the full-instance harness, not product behavior: `SlskdnFullInstanceRunner` treated a node as ready once `/api/v0/session/enabled` answered, but `TwoNodeMeshFullInstanceTests` immediately depends on the overlay TCP listener too. In heavier optimized runs the first `/api/v0/overlay/connect` could beat listener bind and return `502 Bad Gateway`.
+- Hardened `SlskdnFullInstanceRunner.StartAsync()` to wait for the configured overlay TCP port the same way the harness already waited for the optional bridge listener, and generalized the helper into `WaitForTcpPortReadyAsync(...)`.
+- Documented the harness-startup gotcha in ADR-0001 and committed that docs-only entry as `e26b30713`.
+- Final validation is clean:
+  - focused full-instance Release `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection`: passed
+  - `bash packaging/scripts/run-release-gate.sh`: passed
+  - `./bin/build`: passed end to end
+  - `bash ./bin/lint`: passed
+  - `git diff --check`: passed
