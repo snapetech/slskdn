@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z93. Cancellation-Path Download Tests Must Wait Until The Transfer Exists Before Cancelling
+
+**The Bug**: `DownloadServiceTests.EnqueueAsync_CancelledTransfer_DoesNotFailFromDisposedBatchSemaphore` passed locally in isolation but failed in Release CI because the test cancelled the transfer immediately after `EnqueueAsync()` returned, then waited for `service.Find(...)` to show a completed transfer. On slower or differently ordered runs, cancellation could land before the background download path had actually materialized the transfer into the service state, so the test timed out waiting for a row that had never become observable in that window.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs`
+
+**Wrong**:
+```csharp
+var (enqueued, failed) = await service.EnqueueAsync(...);
+var transferId = enqueued.Single().Id;
+Assert.True(service.TryCancel(transferId));
+
+var cancelledTransfer = await WaitForTransferAsync(
+    () => service.Find(t => t.Id == transferId && t.EndedAt != null),
+    TimeSpan.FromSeconds(5));
+```
+
+**Correct**:
+```csharp
+var downloadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+// Signal from the mocked download path once the transfer work has actually started.
+
+await downloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+Assert.True(service.TryCancel(transferId));
+```
+
+**Why This Keeps Happening**: These tests exercise asynchronous transfer orchestration, but `EnqueueAsync()` returning does not guarantee the background download worker has already registered a visible transfer row or reached a cancellable wait. Cancelling before the worker has definitely started makes the test depend on scheduler timing instead of on the behavior it claims to verify.
+
 ### 0z92. Soulseek Timer-Reset Write Loop Races Must Be Classified Too, Not Just Read Loops
 
 **The Bug**: After classifying the `Soulseek.Extensions.Reset(Timer)` teardown race for `ReadInternalAsync`/`MessageConnection.ReadContinuouslyAsync`, live `kspls0` logs still emitted fake `[FATAL] Unobserved task exception` entries from the same third-party timer-reset `NullReferenceException` occurring in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The process kept running, but the logs still looked like a fatal crash.
