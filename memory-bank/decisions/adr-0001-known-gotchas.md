@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z73. PATH-Based Tool Names Are Not Filesystem Paths
+
+**The Bug**: Live `kspls0` logs emitted `[AudioSketch] ffmpeg not configured or missing: ffmpeg` dozens of times even though `ffmpeg` was installed at `/usr/bin/ffmpeg`. `AudioSketchService` treated the default configured command name `ffmpeg` as a literal relative file path and called `File.Exists("ffmpeg")`, which fails for PATH-resolved executables.
+
+**Files Affected**:
+- `src/slskd/Audio/AudioSketchService.cs`
+- `tests/slskd.Tests.Unit/Audio/AudioSketchServiceTests.cs`
+
+**Wrong**:
+```csharp
+if (string.IsNullOrWhiteSpace(ffmpegPath) || !File.Exists(ffmpegPath))
+{
+    log.Warning("[AudioSketch] ffmpeg not configured or missing: {Path}", ffmpegPath);
+    return null;
+}
+```
+
+**Correct**:
+```csharp
+var resolvedFfmpegPath = ResolveExecutablePath(ffmpegPath);
+if (resolvedFfmpegPath is null)
+{
+    log.Warning("[AudioSketch] ffmpeg not configured or missing: {Path}", ffmpegPath);
+    return null;
+}
+```
+
+**Why This Keeps Happening**: Tool configuration often accepts either absolute paths (`/usr/bin/ffmpeg`) or command names (`ffmpeg`). `File.Exists` only answers the first case. Code that launches external tools must either let `ProcessStartInfo` resolve command names through PATH or explicitly resolve PATH before declaring the tool missing.
+
 ### 0z72. Soulseek MessageConnection Teardown Must Not Log As Fatal
 
 **The Bug**: Live `kspls0` manual build testing emitted `[FATAL] Unobserved task exception ... (The underlying Tcp connection is closed)` while a remote transfer had already been classified as peer-side failure. The flattened exception was `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`, which did not match the existing expected Soulseek network classifier even though it is normal peer connection teardown.
