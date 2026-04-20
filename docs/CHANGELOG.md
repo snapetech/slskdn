@@ -24,6 +24,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 - Fixed download shutdown cleanup so active downloads cancelled by host shutdown stop quietly without trying to fail transfers through disposed services or release already-disposed enqueue semaphores.
 - Fixed service shutdown ordering so active Soulseek downloads are drained before the shared client is disposed, avoiding restart-time global download semaphore warnings during clean shutdown.
+- Fixed clean-shutdown error handling to ignore a third-party Soulseek disconnect collection race that could otherwise log a false fatal `Sequence contains no elements` during service restarts.
 - Fixed service signal handling so normal `systemctl stop`/`restart` SIGTERM requests stop the generic host cleanly instead of logging fatal shutdown telemetry and exiting with status 1.
 - Fixed user directory browse API handling so expected remote peer connection failures return a controlled 503 response instead of escaping as unhandled request exceptions with repeated middleware stack traces.
 - Fixed DHT rendezvous connection accounting so peers deferred by the overlay connector's concurrency limit are not counted as real attempts or pushed into the five-minute retry backoff. This keeps diagnostics aligned with actual socket attempts and prevents a potentially valid candidate from being delayed behind simultaneous junk DHT endpoints.

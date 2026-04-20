@@ -733,7 +733,16 @@ namespace slskd
             Clock.Stop();
 
             await Transfers.Downloads.ShutdownAsync(cancellationToken).ConfigureAwait(false);
-            Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
+
+            try
+            {
+                Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
+            }
+            catch (InvalidOperationException ex) when (ShuttingDown && ex.Message.Contains("Sequence contains no elements", StringComparison.Ordinal))
+            {
+                Log.Warning(ex, "Ignoring Soulseek disconnect race during shutdown");
+            }
+
             Client.Dispose();
             foreach (var registration in _posixSignalRegistrations)
             {
