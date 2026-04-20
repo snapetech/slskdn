@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z80. Shutdown Must Tolerate SoulseekClient Disconnect Races
+
+**The Bug**: Live `kspls0` restart validation on `manual.37a745af5` showed `Application.StopAsync()` hitting `SoulseekClient.Disconnect("Shutting down", ...)`, then logging `Application terminated unexpectedly` with `InvalidOperationException: Sequence contains no elements` from `Soulseek.Extensions.RemoveAndDisposeAll`. The service still stopped and restarted, but the shutdown path emitted a false fatal because the third-party client raced its internal connection dictionaries during disconnect.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
+Client.Dispose();
+```
+
+**Correct**:
+```csharp
+try
+{
+    Client.Disconnect("Shutting down", new ApplicationShutdownException("Shutting down"));
+}
+catch (InvalidOperationException ex) when (Application.IsShuttingDown && ex.Message.Contains("Sequence contains no elements"))
+{
+    Log.Warning(ex, "Ignoring Soulseek disconnect race during shutdown");
+}
+
+Client.Dispose();
+```
+
+**Why This Keeps Happening**: Host shutdown is not the same as a protocol-level graceful logout. By the time `StopAsync` runs, active network/background operations may already be tearing down the same Soulseek client collections that `Disconnect()` iterates. Third-party shutdown helpers can throw collection-state exceptions that are irrelevant to process correctness; the host should treat those as shutdown races, log them at reduced severity, and continue disposing cleanly.
+
 ### 0z79. Shutdown Cancellation Must Not Use Disposed Transfer Services
 
 **The Bug**: Live `kspls0` validation of a clean `systemctl restart` showed active downloads cancelling during shutdown, then logging global semaphore release warnings and `ObjectDisposedException` while trying to fail/update transfers after the DI provider was already disposing. Shutdown cancellation is expected, but the download observers treated it like a normal transfer failure and kept touching database/services.
