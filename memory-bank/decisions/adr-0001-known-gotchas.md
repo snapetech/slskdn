@@ -91,6 +91,29 @@ if (loading) {
 
 **Why This Keeps Happening**: React hook order is strictly positional, so any conditional return or branch before hook declarations can silently flip hook execution order. After refactors that add early exits, we can accidentally move hooks below conditionals, so every render path must be linted for stable hook sequencing and ordering.
 
+### 0z97. Anonymous profile lookup returned full internal profile payload
+
+**The Bug**: `ProfileController.GetProfile(peerId)` was anonymous and returned the raw `PeerProfile` model, which included `PublicKey`, `Signature`, `CreatedAt`, and `ExpiresAt`, exposing internal identity and timing metadata to unauthenticated callers.
+
+**Files Affected**:
+- `src/slskd/Identity/API/ProfileController.cs`
+
+**Wrong**:
+```csharp
+[ProducesResponseType(typeof(PeerProfile), 200)]
+...
+return Ok(profile);
+```
+
+**Correct**:
+```csharp
+[ProducesResponseType(typeof(ProfileLookupResponse), 200)]
+...
+return Ok(ToProfileLookupResponse(profile));
+```
+
+**Why This Keeps Happening**: The endpoint is intentionally public for peer discovery, so raw internal DTO reuse can silently broaden the attack surface when schemas drift. Any public endpoint should return a deliberately narrowed response contract instead of reusing internal signed/profile storage models.
+
 ### 0z93. Cancellation-Path Download Tests Must Wait Until The Transfer Exists Before Cancelling
 
 **The Bug**: `DownloadServiceTests.EnqueueAsync_CancelledTransfer_DoesNotFailFromDisposedBatchSemaphore` passed locally in isolation but failed in Release CI because the test cancelled the transfer immediately after `EnqueueAsync()` returned, then waited for `service.Find(...)` to show a completed transfer. On slower or differently ordered runs, cancellation could land before the background download path had actually materialized the transfer into the service state, so the test timed out waiting for a row that had never become observable in that window.
