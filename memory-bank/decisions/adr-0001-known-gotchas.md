@@ -52,6 +52,39 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z91. Manual Publish Must Match The Tagged Release Publish Shape
+
+**The Bug**: `bin/publish` was producing a materially different Linux artifact than the tagged release workflows: self-contained, single-file, `ReadyToRun=true`, and `IncludeNativeLibrariesForSelfExtract=true`. Live manual deploys on `kspls0` then exercised a different native runtime/extraction path than the official release builds, and the resulting crashes showed up as kernel `general protection fault` events in `.NET Server GC` inside the apphost image. That made manual soak results untrustworthy because they were not validating the same publish shape that CI ships.
+
+**Files Affected**:
+- `bin/publish`
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-linux.yml`
+
+**Wrong**:
+```bash
+dotnet publish \
+    --configuration Release \
+    -p:PublishSingleFile=true \
+    -p:ReadyToRun=true \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
+    --self-contained \
+    --runtime $runtime \
+    --output $output
+```
+
+**Correct**:
+```bash
+dotnet publish \
+    --configuration Release \
+    -p:PublishReadyToRun=false \
+    --self-contained \
+    --runtime $runtime \
+    --output $output
+```
+
+**Why This Keeps Happening**: `bin/publish` looks like a convenience wrapper, so it is easy to add "better/faster" publish flags there without checking whether the tagged release workflows use the same runtime shape. But live debugging only means anything if the manual artifact matches the shipped one. If CI builds framework/layout/runtime one way, manual deploy tooling must stay aligned instead of inventing a second publish profile with different native-host behavior.
+
 ### 0z90. Restarted TCP Overlay Listeners Need ReuseAddress Before Binding
 
 **The Bug**: After a clean `systemctl restart` on a live node, `MeshOverlayServer` sometimes failed to rebind port `50305` with `SocketException (98): Address already in use`, even though no other process remained listening on that port by the time the node was inspected. The result was a degraded node that could connect out but could not announce or accept inbound TCP mesh overlay traffic after restart.
