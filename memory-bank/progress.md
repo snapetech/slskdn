@@ -1,3 +1,18 @@
+## 2026-04-20 16:25Z - Aligned manual publish profile with tagged releases and revalidated live startup
+
+- Investigated the remaining live startup `SIGSEGV` beyond app code and found a concrete tooling mismatch: `bin/publish` was producing a self-contained single-file `ReadyToRun` artifact with native self-extraction, while the tagged release workflows publish the normal multi-file self-contained layout without that runtime shape.
+- Pulled kernel/journal/coredump data from `kspls0` and confirmed the crash signature was native (`general protection fault`) in `.NET Server GC`, not a managed exception path.
+- Also noted the host is logging repeated `EXT4-fs ... checksum invalid` errors on `dm-0` from `containerd`, which is a separate host-health concern and makes it even more important that manual deploys match the shipped runtime profile exactly.
+- Documented the manual-publish drift gotcha in ADR-0001 and committed it immediately as `975c754d2`.
+- Updated `bin/publish` to align with the tagged release workflows by removing the single-file/self-extract path and explicitly disabling `PublishReadyToRun`.
+- Built a fresh manual artifact `0.24.5-slskdn.159+manual.nor2r`, deployed it to `kspls0` at `/usr/lib/slskd/releases/manual-nor2r`, repointed `/usr/lib/slskd/current`, and restarted the service.
+- Live validation on `kspls0` is materially better on this publish shape:
+  - no new `.net` extraction directory was created under `/var/lib/slskd/.net/slskd`
+  - initial start was clean
+  - two additional deliberate `systemctl restart slskd` cycles were also clean
+  - `coredumpctl list slskd` did not gain any new entries during this restart loop
+- Current read: the app-side QUIC/overlay fixes remain in place, and the native startup crash currently reproduces only on the divergent manual single-file/ReadyToRun publish shape, not on the CI-aligned publish shape now running live.
+
 ## 2026-04-20 16:12Z - Hardened QUIC lifecycle, fixed TCP overlay restart reuse, and continued live crash triage
 
 - Investigated the recurring native `SIGSEGV` on `kspls0` by pulling fresh `coredumpctl` history and correlating the older dumps with QUIC-enabled runtime activity and restart edges.
