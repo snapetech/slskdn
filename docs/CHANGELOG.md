@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed user directory browse API handling so expected remote peer connection failures return a controlled 503 response instead of escaping as unhandled request exceptions with repeated middleware stack traces.
 - Fixed DHT rendezvous connection accounting so peers deferred by the overlay connector's concurrency limit are not counted as real attempts or pushed into the five-minute retry backoff. This keeps diagnostics aligned with actual socket attempts and prevents a potentially valid candidate from being delayed behind simultaneous junk DHT endpoints.
 - Fixed live mesh compatibility with peers that send unframed JSON control messages after a framed handshake. The overlay reader now recognizes raw JSON starting at a frame boundary, consumes exactly one capped JSON object, and keeps the normal length-prefixed path unchanged, preventing the deterministic two-minute `Invalid message length: 2065855609` disconnect seen on `kspls0`.
 - Fixed QUIC runtime gating so mesh QUIC services and direct-QUIC self-descriptors are enabled only when the current runtime/native MsQuic stack reports both connection and listener support, rather than assuming every Linux/macOS/Windows host has working QUIC.

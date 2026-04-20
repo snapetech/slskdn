@@ -254,6 +254,11 @@ namespace slskd.Users.API
                 Log.Information(ex, "User {Username} is offline for directory browse", username);
                 return NotFound("User is offline");
             }
+            catch (SoulseekClientException ex) when (ex.InnerException is ConnectionException)
+            {
+                Log.Information(ex, "Unable to connect to user {Username} for directory browse", username);
+                return StatusCode(503, "Unable to retrieve directory contents from user");
+            }
         }
 
         /// <summary>

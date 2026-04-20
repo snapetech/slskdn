@@ -117,8 +117,39 @@ namespace slskd.Tests.Unit.Users
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<int?>(),
-                    It.IsAny<CancellationToken?>()),
+                It.IsAny<CancellationToken?>()),
                 Times.Never);
+        }
+
+        [Fact]
+        public async Task Directory_WhenPeerConnectionFails_ReturnsServiceUnavailable()
+        {
+            var soulseekClientMock = new Mock<ISoulseekClient>();
+            soulseekClientMock.SetupGet(x => x.State).Returns(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn);
+            soulseekClientMock
+                .Setup(x => x.GetDirectoryContentsAsync(
+                    "testuser",
+                    "Music",
+                    It.IsAny<int?>(),
+                    It.IsAny<CancellationToken?>()))
+                .ThrowsAsync(new SoulseekClientException(
+                    "Failed to retrieve directory contents",
+                    new ConnectionException("Failed to establish a direct or indirect message connection")));
+
+            var controller = new UsersController(
+                soulseekClient: soulseekClientMock.Object,
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: Mock.Of<IUserService>(),
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Directory(
+                "testuser",
+                new DirectoryContentsRequest { Directory = "Music" });
+
+            var unavailable = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(503, unavailable.StatusCode);
+            Assert.Equal("Unable to retrieve directory contents from user", unavailable.Value);
         }
     }
 }
