@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z78. Service SIGTERM Must Stop The Host, Not Exit 1
+
+**The Bug**: Live `kspls0` manual deployments showed `systemctl restart slskd` logging `Received SIGTERM`, `[FATAL] ProcessExit event fired`, and `Main process exited, code=exited, status=1/FAILURE`. `Application` registered POSIX signal handlers that treated normal service stop/restart signals as fatal and called `Environment.Exit(1)`.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+PosixSignalRegistration.Create(signal, context =>
+{
+    ShuttingDown = true;
+    Program.MasterCancellationTokenSource.Cancel();
+    Log.Fatal("Received {Signal}", signal);
+    Environment.Exit(1);
+});
+```
+
+**Correct**:
+```csharp
+PosixSignalRegistration.Create(signal, context =>
+{
+    context.Cancel = true;
+    ShuttingDown = true;
+    Program.MasterCancellationTokenSource.Cancel();
+    lifetime.StopApplication();
+});
+```
+
+**Why This Keeps Happening**: SIGTERM is how systemd performs a normal service stop or restart. Treating it like a crash creates false failure telemetry, increments failure counters, and can trigger restart/on-failure policy even though the operator requested a clean shutdown. Signal handlers should cancel the default termination, mark shutdown state, and ask the generic host to stop so hosted services can run `StopAsync`.
+
 ### 0z77. Expected Peer Browse Failures Must Not Escape API Controllers
 
 **The Bug**: Live `kspls0` logs showed `POST /api/v0/users/{username}/directory` producing repeated middleware/error-handler stack traces when a remote Soulseek peer could not establish a direct or indirect message connection. `UsersController.Directory` only handled `UserOfflineException`, so ordinary peer reachability failures bubbled as unhandled request exceptions.
