@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z87. Shutdown-Drain Tests Must Gate On Worker Start Before Expecting Cancellation
+
+**The Bug**: `build-main-0.24.5-slskdn.161` failed in CI again on `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` even after replacing the old sleep-only assertion. The test still called `ShutdownAsync()` immediately after `EnqueueAsync()` and assumed the mocked `DownloadAsync()` body had already reached its cancellable wait. On a busy Release runner, shutdown could race ahead before the worker observed the token, leaving the test blocked on a `TaskCompletionSource` that was never signaled.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Transfers/Downloads/DownloadServiceTests.cs`
+
+**Wrong**:
+```csharp
+await service.EnqueueAsync(...);
+await service.ShutdownAsync(CancellationToken.None);
+await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+```
+
+**Correct**:
+```csharp
+await service.EnqueueAsync(...);
+await downloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+var shutdownTask = service.ShutdownAsync(CancellationToken.None);
+await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+```
+
+**Why This Keeps Happening**: "Enqueued" only proves the bookkeeping path completed; it does not guarantee the background download task has actually entered its cancellation point. Release-mode CI can reorder and delay task startup just enough that shutdown assertions become scheduler races. Async drain tests must wait for an explicit "worker started" signal from the mocked/background operation before asserting cancellation or shutdown completion semantics.
+
 ### 0z86. First-Run Share Bootstrap Must Fall Through To Scan, Not Throw A Corruption-Looking Exception
 
 **The Bug**: A brand-new app directory logged `Share cache backup is missing, corrupt, or is out of date`, threw `ShareInitializationException`, then immediately retried and succeeded with a forced rescan. The startup path was functionally fine, but first-run logs looked like share-cache corruption.
