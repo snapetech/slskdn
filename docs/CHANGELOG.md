@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added DHT/overlay operator diagnostics that roll up candidate handling (`seen`, `accepted`, skip/defer/backoff counts), expose endpoint cooldown/degradation stats, and log mesh session-end summaries so repeated bad remote endpoints stand out without flooding the logs.
+- Fixed release-smoke integration compilation after the download-shutdown drain change by updating the integration test `StubDownloadService` to implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.
 - Fixed download shutdown cleanup so active downloads cancelled by host shutdown stop quietly without trying to fail transfers through disposed services or release already-disposed enqueue semaphores.
 - Fixed service shutdown ordering so active Soulseek downloads are drained before the shared client is disposed, avoiding restart-time global download semaphore warnings during clean shutdown.
 - Fixed clean-shutdown error handling to ignore a third-party Soulseek disconnect collection race that could otherwise log a false fatal `Sequence contains no elements` during service restarts.

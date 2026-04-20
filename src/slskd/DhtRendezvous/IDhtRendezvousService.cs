@@ -133,6 +133,12 @@ public sealed class DhtRendezvousStats
     public int VerifiedBeaconCount { get; init; }
 
     public long TotalPeersDiscovered { get; init; }
+    public long TotalCandidateEndpointsSeen { get; init; }
+    public long TotalCandidatesAccepted { get; init; }
+    public long TotalCandidatesSkippedDhtPort { get; init; }
+    public long TotalCandidatesSkippedDiscoveredCapacity { get; init; }
+    public long TotalCandidatesDeferredConnectorCapacity { get; init; }
+    public long TotalCandidatesSkippedReconnectBackoff { get; init; }
     public long TotalConnectionsAttempted { get; init; }
     public long TotalConnectionsSucceeded { get; init; }
     public DateTimeOffset? LastAnnounceTime { get; init; }

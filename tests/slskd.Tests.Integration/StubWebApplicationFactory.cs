@@ -624,6 +624,8 @@ internal sealed class StubDownloadService : IDownloadService
 
     public bool TryFail(Guid id, Exception exception) => false;
 
+    public Task ShutdownAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
     public void Update(Transfer transfer)
     {
         _storage[transfer.Id] = transfer;

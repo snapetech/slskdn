@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.DhtRendezvous;
 
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -94,6 +95,36 @@ public class DhtRendezvousControllerTests
     }
 
     [Fact]
+    public void GetDhtStatus_ExposesCandidateRollupCounters()
+    {
+        using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
+        var dhtService = new Mock<IDhtRendezvousService>();
+        dhtService.Setup(x => x.GetStats()).Returns(new DhtRendezvousStats
+        {
+            IsEnabled = true,
+            TotalCandidateEndpointsSeen = 11,
+            TotalCandidatesAccepted = 8,
+            TotalCandidatesSkippedDhtPort = 1,
+            TotalCandidatesSkippedDiscoveredCapacity = 2,
+            TotalCandidatesDeferredConnectorCapacity = 3,
+            TotalCandidatesSkippedReconnectBackoff = 4,
+        });
+
+        var controller = CreateController(blocklist, dhtService: dhtService.Object);
+
+        var result = controller.GetDhtStatus();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<DhtStatusResponse>(ok.Value);
+        Assert.Equal(11, response.TotalCandidateEndpointsSeen);
+        Assert.Equal(8, response.TotalCandidatesAccepted);
+        Assert.Equal(1, response.TotalCandidatesSkippedDhtPort);
+        Assert.Equal(2, response.TotalCandidatesSkippedDiscoveredCapacity);
+        Assert.Equal(3, response.TotalCandidatesDeferredConnectorCapacity);
+        Assert.Equal(4, response.TotalCandidatesSkippedReconnectBackoff);
+    }
+
+    [Fact]
     public void GetOverlayStats_ExposesConnectorFailureReasons()
     {
         using var blocklist = new OverlayBlocklist(NullLogger<OverlayBlocklist>.Instance);
@@ -103,12 +134,26 @@ public class DhtRendezvousControllerTests
             PendingConnections = 1,
             SuccessfulConnections = 2,
             FailedConnections = 3,
+            EndpointCooldownSkips = 7,
             FailureReasons = new OverlayConnectionFailureStats
             {
                 ConnectTimeouts = 4,
                 TlsEofFailures = 5,
                 ProtocolHandshakeFailures = 6,
             },
+            TopProblemEndpoints =
+            [
+                new OverlayEndpointHealthStats
+                {
+                    Endpoint = "203.0.113.10:50305",
+                    ConsecutiveFailureCount = 3,
+                    TotalFailures = 5,
+                    LastFailureReason = "TlsEof",
+                    LastFailureAt = DateTimeOffset.UtcNow,
+                    SuppressedUntil = DateTimeOffset.UtcNow.AddMinutes(4),
+                    LastUsername = "alice",
+                },
+            ],
         });
 
         var dhtService = new Mock<IDhtRendezvousService>();
@@ -124,6 +169,9 @@ public class DhtRendezvousControllerTests
         Assert.Equal(4, response.Connector.FailureReasons.ConnectTimeouts);
         Assert.Equal(5, response.Connector.FailureReasons.TlsEofFailures);
         Assert.Equal(6, response.Connector.FailureReasons.ProtocolHandshakeFailures);
+        Assert.Equal(7, response.Connector.EndpointCooldownSkips);
+        Assert.Single(response.Connector.TopProblemEndpoints);
+        Assert.Equal("203.0.113.10:50305", response.Connector.TopProblemEndpoints[0].Endpoint);
     }
 
     [Fact]

@@ -1,3 +1,32 @@
+## Update 2026-04-19 20:30:00Z
+
+- Current task: None. DHT/overlay observability and bad-candidate cooldown follow-up is implemented locally and validated.
+- Last activity:
+  - added bounded endpoint cooldowns and top-problem endpoint stats to `MeshOverlayConnector` so repeatedly bad DHT-discovered overlay addresses stop getting hammered
+  - added periodic DHT/overlay summary logging and explicit candidate rollup counters in `DhtRendezvousService`
+  - added inbound/outbound mesh session-end summary logs with connection age and disconnect reason
+  - exposed the new diagnostics through the existing DHT/overlay status API and covered them with focused unit tests
+  - ran the local cycle: focused DHT/overlay unit tests passed, `dotnet build src/slskd/slskd.csproj --no-restore -v minimal` passed, `bash ./bin/lint` passed, and `git diff --check` passed
+  - ran `./bin/build`; the build path itself succeeded through web/release compilation but the full Release unit-test phase hit a single failure in `slskd.Tests.Unit.Transfers.Downloads.DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`, which then passed when rerun in isolation
+- Next steps:
+  1. Decide whether to treat the Release full-suite `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` failure as an existing flaky race or to debug it before the next release build.
+  2. Deploy the new DHT/overlay diagnostics to `kspls0` and sample whether the summary lines clearly distinguish bad remote endpoints (`no-route`, `tls-eof`, etc.) from local capacity/backoff behavior.
+  3. If remote candidate churn remains dominant, add endpoint deprioritization on top of the current cooldowns rather than increasing automatic probe volume.
+
+## Update 2026-04-20 02:30:00Z
+
+- Current task: None. The failed `build-main-0.24.5-slskdn.160` CI release-smoke regression is fixed locally and validated.
+- Last activity:
+  - traced the failed tag build to `Release Gate` compile-time integration smoke, not runtime failures
+  - found that `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still implemented the old `IDownloadService` surface after `ShutdownAsync(CancellationToken)` was added for shutdown drain sequencing
+  - added the missing `StubDownloadService.ShutdownAsync` no-op implementation
+  - documented the interface/test-double drift gotcha in ADR-0001 and committed that doc entry as `58c184c7f`
+  - reran the exact release-smoke validation path locally: Release unit smoke passed, Release integration smoke passed, `packaging/scripts/run-release-integration-smoke.sh` passed, `bash ./bin/lint` passed, and `git diff --check` passed
+- Next steps:
+  1. Commit the remaining code/doc changes for the DHT/overlay diagnostics pass plus the CI smoke fix.
+  2. Push `main` when desired.
+  3. Create a replacement build tag only if the user explicitly wants a new release build.
+
 ## Update 2026-04-20 01:52:00Z
 
 - Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.

@@ -31,6 +31,16 @@ public class MeshOverlayConnectorStats
     public OverlayConnectionFailureStats FailureReasons { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the number of connection attempts skipped because an endpoint is cooling down after repeated failures.
+    /// </summary>
+    public long EndpointCooldownSkips { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most degraded endpoints by failure streak.
+    /// </summary>
+    public IReadOnlyList<OverlayEndpointHealthStats> TopProblemEndpoints { get; set; } = Array.Empty<OverlayEndpointHealthStats>();
+
+    /// <summary>
     /// Gets the connection success rate (0.0 to 1.0).
     /// </summary>
     public double SuccessRate
@@ -58,4 +68,19 @@ public class OverlayConnectionFailureStats
     public long RegistrationFailures { get; set; }
     public long BlockedPeerFailures { get; set; }
     public long UnknownFailures { get; set; }
+}
+
+/// <summary>
+/// Health snapshot for a recently attempted overlay endpoint.
+/// </summary>
+public sealed class OverlayEndpointHealthStats
+{
+    public string Endpoint { get; set; } = string.Empty;
+    public int ConsecutiveFailureCount { get; set; }
+    public long TotalFailures { get; set; }
+    public string LastFailureReason { get; set; } = string.Empty;
+    public DateTimeOffset? LastFailureAt { get; set; }
+    public DateTimeOffset? SuppressedUntil { get; set; }
+    public DateTimeOffset? LastSuccessAt { get; set; }
+    public string? LastUsername { get; set; }
 }

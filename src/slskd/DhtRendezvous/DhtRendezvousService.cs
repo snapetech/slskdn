@@ -50,10 +50,18 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private const int MaxDiscoveredPeers = 1000;
     internal const int MaxConcurrentPeerConnectionAttempts = MeshOverlayConnector.MaxConcurrentAttempts;
     private static readonly TimeSpan PeerReconnectInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan SummaryLogInterval = TimeSpan.FromMinutes(2);
     private DateTimeOffset? _lastAnnounceTime;
     private DateTimeOffset? _lastDiscoveryTime;
+    private DateTimeOffset? _lastSummaryLogTime;
     private DateTimeOffset? _startedAt;
     private long _totalPeersDiscovered;
+    private long _totalCandidateEndpointsSeen;
+    private long _totalCandidatesAccepted;
+    private long _totalCandidatesSkippedDhtPort;
+    private long _totalCandidatesSkippedDiscoveredCapacity;
+    private long _totalCandidatesDeferredConnectorCapacity;
+    private long _totalCandidatesSkippedReconnectBackoff;
     private long _totalConnectionsAttempted;
     private long _totalConnectionsSucceeded;
     private CancellationTokenSource? _backgroundInitializationCts;
@@ -294,6 +302,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
                 // Cleanup stale connections
                 await _registry.CleanupStaleConnectionsAsync();
+                LogPeriodicSummaryIfDue();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -468,9 +477,11 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
                 var endpoint = new IPEndPoint(ip, uri.Port);
                 var endpointKey = $"{ip}:{uri.Port}";
+                Interlocked.Increment(ref _totalCandidateEndpointsSeen);
 
                 if (IsLikelyDhtContactPort(endpoint.Port, _options.DhtPort, _options.OverlayPort))
                 {
+                    Interlocked.Increment(ref _totalCandidatesSkippedDhtPort);
                     _logger.LogDebug(
                         "Ignoring DHT rendezvous candidate {Endpoint} because it uses the configured DHT UDP port, not the TCP overlay port {OverlayPort}",
                         OverlayLogSanitizer.Endpoint(endpoint),
@@ -481,9 +492,12 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 // SECURITY: Cap discovered peers to prevent memory exhaustion
                 if (_discoveredPeers.Count >= MaxDiscoveredPeers)
                 {
+                    Interlocked.Increment(ref _totalCandidatesSkippedDiscoveredCapacity);
                     _logger.LogDebug("Discovered peers at capacity ({Max}), skipping {Endpoint}", MaxDiscoveredPeers, OverlayLogSanitizer.Endpoint(endpoint));
                     continue;
                 }
+
+                Interlocked.Increment(ref _totalCandidatesAccepted);
 
                 // Don't add ourselves or already-known peers
                 if (_discoveredPeers.TryAdd(endpointKey, endpoint))
@@ -519,6 +533,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
         if (_pendingPeerConnections.Count >= MaxConcurrentPeerConnectionAttempts)
         {
+            Interlocked.Increment(ref _totalCandidatesDeferredConnectorCapacity);
             _logger.LogDebug(
                 "Deferring DHT peer connection to {Endpoint}; {PendingCount}/{MaxPending} rendezvous attempts are already pending",
                 OverlayLogSanitizer.Endpoint(endpoint),
@@ -535,6 +550,16 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 _pendingPeerConnections.ContainsKey(peerId),
                 PeerReconnectInterval))
         {
+            if (_peerConnectionAttemptedAt.ContainsKey(peerId) &&
+                lastAttempt != default &&
+                now - lastAttempt < PeerReconnectInterval &&
+                !_registry.IsConnectedTo(endpoint) &&
+                peer?.SupportsOnionRouting != true &&
+                !_pendingPeerConnections.ContainsKey(peerId))
+            {
+                Interlocked.Increment(ref _totalCandidatesSkippedReconnectBackoff);
+            }
+
             return;
         }
 
@@ -700,6 +725,12 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             ActiveMeshConnections = ActiveMeshConnections,
             VerifiedBeaconCount = (int)_totalConnectionsSucceeded,
             TotalPeersDiscovered = _totalPeersDiscovered,
+            TotalCandidateEndpointsSeen = _totalCandidateEndpointsSeen,
+            TotalCandidatesAccepted = _totalCandidatesAccepted,
+            TotalCandidatesSkippedDhtPort = _totalCandidatesSkippedDhtPort,
+            TotalCandidatesSkippedDiscoveredCapacity = _totalCandidatesSkippedDiscoveredCapacity,
+            TotalCandidatesDeferredConnectorCapacity = _totalCandidatesDeferredConnectorCapacity,
+            TotalCandidatesSkippedReconnectBackoff = _totalCandidatesSkippedReconnectBackoff,
             TotalConnectionsAttempted = _totalConnectionsAttempted,
             TotalConnectionsSucceeded = _totalConnectionsSucceeded,
             LastAnnounceTime = _lastAnnounceTime,
@@ -744,6 +775,60 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         }
 
         return DateTimeOffset.UtcNow - _lastDiscoveryTime.Value > TimeSpan.FromSeconds(_options.DiscoveryIntervalSeconds);
+    }
+
+    private void LogPeriodicSummaryIfDue()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (_lastSummaryLogTime.HasValue && now - _lastSummaryLogTime.Value < SummaryLogInterval)
+        {
+            return;
+        }
+
+        _lastSummaryLogTime = now;
+        var connectorStats = _overlayConnector.GetStats();
+        var topFailures = new List<string>();
+
+        AppendFailureReason(topFailures, "timeout", connectorStats.FailureReasons.ConnectTimeouts);
+        AppendFailureReason(topFailures, "no-route", connectorStats.FailureReasons.NoRouteFailures);
+        AppendFailureReason(topFailures, "conn-refused", connectorStats.FailureReasons.ConnectionRefusedFailures);
+        AppendFailureReason(topFailures, "conn-reset", connectorStats.FailureReasons.ConnectionResetFailures);
+        AppendFailureReason(topFailures, "tls-eof", connectorStats.FailureReasons.TlsEofFailures);
+        AppendFailureReason(topFailures, "tls-handshake", connectorStats.FailureReasons.TlsHandshakeFailures);
+        AppendFailureReason(topFailures, "protocol", connectorStats.FailureReasons.ProtocolHandshakeFailures);
+        AppendFailureReason(topFailures, "registration", connectorStats.FailureReasons.RegistrationFailures);
+
+        var degradedEndpoints = connectorStats.TopProblemEndpoints
+            .Where(endpoint => endpoint.ConsecutiveFailureCount > 0)
+            .Take(3)
+            .Select(endpoint => $"{endpoint.Endpoint}:{endpoint.LastFailureReason}x{endpoint.ConsecutiveFailureCount}")
+            .ToArray();
+
+        _logger.LogInformation(
+            "DHT/overlay summary: state={State} nodes={NodeCount} activeMesh={ActiveMesh} discovered={Discovered} seen={Seen} accepted={Accepted} skippedPort={SkippedPort} skippedCapacity={SkippedCapacity} deferredCapacity={DeferredCapacity} retryBackoff={RetryBackoff} attempts={Attempts} successes={Successes} cooldownSkips={CooldownSkips} failureMix=[{FailureMix}] degraded=[{DegradedEndpoints}]",
+            _dhtEngine?.State ?? DhtState.NotReady,
+            DhtNodeCount,
+            ActiveMeshConnections,
+            DiscoveredPeerCount,
+            _totalCandidateEndpointsSeen,
+            _totalCandidatesAccepted,
+            _totalCandidatesSkippedDhtPort,
+            _totalCandidatesSkippedDiscoveredCapacity,
+            _totalCandidatesDeferredConnectorCapacity,
+            _totalCandidatesSkippedReconnectBackoff,
+            _totalConnectionsAttempted,
+            _totalConnectionsSucceeded,
+            connectorStats.EndpointCooldownSkips,
+            topFailures.Count > 0 ? string.Join(", ", topFailures) : "none",
+            degradedEndpoints.Length > 0 ? string.Join(", ", degradedEndpoints) : "none");
+    }
+
+    private static void AppendFailureReason(ICollection<string> reasons, string label, long count)
+    {
+        if (count > 0)
+        {
+            reasons.Add($"{label}={count}");
+        }
     }
 
     private async Task<bool> StartOverlayServerIfPossibleAsync(CancellationToken cancellationToken)

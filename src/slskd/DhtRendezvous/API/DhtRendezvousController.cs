@@ -68,6 +68,12 @@ public class DhtRendezvousController : ControllerBase
             ActiveMeshConnections = stats.ActiveMeshConnections,
             VerifiedBeaconCount = stats.VerifiedBeaconCount,
             TotalPeersDiscovered = stats.TotalPeersDiscovered,
+            TotalCandidateEndpointsSeen = stats.TotalCandidateEndpointsSeen,
+            TotalCandidatesAccepted = stats.TotalCandidatesAccepted,
+            TotalCandidatesSkippedDhtPort = stats.TotalCandidatesSkippedDhtPort,
+            TotalCandidatesSkippedDiscoveredCapacity = stats.TotalCandidatesSkippedDiscoveredCapacity,
+            TotalCandidatesDeferredConnectorCapacity = stats.TotalCandidatesDeferredConnectorCapacity,
+            TotalCandidatesSkippedReconnectBackoff = stats.TotalCandidatesSkippedReconnectBackoff,
             TotalConnectionsAttempted = stats.TotalConnectionsAttempted,
             TotalConnectionsSucceeded = stats.TotalConnectionsSucceeded,
             LastAnnounceTime = stats.LastAnnounceTime,
@@ -223,6 +229,7 @@ public class DhtRendezvousController : ControllerBase
                 TotalSlskdnPeers = slskdnPeersWithVersion + slskdnPeersWithoutVersion,
                 SlskdnPeersWithVersion = slskdnPeersWithVersion,
                 SlskdnPeersWithoutVersion = slskdnPeersWithoutVersion,
+                EndpointCooldownSkips = connectorStats.EndpointCooldownSkips,
                 FailureReasons = new ConnectorFailureReasonStatsResponse
                 {
                     ConnectTimeouts = connectorStats.FailureReasons.ConnectTimeouts,
@@ -236,6 +243,19 @@ public class DhtRendezvousController : ControllerBase
                     BlockedPeerFailures = connectorStats.FailureReasons.BlockedPeerFailures,
                     UnknownFailures = connectorStats.FailureReasons.UnknownFailures,
                 },
+                TopProblemEndpoints = connectorStats.TopProblemEndpoints
+                    .Select(endpoint => new OverlayEndpointHealthResponse
+                    {
+                        Endpoint = endpoint.Endpoint,
+                        ConsecutiveFailureCount = endpoint.ConsecutiveFailureCount,
+                        TotalFailures = endpoint.TotalFailures,
+                        LastFailureReason = endpoint.LastFailureReason,
+                        LastFailureAt = endpoint.LastFailureAt,
+                        SuppressedUntil = endpoint.SuppressedUntil,
+                        LastSuccessAt = endpoint.LastSuccessAt,
+                        LastUsername = endpoint.LastUsername,
+                    })
+                    .ToList(),
             },
             RateLimiter = new RateLimiterStatsResponse
             {
@@ -388,6 +408,12 @@ public sealed class DhtStatusResponse
     public int ActiveMeshConnections { get; init; }
     public int VerifiedBeaconCount { get; init; }
     public long TotalPeersDiscovered { get; init; }
+    public long TotalCandidateEndpointsSeen { get; init; }
+    public long TotalCandidatesAccepted { get; init; }
+    public long TotalCandidatesSkippedDhtPort { get; init; }
+    public long TotalCandidatesSkippedDiscoveredCapacity { get; init; }
+    public long TotalCandidatesDeferredConnectorCapacity { get; init; }
+    public long TotalCandidatesSkippedReconnectBackoff { get; init; }
     public long TotalConnectionsAttempted { get; init; }
     public long TotalConnectionsSucceeded { get; init; }
     public DateTimeOffset? LastAnnounceTime { get; init; }
@@ -458,7 +484,9 @@ public sealed class ConnectorStatsResponse
     public int TotalSlskdnPeers { get; init; }
     public int SlskdnPeersWithVersion { get; init; }
     public int SlskdnPeersWithoutVersion { get; init; }
+    public long EndpointCooldownSkips { get; init; }
     public required ConnectorFailureReasonStatsResponse FailureReasons { get; init; }
+    public required List<OverlayEndpointHealthResponse> TopProblemEndpoints { get; init; }
 }
 
 public sealed class ConnectorFailureReasonStatsResponse
@@ -473,6 +501,18 @@ public sealed class ConnectorFailureReasonStatsResponse
     public long RegistrationFailures { get; init; }
     public long BlockedPeerFailures { get; init; }
     public long UnknownFailures { get; init; }
+}
+
+public sealed class OverlayEndpointHealthResponse
+{
+    public required string Endpoint { get; init; }
+    public int ConsecutiveFailureCount { get; init; }
+    public long TotalFailures { get; init; }
+    public required string LastFailureReason { get; init; }
+    public DateTimeOffset? LastFailureAt { get; init; }
+    public DateTimeOffset? SuppressedUntil { get; init; }
+    public DateTimeOffset? LastSuccessAt { get; init; }
+    public string? LastUsername { get; init; }
 }
 
 public sealed class RateLimiterStatsResponse

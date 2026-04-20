@@ -364,6 +364,8 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
 
     private async Task HandleMessagesAsync(MeshOverlayConnection connection, CancellationToken cancellationToken)
     {
+        var disconnectReason = "shutdown";
+
         try
         {
             while (!cancellationToken.IsCancellationRequested && connection.IsConnected)
@@ -371,6 +373,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 // Check for idle timeout
                 if (connection.IsIdle())
                 {
+                    disconnectReason = "idle-timeout";
                     _logger.LogDebug("Connection to {Username} idle, disconnecting", OverlayLogSanitizer.Username(connection.Username));
                     break;
                 }
@@ -385,6 +388,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                     }
                     catch
                     {
+                        disconnectReason = "keepalive-failed";
                         _logger.LogDebug("Keepalive failed for {Username}", OverlayLogSanitizer.Username(connection.Username));
                         break;
                     }
@@ -394,6 +398,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 var rateResult = _rateLimiter.CheckMessage(connection.ConnectionId);
                 if (!rateResult)
                 {
+                    disconnectReason = "message-rate-limit";
                     _logger.LogWarning(
                         "Message rate limit exceeded for {Username}: {Reason}",
                         OverlayLogSanitizer.Username(connection.Username),
@@ -438,6 +443,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                             }
                             else
                             {
+                                disconnectReason = "peer-disconnect";
                                 _logger.LogDebug("Received disconnect from {Username}: {Reason}", OverlayLogSanitizer.Username(connection.Username), disconnect?.Reason ?? "no reason");
                             }
 
@@ -498,6 +504,7 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    disconnectReason = "cancellation";
                     break;
                 }
                 catch (OperationCanceledException)
@@ -507,11 +514,13 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
                 }
                 catch (System.IO.EndOfStreamException)
                 {
+                    disconnectReason = "remote-eof";
                     _logger.LogDebug("Connection closed by {Username}", OverlayLogSanitizer.Username(connection.Username));
                     break;
                 }
                 catch (ProtocolViolationException ex)
                 {
+                    disconnectReason = "protocol-violation";
                     _logger.LogWarning("Protocol violation from {Username}: {Error}", OverlayLogSanitizer.Username(connection.Username), ex.Message);
                     _rateLimiter.RecordViolation(connection.RemoteAddress);
                     break;
@@ -520,10 +529,17 @@ public sealed class MeshOverlayServer : IMeshOverlayServer, IAsyncDisposable
         }
         catch (Exception ex)
         {
+            disconnectReason = "message-loop-error";
             _logger.LogWarning(ex, "Error in message loop for {Username}", OverlayLogSanitizer.Username(connection.Username));
         }
 
     cleanup:
+        _logger.LogInformation(
+            "Inbound mesh session ended for {Username}@{Endpoint}: ageSeconds={AgeSeconds} reason={Reason}",
+            OverlayLogSanitizer.Username(connection.Username),
+            OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint),
+            Math.Max(0, (int)(DateTimeOffset.UtcNow - connection.ConnectedAt).TotalSeconds),
+            disconnectReason);
         await _registry.UnregisterAsync(connection);
         _requestRouter.RemoveConnection(connection);
         _rateLimiter.RecordDisconnection(connection.RemoteAddress);

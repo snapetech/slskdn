@@ -6561,3 +6561,16 @@ Code quality improvements were completed as part of Option A:
 - `DownloadService` now tracks and drains in-flight enqueue/download observer tasks before `Application.StopAsync` disconnects or disposes the shared Soulseek client. This removed the live restart-time `Failed to release global download semaphore... Cannot access a disposed object`, `Failed to find download`, and `Failed to clean up transfer` noise.
 - Hardened `Application.StopAsync` against a third-party `SoulseekClient.Disconnect()` collection race (`InvalidOperationException: Sequence contains no elements`) seen during one shutdown on `kspls0`; expected shutdown now logs that race as a handled warning instead of a false fatal termination.
 - Deployed and validated live manual builds `manual.37a745af5` and `manual.1475cd068` on `kspls0`. Final validation on `0.24.5-slskdn.159+manual.1475cd068` showed: service active, restart count `0`, DHT running (`72` nodes on sample), overlay listening on `50305`, QUIC listeners active, and one mesh peer connected immediately after deliberate restart with no shutdown cleanup/fatal disconnect regressions.
+
+## 2026-04-19 20:30:00Z
+
+- Added the next DHT/overlay operator diagnostics pass instead of more aggressive probing. `MeshOverlayConnector` now tracks per-endpoint failure streaks, applies bounded cooldowns to repeatedly bad endpoints, exposes top degraded endpoints in stats, and logs outbound session-end summaries with age/reason.
+- `DhtRendezvousService` now keeps explicit candidate rollups (`seen`, `accepted`, `skipped DHT-port`, `skipped discovered-capacity`, `deferred connector-capacity`, `retry-backoff`) and emits periodic DHT/overlay summary lines that surface the current connector failure mix and worst endpoints without flooding logs.
+- Exposed the new diagnostics on the existing DHT/overlay API responses and added focused unit coverage for the new counters, cooldown behavior, and controller mapping.
+- Validation: focused DHT/overlay unit slice passed (`41` tests), `dotnet build src/slskd/slskd.csproj --no-restore -v minimal` passed, `./bin/build` completed the frontend/release build path but failed in its full Release unit-test pass with one shutdown-drain test (`DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`) even though that same test passed immediately when rerun in isolation, `bash ./bin/lint` passed, and `git diff --check` passed.
+
+## 2026-04-20 02:30:00Z
+
+- Traced the failed tag build `build-main-0.24.5-slskdn.160` to the `Release Gate` integration smoke compile step, not the runtime smoke tests. CI failed with `CS0535` because `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still had a pre-shutdown `StubDownloadService` that did not implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.
+- Fixed the integration stub by adding the missing `ShutdownAsync` no-op implementation and documented the pattern in ADR-0001 so future service-interface changes also update smoke/integration test doubles.
+- Revalidated the exact CI path locally: Release unit smoke passed (`35` tests), the exact filtered Release integration smoke command passed (`40` tests), `bash packaging/scripts/run-release-integration-smoke.sh` passed end to end, `bash ./bin/lint` passed, and `git diff --check` passed.

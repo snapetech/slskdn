@@ -6,6 +6,7 @@
 namespace slskd.DhtRendezvous;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -39,6 +40,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private readonly IMeshSearchRpcHandler _meshSearchRpcHandler;
     private readonly MeshOverlayRequestRouter _requestRouter;
     private readonly MeshServiceRouter? _serviceRouter;
+    private readonly ConcurrentDictionary<string, EndpointAttemptState> _endpointAttemptStates = new();
     private int _pendingConnections;
     private long _successfulConnections;
     private long _failedConnections;
@@ -52,6 +54,9 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private long _registrationFailures;
     private long _blockedPeerFailures;
     private long _unknownFailures;
+    private long _endpointCooldownSkips;
+    private static readonly TimeSpan EndpointFailureBaseCooldown = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan EndpointFailureMaxCooldown = TimeSpan.FromMinutes(15);
 
     /// <summary>
     /// Maximum concurrent connection attempts.
@@ -155,6 +160,18 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
             return null;
         }
 
+        if (TryGetEndpointCooldown(endpoint, out var cooldownRemaining, out var endpointState))
+        {
+            Interlocked.Increment(ref _endpointCooldownSkips);
+            _logger.LogDebug(
+                "Skipping overlay connect to {Endpoint}; endpoint cooling down for {CooldownSeconds}s after {FailureReason} streak={FailureCount}",
+                OverlayLogSanitizer.Endpoint(endpoint),
+                Math.Max(1, (int)Math.Ceiling(cooldownRemaining.TotalSeconds)),
+                endpointState?.LastFailureReason ?? OverlayConnectionFailureReason.Unknown,
+                endpointState?.ConsecutiveFailureCount ?? 0);
+            return null;
+        }
+
         if (_pendingConnections >= MaxConcurrentAttempts)
         {
             _logger.LogDebug("Too many pending connections, skipping {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
@@ -221,6 +238,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 }
 
                 Interlocked.Increment(ref _successfulConnections);
+                RecordSuccess(endpoint, ack.Username);
 
                 _logger.LogInformation(
                     "Connected to mesh peer {Username}@{Endpoint} (features: {Features})",
@@ -263,12 +281,15 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
     private async Task RunOutboundMessageLoopAsync(MeshOverlayConnection connection, CancellationToken cancellationToken)
     {
+        var disconnectReason = "shutdown";
+
         try
         {
             while (!cancellationToken.IsCancellationRequested && connection.IsConnected)
             {
                 if (connection.IsIdle())
                 {
+                    disconnectReason = "idle-timeout";
                     _logger.LogDebug("Outbound connection to {Username} idle, disconnecting", OverlayLogSanitizer.Username(connection.Username));
                     break;
                 }
@@ -289,6 +310,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                             break;
 
                         case OverlayMessageType.Disconnect:
+                            disconnectReason = "peer-disconnect";
                             goto cleanup;
 
                         case OverlayMessageType.MeshSearchReq:
@@ -345,6 +367,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    disconnectReason = "cancellation";
                     break;
                 }
                 catch (OperationCanceledException)
@@ -353,11 +376,13 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 }
                 catch (EndOfStreamException)
                 {
+                    disconnectReason = "remote-eof";
                     _logger.LogDebug("Outbound connection closed by {Username}", OverlayLogSanitizer.Username(connection.Username));
                     break;
                 }
                 catch (slskd.DhtRendezvous.Security.ProtocolViolationException ex)
                 {
+                    disconnectReason = "protocol-violation";
                     _logger.LogWarning("Protocol violation from {Username}: {Error}", OverlayLogSanitizer.Username(connection.Username), ex.Message);
                     _rateLimiter.RecordViolation(connection.RemoteAddress);
                     break;
@@ -366,10 +391,17 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         }
         catch (Exception ex)
         {
+            disconnectReason = "message-loop-error";
             _logger.LogDebug(ex, "Error in outbound message loop for {Username}", OverlayLogSanitizer.Username(connection.Username));
         }
 
     cleanup:
+        _logger.LogInformation(
+            "Outbound mesh session ended for {Username}@{Endpoint}: ageSeconds={AgeSeconds} reason={Reason}",
+            OverlayLogSanitizer.Username(connection.Username),
+            OverlayLogSanitizer.Endpoint(connection.RemoteEndPoint),
+            Math.Max(0, (int)(DateTimeOffset.UtcNow - connection.ConnectedAt).TotalSeconds),
+            disconnectReason);
         await _registry.UnregisterAsync(connection).ConfigureAwait(false);
         _requestRouter.RemoveConnection(connection);
         _rateLimiter.RecordDisconnection(connection.RemoteAddress);
@@ -482,6 +514,24 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 BlockedPeerFailures = _blockedPeerFailures,
                 UnknownFailures = _unknownFailures,
             },
+            EndpointCooldownSkips = _endpointCooldownSkips,
+            TopProblemEndpoints = _endpointAttemptStates.Values
+                .Where(state => state.TotalFailures > 0)
+                .OrderByDescending(state => state.ConsecutiveFailureCount)
+                .ThenByDescending(state => state.LastFailureAt)
+                .Take(5)
+                .Select(state => new OverlayEndpointHealthStats
+                {
+                    Endpoint = OverlayLogSanitizer.Endpoint(state.Endpoint),
+                    ConsecutiveFailureCount = state.ConsecutiveFailureCount,
+                    TotalFailures = state.TotalFailures,
+                    LastFailureReason = state.LastFailureReason.ToString(),
+                    LastFailureAt = state.LastFailureAt,
+                    SuppressedUntil = state.SuppressedUntil,
+                    LastSuccessAt = state.LastSuccessAt,
+                    LastUsername = state.LastUsername,
+                })
+                .ToList(),
         };
     }
 
@@ -575,6 +625,11 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
     private void RecordFailure(OverlayConnectionFailureReason reason, IPEndPoint endpoint, string? username = null)
     {
         Interlocked.Increment(ref _failedConnections);
+        var now = DateTimeOffset.UtcNow;
+        var endpointState = _endpointAttemptStates.AddOrUpdate(
+            GetEndpointKey(endpoint),
+            _ => EndpointAttemptState.CreateFailure(endpoint, reason, username, now, GetFailureCooldown(1)),
+            (_, existing) => existing.WithFailure(reason, username, now, GetFailureCooldown(existing.ConsecutiveFailureCount + 1)));
 
         switch (reason)
         {
@@ -610,6 +665,16 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
                 break;
         }
 
+        if (endpointState.ConsecutiveFailureCount >= 3)
+        {
+            _logger.LogInformation(
+                "Overlay endpoint {Endpoint} failure streak={FailureCount} lastReason={FailureReason} coolingDownUntil={SuppressedUntil}",
+                OverlayLogSanitizer.Endpoint(endpoint),
+                endpointState.ConsecutiveFailureCount,
+                reason,
+                endpointState.SuppressedUntil);
+        }
+
         if (username is not null)
         {
             _logger.LogDebug("Recorded overlay failure {FailureReason} for {Username}@{Endpoint}", reason, OverlayLogSanitizer.Username(username), OverlayLogSanitizer.Endpoint(endpoint));
@@ -617,6 +682,119 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
         }
 
         _logger.LogDebug("Recorded overlay failure {FailureReason} for {Endpoint}", reason, OverlayLogSanitizer.Endpoint(endpoint));
+    }
+
+    private void RecordSuccess(IPEndPoint endpoint, string? username)
+    {
+        var endpointKey = GetEndpointKey(endpoint);
+        if (_endpointAttemptStates.TryGetValue(endpointKey, out var state))
+        {
+            _endpointAttemptStates[endpointKey] = state.WithSuccess(DateTimeOffset.UtcNow, username);
+        }
+    }
+
+    internal static TimeSpan GetFailureCooldown(int consecutiveFailures)
+    {
+        if (consecutiveFailures <= 1)
+        {
+            return EndpointFailureBaseCooldown;
+        }
+
+        var multiplier = Math.Min(8, 1 << Math.Min(consecutiveFailures - 1, 3));
+        var cooldown = TimeSpan.FromTicks(EndpointFailureBaseCooldown.Ticks * multiplier);
+        return cooldown <= EndpointFailureMaxCooldown ? cooldown : EndpointFailureMaxCooldown;
+    }
+
+    internal static bool IsEndpointCoolingDown(DateTimeOffset now, DateTimeOffset? suppressedUntil)
+    {
+        return suppressedUntil.HasValue && suppressedUntil.Value > now;
+    }
+
+    private bool TryGetEndpointCooldown(IPEndPoint endpoint, out TimeSpan cooldownRemaining, out EndpointAttemptState? endpointState)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (_endpointAttemptStates.TryGetValue(GetEndpointKey(endpoint), out endpointState) &&
+            IsEndpointCoolingDown(now, endpointState.SuppressedUntil))
+        {
+            cooldownRemaining = endpointState.SuppressedUntil - now;
+            return true;
+        }
+
+        cooldownRemaining = TimeSpan.Zero;
+        endpointState = null;
+        return false;
+    }
+
+    private static string GetEndpointKey(IPEndPoint endpoint)
+    {
+        return endpoint.AddressFamily == AddressFamily.InterNetworkV6
+            ? $"[{endpoint.Address}]:{endpoint.Port}"
+            : $"{endpoint.Address}:{endpoint.Port}";
+    }
+
+    private sealed class EndpointAttemptState
+    {
+        public required IPEndPoint Endpoint { get; init; }
+        public required OverlayConnectionFailureReason LastFailureReason { get; init; }
+        public required DateTimeOffset LastFailureAt { get; init; }
+        public required DateTimeOffset SuppressedUntil { get; init; }
+        public required int ConsecutiveFailureCount { get; init; }
+        public required long TotalFailures { get; init; }
+        public DateTimeOffset? LastSuccessAt { get; init; }
+        public string? LastUsername { get; init; }
+
+        public static EndpointAttemptState CreateFailure(
+            IPEndPoint endpoint,
+            OverlayConnectionFailureReason reason,
+            string? username,
+            DateTimeOffset now,
+            TimeSpan cooldown)
+        {
+            return new EndpointAttemptState
+            {
+                Endpoint = endpoint,
+                LastFailureReason = reason,
+                LastFailureAt = now,
+                SuppressedUntil = now.Add(cooldown),
+                ConsecutiveFailureCount = 1,
+                TotalFailures = 1,
+                LastUsername = username,
+            };
+        }
+
+        public EndpointAttemptState WithFailure(
+            OverlayConnectionFailureReason reason,
+            string? username,
+            DateTimeOffset now,
+            TimeSpan cooldown)
+        {
+            return new EndpointAttemptState
+            {
+                Endpoint = Endpoint,
+                LastFailureReason = reason,
+                LastFailureAt = now,
+                SuppressedUntil = now.Add(cooldown),
+                ConsecutiveFailureCount = ConsecutiveFailureCount + 1,
+                TotalFailures = TotalFailures + 1,
+                LastSuccessAt = LastSuccessAt,
+                LastUsername = username ?? LastUsername,
+            };
+        }
+
+        public EndpointAttemptState WithSuccess(DateTimeOffset now, string? username)
+        {
+            return new EndpointAttemptState
+            {
+                Endpoint = Endpoint,
+                LastFailureReason = LastFailureReason,
+                LastFailureAt = LastFailureAt,
+                SuppressedUntil = now,
+                ConsecutiveFailureCount = 0,
+                TotalFailures = TotalFailures,
+                LastSuccessAt = now,
+                LastUsername = username ?? LastUsername,
+            };
+        }
     }
 
     private sealed class IPEndPointComparer : IEqualityComparer<IPEndPoint>

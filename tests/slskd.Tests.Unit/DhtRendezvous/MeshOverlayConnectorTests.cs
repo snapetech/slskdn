@@ -77,4 +77,27 @@ public class MeshOverlayConnectorTests
 
         Assert.Equal(OverlayConnectionFailureReason.Unknown, reason);
     }
+
+    [Theory]
+    [InlineData(1, 2)]
+    [InlineData(2, 4)]
+    [InlineData(3, 8)]
+    [InlineData(4, 15)]
+    [InlineData(8, 15)]
+    public void GetFailureCooldown_UsesBoundedBackoff(int consecutiveFailures, int expectedMinutes)
+    {
+        var cooldown = MeshOverlayConnector.GetFailureCooldown(consecutiveFailures);
+
+        Assert.Equal(TimeSpan.FromMinutes(expectedMinutes), cooldown);
+    }
+
+    [Fact]
+    public void IsEndpointCoolingDown_ReturnsTrueOnlyBeforeSuppressedUntil()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        Assert.True(MeshOverlayConnector.IsEndpointCoolingDown(now, now.AddSeconds(30)));
+        Assert.False(MeshOverlayConnector.IsEndpointCoolingDown(now, now));
+        Assert.False(MeshOverlayConnector.IsEndpointCoolingDown(now, null));
+    }
 }

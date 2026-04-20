@@ -105,6 +105,7 @@ public class DhtRendezvousServiceTests
         connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Never);
         Assert.Equal(0, service.DiscoveredPeerCount);
         Assert.Equal(0, peerManager.GetStatistics().TotalPeers);
+        Assert.Equal(1, service.GetStats().TotalCandidatesSkippedDhtPort);
     }
 
     [Fact]
@@ -134,6 +135,7 @@ public class DhtRendezvousServiceTests
 
         connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Once);
         Assert.Equal(1, service.DiscoveredPeerCount);
+        Assert.Equal(1, service.GetStats().TotalCandidatesAccepted);
     }
 
     private static void InvokeOnPeersFound(DhtRendezvousService service, PeersFoundEventArgs eventArgs)
@@ -226,6 +228,7 @@ public class DhtRendezvousServiceTests
         await Task.Delay(100);
 
         connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Once);
+        Assert.Equal(1, service.GetStats().TotalCandidatesSkippedReconnectBackoff);
     }
 
     [Fact]
@@ -262,6 +265,7 @@ public class DhtRendezvousServiceTests
             x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()),
             Times.Exactly(DhtRendezvousService.MaxConcurrentPeerConnectionAttempts));
         Assert.Equal(DhtRendezvousService.MaxConcurrentPeerConnectionAttempts, service.GetStats().TotalConnectionsAttempted);
+        Assert.Equal(1, service.GetStats().TotalCandidatesDeferredConnectorCapacity);
 
         pendingConnection.SetResult(0);
     }
