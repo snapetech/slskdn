@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z76. DHT Rendezvous Must Not Count Connector Capacity Skips As Peer Attempts
+
+**The Bug**: Live `kspls0` testing after manual build `d41ef6335` showed DHT healthy with four discovered peers but no mesh, while status reported `totalConnectionsAttempted=8` and overlay stats reported only six connector failures. `DhtRendezvousService` scheduled one background task per discovered peer and marked each peer attempted before calling the connector; `MeshOverlayConnector` then silently skipped calls when its three-attempt concurrency guard was already full.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/DhtRendezvousServiceTests.cs`
+
+**Wrong**:
+```csharp
+_peerConnectionAttemptedAt[peerId] = now;
+_ = TryConnectToPeerAsync(peerId, endpoint);
+```
+
+**Correct**:
+```csharp
+if (_pendingPeerConnections.Count >= MaxConcurrentPeerConnectionAttempts)
+{
+    return;
+}
+
+_peerConnectionAttemptedAt[peerId] = now;
+_ = TryConnectToPeerAsync(peerId, endpoint);
+```
+
+**Why This Keeps Happening**: The rendezvous layer and connector both have concurrency state. If the outer scheduler does not honor the connector's capacity, it can burn retry/backoff state on work that never actually opened a socket. Attempt counters, diagnostics, and retry timing then lie, and a valid candidate later in the DHT result set can be delayed behind junk endpoints.
+
 ### 0z75. Overlay Readers Must Handle Unframed JSON Compatibility Frames
 
 **The Bug**: Live `kspls0` testing on manual build `90257b10d` connected to mesh peer `m***7`, then dropped the peer exactly at the two-minute keepalive mark with `Protocol violation ... Invalid message length: 2065855609`. That "length" is `0x7b227479`, the ASCII bytes `{"ty`, so the reader saw raw JSON at the frame boundary where it expected a four-byte big-endian length prefix.
