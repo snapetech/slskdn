@@ -11,6 +11,16 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Match live Soulseek timer-reset stack signatures in false-fatal classifier.
+ - Status: completed (2026-04-21)
+ - Priority: P1
+ - Notes: The `0.24.5-slskdn.169` `kspls0` route/tab sweep exposed a current-process fatal unobserved `NullReferenceException` from `Soulseek.Extensions.Reset(Timer timer)` inside `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The existing classifier matched the synthetic test string `Reset(Timer)`, missing the real runtime signature with parameter names. The classifier now matches the stable `Reset(` method prefix and focused tests use the live signature. The gotcha is documented in ADR-0001.
+
+- [x] **bug**: Quiet normal systemd shutdown telemetry from package restarts.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: The `0.24.5-slskdn.169` package replacement on `kspls0` shut down cleanly, but the old process still logged SIGTERM/host-stop warnings, duplicate expected `ProcessExit` stderr, and `app.Run() returned (this should not happen normally)`. Clean shutdown now logs at information/debug levels without duplicate fatal-looking stderr. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Quiet optional user-info badge misses in route/tab sweeps.
  - Status: completed (2026-04-21)
  - Priority: P3

@@ -1,3 +1,19 @@
+## Update 2026-04-21 05:06:00Z
+
+- Current task: Validating the `0.24.5-slskdn.169` yay install on `kspls0` and fixing actionable live noise.
+- Last activity:
+  - confirmed `kspls0` is running `slskdn-bin 0.24.5.slskdn.169-1` from systemd PID `2045334`, `active/running`, `NRestarts=0`, with `ExecMainStatus=0`
+  - verified the installed binary reports `0.24.5-slskdn.169`; current-process startup bound the expected web, Soulseek, DHT, and TCP overlay listeners
+  - ran the bounded Playwright route/tab sweep: `/tmp/kspls0-route-tab-sweep-2026-04-21T04-55-23-627Z.md`, `307` visits, `1691` same-origin responses, status summary `{"200":1687,"204":4}`, `0` issues, and no 4xx/5xx/502 responses
+  - triaged the sweep warnings: most are scanner false positives from `/system/options` literal `false`/disabled config text, but `/system/logs` exposed a real current-process fatal unobserved `NullReferenceException` from `Soulseek.Extensions.Reset(Timer timer)` in a Soulseek.NET write path
+  - documented and patched the live stack-signature miss so expected Soulseek timer-reset read/write races match `Reset(` instead of the synthetic exact `Reset(Timer)` string
+  - also quieted clean shutdown telemetry so normal SIGTERM/systemd restart paths no longer print warning/abnormal `app.Run()`/duplicate stderr lines
+  - validation so far: focused `ProgramPathNormalizationTests`/expected-network unit slice passed (`30` tests)
+- Next steps:
+  1. Run Release build, lint, and diff checks.
+  2. Commit and push the shutdown/log-noise fixes after GitHub target verification.
+  3. Do not create another build tag unless explicitly requested.
+
 ## Update 2026-04-21 04:24:00Z
 
 - Current task: Validated the `0.24.5-slskdn.168` yay install on `kspls0` and fixed the actionable issues found locally.

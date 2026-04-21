@@ -141,7 +141,7 @@ namespace slskd
                 args.Cancel = true;
                 ShuttingDown = true;
                 Program.MasterCancellationTokenSource.Cancel();
-                Log.Warning("Received SIGINT; stopping application");
+                Log.Information("Received SIGINT; stopping application");
                 hostLifetime?.StopApplication();
             };
             Console.CancelKeyPress += _cancelKeyPressHandler;
@@ -153,7 +153,7 @@ namespace slskd
                     context.Cancel = true;
                     ShuttingDown = true;
                     Program.MasterCancellationTokenSource.Cancel();
-                    Log.Warning("Received {Signal}; stopping application", signal);
+                    Log.Information("Received {Signal}; stopping application", signal);
                     hostLifetime?.StopApplication();
                 }));
             }
@@ -710,7 +710,7 @@ namespace slskd
         async Task IHostedService.StopAsync(CancellationToken cancellationToken)
         {
             ShuttingDown = true;
-            Log.Warning("Application is shutting down");
+            Log.Information("Application is shutting down");
 
             _startupInitializationCts?.Cancel();
 

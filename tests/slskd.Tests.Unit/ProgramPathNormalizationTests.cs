@@ -262,7 +262,7 @@ public class ProgramPathNormalizationTests
         var inner = new NullReferenceException("Object reference not set to an instance of an object.");
         ExceptionDispatchInfo.SetRemoteStackTrace(
             inner,
-            "   at Soulseek.Extensions.Reset(Timer)\n" +
+            "   at Soulseek.Extensions.Reset(Timer timer)\n" +
             "   at Soulseek.Network.Tcp.Connection.ReadInternalAsync(Int64 length, Stream outputStream, Func`3 governor, Action`3 reporter, CancellationToken cancellationToken)\n" +
             "   at Soulseek.Network.MessageConnection.ReadContinuouslyAsync()");
         var exception = new AggregateException(inner);
@@ -276,7 +276,7 @@ public class ProgramPathNormalizationTests
         var inner = new NullReferenceException("Object reference not set to an instance of an object.");
         ExceptionDispatchInfo.SetRemoteStackTrace(
             inner,
-            "   at Soulseek.Extensions.Reset(Timer)\n" +
+            "   at Soulseek.Extensions.Reset(Timer timer)\n" +
             "   at Soulseek.Network.Tcp.Connection.WriteInternalAsync(Int64 length, Stream inputStream, Func`3 governor, Action`3 reporter, CancellationToken cancellationToken)");
         var exception = new AggregateException(inner);
 

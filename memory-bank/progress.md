@@ -1,3 +1,13 @@
+## 2026-04-21 05:06Z - Validated kspls0 package 169 and fixed remaining false-fatal log noise
+
+- Confirmed the `kspls0` yay install is `slskdn-bin 0.24.5.slskdn.169-1`, `/usr/bin/slskd --version` reports `0.24.5-slskdn.169`, and systemd is running PID `2045334` with `NRestarts=0` and `ExecMainStatus=0`.
+- Verified current-process startup bound the expected listeners and DHT/overlay reached ready state after bootstrap; no new `slskd` coredumps were present in the observed window.
+- Ran the full bounded route/tab Playwright sweep against `http://kspls0:5030`: report `/tmp/kspls0-route-tab-sweep-2026-04-21T04-55-23-627Z.md`, `307` visits, `1691` same-origin responses, status summary `{"200":1687,"204":4}`, `0` issues, and no HTTP 4xx/5xx/502 responses.
+- Triage found most sweep warnings were scanner false positives from `/system/options` containing literal `false`/disabled config text, but `/system/logs` revealed a real current-process fatal unobserved `NullReferenceException` at `23:02:20` from `Soulseek.Extensions.Reset(Timer timer)` in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`.
+- Documented the live stack-signature gotcha in ADR-0001 and committed it as `bee152f29`, then widened the expected Soulseek network classifier to match `Soulseek.Extensions.Reset(` so real runtime signatures with parameter names are covered.
+- Quieted normal shutdown telemetry found during package replacement: SIGTERM/host stop now logs as information, expected `ProcessExit` no longer duplicates to stderr, and `app.Run()` returning after host shutdown is debug-only.
+- Validation so far: focused program expected-network unit slice passed (`30` tests). Release build/lint/push remain next.
+
 ## 2026-04-21 04:08Z - Audited and rewrote all GitHub release notes with tag-to-tag deltas
 
 - Regenerated the GitHub Releases page bodies for every published release currently present on `snapetech/slskdn`, from `0.24.5-slskdn.123` through `0.24.5-slskdn.168`.

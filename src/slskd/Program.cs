@@ -1014,7 +1014,7 @@ namespace slskd
                 }
 
                 app.Run();
-                Log.Information("[Program] app.Run() returned (this should not happen normally)");
+                Log.Debug("[Program] app.Run() returned after host shutdown");
             }
             catch (Common.Security.HardeningValidationException hex)
             {
@@ -4041,7 +4041,11 @@ namespace slskd
                 var msg = expectedShutdown
                     ? "ProcessExit event fired during expected shutdown"
                     : "[FATAL] ProcessExit event fired - process terminating";
-                Console.Error.WriteLine(msg);
+                if (!expectedShutdown)
+                {
+                    Console.Error.WriteLine(msg);
+                }
+
                 try
                 {
                     if (expectedShutdown)
@@ -4285,11 +4289,11 @@ namespace slskd
                 details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
             var isSoulseekTimerResetReadRace =
                 exception is NullReferenceException &&
-                details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+                details.Contains("Soulseek.Extensions.Reset(", StringComparison.Ordinal) &&
                 details.Contains("Soulseek.Network.MessageConnection.ReadContinuouslyAsync", StringComparison.Ordinal);
             var isSoulseekTimerResetWriteRace =
                 exception is NullReferenceException &&
-                details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
+                details.Contains("Soulseek.Extensions.Reset(", StringComparison.Ordinal) &&
                 details.Contains("Soulseek.Network.Tcp.Connection.WriteInternalAsync", StringComparison.Ordinal);
             var isSoulseekTcpDoubleDisconnectRace =
                 exception is InvalidOperationException &&
