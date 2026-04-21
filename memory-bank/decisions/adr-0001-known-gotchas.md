@@ -52,6 +52,61 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z115. Mesh Overlay Startup Must Retry Transient Port Reuse
+
+**The Bug**: The packaged `kspls0` `0.24.5-slskdn.168` install started while TCP `50305` was still transiently unavailable. `MeshOverlayServer.StartAsync()` logged `Address already in use`, `DhtRendezvousService` gave up on the overlay listener, and the node stayed online without beacon-capable TCP overlay until a manual restart.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `src/slskd/DhtRendezvous/MeshOverlayServer.cs`
+
+**Wrong**:
+```csharp
+await MeshOverlayServer.StartAsync(cancellationToken);
+```
+
+**Correct**:
+```csharp
+for (var attempt = 1; attempt <= MaxOverlayStartAttempts; attempt++)
+{
+    try
+    {
+        await MeshOverlayServer.StartAsync(cancellationToken);
+        return;
+    }
+    catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+    {
+        await Task.Delay(OverlayStartRetryDelay, cancellationToken);
+    }
+}
+```
+
+**Why This Keeps Happening**: Service replacement and package upgrade paths can stop one process and start the next faster than the kernel or previous process releases the listener. `ReuseAddress` reduces the risk but does not make every restart edge deterministic. A transient bind race should retry briefly before disabling overlay for the whole uptime.
+
+### 0z114. Startup Method-Trace Logs Must Stay Below Information
+
+**The Bug**: Live packaged startup logs still contained dozens of `Information` lines like `Constructor called`, `ExecuteAsync called`, `[UseSlskdnSecurity] STEP 1`, `[MAIN] About to...`, and `[Program] app.Run() will...`. These were useful during earlier boot debugging, but on a healthy release they drown out real startup events and make journal audits noisy.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Common/Security/SecurityStartup.cs`
+- `src/slskd/Application.cs`
+- mesh/background service constructors and `ExecuteAsync()` methods
+
+**Wrong**:
+```csharp
+logger.LogInformation("[MeshBootstrapService] Constructor called");
+logger.LogInformation("[UseSlskdnSecurity] STEP 1: Checking configuration sections...");
+```
+
+**Correct**:
+```csharp
+logger.LogDebug("[MeshBootstrapService] Constructor called");
+logger.LogDebug("[UseSlskdnSecurity] Checking configuration sections");
+```
+
+**Why This Keeps Happening**: Emergency startup instrumentation often lands at `Information` so it is visible during live debugging, then stays there after the bug is fixed. Method-entry, constructor, and step-by-step probe logs should be `Debug`; keep `Information` for durable state changes operators actually need.
+
 ### 0z113. E2E Harness Must Discover The Built Target Framework
 
 **The Bug**: The Playwright E2E harness hardcoded `src/slskd/bin/Release/net8.0` when looking for a prebuilt backend. After the project moved to `net10.0`, CI builds produced `bin/Release/net10.0/slskd.dll`, but the harness failed to find it and fell back to `dotnet run -c Release` during tests. Scheduled E2E then flaked with `TCP port ... never started listening` because each test had to compile/start a Release app inside the Playwright timeout window.
