@@ -4340,9 +4340,11 @@ namespace slskd
                 details.Contains("Transfer failed: Transfer complete", StringComparison.Ordinal) ||
                 details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||
+                details.Contains("Connection timed out", StringComparison.Ordinal) ||
                 details.Contains("The wait timed out", StringComparison.Ordinal) ||
                 details.Contains("Inactivity timeout", StringComparison.Ordinal) ||
                 details.Contains("Failed to read", StringComparison.Ordinal) ||
+                details.Contains("Unable to read data from the transport connection", StringComparison.Ordinal) ||
                 details.Contains("Operation canceled", StringComparison.Ordinal) ||
                 details.Contains("Operation cancelled", StringComparison.Ordinal) ||
                 details.Contains("Unknown PierceFirewall attempt", StringComparison.Ordinal) ||

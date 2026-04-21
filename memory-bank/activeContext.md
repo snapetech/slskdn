@@ -1,3 +1,20 @@
+## Update 2026-04-21 06:45:00Z
+
+- Current task: Validating the `0.24.5-slskdn.171` yay install on `kspls0` and fixing actionable live noise.
+- Last activity:
+  - confirmed `slskdn-bin 0.24.5.slskdn.171-1` was installed, but the service was still running old PID `2151618` from `/usr/lib/slskd/releases/0.24.5.slskdn.170`
+  - restarted `slskd`; the service is now running PID `2269037` from `/usr/lib/slskd/releases/0.24.5.slskdn.171`, `active/running`, `NRestarts=0`, with API `/api/v0/application` reporting `0.24.5-slskdn.171`
+  - verified the duplicate MeshDHT self-descriptor publish fix holds on actual `171` startup: one `[MeshDHT] No configured endpoints...` and one `[MeshDHT] Published self descriptor...`, not the previous duplicate pair
+  - verified web/API, Soulseek login, shares, and overlay TCP listener are up; DHT was still in the bootstrap window on the first post-restart API sample
+  - found a remaining fake fatal from the old `170` PID before restart: `Soulseek.ConnectionReadException` with inner `IOException`/`SocketException` timeout from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`
+  - documented that classifier gotcha in ADR-0001 and committed it as `2d5ee08bc`
+  - patched `Program.IsExpectedSoulseekNetworkException(...)` so `Connection timed out` and `Unable to read data from the transport connection` inner exceptions match expected Soulseek network churn
+  - validation passed so far: focused `ProgramPathNormalizationTests` (`29` tests), Release build, `bash ./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Re-sample `kspls0` after DHT bootstrap completes and watch for fresh current-PID fatal/error/coredump/overlay cooldown noise.
+  2. Commit and push the read-timeout classifier fix after changelog/memory updates.
+  3. Do not create another build tag unless explicitly requested.
+
 ## Update 2026-04-21 06:22:00Z
 
 - Current task: None. The `kspls0` log-polish findings are fixed in `main` and pushed; installed `0.24.5-slskdn.170` is still running until the next requested release/package update.

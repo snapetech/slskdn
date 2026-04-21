@@ -6713,6 +6713,13 @@ Code quality improvements were completed as part of Option A:
 - Found and fixed one actionable startup polish issue: duplicate mesh self-descriptor publishing at boot. `MeshBootstrapService` already owns the initial publish, so `PeerDescriptorRefreshService` now starts its periodic refresh clock at service start instead of immediately republishing the same descriptor.
 - Documented the hosted-service scheduling gotcha in ADR-0001 and committed it as `a4e516468`.
 
+## 2026-04-21 06:45:00Z
+
+- Validated the `0.24.5-slskdn.171` yay package on `kspls0`. The package and `/usr/bin/slskd --version` were `171`, but systemd was still running the old `170` process until an explicit restart. After restart, PID `2269037` reports `0.24.5-slskdn.171` from `/usr/lib/slskd/releases/0.24.5.slskdn.171`, with Soulseek logged in, shares ready, API responsive, and overlay TCP listening on `50305`.
+- Confirmed the duplicate MeshDHT self-descriptor publish fix holds on actual `171` startup: only one descriptor publish sequence appeared. The first post-restart DHT API sample was still bootstrapping, so another sample is needed before calling DHT fully ready.
+- Found one remaining actionable fake-fatal pattern in the old `170` PID logs: expected Soulseek.NET read-loop timeout churn flattened into `ConnectionReadException`, inner `IOException`, and inner `SocketException (110)` did not fully match the expected-network classifier. Documented the gotcha in ADR-0001, patched the classifier phrases, and added focused regression coverage.
+- Validation passed so far: focused `ProgramPathNormalizationTests` (`29` tests), Release build, `bash ./bin/lint`, and `git diff --check`.
+
 ## 2026-04-21 06:13:00Z
 
 - Took another current-process `kspls0` log pass on installed `0.24.5-slskdn.170`: service remained active/running with zero restarts, Soulseek logged in, shares ready, DHT running, overlay TCP listening, no new coredumps, and no fresh fatal/error/exception/502/bind/protocol noise.

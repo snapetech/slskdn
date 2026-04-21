@@ -284,6 +284,33 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForSoulseekReadTimeoutChain()
+    {
+        var socketException = new SocketException((int)SocketError.TimedOut);
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            socketException,
+            "   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)");
+
+        var ioException = new IOException("Unable to read data from the transport connection: Connection timed out.", socketException);
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            ioException,
+            "   at Soulseek.Network.Tcp.Connection.ReadInternalAsync(Int64 length, Stream outputStream, Func`3 governor, Action`3 reporter, CancellationToken cancellationToken)");
+
+        var connectionException = new ConnectionReadException(
+            "Failed to read 4 bytes from 92.157.108.121:57986: Unable to read data from the transport connection: Connection timed out.",
+            ioException);
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            connectionException,
+            "   at Soulseek.Network.Tcp.Connection.ReadInternalAsync(Int64 length, Stream outputStream, Func`3 governor, Action`3 reporter, CancellationToken cancellationToken)\n" +
+            "   at Soulseek.Network.Tcp.Connection.ReadInternalAsync(Int64 length, CancellationToken cancellationToken)\n" +
+            "   at Soulseek.Network.MessageConnection.ReadContinuouslyAsync()");
+
+        var exception = new AggregateException(connectionException);
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
     public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForSoulseekTcpDoubleDisconnectRace()
     {
         var inner = new InvalidOperationException("An attempt was made to transition a task to a final state when it had already completed.");
