@@ -8533,3 +8533,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** `MeshNeighborRegistry` keyed connections by username and endpoint, but cleanup was written as if a username could only ever refer to one connection for the lifetime of the cleanup call. Once replacement/promotion exists, stale cleanup must be object-identity-aware.
 
 **How to prevent it:** Any registry that allows replacing a value under the same key must remove by key + expected object identity, not key alone. Add tests where an old connection is replaced and then old cleanup runs; the replacement must remain registered.
+
+### 0z57. Optional UI Badge Lookups Must Not Use Error-Shaped API Responses For Expected Missing Peer Data
+
+**What went wrong:** The Downloads page rendered `UserCard` for historical/offline transfer users. `UserCard` fetched optional Soulseek user info for every username, and expected offline users returned HTTP 404. The component handled the missing data, but browsers still logged each 404 as a console resource error, so clean Playwright sweeps looked noisy even though the page was functional.
+
+**Why it happened:** The backend endpoint correctly preserved normal API semantics (`404` for offline users, `503` for temporarily unavailable peer info), but the UI was using that endpoint for decorative/optional badges where missing peer data is routine. `Promise.allSettled` prevented a React failure but could not suppress browser-level failed-resource logging.
+
+**How to prevent it:** Optional badge/polling UI should use an explicit quiet/optional API mode that returns a non-error empty response for expected unavailable peer data. Keep the default endpoint behavior unchanged for callers that need to distinguish offline/unavailable states.
