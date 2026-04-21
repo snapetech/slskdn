@@ -1275,6 +1275,25 @@ namespace slskd.Transfers.Downloads
 
                 throw;
             }
+            catch (Exception ex) when (IsExpectedRemoteDownloadFailure(ex))
+            {
+                Log.Warning("Download of {Filename} from user {Username} failed because the remote peer is unavailable: {Message}", transfer.Filename, transfer.Username, ex.Message);
+
+                if (PeerMetrics != null)
+                {
+                    _ = PeerMetrics.RecordChunkCompletionAsync(
+                        transfer.Username,
+                        ChunkCompletionResult.Failed,
+                        cancellationToken: CancellationToken.None);
+                }
+
+                TryFail(transfer.Id, exception: ex);
+
+                // todo: broadcast
+                SynchronizedUpdate(transfer, semaphore: updateSyncRoot, cancellationToken: CancellationToken.None);
+
+                throw;
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Download of {Filename} from user {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
@@ -1338,6 +1357,15 @@ namespace slskd.Transfers.Downloads
                     Log.Error(ex, "Failed to clean up transfer {Id} after failed download", transferId);
                 }
             }
+            catch (Exception ex) when (IsExpectedRemoteDownloadFailure(ex))
+            {
+                Log.Warning("Task for download of {Filename} from {Username} ended with expected remote peer failure: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(transferId, exception: ex))
+                {
+                    Log.Debug("Transfer {Id} was already cleaned up after expected remote download failure", transferId);
+                }
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Task for download of {Filename} from {Username} did not complete successfully: {Error}", filename, username, ex.Message);
@@ -1367,6 +1395,15 @@ namespace slskd.Transfers.Downloads
                 if (!TryFail(transferId, exception: ex))
                 {
                     Log.Error(ex, "Failed to clean up transfer {Id} after failed enqueue", transferId);
+                }
+            }
+            catch (Exception ex) when (IsExpectedRemoteDownloadFailure(ex))
+            {
+                Log.Warning("Task for enqueue of {Filename} from {Username} ended with expected remote peer failure: {Error}", filename, username, ex.Message);
+
+                if (!TryFail(transferId, exception: ex))
+                {
+                    Log.Debug("Transfer {Id} was already cleaned up after expected remote enqueue failure", transferId);
                 }
             }
             catch (Exception ex)
@@ -1460,6 +1497,14 @@ namespace slskd.Transfers.Downloads
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
+        }
+
+        private static bool IsExpectedRemoteDownloadFailure(Exception exception)
+        {
+            return exception is UserOfflineException ||
+                exception.InnerException is UserOfflineException ||
+                exception is Soulseek.TransferException { InnerException: UserOfflineException } ||
+                exception.Message.Contains("appears to be offline", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

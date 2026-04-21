@@ -26,6 +26,11 @@
  - Priority: P2
  - Notes: The live paced cycle on `kspls0` fixed the rate-limit flood but still emitted per-track `Searching` / `Found 0` progress at `Information` across a 128-item stuck batch. Routine per-track search/no-result progress is now `Debug`, while successful candidate discovery and aggregate cycle summaries remain visible. The gotcha is documented in ADR-0001.
 
+- [x] **bug**: Quiet expected remote-offline download failures during restart re-enqueue.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: Fresh `kspls0` restart validation re-enqueued downloads from offline user `icetre` and emitted repeated `UserOfflineException` / `TransferException` stack traces. These are expected remote peer outcomes, so download and observer paths now log warning summaries without stacks while still failing the transfer records. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1
