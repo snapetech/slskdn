@@ -1,15 +1,19 @@
-## Update 2026-04-21 01:55:00Z
+## Update 2026-04-21 02:20:00Z
 
-- Current task: Validate, push, deploy, and retest the `kspls0` user-info 500 fix found during the Playwright sweep.
+- Current task: None. The `kspls0` user-info 500 fix is committed, pushed, deployed, and retested; the route/tab Playwright pass is clean for current 5xx/502/page-error signals.
 - Last activity:
   - controlled Playwright crawling against `kspls0` found no real HTTP 502 responses, but did find `/api/v0/users/{username}/info` returning HTTP 500 for expected Soulseek peer connection failures and timeouts
   - documented the peer-info gotcha in ADR-0001 and committed the docs-only entry as `1699cf7b5`
   - updated `UsersController.Info` so explicit offline users remain 404, while peer connection failures and info timeouts return generic 503 responses without exception-object stack noise
-  - added focused controller coverage for connection failure, direct timeout, and wrapped timeout cases; `UsersControllerTests` passed
+  - added focused controller coverage for connection failure, direct timeout, and wrapped timeout cases; `UsersControllerTests`, Release build, lint, diff check, and GitHub target verification passed
+  - committed and pushed the fix as `5bd0e0b88`
+  - published and deployed `0.24.5-slskdn.165+manual.5bd0e0b88` to `kspls0`; corrected live launcher drift so `/usr/lib/slskd/slskd` execs `/usr/lib/slskd/current/slskd`, documented as ADR-0001 gotcha `deafb040b`
+  - verified `/api/v0/application` reports the new payload, user-info peer failures now return controlled `503`, and the current process has no 500/502/fatal/protocol/bind/coredump noise
+  - ran Playwright route/tab sweep report `/tmp/kspls0-route-tab-sweep-2026-04-21T02-09-22-685Z.md`: all top-level routes and System tabs were exercised, with only one expected user-info 404 and no 5xx responses
 - Next steps:
-  1. Run Release build, lint, diff check, and GitHub target verification.
-  2. Commit and push the code/docs fix.
-  3. Deploy the refreshed manual build to `kspls0`, then rerun focused endpoint/log checks and continue the UI sweep.
+  1. Keep `kspls0` soaking on PID `1642135` and resample later for long-run mesh/download noise.
+  2. Treat the remaining broad dynamic `/searches/{id}` link corpus separately if exhaustive historical search-detail crawling is still desired; the bounded product route/tab pass did not show current 5xx or route-miss failures.
+  3. Do not create a release/build tag unless explicitly requested.
 
 ## Update 2026-04-21 00:11:00Z
 

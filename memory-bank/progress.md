@@ -4,7 +4,12 @@
 - Documented the peer-info gotcha in ADR-0001 and committed that docs-only entry immediately as `1699cf7b5`.
 - Updated `UsersController.Info` so offline users still return `404 "User is offline"`, while expected peer connection failures and info timeouts return `503 "Unable to retrieve user info"` with concise information logs and no exception-object stack noise.
 - Added focused controller coverage for direct peer connection failure, direct timeout, and wrapped timeout behavior.
-- Validation so far: focused `UsersControllerTests` passed (`9` tests) with only existing project warnings.
+- Validation: focused `UsersControllerTests` passed (`9` tests), Release build passed with existing generated MessagePack warnings, `bash ./bin/lint` passed, `git diff --check` passed, and GitHub target verification passed.
+- Committed and pushed the fix as `5bd0e0b88`, then published and manually deployed `0.24.5-slskdn.165+manual.5bd0e0b88` to `kspls0`.
+- During deploy validation, caught a host-side launcher drift: `/usr/lib/slskd/current` pointed at the new payload, but systemd still executed a stale root apphost at `/usr/lib/slskd/slskd`. Replaced the root path with the intended launcher script that execs `/usr/lib/slskd/current/slskd`, preserved the stale binary as `/usr/lib/slskd/slskd.pre-launcher-fix-20260421020113`, and documented that gotcha in ADR-0001 as `deafb040b`.
+- Live retest confirmed the fixed user-info behavior: previously noisy users now returned `503` for unavailable peer info, `404` for explicit offline, or `200` when reachable; the current process logged concise info lines without middleware exception stacks.
+- Playwright route/tab sweep report: `/tmp/kspls0-route-tab-sweep-2026-04-21T02-09-22-685Z.md`. It visited `239` route/tab states across all top-level routes and System tabs and observed `1320` same-origin responses (`1319` HTTP 200, `1` expected HTTP 404 for `grooverider` user info from Downloads). A direct follow-up probe verified `/system/data`, `/system/events`, `/system/logs`, and `/system/metrics` loaded without route misses, bad gateway text, page errors, console errors, or 5xx responses.
+- Final live sample on `kspls0`: service active as PID `1642135`, `NRestarts=0`, no current-process 500/502/fatal/protocol/bind/coredump noise, and no new coredumps in the observed window.
 
 ## 2026-04-21 00:11Z - Paced auto-replace searches after kspls0 safety-budget noise
 
