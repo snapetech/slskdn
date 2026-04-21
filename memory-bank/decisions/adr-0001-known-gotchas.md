@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z117. Normal Host Shutdown Must Not Claim App Run Returning Is Abnormal
+
+**The Bug**: The `0.24.5-slskdn.169` package restart on `kspls0` completed cleanly, but the journal still printed `[Program] app.Run() returned (this should not happen normally)` and a duplicate stderr `ProcessExit event fired during expected shutdown`. `WebApplication.Run()` returns during normal host shutdown, so this made a healthy systemd restart look suspicious.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+app.Run();
+Log.Information("[Program] app.Run() returned (this should not happen normally)");
+```
+
+**Correct**:
+```csharp
+app.Run();
+Log.Debug("[Program] app.Run() returned after host shutdown");
+```
+
+**Why This Keeps Happening**: Startup hang probes often describe unexpected control flow while debugging boot issues, but `app.Run()` returning is expected after SIGTERM/systemd restart. Shutdown path logs should distinguish clean host stop from real premature process exit, and expected shutdown telemetry should not write duplicate stderr lines.
+
 ### 0z116. Release Announcement Webhooks Must Not Fail Completed Builds On Transient Gateway Errors
 
 **The Bug**: The `build-main-0.24.5-slskdn.168` release created artifacts and the GitHub release, then the final `Announce Main Release to Discord` job failed because the Matrix homeserver returned HTTP `504` to the announcement `curl`. The release itself was usable and installed from AUR, but the overall Actions run ended red because a non-critical announcement endpoint had a transient gateway failure.
