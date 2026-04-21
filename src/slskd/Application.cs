@@ -740,7 +740,7 @@ namespace slskd
             }
             catch (InvalidOperationException ex) when (ShuttingDown && ex.Message.Contains("Sequence contains no elements", StringComparison.Ordinal))
             {
-                Log.Warning(ex, "Ignoring Soulseek disconnect race during shutdown");
+                Log.Debug("Ignoring Soulseek disconnect race during shutdown: {Message}", ex.Message);
             }
 
             Client.Dispose();
