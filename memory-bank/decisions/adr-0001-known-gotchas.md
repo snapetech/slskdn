@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z112. Shutdown-Cancelled Background Searches Must Not Log As Errors
+
+**The Bug**: A manual `kspls0` deploy restarted the service while a background search was still in flight. The search task observed `OperationCanceledException: The operation was canceled.` during host shutdown and logged `Failed to execute search ...` at `Error`, making normal deploy cancellation look like a runtime failure.
+
+**Files Affected**:
+- `src/slskd/Search/SearchService.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    Log.Error(ex, "Failed to execute search for '{Query}': {Message}", query, ex.Message);
+    search.State = SearchStates.Completed | SearchStates.Errored;
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex) when (ex is OperationCanceledException && Application.IsShuttingDown)
+{
+    Log.Information("Search for '{Query}' was cancelled during shutdown", query);
+    search.State = SearchStates.Completed | SearchStates.Cancelled;
+}
+```
+
+**Why This Keeps Happening**: Background work often has its own cancellation token source, so checking only the per-search token misses host-level shutdown. Normal deploy/restart cancellation should be classified before the generic failure branch, otherwise every controlled restart can pollute the journal with false error telemetry.
+
 ### 0z111. Controlled User-Info Offline Responses Must Not Log Exception Objects
 
 **The Bug**: After fixing `/api/v0/users/{username}/info` to return controlled `404`/`503` responses, live Playwright sweeps still filled the journal with `Soulseek.UserOfflineException` stack traces because the offline catch block logged the exception object at `Information`.
