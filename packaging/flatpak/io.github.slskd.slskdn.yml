@@ -89,10 +89,10 @@ modules:
         # Generate default config if it doesn't exist
         if [ ! -f "$SLSKD_CONFIG" ]; then
             cat > "$SLSKD_CONFIG" << 'DEFAULT_CONFIG'
-        # slskdN 0.24.5-slskdn.168 Linux glibc x64 (snapetech; asset slskdn-main-linux-glibc-x64.zip)
+        # slskdN 0.24.5-slskdn.169 Linux glibc x64 (snapetech; asset slskdn-main-linux-glibc-x64.zip)
       - type: archive
-        url: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.168/slskdn-main-linux-glibc-x64.zip
-        sha256: 8dacacc82e732e47d9e2b5f04532bd3bae135190c605932ac707884eff181630
+        url: https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.169/slskdn-main-linux-glibc-x64.zip
+        sha256: 98611723b5ddacc5ccacb68d989c1107603a101f4c3041691a4051a4f9bf0ff1
 
       # Desktop file
       - type: file
