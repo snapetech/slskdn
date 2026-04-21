@@ -21,6 +21,11 @@
  - Priority: P1
  - Notes: Manual publish output under `src/slskd/dist` was ignored by git but still visible to `Microsoft.NET.Sdk.Web` default item discovery, so later publish artifacts could contain stale nested `dist` payloads. Added the gotcha to ADR-0001 and excluded `dist/**` from the app project's default items.
 
+- [x] **bug**: Demote routine auto-replace large-batch no-result progress from information logs.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: The live paced cycle on `kspls0` fixed the rate-limit flood but still emitted per-track `Searching` / `Found 0` progress at `Information` across a 128-item stuck batch. Routine per-track search/no-result progress is now `Debug`, while successful candidate discovery and aggregate cycle summaries remain visible. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1

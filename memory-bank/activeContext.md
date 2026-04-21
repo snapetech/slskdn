@@ -7,6 +7,7 @@
   - updated `AutoReplaceService` so alternative searches are paced by `Soulseek.Safety.MaxSearchesPerMinute`, safety-budget rejection defers the current item, and the cycle stops early instead of logging one error per remaining track
   - added unit coverage for the budget-exhaustion path and confirmed the focused auto-replace/program test slice, Release project build, lint, full `dotnet test`, and `git diff --check` pass
   - found generated `src/slskd/dist` output being included in the next publish artifact, documented it in ADR-0001 as `fe0ab5ea9`, and excluded `dist/**` from the app project's default items
+  - confirmed the live paced cycle no longer hits the search limiter, then documented and fixed routine per-track no-result log noise by moving it to `Debug`
 - Next steps:
   1. Commit and push the auto-replace pacing fix to `snapetech/slskdn`.
   2. Publish/deploy a new manual build to `kspls0` without creating a tag, then continue watching for fresh current-process noise.

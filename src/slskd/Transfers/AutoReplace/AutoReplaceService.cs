@@ -339,7 +339,7 @@ namespace slskd.Transfers.AutoReplace
                 return (candidates, SearchBudgetExceeded: false);
             }
 
-            Log.Information("Searching for alternatives: {SearchText}", searchText);
+            Log.Debug("Searching for alternatives: {SearchText}", searchText);
 
             var searchId = Guid.NewGuid();
             var searchOptions = new Soulseek.SearchOptions(
@@ -457,7 +457,14 @@ namespace slskd.Transfers.AutoReplace
                     UploadSpeed = r.UploadSpeed,
                 }).ToList();
 
-                Log.Information("Found {Count} alternative candidates for: {SearchText} (using smart ranking)", candidates.Count, searchText);
+                if (candidates.Count > 0)
+                {
+                    Log.Information("Found {Count} alternative candidates for: {SearchText} (using smart ranking)", candidates.Count, searchText);
+                }
+                else
+                {
+                    Log.Debug("Found no alternative candidates for: {SearchText} (using smart ranking)", searchText);
+                }
             }
             catch (InvalidOperationException ex) when (IsSearchRateLimitExceeded(ex))
             {
