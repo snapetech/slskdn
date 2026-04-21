@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z99. Generated Publish Directories Must Be Excluded From Web SDK Publish Content
+
+**The Bug**: Creating manual publish output under `src/slskd/dist` and then republishing caused the Web SDK to copy that generated `dist` tree back into the next publish artifact. The artifact looked valid but carried stale nested publish output that should never ship.
+
+**Files Affected**:
+- `src/slskd/slskd.csproj`
+- `.gitignore`
+
+**Wrong**:
+```xml
+<!-- Only gitignore dist, but leave it visible to SDK default items. -->
+```
+
+**Correct**:
+```xml
+<DefaultItemExcludes>$(DefaultItemExcludes);dist/**</DefaultItemExcludes>
+```
+
+**Why This Keeps Happening**: `Microsoft.NET.Sdk.Web` includes project files as publish content by default. Git ignore rules only stop source-control churn; they do not change MSBuild item discovery. Any generated directory under the app project must be excluded from both git and SDK default items, or later publishes can recursively package old artifacts.
+
 ### 0z98. OpenAPI `IOpenApiResponse.Content` Is Read-Only Through The Interface
 
 **The Bug**: A nullability cleanup in `ContentNegotiationOperationFilter` changed response handling to assign `response.Content ??= ...` after `operation.Responses.TryGetValue(...)`; the value was typed as `IOpenApiResponse`, where `Content` is read-only, so Release builds failed with `CS0200`.
