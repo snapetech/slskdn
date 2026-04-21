@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z107. User Info Peer Failures Must Not Bubble As HTTP 500
+
+**The Bug**: A Playwright crawl of live search/user links caused `/api/v0/users/{username}/info` to return HTTP 500 for expected Soulseek peer connection failures and timeouts. The UI hit unavailable remote peers, but the API logged unhandled exceptions instead of returning a controlled response.
+
+**Files Affected**:
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+
+**Wrong**:
+```csharp
+catch (UserOfflineException ex)
+{
+    Log.Information(ex, "User {Username} is offline for info", username);
+    return NotFound("User is offline");
+}
+```
+
+**Correct**:
+```csharp
+catch (SoulseekClientException ex) when (ex.InnerException is ConnectionException)
+{
+    Log.Information("Unable to connect to user {Username} for info: {Message}", username, ex.Message);
+    return StatusCode(503, "Unable to retrieve user info");
+}
+```
+
+**Why This Keeps Happening**: Soulseek peer APIs cross a network boundary even when they look like simple user-detail reads. Remote peer timeouts, indirect-connection failures, and offline states are expected P2P outcomes; controller actions must translate them into safe non-500 responses and avoid stack-noise logging for routine peer unavailability.
+
 ### 0z106. Inline Code Followed By Text Needs Explicit JSX Whitespace
 
 **The Bug**: The System > Network public DHT exposure consent modal rendered `dht.lan_only=truein` because a `<code>` element was followed by text in JSX without an explicit whitespace expression. The copy was understandable but looked sloppy during a Playwright sweep.
