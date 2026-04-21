@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z106. Inline Code Followed By Text Needs Explicit JSX Whitespace
+
+**The Bug**: The System > Network public DHT exposure consent modal rendered `dht.lan_only=truein` because a `<code>` element was followed by text in JSX without an explicit whitespace expression. The copy was understandable but looked sloppy during a Playwright sweep.
+
+**Files Affected**:
+- `src/web/src/components/System/Network/index.jsx`
+
+**Wrong**:
+```jsx
+set <code>dht.lan_only=true</code>
+in the configuration
+```
+
+**Correct**:
+```jsx
+set <code>dht.lan_only=true</code>{' '}
+in the configuration
+```
+
+**Why This Keeps Happening**: JSX collapses source formatting around inline elements differently than plain text. When inline tags sit between words, add an explicit `{' '}` or keep the surrounding text in one expression so browser-rendered copy does not concatenate words.
+
 ### 0z105. Soulseek TCP Double-Disconnect Races Are Expected Network Churn, Not Fatal Unobserved Tasks
 
 **The Bug**: Live `kspls0` monitoring caught a current-process `[FATAL] Unobserved task exception` from `Soulseek.Network.Tcp.Connection.Disconnect` with `InvalidOperationException: An attempt was made to transition a task to a final state when it had already completed.` The process survived because the global handler marks it observed, but the log classified a Soulseek.NET read-loop disconnect race as fatal.
