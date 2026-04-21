@@ -52,6 +52,25 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z119. Peer Descriptor Refresh Must Not Duplicate The Bootstrap Publish At Startup
+
+**The Bug**: The packaged `0.24.5-slskdn.170` startup on `kspls0` logged duplicate `[MeshDHT] No configured endpoints...` and `[MeshDHT] Published self descriptor...` lines because `MeshBootstrapService` published the initial descriptor while `PeerDescriptorRefreshService` immediately treated `DateTime.MinValue` as a due periodic refresh.
+
+**Files Affected**:
+- `src/slskd/Mesh/Dht/PeerDescriptorRefreshService.cs`
+
+**Wrong**:
+```csharp
+var lastRefresh = DateTime.MinValue;
+```
+
+**Correct**:
+```csharp
+var lastRefresh = DateTime.UtcNow;
+```
+
+**Why This Keeps Happening**: Multiple hosted services can share one publisher and start in the same host window. If one service owns the startup publish and another owns periodic TTL refreshes, the periodic service must initialize its schedule from startup time rather than immediately republishing the same descriptor.
+
 ### 0z118. Soulseek Timer Reset Classifiers Must Match Real Stack Signatures
 
 **The Bug**: The `0.24.5-slskdn.169` `kspls0` package logged a current-process fatal unobserved task for `NullReferenceException` in `Soulseek.Extensions.Reset(Timer timer)` during an overlay/DHT write path. The existing expected-network classifier had a unit test for `Soulseek.Extensions.Reset(Timer)`, but the live stack included the parameter name (`Timer timer`), so the string match missed the same known Soulseek.NET timer reset race.
