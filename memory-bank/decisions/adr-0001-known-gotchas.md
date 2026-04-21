@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z124. Entropy Health Logs Must Account For Finite Sample Bias
+
+**The Bug**: Live `kspls0` logs for `0.24.5-slskdn.172` emitted `Warning: Entropy below optimal level` every five minutes even though the process was using `RandomNumberGenerator.GetBytes(...)`. The monitor used a 256-byte Shannon entropy sample with a 7.5 bits/byte warning threshold; that small sample is biased below the true entropy often enough to create false operator noise on healthy systems.
+
+**Files Affected**:
+- `src/slskd/Common/Security/EntropyMonitor.cs`
+
+**Wrong**:
+```csharp
+public const int SampleSize = 256;
+public const double WarningEntropy = 7.5;
+```
+
+**Correct**:
+```csharp
+public const int SampleSize = 4096;
+public const double WarningEntropy = 7.75;
+```
+
+**Why This Keeps Happening**: Shannon entropy estimates from small samples are biased downward, especially for 256 possible byte values. Security monitors should avoid warning on expected estimator behavior; sample enough bytes for a stable estimate and keep true critical failures operator-visible.
+
 ### 0z123. LAN Discovery Must Never Advertise A Blank Display Name
 
 **The Bug**: Live `kspls0` startup logs for `0.24.5-slskdn.172` showed `[LanDiscovery] Started advertising as  (...)` because the persisted peer profile can contain a blank `DisplayName`. LAN discovery then publishes and logs the blank value instead of a useful operator-visible fallback.
