@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z120. Overlay Endpoint Cooldowns Should Be Aggregated At Information
+
+**The Bug**: Live `0.24.5-slskdn.170` logs on `kspls0` emitted one `Information` line per degraded DHT-discovered overlay endpoint once each endpoint hit a failure streak of three, even though the periodic DHT/overlay summary and `/api/v0/overlay/stats` already expose the same failure mix and top-problem endpoint data.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
+
+**Wrong**:
+```csharp
+_logger.LogInformation(
+    "Overlay endpoint {Endpoint} failure streak={FailureCount} lastReason={FailureReason} coolingDownUntil={SuppressedUntil}",
+    endpoint,
+    failureCount,
+    reason,
+    suppressedUntil);
+```
+
+**Correct**:
+```csharp
+_logger.LogDebug(
+    "Overlay endpoint {Endpoint} failure streak={FailureCount} lastReason={FailureReason} coolingDownUntil={SuppressedUntil}",
+    endpoint,
+    failureCount,
+    reason,
+    suppressedUntil);
+```
+
+**Why This Keeps Happening**: Per-peer/per-endpoint churn is useful diagnostic detail during development, but public DHT candidates routinely include dead, blocked, or incompatible endpoints. Keep individual endpoint failures below `Information`; use aggregate rollups and authenticated stats endpoints for operator-visible health.
+
 ### 0z119. Peer Descriptor Refresh Must Not Duplicate The Bootstrap Publish At Startup
 
 **The Bug**: The packaged `0.24.5-slskdn.170` startup on `kspls0` logged duplicate `[MeshDHT] No configured endpoints...` and `[MeshDHT] Published self descriptor...` lines because `MeshBootstrapService` published the initial descriptor while `PeerDescriptorRefreshService` immediately treated `DateTime.MinValue` as a due periodic refresh.
