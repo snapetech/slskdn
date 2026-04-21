@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z125. BackgroundService Tests Must Wait On A Real Signal
+
+**The Bug**: A full unit-suite run failed `CircuitMaintenanceServiceTests.ExecuteAsync_ContinuesAfterMaintenanceException` because the test slept for 200 ms and assumed the hosted service loop had already invoked `PerformMaintenance()`. On a loaded runner the service had only logged constructor messages when the assertion checked for the expected error log.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Mesh/CircuitMaintenanceServiceTests.cs`
+
+**Wrong**:
+```csharp
+var executeTask = service.StartAsync(cts.Token);
+await Task.Delay(200);
+await service.StopAsync(cts.Token);
+```
+
+**Correct**:
+```csharp
+var maintenanceAttempted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+builderMock.Setup(x => x.PerformMaintenance()).Callback(() =>
+{
+    maintenanceAttempted.TrySetResult();
+    throw new InvalidOperationException("test");
+});
+
+await service.StartAsync(cts.Token);
+await maintenanceAttempted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+```
+
+**Why This Keeps Happening**: `BackgroundService.StartAsync()` and scheduler timing do not guarantee a loop iteration has happened by the time a fixed sleep expires. Tests for hosted-service behavior should wait on an explicit callback, log event, or state transition before asserting.
+
 ### 0z124. Entropy Health Logs Must Account For Finite Sample Bias
 
 **The Bug**: Live `kspls0` logs for `0.24.5-slskdn.172` emitted `Warning: Entropy below optimal level` every five minutes even though the process was using `RandomNumberGenerator.GetBytes(...)`. The monitor used a 256-byte Shannon entropy sample with a 7.5 bits/byte warning threshold; that small sample is biased below the true entropy often enough to create false operator noise on healthy systems.
