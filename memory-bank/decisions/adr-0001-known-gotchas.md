@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z113. E2E Harness Must Discover The Built Target Framework
+
+**The Bug**: The Playwright E2E harness hardcoded `src/slskd/bin/Release/net8.0` when looking for a prebuilt backend. After the project moved to `net10.0`, CI builds produced `bin/Release/net10.0/slskd.dll`, but the harness failed to find it and fell back to `dotnet run -c Release` during tests. Scheduled E2E then flaked with `TCP port ... never started listening` because each test had to compile/start a Release app inside the Playwright timeout window.
+
+**Files Affected**:
+- `src/web/e2e/harness/SlskdnNode.ts`
+- `src/slskd/slskd.csproj`
+
+**Wrong**:
+```typescript
+private getBuiltAppBaseDir(repoRoot: string): string {
+  return path.join(repoRoot, 'src', 'slskd', 'bin', 'Release', 'net8.0');
+}
+```
+
+**Correct**:
+```typescript
+const targetFramework = await this.getTargetFramework(repoRoot);
+return path.join(repoRoot, 'src', 'slskd', 'bin', 'Release', targetFramework);
+```
+
+**Why This Keeps Happening**: Test harnesses drift when they duplicate project metadata. Any path containing `netX.Y` should be derived from the `.csproj` or discovered from build output so framework upgrades do not silently switch CI from prebuilt launch to slow `dotnet run` fallback.
+
 ### 0z112. Shutdown-Cancelled Background Searches Must Not Log As Errors
 
 **The Bug**: A manual `kspls0` deploy restarted the service while a background search was still in flight. The search task observed `OperationCanceledException: The operation was canceled.` during host shutdown and logged `Failed to execute search ...` at `Error`, making normal deploy cancellation look like a runtime failure.
