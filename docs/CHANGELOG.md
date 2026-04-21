@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Excluded generated `src/slskd/dist` publish output from Web SDK publish content so manual artifacts do not recursively ship stale nested build output.
 - Paced auto-replace alternative searches against the configured Soulseek search safety budget and stopped the cycle after a budget rejection, so one stuck-download batch defers cleanly instead of emitting per-track rate-limit stack traces.
 - Stabilized the `kspls0` manual-build follow-up set: hardened certificate handling, relay TLS pin validation, QUIC connection/task cleanup, shutdown/download draining, OpenAPI response mutation, and current-process fatal-noise classification after live soak testing.
 - Broadened the latest pre-existing in-flight sweep into a release-visible changelog entry: this commit ships pending security, mesh, DHT, QUIC, API, UI, and diagnostics fixes accumulated since the last published release.

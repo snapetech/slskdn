@@ -4,6 +4,7 @@
 - Documented the pacing gotcha in ADR-0001 and committed that documentation immediately as `138f3a6c0`.
 - Changed `AutoReplaceService` to pace alternative searches by the configured `Soulseek.Safety.MaxSearchesPerMinute`, serialize that pacing across concurrent calls, treat search-budget exhaustion as a deferred/skip condition, and stop the current cycle early instead of classifying every remaining download as a failed replacement.
 - Added focused unit coverage proving a rate-limit rejection stops the cycle after one search and reports a skipped/deferred item instead of failures.
+- While preparing the manual deploy, found that `src/slskd/dist` was ignored by git but still included by Web SDK publish default items. Documented the generated-content gotcha in ADR-0001 as `fe0ab5ea9` and excluded `dist/**` from `slskd.csproj` default items so future manual artifacts do not recursively package stale publish output.
 - Validation: focused auto-replace/program unit slice passed (`27` tests), `dotnet build src/slskd/slskd.csproj --no-restore -c Release -v minimal` passed with only existing generated MessagePack analyzer warnings, `bash ./bin/lint` passed, full `dotnet test --no-restore -v minimal` passed, and `git diff --check` passed.
 
 ## 2026-04-20 23:55Z - Resampled kspls0 manual build and cleaned local validation issues

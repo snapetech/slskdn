@@ -17,6 +17,7 @@
     <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <_SkipUpgradeNetAnalyzersNuGetWarning>true</_SkipUpgradeNetAnalyzersNuGetWarning>
+    <DefaultItemExcludes>$(DefaultItemExcludes);dist/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
