@@ -1,3 +1,12 @@
+## 2026-04-21 03:12Z - Deployed final kspls0 manual build and completed full route/tab sweep
+
+- Committed and pushed the final logging fixes to `snapetech/slskdn`: `56a25b31d` quiets controlled offline user-info logs, `783a01302` documents shutdown search cancellation, and `15ba2a423` treats app-shutdown search cancellation as expected.
+- Published and deployed `0.24.5-slskdn.165+manual.15ba2a423` to `/usr/lib/slskd/releases/manual-15ba2a423` on `kspls0`; `/api/v0/application` reports the matching build, systemd is `active/running`, `NRestarts=0`, and no new `slskd` coredumps were found.
+- Verified sockets: `slskd` owns TCP `5030/5031/50300/50305` and UDP `50306/50400`; no `slskd` QUIC listeners are active on `50401/50402` by default.
+- Re-ran the full bounded Playwright route/tab sweep after the final deploy: report `/tmp/kspls0-route-tab-sweep-2026-04-21T03-02-32-124Z.md`, `307` route/tab visits, `1680` same-origin responses, status summary `{"200":1677,"404":3}`, `0` issues, `0` HTTP 5xx/502s.
+- Remaining warnings were expected/no-action findings: controlled offline user-info `404`s for `grooverider`, `Chuck`, and `keenoo`; transient browser `ERR_NETWORK_CHANGED` console noise on `/pods`; and scanner false positives from the Options page containing text such as `remoteConfiguration: false`.
+- Fresh `15ba2a423` logs after startup showed only known operational warnings (DHT exposure warning and low entropy warning) plus normal DHT/overlay peer churn; the one `Failed to execute search ... Operation canceled` error in the window came from the old `56a25b31d` PID while it was shutting down into the fixed build.
+
 ## 2026-04-21 02:31Z - Made QUIC opt-in after kspls0 native restart and reduced live log noise
 
 - Rechecked current `kspls0` logs after the route/tab sweep and found a real service restart: the previous manual build process dumped core with native `SIGSEGV` at `2026-04-20 20:20:41 CST`, then systemd recovered it. The same sample also showed a fake fatal unobserved task from Soulseek.NET listener socket disposal.

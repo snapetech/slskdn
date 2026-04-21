@@ -1,19 +1,16 @@
-## Update 2026-04-21 02:31:00Z
+## Update 2026-04-21 03:12:00Z
 
-- Current task: Finish validation, commit/push, deploy, and monitor the QUIC opt-in and Soulseek listener teardown fixes found during `kspls0` manual-build soak.
+- Current task: Completed `kspls0` manual-build testing/fixing pass.
 - Last activity:
-  - rechecked current `kspls0` logs and found one real native coredump/systemd restart at `2026-04-20 20:20:41 CST`, followed by a fake fatal unobserved task from Soulseek.NET listener socket disposal in the recovered process
-  - documented the Soulseek listener teardown and QUIC opt-in gotchas in ADR-0001 as docs-only commits `a9f809ff2` and `dd5a0686a`
-  - updated the expected Soulseek network exception classifier for the exact listener socket disposal stack and added focused unit coverage
-  - changed QUIC overlay/data to explicit opt-in while keeping UDP overlay enabled by default
-  - demoted verbose startup `[DI]` logs, SPA fallback route serving, and per-request MediaCore CSRF processing logs to debug
-  - route/tab Playwright sweep on the deployed build reached `283` route/tab states with no 5xx responses, but exposed controlled offline user-info `404`s still logging `UserOfflineException` stacks; documented the gotcha as `cfba2687f` and applied the concise logging fix locally
-  - deployed `manual-56a25b31d`; live log inspection then exposed shutdown-cancelled background searches logging as errors during manual restart, documented as `783a01302`, and the local fix now treats app-shutdown search cancellation as expected
-  - validation so far: focused program tests passed (`28`), full unit suite passed (`3546`), and Release build passed with existing warnings
+  - pushed final commits through `15ba2a423` to `snapetech/slskdn`
+  - deployed `0.24.5-slskdn.165+manual.15ba2a423` to `kspls0`
+  - verified service health: `active/running`, `NRestarts=0`, no new `slskd` coredumps, correct version from `/api/v0/application`
+  - verified QUIC remains opt-in by default: `slskd` listens on UDP `50306/50400` and TCP `5030/5031/50300/50305`, with no `slskd` listener on `50401/50402`
+  - ran the full bounded Playwright route/tab sweep: `/tmp/kspls0-route-tab-sweep-2026-04-21T03-02-32-124Z.md`, `307` visits, `1680` responses, `0` issues, `0` HTTP 5xx/502s, three expected offline user-info `404`s
+  - fresh logs show only known operational warnings and normal DHT/overlay churn; no `[DI]`, SPA fallback, CSRF, QUIC, user-info stack, fatal, coredump, or fresh search-cancellation error noise from the final build
 - Next steps:
-  1. Re-run focused tests, lint, and diff checks for the final search shutdown logging fix.
-  2. Commit, verify GitHub target, push to `snapetech/slskdn`.
-  3. Publish/deploy a new manual build to `kspls0`, then confirm QUIC listeners are absent by default, the service has no new coredump/restart, and Playwright/log checks stay clean.
+  1. Continue passive monitoring if requested.
+  2. Do not tag or trigger a release build unless explicitly asked.
 
 ## Update 2026-04-21 02:20:00Z
 
