@@ -7,6 +7,7 @@ namespace slskd.Tests.Unit.DhtRendezvous;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -270,6 +271,30 @@ public class DhtRendezvousServiceTests
         pendingConnection.SetResult(0);
     }
 
+    [Fact]
+    public async Task StartOverlayServerIfPossible_WhenPortIsTemporarilyInUse_RetriesAndStartsOverlay()
+    {
+        var overlayServer = new Mock<IMeshOverlayServer>();
+        overlayServer
+            .SetupSequence(x => x.StartAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new SocketException((int)SocketError.AddressAlreadyInUse))
+            .ThrowsAsync(new SocketException((int)SocketError.AddressAlreadyInUse))
+            .Returns(Task.CompletedTask);
+
+        var service = new DhtRendezvousService(
+            NullLogger<DhtRendezvousService>.Instance,
+            overlayServer.Object,
+            Mock.Of<IMeshOverlayConnector>(),
+            new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
+            new MeshPeerManager(NullLogger<MeshPeerManager>.Instance),
+            new DhtRendezvousOptions { Enabled = true, OverlayPort = 50305 });
+
+        var result = await InvokeStartOverlayServerIfPossibleAsync(service);
+
+        Assert.True(result);
+        overlayServer.Verify(x => x.StartAsync(It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
     [Theory]
     [InlineData(true, false, false, false, false)]
     [InlineData(false, true, false, false, false)]
@@ -316,6 +341,15 @@ public class DhtRendezvousServiceTests
             ?? throw new InvalidOperationException("_peerConnectionAttemptedAt was not found.");
         var attempts = (ConcurrentDictionary<string, DateTimeOffset>)field.GetValue(service)!;
         attempts[peerId] = lastAttempt;
+    }
+
+    private static async Task<bool> InvokeStartOverlayServerIfPossibleAsync(DhtRendezvousService service)
+    {
+        var method = typeof(DhtRendezvousService).GetMethod("StartOverlayServerIfPossibleAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("StartOverlayServerIfPossibleAsync was not found.");
+
+        var task = (Task<bool>)method.Invoke(service, new object[] { CancellationToken.None })!;
+        return await task;
     }
 
     private static async Task WaitForAsync(Func<bool> predicate, TimeSpan timeout)

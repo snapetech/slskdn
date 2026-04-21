@@ -46,13 +46,13 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
         ConnectionThrottler connectionThrottler,
         IOptions<Mesh.MeshOptions>? meshOptions = null)
     {
-        logger.LogInformation("[QuicOverlayServer] Constructor called");
+        logger.LogDebug("[QuicOverlayServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
         this.connectionThrottler = connectionThrottler ?? throw new ArgumentNullException(nameof(connectionThrottler));
         maxRemotePayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
-        logger.LogInformation("[QuicOverlayServer] Constructor completed");
+        logger.LogDebug("[QuicOverlayServer] Constructor completed");
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
         // This yields immediately so Kestrel can start binding while QUIC initializes
         await Task.Yield();
 
-        logger.LogInformation("[QuicOverlayServer] ExecuteAsync called");
+        logger.LogDebug("[QuicOverlayServer] ExecuteAsync called");
         if (!options.Enable)
         {
             logger.LogInformation("[Overlay-QUIC] Disabled by configuration");

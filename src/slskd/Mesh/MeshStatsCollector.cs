@@ -43,10 +43,10 @@ public class MeshStatsCollector : IMeshStatsCollector
         IServiceProvider serviceProvider)
     {
         this.logger = logger;
-        this.logger.LogInformation("[MeshStatsCollector] Constructor called");
+        this.logger.LogDebug("[MeshStatsCollector] Constructor called");
 
         // Use Lazy to avoid circular dependencies and handle optional services
-        this.logger.LogInformation("[MeshStatsCollector] Creating lazy service resolvers...");
+        this.logger.LogDebug("[MeshStatsCollector] Creating lazy service resolvers");
         this.natDetector = new Lazy<INatDetector?>(() =>
             serviceProvider.GetService(typeof(INatDetector)) as INatDetector);
         this.dhtClient = new Lazy<Dht.InMemoryDhtClient?>(() =>
@@ -58,7 +58,7 @@ public class MeshStatsCollector : IMeshStatsCollector
         this.overlayClient = new Lazy<Overlay.IOverlayClient?>(() =>
             serviceProvider.GetService(typeof(Overlay.IOverlayClient)) as Overlay.IOverlayClient);
         dhtOpsTimer.Start();
-        this.logger.LogInformation("[MeshStatsCollector] Constructor completed");
+        this.logger.LogDebug("[MeshStatsCollector] Constructor completed");
     }
 
     /// <summary>

@@ -19,23 +19,30 @@ public class ApplicationHostedServiceWrapper : IHostedService
         IApplication application,
         ILogger<ApplicationHostedServiceWrapper>? logger = null)
     {
-        logger?.LogInformation("[ApplicationHostedServiceWrapper] Constructor called - Application already resolved");
+        logger?.LogDebug("[ApplicationHostedServiceWrapper] Constructor called - Application already resolved");
         _application = application;
         _logger = logger;
-        logger?.LogInformation("[ApplicationHostedServiceWrapper] Constructor completed");
+        logger?.LogDebug("[ApplicationHostedServiceWrapper] Constructor completed");
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        // Critical: log to stderr so we can see this even if Serilog isn't ready
-        System.Console.Error.WriteLine("[ApplicationHostedServiceWrapper] StartAsync called");
-        _logger?.LogInformation("[ApplicationHostedServiceWrapper] StartAsync called - about to call Application.StartAsync");
+        if (System.Environment.GetEnvironmentVariable("SLSKDN_E2E_TRACE_HOSTED") == "1")
+        {
+            System.Console.Error.WriteLine("[ApplicationHostedServiceWrapper] StartAsync called");
+        }
+
+        _logger?.LogDebug("[ApplicationHostedServiceWrapper] StartAsync called - about to call Application.StartAsync");
 
         // Application.StartAsync returns immediately (runs initialization in background)
         // This should not block the web server from starting
         var result = _application.StartAsync(cancellationToken);
-        System.Console.Error.WriteLine("[ApplicationHostedServiceWrapper] Application.StartAsync returned");
-        _logger?.LogInformation("[ApplicationHostedServiceWrapper] Application.StartAsync returned (non-blocking)");
+        if (System.Environment.GetEnvironmentVariable("SLSKDN_E2E_TRACE_HOSTED") == "1")
+        {
+            System.Console.Error.WriteLine("[ApplicationHostedServiceWrapper] Application.StartAsync returned");
+        }
+
+        _logger?.LogDebug("[ApplicationHostedServiceWrapper] Application.StartAsync returned (non-blocking)");
         return result;
     }
 

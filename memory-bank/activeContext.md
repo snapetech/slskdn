@@ -1,3 +1,17 @@
+## Update 2026-04-21 04:24:00Z
+
+- Current task: Validated the `0.24.5-slskdn.168` yay install on `kspls0` and fixed the actionable issues found locally.
+- Last activity:
+  - confirmed `pacman`, `/usr/bin/slskd --version`, the active release symlink, and the authenticated API all report `0.24.5-slskdn.168`
+  - verified the service is active, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and the expected TCP/UDP listeners are present after a clean restart
+  - found the initial package start had lost the TCP overlay listener because `50305` hit a transient `Address already in use`; fixed rendezvous startup to retry transient overlay bind failures and added focused unit coverage
+  - reduced remaining live startup journal noise by demoting method-entry/constructor/security-pipeline probe logs to debug and keeping stdout/stderr probes behind explicit E2E trace environment variables
+  - investigated the red `build-main-0.24.5-slskdn.168` Actions run and found the release artifacts were published; only the final Matrix announcement failed with HTTP 504, so the announcement webhooks now retry and degrade to warnings
+  - validation passed: YAML parse, focused DHT rendezvous tests, full unit suite, Release build, `./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Commit and push the current fix set after the final `kspls0` log sample.
+  2. Do not create another release/build tag unless explicitly requested.
+
 ## Update 2026-04-21 04:08:00Z
 
 - Current task: Completed the GitHub Releases page audit/rewrite.

@@ -30,10 +30,10 @@ public class ContentPeerHintService : BackgroundService, IContentPeerHintService
 
     public ContentPeerHintService(ILogger<ContentPeerHintService> logger, IContentPeerPublisher publisher)
     {
-        logger.LogInformation("[ContentPeerHintService] Constructor called");
+        logger.LogDebug("[ContentPeerHintService] Constructor called");
         this.logger = logger;
         this.publisher = publisher;
-        logger.LogInformation("[ContentPeerHintService] Constructor completed");
+        logger.LogDebug("[ContentPeerHintService] Constructor completed");
     }
 
     public bool Enqueue(string contentId)
@@ -46,7 +46,7 @@ public class ContentPeerHintService : BackgroundService, IContentPeerHintService
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
         await Task.Yield();
 
-        logger.LogInformation("[ContentPeerHintService] ExecuteAsync called");
+        logger.LogDebug("[ContentPeerHintService] ExecuteAsync called");
         await foreach (var contentId in queue.Reader.ReadAllAsync(stoppingToken))
         {
             try

@@ -260,10 +260,17 @@ jobs:
           EOF
           )
 
-          curl --fail --silent --show-error \
+          if ! curl --fail --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --connect-timeout 10 \
+            --max-time 60 \
             -H "Content-Type: application/json" \
             -d "$payload" \
-            "$DISCORD_RELEASE_WEBHOOK"
+            "$DISCORD_RELEASE_WEBHOOK"; then
+            echo "Discord announcement failed; release artifacts are already published, continuing."
+          fi
 
       - name: Post Matrix announcement
         env:
@@ -287,10 +294,22 @@ jobs:
           sync_filter="$(jq -cn --arg room "$MATRIX_ROOM_ID" '{"room":{"rooms":[ $room ],"timeline":{"limit":50}}}')"
           sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))')"
 
-          previous_event_id="$(
+          if ! sync_response="$(
             curl --fail --silent --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --connect-timeout 10 \
+              --max-time 60 \
               -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
-              "${MATRIX_BASE_URL}/_matrix/client/r0/sync?timeout=0&filter=${sync_filter_encoded}" |
+              "${MATRIX_BASE_URL}/_matrix/client/r0/sync?timeout=0&filter=${sync_filter_encoded}"
+          )"; then
+            echo "Matrix announcement sync lookup failed; continuing without redacting previous announcements."
+            sync_response=""
+          fi
+
+          previous_event_id="$(
+            printf '%s' "$sync_response" |
               jq -r \
                 --arg room "$MATRIX_ROOM_ID" \
                 --arg marker "$marker" \
@@ -311,11 +330,17 @@ jobs:
           if [ -n "$previous_event_id" ]; then
             redact_txn="redact-${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             curl --fail --silent --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --connect-timeout 10 \
+              --max-time 60 \
               -X PUT \
               -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
               -H "Content-Type: application/json" \
               -d '{"reason":"Superseded by newer release announcement"}' \
-              "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/redact/${previous_event_id}/${redact_txn}"
+              "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/redact/${previous_event_id}/${redact_txn}" ||
+              echo "Matrix previous-announcement redaction failed; continuing."
           fi
 
           payload="$(jq -cn \
@@ -331,12 +356,19 @@ jobs:
 
           txn_id="${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
-          curl --fail --silent --show-error \
+          if ! curl --fail --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --connect-timeout 10 \
+            --max-time 60 \
             -X PUT \
             -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$payload" \
-            "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/send/m.room.message/${txn_id}"
+            "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/send/m.room.message/${txn_id}"; then
+            echo "Matrix announcement failed; release artifacts are already published, continuing."
+          fi
 
   aur-dev:
     name: Publish to AUR (Dev)
@@ -1287,10 +1319,17 @@ jobs:
           EOF
           )
 
-          curl --fail --silent --show-error \
+          if ! curl --fail --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --connect-timeout 10 \
+            --max-time 60 \
             -H "Content-Type: application/json" \
             -d "$payload" \
-            "$DISCORD_RELEASE_WEBHOOK"
+            "$DISCORD_RELEASE_WEBHOOK"; then
+            echo "Discord announcement failed; release artifacts are already published, continuing."
+          fi
 
       - name: Post Matrix announcement
         env:
@@ -1314,10 +1353,22 @@ jobs:
           sync_filter="$(jq -cn --arg room "$MATRIX_ROOM_ID" '{"room":{"rooms":[ $room ],"timeline":{"limit":50}}}')"
           sync_filter_encoded="$(SYNC_FILTER="$sync_filter" python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["SYNC_FILTER"], safe=""))')"
 
-          previous_event_id="$(
+          if ! sync_response="$(
             curl --fail --silent --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --connect-timeout 10 \
+              --max-time 60 \
               -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
-              "${MATRIX_BASE_URL}/_matrix/client/r0/sync?timeout=0&filter=${sync_filter_encoded}" |
+              "${MATRIX_BASE_URL}/_matrix/client/r0/sync?timeout=0&filter=${sync_filter_encoded}"
+          )"; then
+            echo "Matrix announcement sync lookup failed; continuing without redacting previous announcements."
+            sync_response=""
+          fi
+
+          previous_event_id="$(
+            printf '%s' "$sync_response" |
               jq -r \
                 --arg room "$MATRIX_ROOM_ID" \
                 --arg marker "$marker" \
@@ -1338,11 +1389,17 @@ jobs:
           if [ -n "$previous_event_id" ]; then
             redact_txn="redact-${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             curl --fail --silent --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --connect-timeout 10 \
+              --max-time 60 \
               -X PUT \
               -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
               -H "Content-Type: application/json" \
               -d '{"reason":"Superseded by newer release announcement"}' \
-              "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/redact/${previous_event_id}/${redact_txn}"
+              "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/redact/${previous_event_id}/${redact_txn}" ||
+              echo "Matrix previous-announcement redaction failed; continuing."
           fi
 
           payload="$(jq -cn \
@@ -1358,12 +1415,19 @@ jobs:
 
           txn_id="${MATRIX_PROJECT_KEY}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
-          curl --fail --silent --show-error \
+          if ! curl --fail --silent --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --connect-timeout 10 \
+            --max-time 60 \
             -X PUT \
             -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$payload" \
-            "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/send/m.room.message/${txn_id}"
+            "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/%21feVqoCPCPPaCQmTCEE%3Atimeways.net/send/m.room.message/${txn_id}"; then
+            echo "Matrix announcement failed; release artifacts are already published, continuing."
+          fi
 
   aur-main:
     name: Publish to AUR (Main - Source & Binary)

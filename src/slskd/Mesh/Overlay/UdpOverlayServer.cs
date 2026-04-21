@@ -32,13 +32,13 @@ public class UdpOverlayServer : BackgroundService
         ConnectionThrottler connectionThrottler,
         IOptions<Mesh.MeshOptions>? meshOptions = null)
     {
-        logger.LogInformation("[UdpOverlayServer] Constructor called");
+        logger.LogDebug("[UdpOverlayServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.dispatcher = dispatcher;
         this.connectionThrottler = connectionThrottler ?? throw new ArgumentNullException(nameof(connectionThrottler));
         maxRemotePayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
-        logger.LogInformation("[UdpOverlayServer] Constructor completed");
+        logger.LogDebug("[UdpOverlayServer] Constructor completed");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -47,7 +47,7 @@ public class UdpOverlayServer : BackgroundService
         // This yields immediately so Kestrel can start binding while UDP initializes
         await Task.Yield();
 
-        logger.LogInformation("[UdpOverlayServer] ExecuteAsync called");
+        logger.LogDebug("[UdpOverlayServer] ExecuteAsync called");
         try
         {
             if (!options.Enable)

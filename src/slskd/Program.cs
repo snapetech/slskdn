@@ -702,9 +702,12 @@ namespace slskd
                 builder.Configuration
                     .AddConfigurationProviders(EnvironmentVariablePrefix, ConfigurationFile, reloadOnChange: !OptionsAtStartup.Flags.NoConfigWatch);
 
-                // Deterministic port probe (cannot be filtered by Serilog) - write to stderr
+                // Deterministic port probe for E2E startup debugging.
                 var portStr = builder.Configuration[$"{AppName}:Web:Port"] ?? "<null>";
-                System.Console.Error.WriteLine($"[ConfigProbe] slskd:web:port={portStr}");
+                if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SERVER_PROBE") == "1")
+                {
+                    System.Console.Error.WriteLine($"[ConfigProbe] slskd:web:port={portStr}");
+                }
 
                 // Note: OptionsAtStartup was bound earlier from a different Configuration instance.
                 // Since Options properties are init-only, we can't rebind them. Instead, we read
@@ -740,15 +743,14 @@ namespace slskd
                         // PR-09: Global body size cap; configurable via Web.MaxRequestBodySize (default 10 MB). MeshGateway and others may enforce lower per-route.
                         options.Limits.MaxRequestBodySize = OptionsAtStartup.Web.MaxRequestBodySize;
 
-                        // Sanity check: log what we found in config
-                        Log.Information("[ConfigProbe] slskd:web:port={A} slskd:slskd:web:port={B} using={C}",
+                        Log.Debug("[ConfigProbe] slskd:web:port={A} slskd:slskd:web:port={B} using={C}",
                             builder.Configuration.GetValue<string>($"{AppName}:Web:Port") ?? "null",
                             builder.Configuration.GetValue<string>($"{AppName}:{AppName}:Web:Port") ?? "null",
                             webPort);
 
                         Log.Information($"[Kestrel] Configuring HTTP listener at http://{listenAddressUrl}:{webPort}/ (from config: port={webPortSection.Exists()}, address={webAddressSection.Exists()})");
                         options.Listen(listenAddress, webPort);
-                        Log.Information($"[Kestrel] HTTP listener configured");
+                        Log.Debug($"[Kestrel] HTTP listener configured");
 
                         if (!string.IsNullOrWhiteSpace(OptionsAtStartup.Web.Socket))
                         {
@@ -777,7 +779,7 @@ namespace slskd
                         }
                     });
 
-                Log.Information("[MAIN] About to configure ASP.NET services...");
+                Log.Debug("[MAIN] About to configure ASP.NET services...");
                 builder.Services
                     .ConfigureAspDotNetServices()
                     .ConfigureDependencyInjectionContainer();
@@ -835,14 +837,14 @@ namespace slskd
                 builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", Microsoft.Extensions.Logging.LogLevel.Information);
                 builder.Logging.AddFilter("Microsoft.AspNetCore.Server.Kestrel", Microsoft.Extensions.Logging.LogLevel.Debug);
 
-                Log.Information("[MAIN] Services configured, building DI container...");
+                Log.Debug("[MAIN] Services configured, building DI container...");
                 WebApplication app;
                 try
                 {
-                    Log.Information("Building DI container...");
+                    Log.Debug("Building DI container...");
                     Log.Debug("[DI] About to call builder.Build() - this will construct all singleton services...");
                     app = builder.Build();
-                    Log.Information("DI container built successfully!");
+                    Log.Debug("DI container built successfully!");
                 }
                 catch (Exception diEx)
                 {
@@ -945,8 +947,8 @@ namespace slskd
                     }
                 }
 
-                Log.Information("[Program] About to call app.Run()...");
-                Log.Information("[Program] app.Run() will start the web server and all hosted services...");
+                Log.Debug("[Program] About to call app.Run()...");
+                Log.Debug("[Program] app.Run() will start the web server and all hosted services...");
 
                 // Add lifecycle hooks to track startup progress
                 var hostLifetime = app.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
@@ -954,7 +956,7 @@ namespace slskd
                 // Log when web server starts listening (happens before hosted services StartAsync)
                 hostLifetime.ApplicationStarted.Register(() =>
                 {
-                    Log.Information("[Program] ✓ ApplicationStarted event fired - all hosted services have completed StartAsync");
+                    Log.Debug("[Program] ApplicationStarted event fired - all hosted services have completed StartAsync");
 
                     // Start LAN discovery advertising if enabled
                     if (OptionsAtStartup.Feature.IdentityFriends)
@@ -1002,11 +1004,14 @@ namespace slskd
                 });
 
                 // Try to detect if we're hanging during web server startup
-                Log.Information("[Program] Calling app.Run() - this will block until shutdown...");
-                Log.Information("[Program] If you see this but not 'Host started and bound', the web server is hanging");
+                Log.Debug("[Program] Calling app.Run() - this will block until shutdown...");
+                Log.Debug("[Program] If you see this but not 'Host started and bound', the web server is hanging");
 
-                // Deterministic Kestrel binding probe (cannot be filtered) - write to stderr
-                System.Console.Error.WriteLine($"[KestrelProbe] URLs={string.Join(";", app.Urls)}");
+                // Deterministic Kestrel binding probe for E2E startup debugging.
+                if (Environment.GetEnvironmentVariable("SLSKDN_E2E_SERVER_PROBE") == "1")
+                {
+                    System.Console.Error.WriteLine($"[KestrelProbe] URLs={string.Join(";", app.Urls)}");
+                }
 
                 app.Run();
                 Log.Information("[Program] app.Run() returned (this should not happen normally)");
@@ -2564,7 +2569,7 @@ namespace slskd
 
         private static IServiceCollection ConfigureAspDotNetServices(this IServiceCollection services)
         {
-            Log.Information("[ASP] Starting ConfigureAspDotNetServices...");
+            Log.Debug("[ASP] Starting ConfigureAspDotNetServices...");
 
             services.AddCors(options =>
             {
@@ -3029,7 +3034,7 @@ namespace slskd
             // STEP 1: Verify middleware is in the built pipeline by inspecting the ApplicationBuilder
             // STEP 2: Check for exceptions during pipeline construction
             // STEP 3: Use a custom middleware class instead of inline delegate
-            Log.Information("[Pipeline] Starting ConfigureAspDotNetPipeline...");
+            Log.Debug("[Pipeline] Starting ConfigureAspDotNetPipeline...");
 
             // PR-05: RFC 7807 ProblemDetails; in Production do not leak exception message; always include traceId
             app.UseExceptionHandler(a => a.Run(async context =>
@@ -3094,9 +3099,9 @@ namespace slskd
             // Security middleware (rate limiting, violation tracking, etc.)
             // MUST be FIRST in pipeline (before UsePathBase) to catch path traversal and other attacks
             // This ensures we check the raw request path before any path rewriting occurs
-            Log.Information("[Pipeline] About to call UseSlskdnSecurity (FIRST in pipeline)...");
+            Log.Debug("[Pipeline] About to call UseSlskdnSecurity (FIRST in pipeline)...");
             app.UseSlskdnSecurity();
-            Log.Information("[Pipeline] UseSlskdnSecurity completed");
+            Log.Debug("[Pipeline] UseSlskdnSecurity completed");
 
             // allow users to specify a custom path base, for use behind a reverse proxy
             var urlBase = OptionsAtStartup.Web.UrlBase;

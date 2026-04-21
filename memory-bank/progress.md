@@ -6689,6 +6689,14 @@ Code quality improvements were completed as part of Option A:
 - Exposed the new diagnostics on the existing DHT/overlay API responses and added focused unit coverage for the new counters, cooldown behavior, and controller mapping.
 - Validation: focused DHT/overlay unit slice passed (`41` tests), `dotnet build src/slskd/slskd.csproj --no-restore -v minimal` passed, `./bin/build` completed the frontend/release build path but failed in its full Release unit-test pass with one shutdown-drain test (`DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`) even though that same test passed immediately when rerun in isolation, `bash ./bin/lint` passed, and `git diff --check` passed.
 
+## 2026-04-21 04:24:00Z
+
+- Validated the `0.24.5-slskdn.168` AUR/yay package on `kspls0`: package metadata, CLI version, release symlink, and authenticated API all report the expected version; service is active with no restarts after the clean restart; Soulseek is logged in, shares are ready, DHT is running, and overlay/DHT listeners are present.
+- The only current live package startup fault found was a transient `50305` bind race on the first post-install start. A restart cleared it, but the code now retries transient overlay bind failures before giving up beacon capability for the process lifetime.
+- Reduced the remaining startup-method trace noise by demoting constructor/`ExecuteAsync`/security-pipeline breadcrumbs to debug and keeping explicit stdout/stderr boot probes behind E2E trace environment variables.
+- Investigated the red `build-main-0.24.5-slskdn.168` workflow and confirmed the release artifacts were already published; the failure was a non-critical Matrix announcement `504`. Release announcement webhooks now retry and continue as warnings for transient Discord/Matrix failures.
+- Validation: workflow YAML parsed, focused `DhtRendezvousServiceTests` passed, full unit suite passed (`3552` tests), Release build passed, `bash ./bin/lint` passed, and `git diff --check` passed.
+
 ## 2026-04-20 02:30:00Z
 
 - Traced the failed tag build `build-main-0.24.5-slskdn.160` to the `Release Gate` integration smoke compile step, not the runtime smoke tests. CI failed with `CS0535` because `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still had a pre-shutdown `StubDownloadService` that did not implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.

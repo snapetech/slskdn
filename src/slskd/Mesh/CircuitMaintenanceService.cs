@@ -25,11 +25,11 @@ public class CircuitMaintenanceService : BackgroundService
         IMeshCircuitBuilder circuitBuilder,
         IMeshPeerManager peerManager)
     {
-        logger.LogInformation("[CircuitMaintenanceService] Constructor called");
+        logger.LogDebug("[CircuitMaintenanceService] Constructor called");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _circuitBuilder = circuitBuilder ?? throw new ArgumentNullException(nameof(circuitBuilder));
         _peerManager = peerManager ?? throw new ArgumentNullException(nameof(peerManager));
-        logger.LogInformation("[CircuitMaintenanceService] Constructor completed");
+        logger.LogDebug("[CircuitMaintenanceService] Constructor completed");
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public class CircuitMaintenanceService : BackgroundService
         // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
         await Task.Yield();
 
-        _logger.LogInformation("[CircuitMaintenanceService] ExecuteAsync called");
+        _logger.LogDebug("[CircuitMaintenanceService] ExecuteAsync called");
         _logger.LogInformation("Circuit maintenance service started");
 
         while (!stoppingToken.IsCancellationRequested)

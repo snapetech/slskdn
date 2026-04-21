@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -49,7 +50,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private readonly ConcurrentDictionary<string, byte> _pendingPeerConnections = new();
     private const int MaxDiscoveredPeers = 1000;
     internal const int MaxConcurrentPeerConnectionAttempts = MeshOverlayConnector.MaxConcurrentAttempts;
+    internal const int MaxOverlayStartAttempts = 5;
     private static readonly TimeSpan PeerReconnectInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan OverlayStartRetryDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan SummaryLogInterval = TimeSpan.FromMinutes(2);
     private DateTimeOffset? _lastAnnounceTime;
     private DateTimeOffset? _lastDiscoveryTime;
@@ -848,25 +851,44 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
     private async Task<bool> StartOverlayServerIfPossibleAsync(CancellationToken cancellationToken)
     {
-        try
+        for (var attempt = 1; attempt <= MaxOverlayStartAttempts; attempt++)
         {
-            _logger.LogInformation("Starting overlay server on port {Port}", _options.OverlayPort);
-            await _overlayServer.StartAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("This client is beacon-capable on overlay port {Port}", _options.OverlayPort);
-            return true;
+            try
+            {
+                _logger.LogInformation("Starting overlay server on port {Port}", _options.OverlayPort);
+                await _overlayServer.StartAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("This client is beacon-capable on overlay port {Port}", _options.OverlayPort);
+                return true;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse && attempt < MaxOverlayStartAttempts)
+            {
+                _logger.LogWarning(
+                    "Overlay port {Port} is still in use during startup; retrying bind attempt {Attempt}/{MaxAttempts} after {DelayMs}ms",
+                    _options.OverlayPort,
+                    attempt,
+                    MaxOverlayStartAttempts,
+                    (int)OverlayStartRetryDelay.TotalMilliseconds);
+                await Task.Delay(OverlayStartRetryDelay, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Could not start overlay server on port {Port}; this node will connect to beacons but will not announce itself",
+                    _options.OverlayPort);
+                return false;
+            }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Could not start overlay server on port {Port}; this node will connect to beacons but will not announce itself",
-                _options.OverlayPort);
-            return false;
-        }
+
+        _logger.LogWarning(
+            "Could not start overlay server on port {Port} after {Attempts} attempts; this node will connect to beacons but will not announce itself",
+            _options.OverlayPort,
+            MaxOverlayStartAttempts);
+        return false;
     }
 
     private void CancelBackgroundInitializationNoLock()

@@ -133,8 +133,8 @@ namespace slskd
             IServiceScopeFactory serviceScopeFactory,
             NowPlaying.NowPlayingService nowPlayingService)
         {
-            Log.Information("[Application] Constructor called");
-            Log.Information("[Application] Setting up event handlers...");
+            Log.Debug("[Application] Constructor called");
+            Log.Debug("[Application] Setting up event handlers...");
             var hostLifetime = serviceProvider.GetService<IHostApplicationLifetime>();
             _cancelKeyPressHandler = (_, args) =>
             {
@@ -251,13 +251,13 @@ namespace slskd
 
             ConnectionWatchdog = connectionWatchdog;
 
-            Log.Information("[Application] Registering clock events...");
+            Log.Debug("[Application] Registering clock events...");
             Clock.EveryMinute += Clock_EveryMinute;
             Clock.EveryThirtySeconds += Clock_EveryThirtySeconds;
             Clock.EveryFiveMinutes += Clock_EveryFiveMinutes;
             Clock.EveryThirtyMinutes += Clock_EveryThirtyMinutes;
             Clock.EveryHour += Clock_EveryHour;
-            Log.Information("[Application] Constructor completed");
+            Log.Debug("[Application] Constructor completed");
         }
 
         /// <summary>

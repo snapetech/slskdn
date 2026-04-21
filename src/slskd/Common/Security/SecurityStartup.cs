@@ -140,7 +140,7 @@ public static class SecurityStartup
 
         if (configuration != null)
         {
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1: Checking configuration sections...");
+            logger?.LogDebug("[UseSlskdnSecurity] Checking configuration sections");
 
             // YAML provider normalizes keys to lowercase and prefixes with namespace (slskd:)
             // Try paths in order of likelihood: slskd:security, Security, security
@@ -148,13 +148,13 @@ public static class SecurityStartup
             var securitySection = configuration.GetSection(Common.Security.SecurityOptions.Section); // "Security"
             var securitySectionLower = configuration.GetSection("security");
 
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1a: slskd:security.Exists() = {Exists}, enabled = {Enabled}",
+            logger?.LogDebug("[UseSlskdnSecurity] slskd:security.Exists() = {Exists}, enabled = {Enabled}",
                 slskdSecuritySection.Exists(),
                 slskdSecuritySection.Exists() ? slskdSecuritySection["enabled"] : "N/A");
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1b: Security.Exists() = {Exists}, enabled = {Enabled}",
+            logger?.LogDebug("[UseSlskdnSecurity] Security.Exists() = {Exists}, enabled = {Enabled}",
                 securitySection.Exists(),
                 securitySection.Exists() ? securitySection["enabled"] : "N/A");
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 1c: security.Exists() = {Exists}, enabled = {Enabled}",
+            logger?.LogDebug("[UseSlskdnSecurity] security.Exists() = {Exists}, enabled = {Enabled}",
                 securitySectionLower.Exists(),
                 securitySectionLower.Exists() ? securitySectionLower["enabled"] : "N/A");
 
@@ -162,22 +162,22 @@ public static class SecurityStartup
             if (slskdSecuritySection.Exists())
             {
                 sectionToUse = slskdSecuritySection;
-                logger?.LogInformation("[UseSlskdnSecurity] STEP 2: Using slskd:security section");
+                logger?.LogDebug("[UseSlskdnSecurity] Using slskd:security section");
             }
             else if (securitySection.Exists())
             {
                 sectionToUse = securitySection;
-                logger?.LogInformation("[UseSlskdnSecurity] STEP 2: Using Security section");
+                logger?.LogDebug("[UseSlskdnSecurity] Using Security section");
             }
             else
             {
                 sectionToUse = securitySectionLower;
-                logger?.LogInformation("[UseSlskdnSecurity] STEP 2: Using security section (fallback)");
+                logger?.LogDebug("[UseSlskdnSecurity] Using security section (fallback)");
             }
 
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 3: Getting SecurityOptions from section...");
+            logger?.LogDebug("[UseSlskdnSecurity] Getting SecurityOptions from section");
             options = sectionToUse.Get<Common.Security.SecurityOptions>();
-            logger?.LogInformation("[UseSlskdnSecurity] STEP 3a: sectionToUse.Get result: Enabled = {Enabled}, Profile = {Profile}",
+            logger?.LogDebug("[UseSlskdnSecurity] sectionToUse.Get result: Enabled = {Enabled}, Profile = {Profile}",
                 options?.Enabled ?? (bool?)null,
                 options?.Profile.ToString() ?? "null");
         }
@@ -206,15 +206,15 @@ public static class SecurityStartup
         {
             // Security disabled - register middleware with null services
             // This ensures path traversal checks still run
-            logger?.LogInformation("[UseSlskdnSecurity] Security is disabled (Enabled=false), but REGISTERING middleware for path traversal protection");
+            logger?.LogDebug("[UseSlskdnSecurity] Security is disabled; registering middleware for path traversal protection");
         }
         else
         {
             // Security enabled - register middleware with full services
-            logger?.LogInformation("[UseSlskdnSecurity] Security is enabled (Enabled={Enabled}), REGISTERING middleware", options?.Enabled ?? true);
+            logger?.LogDebug("[UseSlskdnSecurity] Security is enabled (Enabled={Enabled}); registering middleware", options?.Enabled ?? true);
             if (options != null)
             {
-                logger?.LogInformation("[UseSlskdnSecurity] Options: Enabled={Enabled}, Profile={Profile}", options.Enabled, options.Profile);
+                logger?.LogDebug("[UseSlskdnSecurity] Options: Enabled={Enabled}, Profile={Profile}", options.Enabled, options.Profile);
             }
         }
 
@@ -222,9 +222,9 @@ public static class SecurityStartup
         // but will still perform critical path traversal checks
         try
         {
-            logger?.LogInformation("[UseSlskdnSecurity] About to call UseSecurityMiddleware...");
+            logger?.LogDebug("[UseSlskdnSecurity] About to call UseSecurityMiddleware");
             app.UseSecurityMiddleware();
-            logger?.LogInformation("[UseSlskdnSecurity] Security middleware registered successfully");
+            logger?.LogDebug("[UseSlskdnSecurity] Security middleware registered successfully");
         }
         catch (Exception ex)
         {

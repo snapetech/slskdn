@@ -31,7 +31,7 @@ public class PeerDescriptorRefreshService : BackgroundService
         IPeerDescriptorPublisher publisher,
         IOptions<MeshOptions> meshOptions)
     {
-        logger.LogInformation("[PeerDescriptorRefreshService] Constructor called");
+        logger.LogDebug("[PeerDescriptorRefreshService] Constructor called");
         this.logger = logger;
         this.publisher = publisher;
         options = meshOptions.Value;
@@ -39,12 +39,12 @@ public class PeerDescriptorRefreshService : BackgroundService
         // Initialize with current endpoints if IP change detection is enabled
         if (options.PeerDescriptorRefresh.EnableIpChangeDetection)
         {
-            logger.LogInformation("[PeerDescriptorRefreshService] Getting current endpoints...");
+            logger.LogDebug("[PeerDescriptorRefreshService] Getting current endpoints");
             lastKnownEndpoints = GetCurrentEndpoints();
-            logger.LogInformation("[PeerDescriptorRefreshService] Got {Count} endpoints", lastKnownEndpoints.Count);
+            logger.LogDebug("[PeerDescriptorRefreshService] Got {Count} endpoints", lastKnownEndpoints.Count);
         }
 
-        logger.LogInformation("[PeerDescriptorRefreshService] Constructor completed");
+        logger.LogDebug("[PeerDescriptorRefreshService] Constructor completed");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,7 +58,7 @@ public class PeerDescriptorRefreshService : BackgroundService
             return;
         }
 
-        logger.LogInformation("[PeerDescriptorRefreshService] ExecuteAsync called");
+        logger.LogDebug("[PeerDescriptorRefreshService] ExecuteAsync called");
         logger.LogInformation("[MeshDHT] Starting peer descriptor refresh service");
 
         // Use configurable intervals

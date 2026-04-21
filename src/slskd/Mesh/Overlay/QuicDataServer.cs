@@ -42,7 +42,7 @@ public class QuicDataServer : BackgroundService
         ConnectionThrottler connectionThrottler,
         IOptions<MeshOptions>? meshOptions = null)
     {
-        logger.LogInformation("[QuicDataServer] Constructor called");
+        logger.LogDebug("[QuicDataServer] Constructor called");
         this.logger = logger;
         this.options = options.Value;
         this.connectionThrottler = connectionThrottler ?? throw new ArgumentNullException(nameof(connectionThrottler));
@@ -50,7 +50,7 @@ public class QuicDataServer : BackgroundService
         if (meshOptions?.Value?.Security != null)
             cap = Math.Min(cap, meshOptions.Value.Security.GetEffectiveMaxPayloadSize());
         maxPayloadBytes = Math.Max(1, cap);
-        logger.LogInformation("[QuicDataServer] Constructor completed");
+        logger.LogDebug("[QuicDataServer] Constructor completed");
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -66,7 +66,7 @@ public class QuicDataServer : BackgroundService
         // This yields immediately so Kestrel can start binding while QUIC initializes
         await Task.Yield();
 
-        logger.LogInformation("[QuicDataServer] ExecuteAsync called");
+        logger.LogDebug("[QuicDataServer] ExecuteAsync called");
         if (!options.Enable)
         {
             logger.LogInformation("[Overlay-QUIC-DATA] Disabled by configuration");

@@ -167,7 +167,7 @@ namespace slskd.Transfers.Uploads
             IScheduledRateLimitService? scheduledRateLimitService = null)
         {
             var log = Serilog.Log.ForContext<UploadService>();
-            log.Information("[UploadService] Constructor called");
+            log.Debug("[UploadService] Constructor called");
             Files = fileService;
             Users = userService;
             Client = soulseekClient;
@@ -177,11 +177,11 @@ namespace slskd.Transfers.Uploads
             OptionsMonitor = optionsMonitor;
             EventBus = eventBus;
 
-            log.Information("[UploadService] Creating UploadGovernor...");
+            log.Debug("[UploadService] Creating UploadGovernor");
             Governor = new UploadGovernor(userService, optionsMonitor, scheduledRateLimitService);
-            log.Information("[UploadService] Creating UploadQueue...");
+            log.Debug("[UploadService] Creating UploadQueue");
             Queue = new UploadQueue(userService, optionsMonitor);
-            log.Information("[UploadService] Constructor completed");
+            log.Debug("[UploadService] Constructor completed");
         }
 
         /// <summary>

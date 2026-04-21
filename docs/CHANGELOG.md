@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Made release announcement webhooks retry and degrade to warnings so transient Discord/Matrix gateway failures do not mark completed tag builds failed after artifacts and GitHub releases are already published.
 - Added a quiet optional user-info mode for UI badges so expected offline/unavailable Soulseek users render as missing badge data without browser console 404/503 noise; the normal `/users/{username}/info` API still preserves its 404/503 semantics.
 - Made mesh QUIC explicitly opt-in after recurring native `kspls0` coredumps under active MsQuic listeners: UDP overlay remains enabled by default, QUIC control/data services and clients register only when configured, and the example config now documents the opt-in keys.
 - Classified Soulseek.NET listener socket disposal from `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync` as expected network teardown so it no longer logs as a fake fatal unobserved task exception.
