@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z109. Soulseek Listener Socket Disposal Is Expected Teardown, Not A Fatal Unobserved Task
+
+**The Bug**: Live `kspls0` monitoring caught `[FATAL] Unobserved task exception` for `ObjectDisposedException: Cannot access a disposed object. Object name: 'System.Net.Sockets.Socket'.` The stack was inside `TcpListener.AcceptTcpClientAsync()` through `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync()`. The process kept running, but the global unobserved-task handler classified a disposed listener accept loop as fatal.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+exception is ObjectDisposedException objectDisposedException &&
+string.Equals(objectDisposedException.ObjectName, "Connection", StringComparison.Ordinal)
+```
+
+**Correct**:
+```csharp
+var isSoulseekListenerSocketDisposed =
+    exception is ObjectDisposedException ode &&
+    string.Equals(ode.ObjectName, "System.Net.Sockets.Socket", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync", StringComparison.Ordinal);
+```
+
+**Why This Keeps Happening**: Soulseek.NET owns listener/connection background tasks that can outlive the initiating control path during restart, reconnect, or listener teardown. Disposed sockets from the third-party listener accept loop are expected network lifecycle churn when the stack is inside `Soulseek.Network.Tcp.Listener`; they should be classified as expected Soulseek network exceptions instead of logged as fatal app crashes.
+
 ### 0z108. Manual Deploys Must Verify Systemd Reaches The `current` Release Payload
 
 **The Bug**: A manual `kspls0` deploy copied the new release under `/usr/lib/slskd/releases/manual-5bd0e0b88` and repointed `/usr/lib/slskd/current`, but `systemd` still executed a stale apphost at `/usr/lib/slskd/slskd`. The binary `--version` check against `current/slskd` passed, while `/api/v0/application` still reported the previous build because the service never reached the `current` payload.
