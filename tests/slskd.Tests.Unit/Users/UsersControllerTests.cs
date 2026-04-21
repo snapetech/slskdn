@@ -94,6 +94,24 @@ namespace slskd.Tests.Unit.Users
         }
 
         [Fact]
+        public async Task Info_WhenQuietUnavailableAndUserOffline_ReturnsNoContent()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock.Setup(x => x.GetInfoAsync("testuser")).ThrowsAsync(new UserOfflineException("sensitive detail"));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser", quietUnavailable: true);
+
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Fact]
         public async Task Info_WhenPeerConnectionFails_ReturnsServiceUnavailable()
         {
             var userServiceMock = new Mock<IUserService>();
@@ -115,6 +133,28 @@ namespace slskd.Tests.Unit.Users
             var unavailable = Assert.IsType<ObjectResult>(result);
             Assert.Equal(503, unavailable.StatusCode);
             Assert.Equal("Unable to retrieve user info", unavailable.Value);
+        }
+
+        [Fact]
+        public async Task Info_WhenQuietUnavailableAndPeerConnectionFails_ReturnsNoContent()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock
+                .Setup(x => x.GetInfoAsync("testuser"))
+                .ThrowsAsync(new SoulseekClientException(
+                    "Failed to retrieve information for user testuser",
+                    new ConnectionException("Failed to establish a direct or indirect message connection")));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser", quietUnavailable: true);
+
+            Assert.IsType<NoContentResult>(result);
         }
 
         [Fact]

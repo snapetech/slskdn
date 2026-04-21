@@ -266,13 +266,17 @@ namespace slskd.Users.API
         ///     Retrieves information about the specified <paramref name="username"/>.
         /// </summary>
         /// <param name="username">The username of the user.</param>
+        /// <param name="quietUnavailable">When true, expected missing peer info returns 204 for optional UI badge lookups.</param>
         /// <returns></returns>
         [HttpGet("{username}/info")]
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(Info), 200)]
+        [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [ProducesResponseType(503)]
-        public async Task<IActionResult> Info([FromRoute, Required] string username)
+        public async Task<IActionResult> Info(
+            [FromRoute, Required] string username,
+            [FromQuery] bool quietUnavailable = false)
         {
             if (Program.IsRelayAgent)
             {
@@ -293,16 +297,31 @@ namespace slskd.Users.API
             catch (UserOfflineException ex)
             {
                 Log.Information("User {Username} is offline for info: {Message}", username, ex.Message);
+                if (quietUnavailable)
+                {
+                    return NoContent();
+                }
+
                 return NotFound("User is offline");
             }
             catch (SoulseekClientException ex) when (IsExpectedUserInfoFailure(ex))
             {
                 Log.Information("Unable to connect to user {Username} for info: {Message}", username, ex.Message);
+                if (quietUnavailable)
+                {
+                    return NoContent();
+                }
+
                 return StatusCode(503, "Unable to retrieve user info");
             }
             catch (TimeoutException ex)
             {
                 Log.Information("Timed out retrieving info for user {Username}: {Message}", username, ex.Message);
+                if (quietUnavailable)
+                {
+                    return NoContent();
+                }
+
                 return StatusCode(503, "Unable to retrieve user info");
             }
         }

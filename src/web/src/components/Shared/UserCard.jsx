@@ -32,7 +32,7 @@ class UserCard extends Component {
 
     try {
       const [infoResponse, reputationData] = await Promise.allSettled([
-        users.getInfo({ username }),
+        users.getInfo({ quietUnavailable: true, username }),
         security.getReputation(username).catch(() => null),
       ]);
 

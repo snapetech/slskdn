@@ -1,7 +1,8 @@
 import api from './api';
 
-export const getInfo = ({ username }) => {
-  return api.get(`/users/${encodeURIComponent(username)}/info`);
+export const getInfo = ({ quietUnavailable = false, username }) => {
+  const query = quietUnavailable ? '?quietUnavailable=true' : '';
+  return api.get(`/users/${encodeURIComponent(username)}/info${query}`);
 };
 
 export const getStatus = ({ username }) => {
