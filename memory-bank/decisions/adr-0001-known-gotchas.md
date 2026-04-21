@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z116. Release Announcement Webhooks Must Not Fail Completed Builds On Transient Gateway Errors
+
+**The Bug**: The `build-main-0.24.5-slskdn.168` release created artifacts and the GitHub release, then the final `Announce Main Release to Discord` job failed because the Matrix homeserver returned HTTP `504` to the announcement `curl`. The release itself was usable and installed from AUR, but the overall Actions run ended red because a non-critical announcement endpoint had a transient gateway failure.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```bash
+curl --fail --silent --show-error \
+  -X PUT \
+  -H "Authorization: Bearer ${MATRIX_RELEASE_ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$payload" \
+  "${MATRIX_BASE_URL}/_matrix/client/r0/rooms/${room}/send/m.room.message/${txn_id}"
+```
+
+**Correct**:
+```bash
+if ! curl --fail --silent --show-error --retry 3 --retry-all-errors ...; then
+  echo "Matrix announcement failed; release artifacts are already published, continuing."
+fi
+```
+
+**Why This Keeps Happening**: Announcement webhooks run after the actual release work and depend on external chat infrastructure. They should retry and degrade to warnings on transient network/server failures so a good release is not marked failed by Discord/Matrix availability.
+
 ### 0z115. Mesh Overlay Startup Must Retry Transient Port Reuse
 
 **The Bug**: The packaged `kspls0` `0.24.5-slskdn.168` install started while TCP `50305` was still transiently unavailable. `MeshOverlayServer.StartAsync()` logged `Address already in use`, `DhtRendezvousService` gave up on the overlay listener, and the node stayed online without beacon-capable TCP overlay until a manual restart.
