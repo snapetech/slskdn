@@ -382,7 +382,7 @@ namespace slskd.Transfers.AutoReplace
 
                 if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any())
                 {
-                    Log.Warning("No search responses found for: {SearchText}", searchText);
+                    Log.Debug("No search responses found for: {SearchText}", searchText);
                     return (candidates, SearchBudgetExceeded: false);
                 }
 

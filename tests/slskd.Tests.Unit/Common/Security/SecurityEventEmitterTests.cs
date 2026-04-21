@@ -22,6 +22,14 @@ public class SecurityEventEmitterTests
     }
 
     [Fact]
+    public void EntropyMonitor_UsesSampleSizeThatAvoidsRoutineEstimatorWarnings()
+    {
+        Assert.True(EntropyMonitor.SampleSize >= 4096);
+        Assert.True(EntropyMonitor.WarningEntropy > EntropyMonitor.MinAcceptableEntropy);
+        Assert.True(EntropyMonitor.WarningEntropy <= 7.75);
+    }
+
+    [Fact]
     public void SecurityEventAggregator_WhenOneSubscriberThrows_ContinuesInvokingRemainingSubscribers()
     {
         using var aggregator = new SecurityEventAggregator(NullLogger<SecurityEventAggregator>.Instance);

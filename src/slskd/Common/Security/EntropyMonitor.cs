@@ -26,7 +26,7 @@ public sealed class EntropyMonitor : IDisposable
     /// <summary>
     /// Number of bytes to sample for entropy testing.
     /// </summary>
-    public const int SampleSize = 256;
+    public const int SampleSize = 4096;
 
     /// <summary>
     /// Maximum history entries to keep.
@@ -41,7 +41,7 @@ public sealed class EntropyMonitor : IDisposable
     /// <summary>
     /// Warning threshold for entropy.
     /// </summary>
-    public const double WarningEntropy = 7.5;
+    public const double WarningEntropy = 7.75;
 
     /// <summary>
     /// Gets the last entropy check result.

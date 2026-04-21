@@ -1185,3 +1185,7 @@
 - [x] Validate `kspls0` yay package `0.24.5-slskdn.172` and clean startup polish
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package/API are `172`, service is active with zero restarts, Soulseek is logged in, DHT is ready, overlay TCP is listening, mesh counters are clean, and fresh logs/coredumps show no fatal/error/exception/502/bind/protocol issues. Fixed remaining startup polish by demoting temporary raw config probes to debug and normalizing blank identity display names before profile persistence and LAN discovery advertisement.
+
+- [x] Sweep `kspls0` 172 logs/Web UI and quiet remaining false warnings
+  - Status: completed (2026-04-21)
+  - Notes: Authenticated Web UI route/tab validation found no real 5xx/502/page regressions; earlier tab and SongID hub findings were crawler/navigation abort artifacts. Live logs showed no fatal/error/exception noise, but did show repeated finite-sample entropy warnings and expected auto-replace no-result searches at warning level. Entropy sampling now uses a stable 4096-byte sample, auto-replace no-result telemetry logs at debug, and the full unit-suite pass also fixed a flaky hosted-service test wait exposed during validation.

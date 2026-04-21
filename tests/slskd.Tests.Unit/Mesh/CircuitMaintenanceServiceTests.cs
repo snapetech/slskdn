@@ -110,15 +110,20 @@ public class CircuitMaintenanceServiceTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_ContinuesAfterMaintenanceException()
     {
+        var maintenanceAttempted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var circuitBuilderMock = new Mock<IMeshCircuitBuilder>();
-        circuitBuilderMock.Setup(x => x.PerformMaintenance()).Throws(new InvalidOperationException("test"));
+        circuitBuilderMock.Setup(x => x.PerformMaintenance()).Callback(() =>
+        {
+            maintenanceAttempted.TrySetResult();
+            throw new InvalidOperationException("test");
+        });
         circuitBuilderMock.Setup(x => x.GetStatistics()).Returns(new CircuitStatistics());
 
         var service = new CircuitMaintenanceService(_loggerMock.Object, circuitBuilderMock.Object, _peerManagerMock.Object);
         using var cts = new CancellationTokenSource();
-        var executeTask = service.StartAsync(cts.Token);
 
-        await Task.Delay(200);
+        var executeTask = service.StartAsync(cts.Token);
+        await maintenanceAttempted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         await service.StopAsync(cts.Token);
 
         Assert.True(executeTask.IsCompletedSuccessfully);

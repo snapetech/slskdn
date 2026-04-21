@@ -6737,6 +6737,13 @@ Code quality improvements were completed as part of Option A:
 - Fixed the only actionable startup polish from the journal: raw config binding probes are debug-only, persisted blank peer display names migrate to a trimmed username/`Unknown` fallback, and LAN discovery advertises/logs a non-empty display name.
 - Validation passed: focused identity unit tests (`145` tests), Release build, and `bash ./bin/lint`.
 
+## 2026-04-21 08:00:00Z
+
+- Ran another `kspls0` 172 log/API/UI inspection. The service remains active with zero restarts, API reports `0.24.5-slskdn.172`, Soulseek is logged in, DHT is running, and overlay TCP is listening.
+- Confirmed the earlier Playwright tab failures were harness locator churn: Library Health `Overview`/`All Issues` and Files `Downloads`/`Incomplete` click cleanly with fresh locators, and holding `/searches` open produced no SongID hub console errors.
+- Fixed the only remaining actionable log noise in `main`: entropy monitor warnings now account for finite-sample estimator bias by sampling 4096 bytes, and expected auto-replace no-result searches are debug telemetry instead of operator warnings.
+- Fixed a unit-suite race exposed during validation: `CircuitMaintenanceServiceTests.ExecuteAsync_ContinuesAfterMaintenanceException` now waits for the maintenance callback instead of sleeping and hoping the hosted-service loop ran.
+
 ## 2026-04-20 02:30:00Z
 
 - Traced the failed tag build `build-main-0.24.5-slskdn.160` to the `Release Gate` integration smoke compile step, not the runtime smoke tests. CI failed with `CS0535` because `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still had a pre-shutdown `StubDownloadService` that did not implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.

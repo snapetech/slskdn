@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Stabilized live `kspls0` log noise found during the 172 package soak: entropy health checks now use a larger RNG sample to avoid routine finite-sample false warnings, and auto-replace no-result searches stay at debug-level telemetry.
 - Cleaned up startup polish found during the `kspls0` 172 package soak: temporary raw security config probes now log only at debug, persisted peer profiles with blank display names are migrated to a usable fallback, and LAN discovery advertises a non-empty trimmed display name.
 - Classified Soulseek.NET read-loop timeout inner exception chains as expected peer-network churn so `ConnectionReadException` plus `IOException`/`SocketException` timeout stacks no longer log as fake fatal unobserved task exceptions.
 - Demoted per-endpoint DHT overlay cooldown streak logs to debug so normal remote endpoint churn stays visible through aggregate DHT/overlay summaries and API stats without repeating one line per degraded endpoint at information level.

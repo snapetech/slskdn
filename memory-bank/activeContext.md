@@ -540,6 +540,19 @@ dotnet test
   1. Push the packaging/workflow fix and cut a new stable build so Launchpad retries with the corrected PPA path.
   2. Watch the next Jammy build specifically; if it still fails, the next problem will be in the PPA source-package assembly or Launchpad environment rather than this runtime-path drift.
 
+## Update 2026-04-21 08:00:00Z
+
+- Current task: None. The current `kspls0` 172 log/UI sweep is triaged and the remaining fixable warning noise is patched locally.
+- Last activity:
+  - confirmed `kspls0` is still running `0.24.5-slskdn.172`, systemd is active with zero restarts, Soulseek is logged in, DHT is running, overlay TCP is listening on `50305`, and no fresh fatal/error/exception/502/coredump/protocol noise appeared
+  - reran focused Playwright checks with the corrected Web UI credentials; Library Health and Files nested tabs work, and a steady `/searches` hold produced no SongID hub console errors
+  - documented and fixed the repeated entropy false-warning gotcha by increasing the RNG sample size to reduce finite-sample bias, and moved expected auto-replace no-result searches down to debug
+  - fixed the flaky hosted-service unit test wait exposed by the full unit suite
+  - validation passed so far: focused security event tests, focused circuit maintenance test, full unit suite, Release build, lint, changelog validation, and diff check
+- Next steps:
+  1. Commit and push the log-polish/test fix set.
+  2. Do not create another build tag unless explicitly requested.
+
 ## Update 2026-04-21 07:08:21Z
 
 - Current task: None. The `kspls0` 172 post-install log pass is healthy and the remaining startup polish fixes are implemented locally.
