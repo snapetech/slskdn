@@ -103,10 +103,6 @@ sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-linux (glibc)|sha256 
 sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # x86_64-darwin|sha256 = "'"${MACOS_X64_SRI}"'"; # x86_64-darwin|' flake.nix
 sed -i '/stableSources = {/,/};/s|sha256 = ".*"; # aarch64-darwin|sha256 = "'"${MACOS_ARM64_SRI}"'"; # aarch64-darwin|' flake.nix
 
-sed -i "s/^version: '.*'/version: '${VERSION}'/" packaging/snap/snapcraft.yaml
-sed -i "s|^    source: .*|    source: https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|" packaging/snap/snapcraft.yaml
-sed -i "s|^    source-checksum: .*|    source-checksum: sha256/${LINUX_X64_HEX}|" packaging/snap/snapcraft.yaml
-
 sed -i "s|# slskdN .* Linux .* x64|# slskdN ${VERSION} Linux glibc x64|" packaging/flatpak/io.github.slskd.slskdn.yml
 sed -i "s|# Install slskdN (from .*: slskd, slskd.dll, deps, wwwroot)|# Install slskdN (from slskdn-main-linux-glibc-x64.zip: slskd, slskd.dll, deps, wwwroot)|" packaging/flatpak/io.github.slskd.slskdn.yml
 python3 - <<PY_FLATPAK

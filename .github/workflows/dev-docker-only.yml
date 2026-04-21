@@ -1,4 +1,4 @@
-name: Dev Release (Snap + Docker Only)
+name: Dev Release (Docker Only)
 
 on:
   workflow_dispatch:
@@ -29,44 +29,6 @@ jobs:
           echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "📦 Using version: ${DEV_VERSION} (commit: ${SHORT_SHA})"
-
-  snap:
-    name: Publish to Snap (Edge)
-    runs-on: ubuntu-latest
-    needs: get-version
-    steps:
-      - uses: actions/checkout@v6
-        with: { ref: experimental/multi-source-swarm }
-      
-      - name: Download from Dev Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download dev \
-            --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-linux-glibc-x64.zip"
-      
-      - name: Build and Push
-        env: { SNAPCRAFT_STORE_CREDENTIALS: "${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}" }
-        if: "${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}"
-        run: |
-          unzip slskdn-dev-linux-glibc-x64.zip -d slskdn_dist
-          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
-          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
-          sed -i "s|version: .*|version: '${{ needs.get-version.outputs.dev_version }}'|" packaging/snap/snapcraft.yaml
-          sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
-          
-          # Install Snapcraft
-          sudo snap install snapcraft --classic
-          
-          # Build in destructive mode (no container needed)
-          cd packaging/snap
-          snapcraft --destructive-mode
-          
-          # Publish
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap.login
-          snapcraft login --with snap.login
-          snapcraft upload --release=edge *.snap
 
   docker:
     name: Build and Push Docker Image

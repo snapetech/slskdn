@@ -1,6 +1,6 @@
 ## Update 2026-04-21 05:59:00Z
 
-- Current task: Monitoring `kspls0` package `0.24.5-slskdn.170` and polishing actionable live log noise.
+- Current task: Removing Snap publishing from release workflows after `0.24.5-slskdn.170` got stuck waiting on Snap Store publication.
 - Last activity:
   - confirmed `kspls0` is still running `slskdn-bin 0.24.5.slskdn.170-1` from systemd PID `2151618`, `active/running`, `NRestarts=0`, `ExecMainStatus=0`
   - verified authenticated API state: `/api/v0/application` reports `0.24.5-slskdn.170`, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and the TCP overlay listener is active on `50305`
@@ -9,9 +9,12 @@
   - documented the duplicate-publish gotcha in ADR-0001 and committed it as `a4e516468`
   - changed `PeerDescriptorRefreshService` so periodic refresh scheduling starts from current time, leaving the bootstrap service as the startup publisher while still allowing IP-change-triggered refreshes
   - validation passed: focused `PeerDescriptorRefreshServiceTests`, full unit suite (`3553` tests), Release build, `bash ./bin/lint`, and `git diff --check`
+  - pushed the duplicate self-descriptor publish cleanup as `a1f105521`; CodeQL and dependency submission for that push both passed
+  - removed Snap publishing from the tag workflow, converted the manual dev helper workflow to Docker-only, and stopped release metadata scripts/validators from requiring Snap manifest updates
+  - validation for the Snap purge passed: YAML parse for touched workflows, packaging metadata validation, changelog validation, and `git diff --check`
 - Next steps:
-  1. Commit and push the duplicate self-descriptor publish cleanup.
-  2. Keep watching the `0.24.5-slskdn.170` Snap publishing job; all other main release jobs are green.
+  1. Commit and push the Snap workflow purge.
+  2. Cancel the still-running `build-main-0.24.5-slskdn.170` workflow if only Snap remains in progress.
   3. Do not create another build tag unless explicitly requested.
 
 ## Update 2026-04-21 05:06:00Z

@@ -82,7 +82,6 @@ expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^PackageIde
 expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^Moniker: slskdn-dev$'
 
 expect_line packaging/homebrew/Formula/slskdn.rb '^class Slskdn < Formula$'
-expect_line packaging/snap/snapcraft.yaml '^name: slskdn$'
 
 reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
 expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-glibc-x64\.zip'
@@ -132,18 +131,6 @@ done < <(sed -n "s#.*releases/download/\([^/]*\)/.*#\1#p" packaging/homebrew/For
 
 if [[ "$HOME_URL_VERSIONS_COUNT" -ne 3 ]]; then
   fail "Homebrew formula should have exactly 3 release URLs, found $HOME_URL_VERSIONS_COUNT"
-fi
-
-SNAP_VERSION=$(sed -n "s#^version: '\([^']*\)'#\1#p" packaging/snap/snapcraft.yaml | head -n 1)
-fail_if_empty "$SNAP_VERSION" "Snap version"
-if [[ "$SNAP_VERSION" != "$STABLE_FORMULA_VERSION" ]]; then
-  fail "Snapcraft version ${SNAP_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
-fi
-if ! grep -q "releases/download/${SNAP_VERSION}/" packaging/snap/snapcraft.yaml; then
-  fail "Snapcraft source URL should contain version ${SNAP_VERSION}"
-fi
-if ! grep -q "source-checksum: sha256/${STABLE_FORMULA_LINUX_SHA}" packaging/snap/snapcraft.yaml; then
-  fail "Snapcraft source-checksum should match stable Linux SHA ${STABLE_FORMULA_LINUX_SHA}"
 fi
 
 FLATPAK_URL=$(sed -n "s#^[[:space:]]*url: \\(.*\\)#\\1#p" packaging/flatpak/io.github.slskd.slskdn.yml | grep '/releases/download/' | head -n 1)

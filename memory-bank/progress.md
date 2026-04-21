@@ -6713,6 +6713,8 @@ Code quality improvements were completed as part of Option A:
 - Found and fixed one actionable startup polish issue: duplicate mesh self-descriptor publishing at boot. `MeshBootstrapService` already owns the initial publish, so `PeerDescriptorRefreshService` now starts its periodic refresh clock at service start instead of immediately republishing the same descriptor.
 - Documented the hosted-service scheduling gotcha in ADR-0001 and committed it as `a4e516468`.
 - Validation: focused `PeerDescriptorRefreshServiceTests` passed, full unit suite passed (`3553` tests), Release build passed, `bash ./bin/lint` passed, and `git diff --check` passed.
+- Pushed the duplicate descriptor cleanup as `a1f105521`; the resulting CodeQL and dependency-submission checks passed.
+- Removed Snap publishing from release automation: `build-on-tag.yml` no longer has dev/stable Snap jobs, the manual dev helper workflow is Docker-only, and release metadata scripts/validators no longer update or require Snap manifest freshness. Validation passed with YAML parsing for touched workflows, packaging metadata validation, changelog validation, and `git diff --check`.
 
 ## 2026-04-20 02:30:00Z
 

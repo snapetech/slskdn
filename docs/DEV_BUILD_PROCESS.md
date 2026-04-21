@@ -161,15 +161,6 @@ This document maps out the complete dev build process for slskdn, including vers
 - **SHA256**: Calculated for Linux, macOS x64, macOS ARM64
 - **URLs**: Platform-specific release download URLs
 
-### 9. Snap
-- **Channel**: `edge` (dev builds)
-- **File**: `packaging/snap/snapcraft.yaml`
-- **Updates**:
-  - `version`: Dev version
-  - `source`: Extracted zip directory
-  - `grade`: `devel` (for dev builds)
-- **Credentials**: `SNAPCRAFT_STORE_CREDENTIALS` secret
-
 ## Workflow Dependencies
 
 ### `build-on-tag.yml` Jobs (for `build-dev-*` tags)
@@ -186,10 +177,9 @@ This document maps out the complete dev build process for slskdn, including vers
 10. **chocolatey-dev** → Updates and pushes to Chocolatey
 11. **nix-dev** → Updates flake.nix and commits
 12. **winget-dev** → Updates Winget manifests
-13. **snap-dev** → Builds and publishes Snap
-14. **homebrew-dev** → Updates Homebrew tap
-15. **announce-main** → Posts the new stable release to Discord
-16. **winget-main** → Auto-submits stable Winget update PR when token is configured
+13. **homebrew-dev** → Updates Homebrew tap
+14. **announce-main** → Posts the new stable release to Discord
+15. **winget-main** → Auto-submits stable Winget update PR when token is configured
 
 ### `dev-release.yml` Jobs (for `dev-*` tags)
 
@@ -216,11 +206,10 @@ This document maps out the complete dev build process for slskdn, including vers
 | `DISCORD_RELEASE_WEBHOOK` | `announce-dev`, `announce-main` | Discord webhook URL used to announce each published dev and stable GitHub release |
 | `WINGETCREATE_GITHUB_TOKEN` | Stable Winget job | GitHub classic PAT with `public_repo` so `wingetcreate --submit` can fork and open a PR against `microsoft/winget-pkgs` |
 | `TAP_GITHUB_TOKEN` | Homebrew jobs | GitHub token for tap repo |
-| `SNAPCRAFT_STORE_CREDENTIALS` | Snap jobs | Snap store credentials |
 
 ## Branch Strategy
 
-- **Dev builds**: From the current dev branch (e.g. `dev/40-fixes`). **The workflow file must use the actual branch name**—if the branch was renamed from `experimental/multi-source-swarm` to `dev/40-fixes`, update all refs in `build-on-tag.yml` (nix-dev, winget-dev, snap-dev, etc.).
+- **Dev builds**: From the current dev branch (e.g. `dev/40-fixes`). **The workflow file must use the actual branch name**—if the branch was renamed from `experimental/multi-source-swarm` to `dev/40-fixes`, update all refs in `build-on-tag.yml` (nix-dev, winget-dev, etc.).
 - **Nix updates**: Commits to same branch (with `[skip ci]`)
 - **Winget updates**: Commits to same branch (with `[skip ci]`)
 - **README updates**: Commits to dev branch (dev-release.yml only)

@@ -1030,91 +1030,6 @@ jobs:
           Write-Host "📝 To publish to Winget, submit a PR to microsoft/winget-pkgs manually"
         shell: pwsh
 
-  snap-dev:
-    name: Publish to Snap (Dev/Edge)
-    needs: [parse, release-dev]
-    if: needs.parse.outputs.channel == 'dev'
-    runs-on: ubuntu-latest
-    env:
-      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Download from Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download "${{ github.ref_name }}" \
-            --repo ${{ github.repository }} \
-            --pattern "slskdn-dev-linux-glibc-x64.zip"
-
-      - name: Prepare Snap project
-        run: |
-          mkdir -p packaging/snap/slskdn_dist
-          unzip slskdn-dev-linux-glibc-x64.zip -d packaging/snap/slskdn_dist
-          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
-          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
-          sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
-          sed -i "s|grade: stable|grade: devel|" packaging/snap/snapcraft.yaml
-
-      - name: Build snap (LXD)
-        id: snap-build
-        uses: snapcore/action-build@v1
-        with:
-          path: packaging/snap
-
-      - name: Install snapcraft for upload
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y snapd
-          sudo snap install snapcraft --classic
-
-      - name: Publish to Snap Store (edge)
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        run: |
-          set -euo pipefail
-          # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
-          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          MAX_ATTEMPTS=12
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "Upload attempt $attempt/$MAX_ATTEMPTS started at $STARTED_AT: $SNAP_PATH"
-            set +e
-            OUT="$(timeout --signal=TERM 10m snapcraft upload --release=edge "$SNAP_PATH" 2>&1)"
-            CODE=$?
-            set -e
-            echo "$OUT"
-            if [ $CODE -eq 0 ] || echo "$OUT" | grep -q "exact same content has already been uploaded"; then
-              echo "✅ Published to Snap (edge channel)"
-              exit 0
-            fi
-            SLEEP_SECONDS=$((attempt * 30))
-            if [ "$SLEEP_SECONDS" -gt 300 ]; then
-              SLEEP_SECONDS=300
-            fi
-            if [ $CODE -eq 124 ]; then
-              echo "Upload attempt $attempt/$MAX_ATTEMPTS timed out after 10 minutes. Retrying in ${SLEEP_SECONDS}s."
-              sleep "$SLEEP_SECONDS"
-              continue
-            fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out|binary_sha3_384: Error checking upload uniqueness"; then
-              echo "Retrying in ${SLEEP_SECONDS}s (transient Snap Store error)..."
-              sleep "$SLEEP_SECONDS"
-              continue
-            fi
-            exit $CODE
-          done
-          echo "❌ Snap Store upload failed after $MAX_ATTEMPTS attempts."
-          exit 1
-
-      - name: Skip if no credentials
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
-        run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured, skipping Snap publish"
-
   homebrew-dev:
     name: Update Homebrew Tap (Dev)
     needs: [parse, release-dev]
@@ -2076,7 +1991,6 @@ jobs:
               Formula/slskdn.rb \
               packaging/winget/ \
               packaging/homebrew/Formula/slskdn.rb \
-              packaging/snap/snapcraft.yaml \
               packaging/flatpak/io.github.slskd.slskdn.yml \
               packaging/truenas-scale/charts/slskdn/Chart.yaml \
               packaging/helm/slskdn/Chart.yaml \
@@ -2107,91 +2021,6 @@ jobs:
 
           echo "::error::Failed to push main repo metadata after 10 attempts"
           exit 1
-
-  snap-main:
-    name: Publish to Snap (Main/Stable)
-    needs: [parse, release-main]
-    if: needs.parse.outputs.channel == 'main'
-    runs-on: ubuntu-latest
-    env:
-      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Download from Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download "${{ needs.parse.outputs.version }}" \
-            --repo ${{ github.repository }} \
-            --pattern "slskdn-main-linux-glibc-x64.zip"
-
-      - name: Prepare Snap project
-        run: |
-          mkdir -p packaging/snap/slskdn_dist
-          unzip slskdn-main-linux-glibc-x64.zip -d packaging/snap/slskdn_dist
-          sed -i "s|source: .*|source: slskdn_dist|" packaging/snap/snapcraft.yaml
-          sed -i "/source-checksum:/d" packaging/snap/snapcraft.yaml
-          sed -i "s|version: .*|version: '${{ needs.parse.outputs.version }}'|" packaging/snap/snapcraft.yaml
-          sed -i "s|grade: devel|grade: stable|" packaging/snap/snapcraft.yaml
-
-      - name: Build snap (LXD)
-        id: snap-build
-        uses: snapcore/action-build@v1
-        with:
-          path: packaging/snap
-
-      - name: Install snapcraft for upload
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y snapd
-          sudo snap install snapcraft --classic
-
-      - name: Publish to Snap Store (stable)
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        run: |
-          set -euo pipefail
-          # action-build outputs path relative to repo (e.g. packaging/snap/slskdn_*.snap); do not prepend packaging/snap again
-          SNAP_PATH="${{ steps.snap-build.outputs.snap }}"
-          MAX_ATTEMPTS=12
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "Upload attempt $attempt/$MAX_ATTEMPTS started at $STARTED_AT: $SNAP_PATH"
-            set +e
-            OUT="$(timeout --signal=TERM 10m snapcraft upload --release=stable "$SNAP_PATH" 2>&1)"
-            CODE=$?
-            set -e
-            echo "$OUT"
-            if [ $CODE -eq 0 ] || echo "$OUT" | grep -q "exact same content has already been uploaded"; then
-              echo "✅ Published to Snap (stable channel)"
-              exit 0
-            fi
-            SLEEP_SECONDS=$((attempt * 30))
-            if [ "$SLEEP_SECONDS" -gt 300 ]; then
-              SLEEP_SECONDS=300
-            fi
-            if [ $CODE -eq 124 ]; then
-              echo "Upload attempt $attempt/$MAX_ATTEMPTS timed out after 10 minutes. Retrying in ${SLEEP_SECONDS}s."
-              sleep "$SLEEP_SECONDS"
-              continue
-            fi
-            if echo "$OUT" | grep -qE "Waiting for previous upload|error while processing|Connection aborted|RemoteDisconnected|closed connection|timed out|binary_sha3_384: Error checking upload uniqueness"; then
-              echo "Retrying in ${SLEEP_SECONDS}s (transient Snap Store error)..."
-              sleep "$SLEEP_SECONDS"
-              continue
-            fi
-            exit $CODE
-          done
-          echo "❌ Snap Store upload failed after $MAX_ATTEMPTS attempts."
-          exit 1
-
-      - name: Skip if no credentials
-        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
-        run: echo "⚠️ SNAPCRAFT_STORE_CREDENTIALS not configured"
 
   homebrew-main:
     name: Update Homebrew Tap (Main)
