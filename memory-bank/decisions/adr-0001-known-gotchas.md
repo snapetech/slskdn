@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z111. Controlled User-Info Offline Responses Must Not Log Exception Objects
+
+**The Bug**: After fixing `/api/v0/users/{username}/info` to return controlled `404`/`503` responses, live Playwright sweeps still filled the journal with `Soulseek.UserOfflineException` stack traces because the offline catch block logged the exception object at `Information`.
+
+**Files Affected**:
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+
+**Wrong**:
+```csharp
+Log.Information(ex, "User {Username} is offline for info", username);
+return NotFound("User is offline");
+```
+
+**Correct**:
+```csharp
+Log.Information("User {Username} is offline for info: {Message}", username, ex.Message);
+return NotFound("User is offline");
+```
+
+**Why This Keeps Happening**: Returning a controlled HTTP status is only half the fix. If expected peer/network exceptions are still passed as the first structured logging argument, Serilog prints the full stack and the live journal still looks broken during normal UI sweeps. Expected offline/timeout peer outcomes should log concise summaries unless the stack is needed for a real unexpected failure.
+
 ### 0z110. QUIC Must Be Explicitly Opted In On Long-Running Linux Hosts
 
 **The Bug**: Live `kspls0` monitoring caught another native `SIGSEGV`/systemd restart in the manual build while QUIC control and QUIC data listeners were enabled by default. The coredump was unsymbolized inside the native runtime, but previous and current crash history correlated with active `libmsquic`/QUIC listener activity, while managed logs did not show an app exception before the dump.
