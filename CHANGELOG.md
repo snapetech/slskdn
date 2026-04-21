@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- User info lookups now return a controlled `503` for expected Soulseek peer connection failures and timeouts instead of bubbling live peer unavailability as HTTP 500s.
+
 ### SongID
 
 - Added a native `SongID` feature in the Search page beside MusicBrainz.

@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Return controlled non-500 responses for unavailable Soulseek user info.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: Controlled Playwright crawling of live user/search links on `kspls0` showed `/api/v0/users/{username}/info` returning HTTP 500 for expected peer connection failures and timeouts. The info endpoint now keeps offline users as 404 but returns a generic 503 for unavailable peer info without stack-noise logging. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Pace auto-replace searches instead of failing whole stuck-download batches on the Soulseek safety limiter.
  - Status: completed (2026-04-21)
  - Priority: P1

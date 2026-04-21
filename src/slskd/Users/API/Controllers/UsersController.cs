@@ -19,6 +19,7 @@ using Microsoft.Extensions.Options;
 
 namespace slskd.Users.API
 {
+    using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.Net;
@@ -270,6 +271,7 @@ namespace slskd.Users.API
         [Authorize(Policy = AuthPolicy.Any)]
         [ProducesResponseType(typeof(Info), 200)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(503)]
         public async Task<IActionResult> Info([FromRoute, Required] string username)
         {
             if (Program.IsRelayAgent)
@@ -293,6 +295,21 @@ namespace slskd.Users.API
                 Log.Information(ex, "User {Username} is offline for info", username);
                 return NotFound("User is offline");
             }
+            catch (SoulseekClientException ex) when (IsExpectedUserInfoFailure(ex))
+            {
+                Log.Information("Unable to connect to user {Username} for info: {Message}", username, ex.Message);
+                return StatusCode(503, "Unable to retrieve user info");
+            }
+            catch (TimeoutException ex)
+            {
+                Log.Information("Timed out retrieving info for user {Username}: {Message}", username, ex.Message);
+                return StatusCode(503, "Unable to retrieve user info");
+            }
+        }
+
+        private static bool IsExpectedUserInfoFailure(SoulseekClientException exception)
+        {
+            return exception.InnerException is ConnectionException or TimeoutException;
         }
 
         /// <summary>

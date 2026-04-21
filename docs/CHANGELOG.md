@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed user info lookups so expected Soulseek peer connection failures and timeouts return a controlled `503` instead of bubbling live peer unavailability as HTTP 500s.
 - Quieted expected remote-offline download failures during restart/re-enqueue: transfers still fail normally, but `UserOfflineException` peer outcomes no longer emit repeated error stack traces.
 - Quieted auto-replace shutdown cancellation during manual deploys so host-stop cancellation no longer logs search error stacks or counts interrupted items as failed replacements.
 - Quieted the known Soulseek disconnect race during service shutdown so handled `Sequence contains no elements` races no longer print stack traces.

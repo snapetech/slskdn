@@ -1,5 +1,6 @@
 namespace slskd.Tests.Unit.Users
 {
+    using System;
     using System.Threading;
     using Microsoft.AspNetCore.Mvc;
     using Moq;
@@ -90,6 +91,76 @@ namespace slskd.Tests.Unit.Users
 
             var notFound = Assert.IsType<NotFoundObjectResult>(result);
             Assert.Equal("User is offline", notFound.Value);
+        }
+
+        [Fact]
+        public async Task Info_WhenPeerConnectionFails_ReturnsServiceUnavailable()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock
+                .Setup(x => x.GetInfoAsync("testuser"))
+                .ThrowsAsync(new SoulseekClientException(
+                    "Failed to retrieve information for user testuser",
+                    new ConnectionException("Failed to establish a direct or indirect message connection")));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser");
+
+            var unavailable = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(503, unavailable.StatusCode);
+            Assert.Equal("Unable to retrieve user info", unavailable.Value);
+        }
+
+        [Fact]
+        public async Task Info_WhenPeerInfoTimesOut_ReturnsServiceUnavailable()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock
+                .Setup(x => x.GetInfoAsync("testuser"))
+                .ThrowsAsync(new TimeoutException("The wait timed out after 5000 milliseconds"));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser");
+
+            var unavailable = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(503, unavailable.StatusCode);
+            Assert.Equal("Unable to retrieve user info", unavailable.Value);
+        }
+
+        [Fact]
+        public async Task Info_WhenWrappedPeerInfoTimesOut_ReturnsServiceUnavailable()
+        {
+            var userServiceMock = new Mock<IUserService>();
+            userServiceMock
+                .Setup(x => x.GetInfoAsync("testuser"))
+                .ThrowsAsync(new SoulseekClientException(
+                    "Failed to retrieve information for user testuser",
+                    new TimeoutException("The wait timed out after 5000 milliseconds")));
+
+            var controller = new UsersController(
+                soulseekClient: Mock.Of<ISoulseekClient>(),
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: userServiceMock.Object,
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Info("testuser");
+
+            var unavailable = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(503, unavailable.StatusCode);
+            Assert.Equal("Unable to retrieve user info", unavailable.Value);
         }
 
         [Fact]

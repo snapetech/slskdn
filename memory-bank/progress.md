@@ -1,3 +1,11 @@
+## 2026-04-21 01:55Z - Converted live user-info peer failures from 500s to controlled 503s
+
+- Continued the requested `kspls0` Playwright sweep and found the concrete backend issue behind the observed HTTP 500s: `/api/v0/users/{username}/info` only caught explicit `UserOfflineException`, so expected Soulseek peer connection failures and info timeouts bubbled through the middleware as unhandled exceptions.
+- Documented the peer-info gotcha in ADR-0001 and committed that docs-only entry immediately as `1699cf7b5`.
+- Updated `UsersController.Info` so offline users still return `404 "User is offline"`, while expected peer connection failures and info timeouts return `503 "Unable to retrieve user info"` with concise information logs and no exception-object stack noise.
+- Added focused controller coverage for direct peer connection failure, direct timeout, and wrapped timeout behavior.
+- Validation so far: focused `UsersControllerTests` passed (`9` tests) with only existing project warnings.
+
 ## 2026-04-21 00:11Z - Paced auto-replace searches after kspls0 safety-budget noise
 
 - Continued live monitoring of the manually deployed `kspls0` build and found a real follow-up bug: auto-replace searched a large stuck-download batch until the Soulseek search safety limiter rejected the request, then logged one stack trace per remaining track and marked the cycle as `128 failed`.

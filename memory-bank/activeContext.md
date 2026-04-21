@@ -1,3 +1,16 @@
+## Update 2026-04-21 01:55:00Z
+
+- Current task: Validate, push, deploy, and retest the `kspls0` user-info 500 fix found during the Playwright sweep.
+- Last activity:
+  - controlled Playwright crawling against `kspls0` found no real HTTP 502 responses, but did find `/api/v0/users/{username}/info` returning HTTP 500 for expected Soulseek peer connection failures and timeouts
+  - documented the peer-info gotcha in ADR-0001 and committed the docs-only entry as `1699cf7b5`
+  - updated `UsersController.Info` so explicit offline users remain 404, while peer connection failures and info timeouts return generic 503 responses without exception-object stack noise
+  - added focused controller coverage for connection failure, direct timeout, and wrapped timeout cases; `UsersControllerTests` passed
+- Next steps:
+  1. Run Release build, lint, diff check, and GitHub target verification.
+  2. Commit and push the code/docs fix.
+  3. Deploy the refreshed manual build to `kspls0`, then rerun focused endpoint/log checks and continue the UI sweep.
+
 ## Update 2026-04-21 00:11:00Z
 
 - Current task: Finish, push, deploy, and monitor the auto-replace search-budget fix found during `kspls0` manual-build soak.
