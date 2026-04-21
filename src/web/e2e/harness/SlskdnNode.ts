@@ -197,8 +197,58 @@ export class SlskdnNode {
     }
   }
 
-  private getBuiltAppBaseDir(repoRoot: string): string {
-    return path.join(repoRoot, 'src', 'slskd', 'bin', 'Release', 'net8.0');
+  private async getTargetFramework(repoRoot: string): Promise<string> {
+    const projectPath = path.join(repoRoot, 'src', 'slskd', 'slskd.csproj');
+    const projectXml = await fs.readFile(projectPath, 'utf8');
+    const match = projectXml.match(
+      /<TargetFramework>([^<]+)<\/TargetFramework>/,
+    );
+
+    if (!match || !match[1]) {
+      throw new Error(`TargetFramework not found in ${projectPath}`);
+    }
+
+    return match[1].trim();
+  }
+
+  private async getBuiltAppBaseDir(repoRoot: string): Promise<string> {
+    const targetFramework = await this.getTargetFramework(repoRoot);
+    const configuredPath = path.join(
+      repoRoot,
+      'src',
+      'slskd',
+      'bin',
+      'Release',
+      targetFramework,
+    );
+
+    try {
+      await fs.access(path.join(configuredPath, 'slskd.dll'));
+      return configuredPath;
+    } catch {
+      // Keep the harness resilient if the project moves to TargetFrameworks or
+      // the build output is restored from cache under a different framework.
+    }
+
+    const releasePath = path.join(repoRoot, 'src', 'slskd', 'bin', 'Release');
+    const entries = await fs
+      .readdir(releasePath, { withFileTypes: true })
+      .catch(() => []);
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !entry.name.startsWith('net')) {
+        continue;
+      }
+
+      const candidate = path.join(releasePath, entry.name);
+      try {
+        await fs.access(path.join(candidate, 'slskd.dll'));
+        return candidate;
+      } catch {
+        // Try the next framework directory.
+      }
+    }
+
+    return configuredPath;
   }
 
   private async syncWebUi(repoRoot: string): Promise<void> {
@@ -221,7 +271,7 @@ export class SlskdnNode {
     const sourceWwwroot = path.join(repoRoot, 'src', 'slskd', 'wwwroot');
     await replaceDirectoryContents(webBuildPath, sourceWwwroot);
 
-    const builtAppBaseDir = this.getBuiltAppBaseDir(repoRoot);
+    const builtAppBaseDir = await this.getBuiltAppBaseDir(repoRoot);
     try {
       await fs.access(builtAppBaseDir);
       await replaceDirectoryContents(
@@ -427,7 +477,7 @@ flags:
 
     // Launch slskdn process
     const projectPath = path.join(repoRoot, 'src', 'slskd', 'slskd.csproj');
-    const builtAppBaseDir = this.getBuiltAppBaseDir(repoRoot);
+    const builtAppBaseDir = await this.getBuiltAppBaseDir(repoRoot);
     const builtDllPath = path.join(builtAppBaseDir, 'slskd.dll');
 
     // Verify project exists

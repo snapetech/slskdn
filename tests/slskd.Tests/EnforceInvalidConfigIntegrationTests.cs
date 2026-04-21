@@ -133,10 +133,11 @@ public class EnforceInvalidConfigIntegrationTests
         {
             Directory.CreateDirectory(tempDir);
             // Use dotnet slskd.dll to avoid dotnet run's host loading the app (which can hold the single-instance mutex).
-            var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Debug", "net8.0", "slskd.dll");
+            var targetFramework = GetTargetFramework(slskdProj);
+            var slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Debug", targetFramework, "slskd.dll");
             if (!File.Exists(slskdDll))
             {
-                slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", "net8.0", "slskd.dll");
+                slskdDll = Path.Combine(repoRoot, "src", "slskd", "bin", "Release", targetFramework, "slskd.dll");
             }
 
             if (!File.Exists(slskdDll))
@@ -215,5 +216,23 @@ public class EnforceInvalidConfigIntegrationTests
             try { if (contentDir is not null && Directory.Exists(contentDir)) Directory.Delete(contentDir, recursive: true); } catch { /* ignore */ }
             try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, recursive: true); } catch { /* ignore */ }
         }
+    }
+
+    private static string GetTargetFramework(string projectPath)
+    {
+        const string OpenTag = "<TargetFramework>";
+        const string CloseTag = "</TargetFramework>";
+
+        var projectXml = File.ReadAllText(projectPath);
+        var start = projectXml.IndexOf(OpenTag, StringComparison.Ordinal);
+        var end = projectXml.IndexOf(CloseTag, StringComparison.Ordinal);
+
+        if (start < 0 || end <= start)
+        {
+            return "net10.0";
+        }
+
+        start += OpenTag.Length;
+        return projectXml[start..end].Trim();
     }
 }
