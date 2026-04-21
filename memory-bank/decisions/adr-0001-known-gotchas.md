@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z100. Auto-Replace Large Batches Must Not Log Routine Per-Track No-Result Searches At Information
+
+**The Bug**: After pacing auto-replace searches correctly, live `kspls0` monitoring showed the same 128-item stuck batch logging routine `Searching for alternatives` and `Found 0 alternative candidates` messages at `Information` for every track. The behavior was no longer unsafe, but the journal still filled with expected no-result progress noise.
+
+**Files Affected**:
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+
+**Wrong**:
+```csharp
+Log.Information("Searching for alternatives: {SearchText}", searchText);
+Log.Information("Found {Count} alternative candidates for: {SearchText}", candidates.Count, searchText);
+```
+
+**Correct**:
+```csharp
+Log.Debug("Searching for alternatives: {SearchText}", searchText);
+if (candidates.Count > 0)
+{
+    Log.Information("Found {Count} alternative candidates for: {SearchText}", candidates.Count, searchText);
+}
+```
+
+**Why This Keeps Happening**: Auto-replace is batch-oriented, so per-track progress that is harmless for one manual request becomes operator noise when a background cycle processes many stuck downloads. Keep routine per-item no-result progress at `Debug`; reserve `Information` for aggregate cycle summaries or actionable/successful candidate findings.
+
 ### 0z99. Generated Publish Directories Must Be Excluded From Web SDK Publish Content
 
 **The Bug**: Creating manual publish output under `src/slskd/dist` and then republishing caused the Web SDK to copy that generated `dist` tree back into the next publish artifact. The artifact looked valid but carried stale nested publish output that should never ship.
