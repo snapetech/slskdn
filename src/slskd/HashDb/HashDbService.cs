@@ -215,7 +215,7 @@ namespace slskd.HashDb
 
                 if (flacCount > 0)
                 {
-                    log.Information("[HashDb] Discovered {Count} FLAC files from search results ({Skipped} too small)", flacCount, skippedCount);
+                    log.Debug("[HashDb] Discovered {Count} FLAC files from search results ({Skipped} too small)", flacCount, skippedCount);
                 }
             }
             catch (Exception ex)

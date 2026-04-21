@@ -36,6 +36,11 @@
  - Priority: P2
  - Notes: Manual deploys can stop the service while auto-replace is pacing or waiting for a search. That caller-token cancellation was caught as a generic search error and counted as failed replacement work. Auto-replace now rethrows caller-token cancellation and the background service stops cleanly without error stacks. The gotcha is documented in ADR-0001.
 
+- [x] **bug**: Demote routine shared search progress during background auto-replace batches.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: The fixed `kspls0` build reached a 142-item auto-replace cycle without errors, but each background search still produced `Information` progress from shared search infrastructure (`MeshSearch` no-peer fallback, search completion counts, and passive HashDb discovery). Those routine per-search progress logs are now `Debug`; aggregate auto-replace cycle logs remain visible. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1

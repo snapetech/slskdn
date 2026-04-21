@@ -24,6 +24,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 - Quieted expected remote-offline download failures during restart/re-enqueue: transfers still fail normally, but `UserOfflineException` peer outcomes no longer emit repeated error stack traces.
 - Quieted auto-replace shutdown cancellation during manual deploys so host-stop cancellation no longer logs search error stacks or counts interrupted items as failed replacements.
+- Reduced background search-batch journal noise by demoting routine per-search completion, mesh-search no-peer/fanout, and passive HashDb discovery progress to debug.
 - Reduced auto-replace large-batch journal noise by demoting routine per-track search and no-result progress to debug while keeping aggregate cycle and successful-candidate logs visible.
 - Excluded generated `src/slskd/dist` publish output from Web SDK publish content so manual artifacts do not recursively ship stale nested build output.
 - Paced auto-replace alternative searches against the configured Soulseek search safety budget and stopped the cycle after a budget rejection, so one stuck-download batch defers cleanly instead of emitting per-track rate-limit stack traces.

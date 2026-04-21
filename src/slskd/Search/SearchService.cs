@@ -504,7 +504,7 @@ namespace slskd.Search
                         await SearchHub.BroadcastUpdateAsync(search with { Responses = [] });
 
                         Log.Debug("Search for '{Query}' finalized (id: {Id}): {Search}", query, id, search with { Responses = [] });
-                        Log.Information("Search for '{Query}' completed with {Responses} responses", query, search.ResponseCount);
+                        Log.Debug("Search for '{Query}' completed with {Responses} responses", query, search.ResponseCount);
                     }
                     catch (Exception ex)
                     {
