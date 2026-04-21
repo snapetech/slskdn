@@ -1,6 +1,6 @@
-## Update 2026-04-21 06:13:00Z
+## Update 2026-04-21 06:22:00Z
 
-- Current task: Final `kspls0` log-polish pass on installed `0.24.5-slskdn.170`.
+- Current task: None. The `kspls0` log-polish findings are fixed in `main` and pushed; installed `0.24.5-slskdn.170` is still running until the next requested release/package update.
 - Last activity:
   - confirmed the live yay package and API still report `0.24.5-slskdn.170`, systemd is `active/running`, `NRestarts=0`, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and overlay TCP is listening on `50305`
   - sampled current-process logs and coredumps; no fresh fatal/error/exception/502/coredump/bind/protocol noise appeared
@@ -8,10 +8,12 @@
   - documented the logging gotcha in ADR-0001 and committed it as `0018e6b90`
   - changed `MeshOverlayConnector.RecordFailure` so per-endpoint cooldown streak detail logs at debug while the aggregate summaries remain information-level
   - validation passed: focused DHT/rendezvous unit slice (`105` tests), Release build, `bash ./bin/lint`, changelog validation, and `git diff --check`
+  - pushed the fix as `3f901d944`
+  - final API check against the real web listener on `5030` returned quickly for `/api/v0/application`, `/api/v0/dht/status`, and `/api/v0/overlay/stats`; earlier timeouts were from probing the Soulseek listener on `50300`
+  - installed `170` still logs the duplicate descriptor publish and per-endpoint cooldown detail because those fixes landed after the package was built
 - Next steps:
-  1. Commit and push the cooldown-noise cleanup.
-  2. Take one final live `kspls0` log sample after push.
-  3. Keep `kspls0` on installed build `170`; do not create another build tag unless explicitly requested.
+  1. Keep `kspls0` on installed build `170`; do not create another build tag unless explicitly requested.
+  2. Validate the duplicate descriptor and cooldown log cleanup after the next release/package install.
 
 ## Update 2026-04-21 05:59:00Z
 

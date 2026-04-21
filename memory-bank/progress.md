@@ -6718,6 +6718,7 @@ Code quality improvements were completed as part of Option A:
 - Took another current-process `kspls0` log pass on installed `0.24.5-slskdn.170`: service remained active/running with zero restarts, Soulseek logged in, shares ready, DHT running, overlay TCP listening, no new coredumps, and no fresh fatal/error/exception/502/bind/protocol noise.
 - Found and fixed one remaining log-polish issue: per-endpoint overlay cooldown streaks were logging at information level for normal remote endpoint churn even though the aggregate DHT/overlay summaries already carry the operator signal. Documented the gotcha in ADR-0001, demoted the per-endpoint detail to debug, and kept aggregate diagnostics visible.
 - Validation passed: focused DHT/rendezvous unit slice (`105` tests), Release build, `bash ./bin/lint`, changelog validation, and `git diff --check`.
+- Pushed the cleanup as `3f901d944`. A final live API check against web port `5030` returned quickly for application, DHT, and overlay stats; the installed `170` process still shows the duplicate descriptor publish and endpoint cooldown info logs because those fixes were made after that package build and need the next release/package install to take effect.
 
 - Validation: focused `PeerDescriptorRefreshServiceTests` passed, full unit suite passed (`3553` tests), Release build passed, `bash ./bin/lint` passed, and `git diff --check` passed.
 - Pushed the duplicate descriptor cleanup as `a1f105521`; the resulting CodeQL and dependency-submission checks passed.
