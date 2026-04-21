@@ -13,9 +13,10 @@
   - found the next live cycle still produced routine shared search progress at `Information`, documented the gotcha as `f4191def3`, and moved per-search completion, mesh-search fallback/fanout, and passive HashDb discovery progress to `Debug`
   - confirmed the auto-replace shutdown path was fixed, then found the remaining handled Soulseek disconnect race still emitted a stack because the catch logged the exception object; documented the gotcha as `6dd4690e7` and changed it to a debug summary
   - found a current-process fatal unobserved task from a Soulseek.NET TCP double-disconnect read-loop race, documented the gotcha as `70b26eff5`, and added it to the expected network exception classifier
+  - started the requested Playwright UI sweep and found `/system/network` correctly gates public DHT exposure behind a consent modal, but its inline code copy rendered `dht.lan_only=truein`; documented the gotcha as `bff3fa0fd` and fixed the spacing
 - Next steps:
-  1. Validate, commit, push, and redeploy the Soulseek TCP double-disconnect classifier follow-up to `kspls0`.
-  2. Continue watching the current manual build for fresh current-process noise, then run the requested Playwright UI pass.
+  1. Validate, commit, push, and redeploy the DHT exposure modal copy fix to `kspls0`.
+  2. Continue the controlled Playwright UI pass against the updated manual build and document real endpoint/UI issues separately from route-change request aborts.
 
 ## Update 2026-04-20 23:55:00Z
 

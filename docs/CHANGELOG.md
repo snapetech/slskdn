@@ -26,6 +26,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Quieted auto-replace shutdown cancellation during manual deploys so host-stop cancellation no longer logs search error stacks or counts interrupted items as failed replacements.
 - Quieted the known Soulseek disconnect race during service shutdown so handled `Sequence contains no elements` races no longer print stack traces.
 - Classified Soulseek.NET TCP double-disconnect read-loop races as expected network churn so they no longer log as fatal unobserved task exceptions.
+- Fixed the `/system/network` DHT exposure consent copy so the inline `dht.lan_only=true` setting no longer runs into the following word.
 - Reduced background search-batch journal noise by demoting routine per-search completion, mesh-search no-peer/fanout, and passive HashDb discovery progress to debug.
 - Reduced auto-replace large-batch journal noise by demoting routine per-track search and no-result progress to debug while keeping aggregate cycle and successful-candidate logs visible.
 - Excluded generated `src/slskd/dist` publish output from Web SDK publish content so manual artifacts do not recursively ship stale nested build output.

@@ -51,6 +51,11 @@
  - Priority: P1
  - Notes: Live `kspls0` monitoring caught a current-process fatal unobserved task from `Soulseek.Network.Tcp.Connection.Disconnect`: `An attempt was made to transition a task to a final state when it had already completed.` The global expected-network classifier now recognizes that Soulseek.NET read-loop teardown race and has focused unit coverage. The gotcha is documented in ADR-0001.
 
+- [x] **bug**: Preserve spacing around inline code in the DHT exposure consent modal.
+ - Status: completed (2026-04-21)
+ - Priority: P3
+ - Notes: Playwright inspection of `/system/network` showed the public DHT exposure consent copy rendering `dht.lan_only=truein` because JSX did not include explicit whitespace after the inline `<code>` element. The modal copy now renders with a space, and the gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1

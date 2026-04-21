@@ -242,7 +242,7 @@ const Network = ({ theme }) => {
             intentionally operating with public discovery by default.
           </p>
           <p>
-            If you prefer private-only discovery, set <code>dht.lan_only=true</code>
+            If you prefer private-only discovery, set <code>dht.lan_only=true</code>{' '}
             in the configuration and restart the service.
           </p>
         </Modal.Content>
