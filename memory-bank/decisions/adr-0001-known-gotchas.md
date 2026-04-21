@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z118. Soulseek Timer Reset Classifiers Must Match Real Stack Signatures
+
+**The Bug**: The `0.24.5-slskdn.169` `kspls0` package logged a current-process fatal unobserved task for `NullReferenceException` in `Soulseek.Extensions.Reset(Timer timer)` during an overlay/DHT write path. The existing expected-network classifier had a unit test for `Soulseek.Extensions.Reset(Timer)`, but the live stack included the parameter name (`Timer timer`), so the string match missed the same known Soulseek.NET timer reset race.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal)
+```
+
+**Correct**:
+```csharp
+details.Contains("Soulseek.Extensions.Reset(", StringComparison.Ordinal)
+```
+
+**Why This Keeps Happening**: Runtime stack traces can include parameter names even when synthetic test stack traces do not. Classifiers for expected third-party network teardown races should match the stable method and owning type, not the exact rendered signature.
+
 ### 0z117. Normal Host Shutdown Must Not Claim App Run Returning Is Abnormal
 
 **The Bug**: The `0.24.5-slskdn.169` package restart on `kspls0` completed cleanly, but the journal still printed `[Program] app.Run() returned (this should not happen normally)` and a duplicate stderr `ProcessExit event fired during expected shutdown`. `WebApplication.Run()` returns during normal host shutdown, so this made a healthy systemd restart look suspicious.
