@@ -7,6 +7,7 @@
 - Documented the new `overlay.enable_quic` and `overlay_data.enable` example config keys.
 - Reduced live journal noise by demoting verbose startup `[DI]` tracepoints, SPA fallback route serving, and per-request MediaCore CSRF processing logs to debug.
 - The post-deploy Playwright pass then exposed controlled offline user-info `404`s still logging `UserOfflineException` stack traces; documented the gotcha in ADR-0001 as `cfba2687f` and changed the offline info catch to log a concise summary.
+- The next manual deploy exposed a shutdown-cancelled background search logging as `Error`; documented the gotcha as `783a01302` and changed search cancellation classification to treat app shutdown cancellation as expected.
 - Validation so far: focused `ProgramPathNormalizationTests` passed (`28` tests), full unit suite passed (`3546` tests), and Release build passed with only existing generated MessagePack/test analyzer warnings.
 
 ## 2026-04-21 01:55Z - Converted live user-info peer failures from 500s to controlled 503s

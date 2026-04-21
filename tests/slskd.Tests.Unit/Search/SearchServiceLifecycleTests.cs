@@ -54,6 +54,46 @@ public class SearchServiceLifecycleTests
         Assert.Throws<ObjectDisposedException>(() => _ = secondCts.Token.WaitHandle);
     }
 
+    [Fact]
+    public void IsExpectedSearchCancellation_WhenSearchTokenCancelled_ReturnsTrue()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var result = SearchService.IsExpectedSearchCancellation(
+            new OperationCanceledException(),
+            cts.Token,
+            applicationIsShuttingDown: false);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsExpectedSearchCancellation_WhenApplicationShuttingDown_ReturnsTrue()
+    {
+        using var cts = new CancellationTokenSource();
+
+        var result = SearchService.IsExpectedSearchCancellation(
+            new OperationCanceledException(),
+            cts.Token,
+            applicationIsShuttingDown: true);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsExpectedSearchCancellation_WhenNotCancelled_ReturnsFalse()
+    {
+        using var cts = new CancellationTokenSource();
+
+        var result = SearchService.IsExpectedSearchCancellation(
+            new OperationCanceledException(),
+            cts.Token,
+            applicationIsShuttingDown: false);
+
+        Assert.False(result);
+    }
+
     private static SearchService CreateService()
     {
         return new SearchService(

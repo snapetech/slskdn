@@ -427,10 +427,11 @@ namespace slskd.Search
                             Log.Debug(ex, "Search for '{Query}' threw {Exception}: {Message} (id: {Id})", query, ex.GetType(), ex.Message, id);
 
                             // OperationCanceledException might be thrown somewhere deeper, and we don't want that to count.
-                            // a search that was actually cancelled by the user will meet the criteria below.
-                            if (ex is OperationCanceledException && cancellationTokenSource.Token.IsCancellationRequested)
+                            // User-cancelled searches trip the search token; host shutdown trips the app lifecycle flag.
+                            if (IsExpectedSearchCancellation(ex, cancellationTokenSource.Token, Application.IsShuttingDown))
                             {
-                                Log.Information("Search for '{Query}' was cancelled", query);
+                                var reason = Application.IsShuttingDown ? " during shutdown" : string.Empty;
+                                Log.Information("Search for '{Query}' was cancelled{Reason}", query, reason);
                                 search.State = SearchStates.Completed | SearchStates.Cancelled;
                             }
                             else
@@ -543,6 +544,12 @@ namespace slskd.Search
 
                 throw;
             }
+        }
+
+        internal static bool IsExpectedSearchCancellation(Exception exception, CancellationToken searchCancellationToken, bool applicationIsShuttingDown)
+        {
+            return exception is OperationCanceledException
+                && (searchCancellationToken.IsCancellationRequested || applicationIsShuttingDown);
         }
 
         /// <summary>
