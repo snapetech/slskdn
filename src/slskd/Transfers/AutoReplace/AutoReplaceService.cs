@@ -471,6 +471,10 @@ namespace slskd.Transfers.AutoReplace
                 Log.Warning("Search safety budget exhausted while finding alternatives for: {SearchText}. Deferring remaining auto-replace work.", searchText);
                 return (candidates, SearchBudgetExceeded: true);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Error searching for alternatives: {Message}", ex.Message);
@@ -520,6 +524,10 @@ namespace slskd.Transfers.AutoReplace
                         CleanTrackTitle(request.NewFilename));
                     return false;
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -636,6 +644,10 @@ namespace slskd.Transfers.AutoReplace
                         detail.Error = "Failed to enqueue replacement";
                         result.Failed++;
                     }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {

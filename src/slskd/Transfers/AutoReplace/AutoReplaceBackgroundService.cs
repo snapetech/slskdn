@@ -122,23 +122,33 @@ namespace slskd.Transfers.AutoReplace
 
             Log.Information("Auto-replace background service started (enabled: {Enabled})", IsEnabled);
 
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                var intervalSeconds = OptionsMonitor.CurrentValue.AutoReplace?.IntervalSeconds ?? 300;
-
-                try
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    if (IsEnabled && Client.State.HasFlag(SoulseekClientStates.Connected))
+                    var intervalSeconds = OptionsMonitor.CurrentValue.AutoReplace?.IntervalSeconds ?? 300;
+
+                    try
                     {
-                        await ProcessStuckDownloadsAsync(stoppingToken);
+                        if (IsEnabled && Client.State.HasFlag(SoulseekClientStates.Connected))
+                        {
+                            await ProcessStuckDownloadsAsync(stoppingToken);
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Error processing auto-replace: {Message}", ex.Message);
-                }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Error processing auto-replace: {Message}", ex.Message);
+                    }
 
-                await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), stoppingToken);
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
             }
 
             Log.Information("Auto-replace background service stopped");

@@ -31,6 +31,11 @@
  - Priority: P2
  - Notes: Fresh `kspls0` restart validation re-enqueued downloads from offline user `icetre` and emitted repeated `UserOfflineException` / `TransferException` stack traces. These are expected remote peer outcomes, so download and observer paths now log warning summaries without stacks while still failing the transfer records. The gotcha is documented in ADR-0001.
 
+- [x] **bug**: Treat auto-replace shutdown cancellation as normal hosted-service stop flow.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: Manual deploys can stop the service while auto-replace is pacing or waiting for a search. That caller-token cancellation was caught as a generic search error and counted as failed replacement work. Auto-replace now rethrows caller-token cancellation and the background service stops cleanly without error stacks. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1

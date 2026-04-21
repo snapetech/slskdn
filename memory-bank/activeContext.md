@@ -9,9 +9,10 @@
   - found generated `src/slskd/dist` output being included in the next publish artifact, documented it in ADR-0001 as `fe0ab5ea9`, and excluded `dist/**` from the app project's default items
   - confirmed the live paced cycle no longer hits the search limiter, then documented and fixed routine per-track no-result log noise by moving it to `Debug`
   - found restart/re-enqueue stack traces for expected remote-offline download failures, documented the gotcha as `d3bfa41cb`, and changed those failures to warning summaries without masking transfer failure state
+  - found deploy-time auto-replace shutdown cancellation being logged as search errors from the previous PID, documented the gotcha as `5a10e6cdc`, and changed caller-token cancellation to stop the hosted service cleanly
 - Next steps:
-  1. Commit and push the auto-replace pacing fix to `snapetech/slskdn`.
-  2. Publish/deploy a new manual build to `kspls0` without creating a tag, then continue watching for fresh current-process noise.
+  1. Validate, commit, push, and redeploy the auto-replace shutdown cancellation follow-up to `kspls0`.
+  2. Continue watching the current manual build for fresh current-process noise.
 
 ## Update 2026-04-20 23:55:00Z
 
