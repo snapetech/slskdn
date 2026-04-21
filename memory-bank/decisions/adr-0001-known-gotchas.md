@@ -52,6 +52,48 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z123. LAN Discovery Must Never Advertise A Blank Display Name
+
+**The Bug**: Live `kspls0` startup logs for `0.24.5-slskdn.172` showed `[LanDiscovery] Started advertising as  (...)` because the persisted peer profile can contain a blank `DisplayName`. LAN discovery then publishes and logs the blank value instead of a useful operator-visible fallback.
+
+**Files Affected**:
+- `src/slskd/Identity/LanDiscoveryService.cs`
+- `src/slskd/Identity/ProfileService.cs`
+
+**Wrong**:
+```csharp
+["displayName"] = profile.DisplayName,
+await _advertiser.StartAsync(profile.DisplayName, ServiceType, port, properties, ct);
+```
+
+**Correct**:
+```csharp
+var displayName = string.IsNullOrWhiteSpace(profile.DisplayName) ? friendCode : profile.DisplayName.Trim();
+["displayName"] = displayName,
+await _advertiser.StartAsync(displayName, ServiceType, port, properties, ct);
+```
+
+**Why This Keeps Happening**: Profiles are persisted and may predate newer assumptions about required fields. Any value used for mDNS/public discovery should be normalized at the boundary and should have a stable fallback, even if API update endpoints validate non-empty display names.
+
+### 0z122. Temporary Config Probes Must Not Stay At Information
+
+**The Bug**: Live `kspls0` startup logs for `0.24.5-slskdn.172` still printed raw security binding probes such as `After binding OptionsAtStartup.Security.Enabled...` and `Raw config sections...` at `Information`. These were temporary diagnostics for config hardening but became permanent startup noise.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+Log.Information("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}", ...);
+```
+
+**Correct**:
+```csharp
+Log.Debug("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}", ...);
+```
+
+**Why This Keeps Happening**: Startup diagnostics are useful while debugging configuration binding, but once the issue is resolved they should either be removed or moved below `Information`. Operator-visible startup logs should report outcomes, not internal binding probes.
+
 ### 0z121. Soulseek Read Timeout Inner Exceptions Must Match The Expected Network Classifier
 
 **The Bug**: Live `kspls0` logs on the installed `0.24.5-slskdn.170` process emitted fake `[FATAL] Unobserved task exception` entries for routine Soulseek read-loop timeout churn. The flattened exception chain included `Soulseek.ConnectionReadException: Failed to read 4 bytes...`, an inner `IOException: Unable to read data from the transport connection: Connection timed out`, and an inner `SocketException (110): Connection timed out` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`.
