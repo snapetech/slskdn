@@ -6731,6 +6731,12 @@ Code quality improvements were completed as part of Option A:
 - Pushed the duplicate descriptor cleanup as `a1f105521`; the resulting CodeQL and dependency-submission checks passed.
 - Removed Snap publishing from release automation: `build-on-tag.yml` no longer has dev/stable Snap jobs, the manual dev helper workflow is Docker-only, and release metadata scripts/validators no longer update or require Snap manifest freshness. Validation passed with YAML parsing for touched workflows, packaging metadata validation, changelog validation, and `git diff --check`.
 
+## 2026-04-21 07:08:21Z
+
+- Validated the live `kspls0` `0.24.5-slskdn.172` AUR package after restart: package, binary, API, service, DHT, overlay, and mesh stats are all on 172 with no fresh fatal/error/exception/502/coredump/protocol noise.
+- Fixed the only actionable startup polish from the journal: raw config binding probes are debug-only, persisted blank peer display names migrate to a trimmed username/`Unknown` fallback, and LAN discovery advertises/logs a non-empty display name.
+- Validation passed: focused identity unit tests (`145` tests), Release build, and `bash ./bin/lint`.
+
 ## 2026-04-20 02:30:00Z
 
 - Traced the failed tag build `build-main-0.24.5-slskdn.160` to the `Release Gate` integration smoke compile step, not the runtime smoke tests. CI failed with `CS0535` because `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still had a pre-shutdown `StubDownloadService` that did not implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.

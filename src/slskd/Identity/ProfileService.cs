@@ -123,6 +123,13 @@ public sealed class ProfileService : IProfileService
                         await SaveMyProfileAsync(profile, ct).ConfigureAwait(false);
                     }
 
+                    if (string.IsNullOrWhiteSpace(profile.DisplayName))
+                    {
+                        profile.DisplayName = GetDefaultDisplayName();
+                        profile = SignProfile(profile);
+                        await SaveMyProfileAsync(profile, ct).ConfigureAwait(false);
+                    }
+
                     lock (_cacheLock) { _cachedMyProfile = profile; }
                     return profile;
                 }
@@ -164,7 +171,7 @@ public sealed class ProfileService : IProfileService
         {
             PeerId = peerId,
             PublicKey = Convert.ToBase64String(pub),
-            DisplayName = _options.CurrentValue.Soulseek.Username ?? "Unknown",
+            DisplayName = GetDefaultDisplayName(),
             Capabilities = 0,
             Endpoints = endpoints,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -173,6 +180,12 @@ public sealed class ProfileService : IProfileService
         profile2 = SignProfile(profile2);
         await SaveMyProfileAsync(profile2, ct).ConfigureAwait(false);
         return profile2;
+    }
+
+    private string GetDefaultDisplayName()
+    {
+        var username = _options.CurrentValue.Soulseek.Username;
+        return string.IsNullOrWhiteSpace(username) ? "Unknown" : username.Trim();
     }
 
     public async Task<PeerProfile> UpdateMyProfileAsync(string displayName, string? avatar, int capabilities, List<PeerEndpoint> endpoints, CancellationToken ct = default)

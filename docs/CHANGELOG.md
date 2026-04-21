@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Cleaned up startup polish found during the `kspls0` 172 package soak: temporary raw security config probes now log only at debug, persisted peer profiles with blank display names are migrated to a usable fallback, and LAN discovery advertises a non-empty trimmed display name.
 - Classified Soulseek.NET read-loop timeout inner exception chains as expected peer-network churn so `ConnectionReadException` plus `IOException`/`SocketException` timeout stacks no longer log as fake fatal unobserved task exceptions.
 - Demoted per-endpoint DHT overlay cooldown streak logs to debug so normal remote endpoint churn stays visible through aggregate DHT/overlay summaries and API stats without repeating one line per degraded endpoint at information level.
 - Removed Snap publishing from release workflows so dev/stable releases no longer build or upload Snap packages, wait on Snap Store publication, or refresh Snap metadata as part of release metadata commits.

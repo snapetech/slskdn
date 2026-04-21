@@ -60,10 +60,11 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
 
             var port = (ushort)webOpts.Port;
             var friendCode = _profile.GetFriendCode(profile.PeerId);
+            var displayName = ResolveAdvertisedDisplayName(profile, friendCode);
             var properties = new Dictionary<string, string>
             {
                 ["peerCode"] = friendCode,
-                ["displayName"] = profile.DisplayName,
+                ["displayName"] = displayName,
                 ["peerId"] = profile.PeerId,
                 ["apiPort"] = webOpts.Port.ToString(),
                 ["capabilities"] = profile.Capabilities.ToString()
@@ -71,10 +72,10 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
 
             var advertiserLogger = _loggerFactory.CreateLogger<MdnsAdvertiser>();
             _advertiser = new MdnsAdvertiser(advertiserLogger);
-            await _advertiser.StartAsync(profile.DisplayName, ServiceType, port, properties, ct).ConfigureAwait(false);
+            await _advertiser.StartAsync(displayName, ServiceType, port, properties, ct).ConfigureAwait(false);
 
             _advertising = true;
-            _log.LogInformation("[LanDiscovery] Started advertising as {DisplayName} ({FriendCode}) on port {Port}", profile.DisplayName, friendCode, port);
+            _log.LogInformation("[LanDiscovery] Started advertising as {DisplayName} ({FriendCode}) on port {Port}", displayName, friendCode, port);
         }
         catch (Exception ex)
         {
@@ -83,6 +84,13 @@ public sealed class LanDiscoveryService : ILanDiscoveryService, IDisposable
             _advertiser = null;
             throw;
         }
+    }
+
+    internal static string ResolveAdvertisedDisplayName(PeerProfile profile, string friendCode)
+    {
+        return string.IsNullOrWhiteSpace(profile.DisplayName)
+            ? friendCode
+            : profile.DisplayName.Trim();
     }
 
     public async Task StopAdvertisingAsync()

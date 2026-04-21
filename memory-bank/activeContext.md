@@ -540,6 +540,17 @@ dotnet test
   1. Push the packaging/workflow fix and cut a new stable build so Launchpad retries with the corrected PPA path.
   2. Watch the next Jammy build specifically; if it still fails, the next problem will be in the PPA source-package assembly or Launchpad environment rather than this runtime-path drift.
 
+## Update 2026-04-21 07:08:21Z
+
+- Current task: None. The `kspls0` 172 post-install log pass is healthy and the remaining startup polish fixes are implemented locally.
+- Last activity:
+  - confirmed `kspls0` is running `slskdn-bin 0.24.5.slskdn.172-1` from `/usr/lib/slskd/releases/0.24.5.slskdn.172`, Soulseek is `Connected, LoggedIn`, DHT is ready, overlay TCP is listening, mesh counters are clean, and fresh logs/coredumps show no fatal/error/exception/502/bind/protocol noise
+  - fixed the two actionable startup-polish issues from the fresh journal: temporary raw security config probes now log at debug, and LAN discovery/profile loading now normalize blank display names instead of advertising/logging an empty service name
+  - documented both gotchas first in ADR-0001 and validated the fix with focused identity tests, Release build, and `./bin/lint`
+- Next steps:
+  1. Push the startup-polish commits.
+  2. Cut another tag only if you want these polish fixes in the next package build.
+
 ## Update 2026-04-18 11:20:00Z
 
 - Current task: None. The latest issue `#209` root-cause follow-up is implemented locally and validated.

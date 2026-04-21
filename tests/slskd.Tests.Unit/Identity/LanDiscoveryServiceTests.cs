@@ -151,4 +151,24 @@ public class LanDiscoveryServiceTests : IDisposable
 
         Assert.Same(peer, discovered);
     }
+
+    [Fact]
+    public void ResolveAdvertisedDisplayName_UsesFriendCode_WhenProfileDisplayNameIsBlank()
+    {
+        var profile = new PeerProfile { DisplayName = "   " };
+
+        var displayName = LanDiscoveryService.ResolveAdvertisedDisplayName(profile, "ABCD-EFGH");
+
+        Assert.Equal("ABCD-EFGH", displayName);
+    }
+
+    [Fact]
+    public void ResolveAdvertisedDisplayName_TrimsProfileDisplayName()
+    {
+        var profile = new PeerProfile { DisplayName = "  Nearby Peer  " };
+
+        var displayName = LanDiscoveryService.ResolveAdvertisedDisplayName(profile, "ABCD-EFGH");
+
+        Assert.Equal("Nearby Peer", displayName);
+    }
 }

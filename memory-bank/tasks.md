@@ -1181,3 +1181,7 @@
 - [x] Validate `kspls0` yay package `0.24.5-slskdn.171` and fix Soulseek timeout fake-fatal classifier
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package and binary are `171`; restarted the service because systemd was still running the previous `170` PID after package installation. The real `171` process reports the correct version/path, Soulseek is logged in, shares are ready, API is responsive, and the duplicate MeshDHT descriptor publish is gone. A pre-restart fake fatal from Soulseek.NET read-loop timeout churn exposed a classifier gap; `Connection timed out` and `Unable to read data from the transport connection` inner exception messages are now treated as expected Soulseek network churn with focused coverage.
+
+- [x] Validate `kspls0` yay package `0.24.5-slskdn.172` and clean startup polish
+  - Status: completed (2026-04-21)
+  - Notes: Confirmed the installed package/API are `172`, service is active with zero restarts, Soulseek is logged in, DHT is ready, overlay TCP is listening, mesh counters are clean, and fresh logs/coredumps show no fatal/error/exception/502/bind/protocol issues. Fixed remaining startup polish by demoting temporary raw config probes to debug and normalizing blank identity display names before profile persistence and LAN discovery advertisement.

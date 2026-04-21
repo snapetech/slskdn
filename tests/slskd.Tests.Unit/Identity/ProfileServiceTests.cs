@@ -279,6 +279,35 @@ public class ProfileServiceTests : IDisposable
         Assert.Empty(onDisk!.Endpoints);
     }
 
+    [Fact]
+    public async Task GetMyProfile_MigratesBlankDisplayName()
+    {
+        var profileFile = GetProfileFilePath();
+        var keyFile = Path.ChangeExtension(profileFile, ".key");
+        try { if (File.Exists(profileFile)) File.Delete(profileFile); } catch { }
+        try { if (File.Exists(keyFile)) File.Delete(keyFile); } catch { }
+
+        var bootstrap = CreateService();
+        var seed = await bootstrap.GetMyProfileAsync(CancellationToken.None);
+        seed.DisplayName = "   ";
+        var legacy = bootstrap.SignProfile(seed);
+        await System.IO.File.WriteAllTextAsync(
+            profileFile,
+            System.Text.Json.JsonSerializer.Serialize(legacy, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
+            CancellationToken.None);
+
+        var svc = CreateService();
+        var loaded = await svc.GetMyProfileAsync(CancellationToken.None);
+
+        Assert.Equal("testuser", loaded.DisplayName);
+        Assert.True(svc.VerifyProfile(loaded));
+
+        var onDiskJson = await System.IO.File.ReadAllTextAsync(profileFile, CancellationToken.None);
+        var onDisk = System.Text.Json.JsonSerializer.Deserialize<PeerProfile>(onDiskJson);
+        Assert.NotNull(onDisk);
+        Assert.Equal("testuser", onDisk!.DisplayName);
+    }
+
     private static void SetAppDirectory(string? value)
     {
         const string propertyName = nameof(Program.AppDirectory);

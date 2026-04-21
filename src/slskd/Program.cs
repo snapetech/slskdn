@@ -590,25 +590,23 @@ namespace slskd
                 Configuration.GetSection(AppName)
                     .Bind(OptionsAtStartup, (o) => { o.BindNonPublicProperties = true; });
 
-                // Log security configuration after binding
-                Log.Information("[Config] After binding OptionsAtStartup.Security.Enabled = {Enabled}, Profile = {Profile}",
+                Log.Debug("[Config] After binding OptionsAtStartup.Security.Enabled = {Enabled}, Profile = {Profile}",
                     OptionsAtStartup.Security?.Enabled ?? false,
                     OptionsAtStartup.Security?.Profile.ToString() ?? "null");
 
-                // Also check raw configuration sections
                 var securitySection = Configuration.GetSection("security");
                 var slskdSecuritySection = Configuration.GetSection("slskd:security");
-                Log.Information("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}",
+                Log.Debug("[Config] Raw config sections - security.Exists={SecurityExists}, slskd:security.Exists={SlskdSecurityExists}",
                     securitySection.Exists(),
                     slskdSecuritySection.Exists());
                 if (securitySection.Exists())
                 {
-                    Log.Information("[Config] Raw security section enabled value: {Enabled}", securitySection["enabled"]);
+                    Log.Debug("[Config] Raw security section enabled value: {Enabled}", securitySection["enabled"]);
                 }
 
                 if (slskdSecuritySection.Exists())
                 {
-                    Log.Information("[Config] Raw slskd:security section enabled value: {Enabled}", slskdSecuritySection["enabled"]);
+                    Log.Debug("[Config] Raw slskd:security section enabled value: {Enabled}", slskdSecuritySection["enabled"]);
                 }
 
                 if (!OptionsAtStartup.TryValidate(out var result))
