@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z104. Expected Soulseek Shutdown Disconnect Races Must Not Log Exception Objects
+
+**The Bug**: Manual deploy shutdowns hit the known Soulseek.NET disconnect race (`InvalidOperationException: Sequence contains no elements`) and the app caught it, but still passed the exception object to Serilog. The behavior was handled, yet the journal still printed a full stack trace during every affected shutdown.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+catch (InvalidOperationException ex) when (ShuttingDown && IsDisconnectRace(ex))
+{
+    Log.Warning(ex, "Ignoring Soulseek disconnect race during shutdown");
+}
+```
+
+**Correct**:
+```csharp
+catch (InvalidOperationException ex) when (ShuttingDown && IsDisconnectRace(ex))
+{
+    Log.Debug("Ignoring Soulseek disconnect race during shutdown: {Message}", ex.Message);
+}
+```
+
+**Why This Keeps Happening**: Catch filters can correctly classify expected shutdown races, but passing the exception object to `Warning` or `Error` still produces stack noise. For expected shutdown/control-flow races, log a concise message without the exception object unless there is actionable diagnostic value.
+
 ### 0z103. Background Search Batches Must Not Emit Per-Search Success/Fallback Logs At Information
 
 **The Bug**: After auto-replace search pacing was fixed, a 142-item `kspls0` cycle still filled the journal with routine `Information` logs from shared search infrastructure: mesh fallback with no peers, search completion counts, and passive HashDb discovery counts. The cycle was healthy, but normal per-search progress hid actionable runtime signals.
