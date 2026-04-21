@@ -284,6 +284,20 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForSoulseekTcpDoubleDisconnectRace()
+    {
+        var inner = new InvalidOperationException("An attempt was made to transition a task to a final state when it had already completed.");
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            inner,
+            "   at Soulseek.Network.Tcp.Connection.Disconnect(String message, Exception exception)\n" +
+            "   at Soulseek.Network.Tcp.Connection.ReadInternalAsync(Int64 length, Stream outputStream, Func`3 governor, Action`3 reporter, CancellationToken cancellationToken)\n" +
+            "   at Soulseek.Network.MessageConnection.ReadContinuouslyAsync()");
+        var exception = new AggregateException(inner);
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
     public void IsStaleAntiforgeryTokenException_ReturnsTrue_ForKeyRingMismatch()
     {
         var exception = new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring."));

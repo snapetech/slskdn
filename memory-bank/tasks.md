@@ -46,6 +46,11 @@
  - Priority: P2
  - Notes: The app already caught Soulseek.NET's shutdown-time `Sequence contains no elements` disconnect race, but passed the exception object to Serilog and still printed a stack in the journal. The handled race is now logged as a debug summary without the exception object. The gotcha is documented in ADR-0001.
 
+- [x] **bug**: Classify Soulseek TCP double-disconnect read-loop races as expected network churn.
+ - Status: completed (2026-04-21)
+ - Priority: P1
+ - Notes: Live `kspls0` monitoring caught a current-process fatal unobserved task from `Soulseek.Network.Tcp.Connection.Disconnect`: `An attempt was made to transition a task to a final state when it had already completed.` The global expected-network classifier now recognizes that Soulseek.NET read-loop teardown race and has focused unit coverage. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1

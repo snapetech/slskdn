@@ -4284,6 +4284,10 @@ namespace slskd
                 exception is NullReferenceException &&
                 details.Contains("Soulseek.Extensions.Reset(Timer)", StringComparison.Ordinal) &&
                 details.Contains("Soulseek.Network.Tcp.Connection.WriteInternalAsync", StringComparison.Ordinal);
+            var isSoulseekTcpDoubleDisconnectRace =
+                exception is InvalidOperationException &&
+                details.Contains("An attempt was made to transition a task to a final state", StringComparison.Ordinal) &&
+                details.Contains("Soulseek.Network.Tcp.Connection.Disconnect", StringComparison.Ordinal);
 
             var isNetworkFailure =
                 exception is TimeoutException ||
@@ -4294,6 +4298,7 @@ namespace slskd
                 isSoulseekMessageConnectionClosed ||
                 isSoulseekTimerResetReadRace ||
                 isSoulseekTimerResetWriteRace ||
+                isSoulseekTcpDoubleDisconnectRace ||
                 typeName.Contains("Soulseek.ConnectionReadException", StringComparison.Ordinal) ||
                 typeName.Contains("Soulseek.ConnectionException", StringComparison.Ordinal) ||
                 typeName.Contains("Soulseek.TransferException", StringComparison.Ordinal) ||
