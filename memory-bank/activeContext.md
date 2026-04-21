@@ -1,3 +1,15 @@
+## Update 2026-04-21 08:21:42Z
+
+- Current task: SongID UX cleanup and the prior `173` release-gate unit failure are fixed and validated; next step is committing, pushing, and tagging the requested release.
+- Last activity:
+  - audited the SongID page headlessly against the `kspls0` backend with a YouTube URL
+  - fixed duplicate result actions/candidates, noisy diagnostic exposure, and the duplicate graph/atlas action in `SongIDPanel`
+  - isolated static event subscriber-count tests in a non-parallel xUnit collection after the `173` release-gate failure
+  - validated with frontend lint, focused Search UI tests, production web build, headless render pass with no HTTP 4xx/5xx responses, full Release unit suite, repo-wide `dotnet test`, and `bash ./bin/lint`
+- Next steps:
+  1. Commit and push the validated changes.
+  2. Create the next requested build tag and watch the release gate.
+
 ## Update 2026-04-21 06:45:00Z
 
 - Current task: Validating the `0.24.5-slskdn.171` yay install on `kspls0` and fixing actionable live noise.

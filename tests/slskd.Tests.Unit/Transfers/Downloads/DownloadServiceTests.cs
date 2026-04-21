@@ -13,11 +13,13 @@ using slskd.Events;
 using slskd.Files;
 using slskd.Integrations.FTP;
 using slskd.Relay;
+using slskd.Tests.Unit;
 using slskd.Transfers;
 using slskd.Transfers.Downloads;
 using Soulseek;
 using Xunit;
 
+[Collection(StaticEventCollection.Name)]
 public class DownloadServiceTests
 {
     [Fact]

@@ -6,9 +6,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Soulseek;
+using slskd.Tests.Unit;
 using slskd.VirtualSoulfind.DisasterMode;
 using Xunit;
 
+[Collection(StaticEventCollection.Name)]
 public class SharedEventEmitterTests
 {
     [Fact]

@@ -1,3 +1,11 @@
+## 2026-04-21 08:21Z - Improved SongID result UX after headless audit
+
+- Ran the SongID page headlessly through the local React UI against the `kspls0` backend using Web UI credentials and a YouTube source URL.
+- Mapped the UX problems found in the live result: repeated raw source/status fields, duplicate ranked action buttons, duplicate track candidates, always-visible low-signal diagnostics, and duplicate graph/atlas actions.
+- Updated the SongID panel so queue rows show useful titles and status, result summaries lead with the likely track, best actions are deduplicated, repeated tracks/options/plans collapse with match counts, and diagnostic-heavy sections sit behind disclosure rows.
+- Fixed the previous `build-main-0.24.5-slskdn.173` release-gate failure by isolating static event subscriber-count tests in a non-parallel xUnit collection.
+- Validation passed: `npm run lint -- --quiet`, focused `Searches.test.jsx`, `npm run build`, headless Playwright render pass with no 4xx/5xx responses, full Release unit suite (`3558` tests), repo-wide `dotnet test`, and `bash ./bin/lint`.
+
 ## 2026-04-21 05:06Z - Validated kspls0 package 169 and fixed remaining false-fatal log noise
 
 - Confirmed the `kspls0` yay install is `slskdn-bin 0.24.5.slskdn.169-1`, `/usr/bin/slskd --version` reports `0.24.5-slskdn.169`, and systemd is running PID `2045334` with `NRestarts=0` and `ExecMainStatus=0`.

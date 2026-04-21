@@ -16,6 +16,7 @@ using slskd.Messaging;
 using slskd.Relay;
 using slskd.Search;
 using slskd.Shares;
+using slskd.Tests.Unit;
 using slskd.Transfers;
 using slskd.Transfers.API;
 using slskd.Users;
@@ -24,6 +25,7 @@ using Xunit;
 
 namespace slskd.Tests.Unit.Core;
 
+[Collection(StaticEventCollection.Name)]
 public class ApplicationLifecycleTests
 {
     [Fact]

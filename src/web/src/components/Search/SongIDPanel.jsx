@@ -52,6 +52,166 @@ const getIdentityVerdictColor = (verdict) => {
   }
 };
 
+const formatPercent = (value) => Math.round((value || 0) * 100);
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'completed':
+      return 'green';
+    case 'failed':
+      return 'red';
+    case 'running':
+      return 'blue';
+    case 'queued':
+      return 'grey';
+    default:
+      return undefined;
+  }
+};
+
+const getRunTitle = (item) =>
+  item?.metadata?.title ||
+  item?.query ||
+  item?.summary ||
+  item?.sourceType ||
+  'SongID run';
+
+const getTrackKey = (candidate) =>
+  `${(candidate?.artist || '').trim().toLowerCase()}::${(candidate?.title || '').trim().toLowerCase()}`;
+
+const getDedupedTracks = (tracks) => {
+  if (!Array.isArray(tracks)) {
+    return [];
+  }
+
+  const map = new Map();
+  tracks.forEach((candidate) => {
+    const key = getTrackKey(candidate);
+    const current = map.get(key);
+    if (!current || (candidate.actionScore || 0) > (current.actionScore || 0)) {
+      map.set(key, {
+        ...candidate,
+        duplicateCount: (current?.duplicateCount || 0) + 1,
+      });
+    } else {
+      current.duplicateCount = (current.duplicateCount || 1) + 1;
+    }
+  });
+
+  return Array.from(map.values()).sort(
+    (left, right) => (right.actionScore || 0) - (left.actionScore || 0),
+  );
+};
+
+const getOptionKey = (option) => [
+  option?.actionKind || '',
+  option?.scope || '',
+  option?.mode || '',
+  option?.targetId || '',
+  option?.searchText || '',
+  Array.isArray(option?.searchTexts) ? option.searchTexts.join('|') : '',
+].join('::');
+
+const getDedupedOptions = (options) => {
+  if (!Array.isArray(options)) {
+    return [];
+  }
+
+  const map = new Map();
+  options.forEach((option) => {
+    const key = getOptionKey(option);
+    const current = map.get(key);
+    if (!current || (option.overallScore || 0) > (current.overallScore || 0)) {
+      map.set(key, {
+        ...option,
+        duplicateCount: (current?.duplicateCount || 0) + 1,
+      });
+    } else {
+      current.duplicateCount = (current.duplicateCount || 1) + 1;
+    }
+  });
+
+  return Array.from(map.values()).sort(
+    (left, right) => (right.overallScore || 0) - (left.overallScore || 0),
+  );
+};
+
+const getPlanKey = (plan) => [
+  plan?.kind || '',
+  plan?.targetId || '',
+  plan?.profile || '',
+  plan?.searchText || '',
+  plan?.title || '',
+].join('::');
+
+const getDedupedPlans = (plans) => {
+  if (!Array.isArray(plans)) {
+    return [];
+  }
+
+  const map = new Map();
+  plans.forEach((plan) => {
+    const key = getPlanKey(plan);
+    const current = map.get(key);
+    if (!current || (plan.actionScore || 0) > (current.actionScore || 0)) {
+      map.set(key, {
+        ...plan,
+        duplicateCount: (current?.duplicateCount || 0) + 1,
+      });
+    } else {
+      current.duplicateCount = (current.duplicateCount || 1) + 1;
+    }
+  });
+
+  return Array.from(map.values()).sort(
+    (left, right) => (right.actionScore || 0) - (left.actionScore || 0),
+  );
+};
+
+const getUniqueTopActions = (actions, limit) => {
+  const seen = new Set();
+  return actions.filter((action) => {
+    const key = (action.label || '').toLowerCase();
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  }).slice(0, limit);
+};
+
+const hasScorecardSignal = (scorecard) => scorecard && [
+  'clipCount',
+  'acoustIdHitCount',
+  'rawAcoustIdHitCount',
+  'songRecHitCount',
+  'songRecDistinctMatchCount',
+  'transcriptCount',
+  'ocrCount',
+  'commentFindingCount',
+  'timestampHintCount',
+  'chapterHintCount',
+  'playlistRequestCount',
+  'aiCommentMentionCount',
+  'panakoHitCount',
+  'audfprintHitCount',
+  'corpusMatchCount',
+  'provenanceSignalCount',
+  'aiArtifactClipCount',
+].some((key) => (scorecard[key] || 0) > 0);
+
+const detailStyle = {
+  borderTop: '1px solid rgba(34, 36, 38, 0.15)',
+  marginTop: '1em',
+  paddingTop: '0.75em',
+};
+
+const detailSummaryStyle = {
+  cursor: 'pointer',
+  fontWeight: 600,
+};
+
 const SongIDPanel = ({ disabled }) => {
   const [source, setSource] = useState('');
   const [targetDirectory, setTargetDirectory] = useState('');
@@ -478,6 +638,50 @@ const SongIDPanel = ({ disabled }) => {
     );
   };
 
+  const tracks = getDedupedTracks(run?.tracks);
+  const options = getDedupedOptions(run?.options);
+  const plans = getDedupedPlans(run?.plans);
+  const bestTrack = tracks[0];
+  const bestAlbum = Array.isArray(run?.albums) ? run.albums[0] : null;
+  const bestArtist = Array.isArray(run?.artists) ? run.artists[0] : null;
+  const topActions = getUniqueTopActions([
+    bestTrack ? {
+      label: 'Search Best Track',
+      track: bestTrack,
+      type: 'track',
+    } : null,
+    bestAlbum ? {
+      album: bestAlbum,
+      label: 'Download Best Album',
+      type: 'album',
+    } : null,
+    bestArtist ? {
+      artist: bestArtist,
+      label: 'Plan Best Artist',
+      type: 'artist',
+    } : null,
+    ...options.slice(0, 4).map((option) => ({
+      label: option.actionLabel,
+      option,
+      type: 'option',
+    })),
+    ...plans.slice(0, 4).map((plan) => ({
+      label: plan.actionLabel,
+      plan,
+      type: 'plan',
+    })),
+  ].filter(Boolean), 5);
+  const identityVerdict = run?.identityAssessment?.verdict || run?.assessment?.verdict;
+  const identityConfidence = (run?.identityAssessment?.confidence ?? run?.assessment?.confidence) || 0;
+  const identitySummary = run?.identityAssessment?.summary || run?.assessment?.summary;
+  const showIdentity = Boolean(identitySummary || identityConfidence > 0 || (identityVerdict && identityVerdict !== 'unclassified'));
+  const showSynthetic = Boolean(
+    run?.syntheticAssessment?.summary ||
+    (run?.syntheticAssessment?.verdict && run.syntheticAssessment.verdict !== 'insufficient_evidence') ||
+    run?.forensicMatrix?.familyLabel ||
+    hasScorecardSignal(run?.scorecard),
+  );
+
   return (
     <>
     <Segment raised>
@@ -567,12 +771,22 @@ const SongIDPanel = ({ disabled }) => {
                       />
                     </List.Content>
                     <List.Content>
-                      <List.Header>{item.sourceType || 'unknown'}</List.Header>
+                      <List.Header>{getRunTitle(item)}</List.Header>
                       <List.Description>
-                        {item.summary || 'No summary'}
+                        <Label
+                          color={getStatusColor(item.status)}
+                          size="tiny"
+                        >
+                          {item.status || 'unknown'}
+                        </Label>
+                        <Label size="tiny">{item.sourceType || 'unknown'}</Label>
+                        {item.percentComplete ? (
+                          <Label size="tiny">
+                            {formatPercent(item.percentComplete)}%
+                          </Label>
+                        ) : null}
                       </List.Description>
                       <List.Description style={{ marginTop: '0.35em' }}>
-                        <Label size="tiny">{item.status || 'unknown'}</Label>
                         {item.queuePosition !== null &&
                         item.queuePosition !== undefined ? (
                           <Label size="tiny">Queue {item.queuePosition}</Label>
@@ -581,7 +795,15 @@ const SongIDPanel = ({ disabled }) => {
                         item.workerSlot !== undefined ? (
                           <Label size="tiny">Worker {item.workerSlot}</Label>
                         ) : null}
+                        {item.currentStage ? (
+                          <Label size="tiny">{item.currentStage}</Label>
+                        ) : null}
                       </List.Description>
+                      {item.summary ? (
+                        <List.Description style={{ marginTop: '0.35em' }}>
+                          {item.summary}
+                        </List.Description>
+                      ) : null}
                     </List.Content>
                   </List.Item>
                 ))}
@@ -614,49 +836,33 @@ const SongIDPanel = ({ disabled }) => {
                 </Button>
               }
             />
-            <Popup
-              content="Open the same run in atlas mode so you can browse a wider SongID neighborhood with semantic zoom controls."
-              position="top center"
-              trigger={
-                <Button
-                  onClick={() =>
-                    openDiscoveryGraph({
-                      scope: 'songid_run',
-                      songIdRunId: run?.id,
-                      title: run?.query || run?.metadata?.title,
-                    })
-                  }
-                  size="small"
-                  style={{ marginLeft: '0.5em' }}
-                >
-                  Atlas
-                </Button>
-              }
-            />
           </div>
-          <p>
-            <strong>Source Type:</strong> {run.sourceType || 'unknown'}
-            <br />
-            <strong>Status:</strong> {run.status || 'unknown'}
-            <br />
-            <strong>Stage:</strong> {run.currentStage || 'unknown'}
-            <br />
-            <strong>Queue Position:</strong>{' '}
-            {run.queuePosition !== null && run.queuePosition !== undefined
-              ? run.queuePosition
-              : 'none'}
-            <br />
-            <strong>Worker Slot:</strong>{' '}
-            {run.workerSlot !== null && run.workerSlot !== undefined
-              ? run.workerSlot
-              : 'idle'}
-            <br />
-            <strong>Query:</strong> {run.query || 'none'}
-            <br />
-            <strong>Summary:</strong> {run.summary || 'No summary'}
-            <br />
-            <strong>Artifacts:</strong> {run.artifactDirectory || 'none'}
-          </p>
+          <Segment>
+            <Header as="h4" style={{ marginTop: 0 }}>
+              {bestTrack
+                ? `${bestTrack.artist} - ${bestTrack.title}`
+                : getRunTitle(run)}
+            </Header>
+            <div style={{ marginBottom: '0.75em' }}>
+              <Label color={getStatusColor(run.status)} size="small">
+                {run.status || 'unknown'}
+              </Label>
+              <Label size="small">{run.currentStage || 'queued'}</Label>
+              <Label size="small">{run.sourceType || 'unknown'}</Label>
+              {run.workerSlot !== null && run.workerSlot !== undefined ? (
+                <Label size="small">Worker {run.workerSlot}</Label>
+              ) : null}
+              {run.queuePosition !== null && run.queuePosition !== undefined ? (
+                <Label size="small">Queue {run.queuePosition}</Label>
+              ) : null}
+            </div>
+            {run.summary ? <p>{run.summary}</p> : null}
+            {run.query ? (
+              <p style={{ marginBottom: 0 }}>
+                <strong>Query:</strong> {run.query}
+              </p>
+            ) : null}
+          </Segment>
           <Progress
             color={run.status === 'failed' ? 'red' : 'blue'}
             percent={Math.round((run.percentComplete || 0) * 100)}
@@ -666,6 +872,56 @@ const SongIDPanel = ({ disabled }) => {
           >
             {run.currentStage || 'queued'}
           </Progress>
+          {topActions.length > 0 ? (
+            <>
+              <Header as="h5">Best Next Actions</Header>
+              <div style={{ marginBottom: '1em' }}>
+                {topActions.map((action, index) => {
+                  const content = {
+                    album: 'Create a single-release job from the strongest album candidate.',
+                    artist: 'Create a discography job from the strongest artist candidate.',
+                    option: 'Run this ranked SongID acquisition option.',
+                    plan: 'Run this ranked SongID plan.',
+                    track: 'Start a regular slskdn search using the strongest SongID track candidate.',
+                  }[action.type];
+                  const onClick = () => {
+                    if (action.type === 'track') {
+                      return handleTrackSearch(action.track);
+                    }
+                    if (action.type === 'album') {
+                      return handleMbReleaseJob(action.album);
+                    }
+                    if (action.type === 'artist') {
+                      return handleDiscography(action.artist);
+                    }
+                    if (action.type === 'option') {
+                      return handleOptionAction(action.option);
+                    }
+
+                    return handlePlanAction(action.plan);
+                  };
+
+                  return (
+                    <Popup
+                      key={`${action.type}-${action.label}-${index}`}
+                      content={content}
+                      position="top center"
+                      trigger={
+                        <Button
+                          onClick={onClick}
+                          primary={index === 0}
+                          size="small"
+                          style={{ marginLeft: index === 0 ? 0 : '0.5em' }}
+                        >
+                          {action.label}
+                        </Button>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
           {graphData && graphRequest?.songIdRunId === run?.id ? (
             <>
               <Divider />
@@ -721,36 +977,26 @@ const SongIDPanel = ({ disabled }) => {
             </>
           ) : null}
 
-          {(run.identityAssessment || run.assessment) ? (
+          {showIdentity ? (
             <>
               <Header as="h5">Identity</Header>
               <p>
                 <strong>Verdict:</strong>{' '}
                 <Label
-                  color={getIdentityVerdictColor(
-                    run.identityAssessment?.verdict || run.assessment?.verdict,
-                  )}
+                  color={getIdentityVerdictColor(identityVerdict)}
                   size="tiny"
                 >
-                  {run.identityAssessment?.verdict ||
-                    run.assessment?.verdict ||
-                    'unclassified'}
+                  {identityVerdict || 'unclassified'}
                 </Label>
                 <br />
-                <strong>Confidence:</strong>{' '}
-                {Math.round(
-                  ((run.identityAssessment?.confidence ??
-                    run.assessment?.confidence) ||
-                    0) * 100,
-                )}
+                <strong>Confidence:</strong> {formatPercent(identityConfidence)}
                 <br />
-                <strong>Reasoning:</strong>{' '}
-                {run.identityAssessment?.summary || run.assessment?.summary || 'None'}
+                <strong>Reasoning:</strong> {identitySummary || 'None'}
               </p>
             </>
           ) : null}
 
-          {run.syntheticAssessment || run.forensicMatrix ? (
+          {showSynthetic ? (
             <>
               <Header as="h5">Synthetic Signals</Header>
               <div style={{ marginBottom: '1em' }}>
@@ -821,9 +1067,9 @@ const SongIDPanel = ({ disabled }) => {
             </>
           ) : null}
 
-          {run.scorecard ? (
-            <>
-              <Header as="h5">Scorecard</Header>
+          {hasScorecardSignal(run.scorecard) ? (
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>Scorecard</summary>
               <div style={{ marginBottom: '1em' }}>
                 <Label size="tiny">Audio {run.scorecard.analysisAudioSource || 'none'}</Label>
                 <Label size="tiny">Clips {run.scorecard.clipCount || 0}</Label>
@@ -862,12 +1108,12 @@ const SongIDPanel = ({ disabled }) => {
                   {run.scorecard.provenanceSignals.join(', ')}
                 </div>
               ) : null}
-            </>
+            </details>
           ) : null}
 
           {run.fullSourceFingerprint ? (
-            <>
-              <Header as="h5">Full-Source Fingerprint</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>Full-Source Fingerprint</summary>
               <p>
                 <strong>Duration:</strong>{' '}
                 {Math.round(run.fullSourceFingerprint.durationSeconds || 0)}s
@@ -877,7 +1123,7 @@ const SongIDPanel = ({ disabled }) => {
                 <br />
                 <strong>Path:</strong> {run.fullSourceFingerprint.path}
               </p>
-            </>
+            </details>
           ) : null}
 
           {run.provenance && run.provenance.signalCount > 0 ? (
@@ -908,8 +1154,8 @@ const SongIDPanel = ({ disabled }) => {
           ) : null}
 
           {run.aiHeuristics ? (
-            <>
-              <Header as="h5">AI Audio Heuristics</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>AI Audio Heuristics</summary>
               <div style={{ marginBottom: '1em' }}>
                 <Label size="tiny">
                   Score {Math.round((run.aiHeuristics.artifactScore || 0) * 100)}
@@ -932,12 +1178,14 @@ const SongIDPanel = ({ disabled }) => {
                   Pitch {Math.round((run.aiHeuristics.pitchSalience || 0) * 100)}
                 </Label>
               </div>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.perturbations) && run.perturbations.length > 0 ? (
-            <>
-              <Header as="h5">Perturbation Stability</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Perturbation Stability ({run.perturbations.length})
+              </summary>
               <List divided relaxed>
                 {run.perturbations.map((item) => (
                   <List.Item key={item.perturbationId}>
@@ -956,7 +1204,7 @@ const SongIDPanel = ({ disabled }) => {
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.corpusMatches) && run.corpusMatches.length > 0 ? (
@@ -1001,14 +1249,16 @@ const SongIDPanel = ({ disabled }) => {
           ) : null}
 
           {Array.isArray(run.evidence) && run.evidence.length > 0 ? (
-            <>
-              <Header as="h5">Evidence</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Evidence ({run.evidence.length})
+              </summary>
               <List bulleted>
                 {run.evidence.map((item) => (
                   <List.Item key={item}>{item}</List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.segments) && run.segments.length > 0 ? (
@@ -1079,11 +1329,13 @@ const SongIDPanel = ({ disabled }) => {
             </>
           ) : null}
 
-          {Array.isArray(run.options) && run.options.length > 0 ? (
-            <>
-              <Header as="h5">Ranked Download Options</Header>
+          {options.length > 0 ? (
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Ranked Download Options ({options.length})
+              </summary>
               <List divided relaxed>
-                {run.options.map((option) => (
+                {options.map((option) => (
                   <List.Item key={option.optionId}>
                     <List.Content floated="right">
                       <Popup
@@ -1104,6 +1356,11 @@ const SongIDPanel = ({ disabled }) => {
                         {option.title}{' '}
                         <Label size="tiny">{option.scope}</Label>
                         <Label size="tiny">{option.mode}</Label>
+                        {option.duplicateCount > 1 ? (
+                          <Label color="grey" size="tiny">
+                            {option.duplicateCount} matches
+                          </Label>
+                        ) : null}
                       </List.Header>
                       <List.Description>{option.description}</List.Description>
                       {option.searchText ? (
@@ -1127,12 +1384,14 @@ const SongIDPanel = ({ disabled }) => {
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.clips) && run.clips.length > 0 ? (
-            <>
-              <Header as="h5">Clip Findings</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Clip Findings ({run.clips.length})
+              </summary>
               <List divided relaxed>
                 {run.clips.map((clip) => (
                   <List.Item key={clip.clipId}>
@@ -1173,12 +1432,14 @@ const SongIDPanel = ({ disabled }) => {
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.transcripts) && run.transcripts.length > 0 ? (
-            <>
-              <Header as="h5">Transcripts</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Transcripts ({run.transcripts.length})
+              </summary>
               <List divided relaxed>
                 {run.transcripts.map((transcript) => (
                   <List.Item key={transcript.transcriptId}>
@@ -1201,12 +1462,12 @@ const SongIDPanel = ({ disabled }) => {
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.ocr) && run.ocr.length > 0 ? (
-            <>
-              <Header as="h5">OCR</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>OCR ({run.ocr.length})</summary>
               <List bulleted>
                 {run.ocr.map((item) => (
                   <List.Item key={item.ocrId}>
@@ -1214,12 +1475,14 @@ const SongIDPanel = ({ disabled }) => {
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.comments) && run.comments.length > 0 ? (
-            <>
-              <Header as="h5">Comments</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Comments ({run.comments.length})
+              </summary>
               <List bulleted>
                 {run.comments.map((comment) => (
                   <List.Item key={comment.commentId}>
@@ -1232,7 +1495,7 @@ const SongIDPanel = ({ disabled }) => {
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
           {Array.isArray(run.chapters) && run.chapters.length > 0 ? (
@@ -1253,8 +1516,8 @@ const SongIDPanel = ({ disabled }) => {
           ) : null}
 
           {run.forensicMatrix ? (
-            <>
-              <Header as="h5">Forensic Matrix</Header>
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>Forensic Matrix</summary>
               <div style={{ marginBottom: '1em' }}>
                 <Label size="tiny">Identity {run.forensicMatrix.identityScore || 0}</Label>
                 <Label size="tiny">
@@ -1354,14 +1617,16 @@ const SongIDPanel = ({ disabled }) => {
                   <strong>Notes:</strong> {run.forensicMatrix.notes.join(' | ')}
                 </div>
               ) : null}
-            </>
+            </details>
           ) : null}
 
-          {Array.isArray(run.plans) && run.plans.length > 0 ? (
-            <>
-              <Header as="h5">Ranked Plans</Header>
+          {plans.length > 0 ? (
+            <details style={detailStyle}>
+              <summary style={detailSummaryStyle}>
+                Ranked Plans ({plans.length})
+              </summary>
               <List divided relaxed>
-                {run.plans.map((plan) => (
+                {plans.map((plan) => (
                   <List.Item key={plan.planId}>
                     <List.Content floated="right">
                       <Popup
@@ -1378,21 +1643,28 @@ const SongIDPanel = ({ disabled }) => {
                       />
                     </List.Content>
                     <List.Content>
-                      <List.Header>{plan.title}</List.Header>
+                      <List.Header>
+                        {plan.title}{' '}
+                        {plan.duplicateCount > 1 ? (
+                          <Label color="grey" size="tiny">
+                            {plan.duplicateCount} matches
+                          </Label>
+                        ) : null}
+                      </List.Header>
                       <List.Description>{plan.subtitle}</List.Description>
                       {renderScores(plan)}
                     </List.Content>
                   </List.Item>
                 ))}
               </List>
-            </>
+            </details>
           ) : null}
 
-          {Array.isArray(run.tracks) && run.tracks.length > 0 ? (
+          {tracks.length > 0 ? (
             <>
               <Header as="h5">Tracks</Header>
               <List divided relaxed>
-                {run.tracks.map((candidate) => (
+                {tracks.map((candidate) => (
                   <List.Item key={candidate.candidateId}>
                     <List.Content floated="right">
                       <Popup
@@ -1435,6 +1707,11 @@ const SongIDPanel = ({ disabled }) => {
                         {candidate.isExact ? (
                           <Label color="green" size="tiny">
                             exact
+                          </Label>
+                        ) : null}
+                        {candidate.duplicateCount > 1 ? (
+                          <Label color="grey" size="tiny">
+                            {candidate.duplicateCount} matches
                           </Label>
                         ) : null}
                       </List.Header>

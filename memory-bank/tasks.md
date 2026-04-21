@@ -11,6 +11,16 @@
 
 *No high priority tasks currently active
 
+- [x] **ux**: Reduce SongID results duplication and diagnostic scroll fatigue.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: Headless UX testing against `kspls0` with a YouTube URL showed repeated track/options/actions, duplicate graph/atlas controls, and low-value diagnostics dominating the result flow. The SongID panel now promotes the likely track and deduped best actions, collapses duplicate candidates with match counts, and moves raw diagnostic sections behind disclosure rows.
+
+- [x] **test**: Isolate static event subscriber-count lifecycle tests from xUnit parallelism.
+ - Status: completed (2026-04-21)
+ - Priority: P1
+ - Notes: Release tag `build-main-0.24.5-slskdn.173` failed `ApplicationLifecycleTests.Dispose_UnsubscribesGlobalAndSoulseekEvents` because static event invocation-count assertions can race with other tests touching the same global events. Static event tests now share a non-parallel xUnit collection, and the full Release unit suite passes.
+
 - [x] **bug**: Match live Soulseek timer-reset stack signatures in false-fatal classifier.
  - Status: completed (2026-04-21)
  - Priority: P1

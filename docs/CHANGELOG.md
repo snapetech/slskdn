@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Improved the SongID results page after a headless UX audit: queue rows now show meaningful titles/status, duplicate track/action candidates collapse, the result summary promotes the best next actions, and low-level diagnostics move behind disclosure rows.
+- Stabilized the release gate by isolating unit tests that inspect process-global static event subscriptions, preventing xUnit parallelism from racing `Clock.EveryMinute`/`Program.LogEmitted` subscriber-count assertions.
 - Stabilized live `kspls0` log noise found during the 172 package soak: entropy health checks now use a larger RNG sample to avoid routine finite-sample false warnings, and auto-replace no-result searches stay at debug-level telemetry.
 - Cleaned up startup polish found during the `kspls0` 172 package soak: temporary raw security config probes now log only at debug, persisted peer profiles with blank display names are migrated to a usable fallback, and LAN discovery advertises a non-empty trimmed display name.
 - Classified Soulseek.NET read-loop timeout inner exception chains as expected peer-network churn so `ConnectionReadException` plus `IOException`/`SocketException` timeout stacks no longer log as fake fatal unobserved task exceptions.
