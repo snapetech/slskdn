@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z101. Remote Offline Download Failures Are Expected Peer Outcomes, Not Error Stack Noise
+
+**The Bug**: Live `kspls0` restart validation re-enqueued downloads from an offline remote user and logged repeated `Soulseek.UserOfflineException` / `Soulseek.TransferException` stack traces from `DownloadService`. The transfer failure was expected peer state, but the journal looked like a local runtime error.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    Log.Error(ex, "Download of {Filename} from user {Username} failed: {Message}", ...);
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex) when (IsExpectedRemoteDownloadFailure(ex))
+{
+    Log.Warning("Download of {Filename} from user {Username} failed because the remote peer is unavailable: {Message}", ...);
+}
+```
+
+**Why This Keeps Happening**: Download failures mix local bugs with normal P2P outcomes. Remote offline/rejected/unavailable states should still fail the transfer record, but they should not emit full error stack traces unless the failure shape is unexpected.
+
 ### 0z100. Auto-Replace Large Batches Must Not Log Routine Per-Track No-Result Searches At Information
 
 **The Bug**: After pacing auto-replace searches correctly, live `kspls0` monitoring showed the same 128-item stuck batch logging routine `Searching for alternatives` and `Found 0 alternative candidates` messages at `Information` for every track. The behavior was no longer unsafe, but the journal still filled with expected no-result progress noise.
