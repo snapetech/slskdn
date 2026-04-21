@@ -8828,3 +8828,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The backend endpoint correctly preserved normal API semantics (`404` for offline users, `503` for temporarily unavailable peer info), but the UI was using that endpoint for decorative/optional badges where missing peer data is routine. `Promise.allSettled` prevented a React failure but could not suppress browser-level failed-resource logging.
 
 **How to prevent it:** Optional badge/polling UI should use an explicit quiet/optional API mode that returns a non-error empty response for expected unavailable peer data. Keep the default endpoint behavior unchanged for callers that need to distinguish offline/unavailable states.
+
+### 0z58. Static Event Subscriber-Count Tests Must Not Run In Parallel
+
+**What went wrong:** The `build-main-0.24.5-slskdn.173` release gate failed `ApplicationLifecycleTests.Dispose_UnsubscribesGlobalAndSoulseekEvents` because it asserted an exact `Clock.EveryMinute` static event subscriber count while other unit tests can create objects that subscribe to the same static event. The focused Release test passed in isolation, making the failure look nondeterministic.
+
+**Why it happened:** Static events are process-global state, but xUnit runs test classes in parallel by default. A test that snapshots an invocation count and expects exactly one new subscriber can race with another test that subscribes/unsubscribes the same static event in the same process.
+
+**How to prevent it:** Put any tests that inspect or mutate static event invocation lists in a shared non-parallel collection, or rewrite the assertion to prove the specific owned handler was removed without depending on a global count. Do not add new static event count assertions without isolating them from xUnit parallelism.
