@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Demoted per-endpoint DHT overlay cooldown streak logs to debug so normal remote endpoint churn stays visible through aggregate DHT/overlay summaries and API stats without repeating one line per degraded endpoint at information level.
 - Removed Snap publishing from release workflows so dev/stable releases no longer build or upload Snap packages, wait on Snap Store publication, or refresh Snap metadata as part of release metadata commits.
 - Avoided duplicate MeshDHT self-descriptor publication at startup by letting the bootstrap service own the initial publish while the refresh service waits until its scheduled interval or an IP-change-triggered refresh.
 - Quieted normal host shutdown logs so clean systemd stops/restarts no longer report `app.Run()` returning as abnormal or duplicate expected `ProcessExit` telemetry on stderr.

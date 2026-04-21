@@ -1173,3 +1173,7 @@
 - [x] Validate `kspls0` yay package `0.24.5-slskdn.168` and fix actionable noise
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package, CLI, release symlink, and authenticated API all report `0.24.5-slskdn.168`; service is active after a clean restart with Soulseek logged in, shares ready, DHT running, and expected listeners present. Fixed the transient overlay `50305` bind race by retrying startup binds, demoted remaining startup method-trace logs to debug, and made release Discord/Matrix announcement webhooks retry/non-fatal after the `168` run went red only on a Matrix HTTP 504 after artifacts were already published. Validation passed with YAML parse, focused DHT tests, full unit tests, Release build, lint, and diff check.
+
+- [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and quiet remaining overlay log noise
+  - Status: completed (2026-04-21)
+  - Notes: Confirmed the installed package/API still report `0.24.5-slskdn.170`, systemd is active with zero restarts, Soulseek is logged in, shares are ready, DHT is running, overlay TCP is listening, and current-process logs/coredumps show no actionable fatal/error/exception/502/bind/protocol issues. The only fixable noise was per-endpoint overlay cooldown streak detail at information level; that detail is now debug-level while aggregate DHT/overlay summaries remain visible.

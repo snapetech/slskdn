@@ -667,7 +667,7 @@ public sealed class MeshOverlayConnector : IMeshOverlayConnector
 
         if (endpointState.ConsecutiveFailureCount >= 3)
         {
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Overlay endpoint {Endpoint} failure streak={FailureCount} lastReason={FailureReason} coolingDownUntil={SuppressedUntil}",
                 OverlayLogSanitizer.Endpoint(endpoint),
                 endpointState.ConsecutiveFailureCount,

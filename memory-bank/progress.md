@@ -6712,6 +6712,13 @@ Code quality improvements were completed as part of Option A:
 - Continued the live `kspls0` package soak on `0.24.5-slskdn.170`. The service stayed active on the same PID with `NRestarts=0`, no fresh coredumps, Soulseek `Connected, LoggedIn`, shares ready, DHT running, and the overlay listener active. The auto-replace batch that started during the previous sample did not recur with search-budget errors or stack-trace spam.
 - Found and fixed one actionable startup polish issue: duplicate mesh self-descriptor publishing at boot. `MeshBootstrapService` already owns the initial publish, so `PeerDescriptorRefreshService` now starts its periodic refresh clock at service start instead of immediately republishing the same descriptor.
 - Documented the hosted-service scheduling gotcha in ADR-0001 and committed it as `a4e516468`.
+
+## 2026-04-21 06:13:00Z
+
+- Took another current-process `kspls0` log pass on installed `0.24.5-slskdn.170`: service remained active/running with zero restarts, Soulseek logged in, shares ready, DHT running, overlay TCP listening, no new coredumps, and no fresh fatal/error/exception/502/bind/protocol noise.
+- Found and fixed one remaining log-polish issue: per-endpoint overlay cooldown streaks were logging at information level for normal remote endpoint churn even though the aggregate DHT/overlay summaries already carry the operator signal. Documented the gotcha in ADR-0001, demoted the per-endpoint detail to debug, and kept aggregate diagnostics visible.
+- Validation passed: focused DHT/rendezvous unit slice (`105` tests), Release build, `bash ./bin/lint`, changelog validation, and `git diff --check`.
+
 - Validation: focused `PeerDescriptorRefreshServiceTests` passed, full unit suite passed (`3553` tests), Release build passed, `bash ./bin/lint` passed, and `git diff --check` passed.
 - Pushed the duplicate descriptor cleanup as `a1f105521`; the resulting CodeQL and dependency-submission checks passed.
 - Removed Snap publishing from release automation: `build-on-tag.yml` no longer has dev/stable Snap jobs, the manual dev helper workflow is Docker-only, and release metadata scripts/validators no longer update or require Snap manifest freshness. Validation passed with YAML parsing for touched workflows, packaging metadata validation, changelog validation, and `git diff --check`.

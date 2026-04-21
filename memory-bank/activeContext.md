@@ -1,3 +1,18 @@
+## Update 2026-04-21 06:13:00Z
+
+- Current task: Final `kspls0` log-polish pass on installed `0.24.5-slskdn.170`.
+- Last activity:
+  - confirmed the live yay package and API still report `0.24.5-slskdn.170`, systemd is `active/running`, `NRestarts=0`, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and overlay TCP is listening on `50305`
+  - sampled current-process logs and coredumps; no fresh fatal/error/exception/502/coredump/bind/protocol noise appeared
+  - found the remaining actionable noise was normal remote overlay endpoint cooldown streaks logging one information line per endpoint even though the aggregate DHT/overlay summaries and `/api/v0/overlay/stats` already expose the degraded endpoint state
+  - documented the logging gotcha in ADR-0001 and committed it as `0018e6b90`
+  - changed `MeshOverlayConnector.RecordFailure` so per-endpoint cooldown streak detail logs at debug while the aggregate summaries remain information-level
+  - validation passed: focused DHT/rendezvous unit slice (`105` tests), Release build, `bash ./bin/lint`, changelog validation, and `git diff --check`
+- Next steps:
+  1. Commit and push the cooldown-noise cleanup.
+  2. Take one final live `kspls0` log sample after push.
+  3. Keep `kspls0` on installed build `170`; do not create another build tag unless explicitly requested.
+
 ## Update 2026-04-21 05:59:00Z
 
 - Current task: Removing Snap publishing from release workflows after `0.24.5-slskdn.170` got stuck waiting on Snap Store publication.
