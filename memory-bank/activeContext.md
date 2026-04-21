@@ -1,3 +1,15 @@
+## Update 2026-04-21 04:08:00Z
+
+- Current task: Completed the GitHub Releases page audit/rewrite.
+- Last activity:
+  - edited every published GitHub release body currently on `snapetech/slskdn`, from `0.24.5-slskdn.123` through `0.24.5-slskdn.168`
+  - each release now describes the delta from the previous published release, links the compare range, groups changes by type, and lists exact commits with direct links
+  - waited for the new `0.24.5-slskdn.168` release object to appear, then rewrote that body too with the `0.24.5-slskdn.167...0.24.5-slskdn.168` delta
+  - verified `37` release bodies through GitHub after editing; no required release-note sections were missing
+- Next steps:
+  1. Let the `build-main-0.24.5-slskdn.168` workflow finish its remaining package jobs.
+  2. If the release-notes generator should keep this stricter all-commit format automatically, update `scripts/generate-release-notes.sh` in a separate code change.
+
 ## Update 2026-04-21 03:58:00Z
 
 - Current task: Completed the requested release, push, manual `kspls0` redeploy, monitoring pass, and fixable-noise cleanup.

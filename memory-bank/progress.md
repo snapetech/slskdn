@@ -1,3 +1,10 @@
+## 2026-04-21 04:08Z - Audited and rewrote all GitHub release notes with tag-to-tag deltas
+
+- Regenerated the GitHub Releases page bodies for every published release currently present on `snapetech/slskdn`, from `0.24.5-slskdn.123` through `0.24.5-slskdn.168`.
+- Each release now states the delta from the previous published GitHub release, includes a compare link, groups the changes by type, and lists the exact commits in that delta with direct commit links.
+- Included `0.24.5-slskdn.168` after the running tag build created the release object; its notes now cover the `0.24.5-slskdn.167...0.24.5-slskdn.168` six-commit delta.
+- Verification pass checked `37` release bodies via `gh release view`; all contained the required delta heading, changes section, commit section, compare range where applicable, and audit footer.
+
 ## 2026-04-21 03:58Z - Released, redeployed, and re-swept kspls0 after quiet optional user-info fix
 
 - Created and pushed release tag `build-main-0.24.5-slskdn.167` from `e67099ff2`; GitHub Actions run `24702224025` produced the main release artifacts and updated stable metadata on `origin/main`.
