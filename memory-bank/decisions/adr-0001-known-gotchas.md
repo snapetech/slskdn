@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z110. QUIC Must Be Explicitly Opted In On Long-Running Linux Hosts
+
+**The Bug**: Live `kspls0` monitoring caught another native `SIGSEGV`/systemd restart in the manual build while QUIC control and QUIC data listeners were enabled by default. The coredump was unsymbolized inside the native runtime, but previous and current crash history correlated with active `libmsquic`/QUIC listener activity, while managed logs did not show an app exception before the dump.
+
+**Files Affected**:
+- `src/slskd/Mesh/Overlay/OverlayOptions.cs`
+- `src/slskd/Mesh/Overlay/DataOverlayOptions.cs`
+- `src/slskd/Program.cs`
+- `config/slskd.example.yml`
+
+**Wrong**:
+```csharp
+public bool Enable { get; set; } = true;
+// QUIC services are registered whenever Mesh.QuicRuntime.IsAvailable().
+```
+
+**Correct**:
+```csharp
+public bool EnableQuic { get; set; } = false;
+// Register QUIC hosted services and QUIC clients only when runtime support is present
+// and the operator explicitly opted in.
+```
+
+**Why This Keeps Happening**: `QuicListener.IsSupported` only proves the native dependency can initialize; it does not prove this host/runtime/library combination is stable under long-running mesh load. QUIC owns native MsQuic handles, and failures can bypass managed exception handling entirely. Treat QUIC as an explicit operator choice until soak testing proves the host stack stable.
+
 ### 0z109. Soulseek Listener Socket Disposal Is Expected Teardown, Not A Fatal Unobserved Task
 
 **The Bug**: Live `kspls0` monitoring caught `[FATAL] Unobserved task exception` for `ObjectDisposedException: Cannot access a disposed object. Object name: 'System.Net.Sockets.Socket'.` The stack was inside `TcpListener.AcceptTcpClientAsync()` through `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync()`. The process kept running, but the global unobserved-task handler classified a disposed listener accept loop as fatal.
