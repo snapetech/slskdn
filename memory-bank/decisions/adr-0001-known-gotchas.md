@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z108. Manual Deploys Must Verify Systemd Reaches The `current` Release Payload
+
+**The Bug**: A manual `kspls0` deploy copied the new release under `/usr/lib/slskd/releases/manual-5bd0e0b88` and repointed `/usr/lib/slskd/current`, but `systemd` still executed a stale apphost at `/usr/lib/slskd/slskd`. The binary `--version` check against `current/slskd` passed, while `/api/v0/application` still reported the previous build because the service never reached the `current` payload.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD`
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/PKGBUILD-dev`
+- Live/manual deployment commands that touch `/usr/lib/slskd`
+
+**Wrong**:
+```bash
+sudo ln -sfn "$release" /usr/lib/slskd/current
+sudo systemctl restart slskd
+/usr/lib/slskd/current/slskd --version
+```
+
+**Correct**:
+```bash
+sudo ln -sfn "$release" /usr/lib/slskd/current
+printf '%s\n' '#!/bin/sh' 'exec /usr/lib/slskd/current/slskd "$@"' \
+  | sudo tee /usr/lib/slskd/slskd >/dev/null
+sudo chmod 755 /usr/lib/slskd/slskd
+sudo systemctl restart slskd
+curl -H "Authorization: Bearer $token" http://host:5030/api/v0/application
+```
+
+**Why This Keeps Happening**: The AUR layout intentionally keeps a stable `/usr/lib/slskd/slskd` service path and moves the mutable payload behind `/usr/lib/slskd/current`. Manual deploys that only update `current` can silently leave a stale root apphost in place. Always verify the running API's `runtime.executablePath` and version after restart, not just the target release binary.
+
 ### 0z107. User Info Peer Failures Must Not Bubble As HTTP 500
 
 **The Bug**: A Playwright crawl of live search/user links caused `/api/v0/users/{username}/info` to return HTTP 500 for expected Soulseek peer connection failures and timeouts. The UI hit unavailable remote peers, but the API logged unhandled exceptions instead of returning a controlled response.
