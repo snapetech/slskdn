@@ -1,3 +1,11 @@
+## 2026-04-21 00:11Z - Paced auto-replace searches after kspls0 safety-budget noise
+
+- Continued live monitoring of the manually deployed `kspls0` build and found a real follow-up bug: auto-replace searched a large stuck-download batch until the Soulseek search safety limiter rejected the request, then logged one stack trace per remaining track and marked the cycle as `128 failed`.
+- Documented the pacing gotcha in ADR-0001 and committed that documentation immediately as `138f3a6c0`.
+- Changed `AutoReplaceService` to pace alternative searches by the configured `Soulseek.Safety.MaxSearchesPerMinute`, serialize that pacing across concurrent calls, treat search-budget exhaustion as a deferred/skip condition, and stop the current cycle early instead of classifying every remaining download as a failed replacement.
+- Added focused unit coverage proving a rate-limit rejection stops the cycle after one search and reports a skipped/deferred item instead of failures.
+- Validation: focused auto-replace/program unit slice passed (`27` tests), `dotnet build src/slskd/slskd.csproj --no-restore -c Release -v minimal` passed with only existing generated MessagePack analyzer warnings, `bash ./bin/lint` passed, full `dotnet test --no-restore -v minimal` passed, and `git diff --check` passed.
+
 ## 2026-04-20 23:55Z - Resampled kspls0 manual build and cleaned local validation issues
 
 - Continued validation of the manually deployed `kspls0` build now running as PID `1335511` from `2026-04-20 17:37:10 CST`.

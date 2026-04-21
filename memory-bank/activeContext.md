@@ -1,3 +1,15 @@
+## Update 2026-04-21 00:11:00Z
+
+- Current task: Finish, push, deploy, and monitor the auto-replace search-budget fix found during `kspls0` manual-build soak.
+- Last activity:
+  - live monitoring found auto-replace issuing a large stuck-download batch until `Search rate limit exceeded` triggered, then logging repeated per-track stack traces and marking the cycle as failed
+  - documented the gotcha in ADR-0001 and committed that docs-only entry as `138f3a6c0`
+  - updated `AutoReplaceService` so alternative searches are paced by `Soulseek.Safety.MaxSearchesPerMinute`, safety-budget rejection defers the current item, and the cycle stops early instead of logging one error per remaining track
+  - added unit coverage for the budget-exhaustion path and confirmed the focused auto-replace/program test slice, Release project build, lint, full `dotnet test`, and `git diff --check` pass
+- Next steps:
+  1. Commit and push the auto-replace pacing fix to `snapetech/slskdn`.
+  2. Publish/deploy a new manual build to `kspls0` without creating a tag, then continue watching for fresh current-process noise.
+
 ## Update 2026-04-20 23:55:00Z
 
 - Current task: None. The current `kspls0` manual build is stable in the latest sample, and the local formatter/compile cleanup from the validation pass is complete.

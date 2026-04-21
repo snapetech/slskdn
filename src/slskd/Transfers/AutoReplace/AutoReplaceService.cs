@@ -245,7 +245,7 @@ namespace slskd.Transfers.AutoReplace
     /// <summary>
     ///     Implementation of <see cref="IAutoReplaceService"/>.
     /// </summary>
-    public class AutoReplaceService : IAutoReplaceService
+    public sealed class AutoReplaceService : IAutoReplaceService, IDisposable
     {
         private static readonly TransferStates[] StuckStates = new[]
         {
@@ -257,6 +257,8 @@ namespace slskd.Transfers.AutoReplace
 
         private static readonly TimeSpan DefaultSearchCompletionTimeout = TimeSpan.FromSeconds(45);
         private static readonly TimeSpan DefaultSearchPollInterval = TimeSpan.FromSeconds(1);
+        private readonly SemaphoreSlim _searchBudgetGate = new(1, 1);
+        private DateTimeOffset _nextAlternativeSearchNotBeforeUtc = DateTimeOffset.MinValue;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="AutoReplaceService"/> class.
@@ -268,6 +270,7 @@ namespace slskd.Transfers.AutoReplace
         /// <param name="rankingService">The source ranking service.</param>
         /// <param name="searchCompletionTimeout">How long to wait for the search finalizer to persist responses.</param>
         /// <param name="searchPollInterval">How often to poll for finalized search responses.</param>
+        /// <param name="minimumSearchInterval">Optional override for the minimum interval between alternative searches.</param>
         public AutoReplaceService(
             ITransferService transferService,
             ISearchService searchService,
@@ -275,7 +278,8 @@ namespace slskd.Transfers.AutoReplace
             IOptionsMonitor<slskd.Options> optionsMonitor,
             ISourceRankingService rankingService,
             TimeSpan? searchCompletionTimeout = null,
-            TimeSpan? searchPollInterval = null)
+            TimeSpan? searchPollInterval = null,
+            TimeSpan? minimumSearchInterval = null)
         {
             Transfers = transferService;
             Searches = searchService;
@@ -284,6 +288,7 @@ namespace slskd.Transfers.AutoReplace
             RankingService = rankingService;
             SearchCompletionTimeout = searchCompletionTimeout ?? DefaultSearchCompletionTimeout;
             SearchPollInterval = searchPollInterval ?? DefaultSearchPollInterval;
+            MinimumSearchIntervalOverride = minimumSearchInterval;
         }
 
         private ITransferService Transfers { get; }
@@ -300,6 +305,8 @@ namespace slskd.Transfers.AutoReplace
 
         private TimeSpan SearchPollInterval { get; }
 
+        private TimeSpan? MinimumSearchIntervalOverride { get; }
+
         private ILogger Log { get; } = Serilog.Log.ForContext<AutoReplaceService>();
 
         /// <inheritdoc/>
@@ -314,6 +321,14 @@ namespace slskd.Transfers.AutoReplace
             FindAlternativeRequest request,
             CancellationToken cancellationToken = default)
         {
+            var (candidates, _) = await FindAlternativesWithStatusAsync(request, cancellationToken);
+            return candidates;
+        }
+
+        private async Task<(List<AlternativeCandidate> Candidates, bool SearchBudgetExceeded)> FindAlternativesWithStatusAsync(
+            FindAlternativeRequest request,
+            CancellationToken cancellationToken = default)
+        {
             var candidates = new List<AlternativeCandidate>();
 
             // Build search query from filename
@@ -321,7 +336,7 @@ namespace slskd.Transfers.AutoReplace
             if (string.IsNullOrWhiteSpace(searchText))
             {
                 Log.Warning("Could not build search text from filename: {Filename}", request.Filename);
-                return candidates;
+                return (candidates, SearchBudgetExceeded: false);
             }
 
             Log.Information("Searching for alternatives: {SearchText}", searchText);
@@ -334,11 +349,14 @@ namespace slskd.Transfers.AutoReplace
 
             try
             {
+                await WaitForSearchBudgetAsync(cancellationToken);
+
                 await Searches.StartAsync(
                     searchId,
                     SearchQuery.FromText(searchText),
                     SearchScope.Network,
-                    searchOptions);
+                    searchOptions,
+                    requestedProviders: null);
 
                 var waited = TimeSpan.Zero;
                 slskd.Search.Search? searchWithResponses = null;
@@ -359,13 +377,13 @@ namespace slskd.Transfers.AutoReplace
                 if (searchWithResponses?.State.HasFlag(SearchStates.Completed) != true)
                 {
                     Log.Warning("Search for alternatives did not complete within {TimeoutSeconds}s: {SearchText}", SearchCompletionTimeout.TotalSeconds, searchText);
-                    return candidates;
+                    return (candidates, SearchBudgetExceeded: false);
                 }
 
                 if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any())
                 {
                     Log.Warning("No search responses found for: {SearchText}", searchText);
-                    return candidates;
+                    return (candidates, SearchBudgetExceeded: false);
                 }
 
                 // Get expected extension
@@ -441,12 +459,17 @@ namespace slskd.Transfers.AutoReplace
 
                 Log.Information("Found {Count} alternative candidates for: {SearchText} (using smart ranking)", candidates.Count, searchText);
             }
+            catch (InvalidOperationException ex) when (IsSearchRateLimitExceeded(ex))
+            {
+                Log.Warning("Search safety budget exhausted while finding alternatives for: {SearchText}. Deferring remaining auto-replace work.", searchText);
+                return (candidates, SearchBudgetExceeded: true);
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Error searching for alternatives: {Message}", ex.Message);
             }
 
-            return candidates;
+            return (candidates, SearchBudgetExceeded: false);
         }
 
         /// <inheritdoc/>
@@ -544,7 +567,7 @@ namespace slskd.Transfers.AutoReplace
                     await RankingService.RecordFailureAsync(download.Username, cancellationToken);
 
                     // Find alternatives
-                    var alternatives = await FindAlternativesAsync(
+                    var (alternatives, searchBudgetExceeded) = await FindAlternativesWithStatusAsync(
                         new FindAlternativeRequest
                         {
                             Username = download.Username,
@@ -553,6 +576,15 @@ namespace slskd.Transfers.AutoReplace
                             Threshold = request.Threshold,
                         },
                         cancellationToken);
+
+                    if (searchBudgetExceeded)
+                    {
+                        detail.Error = "Search safety budget exhausted; deferred to a later auto-replace cycle";
+                        result.Skipped++;
+                        result.Details.Add(detail);
+                        Log.Information("Stopping auto-replace cycle early because the Soulseek search safety budget is exhausted");
+                        break;
+                    }
 
                     // Find the best candidate within threshold
                     var bestCandidate = alternatives
@@ -664,6 +696,62 @@ namespace slskd.Transfers.AutoReplace
             name = name.Trim('-', ' ');
 
             return name;
+        }
+
+        private async Task WaitForSearchBudgetAsync(CancellationToken cancellationToken)
+        {
+            var minimumInterval = GetMinimumSearchInterval();
+            if (minimumInterval <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            await _searchBudgetGate.WaitAsync(cancellationToken);
+
+            try
+            {
+                var now = DateTimeOffset.UtcNow;
+                if (_nextAlternativeSearchNotBeforeUtc > now)
+                {
+                    var delay = _nextAlternativeSearchNotBeforeUtc - now;
+                    Log.Debug("Pacing alternative search for {DelaySeconds:F1}s to respect Soulseek search safety budget", delay.TotalSeconds);
+                    await Task.Delay(delay, cancellationToken);
+                    now = DateTimeOffset.UtcNow;
+                }
+
+                _nextAlternativeSearchNotBeforeUtc = now + minimumInterval;
+            }
+            finally
+            {
+                _searchBudgetGate.Release();
+            }
+        }
+
+        private TimeSpan GetMinimumSearchInterval()
+        {
+            if (MinimumSearchIntervalOverride.HasValue)
+            {
+                return MinimumSearchIntervalOverride.Value;
+            }
+
+            var safetyOptions = OptionsMonitor.CurrentValue?.Soulseek.Safety;
+            if (safetyOptions?.Enabled != true || safetyOptions.MaxSearchesPerMinute <= 0)
+            {
+                return TimeSpan.Zero;
+            }
+
+            return TimeSpan.FromMinutes(1.0 / safetyOptions.MaxSearchesPerMinute);
+        }
+
+        private static bool IsSearchRateLimitExceeded(Exception exception)
+        {
+            return exception.Message.Contains("Search rate limit exceeded", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _searchBudgetGate.Dispose();
         }
 
         /// <summary>

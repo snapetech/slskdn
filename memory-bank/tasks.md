@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Pace auto-replace searches instead of failing whole stuck-download batches on the Soulseek safety limiter.
+ - Status: completed (2026-04-21)
+ - Priority: P1
+ - Notes: Live `kspls0` soak showed auto-replace issuing a large stuck-download batch until `Search rate limit exceeded`, then logging repeated stack traces and recording `128 failed`. Alternative searches are now paced by `Soulseek.Safety.MaxSearchesPerMinute`, search-budget exhaustion defers the current item and stops the cycle early, and focused unit coverage locks in the behavior. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1

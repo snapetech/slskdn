@@ -15,11 +15,13 @@ using Moq;
 using slskd.Search;
 using slskd.Transfers;
 using slskd.Transfers.AutoReplace;
+using slskd.Transfers.Downloads;
 using slskd.Transfers.Ranking;
 using Soulseek;
 using Xunit;
 using SearchFile = slskd.Search.File;
 using SearchModel = slskd.Search.Search;
+using SlskdTransfer = slskd.Transfers.Transfer;
 using SlskdOptions = slskd.Options;
 
 public class AutoReplaceServiceTests
@@ -34,8 +36,8 @@ public class AutoReplaceServiceTests
                 It.IsAny<SearchQuery>(),
                 SearchScope.Network,
                 It.IsAny<SearchOptions>(),
-                null))
-            .ReturnsAsync((Guid id, SearchQuery _, SearchScope _, SearchOptions? _, List<string>? _) => new SearchModel
+                It.IsAny<List<string>>()))
+            .ReturnsAsync((Guid id, SearchQuery _, SearchScope _, SearchOptions _, List<string> _) => new SearchModel
             {
                 Id = id,
                 State = SearchStates.Requested,
@@ -87,14 +89,15 @@ public class AutoReplaceServiceTests
                 SmartScore = 100,
             }));
 
-        var service = new AutoReplaceService(
+        using var service = new AutoReplaceService(
             Mock.Of<ITransferService>(),
             searchService.Object,
             Mock.Of<ISoulseekClient>(),
             Mock.Of<IOptionsMonitor<SlskdOptions>>(),
             rankingService.Object,
             searchCompletionTimeout: TimeSpan.FromMilliseconds(50),
-            searchPollInterval: TimeSpan.FromMilliseconds(1));
+            searchPollInterval: TimeSpan.FromMilliseconds(1),
+            minimumSearchInterval: TimeSpan.Zero);
 
         var alternatives = await service.FindAlternativesAsync(new FindAlternativeRequest
         {
@@ -109,5 +112,112 @@ public class AutoReplaceServiceTests
         searchService.Verify(
             service => service.FindAsync(It.IsAny<Expression<Func<SearchModel, bool>>>(), true),
             Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ProcessStuckDownloadsAsync_WhenSearchBudgetExceeded_SkipsAndStopsCycle()
+    {
+        var downloads = new List<SlskdTransfer>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Username = "source-one",
+                Filename = "Artist - Track One.flac",
+                Size = 1000,
+                State = TransferStates.Completed | TransferStates.TimedOut,
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Username = "source-two",
+                Filename = "Artist - Track Two.flac",
+                Size = 1000,
+                State = TransferStates.Completed | TransferStates.TimedOut,
+            },
+        };
+
+        var downloadService = new Mock<IDownloadService>();
+        downloadService
+            .Setup(service => service.List(It.IsAny<Expression<Func<SlskdTransfer, bool>>>(), false))
+            .Returns((Expression<Func<SlskdTransfer, bool>> expression, bool _) => downloads.Where(expression.Compile()).ToList());
+
+        var transferService = new Mock<ITransferService>();
+        transferService
+            .SetupGet(service => service.Downloads)
+            .Returns(downloadService.Object);
+
+        using var searchService = new RateLimitedSearchService();
+
+        var rankingService = new Mock<ISourceRankingService>();
+        rankingService
+            .Setup(service => service.RecordFailureAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        using var service = new AutoReplaceService(
+            transferService.Object,
+            searchService,
+            Mock.Of<ISoulseekClient>(),
+            Mock.Of<IOptionsMonitor<SlskdOptions>>(),
+            rankingService.Object,
+            searchCompletionTimeout: TimeSpan.FromMilliseconds(1),
+            searchPollInterval: TimeSpan.FromMilliseconds(1),
+            minimumSearchInterval: TimeSpan.Zero);
+
+        var result = await service.ProcessStuckDownloadsAsync(new AutoReplaceRequest());
+
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(1, result.Skipped);
+        Assert.Contains("Search safety budget exhausted", Assert.Single(result.Details).Error);
+        Assert.Equal(1, searchService.StartCount);
+    }
+
+    private sealed class RateLimitedSearchService : ISearchService
+    {
+        public int StartCount { get; private set; }
+
+        public Task DeleteAsync(SearchModel search)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<SearchModel> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null)
+        {
+            StartCount++;
+            throw new InvalidOperationException("Search rate limit exceeded. See Soulseek safety configuration.");
+        }
+
+        public Task<SearchModel> FindAsync(Expression<Func<SearchModel, bool>> expression, bool includeResponses = false)
+        {
+            return Task.FromResult<SearchModel>(null);
+        }
+
+        public Task<List<SearchModel>> ListAsync(Expression<Func<SearchModel, bool>> expression = null, int limit = 0, int offset = 0)
+        {
+            return Task.FromResult(new List<SearchModel>());
+        }
+
+        public void Update(SearchModel search)
+        {
+        }
+
+        public bool TryCancel(Guid id)
+        {
+            return false;
+        }
+
+        public Task<int> PruneAsync(int age)
+        {
+            return Task.FromResult(0);
+        }
+
+        public Task<int> DeleteAllAsync()
+        {
+            return Task.FromResult(0);
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }
