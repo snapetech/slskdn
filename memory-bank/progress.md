@@ -1,3 +1,13 @@
+## 2026-04-21 02:31Z - Made QUIC opt-in after kspls0 native restart and reduced live log noise
+
+- Rechecked current `kspls0` logs after the route/tab sweep and found a real service restart: the previous manual build process dumped core with native `SIGSEGV` at `2026-04-20 20:20:41 CST`, then systemd recovered it. The same sample also showed a fake fatal unobserved task from Soulseek.NET listener socket disposal.
+- Documented the Soulseek listener teardown gotcha in ADR-0001 and committed it as `a9f809ff2`, then documented the recurring QUIC/native coredump risk and committed it as `dd5a0686a`.
+- Extended `Program.IsExpectedSoulseekNetworkException(...)` to classify `ObjectDisposedException("System.Net.Sockets.Socket")` only when the stack is inside `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync`, with focused unit coverage.
+- Changed mesh QUIC to be explicitly opt-in: UDP overlay remains enabled by default, `OverlayOptions.EnableQuic` defaults false, `DataOverlayOptions.Enable` defaults false, and QUIC clients/hosted services are registered only when the operator enables the relevant config and the runtime supports QUIC.
+- Documented the new `overlay.enable_quic` and `overlay_data.enable` example config keys.
+- Reduced live journal noise by demoting verbose startup `[DI]` tracepoints and per-request MediaCore CSRF processing logs to debug.
+- Validation so far: focused `ProgramPathNormalizationTests` passed (`28` tests), full unit suite passed (`3546` tests), and Release build passed with only existing generated MessagePack/test analyzer warnings.
+
 ## 2026-04-21 01:55Z - Converted live user-info peer failures from 500s to controlled 503s
 
 - Continued the requested `kspls0` Playwright sweep and found the concrete backend issue behind the observed HTTP 500s: `/api/v0/users/{username}/info` only caught explicit `UserOfflineException`, so expected Soulseek peer connection failures and info timeouts bubbled through the middleware as unhandled exceptions.

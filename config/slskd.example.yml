@@ -353,6 +353,14 @@
 #       port: ~
 #       username: ~
 #       password: ~
+# overlay:
+#   enable: true
+#   listen_port: 50400
+#   enable_quic: false   # opt in only after the host's MsQuic/runtime stack has soaked cleanly
+#   quic_listen_port: 50402
+# overlay_data:
+#   enable: false        # QUIC data plane; requires a stable MsQuic/runtime stack
+#   listen_port: 50401
 # integration:
 #   webhooks:
 #     my_webhook:

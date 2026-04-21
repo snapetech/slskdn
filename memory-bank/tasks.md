@@ -1137,3 +1137,7 @@
 - [x] Fix transfer cleanup ordering during service shutdown
   - Status: completed (2026-04-19)
   - Notes: `DownloadService` now drains in-flight download/enqueue tasks before `Application.StopAsync` disposes the shared Soulseek client, which removed the restart-time global semaphore warnings and disposed-object cleanup noise on live `kspls0` restarts. A second live shutdown race in `SoulseekClient.Disconnect()` (`Sequence contains no elements`) is now caught and downgraded during expected shutdown so clean restarts do not emit false fatal termination logs.
+
+- [x] Fix kspls0 QUIC/native crash mitigation and Soulseek listener fake-fatal noise
+  - Status: completed (2026-04-21)
+  - Notes: Live manual-build soak found a native `SIGSEGV` restart while QUIC listeners were active and a recovered-process fake fatal from Soulseek.NET listener socket disposal. QUIC control/data now require explicit operator opt-in, UDP overlay remains enabled by default, listener socket disposal is classified as expected Soulseek network teardown, and verbose startup/CSRF request logs were demoted to debug.

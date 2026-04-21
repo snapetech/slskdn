@@ -298,6 +298,32 @@ public class ProgramPathNormalizationTests
     }
 
     [Fact]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForSoulseekListenerSocketDisposedTeardown()
+    {
+        var inner = new ObjectDisposedException("System.Net.Sockets.Socket");
+        ExceptionDispatchInfo.SetRemoteStackTrace(
+            inner,
+            "   at System.Net.Sockets.Socket.AcceptAsync(SocketAsyncEventArgs e, CancellationToken cancellationToken)\n" +
+            "   at System.Net.Sockets.TcpListener.AcceptTcpClientAsync()\n" +
+            "   at Soulseek.Network.Tcp.TcpListenerAdapter.AcceptTcpClientAsync()\n" +
+            "   at Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync()");
+        var exception = new AggregateException(inner);
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
+    [Fact]
+    public void OverlayOptions_DefaultToQuicOptIn()
+    {
+        var overlay = new slskd.Mesh.Overlay.OverlayOptions();
+        var dataOverlay = new slskd.Mesh.Overlay.DataOverlayOptions();
+
+        Assert.True(overlay.Enable);
+        Assert.False(overlay.EnableQuic);
+        Assert.False(dataOverlay.Enable);
+    }
+
+    [Fact]
     public void IsStaleAntiforgeryTokenException_ReturnsTrue_ForKeyRingMismatch()
     {
         var exception = new AntiforgeryValidationException("The antiforgery token could not be decrypted.", new CryptographicException("The key {abc} was not found in the key ring."));

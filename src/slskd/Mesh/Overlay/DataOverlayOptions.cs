@@ -9,7 +9,7 @@ namespace slskd.Mesh.Overlay;
 /// </summary>
 public class DataOverlayOptions
 {
-    public bool Enable { get; set; } = true;
+    public bool Enable { get; set; } = false;
     public int ListenPort { get; set; } = 50401;
     public int MaxPayloadBytes { get; set; } = 512 * 1024; // 512 KB per message
     public int MaxConcurrentStreams { get; set; } = 8;

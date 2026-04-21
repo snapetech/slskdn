@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Mesh QUIC is now explicitly opt-in after recurring native `kspls0` coredumps under active MsQuic listeners. UDP overlay remains enabled by default, while QUIC control/data services and clients register only when configured.
+- Soulseek.NET listener socket disposal from `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync` is now classified as expected network teardown instead of fake fatal unobserved-task telemetry.
+- Verbose startup `[DI]` tracepoints and per-request MediaCore CSRF processing logs now emit at debug level to reduce live journal noise.
 - User info lookups now return a controlled `503` for expected Soulseek peer connection failures and timeouts instead of bubbling live peer unavailability as HTTP 500s.
 
 ### SongID

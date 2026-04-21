@@ -11,10 +11,11 @@ public class OverlayOptions
 {
     public bool Enable { get; set; } = true;
     public int ListenPort { get; set; } = 50400;
+    public bool EnableQuic { get; set; } = false;
 
     // QUIC overlay server needs its own UDP port: QUIC takes exclusive ownership of its
     // UDP socket, so it cannot share ListenPort with the legacy UdpOverlayServer. Both
-    // run concurrently — UDP is a fallback for peers that can't negotiate QUIC.
+    // can run concurrently when QUIC is explicitly enabled.
     public int QuicListenPort { get; set; } = 50402;
 
     public int ReceiveBufferBytes { get; set; } = 128 * 1024;

@@ -1,3 +1,18 @@
+## Update 2026-04-21 02:31:00Z
+
+- Current task: Finish validation, commit/push, deploy, and monitor the QUIC opt-in and Soulseek listener teardown fixes found during `kspls0` manual-build soak.
+- Last activity:
+  - rechecked current `kspls0` logs and found one real native coredump/systemd restart at `2026-04-20 20:20:41 CST`, followed by a fake fatal unobserved task from Soulseek.NET listener socket disposal in the recovered process
+  - documented the Soulseek listener teardown and QUIC opt-in gotchas in ADR-0001 as docs-only commits `a9f809ff2` and `dd5a0686a`
+  - updated the expected Soulseek network exception classifier for the exact listener socket disposal stack and added focused unit coverage
+  - changed QUIC overlay/data to explicit opt-in while keeping UDP overlay enabled by default
+  - demoted verbose startup `[DI]` logs and per-request MediaCore CSRF processing logs to debug
+  - validation so far: focused program tests passed (`28`), full unit suite passed (`3546`), and Release build passed with existing warnings
+- Next steps:
+  1. Run lint and diff checks.
+  2. Commit, verify GitHub target, push to `snapetech/slskdn`.
+  3. Publish/deploy a new manual build to `kspls0`, then confirm QUIC listeners are absent by default, the service has no new coredump/restart, and Playwright/log checks stay clean.
+
 ## Update 2026-04-21 02:20:00Z
 
 - Current task: None. The `kspls0` user-info 500 fix is committed, pushed, deployed, and retested; the route/tab Playwright pass is clean for current 5xx/502/page-error signals.
