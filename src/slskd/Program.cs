@@ -3552,7 +3552,7 @@ namespace slskd
 
                             if (!isApi && !isSwagger && !isHub && !isHealth && !isStatic && !hasExtension)
                             {
-                                Log.Information("[SPA Fallback Middleware] Serving index.html for {Path} (file server returned 404)", path);
+                                Log.Debug("[SPA Fallback Middleware] Serving index.html for {Path} (file server returned 404)", path);
                                 context.Response.StatusCode = 200;
                                 context.Response.ContentType = "text/html; charset=utf-8";
                                 await context.Response.SendFileAsync(indexPath);

@@ -6,10 +6,11 @@
   - documented the Soulseek listener teardown and QUIC opt-in gotchas in ADR-0001 as docs-only commits `a9f809ff2` and `dd5a0686a`
   - updated the expected Soulseek network exception classifier for the exact listener socket disposal stack and added focused unit coverage
   - changed QUIC overlay/data to explicit opt-in while keeping UDP overlay enabled by default
-  - demoted verbose startup `[DI]` logs and per-request MediaCore CSRF processing logs to debug
+  - demoted verbose startup `[DI]` logs, SPA fallback route serving, and per-request MediaCore CSRF processing logs to debug
+  - route/tab Playwright sweep on the deployed build reached `283` route/tab states with no 5xx responses, but exposed controlled offline user-info `404`s still logging `UserOfflineException` stacks; documented the gotcha as `cfba2687f` and applied the concise logging fix locally
   - validation so far: focused program tests passed (`28`), full unit suite passed (`3546`), and Release build passed with existing warnings
 - Next steps:
-  1. Run lint and diff checks.
+  1. Re-run focused tests, lint, and diff checks for the final logging fix.
   2. Commit, verify GitHub target, push to `snapetech/slskdn`.
   3. Publish/deploy a new manual build to `kspls0`, then confirm QUIC listeners are absent by default, the service has no new coredump/restart, and Playwright/log checks stay clean.
 

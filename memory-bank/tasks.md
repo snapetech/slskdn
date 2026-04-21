@@ -1140,4 +1140,4 @@
 
 - [x] Fix kspls0 QUIC/native crash mitigation and Soulseek listener fake-fatal noise
   - Status: completed (2026-04-21)
-  - Notes: Live manual-build soak found a native `SIGSEGV` restart while QUIC listeners were active and a recovered-process fake fatal from Soulseek.NET listener socket disposal. QUIC control/data now require explicit operator opt-in, UDP overlay remains enabled by default, listener socket disposal is classified as expected Soulseek network teardown, and verbose startup/CSRF request logs were demoted to debug.
+  - Notes: Live manual-build soak found a native `SIGSEGV` restart while QUIC listeners were active and a recovered-process fake fatal from Soulseek.NET listener socket disposal. QUIC control/data now require explicit operator opt-in, UDP overlay remains enabled by default, listener socket disposal is classified as expected Soulseek network teardown, and verbose startup/SPA fallback/CSRF request logs were demoted to debug. A post-deploy Playwright pass also exposed controlled offline user-info `404`s still logging `UserOfflineException` stacks; the offline info catch now logs a concise summary.

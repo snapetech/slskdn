@@ -292,7 +292,7 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                Log.Information(ex, "User {Username} is offline for info", username);
+                Log.Information("User {Username} is offline for info: {Message}", username, ex.Message);
                 return NotFound("User is offline");
             }
             catch (SoulseekClientException ex) when (IsExpectedUserInfoFailure(ex))

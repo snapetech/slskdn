@@ -5,7 +5,8 @@
 - Extended `Program.IsExpectedSoulseekNetworkException(...)` to classify `ObjectDisposedException("System.Net.Sockets.Socket")` only when the stack is inside `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync`, with focused unit coverage.
 - Changed mesh QUIC to be explicitly opt-in: UDP overlay remains enabled by default, `OverlayOptions.EnableQuic` defaults false, `DataOverlayOptions.Enable` defaults false, and QUIC clients/hosted services are registered only when the operator enables the relevant config and the runtime supports QUIC.
 - Documented the new `overlay.enable_quic` and `overlay_data.enable` example config keys.
-- Reduced live journal noise by demoting verbose startup `[DI]` tracepoints and per-request MediaCore CSRF processing logs to debug.
+- Reduced live journal noise by demoting verbose startup `[DI]` tracepoints, SPA fallback route serving, and per-request MediaCore CSRF processing logs to debug.
+- The post-deploy Playwright pass then exposed controlled offline user-info `404`s still logging `UserOfflineException` stack traces; documented the gotcha in ADR-0001 as `cfba2687f` and changed the offline info catch to log a concise summary.
 - Validation so far: focused `ProgramPathNormalizationTests` passed (`28` tests), full unit suite passed (`3546` tests), and Release build passed with only existing generated MessagePack/test analyzer warnings.
 
 ## 2026-04-21 01:55Z - Converted live user-info peer failures from 500s to controlled 503s

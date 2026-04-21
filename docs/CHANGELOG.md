@@ -24,7 +24,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 - Made mesh QUIC explicitly opt-in after recurring native `kspls0` coredumps under active MsQuic listeners: UDP overlay remains enabled by default, QUIC control/data services and clients register only when configured, and the example config now documents the opt-in keys.
 - Classified Soulseek.NET listener socket disposal from `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync` as expected network teardown so it no longer logs as a fake fatal unobserved task exception.
-- Reduced live journal noise by demoting verbose startup `[DI]` tracepoints and per-request MediaCore CSRF processing logs to debug.
+- Reduced live journal noise by demoting verbose startup `[DI]` tracepoints, SPA fallback route serving, and per-request MediaCore CSRF processing logs to debug; controlled offline user-info responses now log concise summaries instead of `UserOfflineException` stacks.
 - Fixed user info lookups so expected Soulseek peer connection failures and timeouts return a controlled `503` instead of bubbling live peer unavailability as HTTP 500s.
 - Quieted expected remote-offline download failures during restart/re-enqueue: transfers still fail normally, but `UserOfflineException` peer outcomes no longer emit repeated error stack traces.
 - Quieted auto-replace shutdown cancellation during manual deploys so host-stop cancellation no longer logs search error stacks or counts interrupted items as failed replacements.
