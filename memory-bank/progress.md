@@ -1,3 +1,15 @@
+## 2026-04-21 03:58Z - Released, redeployed, and re-swept kspls0 after quiet optional user-info fix
+
+- Created and pushed release tag `build-main-0.24.5-slskdn.167` from `e67099ff2`; GitHub Actions run `24702224025` produced the main release artifacts and updated stable metadata on `origin/main`.
+- Investigated the failed scheduled E2E run and fixed target-framework drift in the E2E/test launchers: they now discover the app target framework from `src/slskd/slskd.csproj` instead of hardcoding `net8.0`. Documented the gotcha in ADR-0001 as `a50e34bf6`, committed the fix as `2e4cc934c`, and pushed it to `snapetech/slskdn`.
+- Deployed `0.24.5-slskdn.167+manual.2e4cc934c` to `/usr/lib/slskd/releases/manual-2e4cc934c` on `kspls0`; the first post-release route/tab sweep was otherwise clean but still showed optional offline user-info badge lookups as browser-visible 404 noise from historical downloads.
+- Fixed the remaining fixable UI/API noise by adding `quietUnavailable=true` to optional user-info badge lookups: default `/api/v0/users/{username}/info` semantics remain unchanged, while quiet optional badge misses return `204 No Content` for expected offline/unavailable peer data. Documented the gotcha as `2f52e3bed`, committed the code/docs fix as `9c1d3f14d`, and pushed it to `snapetech/slskdn`.
+- Published and deployed `0.24.5-slskdn.167+manual.9c1d3f14d` to `/usr/lib/slskd/releases/manual-9c1d3f14d` on `kspls0`; `/api/v0/application` reports the matching build, Soulseek is `Connected, LoggedIn`, shares are ready, and systemd shows PID `1887195`, `active/running`, `NRestarts=0`.
+- Verified expected sockets after the final deploy: UDP `50306/50400` and TCP `5030/50300/50305` are owned by `slskd`; no QUIC listeners are active on `50401/50402` by default.
+- Final bounded Playwright route/tab sweep report: `/tmp/kspls0-route-tab-sweep-2026-04-21T03-44-45-634Z.md`, `307` route/tab visits, `1683` same-origin responses, status summary `{"200":1680,"204":3}`, `0` issues, `0` HTTP 4xx/5xx/502 responses.
+- Remaining sweep warnings are scanner false positives from `/system/options` containing literal text such as `remoteConfiguration: false` and `Remote Configuration Disabled`; the earlier offline user-info 404/resource warnings are gone.
+- Fresh journal/coredump samples after the final sweep showed no new `slskd` coredumps and no actionable fatal/error/exception/502/bind/protocol noise from the current process; only expected DHT exposure/churn summaries remained.
+
 ## 2026-04-21 03:12Z - Deployed final kspls0 manual build and completed full route/tab sweep
 
 - Committed and pushed the final logging fixes to `snapetech/slskdn`: `56a25b31d` quiets controlled offline user-info logs, `783a01302` documents shutdown search cancellation, and `15ba2a423` treats app-shutdown search cancellation as expected.

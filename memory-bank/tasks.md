@@ -11,6 +11,16 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Quiet optional user-info badge misses in route/tab sweeps.
+ - Status: completed (2026-04-21)
+ - Priority: P3
+ - Notes: The post-release `kspls0` route/tab sweep showed the remaining browser-visible noise was optional user badge requests for offline historical download users. `UserCard` now asks `/api/v0/users/{username}/info?quietUnavailable=true`, and expected offline/unavailable peer data returns `204 No Content` only for that optional mode; default endpoint semantics remain unchanged. The gotcha is documented in ADR-0001.
+
+- [x] **bug**: Discover app target framework in E2E and integration launchers.
+ - Status: completed (2026-04-21)
+ - Priority: P2
+ - Notes: The scheduled E2E run fell back to `dotnet run` because the harness hardcoded `bin/Release/net8.0` while the app targets `net10.0`, which made startup timing flaky. The Playwright harness and invalid-config integration test launcher now read `<TargetFramework>` from `src/slskd/slskd.csproj` and use the matching build output. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Return controlled non-500 responses for unavailable Soulseek user info.
  - Status: completed (2026-04-21)
  - Priority: P2

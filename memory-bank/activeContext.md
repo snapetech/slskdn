@@ -1,3 +1,19 @@
+## Update 2026-04-21 03:58:00Z
+
+- Current task: Completed the requested release, push, manual `kspls0` redeploy, monitoring pass, and fixable-noise cleanup.
+- Last activity:
+  - created and pushed `build-main-0.24.5-slskdn.167`; release run `24702224025` produced the main release artifacts and updated stable metadata
+  - fixed scheduled E2E/test target-framework drift by discovering the app target framework from `src/slskd/slskd.csproj`; gotcha documented as `a50e34bf6`, fix pushed as `2e4cc934c`
+  - deployed `0.24.5-slskdn.167+manual.2e4cc934c` to `kspls0`, then used the route/tab sweep to isolate the remaining fixable browser-visible noise to optional user-info badge 404s for offline historical downloads
+  - added quiet optional user-info lookups so badge misses return `204 No Content` without changing default API semantics; gotcha documented as `2f52e3bed`, fix pushed as `9c1d3f14d`
+  - deployed `0.24.5-slskdn.167+manual.9c1d3f14d` to `/usr/lib/slskd/releases/manual-9c1d3f14d`; service is `active/running`, PID `1887195`, `NRestarts=0`, Soulseek `Connected, LoggedIn`, shares ready
+  - final Playwright route/tab sweep report `/tmp/kspls0-route-tab-sweep-2026-04-21T03-44-45-634Z.md`: `307` visits, `1683` same-origin responses, `{"200":1680,"204":3}`, `0` issues, `0` 4xx/5xx/502 responses
+  - fresh logs/coredumps after the final sweep show no new `slskd` coredumps and no actionable current-process fatal/error/exception/502/bind/protocol noise; remaining warnings are `/system/options` scanner false positives and expected DHT churn summaries
+- Next steps:
+  1. Continue passive monitoring if requested.
+  2. Check any still-running downstream package jobs from release run `24702224025` if release packaging status is needed.
+  3. Do not create another build tag unless explicitly requested.
+
 ## Update 2026-04-21 03:12:00Z
 
 - Current task: Completed `kspls0` manual-build testing/fixing pass.
