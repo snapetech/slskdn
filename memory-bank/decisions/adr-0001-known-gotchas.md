@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z121. Soulseek Read Timeout Inner Exceptions Must Match The Expected Network Classifier
+
+**The Bug**: Live `kspls0` logs on the installed `0.24.5-slskdn.170` process emitted fake `[FATAL] Unobserved task exception` entries for routine Soulseek read-loop timeout churn. The flattened exception chain included `Soulseek.ConnectionReadException: Failed to read 4 bytes...`, an inner `IOException: Unable to read data from the transport connection: Connection timed out`, and an inner `SocketException (110): Connection timed out` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+details.Contains("Operation timed out", StringComparison.Ordinal) ||
+details.Contains("Failed to read", StringComparison.Ordinal)
+```
+
+**Correct**:
+```csharp
+details.Contains("Operation timed out", StringComparison.Ordinal) ||
+details.Contains("Connection timed out", StringComparison.Ordinal) ||
+details.Contains("Failed to read", StringComparison.Ordinal) ||
+details.Contains("Unable to read data from the transport connection", StringComparison.Ordinal)
+```
+
+**Why This Keeps Happening**: `Program.IsExpectedSoulseekNetworkException(...)` flattens aggregate/inner exceptions and requires every flattened exception to match. Matching only the outer Soulseek library exception is not enough; expected-network classifiers must cover the inner `IOException` and `SocketException` message shapes that the runtime actually logs.
+
 ### 0z120. Overlay Endpoint Cooldowns Should Be Aggregated At Information
 
 **The Bug**: Live `0.24.5-slskdn.170` logs on `kspls0` emitted one `Information` line per degraded DHT-discovered overlay endpoint once each endpoint hit a failure streak of three, even though the periodic DHT/overlay summary and `/api/v0/overlay/stats` already expose the same failure mix and top-problem endpoint data.
