@@ -64,7 +64,7 @@ public class PeerDescriptorRefreshService : BackgroundService
         // Use configurable intervals
         var refreshInterval = options.PeerDescriptorRefresh.RefreshInterval;
         var ipCheckInterval = options.PeerDescriptorRefresh.IpCheckInterval;
-        var lastRefresh = DateTime.MinValue;
+        var lastRefresh = DateTime.UtcNow;
         var lastIpCheck = DateTime.MinValue;
 
         while (!stoppingToken.IsCancellationRequested)

@@ -1086,6 +1086,10 @@
 
 - [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.
 
+- [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and fix duplicate startup descriptor publish noise
+  - Status: completed (2026-04-21)
+  - Notes: Confirmed the installed package, CLI/API version, service state, Soulseek login, shares, DHT, and overlay listener are healthy on `kspls0`. Current-process logs have no fresh fatal/error/exception/502/coredump/search-rate noise after the auto-replace cycle. Fixed duplicate startup MeshDHT self-descriptor publication by letting `MeshBootstrapService` own the startup publish and starting `PeerDescriptorRefreshService` periodic scheduling from current time. Validation passed with focused and full unit tests, Release build, lint, and diff check.
+
 - [x] Fix issue `#209` root split between DHT discovery, circuit peer inventory, and stale antiforgery recovery
   - Status: done
   - Notes: DHT-discovered rendezvous peers now publish into `IMeshPeerManager` immediately so circuit maintenance sees nonzero onion-capable peers even before overlay neighbor registration completes, connection success/failure updates now refine those peer records, and stale antiforgery cookie recovery now retries on any key-ring/decryption exception shape instead of only `AntiforgeryValidationException`.

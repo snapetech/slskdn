@@ -6707,6 +6707,13 @@ Code quality improvements were completed as part of Option A:
 - Investigated the red `build-main-0.24.5-slskdn.168` workflow and confirmed the release artifacts were already published; the failure was a non-critical Matrix announcement `504`. Release announcement webhooks now retry and continue as warnings for transient Discord/Matrix failures.
 - Validation: workflow YAML parsed, focused `DhtRendezvousServiceTests` passed, full unit suite passed (`3552` tests), Release build passed, `bash ./bin/lint` passed, and `git diff --check` passed.
 
+## 2026-04-21 05:59:00Z
+
+- Continued the live `kspls0` package soak on `0.24.5-slskdn.170`. The service stayed active on the same PID with `NRestarts=0`, no fresh coredumps, Soulseek `Connected, LoggedIn`, shares ready, DHT running, and the overlay listener active. The auto-replace batch that started during the previous sample did not recur with search-budget errors or stack-trace spam.
+- Found and fixed one actionable startup polish issue: duplicate mesh self-descriptor publishing at boot. `MeshBootstrapService` already owns the initial publish, so `PeerDescriptorRefreshService` now starts its periodic refresh clock at service start instead of immediately republishing the same descriptor.
+- Documented the hosted-service scheduling gotcha in ADR-0001 and committed it as `a4e516468`.
+- Validation: focused `PeerDescriptorRefreshServiceTests` passed, full unit suite passed (`3553` tests), Release build passed, `bash ./bin/lint` passed, and `git diff --check` passed.
+
 ## 2026-04-20 02:30:00Z
 
 - Traced the failed tag build `build-main-0.24.5-slskdn.160` to the `Release Gate` integration smoke compile step, not the runtime smoke tests. CI failed with `CS0535` because `tests/slskd.Tests.Integration/StubWebApplicationFactory.cs` still had a pre-shutdown `StubDownloadService` that did not implement the new `IDownloadService.ShutdownAsync(CancellationToken)` member.
