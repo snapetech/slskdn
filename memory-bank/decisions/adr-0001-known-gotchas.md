@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z102. Auto-Replace Shutdown Cancellation Must Not Count As Search Errors
+
+**The Bug**: Deploying a new manual build while auto-replace was in the middle of a paced alternative search logged `TaskCanceledException` stack traces and counted the interrupted items as failed replacements. The shutdown was intentional, but the journal looked like current-process search failure noise.
+
+**Files Affected**:
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+- `src/slskd/Transfers/AutoReplace/AutoReplaceBackgroundService.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    Log.Error(ex, "Error searching for alternatives: {Message}", ex.Message);
+}
+```
+
+**Correct**:
+```csharp
+catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+{
+    throw;
+}
+```
+
+**Why This Keeps Happening**: Long-running background cycles often receive host shutdown tokens while they are sleeping, pacing, or polling remote state. Cancellation from the caller's token is a control-flow signal, not a failed search or failed replacement; let it unwind to the hosted service and log a concise shutdown message if needed.
+
 ### 0z101. Remote Offline Download Failures Are Expected Peer Outcomes, Not Error Stack Noise
 
 **The Bug**: Live `kspls0` restart validation re-enqueued downloads from an offline remote user and logged repeated `Soulseek.UserOfflineException` / `Soulseek.TransferException` stack traces from `DownloadService`. The transfer failure was expected peer state, but the journal looked like a local runtime error.
