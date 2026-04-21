@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z105. Soulseek TCP Double-Disconnect Races Are Expected Network Churn, Not Fatal Unobserved Tasks
+
+**The Bug**: Live `kspls0` monitoring caught a current-process `[FATAL] Unobserved task exception` from `Soulseek.Network.Tcp.Connection.Disconnect` with `InvalidOperationException: An attempt was made to transition a task to a final state when it had already completed.` The process survived because the global handler marks it observed, but the log classified a Soulseek.NET read-loop disconnect race as fatal.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+var isNetworkFailure =
+    exception is TimeoutException ||
+    exception is OperationCanceledException ||
+    exception is IOException;
+```
+
+**Correct**:
+```csharp
+var isSoulseekTcpDoubleDisconnectRace =
+    exception is InvalidOperationException &&
+    details.Contains("An attempt was made to transition a task to a final state", StringComparison.Ordinal) &&
+    details.Contains("Soulseek.Network.Tcp.Connection.Disconnect", StringComparison.Ordinal);
+```
+
+**Why This Keeps Happening**: Soulseek.NET connection teardown can race between a read loop and a disconnect path. These failures are remote network churn/control-flow races when the stack is inside `Soulseek.Network.Tcp.Connection` or `MessageConnection`, so the global unobserved-task classifier must recognize them before the fatal fallback.
+
 ### 0z104. Expected Soulseek Shutdown Disconnect Races Must Not Log Exception Objects
 
 **The Bug**: Manual deploy shutdowns hit the known Soulseek.NET disconnect race (`InvalidOperationException: Sequence contains no elements`) and the app caught it, but still passed the exception object to Serilog. The behavior was handled, yet the journal still printed a full stack trace during every affected shutdown.
