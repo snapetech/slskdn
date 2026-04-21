@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z103. Background Search Batches Must Not Emit Per-Search Success/Fallback Logs At Information
+
+**The Bug**: After auto-replace search pacing was fixed, a 142-item `kspls0` cycle still filled the journal with routine `Information` logs from shared search infrastructure: mesh fallback with no peers, search completion counts, and passive HashDb discovery counts. The cycle was healthy, but normal per-search progress hid actionable runtime signals.
+
+**Files Affected**:
+- `src/slskd/Search/SearchService.cs`
+- `src/slskd/DhtRendezvous/Search/MeshOverlaySearchService.cs`
+- `src/slskd/HashDb/HashDbService.cs`
+
+**Wrong**:
+```csharp
+Log.Information("Search for '{Query}' completed with {Responses} responses", query, search.ResponseCount);
+_logger.LogInformation("[MeshSearch] No outbound mesh peers ...");
+log.Information("[HashDb] Discovered {Count} FLAC files ...");
+```
+
+**Correct**:
+```csharp
+Log.Debug("Search for '{Query}' completed with {Responses} responses", query, search.ResponseCount);
+_logger.LogDebug("[MeshSearch] No outbound mesh peers ...");
+log.Debug("[HashDb] Discovered {Count} FLAC files ...");
+```
+
+**Why This Keeps Happening**: Shared search services serve both interactive searches and background batch workflows. A log level that feels harmless for one manual search becomes noise when a conservative background loop performs dozens of searches. Keep routine per-search progress at `Debug`; reserve `Information` for user-visible aggregate workflow summaries or unusual/actionable outcomes.
+
 ### 0z102. Auto-Replace Shutdown Cancellation Must Not Count As Search Errors
 
 **The Bug**: Deploying a new manual build while auto-replace was in the middle of a paced alternative search logged `TaskCanceledException` stack traces and counted the interrupted items as failed replacements. The shutdown was intentional, but the journal looked like current-process search failure noise.
