@@ -8862,7 +8862,6 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 **How to prevent it:** Any full-instance test harness that launches `slskd` must pass both `--config` and `--app-dir` explicitly on the command line. Do not rely on environment-only appdir overrides for subprocess isolation when the product has singleton/appdir locking during startup.
 
-
 ### 0z51. Full-Instance Harnesses Must Override Every Bound Listener Port, Not Just The Primary HTTP Port
 
 **What went wrong:** After fixing `--app-dir`, the new two-instance mesh smoke still died during startup because the subprocess tried to bind other default listeners already used by the developer machine, including HTTPS on `5031` and the mesh UDP/QUIC defaults on `50400/50401`. Randomizing only the primary web port was not enough to isolate the child process.
@@ -8930,3 +8929,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** Static events are process-global state, but xUnit runs test classes in parallel by default. A test that snapshots an invocation count and expects exactly one new subscriber can race with another test that subscribes/unsubscribes the same static event in the same process.
 
 **How to prevent it:** Put any tests that inspect or mutate static event invocation lists in a shared non-parallel collection, or rewrite the assertion to prove the specific owned handler was removed without depending on a global count. Do not add new static event count assertions without isolating them from xUnit parallelism.
+
+### 0z59. Public Mesh Descriptors Must Not Publish Every Local Interface
+
+**What went wrong:** Live issue-209 diagnostics on `kspls0` showed the node publishing five self-descriptor endpoints/transports from automatic interface detection while public DHT discovery still had zero active mesh connections. Those auto-detected addresses can include private, link-local, container, VPN, or otherwise non-public interface addresses that remote peers cannot reach. They make the mesh look populated while poisoning peer descriptors with bad direct candidates.
+
+**Why it happened:** `PeerDescriptorPublisher` treated every non-loopback interface as "routable" and also supplemented explicitly configured `SelfEndpoints` with detected interfaces. `PeerDescriptorRefreshService` used a similar broad interface scan for IP-change detection, so private-interface churn could also trigger needless descriptor refreshes.
+
+**How to prevent it:** Automatic mesh endpoint advertisement must only use public-routable IP addresses. Trust explicitly configured `SelfEndpoints` as operator intent, but do not silently add detected interfaces beside them. Keep descriptor refresh IP-change detection aligned with the same public-routable address policy so private/container interface changes do not republish bad descriptors.
