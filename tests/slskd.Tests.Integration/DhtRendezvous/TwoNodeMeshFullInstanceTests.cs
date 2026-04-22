@@ -153,7 +153,7 @@ public class TwoNodeMeshFullInstanceTests
         using var alphaClient = new HttpClient { BaseAddress = new Uri(alpha.ApiUrl) };
         using var betaClient = new HttpClient { BaseAddress = new Uri(beta.ApiUrl) };
 
-        var scanResponse = await betaClient.PutAsync("/api/v0/shares", content: null);
+        var scanResponse = await betaClient.PutAsync("/api/v0/shares?api_key=integration-test", content: null);
         scanResponse.EnsureSuccessStatusCode();
 
         var contentId = $"content:test:{probeId}";
@@ -163,7 +163,7 @@ public class TwoNodeMeshFullInstanceTests
             () => "beta share repository did not index the probe file");
 
         var connectResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/overlay/connect",
+            "/api/v0/overlay/connect?api_key=integration-test",
             new ConnectOverlayPeerRequest
             {
                 Address = "127.0.0.1",
@@ -254,8 +254,10 @@ public class TwoNodeMeshFullInstanceTests
         await WaitForSoulseekLoggedInAsync(alphaClient, "alpha");
         await WaitForSoulseekLoggedInAsync(betaClient, "beta");
 
-        var scanResponse = await betaClient.PutAsync("/api/v0/shares", content: null);
-        scanResponse.EnsureSuccessStatusCode();
+        var scanResponse = await betaClient.PutAsync("/api/v0/shares?api_key=integration-test", content: null);
+        Assert.True(
+            scanResponse.IsSuccessStatusCode,
+            $"Share scan request failed: {(int)scanResponse.StatusCode} {await scanResponse.Content.ReadAsStringAsync()}");
 
         var contentId = $"content:live-test:{probeId}";
         await WaitForAsync(
@@ -264,13 +266,15 @@ public class TwoNodeMeshFullInstanceTests
             () => "beta live-account share repository did not index the probe file");
 
         var connectResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/overlay/connect",
+            "/api/v0/overlay/connect?api_key=integration-test",
             new ConnectOverlayPeerRequest
             {
                 Address = "127.0.0.1",
                 Port = beta.OverlayPort!.Value,
             });
-        connectResponse.EnsureSuccessStatusCode();
+        Assert.True(
+            connectResponse.IsSuccessStatusCode,
+            $"Overlay connect request failed: {(int)connectResponse.StatusCode} {await connectResponse.Content.ReadAsStringAsync()}");
 
         await WaitForAsync(
             async () =>
@@ -419,22 +423,34 @@ public class TwoNodeMeshFullInstanceTests
     private static async Task WaitForSoulseekLoggedInAsync(HttpClient client, string nodeName)
     {
         string? failureDetails = null;
-        await WaitForAsync(
-            async () =>
-            {
-                using var response = await client.GetAsync("/api/v0/application");
-                var body = await response.Content.ReadAsStringAsync();
-                failureDetails = body;
-                response.EnsureSuccessStatusCode();
+        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(90);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            using var response = await client.GetAsync("/api/v0/application");
+            var body = await response.Content.ReadAsStringAsync();
+            failureDetails = body;
 
-                using var document = JsonDocument.Parse(body);
-                return document.RootElement
-                    .GetProperty("server")
-                    .GetProperty("isLoggedIn")
-                    .GetBoolean();
-            },
-            TimeSpan.FromSeconds(60),
-            () => $"{nodeName} did not log in to Soulseek with the configured live test account\n" + failureDetails);
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                continue;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement
+                .GetProperty("server")
+                .GetProperty("isLoggedIn")
+                .GetBoolean())
+            {
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
+
+        Assert.Fail($"{nodeName} did not log in to Soulseek with the configured live test account\n" + failureDetails);
     }
 
     private static bool TryLoadLocalMeshAccounts(out LocalMeshAccounts accounts)

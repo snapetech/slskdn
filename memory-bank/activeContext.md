@@ -1,3 +1,16 @@
+## Update 2026-04-22 18:57:24Z
+
+- Current task: Issue `#209` live mesh proof is complete for the two-account sandbox path.
+- Last activity:
+  - generated two fresh short alphanumeric Soulseek test accounts and recorded them in the gitignored live mesh env file
+  - stored the same credential set in OpenBao at `secret/slskdn/mesh-live-test-accounts`
+  - fixed live full-instance harness config/auth gaps: explicit Soulseek server endpoint, unique child listen ports, slower login polling with 429 tolerance, and API-key auth for mutating setup endpoints
+  - proved the public-network path: the live-account smoke logged both accounts into Soulseek, hosted a generated probe file on beta, mesh-searched it from alpha, downloaded it through the pod path, and byte-compared the transfer
+  - validation passed: standalone live-account smoke and full `TwoNodeMeshFullInstanceTests` class (`3` tests)
+- Next steps:
+  1. Run lint/diff checks and commit the live harness fixes plus memory/changelog updates.
+  2. Do not create a build tag unless explicitly requested.
+
 ## Update 2026-04-22 18:28:38Z
 
 - Current task: Issue `#209` mesh proof is locally strengthened with an optional live-account smoke; public logged-in sandbox validation is pending credentials.

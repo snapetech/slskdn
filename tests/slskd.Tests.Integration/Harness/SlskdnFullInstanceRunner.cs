@@ -37,6 +37,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
     private int? dhtPort;
     private int? udpOverlayPort;
     private int? dataOverlayPort;
+    private int? soulseekListenPort;
     private bool isRunning;
 
     public SlskdnFullInstanceRunner(ILogger<SlskdnFullInstanceRunner> logger, string testId)
@@ -86,6 +87,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         dhtPort = dhtPortOverride ?? AllocateEphemeralPortUdp();
         udpOverlayPort = AllocateEphemeralPortUdp();
         dataOverlayPort = AllocateEphemeralPort();
+        soulseekListenPort = AllocateEphemeralPort();
         if (enableBridge)
         {
             bridgePort = bridgePortOverride ?? AllocateEphemeralPort();
@@ -239,8 +241,12 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         sb.AppendLine("  collectionsSharing: true");
         sb.AppendLine("  scenePodBridge: true");
         sb.AppendLine("soulseek:");
+        sb.AppendLine("  address: vps.slsknet.org");
+        sb.AppendLine("  port: 2271");
         sb.AppendLine($"  username: {YamlEscape(soulseekUsername ?? testId)}");
         sb.AppendLine($"  password: {YamlEscape(soulseekPassword ?? "test-password")}");
+        sb.AppendLine("  listen_ip_address: 0.0.0.0");
+        sb.AppendLine($"  listen_port: {soulseekListenPort ?? 50300}");
         sb.AppendLine("dhtRendezvous:");
         sb.AppendLine("  enabled: true");
         sb.AppendLine($"  overlay_port: {overlayPort ?? 50305}");

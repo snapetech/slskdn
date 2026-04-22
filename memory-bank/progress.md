@@ -6871,3 +6871,10 @@ Code quality improvements were completed as part of Option A:
 - Rechecked the strongest mesh proof after the live `kspls0` run. The existing deterministic full-instance integration smoke proves mesh search plus pod download over the real overlay path between two isolated slskdN subprocesses, including byte comparison of the downloaded probe file.
 - Added an optional live-account full-instance smoke for the exact public-network scenario: two configured Soulseek test credentials, `no_connect=false`, login wait, beta-hosted probe share, alpha mesh search, pod download, and byte comparison.
 - Validation: `dotnet test tests/slskd.Tests.Integration/slskd.Tests.Integration.csproj --filter "FullyQualifiedName~TwoNodeMeshFullInstanceTests" --no-restore -v minimal` passed (`3` tests); `bash ./bin/lint` passed; `git diff --check` passed. No `local-mesh-accounts.env` file is present in this workspace, so the optional live-account test did not exercise public credentials yet.
+
+## 2026-04-22 18:57:24Z
+
+- Generated two fresh short alphanumeric Soulseek test accounts for the live mesh smoke. The first underscore/long-name attempt was rejected by the public server with `INVALIDUSERNAME`; the shorter usernames logged in successfully.
+- Stored the live test credentials in the gitignored `tests/slskd.Tests.Integration/local-mesh-accounts.env` file with mode `600` and in OpenBao at `secret/slskdn/mesh-live-test-accounts`; verification read back only redacted values/metadata.
+- Fixed the full-instance harness so live-login configs emit the Soulseek server endpoint and a unique listen port per child process, and changed mutating API calls in the smoke to use API-key auth so CSRF does not block local test setup.
+- Validation: the standalone live-account test passed, and the full `TwoNodeMeshFullInstanceTests` class passed (`3` tests, including public-network live-account mesh search + pod download + byte comparison).
