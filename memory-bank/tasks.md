@@ -1208,3 +1208,7 @@
 - [x] Continue issue `#209` live mesh/search diagnosis on `kspls0`
   - Status: completed (2026-04-22)
   - Notes: Fixed public self-descriptor advertisement so only public-routable auto-detected interfaces are published and configured endpoints are not supplemented with private/container/VPN addresses. Added mesh-search peer outcome logging. Deployed `0.24.5-slskdn.174+manual.6fce6575c` to `kspls0` and proved the current search path works: core Soulseek returned `252` responses / `16686` files for `radiohead`, while mesh fanout reached one active peer and got an empty response (`peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0`).
+
+- [x] Add optional live-account mesh search/transfer smoke
+  - Status: completed (2026-04-22)
+  - Notes: Added a full-instance integration smoke that uses `tests/slskd.Tests.Integration/local-mesh-accounts.env` or matching environment variables to start two real slskdN processes with live Soulseek test credentials, wait for login, host a generated probe file on beta, mesh-search it from alpha, download it through the pod path, and byte-compare the transfer. Focused `TwoNodeMeshFullInstanceTests` passed; the live-account path returns early when credentials are absent, so it is ready to run once the gitignored credential file is populated.

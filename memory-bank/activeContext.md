@@ -1,3 +1,16 @@
+## Update 2026-04-22 18:28:38Z
+
+- Current task: Issue `#209` mesh proof is locally strengthened with an optional live-account smoke; public logged-in sandbox validation is pending credentials.
+- Last activity:
+  - confirmed the deterministic two-full-instance mesh test already proves search result discovery plus pod transfer and byte comparison over the real overlay stack
+  - added `OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh`, which starts two full slskdN instances with configured Soulseek test credentials, waits for both to log in, hosts a generated probe on beta, mesh-searches from alpha, downloads it, and byte-verifies the file
+  - validation passed: focused `TwoNodeMeshFullInstanceTests` (`3` tests), `bash ./bin/lint`, and `git diff --check`
+  - no gitignored `tests/slskd.Tests.Integration/local-mesh-accounts.env` file is present here, so the public-network live-account branch is ready but not yet exercised
+- Next steps:
+  1. Populate `tests/slskd.Tests.Integration/local-mesh-accounts.env` with the two test credentials or export the matching environment variables.
+  2. Run the optional live-account smoke to prove public logged-in mesh search and transfer end to end.
+  3. Do not create a build tag unless explicitly requested.
+
 ## Update 2026-04-22 17:25:51Z
 
 - Current task: Issue `#209` troubleshooting has a live answer from `kspls0`: normal Soulseek search works after removing auto-replace budget contention; mesh search still has no active peers because discovered overlay endpoints are unreachable.

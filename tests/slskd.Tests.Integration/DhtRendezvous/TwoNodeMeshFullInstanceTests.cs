@@ -215,6 +215,106 @@ public class TwoNodeMeshFullInstanceTests
         Assert.Equal(probeBytes, await File.ReadAllBytesAsync(localPath!));
     }
 
+    [Fact]
+    public async Task OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh()
+    {
+        if (!TryLoadLocalMeshAccounts(out var accounts))
+        {
+            return;
+        }
+
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        await using var alpha = new SlskdnFullInstanceRunner(
+            loggerFactory.CreateLogger<SlskdnFullInstanceRunner>(),
+            $"mesh-live-alpha-{Guid.NewGuid():N}"[..24]);
+        await using var beta = new SlskdnFullInstanceRunner(
+            loggerFactory.CreateLogger<SlskdnFullInstanceRunner>(),
+            $"mesh-live-beta-{Guid.NewGuid():N}"[..23]);
+
+        var probeId = Guid.NewGuid().ToString("N")[..12];
+        var probeFilename = $"mesh-live-probe-{probeId}.flac";
+        var probeBytes = Enumerable.Range(0, 8192).Select(i => (byte)((i * 17) % 251)).ToArray();
+        var betaSharePath = Path.Combine(beta.SharesDirectory, probeFilename);
+        await File.WriteAllBytesAsync(betaSharePath, probeBytes);
+
+        await alpha.StartAsync(
+            disableAuthentication: true,
+            noConnect: false,
+            soulseekUsername: accounts.AlphaUsername,
+            soulseekPassword: accounts.AlphaPassword);
+        await beta.StartAsync(
+            disableAuthentication: true,
+            noConnect: false,
+            soulseekUsername: accounts.BetaUsername,
+            soulseekPassword: accounts.BetaPassword);
+
+        using var alphaClient = new HttpClient { BaseAddress = new Uri(alpha.ApiUrl) };
+        using var betaClient = new HttpClient { BaseAddress = new Uri(beta.ApiUrl) };
+
+        await WaitForSoulseekLoggedInAsync(alphaClient, "alpha");
+        await WaitForSoulseekLoggedInAsync(betaClient, "beta");
+
+        var scanResponse = await betaClient.PutAsync("/api/v0/shares", content: null);
+        scanResponse.EnsureSuccessStatusCode();
+
+        var contentId = $"content:live-test:{probeId}";
+        await WaitForAsync(
+            () => TrySeedContentItemAsync(beta, probeFilename, contentId),
+            TimeSpan.FromSeconds(20),
+            () => "beta live-account share repository did not index the probe file");
+
+        var connectResponse = await alphaClient.PostAsJsonAsync(
+            "/api/v0/overlay/connect",
+            new ConnectOverlayPeerRequest
+            {
+                Address = "127.0.0.1",
+                Port = beta.OverlayPort!.Value,
+            });
+        connectResponse.EnsureSuccessStatusCode();
+
+        await WaitForAsync(
+            async () =>
+            {
+                var alphaConnections = await alphaClient.GetFromJsonAsync<List<MeshPeerInfoResponse>>("/api/v0/overlay/connections");
+                return alphaConnections?.Exists(peer =>
+                    string.Equals(peer.Username, accounts.BetaUsername, StringComparison.OrdinalIgnoreCase)) == true;
+            },
+            TimeSpan.FromSeconds(20),
+            () => "alpha did not keep an outbound overlay connection to beta using live accounts");
+
+        var searchResponse = await alphaClient.PostAsJsonAsync(
+            "/api/v0/searches?api_key=integration-test",
+            new
+            {
+                searchText = Path.GetFileNameWithoutExtension(probeFilename),
+                filterResponses = false,
+                searchTimeout = 5,
+                providers = new[] { "pod" },
+            });
+        Assert.True(
+            searchResponse.IsSuccessStatusCode,
+            $"Search request failed: {(int)searchResponse.StatusCode} {await searchResponse.Content.ReadAsStringAsync()}");
+
+        using var searchJson = JsonDocument.Parse(await searchResponse.Content.ReadAsStringAsync());
+        var searchId = searchJson.RootElement.GetProperty("id").GetGuid();
+
+        var itemId = await WaitForMeshSearchResultAsync(alphaClient, searchId, probeFilename, contentId, accounts.BetaUsername);
+        var downloadResponse = await alphaClient.PostAsync($"/api/v0/searches/{searchId}/items/{itemId}/download?api_key=integration-test", content: null);
+        Assert.True(
+            downloadResponse.IsSuccessStatusCode,
+            $"Download request failed: {(int)downloadResponse.StatusCode} {await downloadResponse.Content.ReadAsStringAsync()}");
+
+        using var downloadJson = JsonDocument.Parse(await downloadResponse.Content.ReadAsStringAsync());
+        Assert.True(downloadJson.RootElement.GetProperty("success").GetBoolean());
+        Assert.Equal(contentId, downloadJson.RootElement.GetProperty("content_id").GetString());
+        Assert.Equal("pod", downloadJson.RootElement.GetProperty("source").GetString());
+
+        var localPath = downloadJson.RootElement.GetProperty("path").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(localPath));
+        Assert.True(File.Exists(localPath), $"Downloaded file not found: {localPath}");
+        Assert.Equal(probeBytes, await File.ReadAllBytesAsync(localPath!));
+    }
+
     private static async Task WaitForAsync(Func<Task<bool>> predicate, TimeSpan timeout, Func<string> failureMessageFactory)
     {
         var deadline = DateTimeOffset.UtcNow + timeout;
@@ -238,6 +338,11 @@ public class TwoNodeMeshFullInstanceTests
     }
 
     private static async Task<string> WaitForMeshSearchResultAsync(HttpClient client, Guid searchId, string expectedFilename, string expectedContentId)
+    {
+        return await WaitForMeshSearchResultAsync(client, searchId, expectedFilename, expectedContentId, "mesh-beta");
+    }
+
+    private static async Task<string> WaitForMeshSearchResultAsync(HttpClient client, Guid searchId, string expectedFilename, string expectedContentId, string expectedUsername)
     {
         string? failureDetails = null;
 
@@ -266,7 +371,7 @@ public class TwoNodeMeshFullInstanceTests
                         ? primarySourceElement.GetString()
                         : null;
 
-                    if (!string.Equals(username, "mesh-beta", StringComparison.OrdinalIgnoreCase) ||
+                    if (!string.Equals(username, expectedUsername, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(primarySource, "pod", StringComparison.OrdinalIgnoreCase))
                     {
                         responseIndex++;
@@ -310,6 +415,101 @@ public class TwoNodeMeshFullInstanceTests
 
         return failureDetails!;
     }
+
+    private static async Task WaitForSoulseekLoggedInAsync(HttpClient client, string nodeName)
+    {
+        string? failureDetails = null;
+        await WaitForAsync(
+            async () =>
+            {
+                using var response = await client.GetAsync("/api/v0/application");
+                var body = await response.Content.ReadAsStringAsync();
+                failureDetails = body;
+                response.EnsureSuccessStatusCode();
+
+                using var document = JsonDocument.Parse(body);
+                return document.RootElement
+                    .GetProperty("server")
+                    .GetProperty("isLoggedIn")
+                    .GetBoolean();
+            },
+            TimeSpan.FromSeconds(60),
+            () => $"{nodeName} did not log in to Soulseek with the configured live test account\n" + failureDetails);
+    }
+
+    private static bool TryLoadLocalMeshAccounts(out LocalMeshAccounts accounts)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var envPath = Path.Combine(AppContext.BaseDirectory, "local-mesh-accounts.env");
+        if (!File.Exists(envPath))
+        {
+            envPath = Path.Combine(FindRepositoryRoot(), "tests", "slskd.Tests.Integration", "local-mesh-accounts.env");
+        }
+
+        if (File.Exists(envPath))
+        {
+            foreach (var line in File.ReadAllLines(envPath))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var separatorIndex = trimmed.IndexOf('=');
+                if (separatorIndex <= 0)
+                {
+                    continue;
+                }
+
+                values[trimmed[..separatorIndex].Trim()] = trimmed[(separatorIndex + 1)..].Trim();
+            }
+        }
+
+        var alphaUsername = ReadCredential(values, "SLSKDN_MESH_ACCOUNT_A_USERNAME");
+        var alphaPassword = ReadCredential(values, "SLSKDN_MESH_ACCOUNT_A_PASSWORD");
+        var betaUsername = ReadCredential(values, "SLSKDN_MESH_ACCOUNT_B_USERNAME");
+        var betaPassword = ReadCredential(values, "SLSKDN_MESH_ACCOUNT_B_PASSWORD");
+
+        accounts = new LocalMeshAccounts(alphaUsername, alphaPassword, betaUsername, betaPassword);
+        return !string.IsNullOrWhiteSpace(alphaUsername) &&
+            !string.IsNullOrWhiteSpace(alphaPassword) &&
+            !string.IsNullOrWhiteSpace(betaUsername) &&
+            !string.IsNullOrWhiteSpace(betaPassword);
+    }
+
+    private static string ReadCredential(Dictionary<string, string> values, string key)
+    {
+        var envValue = Environment.GetEnvironmentVariable(key);
+        if (!string.IsNullOrWhiteSpace(envValue))
+        {
+            return envValue;
+        }
+
+        return values.TryGetValue(key, out var fileValue) ? fileValue : string.Empty;
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (directory != null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "slskd.sln")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return Directory.GetCurrentDirectory();
+    }
+
+    private sealed record LocalMeshAccounts(
+        string AlphaUsername,
+        string AlphaPassword,
+        string BetaUsername,
+        string BetaPassword);
 
     private static Task<bool> TrySeedContentItemAsync(SlskdnFullInstanceRunner runner, string filename, string contentId)
     {
