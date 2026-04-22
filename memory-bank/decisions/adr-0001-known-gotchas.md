@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z129. Public Search Timeout Units Must Match Soulseek SearchOptions Units
+
+**The Bug**: Issue `#209` live retesting on `kspls0` used the documented `/api/v0/searches` contract and sent `searchTimeout: 10` for a 10-second search. `SearchRequest` documented the field as seconds and validated values down to `5`, but `ToSearchOptions()` passed the raw `10` into `Soulseek.SearchOptions`, which expects milliseconds. The search completed in 10-44 ms with zero responses, creating a false app/network failure signal.
+
+**Files Affected**:
+- `src/slskd/Search/API/DTO/SearchRequest.cs`
+
+**Wrong**:
+```csharp
+searchTimeout: SearchTimeout ?? def.SearchTimeout
+```
+
+**Correct**:
+```csharp
+searchTimeout: SearchTimeout.HasValue
+    ? SearchTimeout.Value * 1000
+    : def.SearchTimeout
+```
+
+**Why This Keeps Happening**: slskd's public API describes search timeouts in seconds while Soulseek.NET uses milliseconds. Any boundary code that maps API/config seconds into `Soulseek.SearchOptions` must convert explicitly, and comments saying "convert to seconds" near `SearchOptions` calls should be treated as suspicious.
+
 ### 0z128. Background Search Producers Must Not Spend The User Search Safety Bucket
 
 **The Bug**: Live `kspls0` issue `#209` troubleshooting showed auto-replace running every few minutes, consuming ten Soulseek searches, then logging `[SAFETY] Search rate limit exceeded for source=user`. Manual/API searches were also charged to `source=user`, so background replacement work could starve real user searches and make normal searches appear to return zero results or fail unpredictably.
