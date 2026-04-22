@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Stopped circuit maintenance from automatically running placeholder multi-hop circuit probes against live mesh peers, removing recurring `Circuit building test failed` warnings and avoiding unsolicited peer traffic during normal maintenance.
+- Classified common Soulseek remote transfer rejection reasons (`Too many megabytes`, `Too many files`) as expected peer-policy outcomes so they no longer surface as fake fatal unobserved task exceptions.
 - Improved the SongID results page after a headless UX audit: queue rows now show meaningful titles/status, duplicate track/action candidates collapse, the result summary promotes the best next actions, and low-level diagnostics move behind disclosure rows.
 - Stabilized the release gate by isolating unit tests that inspect process-global static event subscriptions, preventing xUnit parallelism from racing `Clock.EveryMinute`/`Program.LogEmitted` subscriber-count assertions.
 - Stabilized live `kspls0` log noise found during the 172 package soak: entropy health checks now use a larger RNG sample to avoid routine finite-sample false warnings, and auto-replace no-result searches stay at debug-level telemetry.

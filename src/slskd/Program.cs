@@ -4335,6 +4335,8 @@ namespace slskd
                 details.Contains("The underlying Tcp connection is closed", StringComparison.Ordinal) ||
                 details.Contains("Download reported as failed by remote client", StringComparison.Ordinal) ||
                 details.Contains("Enqueue failed due to internal error", StringComparison.Ordinal) ||
+                details.Contains("Too many megabytes", StringComparison.Ordinal) ||
+                details.Contains("Too many files", StringComparison.Ordinal) ||
                 details.Contains("Transfer failed: Transfer complete", StringComparison.Ordinal) ||
                 details.Contains("No route to host", StringComparison.Ordinal) ||
                 details.Contains("Operation timed out", StringComparison.Ordinal) ||

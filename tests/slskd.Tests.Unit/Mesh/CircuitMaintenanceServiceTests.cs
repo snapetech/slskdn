@@ -133,9 +133,9 @@ public class CircuitMaintenanceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_SkipsCircuitTestingWhenActiveCircuitsExist()
+    public async Task ExecuteAsync_DoesNotProbeCircuitBuildingDuringMaintenance()
     {
-        var circuitStats = new CircuitStatistics { ActiveCircuits = 1 };
+        var circuitStats = new CircuitStatistics { ActiveCircuits = 0 };
         var peerStats = new PeerStatistics { OnionRoutingPeers = 5 };
         _peerManagerMock.Setup(x => x.GetStatistics()).Returns(peerStats);
 
@@ -149,6 +149,7 @@ public class CircuitMaintenanceServiceTests : IDisposable
         await (Task)method!.Invoke(service, new object[] { CancellationToken.None })!;
 
         _peerManagerMock.Verify(x => x.GetCircuitPeersAsync(It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Never);
+        circuitBuilderMock.Verify(x => x.BuildCircuitAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -167,21 +168,20 @@ public class CircuitMaintenanceServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_TestsCircuitBuildingWhenNoActiveCircuitsAndEnoughPeers()
+    public async Task ExecuteAsync_SkipsCircuitTestingWhenNoActiveCircuitsAndEnoughPeers()
     {
         var peerStats = new PeerStatistics { OnionRoutingPeers = 5 };
         _peerManagerMock.Setup(x => x.GetStatistics()).Returns(peerStats);
         _peerManagerMock.Setup(x => x.GetCircuitPeersAsync(It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MeshPeer> { new MeshPeer("peer1", new List<IPEndPoint>()) });
 
-        // Real builder: BuildCircuitAsync is never called because GetCircuitPeersAsync returns only 1 peer (needs >= 3).
         var builder = CreateCircuitBuilder();
         var service = new CircuitMaintenanceService(_loggerMock.Object, builder, _peerManagerMock.Object);
 
         var method = typeof(CircuitMaintenanceService).GetMethod("PerformMaintenanceAsync", BindingFlags.NonPublic | BindingFlags.Instance);
         await (Task)method!.Invoke(service, new object[] { CancellationToken.None })!;
 
-        _peerManagerMock.Verify(x => x.GetCircuitPeersAsync(0.2, CancellationToken.None), Times.Once);
+        _peerManagerMock.Verify(x => x.GetCircuitPeersAsync(It.IsAny<double>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

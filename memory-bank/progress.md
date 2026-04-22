@@ -1,3 +1,13 @@
+## 2026-04-22 16:55Z - Triage issue 209 on kspls0 and fixed live mesh/circuit noise
+
+- Read issue `#209` and confirmed it has moved past the original DHT bootstrap failure: current tester logs show DHT ready, verified mesh peers present, and failures concentrated in circuit-building and remote overlay reachability.
+- Verified `kspls0` is already running `slskdn-bin 0.24.5.slskdn.174-1` from `/usr/lib/slskd/releases/0.24.5.slskdn.174`, systemd is `active/running`, `NRestarts=0`, Soulseek is `Connected, LoggedIn`, shares are ready, DHT has `250` nodes, and TCP/UDP listeners are present on `5030`, `50300`, `50305`, `50306`, and `50400`.
+- Sampled live DHT/overlay counters: `activeMesh=1`, `discovered=28`, `seen=17606`, `attempts=1353`, `successes=1`, `failedConnections=636`, mostly `connectTimeouts=414`, `noRouteFailures=100`, and `tlsEofFailures=113`. This points to a thin/unreliable public slskdn overlay population and remote endpoint quality, not a local DHT bootstrap failure.
+- Ran two bounded normal searches through the local API (`radiohead`, then `beatles`); both completed with `0` responses. That may be affected by auto-replace repeatedly consuming the search safety budget, so persistent zero-result Soulseek search needs a separate focused follow-up.
+- Found and fixed two app-side issues exposed by the same live pass: common `Soulseek.TransferRejectedException` policy reasons (`Too many megabytes`, `Too many files`) now classify as expected peer outcomes, and `CircuitMaintenanceService` no longer automatically runs placeholder multi-hop circuit probes against live peers.
+- Documented both gotchas in ADR-0001 and committed the docs entry as `95702a2dd`.
+- Validation passed: focused `ProgramPathNormalizationTests`/`CircuitMaintenanceServiceTests` (`42` tests), Release build, `bash ./bin/lint`, and `git diff --check`.
+
 ## 2026-04-21 08:21Z - Improved SongID result UX after headless audit
 
 - Ran the SongID page headlessly through the local React UI against the `kspls0` backend using Web UI credentials and a YouTube source URL.

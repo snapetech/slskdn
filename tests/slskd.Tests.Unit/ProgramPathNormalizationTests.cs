@@ -236,6 +236,16 @@ public class ProgramPathNormalizationTests
         Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
     }
 
+    [Theory]
+    [InlineData("Too many megabytes")]
+    [InlineData("Too many files")]
+    public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForRemoteTransferRejectedPolicyFailures(string reason)
+    {
+        var exception = new AggregateException(new TransferRejectedException(reason));
+
+        Assert.True(Program.IsExpectedSoulseekNetworkException(exception));
+    }
+
     [Fact]
     public void IsExpectedSoulseekNetworkException_ReturnsTrue_ForTransferCompleteTeardownFailures()
     {

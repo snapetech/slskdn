@@ -1,3 +1,18 @@
+## Update 2026-04-22 16:55:00Z
+
+- Current task: Issue `#209` triage on `kspls0` is complete locally; two app-side fixes are implemented and validated, but the code changes still need commit/push if they should ship.
+- Last activity:
+  - confirmed `kspls0` is already running `slskdn-bin 0.24.5.slskdn.174-1`, systemd `active/running`, `NRestarts=0`, Soulseek logged in, shares ready, DHT ready with `250` nodes, and overlay TCP listening on `50305`
+  - sampled DHT/overlay diagnostics showing a thin verified overlay (`activeMesh=1`, `successes=1`) with most public candidates failing by timeout/no-route/TLS EOF; this supports remote endpoint quality/population as the mesh-connectivity limit, not a local DHT bootstrap failure
+  - reproduced zero-result normal API searches for `radiohead` and `beatles`, but auto-replace was repeatedly exhausting the search safety budget, so persistent Soulseek zero-result behavior needs a separate focused pass
+  - fixed fake fatal unobserved task noise for normal remote transfer rejections (`Too many megabytes`, `Too many files`)
+  - stopped circuit maintenance from automatically running placeholder circuit-building probes against live peers
+  - documented both gotchas in ADR-0001 and committed that docs entry as `95702a2dd`
+  - validation passed: focused unit slice (`42` tests), Release build, `bash ./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Commit and push the code/docs/changelog/memory updates if approved.
+  2. If search zero-results remain important, pause or disable auto-replace search consumption and run a clean Soulseek search comparison.
+
 ## Update 2026-04-21 08:21:42Z
 
 - Current task: SongID UX cleanup and the prior `173` release-gate unit failure are fixed and validated; next step is committing, pushing, and tagging the requested release.

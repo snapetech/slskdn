@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Triage issue `#209` on `kspls0` and quiet app-side live noise.
+ - Status: completed (2026-04-22)
+ - Priority: P1
+ - Notes: `kspls0` is already on `slskdn-bin 0.24.5.slskdn.174-1`, active under systemd with `NRestarts=0`, Soulseek logged in, shares ready, DHT ready at `250` nodes, and overlay listening on `50305`. The mesh population is thin/unreliable rather than absent: `/api/v0/overlay/stats` showed `1` active verified mesh connection out of `636` failed outbound overlay attempts, mostly timeout/no-route/TLS EOF remote endpoint churn. Normal Soulseek downloads are working, but two manual API searches (`radiohead`, `beatles`) returned zero responses while auto-replace was repeatedly consuming the search safety budget, so search needs a separate follow-up if zero-result UI searches persist after budget contention is removed. Fixed app-side defects found in the same pass: common remote transfer rejections now classify as expected peer policy instead of fake fatal unobserved tasks, and circuit maintenance no longer runs automatic placeholder circuit-building probes against live peers. Gotchas are documented in ADR-0001.
+
 - [x] **ux**: Reduce SongID results duplication and diagnostic scroll fatigue.
  - Status: completed (2026-04-21)
  - Priority: P2

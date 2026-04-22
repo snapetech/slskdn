@@ -67,7 +67,7 @@ public class CircuitMaintenanceService : BackgroundService
         _logger.LogInformation("Circuit maintenance service stopped");
     }
 
-    private async Task PerformMaintenanceAsync(CancellationToken cancellationToken)
+    private Task PerformMaintenanceAsync(CancellationToken cancellationToken)
     {
         // Clean up expired circuits
         _circuitBuilder.PerformMaintenance();
@@ -86,36 +86,6 @@ public class CircuitMaintenanceService : BackgroundService
             peerStats.ActivePeers,
             peerStats.OnionRoutingPeers);
 
-        // Test a few random circuits if we have enough peers
-        if (circuitStats.ActiveCircuits == 0 && peerStats.OnionRoutingPeers >= 3)
-        {
-            await TestCircuitBuildingAsync(cancellationToken);
-        }
-    }
-
-    private async Task TestCircuitBuildingAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Get some test peers
-            var circuitPeers = await _peerManager.GetCircuitPeersAsync(0.2, cancellationToken);
-            if (circuitPeers.Count >= 3)
-            {
-                var testPeer = circuitPeers.First();
-                _logger.LogInformation("Testing circuit building to peer {PeerId}", testPeer.PeerId);
-
-                // Build a test circuit
-                var circuit = await _circuitBuilder.BuildCircuitAsync(testPeer.PeerId, 3, cancellationToken);
-
-                // Clean it up immediately (just testing)
-                _circuitBuilder.DestroyCircuit(circuit.CircuitId);
-
-                _logger.LogInformation("Circuit building test successful");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Circuit building test failed");
-        }
+        return Task.CompletedTask;
     }
 }
