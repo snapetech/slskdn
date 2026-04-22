@@ -1,3 +1,11 @@
+## 2026-04-22 17:25Z - Deployed issue 209 diagnostic build and proved Soulseek search works
+
+- Published `0.24.5-slskdn.174+manual.558f05d71` with the tag-aligned multi-file profile and deployed it to `kspls0` under `/usr/lib/slskd/releases/manual-558f05d71`; `/api/v0/application` reports the matching executable path/version and systemd is `active` with `NRestarts=0`.
+- The first API retest accidentally sent `searchTimeout: 10`; the public DTO comment says seconds, but the underlying `Soulseek.SearchOptions` value is milliseconds, so those searches completed in 10-44 ms with zero responses. This explains the earlier misleading quick-zero API repro but not the UI default path, which omits the field and uses the 15000 ms default.
+- Reran clean user/API searches with `searchTimeout: 10000`: `radiohead` returned `2` responses / `518` files, `pink floyd` returned `6` / `628`, `nirvana` returned `3` / `1148`, while `beatles` timed out with zero. The new logs confirmed these were accepted as `source=user` and had real Soulseek response counts.
+- Auto-replace now logs and spends `source=auto-replace`; during the same retest it found many Soulseek responses, then exhausted only the `auto-replace` bucket and stopped its cycle early without blocking the user searches.
+- Mesh remains the weak side of issue `#209`: after DHT startup, `/api/v0/dht/status` showed DHT running with `7` discovered peers but `0` active mesh connections and `0` successful overlay connections; `/api/v0/overlay/stats` showed `12` failed outbound attempts (`11` connect timeouts, `1` no-route). This points to thin/unreachable public mesh endpoints rather than normal Soulseek search failure.
+
 ## 2026-04-22 16:55Z - Split auto-replace from user search safety budget
 
 - Continued issue `#209` diagnosis after the first `kspls0` pass showed zero-result manual searches while auto-replace was actively processing a stuck-download batch.
