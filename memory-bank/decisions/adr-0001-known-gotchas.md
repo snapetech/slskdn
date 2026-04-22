@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z128. Background Search Producers Must Not Spend The User Search Safety Bucket
+
+**The Bug**: Live `kspls0` issue `#209` troubleshooting showed auto-replace running every few minutes, consuming ten Soulseek searches, then logging `[SAFETY] Search rate limit exceeded for source=user`. Manual/API searches were also charged to `source=user`, so background replacement work could starve real user searches and make normal searches appear to return zero results or fail unpredictably.
+
+**Files Affected**:
+- `src/slskd/Search/SearchService.cs`
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+
+**Wrong**:
+```csharp
+if (!SafetyLimiter.TryConsumeSearch("user"))
+{
+    throw new InvalidOperationException(message);
+}
+```
+
+**Correct**:
+```csharp
+if (!SafetyLimiter.TryConsumeSearch(safetySource))
+{
+    throw new InvalidOperationException(message);
+}
+
+await Searches.StartAsync(..., safetySource: "auto-replace");
+```
+
+**Why This Keeps Happening**: A single service method hid the rate-limiter source, so all callers inherited the interactive-user bucket. Every background producer that contacts Soulseek must identify itself explicitly so diagnostics and safety limits can separate user actions from automated maintenance.
+
 ### 0z127. Circuit Maintenance Must Not Run Placeholder Circuit Probes Against Live Peers
 
 **The Bug**: Issue `#209` tester logs on `0.24.5-slskdn.174` showed recurring `Circuit building test failed` warnings every maintenance cycle once the host had at least three circuit-capable peers. The maintenance service was automatically invoking the placeholder `MeshCircuitBuilder` test path, which dials each selected peer directly and logs stack traces when those peers do not have usable direct transport metadata.
