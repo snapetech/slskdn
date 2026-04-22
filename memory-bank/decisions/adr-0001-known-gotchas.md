@@ -8945,3 +8945,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The harness was originally built for deterministic local overlay tests with `no_connect: true`, so it did not need to connect to the public Soulseek server. Reusing that same partial config for live-account validation meant the login watchdog had no usable server endpoint and could also collide on the default Soulseek listen port when two subprocesses ran at once.
 
 **How to prevent it:** Any full-instance test that expects live Soulseek login must explicitly write `soulseek.address`, `soulseek.port`, and a unique per-process `soulseek.listen_port` alongside the credentials. Do not infer live-login readiness from credentials plus `no_connect: false`; inspect the generated child config for every network listener and upstream endpoint the path needs.
+
+### 0z61. Full-Instance API Smokes Must Authenticate Unsafe Methods With An API Key
+
+**What went wrong:** The live-account mesh smoke logged two fresh public Soulseek test accounts in successfully, then failed on `PUT /api/v0/shares` and later `POST /api/v0/overlay/connect` with HTTP 400 CSRF responses. The test had disabled web authentication and assumed that was enough for local harness calls.
+
+**Why it happened:** Disabling web authentication does not disable CSRF protection for unsafe HTTP methods. Browser-cookie-style anonymous calls are still rejected, while API-key/JWT-authenticated API calls are allowed. The deterministic no-connect smoke had previously exercised these endpoints without proving the live auth/CSRF shape.
+
+**How to prevent it:** Full-instance integration tests must call mutating API endpoints with an explicit API key or bearer token, even when the harness disables web authentication. When a test calls `POST`, `PUT`, `PATCH`, or `DELETE`, include response-body assertions so CSRF/auth failures are obvious instead of surfacing as generic `EnsureSuccessStatusCode()` failures.
