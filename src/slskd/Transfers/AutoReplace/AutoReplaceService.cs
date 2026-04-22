@@ -356,7 +356,8 @@ namespace slskd.Transfers.AutoReplace
                     SearchQuery.FromText(searchText),
                     SearchScope.Network,
                     searchOptions,
-                    requestedProviders: null);
+                    requestedProviders: null,
+                    safetySource: "auto-replace");
 
                 var waited = TimeSpan.Zero;
                 slskd.Search.Search? searchWithResponses = null;

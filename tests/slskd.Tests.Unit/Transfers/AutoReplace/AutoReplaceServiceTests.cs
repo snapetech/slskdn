@@ -36,8 +36,9 @@ public class AutoReplaceServiceTests
                 It.IsAny<SearchQuery>(),
                 SearchScope.Network,
                 It.IsAny<SearchOptions>(),
-                It.IsAny<List<string>>()))
-            .ReturnsAsync((Guid id, SearchQuery _, SearchScope _, SearchOptions _, List<string> _) => new SearchModel
+                It.IsAny<List<string>>(),
+                "auto-replace"))
+            .ReturnsAsync((Guid id, SearchQuery _, SearchScope _, SearchOptions _, List<string> _, string _) => new SearchModel
             {
                 Id = id,
                 State = SearchStates.Requested,
@@ -182,6 +183,11 @@ public class AutoReplaceServiceTests
         }
 
         public Task<SearchModel> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options = null, List<string> requestedProviders = null)
+        {
+            return StartAsync(id, query, scope, options, requestedProviders, "user");
+        }
+
+        public Task<SearchModel> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions options, List<string> requestedProviders, string safetySource)
         {
             StartCount++;
             throw new InvalidOperationException("Search rate limit exceeded. See Soulseek safety configuration.");

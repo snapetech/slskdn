@@ -1,3 +1,12 @@
+## 2026-04-22 16:55Z - Split auto-replace from user search safety budget
+
+- Continued issue `#209` diagnosis after the first `kspls0` pass showed zero-result manual searches while auto-replace was actively processing a stuck-download batch.
+- Found the concrete app defect: all `ISearchService.StartAsync(...)` callers charged `SafetyLimiter.TryConsumeSearch("user")`, so background auto-replace maintenance spent the same rate-limit bucket as manual UI/API searches.
+- Documented the gotcha in ADR-0001 and committed that docs-only entry immediately as `1a9cb7dc2`.
+- Added an explicit search safety source path: existing callers still default to `user`, while auto-replace now calls search with `safetySource: "auto-replace"`.
+- Added source-aware search rejection logs and a completion summary with source, state, Soulseek responses, mesh responses, merged responses, file count, and duration so the next live `kspls0` retest can distinguish no peers/no Soulseek responses from budget contention.
+- Validation passed: focused unit search/auto-replace/API controller slice (`13` tests), Release app build, and Release integration test project build. Builds still emit existing generated MessagePack/test analyzer warnings.
+
 ## 2026-04-22 16:55Z - Triage issue 209 on kspls0 and fixed live mesh/circuit noise
 
 - Read issue `#209` and confirmed it has moved past the original DHT bootstrap failure: current tester logs show DHT ready, verified mesh peers present, and failures concentrated in circuit-building and remote overlay reachability.

@@ -950,6 +950,11 @@ internal class StubSearchService : ISearchService
 
     public Task<global::slskd.Search.Search> StartAsync(Guid id, Soulseek.SearchQuery query, Soulseek.SearchScope scope, Soulseek.SearchOptions options = null, List<string> requestedProviders = null)
     {
+        return StartAsync(id, query, scope, options, requestedProviders, "user");
+    }
+
+    public Task<global::slskd.Search.Search> StartAsync(Guid id, Soulseek.SearchQuery query, Soulseek.SearchScope scope, Soulseek.SearchOptions options, List<string> requestedProviders, string safetySource)
+    {
         var search = new global::slskd.Search.Search
         {
             Id = id,

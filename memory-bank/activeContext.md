@@ -1,3 +1,17 @@
+## Update 2026-04-22 16:55:30Z
+
+- Current task: Issue `#209` troubleshooting found and fixed a second local app issue: background auto-replace was sharing the user/API search safety limiter bucket. Implementation is validated locally and ready to commit/push.
+- Last activity:
+  - confirmed the earlier `kspls0` zero-result manual searches were not a clean population test because auto-replace was repeatedly charging `SafetyLimiter.TryConsumeSearch("user")`
+  - documented the background-search budget gotcha in ADR-0001 and committed it as `1a9cb7dc2`
+  - added an explicit search safety source overload, preserving `user` for UI/API callers and charging auto-replace to `auto-replace`
+  - added source-aware search rejection logs and completion summaries with Soulseek/mesh/merged response counts, file count, and duration
+  - validation passed: focused unit search/auto-replace/API slice (`13` tests), Release app build, and Release integration test project build
+- Next steps:
+  1. Run lint and diff checks.
+  2. Commit the implementation/docs update.
+  3. Install or otherwise deploy the fixed build on `kspls0`, then rerun clean manual searches while watching the new source-aware logs.
+
 ## Update 2026-04-22 16:55:00Z
 
 - Current task: Issue `#209` triage on `kspls0` is complete locally; two app-side fixes are implemented and validated, but the code changes still need commit/push if they should ship.

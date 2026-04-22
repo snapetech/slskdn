@@ -31,6 +31,7 @@ namespace slskd.Search
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.EntityFrameworkCore;
     using Serilog;
+    using Serilog.Events;
     using slskd.Search.API;
     using slskd.Search.Providers;
     using Soulseek;
@@ -88,6 +89,18 @@ namespace slskd.Search
         /// <param name="requestedProviders">Optional list of provider names for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"]).</param>
         /// <returns>The completed search.</returns>
         Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<string>? requestedProviders = null);
+
+        /// <summary>
+        ///     Performs a search for the specified <paramref name="query"/> and <paramref name="scope"/>, charging the safety limiter to the specified source.
+        /// </summary>
+        /// <param name="id">A unique identifier for the search.</param>
+        /// <param name="query">The search query.</param>
+        /// <param name="scope">The search scope.</param>
+        /// <param name="options">Search options.</param>
+        /// <param name="requestedProviders">Optional list of provider names for Scene ↔ Pod Bridging (e.g., ["pod"], ["scene"]).</param>
+        /// <param name="safetySource">The safety-limiter source for this search producer.</param>
+        /// <returns>The completed search.</returns>
+        Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options, List<string>? requestedProviders, string safetySource);
 
         /// <summary>
         ///     Cancels the search matching the specified <paramref name="id"/>, if it is in progress.
@@ -284,13 +297,19 @@ namespace slskd.Search
         /// <param name="options">Search options.</param>
         /// <param name="requestedProviders">Optional search providers to limit execution to.</param>
         /// <returns>The completed search.</returns>
-        public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<string>? requestedProviders = null)
+        public Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options = null, List<string>? requestedProviders = null)
+        {
+            return StartAsync(id, query, scope, options, requestedProviders, safetySource: "user");
+        }
+
+        public async Task<Search> StartAsync(Guid id, SearchQuery query, SearchScope scope, SearchOptions? options, List<string>? requestedProviders, string safetySource)
         {
             using var activity = SearchActivitySource.Source.StartActivity("search.start");
             activity?.SetTag("search.id", id.ToString());
             activity?.SetTag("search.query", query.SearchText);
             activity?.SetTag("search.scope", scope.ToString());
             activity?.SetTag("search.providers", requestedProviders != null ? string.Join(",", requestedProviders) : "all");
+            activity?.SetTag("search.safety_source", safetySource);
 
             // Check if Scene ↔ Pod Bridging is enabled
             var scenePodBridgeEnabled = OptionsMonitor.CurrentValue.Feature.ScenePodBridge;
@@ -308,10 +327,10 @@ namespace slskd.Search
             }
 
             // H-08: Check Soulseek safety caps before initiating search
-            if (!SafetyLimiter.TryConsumeSearch("user"))
+            if (!SafetyLimiter.TryConsumeSearch(safetySource))
             {
                 var message = $"Search rate limit exceeded. See Soulseek safety configuration.";
-                Log.Warning("[SAFETY] Search rejected for query='{Query}': {Message}", query.SearchText, message);
+                Log.Warning("[SAFETY] Search rejected for source={Source} query='{Query}': {Message}", safetySource, query.SearchText, message);
 
                 throw new InvalidOperationException(message);
             }
@@ -506,6 +525,22 @@ namespace slskd.Search
 
                         Log.Debug("Search for '{Query}' finalized (id: {Id}): {Search}", query, id, search with { Responses = [] });
                         Log.Debug("Search for '{Query}' completed with {Responses} responses", query, search.ResponseCount);
+
+                        var completionLog = safetySource == "user" || search.ResponseCount > 0
+                            ? LogEventLevel.Information
+                            : LogEventLevel.Debug;
+
+                        Log.Write(
+                            completionLog,
+                            "Search completed: source={Source} query='{Query}' state={State} soulseekResponses={SoulseekResponses} meshResponses={MeshResponses} mergedResponses={MergedResponses} files={Files} durationMs={DurationMs}",
+                            safetySource,
+                            query.SearchText,
+                            search.State,
+                            responses.Count,
+                            meshResponses.Count,
+                            search.ResponseCount,
+                            search.FileCount,
+                            search.EndedAt.HasValue ? (long)(search.EndedAt.Value - search.StartedAt).TotalMilliseconds : 0);
                     }
                     catch (Exception ex)
                     {
