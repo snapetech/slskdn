@@ -52,6 +52,51 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z127. Circuit Maintenance Must Not Run Placeholder Circuit Probes Against Live Peers
+
+**The Bug**: Issue `#209` tester logs on `0.24.5-slskdn.174` showed recurring `Circuit building test failed` warnings every maintenance cycle once the host had at least three circuit-capable peers. The maintenance service was automatically invoking the placeholder `MeshCircuitBuilder` test path, which dials each selected peer directly and logs stack traces when those peers do not have usable direct transport metadata.
+
+**Files Affected**:
+- `src/slskd/Mesh/CircuitMaintenanceService.cs`
+
+**Wrong**:
+```csharp
+if (circuitStats.ActiveCircuits == 0 && peerStats.OnionRoutingPeers >= 3)
+{
+    await TestCircuitBuildingAsync(cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+// Periodic maintenance only reports circuit inventory.
+// Explicit user/API actions should own any active circuit-building probe.
+```
+
+**Why This Keeps Happening**: Diagnostic probes are tempting during feature bring-up, but live maintenance loops must not initiate peer traffic unless the feature is production-ready and explicitly enabled. Automatic probes create noise, spend peer/network budget, and make low-population mesh conditions look like application failures.
+
+### 0z126. Soulseek Transfer Rejection Reasons Must Match The Expected Network Classifier
+
+**The Bug**: Live `kspls0` logs for `0.24.5-slskdn.174` emitted repeated fake `[FATAL] Unobserved task exception` entries for normal Soulseek transfer rejections with message `Too many megabytes`. The classifier recognized `Soulseek.TransferRejectedException` as an expected network/peer class, but the final message allow-list only covered `Enqueue failed due to internal error`.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+details.Contains("Enqueue failed due to internal error", StringComparison.Ordinal)
+```
+
+**Correct**:
+```csharp
+details.Contains("Enqueue failed due to internal error", StringComparison.Ordinal) ||
+details.Contains("Too many megabytes", StringComparison.Ordinal) ||
+details.Contains("Too many files", StringComparison.Ordinal)
+```
+
+**Why This Keeps Happening**: Expected-network classifiers flatten aggregate exceptions and then require every inner exception to match the stable expected-message list. Soulseek remote-denial text is user/client policy, not process-fatal behavior, so common rejection strings must be classified with the transfer exception type.
+
 ### 0z125. BackgroundService Tests Must Wait On A Real Signal
 
 **The Bug**: A full unit-suite run failed `CircuitMaintenanceServiceTests.ExecuteAsync_ContinuesAfterMaintenanceException` because the test slept for 200 ms and assumed the hosted service loop had already invoked `PerformMaintenance()`. On a loaded runner the service had only logged constructor messages when the assertion checked for the expected error log.
