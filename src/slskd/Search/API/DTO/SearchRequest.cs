@@ -105,7 +105,7 @@ namespace slskd.Search.API
             var def = new SearchOptions();
 
             return new SearchOptions(
-                searchTimeout: SearchTimeout ?? def.SearchTimeout,
+                searchTimeout: SearchTimeout.HasValue ? SearchTimeout.Value * 1000 : def.SearchTimeout,
                 responseLimit: ResponseLimit ?? def.ResponseLimit,
                 fileLimit: FileLimit ?? def.FileLimit,
                 filterResponses: FilterResponses ?? def.FilterResponses,

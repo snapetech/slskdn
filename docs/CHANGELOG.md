@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed documented seconds-to-milliseconds timeout mapping for `/api/v0/searches` and multi-source discovery searches so callers requesting a 10-second or multi-minute search no longer get an accidental 10 ms / 270 ms search window.
 - Split background auto-replace searches into an `auto-replace` Soulseek safety-limiter source instead of sharing the user/API `user` bucket, and added source-aware search completion diagnostics for manual issue `#209` retesting without reintroducing routine background log noise.
 - Stopped circuit maintenance from automatically running placeholder multi-hop circuit probes against live mesh peers, removing recurring `Circuit building test failed` warnings and avoiding unsolicited peer traffic during normal maintenance.
 - Classified common Soulseek remote transfer rejection reasons (`Too many megabytes`, `Too many files`) as expected peer-policy outcomes so they no longer surface as fake fatal unobserved task exceptions.

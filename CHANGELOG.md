@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Search API timeout values now honor the documented seconds unit before mapping to Soulseek's millisecond timeout, and multi-source discovery now uses its intended multi-minute search window instead of an accidental sub-second window.
 - Background auto-replace searches now charge the Soulseek search safety limiter to an `auto-replace` source instead of the user/API `user` bucket, so stuck-download maintenance cannot starve manual searches. Search completion logs now include source, state, Soulseek response count, mesh response count, merged response count, file count, and duration for live diagnosis.
 - Mesh QUIC is now explicitly opt-in after recurring native `kspls0` coredumps under active MsQuic listeners. UDP overlay remains enabled by default, while QUIC control/data services and clients register only when configured.
 - Soulseek.NET listener socket disposal from `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync` is now classified as expected network teardown instead of fake fatal unobserved-task telemetry.

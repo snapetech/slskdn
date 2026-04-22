@@ -5,10 +5,10 @@
   - deployed `0.24.5-slskdn.174+manual.558f05d71` to `/usr/lib/slskd/releases/manual-558f05d71`; API reports the matching executable/version and systemd is active with `NRestarts=0`
   - verified source-separated logs: auto-replace spends `source=auto-replace`, user/API searches spend `source=user`
   - reran user/API searches with the correct millisecond timeout (`10000`): `radiohead` returned `2` responses / `518` files, `pink floyd` returned `6` / `628`, `nirvana` returned `3` / `1148`, and `beatles` timed out with zero
-  - confirmed the earlier API zero-result repro used `searchTimeout: 10`, which the API DTO documents as seconds but the underlying Soulseek option treats as milliseconds
+  - confirmed the earlier API zero-result repro used `searchTimeout: 10`, which the API DTO documents as seconds but the underlying Soulseek option treats as milliseconds; documented the gotcha as `47211c67` and patched API/discovery timeout conversion locally
   - sampled DHT/overlay after startup: DHT running with `7` discovered peers, but `0` active mesh connections and `0` successful overlay connections; failures are connect timeouts/no-route
 - Next steps:
-  1. Decide whether to fix the API `SearchTimeout` documentation/contract mismatch separately.
+  1. Validate and commit the API/discovery timeout conversion fix.
   2. Continue mesh reachability work from the overlay side, not the normal Soulseek search path.
   3. Push the local commits when ready; do not create a build tag unless explicitly requested.
 

@@ -58,6 +58,38 @@ public class SearchesControllerTests
     }
 
     [Fact]
+    public async Task Post_ConvertsSearchTimeoutSecondsToSoulseekMilliseconds()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ReturnsAsync(new slskd.Search.Search { Id = Guid.NewGuid(), SearchText = "hello" });
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest
+        {
+            SearchText = "hello",
+            SearchTimeout = 10,
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        searchService.Verify(
+            service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.Is<SearchOptions>(options => options.SearchTimeout == 10000),
+                It.IsAny<List<string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetAll_WithNegativeLimit_ReturnsBadRequest()
     {
         var controller = CreateController();

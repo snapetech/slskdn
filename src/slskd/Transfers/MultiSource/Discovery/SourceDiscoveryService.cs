@@ -375,7 +375,7 @@ namespace slskd.Transfers.MultiSource.Discovery
                             SearchQuery.FromText(CurrentSearchTerm),
                             responseHandler: (response) => responses.Add(response),
                             options: new SearchOptions(
-                                searchTimeout: SearchWindowMs / 1000, // Convert to seconds
+                                searchTimeout: SearchWindowMs,
                                 responseLimit: 10000,
                                 fileLimit: 1000000,
                                 filterResponses: true,
