@@ -6,6 +6,7 @@
 - Reran clean user/API searches with `searchTimeout: 10000`: `radiohead` returned `2` responses / `518` files, `pink floyd` returned `6` / `628`, `nirvana` returned `3` / `1148`, while `beatles` timed out with zero. The new logs confirmed these were accepted as `source=user` and had real Soulseek response counts.
 - Auto-replace now logs and spends `source=auto-replace`; during the same retest it found many Soulseek responses, then exhausted only the `auto-replace` bucket and stopped its cycle early without blocking the user searches.
 - Mesh remains the weak side of issue `#209`: after DHT startup, `/api/v0/dht/status` showed DHT running with `7` discovered peers but `0` active mesh connections and `0` successful overlay connections; `/api/v0/overlay/stats` showed `12` failed outbound attempts (`11` connect timeouts, `1` no-route). This points to thin/unreachable public mesh endpoints rather than normal Soulseek search failure.
+- After committing the timeout conversion as `0214ccc8b`, deployed `0.24.5-slskdn.174+manual.0214ccc8b` to `kspls0` and verified the documented API contract live: `searchTimeout: 10` produced a real user search, `radiohead` returned `7` Soulseek responses / `567` files, and the log showed `source=user ... durationMs=1622`.
 
 ## 2026-04-22 16:55Z - Split auto-replace from user search safety budget
 
