@@ -4,6 +4,7 @@
 
 namespace slskd.Tests.Unit.Mesh;
 
+using System.Net;
 using System.Reflection;
 using slskd.Mesh.Dht;
 using Xunit;
@@ -58,6 +59,23 @@ public class PeerDescriptorPublisherTests
         bool expected)
     {
         Assert.Equal(expected, PeerDescriptorPublisher.ShouldAdvertiseDirectTransport(enableDirect, privacyModeNoClearnetAdvertise, quicIsSupported));
+    }
+
+    [Theory]
+    [InlineData("8.8.8.8", true)]
+    [InlineData("1.1.1.1", true)]
+    [InlineData("2001:4860:4860::8888", true)]
+    [InlineData("10.0.0.10", false)]
+    [InlineData("172.16.0.10", false)]
+    [InlineData("192.168.1.10", false)]
+    [InlineData("169.254.1.10", false)]
+    [InlineData("100.64.1.10", false)]
+    [InlineData("203.0.113.10", false)]
+    [InlineData("fc00::1", false)]
+    [InlineData("fe80::1", false)]
+    public void IsPubliclyRoutableAddress_RejectsLocalAndSpecialRanges(string address, bool expected)
+    {
+        Assert.Equal(expected, PeerDescriptorPublisher.IsPubliclyRoutableAddress(IPAddress.Parse(address)));
     }
 
     private static (bool Success, string Host, int Port) InvokeTryParseAdvertisedEndpoint(string endpoint)

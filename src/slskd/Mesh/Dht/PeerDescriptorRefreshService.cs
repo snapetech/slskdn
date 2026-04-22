@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
@@ -141,31 +140,17 @@ public class PeerDescriptorRefreshService : BackgroundService
             {
                 var ipProperties = ni.GetIPProperties();
 
-                // Get IPv4 addresses
                 foreach (var unicast in ipProperties.UnicastAddresses)
                 {
-                    if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    if (PeerDescriptorPublisher.IsPubliclyRoutableAddress(unicast.Address))
                     {
-                        // Only include non-link-local addresses
-                        if (!IPAddress.IsLoopback(unicast.Address) &&
-                            unicast.Address.ToString() != "0.0.0.0")
+                        if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                        {
+                            endpoints.Add($"[{unicast.Address}]");
+                        }
+                        else
                         {
                             endpoints.Add(unicast.Address.ToString());
-                        }
-                    }
-                }
-
-                // Get IPv6 addresses (global scope only)
-                foreach (var unicast in ipProperties.UnicastAddresses)
-                {
-                    if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-                    {
-                        if (!IPAddress.IsLoopback(unicast.Address) &&
-                            unicast.Address.ToString() != "::" &&
-                            !unicast.Address.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Skip link-local.
-                            endpoints.Add($"[{unicast.Address}]");
                         }
                     }
                 }

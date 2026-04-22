@@ -6,10 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Common.Security;
 using slskd.Mesh.Overlay;
 using slskd.Mesh.Transport;
 using static slskd.Mesh.TransportType;
@@ -102,7 +104,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         var nat = await natDetector.DetectAsync(ct);
 
         // Build legacy endpoints for backward compatibility
-        var legacyEndpoints = await BuildLegacyEndpointsAsync(ct);
+        var legacyEndpoints = await BuildLegacyEndpointsAsync();
 
         // Build transport endpoints based on configuration and privacy settings
         var transportEndpoints = BuildTransportEndpoints();
@@ -171,29 +173,25 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             transportOptions.Tor.PrivacyModeNoClearnetAdvertise ? "enabled" : "disabled");
     }
 
-    private Task<List<string>> BuildLegacyEndpointsAsync(CancellationToken ct)
+    private Task<List<string>> BuildLegacyEndpointsAsync()
     {
-        // Start with configured endpoints
         var endpoints = new List<string>(options.SelfEndpoints);
 
-        // If no configured endpoints, try to detect actual network interfaces
         if (!endpoints.Any())
         {
             endpoints.AddRange(DetectLegacyNetworkEndpoints());
-            logger.LogInformation("[MeshDHT] No configured endpoints, detected {Count} network interfaces", endpoints.Count);
+            if (endpoints.Count == 0)
+            {
+                logger.LogWarning("[MeshDHT] No configured endpoints and no public-routable network interfaces detected; descriptor will rely on DHT announce and relay endpoints only");
+            }
+            else
+            {
+                logger.LogInformation("[MeshDHT] No configured endpoints, detected {Count} public-routable network interfaces", endpoints.Count);
+            }
         }
         else
         {
-            // Supplement configured endpoints with detected ones if they differ
-            var detectedEndpoints = DetectLegacyNetworkEndpoints();
-            foreach (var detected in detectedEndpoints)
-            {
-                if (!endpoints.Contains(detected))
-                {
-                    endpoints.Add(detected);
-                    logger.LogDebug("[MeshDHT] Added detected endpoint: {Endpoint}", detected);
-                }
-            }
+            logger.LogDebug("[MeshDHT] Using {Count} configured self endpoint(s); automatic endpoint detection skipped", endpoints.Count);
         }
 
         // Add relay endpoints
@@ -329,27 +327,10 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
 
                 foreach (var unicast in ipProperties.UnicastAddresses)
                 {
-                    if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    var ip = unicast.Address;
+                    if (IsPubliclyRoutableAddress(ip))
                     {
-                        var ip = unicast.Address;
-                        if (!IPAddress.IsLoopback(ip) && ip.ToString() != "0.0.0.0")
-                        {
-                            hosts.Add(ip.ToString());
-                        }
-                    }
-                }
-
-                foreach (var unicast in ipProperties.UnicastAddresses)
-                {
-                    if (unicast.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-                    {
-                        var ip = unicast.Address;
-                        if (!IPAddress.IsLoopback(ip) &&
-                            ip.ToString() != "::" &&
-                            !ip.ToString().StartsWith("fe80::", StringComparison.OrdinalIgnoreCase))
-                        {
-                            hosts.Add(ip.ToString());
-                        }
+                        hosts.Add(ip.ToString());
                     }
                 }
             }
@@ -360,5 +341,41 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
         }
 
         return hosts.Distinct();
+    }
+
+    internal static bool IsPubliclyRoutableAddress(IPAddress ip)
+    {
+        if (ip.IsIPv4MappedToIPv6)
+        {
+            ip = ip.MapToIPv4();
+        }
+
+        if (IpRangeClassifier.Classify(ip) != IpRangeClassifier.IpClassification.Public)
+        {
+            return false;
+        }
+
+        if (ip.AddressFamily == AddressFamily.InterNetwork)
+        {
+            var bytes = ip.GetAddressBytes();
+            return !IsNonAdvertisablePublicIpv4(bytes);
+        }
+
+        if (ip.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            return !ip.IsIPv6SiteLocal;
+        }
+
+        return false;
+    }
+
+    private static bool IsNonAdvertisablePublicIpv4(byte[] bytes)
+    {
+        return
+            (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) ||
+            (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 2) ||
+            (bytes[0] == 198 && bytes[1] == 51 && bytes[2] == 100) ||
+            (bytes[0] == 203 && bytes[1] == 0 && bytes[2] == 113) ||
+            (bytes[0] == 198 && (bytes[1] == 18 || bytes[1] == 19));
     }
 }
