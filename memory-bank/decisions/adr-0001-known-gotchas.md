@@ -8937,3 +8937,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** `PeerDescriptorPublisher` treated every non-loopback interface as "routable" and also supplemented explicitly configured `SelfEndpoints` with detected interfaces. `PeerDescriptorRefreshService` used a similar broad interface scan for IP-change detection, so private-interface churn could also trigger needless descriptor refreshes.
 
 **How to prevent it:** Automatic mesh endpoint advertisement must only use public-routable IP addresses. Trust explicitly configured `SelfEndpoints` as operator intent, but do not silently add detected interfaces beside them. Keep descriptor refresh IP-change detection aligned with the same public-routable address policy so private/container interface changes do not republish bad descriptors.
+
+### 0z60. Live Full-Instance Harnesses Must Emit The Soulseek Server Endpoint And Unique Listen Port
+
+**What went wrong:** The optional live-account mesh smoke generated valid sandbox credentials and set `flags.no_connect: false`, but the child process stayed `Disconnected` until the test timed out. The generated YAML included username/password, yet omitted the Soulseek server address/port and left listen-port behavior to product defaults.
+
+**Why it happened:** The harness was originally built for deterministic local overlay tests with `no_connect: true`, so it did not need to connect to the public Soulseek server. Reusing that same partial config for live-account validation meant the login watchdog had no usable server endpoint and could also collide on the default Soulseek listen port when two subprocesses ran at once.
+
+**How to prevent it:** Any full-instance test that expects live Soulseek login must explicitly write `soulseek.address`, `soulseek.port`, and a unique per-process `soulseek.listen_port` alongside the credentials. Do not infer live-login readiness from credentials plus `no_connect: false`; inspect the generated child config for every network listener and upstream endpoint the path needs.
