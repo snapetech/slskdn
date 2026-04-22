@@ -1204,3 +1204,7 @@
 - [x] Sweep `kspls0` 172 logs/Web UI and quiet remaining false warnings
   - Status: completed (2026-04-21)
   - Notes: Authenticated Web UI route/tab validation found no real 5xx/502/page regressions; earlier tab and SongID hub findings were crawler/navigation abort artifacts. Live logs showed no fatal/error/exception noise, but did show repeated finite-sample entropy warnings and expected auto-replace no-result searches at warning level. Entropy sampling now uses a stable 4096-byte sample, auto-replace no-result telemetry logs at debug, and the full unit-suite pass also fixed a flaky hosted-service test wait exposed during validation.
+
+- [x] Continue issue `#209` live mesh/search diagnosis on `kspls0`
+  - Status: completed (2026-04-22)
+  - Notes: Fixed public self-descriptor advertisement so only public-routable auto-detected interfaces are published and configured endpoints are not supplemented with private/container/VPN addresses. Added mesh-search peer outcome logging. Deployed `0.24.5-slskdn.174+manual.6fce6575c` to `kspls0` and proved the current search path works: core Soulseek returned `252` responses / `16686` files for `radiohead`, while mesh fanout reached one active peer and got an empty response (`peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0`).

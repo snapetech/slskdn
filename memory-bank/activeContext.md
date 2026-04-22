@@ -607,16 +607,17 @@ dotnet test
   1. Commit and push the log-polish/test fix set.
   2. Do not create another build tag unless explicitly requested.
 
-## Update 2026-04-21 07:08:21Z
+## Update 2026-04-22 18:20:00Z
 
-- Current task: None. The `kspls0` 172 post-install log pass is healthy and the remaining startup polish fixes are implemented locally.
+- Current task: None. The latest issue `#209` live follow-up is implemented, committed locally, and deployed to `kspls0` for validation.
 - Last activity:
-  - confirmed `kspls0` is running `slskdn-bin 0.24.5.slskdn.172-1` from `/usr/lib/slskd/releases/0.24.5.slskdn.172`, Soulseek is `Connected, LoggedIn`, DHT is ready, overlay TCP is listening, mesh counters are clean, and fresh logs/coredumps show no fatal/error/exception/502/bind/protocol noise
-  - fixed the two actionable startup-polish issues from the fresh journal: temporary raw security config probes now log at debug, and LAN discovery/profile loading now normalize blank display names instead of advertising/logging an empty service name
-  - documented both gotchas first in ADR-0001 and validated the fix with focused identity tests, Release build, and `./bin/lint`
+  - confirmed the current `kspls0` build is `0.24.5-slskdn.174+manual.6fce6575c` from `/usr/lib/slskd/releases/manual-6fce6575c`, with systemd active and `NRestarts=0`
+  - fixed mesh self-descriptor endpoint publication so automatic detection only advertises public-routable interfaces and configured self endpoints are not silently supplemented with private/container/VPN addresses
+  - added info-level mesh-search fanout diagnostics when active overlay peers are queried
+  - live validation showed DHT discovery and overlay connectivity are not stuck at zero: the host reconnected to one outbound `mesh_search` peer (`minimus7`), and a live `radiohead` search logged `peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0` while core Soulseek returned `252` responses / `16686` files
 - Next steps:
-  1. Push the startup-polish commits.
-  2. Cut another tag only if you want these polish fixes in the next package build.
+  1. Push the local issue `#209` commits if you want them on `origin/main`.
+  2. If testers still expect non-zero mesh search results, collect runs with more than one active mesh peer or a known shared probe query; the current single connected peer is reachable but simply returned no files for `radiohead`.
 
 ## Update 2026-04-18 11:20:00Z
 
