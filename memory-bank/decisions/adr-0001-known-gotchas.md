@@ -8953,3 +8953,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** Disabling web authentication does not disable CSRF protection for unsafe HTTP methods. Browser-cookie-style anonymous calls are still rejected, while API-key/JWT-authenticated API calls are allowed. The deterministic no-connect smoke had previously exercised these endpoints without proving the live auth/CSRF shape.
 
 **How to prevent it:** Full-instance integration tests must call mutating API endpoints with an explicit API key or bearer token, even when the harness disables web authentication. When a test calls `POST`, `PUT`, `PATCH`, or `DELETE`, include response-body assertions so CSRF/auth failures are obvious instead of surfacing as generic `EnsureSuccessStatusCode()` failures.
+
+### 0z62. AUR Binary PKGBUILDs Must Package Directly From The Downloaded Release Zip, Not From Whatever `makepkg` Auto-Unpacked Into `${srcdir}`
+
+**What went wrong:** The `slskdn-bin` AUR package for `0.24.5.slskdn.175-1` was reported on Manjaro as starting without `Microsoft.AspNetCore.Diagnostics.Abstractions, Version=10.0.0.0`, even though the published GitHub release zip itself contained that DLL and the self-contained payload ran correctly when extracted directly. The PKGBUILD copied the bundle from `${srcdir}/*`, assuming `makepkg`'s implicit zip extraction had populated a complete runtime tree there.
+
+**Why it happened:** `makepkg` extraction is an implementation detail, not the package contract. Packaging from `${srcdir}` instead of the versioned archive path means the final package contents depend on whatever the helper/toolchain auto-unpacked, reused, or left behind in the working tree. That makes AUR binary packages vulnerable to incomplete or stale extracted payloads even when the downloaded release zip is correct.
+
+**How to prevent it:** For binary AUR packages, always install from the explicit downloaded archive file named in `source=()`. Unzip that archive into a temporary staging directory inside `package()`, assert that the apphost and critical managed runtime files exist there, and copy that staged tree into the package payload. Do not rely on `${srcdir}` globbing to discover what should be packaged from a release bundle.
