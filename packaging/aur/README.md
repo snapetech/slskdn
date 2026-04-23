@@ -26,6 +26,8 @@ This means:
 ### slskdn-bin (Recommended)
 
 Binary package - quick installation, no build dependencies.
+The package bundles the published self-contained .NET 10 runtime from the
+GitHub release zip, so it should not depend on distro `aspnet-runtime` packages.
 
 ```bash
 yay -S slskdn-bin

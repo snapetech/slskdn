@@ -1,3 +1,16 @@
+## Update 2026-04-23 00:00:00Z
+
+- Current task: None. The AUR binary packaging hardening for the reported `0.24.5.slskdn.175-1` Manjaro missing-DLL failure is implemented and locally validated.
+- Last activity:
+  - confirmed the live `0.24.5-slskdn.175` Linux x64 release zip is self-contained and includes `Microsoft.AspNetCore.Diagnostics.Abstractions.dll`, so the issue was not an upstream/slskd or GitHub release-asset regression
+  - documented the AUR binary zip-staging gotcha in ADR-0001 and committed that docs entry as `7cd2cb9e1`
+  - changed `PKGBUILD-bin` and `PKGBUILD-dev` to use `noextract`, unzip the downloaded archive during `package()`, and fail if the staged bundle is missing `slskd`, `slskd.deps.json`, or `Microsoft.AspNetCore.Diagnostics.Abstractions.dll`
+  - updated the AUR README, changelog, and packaging metadata validator to match the new binary staging path
+  - validation passed: packaging metadata script, `git diff --check`, direct release-zip smoke, and `bash ./bin/lint`; repo-wide `dotnet test` still has unrelated DNS/wildcard-sensitive failures in existing unit tests
+- Next steps:
+  1. Push the AUR packaging fix when ready and let the next stable/dev AUR publish carry it.
+  2. If the Manjaro reporter is still blocked before the next release, reply with a temporary workaround focused on clearing the `yay` cache and rebuilding `slskdn-bin`.
+
 ## Update 2026-04-22 18:57:24Z
 
 - Current task: Issue `#209` live mesh proof is complete for the two-account sandbox path.

@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed AUR binary package staging for `slskdn-bin` and `slskdn-dev`: the PKGBUILDs now mark the release zips as `noextract`, unpack directly from the downloaded archive during `package()`, and fail the build if the apphost, deps file, or `Microsoft.AspNetCore.Diagnostics.Abstractions.dll` are missing from the staged self-contained .NET 10 payload.
 - Added and live-validated an optional live-account mesh smoke that starts two full slskdN instances with configured Soulseek test credentials, hosts a probe file on one node, mesh-searches it from the other, downloads it through the pod path, and byte-verifies the transfer.
 - Added info-level mesh-search fanout diagnostics when active overlay peers are queried, including peer count, empty peer responses, failed peers, and returned file count so `meshResponses=0` no longer hides whether the mesh path was actually exercised.
 - Fixed mesh self-descriptor endpoint publication so automatic detection only advertises public-routable interfaces and no longer supplements explicitly configured self endpoints with private/container/VPN addresses.

@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Stage AUR binary packages directly from the downloaded release zip.
+ - Status: completed (2026-04-23)
+ - Priority: P1
+ - Notes: Investigated the live `slskdn-bin 0.24.5.slskdn.175-1` Manjaro report about missing `Microsoft.AspNetCore.Diagnostics.Abstractions`. The published `0.24.5-slskdn.175` Linux x64 release zip was intact and self-contained, so the bug was isolated to the AUR binary packaging path. `PKGBUILD-bin` and `PKGBUILD-dev` now mark the zip source as `noextract`, unzip the downloaded archive explicitly during `package()`, and fail the build if `slskd`, `slskd.deps.json`, or `Microsoft.AspNetCore.Diagnostics.Abstractions.dll` are missing from the staged payload. Added the gotcha to ADR-0001, updated the AUR README/changelog, and tightened packaging metadata validation to lock the new staging path in place. Validation passed for packaging metadata, `git diff --check`, and a direct smoke of the real `0.24.5-slskdn.175` release zip; repo-wide `dotnet test` still has unrelated environment-sensitive DNS/wildcard failures in `SolidFetchPolicyTests` and `DestinationAllowlistTests`.
+
 - [x] **bug**: Triage issue `#209` on `kspls0` and quiet app-side live noise.
  - Status: completed (2026-04-22)
  - Priority: P1

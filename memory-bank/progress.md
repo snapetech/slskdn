@@ -1,3 +1,11 @@
+## 2026-04-23 00:00Z - Hardened AUR binary package staging for the .NET 10 self-contained bundle
+
+- Investigated the live Manjaro `slskdn-bin 0.24.5.slskdn.175-1` report about missing `Microsoft.AspNetCore.Diagnostics.Abstractions` and confirmed the published `0.24.5-slskdn.175` Linux x64 release zip itself is intact: it contains the DLL, `slskd.deps.json`, and a runnable self-contained apphost.
+- Documented the packaging gotcha in ADR-0001 and committed the docs entry immediately as `7cd2cb9e1`.
+- Fixed `packaging/aur/PKGBUILD-bin` and `packaging/aur/PKGBUILD-dev` to stop packaging from `${srcdir}` auto-extraction side effects: both now use `noextract`, unzip the downloaded release archive inside `package()`, and fail fast if the staged payload is missing the apphost, deps file, or the reported ASP.NET assembly.
+- Updated `packaging/aur/README.md`, `docs/CHANGELOG.md`, and `packaging/scripts/validate-packaging-metadata.sh` so the new AUR binary staging path is documented and regression-checked.
+- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and a direct smoke against the real `0.24.5-slskdn.175` GitHub release zip. `bash ./bin/lint` passed when invoked via `bash`. Repo-wide `dotnet test` still has unrelated environment-sensitive failures in `slskd.Tests.Unit.Solid.SolidFetchPolicyTests.*` and `slskd.Tests.Unit.Mesh.ServiceFabric.DestinationAllowlistTests.OpenTunnel_WildcardHostnameMatch_Allowed` due DNS/wildcard resolution behavior in this environment.
+
 ## 2026-04-22 17:25Z - Deployed issue 209 diagnostic build and proved Soulseek search works
 
 - Published `0.24.5-slskdn.174+manual.558f05d71` with the tag-aligned multi-file profile and deployed it to `kspls0` under `/usr/lib/slskd/releases/manual-558f05d71`; `/api/v0/application` reports the matching executable path/version and systemd is `active` with `NRestarts=0`.
