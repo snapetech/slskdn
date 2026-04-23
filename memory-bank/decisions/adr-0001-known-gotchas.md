@@ -8961,3 +8961,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** `makepkg` extraction is an implementation detail, not the package contract. Packaging from `${srcdir}` instead of the versioned archive path means the final package contents depend on whatever the helper/toolchain auto-unpacked, reused, or left behind in the working tree. That makes AUR binary packages vulnerable to incomplete or stale extracted payloads even when the downloaded release zip is correct.
 
 **How to prevent it:** For binary AUR packages, always install from the explicit downloaded archive file named in `source=()`. Unzip that archive into a temporary staging directory inside `package()`, assert that the apphost and critical managed runtime files exist there, and copy that staged tree into the package payload. Do not rely on `${srcdir}` globbing to discover what should be packaged from a release bundle.
+
+### 0z65. Unit Tests Must Not Depend On Live DNS Or External Hostname Resolution
+
+**What went wrong:** Repo-wide `dotnet test` failed in this environment because `SolidFetchPolicyTests` used `https://example.com/...` and expected live DNS resolution to succeed, while `DestinationAllowlistTests.OpenTunnel_WildcardHostnameMatch_Allowed` exercised the real `DnsSecurityService` for `www.example.com`. When the host environment had transient DNS/socket limits, those unit tests failed even though the production code path under test had not regressed.
+
+**Why it happened:** These tests mixed policy assertions with real network resolution. That makes unit outcomes depend on runner DNS reachability, socket availability, and external hostname behavior instead of only the code's decision logic.
+
+**How to prevent it:** Unit tests must use deterministic IP literals for success-path host validation or inject/mock the DNS validation dependency explicitly. Do not use public hostnames like `example.com` in unit tests unless the test is specifically about the DNS resolver itself and owns the resolution mechanism.
