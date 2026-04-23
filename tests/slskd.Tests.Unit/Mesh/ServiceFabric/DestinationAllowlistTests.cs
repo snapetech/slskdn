@@ -73,7 +73,10 @@ public class DestinationAllowlistTests
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint!).Port;
-        var service = CreateService(new TestTunnelConnectivity(port));
+        var dnsMock = new Mock<IDnsSecurityService>();
+        dnsMock.Setup(x => x.ResolveAndValidateAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync(DnsResolutionResult.Success(new List<string> { "93.184.216.34" }));
+        var service = CreateService(new TestTunnelConnectivity(port), dnsMock.Object);
         var policy = CreatePolicyWithAllowlist("*.example.com");
         var pod = CreatePodWithPolicy(policy);
         SetupPodAndMembers(pod, policy);
