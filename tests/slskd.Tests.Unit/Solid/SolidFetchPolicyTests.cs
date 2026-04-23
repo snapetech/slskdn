@@ -66,11 +66,11 @@ public class SolidFetchPolicyTests
         {
             Solid = new slskd.Options.SolidOptions
             {
-                AllowedHosts = new[] { "example.com" }
+                AllowedHosts = new[] { "93.184.216.34" }
             }
         });
         var policy = CreatePolicy();
-        var uri = new Uri("https://example.com/profile");
+        var uri = new Uri("https://93.184.216.34/profile");
 
         await policy.ValidateAsync(uri, CancellationToken.None);
     }
@@ -82,12 +82,12 @@ public class SolidFetchPolicyTests
         {
             Solid = new slskd.Options.SolidOptions
             {
-                AllowedHosts = new[] { "example.com" },
+                AllowedHosts = new[] { "93.184.216.34" },
                 AllowInsecureHttp = false
             }
         });
         var policy = CreatePolicy();
-        var uri = new Uri("http://example.com/profile");
+        var uri = new Uri("http://93.184.216.34/profile");
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => policy.ValidateAsync(uri, CancellationToken.None));
         Assert.Contains("only https:// allowed", ex.Message);
@@ -100,12 +100,12 @@ public class SolidFetchPolicyTests
         {
             Solid = new slskd.Options.SolidOptions
             {
-                AllowedHosts = new[] { "example.com" },
+                AllowedHosts = new[] { "93.184.216.34" },
                 AllowInsecureHttp = true
             }
         });
         var policy = CreatePolicy();
-        var uri = new Uri("http://example.com/profile");
+        var uri = new Uri("http://93.184.216.34/profile");
 
         await policy.ValidateAsync(uri, CancellationToken.None);
     }
