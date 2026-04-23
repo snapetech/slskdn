@@ -105,6 +105,7 @@
     <PackageReference Include="Mono.Nat" Version="3.0.4" />
     <PackageReference Include="MonoTorrent" Version="3.0.3-alpha.unstable.rev0049" />
     <PackageReference Include="OneOf" Version="3.0.271" />
+  <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageReference Include="prometheus-net" Version="8.2.1" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
     <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="8.2.1" />
