@@ -28,7 +28,7 @@
     "semantic-ui-less": "^2.5.0",
     "semantic-ui-react": "^2.1.5",
     "signalr": "^2.4.1",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "yaml": "^2.8.3"
   },
   "devDependencies": {
