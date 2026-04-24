@@ -11,10 +11,15 @@
 
 *No high priority tasks currently active
 
+- [x] **ux**: Publish mesh search results before Soulseek timeout completion.
+ - Status: completed (2026-04-24)
+ - Priority: P2
+ - Notes: Issue `#209` tester follow-up showed a `beatles` mesh result at `09:22:39`, but the user-facing search completed at `09:22:54` because final result publication waited for the Soulseek timeout. `SearchService` now starts a mesh publication task that persists and broadcasts merged mesh/pod results as soon as the overlay response arrives, while the Soulseek search continues. The search detail page now refetches responses when early result counts appear instead of waiting only for `isComplete`. The gotcha is documented in ADR-0001.
+
 - [x] **bug**: Normalize AUR release payload permissions after zip staging.
  - Status: completed (2026-04-24)
  - Priority: P1
- - Notes: AUR user feedback for `0.24.5.slskdn.177-1` showed `/usr/lib/slskd/releases/0.24.5.slskdn.177/` installed as `drwx------ root root`, preventing startup through systemd or any non-root user. The binary/dev PKGBUILDs extract into a `mktemp -d` staging directory and copy with archive-preserving semantics, so the `0700` staging mode could leak onto the release root. `PKGBUILD`, `PKGBUILD-bin`, and `PKGBUILD-dev` now normalize release payload permissions with `chmod -R u=rwX,go=rX "${release_root}"` and explicitly set the apphost to `755`; packaging metadata validation locks this in. Local package-function smokes for source, binary, and dev AUR paths all produced `0755` release roots.
+ - Notes: AUR user feedback for `0.24.5.slskdn.177-1` showed `/usr/lib/slskd/releases/0.24.5.slskdn.177/` installed as `drwx------ root root`, preventing startup through systemd or any non-root user. The binary/dev PKGBUILDs extract into a `mktemp -d` staging directory and copy with archive-preserving semantics, so the `0700` staging mode could leak onto the release root. `PKGBUILD`, `PKGBUILD-bin`, and `PKGBUILD-dev` now normalize release payload permissions with `chmod -R u=rwX,go=rX "${release_root}"` and explicitly set the apphost to `755`; packaging metadata validation locks this in. Local package-function smokes for source, binary, and dev AUR paths all produced `0755` release roots. Published the immediate AUR `slskdn-bin` repair as `0.24.5.slskdn.177-2`.
 
 - [x] **bug**: Stage AUR binary packages directly from the downloaded release zip.
  - Status: completed (2026-04-23)

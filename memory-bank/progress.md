@@ -1,3 +1,11 @@
+## 2026-04-24 15:47Z - Published mesh search results before Soulseek timeout
+
+- Reviewed the newest issue `#209` tester log: DHT/overlay were healthy (`state=Ready`, `activeMesh=8`), mesh search returned `beatles` results at `09:22:39`, and the combined search completed at `09:22:54` because Soulseek timed out after 15 seconds with zero responses.
+- Documented the gotcha in ADR-0001 and committed that docs-only entry immediately as `713fe1fcf`.
+- Updated `SearchService` so mesh overlay search still runs in parallel with Soulseek, but a mesh publication task now persists and broadcasts merged responses as soon as mesh results arrive; final completion still merges the latest Soulseek and mesh snapshots.
+- Updated the search detail view to refetch responses when early result counts appear, so users opening a running hybrid search can see mesh/pod hits before `isComplete`.
+- Validation passed: focused `SearchServiceLifecycleTests`, focused frontend search tests, frontend lint, `git diff --check`, and `bash ./bin/lint`. Full `dotnet test --no-restore` passed the unit and non-integration projects, then failed one integration case (`TwoFullInstances_CanFormOverlayMeshConnection`) with a setup-time HTTP 502; rerunning that exact integration test by itself passed.
+
 ## 2026-04-24 15:43Z - Fixed AUR release payload directory permissions
 
 - Investigated AUR user feedback for `slskdn-bin 0.24.5.slskdn.177-1`: `/usr/lib/slskd/releases/0.24.5.slskdn.177/` was installed as `drwx------ root root`, which prevents the systemd `slskd` user and non-root invocations from traversing the release payload.
@@ -6,6 +14,7 @@
 - Fixed `packaging/aur/PKGBUILD`, `packaging/aur/PKGBUILD-bin`, and `packaging/aur/PKGBUILD-dev` to normalize release payload permissions after copying with `chmod -R u=rwX,go=rX "${release_root}"` and then set the apphost to `755`.
 - Tightened `packaging/scripts/validate-packaging-metadata.sh` so future AUR package template changes must keep the permission normalization.
 - Validation passed: packaging metadata validation, `git diff --check`, and direct package-function smokes for source, binary, and dev AUR paths; all produced `0755` release roots and `0755` apphosts.
+- Published the immediate live AUR binary package repair as `slskdn-bin 0.24.5.slskdn.177-2`; the AUR commit is `6766f22` (`Fix release payload permissions`).
 
 ## 2026-04-23 00:00Z - Hardened AUR binary package staging for the .NET 10 self-contained bundle
 

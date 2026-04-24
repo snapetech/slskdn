@@ -182,30 +182,46 @@ const SearchDetail = ({
     toast.info(`Unblocked ${username}`);
   }, []);
 
-  // when the search transitions from !isComplete -> isComplete,
-  // fetch the results from the server
+  // Fetch results once counts appear. Mesh responses can now arrive before
+  // the Soulseek search reaches its timeout.
   useEffect(() => {
+    const hasResults = responseCount > 0 || fileCount > 0 || lockedFileCount > 0;
+
+    if (!isComplete && !hasResults) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
     const get = async () => {
       try {
         setLoading(true);
 
-        // the results may not be ready yet.  this is very rare, but
-        // if it happens the search will complete with no results.
-        await sleep(500);
+        if (isComplete) {
+          // the results may not be ready yet. this is very rare, but
+          // if it happens the search will complete with no results.
+          await sleep(500);
+        }
 
         const responses = await getResponses({ id });
-        setResults(responses);
-        setLoading(false);
+        if (!cancelled) {
+          setResults(responses);
+          setLoading(false);
+        }
       } catch (getError) {
-        setError(getError);
-        setLoading(false);
+        if (!cancelled) {
+          setError(getError);
+          setLoading(false);
+        }
       }
     };
 
-    if (isComplete) {
-      get();
-    }
-  }, [id, isComplete]);
+    const timeout = setTimeout(get, isComplete ? 0 : 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [fileCount, id, isComplete, lockedFileCount, responseCount]);
 
   // apply sorting and filters.  this can take a while for larger result
   // sets, so memoize it.

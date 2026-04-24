@@ -377,6 +377,8 @@ namespace slskd.Search
                 // initialize the list of responses that we'll use to accumulate them
                 // populated by the responseHandler we pass to SearchAsync
                 List<SearchResponse> responses = new();
+                IReadOnlyList<Response> latestMeshResponses = Array.Empty<Response>();
+                object responseLock = new();
 
                 options ??= new SearchOptions();
                 options = options.WithActions(
@@ -398,9 +400,16 @@ namespace slskd.Search
                         // note: this is rate limited, but has the potential to update the database every 250ms (or whatever the
                         // interval is set to) for the duration of the search. any issues with disk i/o or performance while searches
                         // are running should investigate this as a cause
-                        search.ResponseCount = args.Search.ResponseCount;
-                        search.FileCount = args.Search.FileCount;
-                        search.LockedFileCount = args.Search.LockedFileCount;
+                        List<SearchResponse> soulseekSnapshot;
+                        IReadOnlyList<Response> meshSnapshot;
+                        lock (responseLock)
+                        {
+                            soulseekSnapshot = responses.ToList();
+                            meshSnapshot = latestMeshResponses;
+                        }
+
+                        var merged = MergeSearchResponses(soulseekSnapshot, meshSnapshot);
+                        ApplyResponseSummary(search, merged);
 
                         Update(search);
 
@@ -413,7 +422,13 @@ namespace slskd.Search
                 // the client state (e.g. disconnected) or a problem with the search (e.g. no terms)
                 var soulseekSearchTask = Client.SearchAsync(
                     query,
-                    responseHandler: (response) => responses.Add(response),
+                    responseHandler: (response) =>
+                    {
+                        lock (responseLock)
+                        {
+                            responses.Add(response);
+                        }
+                    },
                     scope,
                     token,
                     options,
@@ -433,6 +448,8 @@ namespace slskd.Search
                         var meshTask = (meshEnabled && MeshOverlaySearchService != null)
                             ? MeshOverlaySearchService.SearchAsync(query.SearchText, cancellationTokenSource.Token)
                             : Task.FromResult((IReadOnlyList<Response>)Array.Empty<Response>());
+
+                        var meshPublicationTask = PublishMeshResultsWhenReadyAsync(meshTask);
 
                         try
                         {
@@ -461,16 +478,7 @@ namespace slskd.Search
                         }
 
                         // Await mesh overlay results (runs in parallel with Soulseek; bounded by per-peer timeout)
-                        IReadOnlyList<Response> meshResponses;
-                        try
-                        {
-                            meshResponses = await meshTask;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Debug(ex, "Mesh overlay search for '{Query}' failed: {Message}", query.SearchText, ex.Message);
-                            meshResponses = Array.Empty<Response>();
-                        }
+                        var meshResponses = await meshPublicationTask;
 
                         // it shouldn't be possible for this to happen, as the StateChanged callback is called before the
                         // SearchAsync() method returns, and we will have already updated the record at that time. if for
@@ -483,32 +491,35 @@ namespace slskd.Search
 
                         search.EndedAt = DateTime.UtcNow;
 
-                        var soulseekResponses = responses.Select(r => Response.FromSoulseekSearchResponse(r));
-                        var merged = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
+                        List<SearchResponse> soulseekSnapshot;
+                        lock (responseLock)
+                        {
+                            soulseekSnapshot = responses.ToList();
+                        }
+
+                        var merged = MergeSearchResponses(soulseekSnapshot, meshResponses);
                         search.Responses = merged;
-                        search.ResponseCount = merged.Count;
-                        search.FileCount = merged.Sum(r => r.FileCount);
-                        search.LockedFileCount = merged.Sum(r => r.LockedFileCount);
+                        ApplyResponseSummary(search, merged);
 
                         Update(search);
 
                         // Raise event for passive FLAC discovery (HashDb will pick up FLAC files)
-                        if (EventBus != null && responses.Count > 0)
+                        if (EventBus != null && soulseekSnapshot.Count > 0)
                         {
                             EventBus.Raise(new slskd.Events.SearchResponsesReceivedEvent
                             {
-                                Responses = responses,
+                                Responses = soulseekSnapshot,
                             });
                         }
 
                         // Notify traffic observer for Virtual Soulfind capture (Phase 6A: T-803)
-                        if (TrafficObserver != null && responses.Count > 0)
+                        if (TrafficObserver != null && soulseekSnapshot.Count > 0)
                         {
                             try
                             {
                                 // Call TrafficObserver for each search response
                                 // Each SearchResponse represents one user's results for the query
-                                foreach (var response in responses)
+                                foreach (var response in soulseekSnapshot)
                                 {
                                     _ = TrafficObserver.OnSearchResultsAsync(query.SearchText, response, CancellationToken.None);
                                 }
@@ -536,11 +547,53 @@ namespace slskd.Search
                             safetySource,
                             query.SearchText,
                             search.State,
-                            responses.Count,
+                            soulseekSnapshot.Count,
                             meshResponses.Count,
                             search.ResponseCount,
                             search.FileCount,
                             search.EndedAt.HasValue ? (long)(search.EndedAt.Value - search.StartedAt).TotalMilliseconds : 0);
+
+                        async Task<IReadOnlyList<Response>> PublishMeshResultsWhenReadyAsync(Task<IReadOnlyList<Response>> pendingMeshTask)
+                        {
+                            IReadOnlyList<Response> meshResponses;
+                            try
+                            {
+                                meshResponses = await pendingMeshTask;
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Debug(ex, "Mesh overlay search for '{Query}' failed: {Message}", query.SearchText, ex.Message);
+                                meshResponses = Array.Empty<Response>();
+                            }
+
+                            if (meshResponses.Count == 0)
+                            {
+                                return meshResponses;
+                            }
+
+                            List<SearchResponse> soulseekSnapshot;
+                            lock (responseLock)
+                            {
+                                latestMeshResponses = meshResponses;
+                                soulseekSnapshot = responses.ToList();
+                            }
+
+                            var merged = MergeSearchResponses(soulseekSnapshot, meshResponses);
+                            search.Responses = merged;
+                            ApplyResponseSummary(search, merged);
+                            Update(search);
+                            await SearchHub.BroadcastUpdateAsync(search with { Responses = [] });
+
+                            Log.Debug(
+                                "Published early mesh results for '{Query}' (id: {Id}): meshResponses={MeshResponses} mergedResponses={MergedResponses} files={Files}",
+                                query.SearchText,
+                                id,
+                                meshResponses.Count,
+                                search.ResponseCount,
+                                search.FileCount);
+
+                            return meshResponses;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -585,6 +638,20 @@ namespace slskd.Search
         {
             return exception is OperationCanceledException
                 && (searchCancellationToken.IsCancellationRequested || applicationIsShuttingDown);
+        }
+
+        internal static List<Response> MergeSearchResponses(IEnumerable<SearchResponse> soulseekResponses, IReadOnlyList<Response> meshResponses)
+        {
+            return SearchResponseMerger.Deduplicate(
+                soulseekResponses.Select(r => Response.FromSoulseekSearchResponse(r)),
+                meshResponses);
+        }
+
+        internal static void ApplyResponseSummary(Search search, IReadOnlyCollection<Response> responses)
+        {
+            search.ResponseCount = responses.Count;
+            search.FileCount = responses.Sum(r => r.FileCount);
+            search.LockedFileCount = responses.Sum(r => r.LockedFileCount);
         }
 
         /// <summary>

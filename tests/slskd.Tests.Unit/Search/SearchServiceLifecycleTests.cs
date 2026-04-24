@@ -6,6 +6,7 @@ namespace slskd.Tests.Unit.Search;
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -92,6 +93,36 @@ public class SearchServiceLifecycleTests
             applicationIsShuttingDown: false);
 
         Assert.False(result);
+    }
+
+    [Fact]
+    public void ApplyResponseSummary_IncludesEarlyMeshResponses()
+    {
+        var search = new slskd.Search.Search();
+        var responses = new List<Response>
+        {
+            new()
+            {
+                Username = "mesh-peer",
+                FileCount = 1,
+                LockedFileCount = 0,
+                Files = new List<slskd.Search.File>
+                {
+                    new()
+                    {
+                        Filename = "song.flac",
+                        Size = 1234,
+                    },
+                },
+                LockedFiles = new List<slskd.Search.File>(),
+            },
+        };
+
+        SearchService.ApplyResponseSummary(search, responses);
+
+        Assert.Equal(1, search.ResponseCount);
+        Assert.Equal(1, search.FileCount);
+        Assert.Equal(0, search.LockedFileCount);
     }
 
     private static SearchService CreateService()

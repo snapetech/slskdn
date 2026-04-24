@@ -1,16 +1,31 @@
+## Update 2026-04-24 15:47:21Z
+
+- Current task: Issue `#209` mesh-result UX follow-up is implemented and locally validated.
+- Last activity:
+  - inspected the latest tester follow-up and confirmed the current symptom is not peer acquisition delay: DHT/overlay were ready with `activeMesh=8`, mesh search returned `beatles` results at `09:22:39`, and the combined search completed at `09:22:54` after the normal 15-second Soulseek timeout
+  - documented the gotcha in ADR-0001 and committed the docs-only entry as `713fe1fcf`
+  - changed `SearchService` to persist and broadcast merged mesh/pod responses as soon as the mesh overlay search returns, while preserving final Soulseek+mesh merging at search completion
+  - changed the search detail page to refetch responses when early result counts appear, not only when `isComplete` flips
+  - validation passed: focused backend `SearchServiceLifecycleTests`, focused frontend search tests, frontend lint, `git diff --check`, and `bash ./bin/lint`
+  - full `dotnet test --no-restore` passed the unit and non-integration projects, then failed one integration case (`TwoFullInstances_CanFormOverlayMeshConnection`) with setup-time HTTP 502; rerunning that exact integration test by itself passed
+- Next steps:
+  1. Reply on issue `#209` after this change is pushed/released, explaining that mesh results should now appear before slow/empty Soulseek searches finish.
+  2. Do not create build tags unless explicitly requested.
+
 ## Update 2026-04-24 15:43:56Z
 
-- Current task: AUR release payload permission fix is implemented and locally validated for source, binary, and dev package paths.
+- Current task: None. The AUR release payload permission fix is implemented, locally validated, committed, and published to the live `slskdn-bin` AUR package.
 - Last activity:
   - investigated AUR user feedback for `slskdn-bin 0.24.5.slskdn.177-1`, where `/usr/lib/slskd/releases/0.24.5.slskdn.177/` installed as `drwx------ root root` and blocked systemd/non-root startup
   - identified the staging-mode leak from `mktemp -d` plus archive-preserving copy into the release root
   - documented the gotcha in ADR-0001 and committed the docs entry as `a75d5783f`
   - updated `PKGBUILD`, `PKGBUILD-bin`, and `PKGBUILD-dev` to normalize release payload permissions with `chmod -R u=rwX,go=rX "${release_root}"` and apphost mode `755`
   - updated packaging metadata validation and the changelog/memory-bank records
-  - validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and local package-function smokes proving source/binary/dev release roots install as `0755`
+  - validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `bash ./bin/lint`, `git diff --check`, and local package-function smokes proving source/binary/dev release roots install as `0755`
+  - published `slskdn-bin 0.24.5.slskdn.177-2` to AUR with commit `6766f22`
 - Next steps:
-  1. Commit and push the packaging fix when ready.
-  2. Publish the corrected AUR package metadata for the currently affected `0.24.5.slskdn.177` package, likely as a pkgrel bump, without creating any build tags unless explicitly requested.
+  1. Push the local repository commits when ready.
+  2. Tell affected users to update to `slskdn-bin 0.24.5.slskdn.177-2`; if their helper reuses stale metadata, clear the helper cache and rebuild.
 
 ## Update 2026-04-23 00:00:00Z
 
