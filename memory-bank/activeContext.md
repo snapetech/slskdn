@@ -1,3 +1,17 @@
+## Update 2026-04-24 15:43:56Z
+
+- Current task: AUR release payload permission fix is implemented and locally validated for source, binary, and dev package paths.
+- Last activity:
+  - investigated AUR user feedback for `slskdn-bin 0.24.5.slskdn.177-1`, where `/usr/lib/slskd/releases/0.24.5.slskdn.177/` installed as `drwx------ root root` and blocked systemd/non-root startup
+  - identified the staging-mode leak from `mktemp -d` plus archive-preserving copy into the release root
+  - documented the gotcha in ADR-0001 and committed the docs entry as `a75d5783f`
+  - updated `PKGBUILD`, `PKGBUILD-bin`, and `PKGBUILD-dev` to normalize release payload permissions with `chmod -R u=rwX,go=rX "${release_root}"` and apphost mode `755`
+  - updated packaging metadata validation and the changelog/memory-bank records
+  - validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and local package-function smokes proving source/binary/dev release roots install as `0755`
+- Next steps:
+  1. Commit and push the packaging fix when ready.
+  2. Publish the corrected AUR package metadata for the currently affected `0.24.5.slskdn.177` package, likely as a pkgrel bump, without creating any build tags unless explicitly requested.
+
 ## Update 2026-04-23 00:00:00Z
 
 - Current task: None. The AUR binary packaging hardening for the reported `0.24.5.slskdn.175-1` Manjaro missing-DLL failure is implemented and locally validated.

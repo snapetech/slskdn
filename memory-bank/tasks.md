@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Normalize AUR release payload permissions after zip staging.
+ - Status: completed (2026-04-24)
+ - Priority: P1
+ - Notes: AUR user feedback for `0.24.5.slskdn.177-1` showed `/usr/lib/slskd/releases/0.24.5.slskdn.177/` installed as `drwx------ root root`, preventing startup through systemd or any non-root user. The binary/dev PKGBUILDs extract into a `mktemp -d` staging directory and copy with archive-preserving semantics, so the `0700` staging mode could leak onto the release root. `PKGBUILD`, `PKGBUILD-bin`, and `PKGBUILD-dev` now normalize release payload permissions with `chmod -R u=rwX,go=rX "${release_root}"` and explicitly set the apphost to `755`; packaging metadata validation locks this in. Local package-function smokes for source, binary, and dev AUR paths all produced `0755` release roots.
+
 - [x] **bug**: Stage AUR binary packages directly from the downloaded release zip.
  - Status: completed (2026-04-23)
  - Priority: P1

@@ -1,3 +1,12 @@
+## 2026-04-24 15:43Z - Fixed AUR release payload directory permissions
+
+- Investigated AUR user feedback for `slskdn-bin 0.24.5.slskdn.177-1`: `/usr/lib/slskd/releases/0.24.5.slskdn.177/` was installed as `drwx------ root root`, which prevents the systemd `slskd` user and non-root invocations from traversing the release payload.
+- Root cause is the recent binary zip staging path: `mktemp -d` creates a `0700` staging directory, and `cp -a "${stage_root}"/. "${release_root}/"` can preserve the staging directory attributes onto the destination release root.
+- Documented the gotcha in ADR-0001 and committed that docs-only entry immediately as `a75d5783f`.
+- Fixed `packaging/aur/PKGBUILD`, `packaging/aur/PKGBUILD-bin`, and `packaging/aur/PKGBUILD-dev` to normalize release payload permissions after copying with `chmod -R u=rwX,go=rX "${release_root}"` and then set the apphost to `755`.
+- Tightened `packaging/scripts/validate-packaging-metadata.sh` so future AUR package template changes must keep the permission normalization.
+- Validation passed: packaging metadata validation, `git diff --check`, and direct package-function smokes for source, binary, and dev AUR paths; all produced `0755` release roots and `0755` apphosts.
+
 ## 2026-04-23 00:00Z - Hardened AUR binary package staging for the .NET 10 self-contained bundle
 
 - Investigated the live Manjaro `slskdn-bin 0.24.5.slskdn.175-1` report about missing `Microsoft.AspNetCore.Diagnostics.Abstractions` and confirmed the published `0.24.5-slskdn.175` Linux x64 release zip itself is intact: it contains the DLL, `slskd.deps.json`, and a runnable self-contained apphost.

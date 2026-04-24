@@ -70,7 +70,8 @@ package() {
     install -dm755 "${release_root}/wwwroot"
     cp -r src/web/build/* "${release_root}/wwwroot/"
 
-    chmod +x "${release_root}/slskd"
+    chmod -R u=rwX,go=rX "${release_root}"
+    chmod 755 "${release_root}/slskd"
     ln -sfn "releases/${pkgver}" "${app_root}/current"
 
     cat > "${app_root}/slskd" <<'EOF'
