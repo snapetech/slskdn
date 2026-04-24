@@ -1,3 +1,10 @@
+## 2026-04-24 16:10Z - Pushed pending fixes and checked release status
+
+- Rebasing local `main` onto remote release metadata commit `c93cf1653` applied cleanly, then pushed the pending commits through `00742f9cd` to `snapetech/slskdn`.
+- Local and remote `main` now match at `00742f9cd4f17aca09e293736be8a7f47c77c467`.
+- GitHub Actions currently has CodeQL and dependency-submission checks running for the push; no release/tag workflow is currently running to cancel.
+- The published `0.24.5-slskdn.177` release and `build-main-0.24.5-slskdn.177` build tag point at `92fa389c`, so they do not include the AUR permission fix or issue `#209` early mesh-result publication fix. Shipping these fixes requires a new build tag, likely `build-main-0.24.5-slskdn.178`, after explicit user confirmation.
+
 ## 2026-04-24 15:47Z - Published mesh search results before Soulseek timeout
 
 - Reviewed the newest issue `#209` tester log: DHT/overlay were healthy (`state=Ready`, `activeMesh=8`), mesh search returned `beatles` results at `09:22:39`, and the combined search completed at `09:22:54` because Soulseek timed out after 15 seconds with zero responses.

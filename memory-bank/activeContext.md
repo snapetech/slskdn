@@ -1,3 +1,16 @@
+## Update 2026-04-24 16:10:07Z
+
+- Current task: None. The AUR permission fix and issue `#209` early mesh-result publication fix are committed and pushed to `snapetech/slskdn` `main`.
+- Last activity:
+  - rebased local `main` onto remote release metadata commit `c93cf1653`
+  - pushed four commits to GitHub through `00742f9cd`: AUR permission gotcha, mesh publication-delay gotcha, AUR permission fix, and early mesh-result publication fix
+  - verified local and remote `main` both resolve to `00742f9cd4f17aca09e293736be8a7f47c77c467`
+  - checked Actions: no current release/tag workflow is running; only CodeQL and dependency-submission checks started from the `main` push
+  - confirmed published release `0.24.5-slskdn.177` / build tag `build-main-0.24.5-slskdn.177` does not contain these fixes because the build tag points at `92fa389c`
+- Next steps:
+  1. If these fixes should ship immediately, create a new build tag after explicit user confirmation, likely `build-main-0.24.5-slskdn.178`.
+  2. Do not cancel anything unless a new release/tag workflow is found running.
+
 ## Update 2026-04-24 15:47:21Z
 
 - Current task: Issue `#209` mesh-result UX follow-up is implemented and locally validated.
