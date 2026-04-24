@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z131. Mesh Search Results Must Not Wait Behind Soulseek Timeout
+
+**The Bug**: Issue `#209` tester follow-up showed mesh search returning `beatles` results at `09:22:39`, but the user-facing search did not complete until `09:22:54` because `SearchService` awaited the Soulseek search task before awaiting and persisting mesh overlay results. Mesh had already answered, but the UI could not show those results until the normal 15-second Soulseek timeout elapsed.
+
+**Files Affected**:
+- `src/slskd/Search/SearchService.cs`
+- `src/web/src/components/Search/Detail/SearchDetail.jsx`
+
+**Wrong**:
+```csharp
+var soulseekSearch = await soulseekSearchTask;
+var meshResponses = await meshTask;
+search.Responses = SearchResponseMerger.Deduplicate(soulseekResponses, meshResponses);
+Update(search);
+```
+
+**Correct**:
+```csharp
+var meshPublicationTask = PublishMeshResultsWhenReadyAsync(meshTask);
+var soulseekSearch = await soulseekSearchTask;
+var meshResponses = await meshPublicationTask;
+```
+
+**Why This Keeps Happening**: Hybrid search can run providers in parallel while still serializing result publication at the end. Any fast secondary provider, especially mesh/pod search, needs an early persistence and broadcast path so slow or zero-result Soulseek searches do not hide already-available results.
+
 ### 0z130. AUR Zip Staging Must Normalize Release Directory Permissions
 
 **The Bug**: AUR binary build `0.24.5.slskdn.177-1` installed `/usr/lib/slskd/releases/0.24.5.slskdn.177/` as `drwx------ root root`, so systemd and non-root users could not traverse the bundled release payload and startup failed until the directory was manually chmodded.
