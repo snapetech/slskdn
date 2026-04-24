@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z130. AUR Zip Staging Must Normalize Release Directory Permissions
+
+**The Bug**: AUR binary build `0.24.5.slskdn.177-1` installed `/usr/lib/slskd/releases/0.24.5.slskdn.177/` as `drwx------ root root`, so systemd and non-root users could not traverse the bundled release payload and startup failed until the directory was manually chmodded.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD-bin`
+- `packaging/aur/PKGBUILD-dev`
+- `packaging/aur/PKGBUILD`
+
+**Wrong**:
+```bash
+stage_root="$(mktemp -d)"
+install -dm755 "${release_root}"
+unzip -q "${archive}" -d "${stage_root}"
+cp -a "${stage_root}"/. "${release_root}/"
+chmod +x "${release_root}/slskd"
+```
+
+**Correct**:
+```bash
+stage_root="$(mktemp -d)"
+install -dm755 "${release_root}"
+unzip -q "${archive}" -d "${stage_root}"
+cp -a "${stage_root}"/. "${release_root}/"
+chmod -R u=rwX,go=rX "${release_root}"
+chmod 755 "${release_root}/slskd"
+```
+
+**Why This Keeps Happening**: `mktemp -d` creates a `0700` staging directory, and archive-preserving copies from `stage_root/.` can carry the staging directory attributes onto the destination release root. Package payloads under `/usr/lib/slskd/releases/<version>` must be traversable by the `slskd` service user, so AUR package functions must normalize directory/file modes after staging release zips.
+
 ### 0z129. Public Search Timeout Units Must Match Soulseek SearchOptions Units
 
 **The Bug**: Issue `#209` live retesting on `kspls0` used the documented `/api/v0/searches` contract and sent `searchTimeout: 10` for a 10-second search. `SearchRequest` documented the field as seconds and validated values down to `5`, but `ToSearchOptions()` passed the raw `10` into `Soulseek.SearchOptions`, which expects milliseconds. The search completed in 10-44 ms with zero responses, creating a false app/network failure signal.
