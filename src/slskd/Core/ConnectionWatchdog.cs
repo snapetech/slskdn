@@ -272,6 +272,7 @@ namespace slskd
                         {
                             var (delay, jitter) = Compute.ExponentialBackoffDelay(
                                 iteration: attempts,
+                                baseDelayInMilliseconds: 1000,
                                 maxDelayInMilliseconds: ReconnectMaxDelayMilliseconds);
 
                             var approximateDelay = (int)Math.Ceiling((double)(delay + jitter) / 1000);
