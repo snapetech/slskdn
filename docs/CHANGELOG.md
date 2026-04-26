@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Ported upstream Docker non-root runtime support for `--user` and `PUID`/`PGID`, preserving slskdN image metadata.
 - Applied upstream favicon metadata while keeping slskdN's newer frontend dependency graph in place.
 - Confirmed upstream share-scan count synchronization matches slskdN's existing snapshot-based progress accounting.
 - Ported upstream Soulseek option diff handling so live option reconfiguration also observes the new transfer upload/download option tree.
