@@ -336,6 +336,23 @@ transfers:
     speed_limit: 1000
 ```
 
+## Retry Behavior
+
+Failed downloads can be retried automatically up to the configured number of attempts. If an attempt fails initially, the application delays the second attempt by the configured delay, and an exponential backoff is used to compute the delay for all subsequent attempts, up to the configured maximum delay.
+
+By default, partial downloads are resumed based on the size of the incomplete file. Users can choose to always overwrite incomplete files instead.
+
+**YAML**
+```yaml
+transfers:
+  download:
+    retry:
+      incomplete: resume # 'overwrite' or 'resume'
+      attempts: 3
+      delay: 5000 # initial time between retries, in milliseconds
+      max_delay: 60000 # maximum time between retries, in milliseconds
+```
+
 ## Global Upload Limits
 
 Global upload limits define the number of queued, daily, and weekly uploads on a _per user_ basis.  These limits behave as defaults and are applied if limits for a user's group have not been set.

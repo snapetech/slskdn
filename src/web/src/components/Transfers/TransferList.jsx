@@ -158,6 +158,9 @@ class TransferList extends Component {
                                 padding: 7,
                               }}
                               {...getColor(f.state)}
+                              {...(!getColor(f.state).color && f.attempts > 1
+                                ? { color: 'yellow' }
+                                : {})}
                               active={f.direction === 'Upload'}
                               onClick={() => this.handleClick(f)}
                             >
@@ -171,6 +174,7 @@ class TransferList extends Component {
                                 )}
                               {f.state}
                               {f.placeInQueue ? ` (#${f.placeInQueue})` : ''}
+                              {f.attempts > 1 ? ` (Retry #${f.attempts})` : ''}
                             </Button>
                           )}
                         </Table.Cell>

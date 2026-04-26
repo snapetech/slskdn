@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Ported upstream automatic download retry/resume behavior, retry configuration docs, transfer attempt reporting, and completed-transfer report filtering.
 - Ported upstream username-pattern blacklist support, blacklist decision caching, and network/API guards for blacklisted users.
 - Ported upstream option-diff null handling so configuration changes involving nullable nested values are detected instead of crashing or being skipped.
 - Ported upstream AGPL additional-terms legal artifacts and startup license notice, with slskdN fork attribution preserved in `NOTICE` and the banner.
