@@ -1,3 +1,16 @@
+## Update 2026-04-26 21:22:00Z
+
+- Current task: Correcting 0.25.1 release numbering to continue the slskdN sequence.
+- Last activity:
+  - canceled the incorrect `build-main-0.25.1-slskdn.2` release run
+  - deleted the incorrect `0.25.1-slskdn.2` GitHub release and removed the wrong `build-main-0.25.1-slskdn.1` / `.2` trigger tags
+  - rebased the corrected metadata over the release-bot commit that briefly landed from the canceled `.2` run
+  - updated active package/docs metadata to `0.25.1-slskdn.183`
+  - validation passed: `bash packaging/scripts/validate-packaging-metadata.sh` and `git diff --check`
+- Next steps:
+  1. Commit and push the `0.25.1-slskdn.183` correction.
+  2. Push `build-main-0.25.1-slskdn.183` from current `main`.
+
 ## Update 2026-04-26 21:15:00Z
 
 - Current task: None. README upstream-parity feature comparison cleanup is implemented and validated.
@@ -7,7 +20,7 @@
   - split comparison rows so upstream gets checkmarks only for exact upstream capabilities, while slskdN-only UI/automation layers remain distinct
   - validation passed: `git diff --check`
 - Next steps:
-  1. Continue monitoring the replacement `build-main-0.25.1-slskdn.2` release run separately.
+  1. Continue release correction work under the latest context above.
 
 ## Update 2026-04-26 21:04:00Z
 
@@ -15,10 +28,10 @@
 - Last activity:
   - merged PR #217 into `main` at `881453d29` and deleted the remote/local `sync/upstream-0.25.1` branch
   - pushed `build-main-0.25.1-slskdn.1`; the release workflow failed because `nix-smoke` fetched brand-new stable release assets before `publish` had created them
-  - documented the gotcha in ADR-0001 and started the replacement release metadata bump to `0.25.1-slskdn.2`
+  - documented the gotcha in ADR-0001 and started the replacement release metadata bump to `0.25.1-slskdn.183`
 - Next steps:
   1. Commit and push the workflow/metadata repair on `main`.
-  2. Push replacement tag `build-main-0.25.1-slskdn.2` and watch the release run.
+  2. Push replacement tag `build-main-0.25.1-slskdn.183` and watch the release run.
 
 ## Update 2026-04-26 20:37:00Z
 

@@ -1,3 +1,10 @@
+## 2026-04-26 21:22Z - Corrected 0.25.1 release numbering to slskdN sequence
+
+- Corrected the release line from reset-style `0.25.1-slskdn.2` to sequence-continuing `0.25.1-slskdn.183`.
+- Canceled the incorrect `build-main-0.25.1-slskdn.2` run, deleted the incorrect `0.25.1-slskdn.2` GitHub release, and removed the wrong `build-main-0.25.1-slskdn.1` / `.2` trigger tags from origin.
+- Rebasing over the release-bot metadata commit from the canceled `.2` run preserved the generated metadata file changes while replacing the version with `.183`.
+- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and no active metadata references to `.2` remain.
+
 ## 2026-04-26 21:15Z - Updated README upstream parity feature comparison
 
 - Reviewed README feature claims against upstream `slskd/slskd` 0.25.1 code/docs now merged into `main`.
@@ -9,12 +16,12 @@
 
 - Merged PR #217 into `main` at `881453d29`, deleted the remote/local `sync/upstream-0.25.1` branch, and pushed `build-main-0.25.1-slskdn.1`.
 - The first tag run built the web content successfully but failed before publishing because the pre-publish `Nix Package Smoke` job tried to build the stable flake from release assets that did not exist yet.
-- Documented the release-ordering gotcha in ADR-0001, removed the pre-publish Nix smoke dependency from `build-on-tag.yml`, and bumped active release metadata to `0.25.1-slskdn.2` for the replacement tag.
+- Documented the release-ordering gotcha in ADR-0001, removed the pre-publish Nix smoke dependency from `build-on-tag.yml`, and bumped active release metadata to `0.25.1-slskdn.183` for the replacement tag.
 - Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and `bash ./bin/lint`.
 
 ## 2026-04-26 20:37Z - Updated 0.25.1 base references and deployed kspls0 manual build
 
-- Updated active user-facing and packaging metadata from the 0.24.x upstream base to `0.25.1` / `0.25.1-slskdn.2`, including README badges/install examples, build/dev documentation, workflow fallback examples, AUR/RPM/Debian/Homebrew/Chocolatey/Winget/Flatpak/Helm/TrueNAS/Synology/Snap metadata, and the stable metadata updater.
+- Updated active user-facing and packaging metadata from the 0.24.x upstream base to `0.25.1` / `0.25.1-slskdn.183`, including README badges/install examples, build/dev documentation, workflow fallback examples, AUR/RPM/Debian/Homebrew/Chocolatey/Winget/Flatpak/Helm/TrueNAS/Synology/Snap metadata, and the stable metadata updater.
 - Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, full `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`.
 - Published the Linux x64 manual artifact with the release-aligned multi-file profile and deployed it to `kspls0` under `/usr/lib/slskd/releases/manual-39a4f2c16`.
 - Live `kspls0` validation: `/usr/lib/slskd/current/slskd --version` reports `0.25.1-slskdn.1+manual.39a4f2c16`, systemd is active with `NRestarts=0`, listeners are present on `5030`, `50300`, `50305`, `50306`, and `50400`, Soulseek logged in, a mesh neighbor reconnected, no current-process error/fatal/exception matches were found, and no new coredumps appeared.

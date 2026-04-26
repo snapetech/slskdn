@@ -14,12 +14,17 @@
 - [x] **chore**: Update active upstream-base references to `0.25.1` and smoke the synced build on `kspls0`.
  - Status: completed (2026-04-26)
  - Priority: P1
- - Notes: Updated active README/download examples, build/dev docs, workflow fallbacks, and packaging metadata to `0.25.1` / `0.25.1-slskdn.2`. Validation passed with packaging metadata checks, `git diff --check`, full Release build/tests via `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`. Deployed manual Linux x64 build `0.25.1-slskdn.1+manual.39a4f2c16` to `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; service stayed active with `NRestarts=0`, expected listeners, Soulseek login, mesh reconnect, no current-process issue matches, and no new coredumps.
+ - Notes: Updated active README/download examples, build/dev docs, workflow fallbacks, and packaging metadata to `0.25.1` / `0.25.1-slskdn.183`. Validation passed with packaging metadata checks, `git diff --check`, full Release build/tests via `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`. Deployed manual Linux x64 build `0.25.1-slskdn.1+manual.39a4f2c16` to `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; service stayed active with `NRestarts=0`, expected listeners, Soulseek login, mesh reconnect, no current-process issue matches, and no new coredumps.
 
 - [x] **docs**: Update README upstream parity comparison after the 0.25.1 sync.
  - Status: completed (2026-04-26)
  - Priority: P2
  - Notes: Marked slskd as supporting upstream 0.25.1 capabilities now present in both projects, including transfer retry/resume, search filters/sorting, server-side blacklist interactions, app-controlled file deletion, batch download tracking/API, and Prometheus metrics endpoint support. Split slskdN-only UI/automation layers into separate rows so auto-replace, quick browser-side blocking, folder-selection UI, saved default filters, and the metrics dashboard remain fork-specific. Validation passed with `git diff --check`.
+
+- [x] **release**: Correct 0.25.1 stable numbering to continue the slskdN sequence.
+ - Status: completed (2026-04-26)
+ - Priority: P1
+ - Notes: Canceled the wrong `build-main-0.25.1-slskdn.2` run, deleted the incorrect `0.25.1-slskdn.2` release, removed wrong `.1`/`.2` build trigger tags, and updated active metadata to `0.25.1-slskdn.183`. Validation passed with packaging metadata checks and `git diff --check`.
 
 - [x] **ux**: Publish mesh search results before Soulseek timeout completion.
  - Status: completed (2026-04-24)
