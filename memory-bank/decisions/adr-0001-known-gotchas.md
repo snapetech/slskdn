@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z132. YAML Examples And Operator Warnings Must Use Public Option Names
+
+**The Bug**: A tester tried to suppress the DHT public-discoverability warning by setting `lan_only` under both `dht` and `dhtRendezvous`, but the sample config did not show `dht.lan_only` and the warning printed internal C# option names (`DhtRendezvous.LanOnly`) instead of the YAML key operators actually use.
+
+**Files Affected**:
+- `config/slskd.example.yml`
+- `src/slskd/DhtRendezvous/DhtExposureWarningService.cs`
+
+**Wrong**:
+```text
+Set DhtRendezvous.LanOnly=true to disable public DHT bootstrap
+```
+
+**Correct**:
+```text
+Set dht.lan_only: true to disable public DHT bootstrap
+```
+
+**Why This Keeps Happening**: Options classes may have C# property names and YAML aliases. Any user-facing warning, error, example, or troubleshooting note must name the public config key, not the internal option object.
+
 ### 0z131. Mesh Search Results Must Not Wait Behind Soulseek Timeout
 
 **The Bug**: Issue `#209` tester follow-up showed mesh search returning `beatles` results at `09:22:39`, but the user-facing search did not complete until `09:22:54` because `SearchService` awaited the Soulseek search task before awaiting and persisting mesh overlay results. Mesh had already answered, but the UI could not show those results until the normal 15-second Soulseek timeout elapsed.
