@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z133. Batch Retry Downloads Must Move From The Batch Incomplete Path
+
+**The Bug**: A retrying download with `BatchId` can write its partial file under `incomplete/<batch-id>/...`, but completion code can still try to move the root incomplete path and fail after a successful transfer.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+var incompleteFilename = transfer.Filename.ToLocalFilename(
+    baseDirectory: Path.Combine(incompleteRoot, transfer.BatchId?.ToString() ?? string.Empty));
+
+Files.MoveFile(
+    sourceFilename: transfer.Filename.ToLocalFilename(baseDirectory: incompleteRoot),
+    destinationDirectory: destinationDirectory);
+```
+
+**Correct**:
+```csharp
+var incompleteFilename = transfer.Filename.ToLocalFilename(
+    baseDirectory: Path.Combine(incompleteRoot, transfer.BatchId?.ToString() ?? string.Empty));
+
+Files.MoveFile(
+    sourceFilename: incompleteFilename,
+    destinationDirectory: destinationDirectory);
+```
+
+**Why This Keeps Happening**: Resume/retry logic introduces a derived local filename before the Soulseek download call, but later completion code often recomputes the old legacy path. Once batch-specific incomplete directories exist, all file operations in the transfer lifecycle must use the same resolved incomplete filename.
+
 ### 0z132. YAML Examples And Operator Warnings Must Use Public Option Names
 
 **The Bug**: A tester tried to suppress the DHT public-discoverability warning by setting `lan_only` under both `dht` and `dhtRendezvous`, but the sample config did not show `dht.lan_only` and the warning printed internal C# option names (`DhtRendezvous.LanOnly`) instead of the YAML key operators actually use.
