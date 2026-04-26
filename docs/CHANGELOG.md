@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Ported upstream AGPL additional-terms legal artifacts and startup license notice, with slskdN fork attribution preserved in `NOTICE` and the banner.
 - Ported upstream transfer configuration documentation and Docker user-mode documentation while retaining slskdN's existing integration key.
 - Ported upstream Docker legacy root-mode compatibility for containers without `--user` or `PUID`/`PGID`.
 - Ported upstream Docker non-root runtime support for `--user` and `PUID`/`PGID`, preserving slskdN image metadata.

@@ -3970,9 +3970,10 @@ namespace slskd
                 var banner = @$"
 {logo}
 ╒════════════════════════════════════════════════════════╕
-│           GNU AFFERO GENERAL PUBLIC LICENSE            │
-│                   https://slskd.org                    │
-│                                                        │
+│ This program is free software under AGPLv3.             │
+│ Additional Terms apply; see LICENSE and NOTICE.         │
+│ slskdN is a modified version of slskd.                  │
+│ https://github.com/snapetech/slskdn                     │
 │{centeredVersion}│";
 
                 if (IsDevelopment)
