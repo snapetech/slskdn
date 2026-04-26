@@ -1,3 +1,16 @@
+## Update 2026-04-26 17:13:39Z
+
+- Current task: Tester upload/DHT onboarding feedback is being investigated.
+- Last activity:
+  - confirmed the DHT public-discoverability warning used internal option names while YAML binds the public key under `dht:`
+  - added `dht.lan_only` to the example config and updated the runtime warning to mention `dht.lan_only: true` / `dht.enabled: false`
+  - documented the gotcha in ADR-0001 and committed that docs-only entry as `29d4d4958`
+  - confirmed upload troubleshooting should collect listener bind logs, attempted remote upload logs, `/api/v0/options`, `/api/v0/application`, `/api/v0/transfers/uploads?includeRemoved=true`, and host/container port state
+- Next steps:
+  1. Run validation for the small DHT warning/config change.
+  2. Commit and push the implementation/docs update if validation passes.
+  3. Send tester-facing upload diagnostics checklist and DHT config guidance.
+
 ## Update 2026-04-24 16:10:07Z
 
 - Current task: None. The AUR permission fix and issue `#209` early mesh-result publication fix are committed and pushed to `snapetech/slskdn` `main`.

@@ -61,7 +61,7 @@ public sealed class DhtExposureWarningService : BackgroundService
                         "[DHT] HARDENING-2026-04-20 H12: DHT rendezvous is enabled and publishing " +
                         "this node's IP to public BitTorrent DHT bootstrap nodes ({BootstrapCount} configured). " +
                         "Residential IPs and listen ports are discoverable by anyone on the public DHT. " +
-                        "Set DhtRendezvous.LanOnly=true to disable public DHT bootstrap, or DhtRendezvous.Enabled=false " +
+                        "Set dht.lan_only: true to disable public DHT bootstrap, or dht.enabled: false " +
                         "to disable DHT peer discovery entirely.",
                         dht.BootstrapRouters?.Length ?? 0);
                 }

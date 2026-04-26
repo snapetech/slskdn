@@ -84,6 +84,7 @@
 #     auto_download: false
 # dht:
 #   enabled: true
+#   lan_only: false # set true to avoid public BitTorrent DHT bootstrap/discoverability
 #   overlay_port: 50305
 #   dht_port: 50306 # explicit stable UDP port; forward/allow-list this port if DHT rendezvous is enabled
 #   bootstrap_routers:

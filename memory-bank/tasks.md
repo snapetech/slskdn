@@ -1148,6 +1148,10 @@
   - Status: done
   - Notes: Stopped marking DHT-discovered endpoints as `supportsOnionRouting=true` before any overlay handshake succeeds, updated DHT rendezvous tests so failed immediate connects stay tracked as `dht-discovered` candidates instead of circuit-capable peers, and validated on `kspls0` that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while raw DHT candidates are still visible separately.
 
+- [x] Investigate tester upload/DHT onboarding feedback
+  - Status: completed (2026-04-26)
+  - Notes: Confirmed upload failures need listener/port/share/enqueue diagnostics from the tester. Fixed the slskdN-side DHT warning/config discoverability mismatch by documenting `dht.lan_only` in the sample config and using YAML option names in the warning text.
+
 - [x] Fix mesh self-descriptor publication on QUIC-unsupported hosts
   - Status: done
   - Notes: Reproduced on `kspls0` that `PeerDescriptorPublisher` was auto-advertising fake `2234/2235` endpoints and impossible `DirectQuic` transports while `QuicListener.IsSupported` was false. Updated descriptor publication to derive legacy endpoints from the real UDP overlay listen port and to suppress direct QUIC transport advertisement when the host cannot actually accept QUIC. Validated on `kspls0`: published self descriptor now logs `endpoints=4 transports=0` instead of poisoning DHT with impossible direct candidates.

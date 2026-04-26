@@ -6834,6 +6834,13 @@ Code quality improvements were completed as part of Option A:
   - focused full-instance integration `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection`: passed in isolation
   - `./bin/build`: still found one heavier full-suite integration issue outside the release gate, with `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` failing once inside the full Release integration sweep with `502 Bad Gateway` on `/api/v0/overlay/connect`, even though that same test passed when rerun alone immediately afterward
 
+## 2026-04-26 17:13:39Z
+
+- Investigated tester onboarding feedback about failed uploads and confusing mesh public-discoverability warnings.
+- Confirmed upload troubleshooting should start from the Soulseek listener and enqueue path: startup logs include `Listening for incoming connections on {IP}:{Port}`, remote upload attempts log `Enqueue` or explicit rejection reasons, and current uploads are exposed through `/api/v0/transfers/uploads`.
+- Fixed the DHT warning/config mismatch by documenting `dht.lan_only` in `config/slskd.example.yml` and changing the public warning from internal `DhtRendezvous.*` option names to the YAML keys operators can set.
+- Documented the public-option-name gotcha in ADR-0001 and committed that entry separately as required.
+
 ## 2026-04-20 03:20:00Z
 
 - Continued the strict local release-candidate cycle by debugging the one remaining non-gate `./bin/build` failure in the full Release integration sweep.
