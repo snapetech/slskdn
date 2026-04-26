@@ -6844,6 +6844,8 @@ Code quality improvements were completed as part of Option A:
 
 - Investigated tester onboarding feedback about failed uploads and confusing mesh public-discoverability warnings.
 - Confirmed upload troubleshooting should start from the Soulseek listener and enqueue path: startup logs include `Listening for incoming connections on {IP}:{Port}`, remote upload attempts log `Enqueue` or explicit rejection reasons, and current uploads are exposed through `/api/v0/transfers/uploads`.
+- 2026-04-26 20:25:00Z: Completed the upstream `slskd` 0.25.1 sync evaluation/port on branch `sync/upstream-0.25.1`. Ported upstream search/migration/retry/options/Docker/docs/license/config-diff/blacklist/retries/relay changes while preserving slskdN fork features and documenting the batch retry incomplete-path gotcha. Superseded/not-applicable upstream work: frontend dependency bumps were older than slskdN's stack, .NET 10 was already present, integration-test removal does not apply, config sentinel for old `global`/`groups`/`integration` was not taken because compatibility is retained, and upstream share-count logic matched slskdN's existing implementation. Validation passed: generated web assets for integration tests, `dotnet test`, `bash ./bin/lint`, and `git diff --check`.
+
 - Fixed the DHT warning/config mismatch by documenting `dht.lan_only` in `config/slskd.example.yml` and changing the public warning from internal `DhtRendezvous.*` option names to the YAML keys operators can set.
 - Documented the public-option-name gotcha in ADR-0001 and committed that entry separately as required.
 

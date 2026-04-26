@@ -1,3 +1,15 @@
+## Update 2026-04-26 20:25:00Z
+
+- Current task: Upstream `slskd` 0.25.1 synchronization is implemented and locally validated on branch `sync/upstream-0.25.1` in `/home/keith/Documents/code/slskdn-upstream-sync`.
+- Last activity:
+  - ported upstream search-again, migration ordering, retry helper, transfer option tree, live option diff, Docker user/root handling, docs, license/notice, nullable option diff, blacklist username-pattern, automatic transfer retry/resume, upload-governor transfer groups, and relay IPv6 CIDR handling changes
+  - kept slskdN-specific features and compatibility where upstream changes were superseded or not applicable, including newer frontend dependencies, existing integration tests, singular `integration` config compatibility, and slskdN share count behavior already matching upstream
+  - documented the batch retry incomplete-path gotcha in ADR-0001 and committed it immediately
+  - validation passed: `dotnet test`, `bash ./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Record the synthetic upstream merge marker for `upstream/master` at `b5bc69742` so the fork is no longer logically behind upstream.
+  2. Push/open review against `snapetech/slskdn` if the user wants this branch published.
+
 ## Update 2026-04-26 19:14:31Z
 
 - Current task: None. Bas upload troubleshooting instrumentation is implemented, validated, committed, and pushed to `snapetech/slskdn` `main`.

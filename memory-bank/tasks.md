@@ -1116,6 +1116,10 @@
 
 - [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.
 
+- [x] Sync slskdN with upstream `slskd` 0.25.1
+  - Status: completed (2026-04-26)
+  - Notes: Ported upstream changes through `upstream/master` `b5bc69742` onto `sync/upstream-0.25.1`, preserving slskdN-specific features and compatibility. Upstream implementations replaced or completed local partials for transfer retry/resume, transfer option groups, blacklist username patterns, option diff null handling, Docker user/root behavior, legal notice artifacts, and relay IPv6 CIDR handling. Validation passed with `dotnet test`, `bash ./bin/lint`, and `git diff --check`.
+
 - [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and fix duplicate startup descriptor publish noise
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package, CLI/API version, service state, Soulseek login, shares, DHT, and overlay listener are healthy on `kspls0`. Current-process logs have no fresh fatal/error/exception/502/coredump/search-rate noise after the auto-replace cycle. Fixed duplicate startup MeshDHT self-descriptor publication by letting `MeshBootstrapService` own the startup publish and starting `PeerDescriptorRefreshService` periodic scheduling from current time. Validation passed with focused and full unit tests, Release build, lint, and diff check.
