@@ -52,7 +52,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
-### 0z133. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
+### 0z134. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
 
 **The Bug**: Runtime updates to `soulseek.listen_port` or `soulseek.listen_ip_address` can restart the local Soulseek.NET listener without making the server learn the new advertised port. Soulseek.NET sends `SetListenPort` during login/config messages, not from `ReconfigureOptionsAsync()`, so remote peers may keep connecting to the stale port and uploads can appear broken even though the local listener is healthy.
 
@@ -73,6 +73,35 @@ public int ListenPort { get; init; } = 50300;
 ```
 
 **Why This Keeps Happening**: The local listener and the server-advertised endpoint are separate state. Any code path that changes where slskd listens must also ensure the Soulseek server receives the updated port, either by reconnecting or by an explicit server configuration command if Soulseek.NET exposes one.
+
+### 0z133. Batch Retry Downloads Must Move From The Batch Incomplete Path
+
+**The Bug**: A retrying download with `BatchId` can write its partial file under `incomplete/<batch-id>/...`, but completion code can still try to move the root incomplete path and fail after a successful transfer.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+var incompleteFilename = transfer.Filename.ToLocalFilename(
+    baseDirectory: Path.Combine(incompleteRoot, transfer.BatchId?.ToString() ?? string.Empty));
+
+Files.MoveFile(
+    sourceFilename: transfer.Filename.ToLocalFilename(baseDirectory: incompleteRoot),
+    destinationDirectory: destinationDirectory);
+```
+
+**Correct**:
+```csharp
+var incompleteFilename = transfer.Filename.ToLocalFilename(
+    baseDirectory: Path.Combine(incompleteRoot, transfer.BatchId?.ToString() ?? string.Empty));
+
+Files.MoveFile(
+    sourceFilename: incompleteFilename,
+    destinationDirectory: destinationDirectory);
+```
+
+**Why This Keeps Happening**: Resume/retry logic introduces a derived local filename before the Soulseek download call, but later completion code often recomputes the old legacy path. Once batch-specific incomplete directories exist, all file operations in the transfer lifecycle must use the same resolved incomplete filename.
 
 ### 0z132. YAML Examples And Operator Warnings Must Use Public Option Names
 

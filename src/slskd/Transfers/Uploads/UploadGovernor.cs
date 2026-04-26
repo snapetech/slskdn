@@ -161,10 +161,13 @@ namespace slskd.Transfers
                 return new(capacity, interval: intervalInMs);
             }
 
-            var optionsHash = Compute.Sha1Hash(options.Groups.ToJson());
+            var optionsHash = Compute.Sha1Hash(options.Transfers.Groups.ToJson());
 
             // Get the effective global upload speed limit (considering scheduled limits)
-            var effectiveGlobalUploadSpeedLimit = ScheduledRateLimitService?.GetEffectiveUploadSpeedLimit() ?? options.Global.Upload.SpeedLimit;
+            var configuredUploadSpeedLimit = options.Transfers.Upload.SpeedLimit == int.MaxValue
+                ? options.Global.Upload.SpeedLimit
+                : options.Transfers.Upload.SpeedLimit;
+            var effectiveGlobalUploadSpeedLimit = ScheduledRateLimitService?.GetEffectiveUploadSpeedLimit() ?? configuredUploadSpeedLimit;
 
             if (optionsHash == LastOptionsHash && effectiveGlobalUploadSpeedLimit == LastGlobalSpeedLimit)
             {
@@ -179,11 +182,11 @@ namespace slskd.Transfers
             var tokenBuckets = new Dictionary<string, ITokenBucket>()
             {
                 { Application.PrivilegedGroup, CreateBucket(speedInKiB: effectiveGlobalUploadSpeedLimit) },
-                { Application.DefaultGroup, CreateBucket(speedInKiB: options.Groups.Default.Upload.SpeedLimit) },
-                { Application.LeecherGroup, CreateBucket(speedInKiB: options.Groups.Leechers.Upload.SpeedLimit) },
+                { Application.DefaultGroup, CreateBucket(speedInKiB: options.Transfers.Groups.Default.Upload.SpeedLimit) },
+                { Application.LeecherGroup, CreateBucket(speedInKiB: options.Transfers.Groups.Leechers.Upload.SpeedLimit) },
             };
 
-            foreach (var group in options.Groups.UserDefined)
+            foreach (var group in options.Transfers.Groups.UserDefined)
             {
                 tokenBuckets.Add(group.Key, CreateBucket(group.Value.Upload.SpeedLimit));
             }

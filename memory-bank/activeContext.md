@@ -1,44 +1,27 @@
-## Update 2026-04-26 20:28:30Z
+## Update 2026-04-26 20:37:00Z
 
-- Current task: None. Open Dependabot PRs `#213`, `#214`, and `#215` have been reviewed and actioned.
+- Current task: None. Upstream-base version references are updated to `0.25.1`, and the upstream-sync branch has been built and manually deployed to `kspls0`.
 - Last activity:
-  - verified GitHub writes target `snapetech/slskdn`
-  - reviewed the three open PRs: `uuid 13.0.0 -> 14.0.0`, `OpenTelemetry/OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 -> 1.15.3`, and the overlapping transitive `OpenTelemetry.Api 1.15.2 -> 1.15.3` pin
-  - updated dependencies on `main`: `uuid` to `14.0.0`, `OpenTelemetry` to `1.15.3`, and `OpenTelemetry.Exporter.OpenTelemetryProtocol` to `1.15.3`; `OpenTelemetry.Api` now resolves transitively to `1.15.3`
-  - created missing GitHub labels `npm` and `nuget`, and applied `dependencies` plus the ecosystem labels to PRs `#213`, `#214`, and `#215`
-  - validation passed: `npm run lint`, `dotnet build src/slskd/slskd.csproj --no-restore`, `git diff --check`, `bash ./bin/lint`, NuGet/npm vulnerability checks, and full `dotnet test --no-restore`
-  - pushed commit `7263f8c8f` to `main`, commented on PRs `#213`, `#214`, and `#215`, then closed them as superseded by the direct `main` update
-  - verified `gh pr list --repo snapetech/slskdn --state open` returns no open PRs
+  - updated active README badges/install examples, build/dev documentation, workflow fallback examples, and stable packaging metadata from the 0.24.x base to `0.25.1` / `0.25.1-slskdn.1`
+  - kept historical changelog/archive records out of the active-reference cleanup except where package metadata uses the current top entry
+  - validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, full `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`
+  - published a Linux x64 manual artifact and deployed it on `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; `/usr/lib/slskd/current/slskd --version` reports `0.25.1-slskdn.1+manual.39a4f2c16`
+  - live soak on `kspls0` stayed healthy: systemd active, `NRestarts=0`, listeners present on `5030`, `50300`, `50305`, `50306`, and `50400`, Soulseek logged in, one mesh neighbor reconnected, no current-process error/fatal/exception matches, and no new coredumps
 - Next steps:
-  1. Wait for GitHub Dependabot/security scanning to refresh the default-branch vulnerability count.
-  2. Do not create build tags unless explicitly requested.
+  1. Commit the version metadata/docs update.
+  2. Push/open review against `snapetech/slskdn` when ready; do not create build tags unless explicitly requested.
 
-## Update 2026-04-26 20:08:00Z
+## Update 2026-04-26 20:25:00Z
 
-- Current task: Issue `#216` CSV playlist import is implemented and ready to commit/push.
+- Current task: Upstream `slskd` 0.25.1 synchronization is implemented and locally validated on branch `sync/upstream-0.25.1` in `/home/keith/Documents/code/slskdn-upstream-sync`.
 - Last activity:
-  - fetched GitHub issue `#216` from `snapetech/slskdn`: request is batch downloading music from CSV exports like TuneMyMusic
-  - added a wishlist CSV import model/parser that recognizes TuneMyMusic-style track/artist/album headers, handles quoted CSV fields, generates artist/title wishlist searches, and deduplicates against existing/imported rows
-  - added authenticated `POST /api/v0/wishlist/import/csv`; import creates wishlist entries without starting a large immediate Soulseek search burst, while optional `autoDownload` uses the existing wishlist scheduler/manual run path
-  - added a Wishlist page CSV import modal with file/text input, filter, max results, enabled, auto-download, and album-term controls
-  - validation passed: focused `WishlistControllerTests`, frontend lint, frontend production build, `dotnet build --no-restore`, `bash ./bin/lint`, `git diff --check`, full `dotnet test --no-restore` except one known transient optional live mesh setup `502`, and the exact failed integration test passed on rerun
+  - ported upstream search-again, migration ordering, retry helper, transfer option tree, live option diff, Docker user/root handling, docs, license/notice, nullable option diff, blacklist username-pattern, automatic transfer retry/resume, upload-governor transfer groups, and relay IPv6 CIDR handling changes
+  - kept slskdN-specific features and compatibility where upstream changes were superseded or not applicable, including newer frontend dependencies, existing integration tests, singular `integration` config compatibility, and slskdN share count behavior already matching upstream
+  - documented the batch retry incomplete-path gotcha in ADR-0001 and committed it immediately
+  - validation passed: `dotnet test`, `bash ./bin/lint`, and `git diff --check`
 - Next steps:
-  1. Commit and push the issue `#216` work.
-  2. Create `build-main-0.24.5-slskdn.181` if an immediate main build is still desired.
-
-## Update 2026-04-26 19:33:25Z
-
-- Current task: None. Deep code audit of Bas upload failure found a concrete listen endpoint advertisement bug and the fix is ready to commit/push.
-- Last activity:
-  - re-audited listener setup, runtime listener updates, inbound upload enqueue handling, upload queue processing, share resolution, and Soulseek.NET peer/transfer connection behavior
-  - found that runtime `soulseek.listen_port` / `soulseek.listen_ip_address` changes can restart the local listener without forcing the Soulseek server to advertise the new endpoint
-  - documented the gotcha and committed ADR-0001 entry as `d326113fc`
-  - marked listen endpoint options as reconnect-required and added focused regression coverage for connected listen-port updates setting `PendingReconnect`
-  - validation passed: `git diff --check` for touched files, `bash ./bin/lint`, focused `ApplicationLifecycleTests`, and rerun of the one flaky optional live mesh integration test
-  - full `dotnet test` passed unit/non-integration projects and failed once only on the known optional live mesh account setup-time overlay `502`; the exact failing test passed on rerun
-- Next steps:
-  1. Commit and push the upload listen endpoint fix.
-  2. If this needs to supersede release `.179`, tag a new build after push.
+  1. Record the synthetic upstream merge marker for `upstream/master` at `b5bc69742` so the fork is no longer logically behind upstream.
+  2. Push/open review against `snapetech/slskdn` if the user wants this branch published.
 
 ## Update 2026-04-26 19:14:31Z
 

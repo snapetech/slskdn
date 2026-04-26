@@ -2,10 +2,10 @@
 
 ## Does a separate "nupkg CI task" run when we fire the build?
 
-**No.** When you push a tag like `build-dev-0.24.1.dev.9...`:
+**No.** When you push a tag like `build-dev-0.25.1.dev.9...`:
 
 - **Only `build-on-tag.yml` runs.**  
-  `ci.yml` is **not** triggered by `build-dev-*`; it runs on version tags like `0.24.1-slskdn.40`.
+  `ci.yml` is **not** triggered by `build-dev-*`; it runs on version tags like `0.25.1-slskdn.1`.
 
 - **The .nupkg is created inside the Chocolatey job.**  
   There is no other workflow that produces a nupkg. In `build-on-tag.yml`, the `chocolatey-dev` job:

@@ -47,12 +47,15 @@ namespace slskd.Tests.Unit.Transfers.Uploads
         {
             var options = new AppOptions()
             {
-                Groups = new Options.GroupsOptions()
+                Transfers = new Options.TransfersOptions
                 {
-                    UserDefined = new Dictionary<string, Options.GroupsOptions.UserDefinedOptions>()
+                    Groups = new Options.TransfersOptions.GroupsOptions()
                     {
-                        { group1, new Options.GroupsOptions.UserDefinedOptions() },
-                        { group2, new Options.GroupsOptions.UserDefinedOptions() },
+                        UserDefined = new Dictionary<string, Options.TransfersOptions.GroupsOptions.UserDefinedOptions>()
+                        {
+                            { group1, new Options.TransfersOptions.GroupsOptions.UserDefinedOptions() },
+                            { group2, new Options.TransfersOptions.GroupsOptions.UserDefinedOptions() },
+                        }
                     }
                 }
             };
@@ -218,12 +221,15 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             {
                 var options = new AppOptions()
                 {
-                    Groups = new Options.GroupsOptions()
+                    Transfers = new Options.TransfersOptions
                     {
-                        UserDefined = new Dictionary<string, Options.GroupsOptions.UserDefinedOptions>()
-                    {
-                        { group, new Options.GroupsOptions.UserDefinedOptions() },
-                    }
+                        Groups = new Options.TransfersOptions.GroupsOptions()
+                        {
+                            UserDefined = new Dictionary<string, Options.TransfersOptions.GroupsOptions.UserDefinedOptions>()
+                            {
+                                { group, new Options.TransfersOptions.GroupsOptions.UserDefinedOptions() },
+                            }
+                        }
                     }
                 };
 
@@ -251,11 +257,14 @@ namespace slskd.Tests.Unit.Transfers.Uploads
             {
                 var options = new AppOptions()
                 {
-                    Groups = new Options.GroupsOptions()
+                    Transfers = new Options.TransfersOptions
                     {
-                        UserDefined = new Dictionary<string, Options.GroupsOptions.UserDefinedOptions>()
+                        Groups = new Options.TransfersOptions.GroupsOptions()
                         {
-                            { group, new Options.GroupsOptions.UserDefinedOptions() },
+                            UserDefined = new Dictionary<string, Options.TransfersOptions.GroupsOptions.UserDefinedOptions>()
+                            {
+                                { group, new Options.TransfersOptions.GroupsOptions.UserDefinedOptions() },
+                            }
                         }
                     }
                 };

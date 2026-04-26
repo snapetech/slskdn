@@ -11,10 +11,10 @@
 
 *No high priority tasks currently active
 
-- [x] **chore**: Action open Dependabot PRs for uuid and OpenTelemetry.
+- [x] **chore**: Update active upstream-base references to `0.25.1` and smoke the synced build on `kspls0`.
  - Status: completed (2026-04-26)
- - Priority: P2
- - Notes: Reviewed open PRs `#213`, `#214`, and `#215` on `snapetech/slskdn`. Applied the recommended dependency updates directly on `main`: `uuid` is now `14.0.0`, and OpenTelemetry/OpenTelemetry OTLP exporter are now `1.15.3`, which resolves transitive `OpenTelemetry.Api` and provider extensions to `1.15.3` without adding an explicit package reference. Created missing `npm` and `nuget` labels and applied them to the existing Dependabot PRs so future Dependabot labeling does not repeat the warning comments.
+ - Priority: P1
+ - Notes: Updated active README/download examples, build/dev docs, workflow fallbacks, and packaging metadata to `0.25.1` / `0.25.1-slskdn.1`. Validation passed with packaging metadata checks, `git diff --check`, full Release build/tests via `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`. Deployed manual Linux x64 build `0.25.1-slskdn.1+manual.39a4f2c16` to `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; service stayed active with `NRestarts=0`, expected listeners, Soulseek login, mesh reconnect, no current-process issue matches, and no new coredumps.
 
 - [x] **ux**: Publish mesh search results before Soulseek timeout completion.
  - Status: completed (2026-04-24)
@@ -1121,6 +1121,10 @@
 
 - [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.
 
+- [x] Sync slskdN with upstream `slskd` 0.25.1
+  - Status: completed (2026-04-26)
+  - Notes: Ported upstream changes through `upstream/master` `b5bc69742` onto `sync/upstream-0.25.1`, preserving slskdN-specific features and compatibility. Upstream implementations replaced or completed local partials for transfer retry/resume, transfer option groups, blacklist username patterns, option diff null handling, Docker user/root behavior, legal notice artifacts, and relay IPv6 CIDR handling. Validation passed with `dotnet test`, `bash ./bin/lint`, and `git diff --check`.
+
 - [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and fix duplicate startup descriptor publish noise
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package, CLI/API version, service state, Soulseek login, shares, DHT, and overlay listener are healthy on `kspls0`. Current-process logs have no fresh fatal/error/exception/502/coredump/search-rate noise after the auto-replace cycle. Fixed duplicate startup MeshDHT self-descriptor publication by letting `MeshBootstrapService` own the startup publish and starting `PeerDescriptorRefreshService` periodic scheduling from current time. Validation passed with focused and full unit tests, Release build, lint, and diff check.
@@ -1240,9 +1244,3 @@
 - [x] Add optional live-account mesh search/transfer smoke
   - Status: completed (2026-04-22)
   - Notes: Added and live-validated a full-instance integration smoke that uses `tests/slskd.Tests.Integration/local-mesh-accounts.env` or matching environment variables to start two real slskdN processes with live Soulseek test credentials, wait for login, host a generated probe file on beta, mesh-search it from alpha, download it through the pod path, and byte-compare the transfer. Fresh short alphanumeric Soulseek test accounts were generated, stored in the gitignored env file and in OpenBao at `secret/slskdn/mesh-live-test-accounts`, and `TwoNodeMeshFullInstanceTests` passed with the public-network live-account path exercised.
-- [x] Fix Soulseek listen endpoint reconnect semantics for upload reachability
-  - Status: completed (2026-04-26)
-  - Notes: Deep upload-path audit found that runtime listen endpoint changes can move the local Soulseek.NET listener without forcing server endpoint advertisement to refresh. Marked `soulseek.listen_ip_address` and `soulseek.listen_port` as reconnect-required and added regression coverage for connected option changes setting `PendingReconnect`.
-- [x] Build CSV playlist import into Wishlist for issue #216
-  - Status: completed (2026-04-26)
-  - Notes: Added `POST /api/v0/wishlist/import/csv` and a Wishlist page import modal for TuneMyMusic-style CSV exports. Rows are imported as conservative wishlist searches with optional auto-download, filter, max results, enabled state, and album inclusion; import deduplicates against existing/imported rows and does not immediately burst-search the Soulseek network.

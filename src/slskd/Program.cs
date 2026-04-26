@@ -3575,6 +3575,8 @@ namespace slskd
 
         private static void ConfigureGlobalLogger()
         {
+            var noColor = OptionsAtStartup.Logger.NoColor || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR"));
+
             Serilog.Log.Logger = (OptionsAtStartup.Debug ? new LoggerConfiguration().MinimumLevel.Debug() : new LoggerConfiguration().MinimumLevel.Information())
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Error)
                 .MinimumLevel.Override("System.Net.Http.HttpClient", OptionsAtStartup.Debug ? LogEventLevel.Warning : LogEventLevel.Fatal)
@@ -3586,7 +3588,8 @@ namespace slskd
                 .Enrich.WithProperty("ProcessId", ProcessId)
                 .Enrich.FromLogContext()
                 .WriteTo.Console(
-                    theme: (OptionsAtStartup.Logger.NoColor || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR"))) ? ConsoleTheme.None : SystemConsoleTheme.Literate,
+                    theme: noColor ? ConsoleTheme.None : SystemConsoleTheme.Literate,
+                    applyThemeToRedirectedOutput: !noColor,
                     outputTemplate: (OptionsAtStartup.Debug ? "[{SourceContext}] " : string.Empty) + "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .WriteTo.Async(config =>
                     config.Conditional(
@@ -3967,9 +3970,10 @@ namespace slskd
                 var banner = @$"
 {logo}
 ╒════════════════════════════════════════════════════════╕
-│           GNU AFFERO GENERAL PUBLIC LICENSE            │
-│                   https://slskd.org                    │
-│                                                        │
+│ This program is free software under AGPLv3.             │
+│ Additional Terms apply; see LICENSE and NOTICE.         │
+│ slskdN is a modified version of slskd.                  │
+│ https://github.com/snapetech/slskdn                     │
 │{centeredVersion}│";
 
                 if (IsDevelopment)

@@ -25,6 +25,23 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.
 - Added CSV playlist import for issue `#216`: TuneMyMusic-style exports can now be imported from the Wishlist page into wishlist searches, with optional album terms, filters, enabled state, max results, and auto-download settings.
 - Fixed a Soulseek upload reachability bug where runtime changes to `soulseek.listen_port` or `soulseek.listen_ip_address` could restart the local listener without making the Soulseek server advertise the new endpoint; these options now correctly require a reconnect so peers do not keep trying a stale port.
+- Updated active release, packaging, and build documentation metadata to the new `0.25.1` upstream base and `0.25.1-slskdn.1` fork release line; manually deployed and smoke-checked the synced build on `kspls0`.
+- Aligned upload governor speed buckets with the upstream `transfers.groups` option tree while retaining legacy global upload speed fallback.
+- Ported upstream relay IPv6-mapped IPv4 handling so relay agent CIDR checks work behind IPv6-capable HTTP stacks.
+- Ported upstream automatic download retry/resume behavior, retry configuration docs, transfer attempt reporting, and completed-transfer report filtering.
+- Ported upstream username-pattern blacklist support, blacklist decision caching, and network/API guards for blacklisted users.
+- Ported upstream option-diff null handling so configuration changes involving nullable nested values are detected instead of crashing or being skipped.
+- Ported upstream AGPL additional-terms legal artifacts and startup license notice, with slskdN fork attribution preserved in `NOTICE` and the banner.
+- Ported upstream transfer configuration documentation and Docker user-mode documentation while retaining slskdN's existing integration key.
+- Ported upstream Docker legacy root-mode compatibility for containers without `--user` or `PUID`/`PGID`.
+- Ported upstream Docker non-root runtime support for `--user` and `PUID`/`PGID`, preserving slskdN image metadata.
+- Applied upstream favicon metadata while keeping slskdN's newer frontend dependency graph in place.
+- Confirmed upstream share-scan count synchronization matches slskdN's existing snapshot-based progress accounting.
+- Ported upstream Soulseek option diff handling so live option reconfiguration also observes the new transfer upload/download option tree.
+- Fixed the upstream transfer-option sync to compile against slskdN's existing integration option naming while preserving the new upstream retry/group option types.
+- Began upstream `slskd` 0.25.1 synchronization by porting the upstream search-again fix and date-ordered transfer migration updates, including the new transfer retry/batch metadata migration.
+- Ported upstream retry helper changes so callers can set a base retry delay and cap retained retry exception history.
+- Ported upstream transfer-option plumbing for retry and group behavior while keeping the existing slskdN legacy option surfaces present during the sync.
 - Added upload diagnostics for troubleshooting remote upload failures: `/api/v0/transfers/uploads/diagnostics` now reports configured listener state, a local TCP listener probe, share/index status, upload counters, recent upload records, and actionable warnings; inbound upload enqueue requests also emit structured `[UPLOAD-DIAG]` logs.
 - Fixed the DHT public-discoverability warning and sample config to use the YAML keys operators actually set (`dht.lan_only` / `dht.enabled`) instead of internal option object names.
 - Published mesh/pod search results as soon as the mesh overlay responds instead of waiting behind the normal Soulseek search timeout; the search detail view now refetches when early result counts appear.

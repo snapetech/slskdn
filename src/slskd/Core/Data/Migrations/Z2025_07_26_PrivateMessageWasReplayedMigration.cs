@@ -1,4 +1,4 @@
-// <copyright file="Z07262025_PrivateMessageWasReplayedMigration.cs" company="slskd Team">
+// <copyright file="Z2025_07_26_PrivateMessageWasReplayedMigration.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -26,19 +26,18 @@ using slskd.Messaging;
 /// <summary>
 ///     Updates the Transfers table to add indexes on the Direction and State columns.
 /// </summary>
-public class Z07262025_PrivateMessageWasReplayedMigration : IMigration
+public class Z2025_07_26_PrivateMessageWasReplayedMigration : IMigration
 {
-    public Z07262025_PrivateMessageWasReplayedMigration(ConnectionStringDictionary connectionStrings)
+    public Z2025_07_26_PrivateMessageWasReplayedMigration(ConnectionStringDictionary connectionStrings)
     {
         ConnectionString = connectionStrings[Database.Messaging];
     }
 
-    private ILogger Log { get; } = Serilog.Log.ForContext<Z07262025_PrivateMessageWasReplayedMigration>();
+    private ILogger Log { get; } = Serilog.Log.ForContext<Z2025_07_26_PrivateMessageWasReplayedMigration>();
     private string ConnectionString { get; }
 
     public bool NeedsToBeApplied()
     {
-        // check to see if *BOTH* of the indexes are in place. if one or both are missing, we must apply
         var schema = SchemaInspector.GetDatabaseSchema(ConnectionString);
         var pms = schema["PrivateMessages"];
 
@@ -54,7 +53,7 @@ public class Z07262025_PrivateMessageWasReplayedMigration : IMigration
     {
         if (!NeedsToBeApplied())
         {
-            Log.Information("> Migration {Name} is not necessary or has already been applied", nameof(Z07262025_PrivateMessageWasReplayedMigration));
+            Log.Information("> Migration {Name} is not necessary or has already been applied", nameof(Z2025_07_26_PrivateMessageWasReplayedMigration));
             return;
         }
 

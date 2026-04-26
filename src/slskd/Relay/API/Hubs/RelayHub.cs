@@ -99,7 +99,7 @@ namespace slskd.Relay
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
-        private IPAddress? RemoteIpAddress => Context.Features.Get<IHttpConnectionFeature>()?.RemoteIpAddress;
+        private IPAddress? RemoteIpAddress => GetRemoteIPAddress();
 
         private static string GetAgentLogId(string agentName)
         {
@@ -271,6 +271,18 @@ namespace slskd.Relay
             Log.Information("Agent {Agent} ({ConnectionId}) from {IP} returned file info for {Id}; exists: {Exists}, length: {Length}", GetAgentLogId(record.Agent.Name), GetConnectionLogId(Context.ConnectionId), RemoteIpAddress, id, exists, length);
 
             Relay.HandleFileInfoResponse(record.Agent.Name, id, (exists, length));
+        }
+
+        private IPAddress? GetRemoteIPAddress()
+        {
+            var ip = Context.Features.Get<IHttpConnectionFeature>()?.RemoteIpAddress;
+
+            if (ip?.IsIPv4MappedToIPv6 == true)
+            {
+                ip = ip.MapToIPv4();
+            }
+
+            return ip;
         }
     }
 }

@@ -1,17 +1,9 @@
-## 2026-04-26 20:28Z - Actioned open Dependabot PRs
+## 2026-04-26 20:37Z - Updated 0.25.1 base references and deployed kspls0 manual build
 
-- Reviewed open PRs `#213`, `#214`, and `#215` on `snapetech/slskdn`.
-- Applied the dependency updates on `main`: `src/web` now uses `uuid 14.0.0`; `src/slskd` now uses `OpenTelemetry 1.15.3` and `OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.3`, which resolves transitive `OpenTelemetry.Api` and `OpenTelemetry.Api.ProviderBuilderExtensions` to `1.15.3`.
-- Created missing GitHub labels `npm` and `nuget`, then added `dependencies` plus the ecosystem label to the existing Dependabot PRs so future Dependabot PRs do not repeat the missing-label warning.
-- Pushed commit `7263f8c8f` to `main`, commented on PRs `#213`, `#214`, and `#215`, and closed them as superseded by the direct update; `gh pr list --repo snapetech/slskdn --state open` now returns no open PRs.
-- Validation passed: `npm run lint`, `dotnet build src/slskd/slskd.csproj --no-restore`, `git diff --check`, `bash ./bin/lint`, NuGet/npm vulnerability checks, and full `dotnet test --no-restore` (`46` main tests, `3579` unit tests, `276` integration tests). The backend build still emits existing generated MessagePack warnings.
-
-## 2026-04-26 19:45Z - Implemented issue 216 CSV wishlist import
-
-- Built GitHub issue `#216` into the Wishlist workflow with authenticated `POST /api/v0/wishlist/import/csv` and a Web UI import modal for TuneMyMusic-style CSV exports.
-- The importer parses quoted CSV, recognizes track/artist/album headers, supports optional album search terms, filter, max results, enabled state, and auto-download, and deduplicates against existing/imported wishlist searches.
-- The import creates conservative wishlist entries instead of firing an immediate bulk Soulseek search burst; auto-download follows the existing wishlist scheduler/manual run path.
-- Validation passed: focused `WishlistControllerTests`, frontend lint, frontend production build, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`. Full `dotnet test --no-restore` passed unit/non-integration projects and had one optional live mesh setup-time `502`; the exact failed integration test passed on rerun.
+- Updated active user-facing and packaging metadata from the 0.24.x upstream base to `0.25.1` / `0.25.1-slskdn.1`, including README badges/install examples, build/dev documentation, workflow fallback examples, AUR/RPM/Debian/Homebrew/Chocolatey/Winget/Flatpak/Helm/TrueNAS/Synology/Snap metadata, and the stable metadata updater.
+- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, full `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`.
+- Published the Linux x64 manual artifact with the release-aligned multi-file profile and deployed it to `kspls0` under `/usr/lib/slskd/releases/manual-39a4f2c16`.
+- Live `kspls0` validation: `/usr/lib/slskd/current/slskd --version` reports `0.25.1-slskdn.1+manual.39a4f2c16`, systemd is active with `NRestarts=0`, listeners are present on `5030`, `50300`, `50305`, `50306`, and `50400`, Soulseek logged in, a mesh neighbor reconnected, no current-process error/fatal/exception matches were found, and no new coredumps appeared.
 
 ## 2026-04-24 16:10Z - Pushed pending fixes and checked release status
 
@@ -6859,6 +6851,8 @@ Code quality improvements were completed as part of Option A:
 
 - Investigated tester onboarding feedback about failed uploads and confusing mesh public-discoverability warnings.
 - Confirmed upload troubleshooting should start from the Soulseek listener and enqueue path: startup logs include `Listening for incoming connections on {IP}:{Port}`, remote upload attempts log `Enqueue` or explicit rejection reasons, and current uploads are exposed through `/api/v0/transfers/uploads`.
+- 2026-04-26 20:25:00Z: Completed the upstream `slskd` 0.25.1 sync evaluation/port on branch `sync/upstream-0.25.1`. Ported upstream search/migration/retry/options/Docker/docs/license/config-diff/blacklist/retries/relay changes while preserving slskdN fork features and documenting the batch retry incomplete-path gotcha. Superseded/not-applicable upstream work: frontend dependency bumps were older than slskdN's stack, .NET 10 was already present, integration-test removal does not apply, config sentinel for old `global`/`groups`/`integration` was not taken because compatibility is retained, and upstream share-count logic matched slskdN's existing implementation. Validation passed: generated web assets for integration tests, `dotnet test`, `bash ./bin/lint`, and `git diff --check`.
+
 - Fixed the DHT warning/config mismatch by documenting `dht.lan_only` in `config/slskd.example.yml` and changing the public warning from internal `DhtRendezvous.*` option names to the YAML keys operators can set.
 - Documented the public-option-name gotcha in ADR-0001 and committed that entry separately as required.
 
@@ -6888,21 +6882,6 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`: passed
   - `git diff --check`: passed
   - manual disposable-node verification on `http://127.0.0.1:5040`: `/`, `/searches`, `/pods`, `/system/info`, and `/system/mediacore` all loaded without page errors; authenticated `/api/v0/pods` returned `200`; a burst of `25` authenticated `/api/v0/session` requests stayed `200`; repeated browser navigation produced no `429`; first-run share bootstrap logged recreate/scan without a fake corruption exception
-
-## 2026-04-26 20:08:00Z
-
-- Implemented GitHub issue `#216` by adding CSV playlist import to the Wishlist workflow instead of starting an immediate bulk Soulseek search/download burst.
-- Added a TuneMyMusic-friendly CSV parser for track/artist/album columns with quoted field support, duplicate detection, skipped-row reporting, and optional album inclusion.
-- Added authenticated `POST /api/v0/wishlist/import/csv` and frontend Wishlist import controls for CSV file/text input, filter, max results, enabled state, and auto-download.
-- Validation passed: focused `WishlistControllerTests`, frontend lint, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`.
-
-## 2026-04-26 19:33:25Z
-
-- Re-audited Bas's upload failure path assuming a product bug rather than user error: listener startup, runtime listener reconfiguration, inbound peer queue handling, upload queue release, share lookup, Soulseek.NET endpoint resolution, and transfer connection setup.
-- Found a concrete reachability bug: `soulseek.listen_port` / `soulseek.listen_ip_address` runtime changes can restart the local listener through Soulseek.NET without refreshing the port advertised to the Soulseek server. That can leave peers trying the old port and make uploads look broken even though local port probes pass.
-- Documented the gotcha in ADR-0001 and committed it immediately as `d326113fc`.
-- Marked the listen endpoint options as `[RequiresReconnect]` and added `ApplicationLifecycleTests.OptionsChanged_WhenListenPortChangesWhileConnected_SetsPendingReconnect` so connected option changes now surface the required reconnect instead of silently leaving stale server-advertised endpoint state.
-- Validation: `git diff --check` for touched files passed, `bash ./bin/lint` passed, focused `ApplicationLifecycleTests` passed, full `dotnet test` passed unit/non-integration projects but hit the known optional live mesh account setup flake once (`Overlay connect request failed: 502`); rerunning that exact integration test by itself passed.
 
 ## 2026-04-20 04:05:00Z
 

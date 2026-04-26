@@ -99,6 +99,16 @@ namespace slskd
         /// <returns>A list of differences between the two objects.</returns>
         public static IEnumerable<(PropertyInfo Property, string FQN, object? Left, object? Right)> DiffWith(this object left, object right, string? parentFqn = null)
         {
+            if (left is null || right is null)
+            {
+                if (left is null == right is null)
+                {
+                    return Enumerable.Empty<(PropertyInfo Property, string FQN, object? Left, object? Right)>();
+                }
+
+                return new[] { (Property: (PropertyInfo)null!, FQN: parentFqn ?? string.Empty, Left: left, Right: right) };
+            }
+
             var leftType = left.GetType();
             var rightType = right.GetType();
             if (leftType != rightType)
@@ -123,9 +133,20 @@ namespace slskd
                     var propType = prop.PropertyType;
                     var fqn = string.IsNullOrEmpty(parentFqn) ? prop.Name : string.Join(".", parentFqn, prop.Name);
 
+                    if (leftVal is null || rightVal is null)
+                    {
+                        if (leftVal is null == rightVal is null)
+                        {
+                            continue;
+                        }
+
+                        differences.Add((prop, fqn, leftVal, rightVal));
+                        continue;
+                    }
+
                     if (propType.IsArray || (propType.IsGenericType && propType.GetGenericTypeDefinition() == typeof(Dictionary<,>)))
                     {
-                        if (leftVal?.ToJson() != rightVal?.ToJson())
+                        if (leftVal.ToJson() != rightVal.ToJson())
                         {
                             differences.Add((prop, fqn, leftVal, rightVal));
                         }
@@ -139,16 +160,6 @@ namespace slskd
                     }
                     else
                     {
-                        if (leftVal == null || rightVal == null)
-                        {
-                            if (!Equals(leftVal, rightVal))
-                            {
-                                differences.Add((prop, fqn, leftVal, rightVal));
-                            }
-
-                            continue;
-                        }
-
                         differences.AddRange(DiffWith(leftVal, rightVal, fqn));
                     }
                 }
