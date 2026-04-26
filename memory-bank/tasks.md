@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **chore**: Action open Dependabot PRs for uuid and OpenTelemetry.
+ - Status: completed (2026-04-26)
+ - Priority: P2
+ - Notes: Reviewed open PRs `#213`, `#214`, and `#215` on `snapetech/slskdn`. Applied the recommended dependency updates directly on `main`: `uuid` is now `14.0.0`, and OpenTelemetry/OpenTelemetry OTLP exporter are now `1.15.3`, which resolves transitive `OpenTelemetry.Api` and provider extensions to `1.15.3` without adding an explicit package reference. Created missing `npm` and `nuget` labels and applied them to the existing Dependabot PRs so future Dependabot labeling does not repeat the warning comments.
+
 - [x] **ux**: Publish mesh search results before Soulseek timeout completion.
  - Status: completed (2026-04-24)
  - Priority: P2

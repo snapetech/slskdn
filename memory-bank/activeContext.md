@@ -1,3 +1,16 @@
+## Update 2026-04-26 20:28:30Z
+
+- Current task: None. Open Dependabot PRs `#213`, `#214`, and `#215` have been reviewed and actioned.
+- Last activity:
+  - verified GitHub writes target `snapetech/slskdn`
+  - reviewed the three open PRs: `uuid 13.0.0 -> 14.0.0`, `OpenTelemetry/OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.2 -> 1.15.3`, and the overlapping transitive `OpenTelemetry.Api 1.15.2 -> 1.15.3` pin
+  - updated dependencies on `main`: `uuid` to `14.0.0`, `OpenTelemetry` to `1.15.3`, and `OpenTelemetry.Exporter.OpenTelemetryProtocol` to `1.15.3`; `OpenTelemetry.Api` now resolves transitively to `1.15.3`
+  - created missing GitHub labels `npm` and `nuget`, and applied `dependencies` plus the ecosystem labels to PRs `#213`, `#214`, and `#215`
+  - validation passed: `npm run lint`, `dotnet build src/slskd/slskd.csproj --no-restore`, `git diff --check`, `bash ./bin/lint`, NuGet/npm vulnerability checks, and full `dotnet test --no-restore`
+- Next steps:
+  1. Commit and push the dependency update.
+  2. Comment on the Dependabot PRs with the action taken; close them only after the pushed update is visible on `main`.
+
 ## Update 2026-04-26 20:08:00Z
 
 - Current task: Issue `#216` CSV playlist import is implemented and ready to commit/push.

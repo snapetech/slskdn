@@ -1,3 +1,10 @@
+## 2026-04-26 20:28Z - Actioned open Dependabot PRs
+
+- Reviewed open PRs `#213`, `#214`, and `#215` on `snapetech/slskdn`.
+- Applied the dependency updates on `main`: `src/web` now uses `uuid 14.0.0`; `src/slskd` now uses `OpenTelemetry 1.15.3` and `OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.3`, which resolves transitive `OpenTelemetry.Api` and `OpenTelemetry.Api.ProviderBuilderExtensions` to `1.15.3`.
+- Created missing GitHub labels `npm` and `nuget`, then added `dependencies` plus the ecosystem label to the existing Dependabot PRs so future Dependabot PRs do not repeat the missing-label warning.
+- Validation passed: `npm run lint`, `dotnet build src/slskd/slskd.csproj --no-restore`, `git diff --check`, `bash ./bin/lint`, NuGet/npm vulnerability checks, and full `dotnet test --no-restore` (`46` main tests, `3579` unit tests, `276` integration tests). The backend build still emits existing generated MessagePack warnings.
+
 ## 2026-04-26 19:45Z - Implemented issue 216 CSV wishlist import
 
 - Built GitHub issue `#216` into the Wishlist workflow with authenticated `POST /api/v0/wishlist/import/csv` and a Web UI import modal for TuneMyMusic-style CSV exports.
