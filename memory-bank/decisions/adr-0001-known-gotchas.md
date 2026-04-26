@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z134. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
+
+**The Bug**: Runtime updates to `soulseek.listen_port` or `soulseek.listen_ip_address` can restart the local Soulseek.NET listener without making the server learn the new advertised port. Soulseek.NET sends `SetListenPort` during login/config messages, not from `ReconfigureOptionsAsync()`, so remote peers may keep connecting to the stale port and uploads can appear broken even though the local listener is healthy.
+
+**Files Affected**:
+- `src/slskd/Core/Options.cs`
+- `src/slskd/Application.cs`
+- `src/slskd/Integrations/VPN/VPNService.cs`
+
+**Wrong**:
+```csharp
+listenPort: old.ListenPort == update.ListenPort ? null : update.ListenPort
+```
+
+**Correct**:
+```csharp
+[RequiresReconnect]
+public int ListenPort { get; init; } = 50300;
+```
+
+**Why This Keeps Happening**: The local listener and the server-advertised endpoint are separate state. Any code path that changes where slskd listens must also ensure the Soulseek server receives the updated port, either by reconnecting or by an explicit server configuration command if Soulseek.NET exposes one.
+
 ### 0z133. Batch Retry Downloads Must Move From The Batch Incomplete Path
 
 **The Bug**: A retrying download with `BatchId` can write its partial file under `incomplete/<batch-id>/...`, but completion code can still try to move the root incomplete path and fail after a successful transfer.

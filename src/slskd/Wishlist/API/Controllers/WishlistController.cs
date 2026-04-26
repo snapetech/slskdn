@@ -221,6 +221,53 @@ namespace slskd.Wishlist.API
                 return NotFound();
             }
         }
+
+        /// <summary>
+        ///     Imports wishlist searches from a CSV playlist export.
+        /// </summary>
+        /// <param name="request">The CSV import request.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>The import result.</returns>
+        /// <response code="200">The CSV was imported successfully.</response>
+        /// <response code="400">The request was invalid.</response>
+        [HttpPost("import/csv")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(WishlistCsvImportResult), 200)]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> ImportCsv(
+            [FromBody, Required] ImportWishlistCsvRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.CsvText))
+            {
+                return BadRequest("CsvText is required");
+            }
+
+            request.Filter = string.IsNullOrWhiteSpace(request.Filter) ? string.Empty : request.Filter.Trim();
+            if (request.MaxResults.HasValue && request.MaxResults.Value <= 0)
+            {
+                return BadRequest("MaxResults must be greater than 0");
+            }
+
+            var result = await WishlistService.ImportCsvAsync(
+                request.CsvText,
+                new WishlistCsvImportOptions
+                {
+                    Enabled = request.Enabled ?? true,
+                    AutoDownload = request.AutoDownload ?? false,
+                    Filter = request.Filter,
+                    MaxResults = request.MaxResults ?? 100,
+                    IncludeAlbum = request.IncludeAlbum ?? false,
+                },
+                cancellationToken);
+
+            if (result.TotalRows == 0)
+            {
+                return BadRequest("CSV did not contain any track rows");
+            }
+
+            return Ok(result);
+        }
     }
 
     /// <summary>
@@ -284,5 +331,42 @@ namespace slskd.Wishlist.API
         ///     Maximum results to keep.
         /// </summary>
         public int? MaxResults { get; set; }
+    }
+
+    /// <summary>
+    ///     Request to import wishlist items from CSV text.
+    /// </summary>
+    public class ImportWishlistCsvRequest
+    {
+        /// <summary>
+        ///     Raw CSV text from a playlist export.
+        /// </summary>
+        [Required]
+        public string CsvText { get; set; } = string.Empty;
+
+        /// <summary>
+        ///     Optional filter expression to apply to every imported search.
+        /// </summary>
+        public string Filter { get; set; } = string.Empty;
+
+        /// <summary>
+        ///     Whether imported wishlist items are enabled.
+        /// </summary>
+        public bool? Enabled { get; set; }
+
+        /// <summary>
+        ///     Whether imported wishlist items should auto-download matches.
+        /// </summary>
+        public bool? AutoDownload { get; set; }
+
+        /// <summary>
+        ///     Maximum results to keep for each imported search.
+        /// </summary>
+        public int? MaxResults { get; set; }
+
+        /// <summary>
+        ///     Whether album names should be included in generated search text.
+        /// </summary>
+        public bool? IncludeAlbum { get; set; }
     }
 }
