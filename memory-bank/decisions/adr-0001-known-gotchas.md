@@ -75,6 +75,29 @@ publish:
 
 **Why This Keeps Happening**: The stable Nix package is a consumer of published release artifacts, not a producer. It can only be smoke-tested after the release exists and metadata has been rewritten with the new URLs and hashes, such as in the post-release stable metadata job.
 
+### 0z136. Stable Releases Need Curated Changelog Notes Before Tagging
+
+**The Bug**: `0.25.1-slskdn.183` initially published release notes synthesized from the full commit delta since `0.24.5-slskdn.181`. Because the upstream-sync branch brought a very large merged history and there was no matching `docs/CHANGELOG.md` section, the generated release body listed ancient fork bootstrap commits like "Initial commit" instead of the actual 0.25.1 sync highlights.
+
+**Files Affected**:
+- `scripts/generate-release-notes.sh`
+- `docs/CHANGELOG.md`
+
+**Wrong**:
+```bash
+./scripts/generate-release-notes.sh "$version" release/RELEASE_NOTES.md "$ref"
+# no docs/CHANGELOG.md section exists for "$version"; script publishes hundreds of raw commits
+```
+
+**Correct**:
+```markdown
+## [0.25.1-slskdn.183] - 2026-04-26
+
+- Synced slskdN with upstream slskd 0.25.1 while retaining fork-specific features.
+```
+
+**Why This Keeps Happening**: Release-note synthesis is only safe for small, linear deltas. Major upstream syncs and branch-history repairs need a curated changelog section, and the generator must fail closed when the fallback commit list is too large to be useful.
+
 ### 0z134. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
 
 **The Bug**: Runtime updates to `soulseek.listen_port` or `soulseek.listen_ip_address` can restart the local Soulseek.NET listener without making the server learn the new advertised port. Soulseek.NET sends `SetListenPort` during login/config messages, not from `ReconfigureOptionsAsync()`, so remote peers may keep connecting to the stale port and uploads can appear broken even though the local listener is healthy.
