@@ -40,6 +40,7 @@ namespace slskd
         /// <param name="maxAttempts">The maximum number of retry attempts.</param>
         /// <param name="baseDelayInMilliseconds">The base delay in milliseconds.</param>
         /// <param name="maxDelayInMilliseconds">The maximum delay in milliseconds.</param>
+        /// <param name="exceptionHistoryLimit">The maximum number of retry exceptions retained for the final exception.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>The execution context.</returns>
         public static async Task Do(
@@ -70,6 +71,7 @@ namespace slskd
         /// <param name="maxAttempts">The maximum number of retry attempts.</param>
         /// <param name="baseDelayInMilliseconds">The base delay in milliseconds.</param>
         /// <param name="maxDelayInMilliseconds">The maximum delay in milliseconds.</param>
+        /// <param name="exceptionHistoryLimit">The maximum number of retry exceptions retained for the final exception.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <typeparam name="T">The Type of the logic return value.</typeparam>
         /// <returns>The execution context.</returns>

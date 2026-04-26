@@ -98,6 +98,12 @@ namespace slskd.Users.API
             try
             {
                 var endpoint = await Users.GetIPEndPointAsync(username);
+
+                if (Users.IsBlacklisted(username, endpoint.Address))
+                {
+                    return NotFound("User is offline");
+                }
+
                 return Ok(endpoint);
             }
             catch (UserOfflineException ex)
@@ -134,6 +140,11 @@ namespace slskd.Users.API
             {
                 Log.Warning("[SAFETY] Browse rejected for user='{Username}': Rate limit exceeded", username);
                 return StatusCode(429, "Browse rate limit exceeded. See Soulseek safety configuration.");
+            }
+
+            if (Users.IsBlacklisted(username))
+            {
+                return NotFound("User is offline");
             }
 
             try
@@ -242,6 +253,11 @@ namespace slskd.Users.API
                 return StatusCode(503, "Soulseek server connection is not ready");
             }
 
+            if (Users.IsBlacklisted(username))
+            {
+                return NotFound("User is offline");
+            }
+
             try
             {
                 var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
@@ -287,6 +303,11 @@ namespace slskd.Users.API
             if (string.IsNullOrWhiteSpace(username))
             {
                 return BadRequest("Username is required");
+            }
+
+            if (Users.IsBlacklisted(username))
+            {
+                return NotFound("User is offline");
             }
 
             try
@@ -351,6 +372,11 @@ namespace slskd.Users.API
             if (string.IsNullOrWhiteSpace(username))
             {
                 return BadRequest("Username is required");
+            }
+
+            if (Users.IsBlacklisted(username))
+            {
+                return NotFound("User is offline");
             }
 
             try

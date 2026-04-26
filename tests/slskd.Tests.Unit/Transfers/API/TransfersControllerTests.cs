@@ -14,6 +14,7 @@ using slskd.Transfers.API;
 using slskd.Transfers.AutoReplace;
 using slskd.Transfers.Downloads;
 using slskd.Transfers.Uploads;
+using slskd.Users;
 using Soulseek;
 using Xunit;
 using SlskdTransfer = slskd.Transfers.Transfer;
@@ -224,6 +225,7 @@ public class TransfersControllerTests
 
         return new TransfersController(
             transferService.Object,
+            Mock.Of<IUserService>(),
             optionsSnapshot.Object,
             stateSnapshot.Object,
             Mock.Of<IAutoReplaceService>(),
