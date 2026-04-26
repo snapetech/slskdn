@@ -1,3 +1,14 @@
+## Update 2026-04-26 21:15:00Z
+
+- Current task: None. README upstream-parity feature comparison cleanup is implemented and validated.
+- Last activity:
+  - reviewed README feature sections against upstream `slskd/slskd` 0.25.1 code/docs now merged into `main`
+  - updated README feature descriptions to call out upstream parity for transfer retry/resume, blacklist/search blocking, file deletion, search filtering/sorting, batch download tracking, and Prometheus metrics
+  - split comparison rows so upstream gets checkmarks only for exact upstream capabilities, while slskdN-only UI/automation layers remain distinct
+  - validation passed: `git diff --check`
+- Next steps:
+  1. Continue monitoring the replacement `build-main-0.25.1-slskdn.2` release run separately.
+
 ## Update 2026-04-26 21:04:00Z
 
 - Current task: Retrying the main release after `build-main-0.25.1-slskdn.1` exposed a pre-publish Nix smoke workflow bug.

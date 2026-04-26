@@ -1,3 +1,10 @@
+## 2026-04-26 21:15Z - Updated README upstream parity feature comparison
+
+- Reviewed README feature claims against upstream `slskd/slskd` 0.25.1 code/docs now merged into `main`.
+- Updated README feature descriptions to note upstream parity for transfer retry/resume, server-side blacklist/search blocking, application file deletion, search filters/sorting, batch download tracking/API, and Prometheus metrics endpoint support.
+- Split comparison rows so slskd gets checkmarks for exact upstream capabilities while slskdN-only layers such as auto-replace, quick browser search-result blocking, folder-selection UI, saved default filters, and in-app metrics dashboard remain marked as fork-specific.
+- Validation passed: `git diff --check`.
+
 ## 2026-04-26 21:06Z - Retrying 0.25.1 stable release after pre-publish Nix smoke failure
 
 - Merged PR #217 into `main` at `881453d29`, deleted the remote/local `sync/upstream-0.25.1` branch, and pushed `build-main-0.25.1-slskdn.1`.
