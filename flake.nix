@@ -82,7 +82,7 @@
         stableSources = {
           "x86_64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.2/slskdn-main-linux-glibc-x64.zip";
-            sha256 = "sha256-yW3j/pVGnjT24Z6PUDi/nCexWdttoenTZs1gRvOOKOo="; # x86_64-linux (glibc)
+            sha256 = "sha256-sg89+3/3UL4sdsQlJyMvlJBFI8X7xBdFUCP1qI0HbV0="; # x86_64-linux (glibc)
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-glibc-arm64.zip";
