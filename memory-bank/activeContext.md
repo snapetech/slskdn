@@ -1,3 +1,14 @@
+## Update 2026-04-26 21:04:00Z
+
+- Current task: Retrying the main release after `build-main-0.25.1-slskdn.1` exposed a pre-publish Nix smoke workflow bug.
+- Last activity:
+  - merged PR #217 into `main` at `881453d29` and deleted the remote/local `sync/upstream-0.25.1` branch
+  - pushed `build-main-0.25.1-slskdn.1`; the release workflow failed because `nix-smoke` fetched brand-new stable release assets before `publish` had created them
+  - documented the gotcha in ADR-0001 and started the replacement release metadata bump to `0.25.1-slskdn.2`
+- Next steps:
+  1. Commit and push the workflow/metadata repair on `main`.
+  2. Push replacement tag `build-main-0.25.1-slskdn.2` and watch the release run.
+
 ## Update 2026-04-26 20:37:00Z
 
 - Current task: None. Upstream-base version references are updated to `0.25.1`, and the upstream-sync branch has been built and manually deployed to `kspls0`.

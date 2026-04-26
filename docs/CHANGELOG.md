@@ -25,7 +25,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.
 - Added CSV playlist import for issue `#216`: TuneMyMusic-style exports can now be imported from the Wishlist page into wishlist searches, with optional album terms, filters, enabled state, max results, and auto-download settings.
 - Fixed a Soulseek upload reachability bug where runtime changes to `soulseek.listen_port` or `soulseek.listen_ip_address` could restart the local listener without making the Soulseek server advertise the new endpoint; these options now correctly require a reconnect so peers do not keep trying a stale port.
-- Updated active release, packaging, and build documentation metadata to the new `0.25.1` upstream base and `0.25.1-slskdn.1` fork release line; manually deployed and smoke-checked the synced build on `kspls0`.
+- Updated active release, packaging, and build documentation metadata to the new `0.25.1` upstream base and `0.25.1-slskdn.2` fork release line; manually deployed and smoke-checked the synced build on `kspls0`.
 - Aligned upload governor speed buckets with the upstream `transfers.groups` option tree while retaining legacy global upload speed fallback.
 - Ported upstream relay IPv6-mapped IPv4 handling so relay agent CIDR checks work behind IPv6-capable HTTP stacks.
 - Ported upstream automatic download retry/resume behavior, retry configuration docs, transfer attempt reporting, and completed-transfer report filtering.
