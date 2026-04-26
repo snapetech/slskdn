@@ -145,11 +145,76 @@ public class TransfersControllerTests
         Assert.Equal("Failed to get queue position", error.Value);
     }
 
-    private static TransfersController CreateController(Mock<IDownloadService> downloads)
+    [Fact]
+    public async Task GetUploadDiagnostics_WhenListenerAndSharesLookBad_ReturnsActionableWarnings()
+    {
+        var uploads = new Mock<IUploadService>();
+        uploads
+            .Setup(service => service.List(It.IsAny<Expression<Func<SlskdTransfer, bool>>>(), true))
+            .Returns(new List<SlskdTransfer>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Username = "remote-user",
+                    Filename = "shared\\file.flac",
+                    RequestedAt = DateTime.UtcNow,
+                    State = TransferStates.Completed | TransferStates.Errored,
+                    Exception = "Connection failed",
+                },
+            });
+
+        var options = new slskd.Options
+        {
+            Soulseek = new slskd.Options.SoulseekOptions
+            {
+                ListenIpAddress = "127.0.0.1",
+                ListenPort = 1,
+            },
+        };
+
+        var state = new slskd.State
+        {
+            Server = new slskd.ServerState
+            {
+                State = SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn,
+            },
+            Shares = new slskd.ShareState
+            {
+                Files = 0,
+                Directories = 0,
+            },
+        };
+
+        var controller = CreateController(uploads: uploads, options: options, state: state);
+
+        var result = await controller.GetUploadDiagnostics();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<UploadDiagnosticsResponse>(ok.Value);
+        Assert.False(response.LocalListenProbe.Succeeded);
+        Assert.Equal("127.0.0.1", response.ListenIpAddress);
+        Assert.Equal(1, response.TotalUploadRecords);
+        Assert.Contains(response.Warnings, warning => warning.Contains("loopback", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(response.Warnings, warning => warning.Contains("No shared files", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(response.RecentUploads);
+    }
+
+    private static TransfersController CreateController(
+        Mock<IDownloadService>? downloads = null,
+        Mock<IUploadService>? uploads = null,
+        slskd.Options? options = null,
+        slskd.State? state = null)
     {
         var transferService = new Mock<ITransferService>();
-        transferService.SetupGet(service => service.Downloads).Returns(downloads.Object);
-        transferService.SetupGet(service => service.Uploads).Returns(Mock.Of<IUploadService>());
+        transferService.SetupGet(service => service.Downloads).Returns((downloads ?? new Mock<IDownloadService>()).Object);
+        transferService.SetupGet(service => service.Uploads).Returns((uploads ?? new Mock<IUploadService>()).Object);
+
+        var optionsSnapshot = new Mock<IOptionsSnapshot<slskd.Options>>();
+        optionsSnapshot.SetupGet(snapshot => snapshot.Value).Returns(options ?? new slskd.Options());
+
+        var stateSnapshot = new Mock<IStateSnapshot<slskd.State>>();
+        stateSnapshot.SetupGet(snapshot => snapshot.Value).Returns(state ?? new slskd.State());
 
         using var autoReplaceBackgroundService = new AutoReplaceBackgroundService(
             Mock.Of<IAutoReplaceService>(),
@@ -159,7 +224,8 @@ public class TransfersControllerTests
 
         return new TransfersController(
             transferService.Object,
-            Mock.Of<IOptionsSnapshot<slskd.Options>>(),
+            optionsSnapshot.Object,
+            stateSnapshot.Object,
             Mock.Of<IAutoReplaceService>(),
             autoReplaceBackgroundService);
     }

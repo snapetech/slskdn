@@ -6834,6 +6834,12 @@ Code quality improvements were completed as part of Option A:
   - focused full-instance integration `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection`: passed in isolation
   - `./bin/build`: still found one heavier full-suite integration issue outside the release gate, with `TwoNodeMeshFullInstanceTests.TwoFullInstances_CanFormOverlayMeshConnection` failing once inside the full Release integration sweep with `502 Bad Gateway` on `/api/v0/overlay/connect`, even though that same test passed when rerun alone immediately afterward
 
+## 2026-04-26 19:14:31Z
+
+- Added upload troubleshooting instrumentation for Bas's report: inbound remote upload enqueue attempts now log structured `[UPLOAD-DIAG]` receipt/rejection lines with requester, endpoint, filename, queue depth, latency, and rejection reason.
+- Added authenticated `/api/v0/transfers/uploads/diagnostics` to summarize Soulseek login/listener config, perform a local TCP probe of the configured listen port, show share index counts/scan state, count upload outcomes, include recent upload records, and return warnings for common failure modes like loopback binding, missing listener, zero shared files, and no observed upload records.
+- Added focused unit coverage for the diagnostics response and warning generation.
+
 ## 2026-04-26 17:13:39Z
 
 - Investigated tester onboarding feedback about failed uploads and confusing mesh public-discoverability warnings.

@@ -1148,6 +1148,10 @@
   - Status: done
   - Notes: Stopped marking DHT-discovered endpoints as `supportsOnionRouting=true` before any overlay handshake succeeds, updated DHT rendezvous tests so failed immediate connects stay tracked as `dht-discovered` candidates instead of circuit-capable peers, and validated on `kspls0` that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while raw DHT candidates are still visible separately.
 
+- [x] Add upload diagnostics for Bas's failed-upload report
+  - Status: completed (2026-04-26)
+  - Notes: Added structured `[UPLOAD-DIAG]` logs around inbound upload enqueue requests and an authenticated `/api/v0/transfers/uploads/diagnostics` endpoint that probes the configured local Soulseek listener, summarizes share/login/upload state, and returns actionable warnings.
+
 - [x] Investigate tester upload/DHT onboarding feedback
   - Status: completed (2026-04-26)
   - Notes: Confirmed upload failures need listener/port/share/enqueue diagnostics from the tester. Fixed the slskdN-side DHT warning/config discoverability mismatch by documenting `dht.lan_only` in the sample config and using YAML option names in the warning text.

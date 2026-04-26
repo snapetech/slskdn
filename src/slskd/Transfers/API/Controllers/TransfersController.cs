@@ -23,6 +23,8 @@ namespace slskd.Transfers.API
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.Linq;
+    using System.Net;
+    using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
@@ -46,17 +48,20 @@ namespace slskd.Transfers.API
         ///     Initializes a new instance of the <see cref="TransfersController"/> class.
         /// </summary>
         /// <param name="optionsSnapshot"></param>
+        /// <param name="stateSnapshot"></param>
         /// <param name="transferService"></param>
         /// <param name="autoReplaceService"></param>
         /// <param name="autoReplaceBackgroundService"></param>
         public TransfersController(
             ITransferService transferService,
             IOptionsSnapshot<Options> optionsSnapshot,
+            IStateSnapshot<State> stateSnapshot,
             IAutoReplaceService autoReplaceService,
             AutoReplaceBackgroundService autoReplaceBackgroundService)
         {
             Transfers = transferService;
             OptionsSnapshot = optionsSnapshot;
+            StateSnapshot = stateSnapshot;
             AutoReplace = autoReplaceService;
             AutoReplaceBackgroundService = autoReplaceBackgroundService;
         }
@@ -64,6 +69,7 @@ namespace slskd.Transfers.API
         private static SemaphoreSlim DownloadRequestLimiter { get; } = new SemaphoreSlim(2, 2);
         private ITransferService Transfers { get; }
         private IOptionsSnapshot<Options> OptionsSnapshot { get; }
+        private IStateSnapshot<State> StateSnapshot { get; }
         private IAutoReplaceService AutoReplace { get; }
         private AutoReplaceBackgroundService AutoReplaceBackgroundService { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<TransfersController>();
@@ -221,6 +227,100 @@ namespace slskd.Transfers.API
             }
 
             return NoContent();
+        }
+
+        /// <summary>
+        ///     Gets upload diagnostics for listener, share, and recent upload state.
+        /// </summary>
+        /// <returns></returns>
+        /// <response code="200">The request completed successfully.</response>
+        [HttpGet("uploads/diagnostics")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(UploadDiagnosticsResponse), 200)]
+        public async Task<IActionResult> GetUploadDiagnostics(CancellationToken cancellationToken = default)
+        {
+            if (Program.IsRelayAgent)
+            {
+                return Forbid();
+            }
+
+            var options = OptionsSnapshot.Value;
+            var state = StateSnapshot.Value;
+            var uploads = Transfers.Uploads.List(t => true, includeRemoved: true);
+            var recentUploads = uploads
+                .OrderByDescending(t => t.EnqueuedAt ?? t.StartedAt ?? t.EndedAt ?? t.RequestedAt)
+                .Take(25)
+                .Select(t => new UploadDiagnosticsResponse.RecentUpload
+                {
+                    Id = t.Id,
+                    Username = t.Username,
+                    Filename = t.Filename,
+                    State = t.State.ToString(),
+                    RequestedAt = t.RequestedAt,
+                    EnqueuedAt = t.EnqueuedAt,
+                    StartedAt = t.StartedAt,
+                    EndedAt = t.EndedAt,
+                    BytesTransferred = t.BytesTransferred,
+                    Size = t.Size,
+                    Exception = t.Exception,
+                    Removed = t.Removed,
+                })
+                .ToList();
+
+            var listenProbe = await ProbeConfiguredListenPortAsync(
+                options.Soulseek.ListenIpAddress,
+                options.Soulseek.ListenPort,
+                cancellationToken);
+
+            var warnings = new List<string>();
+
+            if (state.Server.IsConnected && state.Server.IsLoggedIn && !listenProbe.Succeeded)
+            {
+                warnings.Add("Local TCP probe could not connect to the configured Soulseek listener; uploads from remote peers will probably fail until the listener is reachable.");
+            }
+
+            if (IPAddress.TryParse(options.Soulseek.ListenIpAddress, out var listenAddress) && IPAddress.IsLoopback(listenAddress))
+            {
+                warnings.Add("Soulseek listen address is loopback; remote peers cannot connect to 127.0.0.1/::1 from outside this host.");
+            }
+
+            if (state.Shares.Files == 0)
+            {
+                warnings.Add("No shared files are currently indexed; remote requests may be rejected as File not shared.");
+            }
+
+            if (state.Shares.ScanPending || state.Shares.Scanning)
+            {
+                warnings.Add("Share scan is pending or running; upload availability may not match the filesystem until scanning completes.");
+            }
+
+            if (uploads.Count == 0)
+            {
+                warnings.Add("No upload records are present. If a remote user attempted an upload, this usually means the request did not reach slskdN or failed before enqueue.");
+            }
+
+            return Ok(new UploadDiagnosticsResponse
+            {
+                GeneratedAt = DateTime.UtcNow,
+                SoulseekState = state.Server.State.ToString(),
+                IsConnected = state.Server.IsConnected,
+                IsLoggedIn = state.Server.IsLoggedIn,
+                ListenIpAddress = options.Soulseek.ListenIpAddress,
+                ListenPort = options.Soulseek.ListenPort,
+                LocalListenProbe = listenProbe,
+                UploadSlots = options.Global.Upload.Slots,
+                UploadSpeedLimit = options.Global.Upload.SpeedLimit,
+                ShareDirectories = state.Shares.Directories,
+                ShareFiles = state.Shares.Files,
+                ShareScanPending = state.Shares.ScanPending,
+                ShareScanning = state.Shares.Scanning,
+                TotalUploadRecords = uploads.Count,
+                ActiveUploads = uploads.Count(t => !t.State.HasFlag(Soulseek.TransferStates.Completed)),
+                FailedUploads = uploads.Count(t => t.State.HasFlag(Soulseek.TransferStates.Completed) && !t.State.HasFlag(Soulseek.TransferStates.Succeeded)),
+                SucceededUploads = uploads.Count(t => t.State.HasFlag(Soulseek.TransferStates.Completed | Soulseek.TransferStates.Succeeded)),
+                RecentUploads = recentUploads,
+                Warnings = warnings,
+            });
         }
 
         /// <summary>
@@ -525,6 +625,61 @@ namespace slskd.Transfers.API
             return Ok(response);
         }
 
+        private static async Task<UploadDiagnosticsResponse.ListenProbe> ProbeConfiguredListenPortAsync(
+            string listenIpAddress,
+            int listenPort,
+            CancellationToken cancellationToken)
+        {
+            var target = ResolveLocalProbeAddress(listenIpAddress);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromMilliseconds(750));
+
+            try
+            {
+                using var client = new TcpClient(target.AddressFamily);
+                var started = DateTime.UtcNow;
+                await client.ConnectAsync(target, listenPort, timeout.Token);
+
+                return new UploadDiagnosticsResponse.ListenProbe
+                {
+                    TargetIpAddress = target.ToString(),
+                    Port = listenPort,
+                    Succeeded = true,
+                    LatencyMilliseconds = (DateTime.UtcNow - started).TotalMilliseconds,
+                };
+            }
+            catch (Exception ex) when (ex is SocketException || ex is OperationCanceledException || ex is TimeoutException)
+            {
+                return new UploadDiagnosticsResponse.ListenProbe
+                {
+                    TargetIpAddress = target.ToString(),
+                    Port = listenPort,
+                    Succeeded = false,
+                    Error = ex.Message,
+                };
+            }
+        }
+
+        private static IPAddress ResolveLocalProbeAddress(string listenIpAddress)
+        {
+            if (!IPAddress.TryParse(listenIpAddress, out var address))
+            {
+                return IPAddress.Loopback;
+            }
+
+            if (IPAddress.Any.Equals(address))
+            {
+                return IPAddress.Loopback;
+            }
+
+            if (IPAddress.IPv6Any.Equals(address))
+            {
+                return IPAddress.IPv6Loopback;
+            }
+
+            return address;
+        }
+
         /// <summary>
         ///     Gets all uploads for the specified username.
         /// </summary>
@@ -780,5 +935,53 @@ namespace slskd.Transfers.API
         public int FailedDownloads { get; set; }
         public long TotalBytes { get; set; }
         public DateTime? LastDownloadAt { get; set; }
+    }
+
+    public class UploadDiagnosticsResponse
+    {
+        public DateTime GeneratedAt { get; set; }
+        public string SoulseekState { get; set; } = string.Empty;
+        public bool IsConnected { get; set; }
+        public bool IsLoggedIn { get; set; }
+        public string ListenIpAddress { get; set; } = string.Empty;
+        public int ListenPort { get; set; }
+        public ListenProbe LocalListenProbe { get; set; } = new();
+        public int UploadSlots { get; set; }
+        public int UploadSpeedLimit { get; set; }
+        public int ShareDirectories { get; set; }
+        public int ShareFiles { get; set; }
+        public bool ShareScanPending { get; set; }
+        public bool ShareScanning { get; set; }
+        public int TotalUploadRecords { get; set; }
+        public int ActiveUploads { get; set; }
+        public int FailedUploads { get; set; }
+        public int SucceededUploads { get; set; }
+        public IReadOnlyList<RecentUpload> RecentUploads { get; set; } = Array.Empty<RecentUpload>();
+        public IReadOnlyList<string> Warnings { get; set; } = Array.Empty<string>();
+
+        public class ListenProbe
+        {
+            public string TargetIpAddress { get; set; } = string.Empty;
+            public int Port { get; set; }
+            public bool Succeeded { get; set; }
+            public double? LatencyMilliseconds { get; set; }
+            public string? Error { get; set; }
+        }
+
+        public class RecentUpload
+        {
+            public Guid Id { get; set; }
+            public string Username { get; set; } = string.Empty;
+            public string Filename { get; set; } = string.Empty;
+            public string State { get; set; } = string.Empty;
+            public DateTime? RequestedAt { get; set; }
+            public DateTime? EnqueuedAt { get; set; }
+            public DateTime? StartedAt { get; set; }
+            public DateTime? EndedAt { get; set; }
+            public long BytesTransferred { get; set; }
+            public long Size { get; set; }
+            public string? Exception { get; set; }
+            public bool Removed { get; set; }
+        }
     }
 }

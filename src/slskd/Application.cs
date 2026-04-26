@@ -787,6 +787,13 @@ namespace slskd
         private async Task EnqueueDownload(string username, IPEndPoint endpoint, string filename)
         {
             Metrics.Enqueue.RequestsReceived.Inc(1);
+            Log.Information(
+                "[UPLOAD-DIAG] Received upload enqueue request from {Username} ({Endpoint}) for {Filename}; queueDepth={QueueDepth}, currentEnqueueLatency={CurrentLatency}ms",
+                username,
+                endpoint,
+                filename,
+                EnqueueQueueDepth,
+                CurrentEnqueueLatency);
 
             /*
                 circuit breaker/failsafe:
@@ -1099,9 +1106,15 @@ namespace slskd
 
                 Log.Information("Enqueue of {Filename} to {Username} completed in {ElapsedOverall}ms, decision made in {ElapsedDecision}ms", filename, username, stopwatch.ElapsedMilliseconds, decisionStopwatch.ElapsedMilliseconds);
             }
-            catch (DownloadEnqueueException)
+            catch (DownloadEnqueueException ex)
             {
                 Metrics.Enqueue.RequestsRejected.Inc(1);
+                Log.Warning(
+                    "[UPLOAD-DIAG] Rejected upload enqueue request from {Username} ({Endpoint}) for {Filename}: {Reason}",
+                    username,
+                    endpoint,
+                    filename,
+                    ex.Message);
                 throw;
             }
             finally

@@ -1,3 +1,15 @@
+## Update 2026-04-26 19:14:31Z
+
+- Current task: Bas upload troubleshooting instrumentation is implemented and awaiting final validation/commit.
+- Last activity:
+  - added structured `[UPLOAD-DIAG]` logs when remote peers request uploads and when those requests are rejected
+  - added authenticated `/api/v0/transfers/uploads/diagnostics` with configured listener details, local TCP probe, share/index state, upload counters, recent upload records, and actionable warnings
+  - added focused unit coverage for the new diagnostics endpoint
+- Next steps:
+  1. Run lint and focused tests.
+  2. Commit and push if validation passes.
+  3. Tell the tester to collect the diagnostics endpoint output and `[UPLOAD-DIAG]` log lines on the next build.
+
 ## Update 2026-04-26 17:13:39Z
 
 - Current task: Tester upload/DHT onboarding feedback is being investigated.
