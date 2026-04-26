@@ -20,6 +20,7 @@ namespace slskd.Wishlist
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.EntityFrameworkCore;
@@ -66,6 +67,14 @@ namespace slskd.Wishlist
         ///     Manually triggers a search for a wishlist item.
         /// </summary>
         Task<SlskdSearch> RunSearchAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        ///     Imports wishlist searches from a CSV playlist export.
+        /// </summary>
+        Task<WishlistCsvImportResult> ImportCsvAsync(
+            string csvText,
+            WishlistCsvImportOptions options,
+            CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -179,6 +188,76 @@ namespace slskd.Wishlist
             return await ExecuteWishlistSearchAsync(item, context, cancellationToken);
         }
 
+        /// <inheritdoc/>
+        public async Task<WishlistCsvImportResult> ImportCsvAsync(
+            string csvText,
+            WishlistCsvImportOptions options,
+            CancellationToken cancellationToken = default)
+        {
+            var result = new WishlistCsvImportResult();
+            var parsed = ParseCsvTracks(csvText, options.IncludeAlbum);
+
+            using var context = ContextFactory.CreateDbContext();
+            var existingKeys = (await context.WishlistItems
+                    .Select(item => item.SearchText + "\u001f" + item.Filter)
+                    .ToListAsync(cancellationToken))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var importKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var track in parsed)
+            {
+                result.TotalRows++;
+
+                if (string.IsNullOrWhiteSpace(track.SearchText))
+                {
+                    result.SkippedCount++;
+                    result.SkippedRows.Add(new WishlistCsvImportSkippedRow
+                    {
+                        RowNumber = track.RowNumber,
+                        Reason = "Missing artist or track title",
+                        RawText = track.RawText,
+                    });
+                    continue;
+                }
+
+                var key = track.SearchText + "\u001f" + options.Filter;
+                if (existingKeys.Contains(key) || !importKeys.Add(key))
+                {
+                    result.DuplicateCount++;
+                    continue;
+                }
+
+                var item = new WishlistItem
+                {
+                    Id = Guid.NewGuid(),
+                    SearchText = track.SearchText,
+                    Filter = options.Filter,
+                    Enabled = options.Enabled,
+                    AutoDownload = options.AutoDownload,
+                    MaxResults = options.MaxResults,
+                    CreatedAt = DateTime.UtcNow,
+                };
+
+                context.WishlistItems.Add(item);
+                result.CreatedItems.Add(item);
+                existingKeys.Add(key);
+            }
+
+            if (result.CreatedItems.Count > 0)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
+            result.CreatedCount = result.CreatedItems.Count;
+            Log.Information(
+                "Imported {CreatedCount} wishlist searches from CSV ({DuplicateCount} duplicates, {SkippedCount} skipped)",
+                result.CreatedCount,
+                result.DuplicateCount,
+                result.SkippedCount);
+
+            return result;
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             // Critical: never block host startup (BackgroundService.StartAsync runs until first await)
@@ -207,6 +286,150 @@ namespace slskd.Wishlist
             }
 
             Log.Information("Wishlist background service stopped");
+        }
+
+        internal static IReadOnlyList<WishlistCsvTrack> ParseCsvTracks(string csvText, bool includeAlbum)
+        {
+            var rows = ParseCsvRows(csvText);
+            if (rows.Count == 0)
+            {
+                return [];
+            }
+
+            var firstRow = rows[0];
+            var hasHeader = LooksLikeHeader(firstRow);
+            var header = hasHeader ? firstRow : [];
+            var titleIndex = hasHeader ? FindColumn(header, "trackname", "track", "title", "songname", "song", "name") : 0;
+            var artistIndex = hasHeader ? FindColumn(header, "artistname", "artistnames", "artists", "artist") : 1;
+            var albumIndex = hasHeader ? FindColumn(header, "albumname", "album", "release") : 2;
+            var startIndex = hasHeader ? 1 : 0;
+            var tracks = new List<WishlistCsvTrack>();
+
+            for (var index = startIndex; index < rows.Count; index++)
+            {
+                var row = rows[index];
+                var title = GetCell(row, titleIndex);
+                var artist = GetCell(row, artistIndex);
+                var album = GetCell(row, albumIndex);
+                var searchText = BuildSearchText(title, artist, includeAlbum ? album : string.Empty);
+
+                tracks.Add(new WishlistCsvTrack
+                {
+                    RowNumber = index + 1,
+                    SearchText = searchText,
+                    RawText = string.Join(",", row),
+                });
+            }
+
+            return tracks;
+        }
+
+        private static string BuildSearchText(string title, string artist, string album)
+        {
+            var parts = new[] { artist, title, album }
+                .Select(part => part.Trim())
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .ToArray();
+
+            return parts.Length >= 2 ? string.Join(" ", parts) : string.Empty;
+        }
+
+        private static int FindColumn(IReadOnlyList<string> header, params string[] names)
+        {
+            for (var index = 0; index < header.Count; index++)
+            {
+                var normalized = NormalizeHeader(header[index]);
+                if (names.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        private static string GetCell(IReadOnlyList<string> row, int index)
+        {
+            return index >= 0 && index < row.Count ? row[index].Trim() : string.Empty;
+        }
+
+        private static bool LooksLikeHeader(IReadOnlyList<string> row)
+        {
+            return row
+                .Select(NormalizeHeader)
+                .Any(value => value is "trackname" or "track" or "title" or "songname" or "song" or "artistname" or "artist" or "artists" or "albumname" or "album");
+        }
+
+        private static string NormalizeHeader(string value)
+        {
+            var builder = new StringBuilder();
+            foreach (var ch in value)
+            {
+                if (char.IsLetterOrDigit(ch))
+                {
+                    builder.Append(char.ToLowerInvariant(ch));
+                }
+            }
+
+            return builder.ToString();
+        }
+
+        private static List<List<string>> ParseCsvRows(string csvText)
+        {
+            var rows = new List<List<string>>();
+            var row = new List<string>();
+            var field = new StringBuilder();
+            var inQuotes = false;
+
+            for (var index = 0; index < csvText.Length; index++)
+            {
+                var ch = csvText[index];
+                if (ch == '"')
+                {
+                    if (inQuotes && index + 1 < csvText.Length && csvText[index + 1] == '"')
+                    {
+                        field.Append('"');
+                        index++;
+                    }
+                    else
+                    {
+                        inQuotes = !inQuotes;
+                    }
+                }
+                else if (ch == ',' && !inQuotes)
+                {
+                    row.Add(field.ToString());
+                    field.Clear();
+                }
+                else if ((ch == '\n' || ch == '\r') && !inQuotes)
+                {
+                    if (ch == '\r' && index + 1 < csvText.Length && csvText[index + 1] == '\n')
+                    {
+                        index++;
+                    }
+
+                    row.Add(field.ToString());
+                    field.Clear();
+                    AddCsvRow(rows, row);
+                    row = [];
+                }
+                else
+                {
+                    field.Append(ch);
+                }
+            }
+
+            row.Add(field.ToString());
+            AddCsvRow(rows, row);
+            return rows;
+        }
+
+        private static void AddCsvRow(List<List<string>> rows, List<string> row)
+        {
+            if (row.Any(value => !string.IsNullOrWhiteSpace(value)))
+            {
+                rows.Add(row);
+            }
         }
 
         private async Task ProcessWishlistItemsAsync(CancellationToken cancellationToken)

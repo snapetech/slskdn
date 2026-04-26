@@ -48,3 +48,23 @@ export const remove = async (id) => {
 export const runSearch = async (id) => {
   return (await api.post(`/wishlist/${id}/search`)).data;
 };
+
+export const importCsv = async ({
+  csvText,
+  filter,
+  enabled,
+  autoDownload,
+  maxResults,
+  includeAlbum,
+}) => {
+  return (
+    await api.post('/wishlist/import/csv', {
+      autoDownload,
+      csvText,
+      enabled,
+      filter,
+      includeAlbum,
+      maxResults,
+    })
+  ).data;
+};

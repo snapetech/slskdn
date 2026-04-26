@@ -1,15 +1,15 @@
 ## Update 2026-04-26 20:08:00Z
 
-- Current task: Issue `#216` CSV playlist import is implemented locally and validation is in progress.
+- Current task: Issue `#216` CSV playlist import is implemented and ready to commit/push.
 - Last activity:
   - fetched GitHub issue `#216` from `snapetech/slskdn`: request is batch downloading music from CSV exports like TuneMyMusic
   - added a wishlist CSV import model/parser that recognizes TuneMyMusic-style track/artist/album headers, handles quoted CSV fields, generates artist/title wishlist searches, and deduplicates against existing/imported rows
   - added authenticated `POST /api/v0/wishlist/import/csv`; import creates wishlist entries without starting a large immediate Soulseek search burst, while optional `autoDownload` uses the existing wishlist scheduler/manual run path
   - added a Wishlist page CSV import modal with file/text input, filter, max results, enabled, auto-download, and album-term controls
-  - focused validation passed: `WishlistControllerTests`, frontend lint, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`
+  - validation passed: focused `WishlistControllerTests`, frontend lint, frontend production build, `dotnet build --no-restore`, `bash ./bin/lint`, `git diff --check`, full `dotnet test --no-restore` except one known transient optional live mesh setup `502`, and the exact failed integration test passed on rerun
 - Next steps:
-  1. Run any additional targeted frontend test/build if needed.
-  2. Commit the issue `#216` work separately from the pre-existing upload-listener changes in the checkout.
+  1. Commit and push the issue `#216` work.
+  2. Create `build-main-0.24.5-slskdn.181` if an immediate main build is still desired.
 
 ## Update 2026-04-26 19:33:25Z
 

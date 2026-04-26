@@ -1,3 +1,10 @@
+## 2026-04-26 19:45Z - Implemented issue 216 CSV wishlist import
+
+- Built GitHub issue `#216` into the Wishlist workflow with authenticated `POST /api/v0/wishlist/import/csv` and a Web UI import modal for TuneMyMusic-style CSV exports.
+- The importer parses quoted CSV, recognizes track/artist/album headers, supports optional album search terms, filter, max results, enabled state, and auto-download, and deduplicates against existing/imported wishlist searches.
+- The import creates conservative wishlist entries instead of firing an immediate bulk Soulseek search burst; auto-download follows the existing wishlist scheduler/manual run path.
+- Validation passed: focused `WishlistControllerTests`, frontend lint, frontend production build, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`. Full `dotnet test --no-restore` passed unit/non-integration projects and had one optional live mesh setup-time `502`; the exact failed integration test passed on rerun.
+
 ## 2026-04-24 16:10Z - Pushed pending fixes and checked release status
 
 - Rebasing local `main` onto remote release metadata commit `c93cf1653` applied cleanly, then pushed the pending commits through `00742f9cd` to `snapetech/slskdn`.

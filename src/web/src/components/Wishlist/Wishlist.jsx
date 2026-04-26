@@ -221,11 +221,142 @@ const WishlistModal = ({ item, onClose, onSave }) => {
   );
 };
 
+const CsvImportModal = ({ onClose, onImport }) => {
+  const [csvText, setCsvText] = useState('');
+  const [filter, setFilter] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [autoDownload, setAutoDownload] = useState(false);
+  const [includeAlbum, setIncludeAlbum] = useState(false);
+  const [maxResults, setMaxResults] = useState(100);
+  const [importing, setImporting] = useState(false);
+
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setCsvText(await file.text());
+  };
+
+  const handleImport = async () => {
+    if (!csvText.trim()) {
+      toast.error('CSV text is required');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      await onImport({
+        autoDownload,
+        csvText,
+        enabled,
+        filter: filter.trim() || undefined,
+        includeAlbum,
+        maxResults,
+      });
+      onClose();
+    } catch (error) {
+      toast.error(`CSV import failed: ${error.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <Modal
+      onClose={onClose}
+      open
+      size="small"
+    >
+      <Modal.Header>
+        <Icon name="file alternate outline" />
+        Import CSV Playlist
+      </Modal.Header>
+      <Modal.Content>
+        <Form>
+          <Form.Input
+            accept=".csv,text/csv"
+            label="CSV File"
+            onChange={handleFile}
+            type="file"
+          />
+          <Form.TextArea
+            label="CSV Text"
+            onChange={(event) => setCsvText(event.target.value)}
+            placeholder="Track name,Artist name,Album name"
+            rows={8}
+            value={csvText}
+          />
+          <Form.Input
+            label="Filter (optional)"
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder="e.g., flac OR mp3"
+            value={filter}
+          />
+          <Form.Input
+            label="Max Results"
+            max={1_000}
+            min={1}
+            onChange={(event) =>
+              setMaxResults(Number.parseInt(event.target.value, 10) || 100)
+            }
+            type="number"
+            value={maxResults}
+          />
+          <Form.Group widths="equal">
+            <Form.Field>
+              <Checkbox
+                checked={enabled}
+                label="Enabled"
+                onChange={(_, data) => setEnabled(data.checked)}
+                toggle
+              />
+            </Form.Field>
+            <Form.Field>
+              <Checkbox
+                checked={autoDownload}
+                label="Auto-download matches"
+                onChange={(_, data) => setAutoDownload(data.checked)}
+                toggle
+              />
+            </Form.Field>
+            <Form.Field>
+              <Checkbox
+                checked={includeAlbum}
+                label="Include album"
+                onChange={(_, data) => setIncludeAlbum(data.checked)}
+                toggle
+              />
+            </Form.Field>
+          </Form.Group>
+        </Form>
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Close the CSV importer without adding any wishlist searches."
+          trigger={<Button onClick={onClose}>Cancel</Button>}
+        />
+        <Popup
+          content="Create wishlist searches from the parsed CSV rows using the selected options."
+          trigger={
+            <Button
+              loading={importing}
+              onClick={handleImport}
+              primary
+            >
+              Import
+            </Button>
+          }
+        />
+      </Modal.Actions>
+    </Modal>
+  );
+};
+
 const Wishlist = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalItem, setModalItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const loadItems = useCallback(async () => {
     try {
@@ -245,6 +376,10 @@ const Wishlist = () => {
   const handleAdd = () => {
     setModalItem(null);
     setShowModal(true);
+  };
+
+  const handleImportClick = () => {
+    setShowImportModal(true);
   };
 
   const handleEdit = (item) => {
@@ -280,6 +415,14 @@ const Wishlist = () => {
     return result;
   };
 
+  const handleImport = async (request) => {
+    const result = await wishlistAPI.importCsv(request);
+    toast.success(
+      `Imported ${result.createdCount} searches (${result.duplicateCount} duplicates, ${result.skippedCount} skipped)`,
+    );
+    await loadItems();
+  };
+
   return (
     <div className="wishlist-container">
       <Segment
@@ -298,16 +441,35 @@ const Wishlist = () => {
             </Header.Subheader>
           </Header.Content>
         </Header>
-        <Button
-          floated="right"
-          icon
-          labelPosition="left"
-          onClick={handleAdd}
-          primary
-        >
-          <Icon name="plus" />
-          Add Search
-        </Button>
+        <Popup
+          content="Add one saved search to the wishlist. Enabled wishlist entries run later using the normal conservative scheduler."
+          trigger={
+            <Button
+              floated="right"
+              icon
+              labelPosition="left"
+              onClick={handleAdd}
+              primary
+            >
+              <Icon name="plus" />
+              Add Search
+            </Button>
+          }
+        />
+        <Popup
+          content="Import a playlist CSV, such as a TuneMyMusic export, into wishlist searches without starting a large search burst immediately."
+          trigger={
+            <Button
+              floated="right"
+              icon
+              labelPosition="left"
+              onClick={handleImportClick}
+            >
+              <Icon name="file alternate outline" />
+              Import CSV
+            </Button>
+          }
+        />
       </Segment>
 
       {loading ? (
@@ -387,6 +549,13 @@ const Wishlist = () => {
           item={modalItem}
           onClose={() => setShowModal(false)}
           onSave={handleSave}
+        />
+      )}
+
+      {showImportModal && (
+        <CsvImportModal
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImport}
         />
       )}
     </div>
