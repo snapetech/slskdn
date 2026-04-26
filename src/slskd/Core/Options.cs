@@ -257,6 +257,12 @@ namespace slskd
         public GlobalOptions Global { get; init; } = new GlobalOptions();
 
         /// <summary>
+        ///     Gets transfer options.
+        /// </summary>
+        [Validate]
+        public TransfersOptions Transfers { get; init; } = new TransfersOptions();
+
+        /// <summary>
         ///     Gets the DhtRendezvous options.
         /// </summary>
         [YamlMember(Alias = "dht")]
@@ -1256,6 +1262,42 @@ namespace slskd
                 [Description("enable cost-based scheduling for multi-source downloads")]
                 [RequiresRestart]
                 public bool CostBasedScheduling { get; init; } = true;
+
+                /// <summary>
+                ///     Gets download retry options.
+                /// </summary>
+                [Validate]
+                public RetryOptions Retry { get; init; } = new RetryOptions();
+
+                /// <summary>
+                ///     Download retry options.
+                /// </summary>
+                public class RetryOptions
+                {
+                    /// <summary>
+                    ///     Gets the maximum number of times to retry a failed transfer.
+                    /// </summary>
+                    [Range(1, 10)]
+                    public int Attempts { get; init; } = 3;
+
+                    /// <summary>
+                    ///     Gets the base delay, in milliseconds, between retry attempts.
+                    /// </summary>
+                    [Range(1000, 600000)]
+                    public int Delay { get; init; } = 5000;
+
+                    /// <summary>
+                    ///     Gets the maximum delay, in milliseconds, between retry attempts.
+                    /// </summary>
+                    [Range(30000, 3600000)]
+                    public int MaxDelay { get; init; } = 60000;
+
+                    /// <summary>
+                    ///     Gets the strategy for handling incomplete files upon retry.
+                    /// </summary>
+                    [Enum(typeof(Transfers.RetryIncompleteStrategy))]
+                    public string Incomplete { get; init; } = Transfers.RetryIncompleteStrategy.Overwrite.ToString().ToLowerInvariant();
+                }
             }
         }
 
@@ -1503,6 +1545,30 @@ namespace slskd
                 /// </summary>
                 public string[] AllowedFileTypes { get; init; } = Array.Empty<string>();
             }
+        }
+
+        /// <summary>
+        ///     Transfer options.
+        /// </summary>
+        public class TransfersOptions
+        {
+            /// <summary>
+            ///     Gets global upload options.
+            /// </summary>
+            [Validate]
+            public GlobalOptions.GlobalUploadOptions Upload { get; init; } = new GlobalOptions.GlobalUploadOptions();
+
+            /// <summary>
+            ///     Gets global download options.
+            /// </summary>
+            [Validate]
+            public GlobalOptions.GlobalDownloadOptions Download { get; init; } = new GlobalOptions.GlobalDownloadOptions();
+
+            /// <summary>
+            ///     Gets user groups.
+            /// </summary>
+            [Validate]
+            public GroupsOptions Groups { get; init; } = new GroupsOptions();
         }
 
         /// <summary>
