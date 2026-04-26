@@ -217,6 +217,11 @@ public class TransfersControllerTests
         var stateSnapshot = new Mock<IStateSnapshot<slskd.State>>();
         stateSnapshot.SetupGet(snapshot => snapshot.Value).Returns(state ?? new slskd.State());
 
+        var users = new Mock<IUserService>();
+        users
+            .Setup(service => service.GetIPEndPointAsync(It.IsAny<string>()))
+            .ReturnsAsync(new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, 1234));
+
         using var autoReplaceBackgroundService = new AutoReplaceBackgroundService(
             Mock.Of<IAutoReplaceService>(),
             Mock.Of<ISoulseekClient>(),
@@ -225,7 +230,7 @@ public class TransfersControllerTests
 
         return new TransfersController(
             transferService.Object,
-            Mock.Of<IUserService>(),
+            users.Object,
             optionsSnapshot.Object,
             stateSnapshot.Object,
             Mock.Of<IAutoReplaceService>(),

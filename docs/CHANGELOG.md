@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Aligned upload governor speed buckets with the upstream `transfers.groups` option tree while retaining legacy global upload speed fallback.
 - Ported upstream relay IPv6-mapped IPv4 handling so relay agent CIDR checks work behind IPv6-capable HTTP stacks.
 - Ported upstream automatic download retry/resume behavior, retry configuration docs, transfer attempt reporting, and completed-transfer report filtering.
 - Ported upstream username-pattern blacklist support, blacklist decision caching, and network/API guards for blacklisted users.
