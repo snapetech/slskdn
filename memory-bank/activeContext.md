@@ -7,9 +7,11 @@
   - updated dependencies on `main`: `uuid` to `14.0.0`, `OpenTelemetry` to `1.15.3`, and `OpenTelemetry.Exporter.OpenTelemetryProtocol` to `1.15.3`; `OpenTelemetry.Api` now resolves transitively to `1.15.3`
   - created missing GitHub labels `npm` and `nuget`, and applied `dependencies` plus the ecosystem labels to PRs `#213`, `#214`, and `#215`
   - validation passed: `npm run lint`, `dotnet build src/slskd/slskd.csproj --no-restore`, `git diff --check`, `bash ./bin/lint`, NuGet/npm vulnerability checks, and full `dotnet test --no-restore`
+  - pushed commit `7263f8c8f` to `main`, commented on PRs `#213`, `#214`, and `#215`, then closed them as superseded by the direct `main` update
+  - verified `gh pr list --repo snapetech/slskdn --state open` returns no open PRs
 - Next steps:
-  1. Commit and push the dependency update.
-  2. Comment on the Dependabot PRs with the action taken; close them only after the pushed update is visible on `main`.
+  1. Wait for GitHub Dependabot/security scanning to refresh the default-branch vulnerability count.
+  2. Do not create build tags unless explicitly requested.
 
 ## Update 2026-04-26 20:08:00Z
 

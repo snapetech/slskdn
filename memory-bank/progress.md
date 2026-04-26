@@ -3,6 +3,7 @@
 - Reviewed open PRs `#213`, `#214`, and `#215` on `snapetech/slskdn`.
 - Applied the dependency updates on `main`: `src/web` now uses `uuid 14.0.0`; `src/slskd` now uses `OpenTelemetry 1.15.3` and `OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.3`, which resolves transitive `OpenTelemetry.Api` and `OpenTelemetry.Api.ProviderBuilderExtensions` to `1.15.3`.
 - Created missing GitHub labels `npm` and `nuget`, then added `dependencies` plus the ecosystem label to the existing Dependabot PRs so future Dependabot PRs do not repeat the missing-label warning.
+- Pushed commit `7263f8c8f` to `main`, commented on PRs `#213`, `#214`, and `#215`, and closed them as superseded by the direct update; `gh pr list --repo snapetech/slskdn --state open` now returns no open PRs.
 - Validation passed: `npm run lint`, `dotnet build src/slskd/slskd.csproj --no-restore`, `git diff --check`, `bash ./bin/lint`, NuGet/npm vulnerability checks, and full `dotnet test --no-restore` (`46` main tests, `3579` unit tests, `276` integration tests). The backend build still emits existing generated MessagePack warnings.
 
 ## 2026-04-26 19:45Z - Implemented issue 216 CSV wishlist import
