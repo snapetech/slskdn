@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Ported upstream transfer configuration documentation and Docker user-mode documentation while retaining slskdN's existing integration key.
 - Ported upstream Docker legacy root-mode compatibility for containers without `--user` or `PUID`/`PGID`.
 - Ported upstream Docker non-root runtime support for `--user` and `PUID`/`PGID`, preserving slskdN image metadata.
 - Applied upstream favicon metadata while keeping slskdN's newer frontend dependency graph in place.
