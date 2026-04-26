@@ -20,6 +20,13 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
 
+## [0.25.1-slskdn.183] — 2026-04-26
+
+- Synced slskdN with upstream `slskd` through 0.25.1 while preserving the fork-specific feature set and packaging/release channels.
+- Reconciled overlapping upstream work for transfer retry/resume, server-side blacklist/search handling, delete-on-disk support, search result filtering/sorting, batch download tracking API coverage, and the Prometheus metrics endpoint.
+- Retained slskdN-specific additions where they still go beyond upstream, including auto-replace/download continuation workflows, folder-selection UI, saved search defaults, Prometheus metrics UI/dashboard, VPN/Gluetun integration, and slskdN packaging/release metadata.
+- Updated README, badges, docs, comparison tables, and package metadata from the 0.24.x base line to the 0.25.1 base line and continued the stable fork sequence as `0.25.1-slskdn.183`.
+
 ## [Unreleased]
 
 - Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.
@@ -118,6 +125,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed a live `kspls0` source-ranking database race where concurrent transfer history updates could trip `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username`. Download success/failure counters now use a single atomic SQLite upsert, with regression coverage proving concurrent first writes for the same username preserve every counter update.
 - Fixed DHT rendezvous diagnostics authentication so configured API keys can access `/api/v0/dht/status`, `/api/v0/dht/peers`, and `/api/v0/overlay/stats` instead of those endpoints falling through to bearer-only auth despite the rest of the operator API accepting API keys.
 - Resolved the remaining Dependabot security alert without suppressions: removed the vulnerable deprecated `OpenTelemetry.Exporter.Jaeger` package, kept `exporter: jaeger` working through the supported OTLP exporter path for Jaeger collectors, bumped `AWSSDK.S3` to `4.0.21.2`, and refreshed the npm lockfiles for the active Dependabot-managed package ranges.
+
 - Fixed the latest issue `#209` overlay-search root cause: reciprocal mesh connections now keep independent inbound and outbound lifecycles, outbound sockets run the same message loop as inbound sockets, and mesh search responses are routed through a request router instead of competing readers on the same TLS stream. This prevents two healthy peers from disposing or starving each other's live connection after DHT discovery succeeds, and the loopback integration proof now repeats real `MeshOverlaySearchService` searches over the same outbound connection to prove the path stays usable.
 - Fixed the AUR binary package source cache trap: the GitHub Linux glibc zips for `slskdn-bin` and `slskdn-dev` are now saved under versioned local source filenames, so yay/makepkg cannot build a package labeled with a newer `pkgver` while silently reusing an older cached release zip.
 - Fixed the issue `#209` privacy leak in DHT/overlay logs: mesh usernames, peer ids, and public endpoints now go through `OverlayLogSanitizer` before operator logs, so pasted remote logs no longer expose raw Soulseek names like the earlier `Accepted mesh connection from ...` messages.

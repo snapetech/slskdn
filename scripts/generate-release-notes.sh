@@ -289,6 +289,21 @@ if [[ -n "$COMMITS" ]]; then
   DISPLAY_COMMITS="$(printf '%s' "$DISPLAY_COMMITS" | trim_blank_edges || true)"
 fi
 
+INCLUDE_COMMIT_DETAILS=1
+
+if [[ -n "$DISPLAY_COMMITS" ]]; then
+  commit_count="$(printf '%s\n' "$DISPLAY_COMMITS" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  synthesized_commit_limit="${RELEASE_NOTES_SYNTHETIC_COMMIT_LIMIT:-80}"
+
+  if [[ -z "$TAG_SECTION" && "$commit_count" -gt "$synthesized_commit_limit" ]]; then
+    err "refusing to synthesize release notes from ${commit_count} commits for ${LOGICAL_VERSION}; add a docs/CHANGELOG.md section for this version"
+  fi
+
+  if [[ -n "$TAG_SECTION" && "$commit_count" -gt "$synthesized_commit_limit" ]]; then
+    INCLUDE_COMMIT_DETAILS=0
+  fi
+fi
+
 PRODUCT_NAME="${RELEASE_NOTES_PRODUCT_NAME:-}"
 if [[ -z "$PRODUCT_NAME" ]]; then
   PRODUCT_NAME="$(basename "$(git config --get remote.origin.url || echo slskdn)" .git)"
@@ -325,18 +340,20 @@ mkdir -p "$(dirname "$OUT_PATH")"
     fi
   fi
 
-  printf '## Included Commits\n\n'
-  if [[ -z "$DISPLAY_COMMITS" ]]; then
-    printf '%s\n' "- No product commits listed for \`${LOGICAL_VERSION}\` after filtering release-hygiene docs commits."
-  else
-    while IFS=$'\t' read -r sha subject; do
-      short_sha="${sha:0:7}"
-      if [[ -n "$REPO_URL" ]]; then
-        printf '%s\n' "- \`${short_sha}\` ${subject} ([commit](${REPO_URL}/commit/${sha}))"
-      else
-        printf '%s\n' "- \`${short_sha}\` ${subject}"
-      fi
-    done <<<"$DISPLAY_COMMITS"
+  if [[ "$INCLUDE_COMMIT_DETAILS" -eq 1 ]]; then
+    printf '## Included Commits\n\n'
+    if [[ -z "$DISPLAY_COMMITS" ]]; then
+      printf '%s\n' "- No product commits listed for \`${LOGICAL_VERSION}\` after filtering release-hygiene docs commits."
+    else
+      while IFS=$'\t' read -r sha subject; do
+        short_sha="${sha:0:7}"
+        if [[ -n "$REPO_URL" ]]; then
+          printf '%s\n' "- \`${short_sha}\` ${subject} ([commit](${REPO_URL}/commit/${sha}))"
+        else
+          printf '%s\n' "- \`${short_sha}\` ${subject}"
+        fi
+      done <<<"$DISPLAY_COMMITS"
+    fi
   fi
 } >"$OUT_PATH"
 
