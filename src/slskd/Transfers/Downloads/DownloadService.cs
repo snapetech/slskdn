@@ -1231,7 +1231,7 @@ namespace slskd.Transfers.Downloads
                         });
                     }
 
-                    if (OptionsMonitor.CurrentValue.Integrations.Ftp.Enabled)
+                    if (OptionsMonitor.CurrentValue.Integration.Ftp.Enabled)
                     {
                         _ = FTP.UploadAsync(finalFilename);
                     }

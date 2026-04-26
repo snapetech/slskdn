@@ -22,6 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the upstream transfer-option sync to compile against slskdN's existing integration option naming while preserving the new upstream retry/group option types.
 - Began upstream `slskd` 0.25.1 synchronization by porting the upstream search-again fix and date-ordered transfer migration updates, including the new transfer retry/batch metadata migration.
 - Ported upstream retry helper changes so callers can set a base retry delay and cap retained retry exception history.
 - Ported upstream transfer-option plumbing for retry and group behavior while keeping the existing slskdN legacy option surfaces present during the sync.

@@ -29,7 +29,7 @@ namespace slskd.Integrations.FTP
     using FluentFTP;
     using FluentFTP.Exceptions;
     using Microsoft.Extensions.Logging;
-    using static slskd.Options.IntegrationsOptions;
+    using static slskd.Options.IntegrationOptions;
 
     /// <summary>
     ///     FTP Integration service.
@@ -53,7 +53,7 @@ namespace slskd.Integrations.FTP
         }
 
         private IFTPClientFactory Factory { get; set; }
-        private FtpOptions FtpOptions => OptionsMonitor.CurrentValue.Integrations.Ftp;
+        private FtpOptions FtpOptions => OptionsMonitor.CurrentValue.Integration.Ftp;
         private ILogger<FTPService> Log { get; set; }
         private IOptionsMonitor<Options> OptionsMonitor { get; }
 

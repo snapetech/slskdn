@@ -119,7 +119,7 @@ namespace slskd
         /// <remarks>This should be called at application startup.</remarks>
         public virtual void Start()
         {
-            if (OptionsAtStartup.Integrations.Vpn.Enabled)
+            if (OptionsAtStartup.Integration.Vpn.Enabled)
             {
                 VPN.StartPolling();
             }
@@ -256,7 +256,7 @@ namespace slskd
                             return;
                         }
 
-                        if (OptionsAtStartup.Integrations.Vpn.Enabled && !VPN.IsReady)
+                        if (OptionsAtStartup.Integration.Vpn.Enabled && !VPN.IsReady)
                         {
                             IsAwaitingVpn = true;
                             return;

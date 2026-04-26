@@ -26,7 +26,7 @@ namespace slskd.Integrations.FTP
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
     using FluentFTP;
-    using static slskd.Options.IntegrationsOptions;
+    using static slskd.Options.IntegrationOptions;
 
     /// <summary>
     ///     FTP client factory.
@@ -42,7 +42,7 @@ namespace slskd.Integrations.FTP
             OptionsMonitor = optionsMonitor;
         }
 
-        private FtpOptions FtpOptions => OptionsMonitor.CurrentValue.Integrations.Ftp;
+        private FtpOptions FtpOptions => OptionsMonitor.CurrentValue.Integration.Ftp;
         private IOptionsMonitor<Options> OptionsMonitor { get; set; }
 
         /// <summary>
