@@ -6874,6 +6874,21 @@ Code quality improvements were completed as part of Option A:
   - `git diff --check`: passed
   - manual disposable-node verification on `http://127.0.0.1:5040`: `/`, `/searches`, `/pods`, `/system/info`, and `/system/mediacore` all loaded without page errors; authenticated `/api/v0/pods` returned `200`; a burst of `25` authenticated `/api/v0/session` requests stayed `200`; repeated browser navigation produced no `429`; first-run share bootstrap logged recreate/scan without a fake corruption exception
 
+## 2026-04-26 20:08:00Z
+
+- Implemented GitHub issue `#216` by adding CSV playlist import to the Wishlist workflow instead of starting an immediate bulk Soulseek search/download burst.
+- Added a TuneMyMusic-friendly CSV parser for track/artist/album columns with quoted field support, duplicate detection, skipped-row reporting, and optional album inclusion.
+- Added authenticated `POST /api/v0/wishlist/import/csv` and frontend Wishlist import controls for CSV file/text input, filter, max results, enabled state, and auto-download.
+- Validation passed: focused `WishlistControllerTests`, frontend lint, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`.
+
+## 2026-04-26 19:33:25Z
+
+- Re-audited Bas's upload failure path assuming a product bug rather than user error: listener startup, runtime listener reconfiguration, inbound peer queue handling, upload queue release, share lookup, Soulseek.NET endpoint resolution, and transfer connection setup.
+- Found a concrete reachability bug: `soulseek.listen_port` / `soulseek.listen_ip_address` runtime changes can restart the local listener through Soulseek.NET without refreshing the port advertised to the Soulseek server. That can leave peers trying the old port and make uploads look broken even though local port probes pass.
+- Documented the gotcha in ADR-0001 and committed it immediately as `d326113fc`.
+- Marked the listen endpoint options as `[RequiresReconnect]` and added `ApplicationLifecycleTests.OptionsChanged_WhenListenPortChangesWhileConnected_SetsPendingReconnect` so connected option changes now surface the required reconnect instead of silently leaving stale server-advertised endpoint state.
+- Validation: `git diff --check` for touched files passed, `bash ./bin/lint` passed, focused `ApplicationLifecycleTests` passed, full `dotnet test` passed unit/non-integration projects but hit the known optional live mesh account setup flake once (`Overlay connect request failed: 502`); rerunning that exact integration test by itself passed.
+
 ## 2026-04-20 04:05:00Z
 
 - Investigated the failed tag build `build-main-0.24.5-slskdn.161` and pulled the raw GitHub Actions logs for `Build on Tag #228`.

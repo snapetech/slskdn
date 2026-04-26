@@ -1235,3 +1235,9 @@
 - [x] Add optional live-account mesh search/transfer smoke
   - Status: completed (2026-04-22)
   - Notes: Added and live-validated a full-instance integration smoke that uses `tests/slskd.Tests.Integration/local-mesh-accounts.env` or matching environment variables to start two real slskdN processes with live Soulseek test credentials, wait for login, host a generated probe file on beta, mesh-search it from alpha, download it through the pod path, and byte-compare the transfer. Fresh short alphanumeric Soulseek test accounts were generated, stored in the gitignored env file and in OpenBao at `secret/slskdn/mesh-live-test-accounts`, and `TwoNodeMeshFullInstanceTests` passed with the public-network live-account path exercised.
+- [x] Fix Soulseek listen endpoint reconnect semantics for upload reachability
+  - Status: completed (2026-04-26)
+  - Notes: Deep upload-path audit found that runtime listen endpoint changes can move the local Soulseek.NET listener without forcing server endpoint advertisement to refresh. Marked `soulseek.listen_ip_address` and `soulseek.listen_port` as reconnect-required and added regression coverage for connected option changes setting `PendingReconnect`.
+- [x] Build CSV playlist import into Wishlist for issue #216
+  - Status: completed (2026-04-26)
+  - Notes: Added `POST /api/v0/wishlist/import/csv` and a Wishlist page import modal for TuneMyMusic-style CSV exports. Rows are imported as conservative wishlist searches with optional auto-download, filter, max results, enabled state, and album inclusion; import deduplicates against existing/imported rows and does not immediately burst-search the Soulseek network.

@@ -154,6 +154,43 @@ public class ApplicationLifecycleTests
         soulseekClient.VerifyRemove(x => x.ExcludedSearchPhrasesReceived -= It.IsAny<EventHandler<IReadOnlyCollection<string>>>(), Times.Once);
     }
 
+    [Fact]
+    public async Task OptionsChanged_WhenListenPortChangesWhileConnected_SetsPendingReconnect()
+    {
+        var optionsMonitor = new TestOptionsMonitor<Options>(new Options());
+        var applicationState = new ManagedState<State>();
+        var reconfigured = new TaskCompletionSource<object?>();
+
+        var application = CreateApplication(
+            optionsMonitor,
+            applicationState,
+            new ManagedState<ShareState>(),
+            new ManagedState<RelayState>(),
+            out _,
+            out var soulseekClient);
+
+        soulseekClient.SetupGet(client => client.State).Returns(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn);
+        soulseekClient
+            .Setup(client => client.ReconfigureOptionsAsync(
+                It.IsAny<SoulseekClientOptionsPatch>(),
+                It.IsAny<System.Threading.CancellationToken?>()))
+            .Callback(() => reconfigured.TrySetResult(null))
+            .ReturnsAsync(false);
+
+        optionsMonitor.Set(new Options
+        {
+            Soulseek = new Options.SoulseekOptions
+            {
+                ListenPort = 50301,
+            },
+        });
+
+        await reconfigured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(applicationState.CurrentValue.PendingReconnect);
+        application.Dispose();
+    }
+
     private static Application CreateApplication(
         OptionsAtStartup optionsAtStartup,
         TestOptionsMonitor<Options> optionsMonitor,

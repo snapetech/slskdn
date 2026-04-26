@@ -1,3 +1,30 @@
+## Update 2026-04-26 20:08:00Z
+
+- Current task: Issue `#216` CSV playlist import is implemented locally and validation is in progress.
+- Last activity:
+  - fetched GitHub issue `#216` from `snapetech/slskdn`: request is batch downloading music from CSV exports like TuneMyMusic
+  - added a wishlist CSV import model/parser that recognizes TuneMyMusic-style track/artist/album headers, handles quoted CSV fields, generates artist/title wishlist searches, and deduplicates against existing/imported rows
+  - added authenticated `POST /api/v0/wishlist/import/csv`; import creates wishlist entries without starting a large immediate Soulseek search burst, while optional `autoDownload` uses the existing wishlist scheduler/manual run path
+  - added a Wishlist page CSV import modal with file/text input, filter, max results, enabled, auto-download, and album-term controls
+  - focused validation passed: `WishlistControllerTests`, frontend lint, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Run any additional targeted frontend test/build if needed.
+  2. Commit the issue `#216` work separately from the pre-existing upload-listener changes in the checkout.
+
+## Update 2026-04-26 19:33:25Z
+
+- Current task: None. Deep code audit of Bas upload failure found a concrete listen endpoint advertisement bug and the fix is ready to commit/push.
+- Last activity:
+  - re-audited listener setup, runtime listener updates, inbound upload enqueue handling, upload queue processing, share resolution, and Soulseek.NET peer/transfer connection behavior
+  - found that runtime `soulseek.listen_port` / `soulseek.listen_ip_address` changes can restart the local listener without forcing the Soulseek server to advertise the new endpoint
+  - documented the gotcha and committed ADR-0001 entry as `d326113fc`
+  - marked listen endpoint options as reconnect-required and added focused regression coverage for connected listen-port updates setting `PendingReconnect`
+  - validation passed: `git diff --check` for touched files, `bash ./bin/lint`, focused `ApplicationLifecycleTests`, and rerun of the one flaky optional live mesh integration test
+  - full `dotnet test` passed unit/non-integration projects and failed once only on the known optional live mesh account setup-time overlay `502`; the exact failing test passed on rerun
+- Next steps:
+  1. Commit and push the upload listen endpoint fix.
+  2. If this needs to supersede release `.179`, tag a new build after push.
+
 ## Update 2026-04-26 19:14:31Z
 
 - Current task: None. Bas upload troubleshooting instrumentation is implemented, validated, committed, and pushed to `snapetech/slskdn` `main`.
