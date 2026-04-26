@@ -1,3 +1,10 @@
+## 2026-04-26 20:37Z - Updated 0.25.1 base references and deployed kspls0 manual build
+
+- Updated active user-facing and packaging metadata from the 0.24.x upstream base to `0.25.1` / `0.25.1-slskdn.1`, including README badges/install examples, build/dev documentation, workflow fallback examples, AUR/RPM/Debian/Homebrew/Chocolatey/Winget/Flatpak/Helm/TrueNAS/Synology/Snap metadata, and the stable metadata updater.
+- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, full `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`.
+- Published the Linux x64 manual artifact with the release-aligned multi-file profile and deployed it to `kspls0` under `/usr/lib/slskd/releases/manual-39a4f2c16`.
+- Live `kspls0` validation: `/usr/lib/slskd/current/slskd --version` reports `0.25.1-slskdn.1+manual.39a4f2c16`, systemd is active with `NRestarts=0`, listeners are present on `5030`, `50300`, `50305`, `50306`, and `50400`, Soulseek logged in, a mesh neighbor reconnected, no current-process error/fatal/exception matches were found, and no new coredumps appeared.
+
 ## 2026-04-24 16:10Z - Pushed pending fixes and checked release status
 
 - Rebasing local `main` onto remote release metadata commit `c93cf1653` applied cleanly, then pushed the pending commits through `00742f9cd` to `snapetech/slskdn`.

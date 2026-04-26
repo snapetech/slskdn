@@ -1,3 +1,16 @@
+## Update 2026-04-26 20:37:00Z
+
+- Current task: None. Upstream-base version references are updated to `0.25.1`, and the upstream-sync branch has been built and manually deployed to `kspls0`.
+- Last activity:
+  - updated active README badges/install examples, build/dev documentation, workflow fallback examples, and stable packaging metadata from the 0.24.x base to `0.25.1` / `0.25.1-slskdn.1`
+  - kept historical changelog/archive records out of the active-reference cleanup except where package metadata uses the current top entry
+  - validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, full `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`
+  - published a Linux x64 manual artifact and deployed it on `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; `/usr/lib/slskd/current/slskd --version` reports `0.25.1-slskdn.1+manual.39a4f2c16`
+  - live soak on `kspls0` stayed healthy: systemd active, `NRestarts=0`, listeners present on `5030`, `50300`, `50305`, `50306`, and `50400`, Soulseek logged in, one mesh neighbor reconnected, no current-process error/fatal/exception matches, and no new coredumps
+- Next steps:
+  1. Commit the version metadata/docs update.
+  2. Push/open review against `snapetech/slskdn` when ready; do not create build tags unless explicitly requested.
+
 ## Update 2026-04-26 20:25:00Z
 
 - Current task: Upstream `slskd` 0.25.1 synchronization is implemented and locally validated on branch `sync/upstream-0.25.1` in `/home/keith/Documents/code/slskdn-upstream-sync`.

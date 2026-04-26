@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **chore**: Update active upstream-base references to `0.25.1` and smoke the synced build on `kspls0`.
+ - Status: completed (2026-04-26)
+ - Priority: P1
+ - Notes: Updated active README/download examples, build/dev docs, workflow fallbacks, and packaging metadata to `0.25.1` / `0.25.1-slskdn.1`. Validation passed with packaging metadata checks, `git diff --check`, full Release build/tests via `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`. Deployed manual Linux x64 build `0.25.1-slskdn.1+manual.39a4f2c16` to `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; service stayed active with `NRestarts=0`, expected listeners, Soulseek login, mesh reconnect, no current-process issue matches, and no new coredumps.
+
 - [x] **ux**: Publish mesh search results before Soulseek timeout completion.
  - Status: completed (2026-04-24)
  - Priority: P2

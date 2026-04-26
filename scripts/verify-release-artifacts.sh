@@ -2,7 +2,7 @@
 # Verify release artifacts: download, compute SHA256, optionally run binary for version.
 # Usage:
 #   ./scripts/verify-release-artifacts.sh [TAG]
-#   TAG defaults to latest dev tag (build-dev-*). Use e.g. build-dev-0.24.1.dev.91769607746
+#   TAG defaults to latest dev tag (build-dev-*). Use e.g. build-dev-0.25.1.dev.91769607746
 set -e
 
 REPO="${REPO:-snapetech/slskdn}"
@@ -13,7 +13,7 @@ if [ -z "$TAG" ]; then
   # gh release list columns: title, type, tag, date (tab-separated)
   TAG=$(gh release list --repo "$REPO" --limit 20 | awk -F'\t' '$3 ~ /^build-dev-/ {print $3; exit}')
   if [ -z "$TAG" ]; then
-    echo "No build-dev-* release found. Pass TAG explicitly, e.g. build-dev-0.24.1.dev.91769607746"
+    echo "No build-dev-* release found. Pass TAG explicitly, e.g. build-dev-0.25.1.dev.91769607746"
     exit 1
   fi
   echo "Using tag: $TAG"

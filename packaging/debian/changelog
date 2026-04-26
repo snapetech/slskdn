@@ -1,11 +1,11 @@
-slskdn (0.24.5.slskdn.179-1) stable; urgency=medium
+slskdn (0.25.1.slskdn.1-1) stable; urgency=medium
 
-  * Bump packaging metadata to stable release 0.24.5-slskdn.179
+  * Bump packaging metadata to stable release 0.25.1-slskdn.1
     (slskdn-main-linux-glibc-x64.zip)
 
  -- snapetech <slskdn@proton.me>  Mon, 23 Mar 2026 00:00:00 +0000
 
-slskdn (0.24.1.slskdn.41-1) stable; urgency=medium
+slskdn (0.25.1.slskdn.41-1) stable; urgency=medium
 
   * CHANGELOG.md: add project CHANGELOG for 40-fixes, I2P, RelayOnly,
     ExtractPcmSamples, Mesh:SyncSecurity, breaking behavior
@@ -15,20 +15,20 @@ slskdn (0.24.1.slskdn.41-1) stable; urgency=medium
 
  -- snapetech <slskdn@proton.me>  Sun, 25 Jan 2026 12:00:00 +0000
 
-slskdn (0.24.1.slskdn.40-1) stable; urgency=medium
+slskdn (0.25.1.slskdn.40-1) stable; urgency=medium
 
-  * Bump to 0.24.1-slskdn.40 (slskdn-main-linux-x64.zip)
+  * Bump to 0.25.1-slskdn.1 (slskdn-main-linux-x64.zip)
 
  -- snapetech <slskdn@proton.me>  Sat, 25 Jan 2026 12:00:00 +0000
 
-slskdn (0.24.1.slskdn.7-1) stable; urgency=medium
+slskdn (0.25.1.slskdn.7-1) stable; urgency=medium
 
   * Fix race condition in SourceRankingService history recording
   * Update AUR package description with distinctive branding
 
  -- snapetech <slskdn@proton.me>  Sat, 06 Dec 2025 10:00:00 +0000
 
-slskdn (0.24.1.slskdn.6-1) stable; urgency=medium
+slskdn (0.25.1.slskdn.6-1) stable; urgency=medium
 
   * Initial release of slskdn fork
   * Wishlist feature with auto-download

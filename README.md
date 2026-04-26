@@ -22,7 +22,7 @@
   <a href="https://snapcraft.io/slskdn"><img src="https://img.shields.io/badge/snap-slskdn-E95420?logo=snapcraft" alt="Snap"></a>
   <a href="https://community.chocolatey.org/packages/slskdn"><img src="https://img.shields.io/badge/choco-slskdn-80B5E3?logo=chocolatey" alt="Chocolatey"></a>
   <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/s/snapetech/slskdn"><img src="https://img.shields.io/badge/winget-slskdn-00D1F1?logo=windows" alt="Winget"></a>
-  <a href="https://github.com/slskd/slskd/releases"><img src="https://img.shields.io/github/v/release/slskd/slskd?label=base%20slskd&color=purple" alt="Based on slskd"></a>
+  <a href="https://github.com/slskd/slskd/releases"><img src="https://img.shields.io/badge/base%20slskd-0.25.1-purple" alt="Based on slskd"></a>
   <a href="https://github.com/snapetech/slskdn/blob/main/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
   <a href="https://discord.gg/NRzj8xycQZ"><img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
@@ -361,8 +361,8 @@ This issue is **Arch/AUR-only**; other platforms are unaffected by this script.
 For Linux GitHub releases, use the bundled installer helper instead of manually unpacking a zip over an existing `slskd` service install. It rewrites the systemd unit to the extracted release tree so you do not keep launching an older package-managed binary by accident.
 
 ```bash
-wget https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.133/install-linux-release.sh
-sudo SLSKDN_VERSION=0.24.5-slskdn.133 bash install-linux-release.sh
+wget https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.1/install-linux-release.sh
+sudo SLSKDN_VERSION=0.25.1-slskdn.1 bash install-linux-release.sh
 ```
 
 The installer places the release under `/opt/slskdn`, keeps config at `/etc/slskd/slskd.yml`, and points `slskd.service` at the extracted release.
@@ -371,9 +371,9 @@ The installer places the release under `/opt/slskdn`, keeps config at `/etc/slsk
 For latest experimental features:
 
 <!-- BEGIN_DEV_BUILD -->
-**[Development Build master →](https://github.com/snapetech/slskdn/releases/tag/master)** 
+**[Development Build master →](https://github.com/snapetech/slskdn/releases/tag/master)**
 
-Version: `0.24.1-dev-91769043447` | Branch: `master` 
+Version: `0.25.1-dev-9EPOCH` | Branch: `master`
 
 ```bash
 # Arch Linux (AUR)
@@ -648,9 +648,9 @@ Features that prove stable may be submitted as PRs to upstream slskd. Our auto-r
 ---
 
 ## Versioning
-slskdN follows slskd's version numbers with a suffix: `0.24.1-slskdN.1` = First slskdN release based on slskd 0.24.1
+slskdN follows slskd's version numbers with a suffix: `0.25.1-slskdN.1` = First slskdN release based on slskd 0.25.1
 
-Development builds use epoch-based versioning: `0.24.1-dev-91769014133` for proper sorting.
+Development builds use epoch-based versioning: `0.25.1-dev-9EPOCH` for proper sorting.
 
 ---
 
@@ -713,7 +713,7 @@ If you're reading this code, you should assume that:
 
 ## 📈 Development Statistics
 
-**Based on slskd 0.24.1** with extensive enhancements:
+**Based on slskd 0.25.1** with extensive enhancements:
 
 - **Commits ahead**: 4,473+ commits
 - **New systems**: 7 major subsystems (Mesh, Swarm, Security, Pods, MediaCore, VirtualSoulfind, Service Fabric)

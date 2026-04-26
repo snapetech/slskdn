@@ -101,7 +101,7 @@ jobs:
         run: |
           # Get tag from either workflow_dispatch input or release ref
           TAG=${{ github.event.inputs.tag || github.ref_name }}
-          # Convert 0.24.1-slskdn.3 to 0.24.1.slskdn.3 for PKGBUILD
+          # Convert 0.25.1-slskdn.3 to 0.25.1.slskdn.3 for PKGBUILD
           PKGVER=$(echo $TAG | sed 's/-slskdn/.slskdn/')
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "pkgver=${PKGVER}" >> $GITHUB_OUTPUT

@@ -140,17 +140,17 @@ sed -i "s#^\$checksum.*#\$checksum   = \"${WIN_X64_HEX}\"#" packaging/chocolatey
 
 sed -i "s|^Source0:.*|Source0:        https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|" packaging/rpm/slskdn.spec
 sed -i "s|^Version:.*|Version:        ${PKGVER_DOTTED}|" packaging/rpm/slskdn.spec
-sed -i "s|0\.24\.5-slskdn\.[0-9]\+ (slskdn-main-linux-glibc-x64.zip)|${VERSION} (slskdn-main-linux-glibc-x64.zip)|" packaging/rpm/slskdn.spec
+sed -i "s|[0-9]\+\.[0-9]\+\.[0-9]\+-slskdn\.[0-9]\+ (slskdn-main-linux-glibc-x64.zip)|${VERSION} (slskdn-main-linux-glibc-x64.zip)|" packaging/rpm/slskdn.spec
 
 sed -i "1c slskdn (${PKGVER_DOTTED}-1) stable; urgency=medium" packaging/debian/changelog
-sed -i "s|stable release 0\.24\.5-slskdn\.[0-9]\+|stable release ${VERSION}|" packaging/debian/changelog
-sed -i "s|SLSKDN_VERSION=0\.24\.5-slskdn\.[0-9]\+|SLSKDN_VERSION=${VERSION}|" packaging/proxmox-lxc/README.md
+sed -i "s|stable release [0-9]\+\.[0-9]\+\.[0-9]\+-slskdn\.[0-9]\+|stable release ${VERSION}|" packaging/debian/changelog
+sed -i "s|SLSKDN_VERSION=[0-9]\+\.[0-9]\+\.[0-9]\+-slskdn\.[0-9]\+|SLSKDN_VERSION=${VERSION}|" packaging/proxmox-lxc/README.md
 
 sed -i "s|^pkgver=.*|pkgver=${PKGVER_DOTTED}|" packaging/aur/PKGBUILD
 sed -i "s|^pkgver=.*|pkgver=${PKGVER_DOTTED}|" packaging/aur/PKGBUILD-bin
 sed -i 's|slskdn-main-linux-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-x64.zip|slskdn-${pkgver}-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip|' packaging/aur/PKGBUILD-bin
 
-sed -i "s|https://github.com/snapetech/slskdn/releases/download/0\.24\.5-slskdn\.[0-9]\+/slskdn-main-linux-glibc-x64.zip|https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|g" packaging/flatpak/FLATHUB_SUBMISSION.md
+sed -i "s|https://github.com/snapetech/slskdn/releases/download/[0-9]\+\.[0-9]\+\.[0-9]\+-slskdn\.[0-9]\+/slskdn-main-linux-glibc-x64.zip|https://github.com/snapetech/slskdn/releases/download/${RELEASE_TAG}/slskdn-main-linux-glibc-x64.zip|g" packaging/flatpak/FLATHUB_SUBMISSION.md
 sed -i 's|slskdn-main-linux-x64.zip|slskdn-main-linux-glibc-x64.zip|g' packaging/flatpak/FLATHUB_SUBMISSION.md
 
 echo "Updated stable release metadata to ${VERSION} (tag ${RELEASE_TAG})."
