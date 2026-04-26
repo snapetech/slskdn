@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z135. Build Tags Cannot Nix-Smoke Unpublished Stable Release Assets
+
+**The Bug**: `build-main-0.25.1-slskdn.1` failed before publishing release assets because `build-on-tag.yml` made `publish` depend on a pre-publish `nix-smoke` job. The smoke script builds the checked-in stable flake, which fetches `https://github.com/snapetech/slskdn/releases/download/<version>/slskdn-main-linux-glibc-x64.zip`; for a brand-new release tag that asset does not exist yet, so Nix gets a 404 and blocks every release job.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `packaging/scripts/run-nix-package-smoke.sh`
+- `flake.nix`
+
+**Wrong**:
+```yaml
+publish:
+  needs: [parse, build, nix-smoke]
+```
+
+**Correct**:
+```yaml
+publish:
+  needs: [parse, build]
+```
+
+**Why This Keeps Happening**: The stable Nix package is a consumer of published release artifacts, not a producer. It can only be smoke-tested after the release exists and metadata has been rewritten with the new URLs and hashes, such as in the post-release stable metadata job.
+
 ### 0z134. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
 
 **The Bug**: Runtime updates to `soulseek.listen_port` or `soulseek.listen_ip_address` can restart the local Soulseek.NET listener without making the server learn the new advertised port. Soulseek.NET sends `SetListenPort` during login/config messages, not from `ReconfigureOptionsAsync()`, so remote peers may keep connecting to the stale port and uploads can appear broken even though the local listener is healthy.
