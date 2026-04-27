@@ -794,10 +794,12 @@ dotnet test
   - manually deployed `0.25.1-slskdn.183+manual.69da16e2e` to `kspls0` under `/usr/lib/slskd/releases/manual-69da16e2e`
   - confirmed the old unhandled `/api/v0/users/{username}/directory` timeout failures now return controlled responses instead of reaching exception middleware
   - found and fixed follow-up log noise where expected directory timeout/offline/connection failures still printed full exception stacks at information level
+  - found deploy-time download shutdown stack noise caused by `Retry.Do(...)` wrapping host-stop cancellation in `AggregateException`; documented the gotcha and patched `DownloadService`
 - Next steps:
-  1. Commit the concise directory failure logging change.
-  2. Rebuild and manually redeploy the updated commit to `kspls0`.
-  3. Re-run the live log soak and verify there are no fresh warnings/errors, stack traces, restarts, or coredumps.
+  1. Validate the aggregate shutdown cancellation fix locally.
+  2. Commit and push the updated fix set.
+  3. Rebuild and manually redeploy the updated commit to `kspls0`.
+  4. Re-run the live log soak and verify there are no fresh warnings/errors, stack traces, restarts, or coredumps.
 
 ## Update 2026-04-18 11:20:00Z
 

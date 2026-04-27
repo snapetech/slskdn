@@ -29,6 +29,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Quieted shutdown download cancellation during manual deploys when retry wrappers surface expected host-stop cancellation as `AggregateException`.
 - Quieted controlled remote user directory browse failures so expected offline, connection, and timeout outcomes still return 404/503 without printing exception stack traces at information level.
 - Fixed remote user directory browse timeouts so `POST /api/v0/users/{username}/directory` returns a controlled 503 when a Soulseek peer does not answer instead of emitting unhandled middleware stack traces.
 - Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.

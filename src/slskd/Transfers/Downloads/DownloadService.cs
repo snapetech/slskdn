@@ -582,9 +582,9 @@ namespace slskd.Transfers.Downloads
 
                                     Log.Debug("Download of {Filename} from {Username} successfully entered state {State}", transfer.Filename, transfer.Username, state);
                                 }
-                                catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+                                catch (Exception ex) when (IsShutdownCancellation(ex))
                                 {
-                                    Log.Debug(ex, "Download enqueue for {File} from {Username} cancelled during shutdown", transfer.Filename, transfer.Username);
+                                    Log.Debug("Download enqueue for {File} from {Username} cancelled during shutdown: {Message}", transfer.Filename, transfer.Username, ex.Message);
                                 }
                                 catch (Exception ex)
                                 {
@@ -1318,9 +1318,9 @@ namespace slskd.Transfers.Downloads
 
                 return transfer;
             }
-            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+            catch (Exception ex) when (IsShutdownCancellation(ex))
             {
-                Log.Debug(ex, "Download of {Filename} from user {Username} cancelled during shutdown", transfer.Filename, transfer.Username);
+                Log.Debug("Download of {Filename} from user {Username} cancelled during shutdown: {Message}", transfer.Filename, transfer.Username, ex.Message);
                 throw;
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is TimeoutException)
@@ -1413,9 +1413,9 @@ namespace slskd.Transfers.Downloads
                 await downloadTask.ConfigureAwait(false);
                 Log.Information("Task for download of {Filename} from {Username} completed successfully", filename, username);
             }
-            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+            catch (Exception ex) when (IsShutdownCancellation(ex))
             {
-                Log.Debug(ex, "Task for download of {Filename} from {Username} cancelled during shutdown", filename, username);
+                Log.Debug("Task for download of {Filename} from {Username} cancelled during shutdown: {Message}", filename, username, ex.Message);
             }
             catch (OperationCanceledException ex)
             {
@@ -1453,9 +1453,9 @@ namespace slskd.Transfers.Downloads
                 await enqueueTask.ConfigureAwait(false);
                 Log.Information("Task for enqueue of {Filename} from {Username} completed successfully", filename, username);
             }
-            catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+            catch (Exception ex) when (IsShutdownCancellation(ex))
             {
-                Log.Debug(ex, "Task for enqueue of {Filename} from {Username} cancelled during shutdown", filename, username);
+                Log.Debug("Task for enqueue of {Filename} from {Username} cancelled during shutdown: {Message}", filename, username, ex.Message);
             }
             catch (OperationCanceledException ex)
             {
@@ -1574,6 +1574,32 @@ namespace slskd.Transfers.Downloads
                 exception.InnerException is UserOfflineException ||
                 exception is Soulseek.TransferException { InnerException: UserOfflineException } ||
                 exception.Message.Contains("appears to be offline", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsShutdownCancellation(Exception exception)
+        {
+            if (!Application.IsShuttingDown)
+            {
+                return false;
+            }
+
+            return IsCancellationException(exception);
+        }
+
+        private static bool IsCancellationException(Exception exception)
+        {
+            if (exception is OperationCanceledException)
+            {
+                return true;
+            }
+
+            if (exception is AggregateException aggregateException)
+            {
+                var flattened = aggregateException.Flatten().InnerExceptions;
+                return flattened.Count > 0 && flattened.All(IsCancellationException);
+            }
+
+            return exception.InnerException is not null && IsCancellationException(exception.InnerException);
         }
     }
 }

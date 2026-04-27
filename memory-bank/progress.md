@@ -6892,6 +6892,13 @@ Code quality improvements were completed as part of Option A:
 - Updated `UsersController.Directory` to log concise expected peer failure summaries for offline, connection, and timeout cases while preserving the same controlled 404/503 API responses.
 - Validation passed: focused `UsersControllerTests` (`13` passed), `bash ./bin/lint`, and `git diff --check`.
 
+## 2026-04-27 01:25:00Z
+
+- Continued the `kspls0` manual-build soak after deploying `0.25.1-slskdn.183+manual.aed1ba25a`.
+- Found deploy-time download shutdown noise from the previous PID: active downloads cancelled by the intentional `systemctl stop` were wrapped by `Retry.Do(...)` in `AggregateException`, missed the direct shutdown cancellation catch filters, and logged error stack traces.
+- Documented the aggregate-wrapped shutdown cancellation gotcha in ADR-0001 and committed that docs-only entry before changing code.
+- Updated `DownloadService` shutdown cancellation filters to unwrap aggregate/inner exceptions and avoid error-path cleanup for expected host-stop download cancellation.
+
 ## 2026-04-20 03:20:00Z
 
 - Continued the strict local release-candidate cycle by debugging the one remaining non-gate `./bin/build` failure in the full Release integration sweep.

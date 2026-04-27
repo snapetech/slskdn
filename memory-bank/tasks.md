@@ -1258,3 +1258,7 @@
 - [x] Fix user directory browse timeout API noise
   - Status: completed (2026-04-27)
   - Notes: Live `kspls0` `0.25.1-slskdn.183` logs showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when remote Soulseek peers did not answer within the Soulseek.NET 5-second directory wait. `UsersController.Directory` now returns a controlled 503 for direct and wrapped timeout failures, and follow-up log inspection removed expected peer exception objects from the controlled directory failure logs so normal 404/503 outcomes do not print stack traces at information level. Focused controller coverage passed.
+
+- [x] Fix shutdown download cancellation stack noise
+  - Status: completed (2026-04-27)
+  - Notes: Manual `kspls0` deploys while downloads were in flight showed `Retry.Do(...)` wrapping expected host-stop cancellation in `AggregateException`, bypassing the direct `OperationCanceledException` shutdown filters and logging error stacks. `DownloadService` now classifies aggregate-wrapped shutdown cancellation before generic failure handling.
