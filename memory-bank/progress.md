@@ -6898,6 +6898,7 @@ Code quality improvements were completed as part of Option A:
 - Found deploy-time download shutdown noise from the previous PID: active downloads cancelled by the intentional `systemctl stop` were wrapped by `Retry.Do(...)` in `AggregateException`, missed the direct shutdown cancellation catch filters, and logged error stack traces.
 - Documented the aggregate-wrapped shutdown cancellation gotcha in ADR-0001 and committed that docs-only entry before changing code.
 - Updated `DownloadService` shutdown cancellation filters to unwrap aggregate/inner exceptions and avoid error-path cleanup for expected host-stop download cancellation.
+- Published and manually deployed `0.25.1-slskdn.183+manual.17603b6ee` to `kspls0`, then restarted that same fixed binary and ran a post-restart soak. Validation was clean: service active/running, `NRestarts=0`, expected listeners present, no warning/error/stack matches, no old directory timeout signature, and no coredumps.
 
 ## 2026-04-20 03:20:00Z
 

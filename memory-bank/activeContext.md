@@ -789,17 +789,16 @@ dotnet test
 
 ## Update 2026-04-22 18:20:00Z
 
-- Current task: Live-validate `0.25.1-slskdn.183` on `kspls0` and fix actionable runtime log issues.
+- Current task: None. Live `0.25.1-slskdn.183` validation on `kspls0` is clean after the manual `17603b6ee` deployment.
 - Last activity:
-  - manually deployed `0.25.1-slskdn.183+manual.69da16e2e` to `kspls0` under `/usr/lib/slskd/releases/manual-69da16e2e`
+  - manually deployed `0.25.1-slskdn.183+manual.17603b6ee` to `kspls0` under `/usr/lib/slskd/releases/manual-17603b6ee`
   - confirmed the old unhandled `/api/v0/users/{username}/directory` timeout failures now return controlled responses instead of reaching exception middleware
   - found and fixed follow-up log noise where expected directory timeout/offline/connection failures still printed full exception stacks at information level
   - found deploy-time download shutdown stack noise caused by `Retry.Do(...)` wrapping host-stop cancellation in `AggregateException`; documented the gotcha and patched `DownloadService`
+  - validated a fixed-binary restart and post-restart soak with service active/running, `NRestarts=0`, expected listeners up, no warning/error/stack matches, no old directory timeout signature, and no coredumps
 - Next steps:
-  1. Validate the aggregate shutdown cancellation fix locally.
-  2. Commit and push the updated fix set.
-  3. Rebuild and manually redeploy the updated commit to `kspls0`.
-  4. Re-run the live log soak and verify there are no fresh warnings/errors, stack traces, restarts, or coredumps.
+  1. Continue passive monitoring on `kspls0` if new live traffic reports issues.
+  2. Cut a tagged release only when explicitly requested.
 
 ## Update 2026-04-18 11:20:00Z
 
