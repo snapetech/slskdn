@@ -126,6 +126,37 @@ catch (TimeoutException)
 
 **Why This Keeps Happening**: Soulseek peer operations are remote-network calls. Timeouts, offline users, and direct/indirect connection failures are normal peer outcomes, not app faults. Controller actions that call Soulseek peers must translate those exceptions into 404/503 responses before they reach global middleware.
 
+### 0z138. Shutdown Download Cancellation Can Be Wrapped By Retry Helpers
+
+**The Bug**: Manual `kspls0` deploy stops while downloads are in flight can still emit error-level `Download ... failed` and `Task for download ... did not complete successfully` stack traces. The download path catches direct `OperationCanceledException` during `Application.IsShuttingDown`, but `Retry.Do(...)` can wrap the same shutdown cancellation in `AggregateException`, so it misses the shutdown filter and falls into generic error cleanup.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+catch (OperationCanceledException ex) when (Application.IsShuttingDown)
+{
+    Log.Debug(ex, "Download cancelled during shutdown");
+    throw;
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "Download failed");
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex) when (IsShutdownCancellation(ex))
+{
+    Log.Debug("Download cancelled during shutdown: {Message}", ex.Message);
+    throw;
+}
+```
+
+**Why This Keeps Happening**: Retry wrappers, task observers, and aggregate waits can change the outer exception type even when the root cause is still host shutdown cancellation. Shutdown classifiers must unwrap aggregate/inner exceptions and avoid passing expected cancellation exception objects to error logs.
+
 ### 0z134. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
 
 **The Bug**: Runtime updates to `soulseek.listen_port` or `soulseek.listen_ip_address` can restart the local Soulseek.NET listener without making the server learn the new advertised port. Soulseek.NET sends `SetListenPort` during login/config messages, not from `ReconfigureOptionsAsync()`, so remote peers may keep connecting to the stale port and uploads can appear broken even though the local listener is healthy.
