@@ -789,15 +789,15 @@ dotnet test
 
 ## Update 2026-04-22 18:20:00Z
 
-- Current task: None. The latest issue `#209` live follow-up is implemented, committed locally, and deployed to `kspls0` for validation.
+- Current task: Live-validate `0.25.1-slskdn.183` on `kspls0` and fix actionable runtime log issues.
 - Last activity:
-  - confirmed the current `kspls0` build is `0.24.5-slskdn.174+manual.6fce6575c` from `/usr/lib/slskd/releases/manual-6fce6575c`, with systemd active and `NRestarts=0`
-  - fixed mesh self-descriptor endpoint publication so automatic detection only advertises public-routable interfaces and configured self endpoints are not silently supplemented with private/container/VPN addresses
-  - added info-level mesh-search fanout diagnostics when active overlay peers are queried
-  - live validation showed DHT discovery and overlay connectivity are not stuck at zero: the host reconnected to one outbound `mesh_search` peer (`minimus7`), and a live `radiohead` search logged `peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0` while core Soulseek returned `252` responses / `16686` files
+  - manually deployed `0.25.1-slskdn.183+manual.69da16e2e` to `kspls0` under `/usr/lib/slskd/releases/manual-69da16e2e`
+  - confirmed the old unhandled `/api/v0/users/{username}/directory` timeout failures now return controlled responses instead of reaching exception middleware
+  - found and fixed follow-up log noise where expected directory timeout/offline/connection failures still printed full exception stacks at information level
 - Next steps:
-  1. Push the local issue `#209` commits if you want them on `origin/main`.
-  2. If testers still expect non-zero mesh search results, collect runs with more than one active mesh peer or a known shared probe query; the current single connected peer is reachable but simply returned no files for `radiohead`.
+  1. Commit the concise directory failure logging change.
+  2. Rebuild and manually redeploy the updated commit to `kspls0`.
+  3. Re-run the live log soak and verify there are no fresh warnings/errors, stack traces, restarts, or coredumps.
 
 ## Update 2026-04-18 11:20:00Z
 

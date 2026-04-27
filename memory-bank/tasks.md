@@ -1257,4 +1257,4 @@
 
 - [x] Fix user directory browse timeout API noise
   - Status: completed (2026-04-27)
-  - Notes: Live `kspls0` `0.25.1-slskdn.183` logs showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when remote Soulseek peers did not answer within the Soulseek.NET 5-second directory wait. `UsersController.Directory` now returns a controlled 503 for direct and wrapped timeout failures, with focused unit coverage.
+  - Notes: Live `kspls0` `0.25.1-slskdn.183` logs showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when remote Soulseek peers did not answer within the Soulseek.NET 5-second directory wait. `UsersController.Directory` now returns a controlled 503 for direct and wrapped timeout failures, and follow-up log inspection removed expected peer exception objects from the controlled directory failure logs so normal 404/503 outcomes do not print stack traces at information level. Focused controller coverage passed.

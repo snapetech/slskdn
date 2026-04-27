@@ -268,22 +268,22 @@ namespace slskd.Users.API
             }
             catch (UserOfflineException ex)
             {
-                Log.Information(ex, "User {Username} is offline for directory browse", username);
+                Log.Information("User {Username} is offline for directory browse: {Message}", username, ex.Message);
                 return NotFound("User is offline");
             }
             catch (SoulseekClientException ex) when (ex.InnerException is ConnectionException)
             {
-                Log.Information(ex, "Unable to connect to user {Username} for directory browse", username);
+                Log.Information("Unable to connect to user {Username} for directory browse: {Message}", username, ex.Message);
                 return StatusCode(503, "Unable to retrieve directory contents from user");
             }
             catch (SoulseekClientException ex) when (IsExpectedDirectoryFailure(ex))
             {
-                Log.Information(ex, "Unable to retrieve directory contents from user {Username}", username);
+                Log.Information("Unable to retrieve directory contents from user {Username}: {Message}", username, ex.Message);
                 return StatusCode(503, "Unable to retrieve directory contents from user");
             }
             catch (TimeoutException ex)
             {
-                Log.Information(ex, "Timed out retrieving directory contents from user {Username}", username);
+                Log.Information("Timed out retrieving directory contents from user {Username}: {Message}", username, ex.Message);
                 return StatusCode(503, "Unable to retrieve directory contents from user");
             }
         }

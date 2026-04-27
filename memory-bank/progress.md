@@ -6885,6 +6885,13 @@ Code quality improvements were completed as part of Option A:
 - Fixed `UsersController.Directory` so direct `TimeoutException` and wrapped `SoulseekClientException` timeout failures return a controlled `503 Unable to retrieve directory contents from user` instead of reaching global middleware.
 - Validation passed: focused `UsersControllerTests` (`13` passed), `bash ./bin/lint`, and `git diff --check`.
 
+## 2026-04-27 01:10:00Z
+
+- Continued live `kspls0` log inspection after deploying the manual `0.25.1-slskdn.183+manual.69da16e2e` build.
+- Confirmed the old directory timeout failure no longer reaches exception middleware, but expected remote peer timeouts still logged full `System.TimeoutException` stacks at information level because the controlled catch blocks passed exception objects to Serilog.
+- Updated `UsersController.Directory` to log concise expected peer failure summaries for offline, connection, and timeout cases while preserving the same controlled 404/503 API responses.
+- Validation passed: focused `UsersControllerTests` (`13` passed), `bash ./bin/lint`, and `git diff --check`.
+
 ## 2026-04-20 03:20:00Z
 
 - Continued the strict local release-candidate cycle by debugging the one remaining non-gate `./bin/build` failure in the full Release integration sweep.
