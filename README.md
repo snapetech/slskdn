@@ -371,8 +371,8 @@ This issue is **Arch/AUR-only**; other platforms are unaffected by this script.
 For Linux GitHub releases, use the bundled installer helper instead of manually unpacking a zip over an existing `slskd` service install. It rewrites the systemd unit to the extracted release tree so you do not keep launching an older package-managed binary by accident.
 
 ```bash
-wget https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.183/install-linux-release.sh
-sudo SLSKDN_VERSION=0.25.1-slskdn.183 bash install-linux-release.sh
+wget https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.184/install-linux-release.sh
+sudo SLSKDN_VERSION=0.25.1-slskdn.184 bash install-linux-release.sh
 ```
 
 The installer places the release under `/opt/slskdn`, keeps config at `/etc/slskd/slskd.yml`, and points `slskd.service` at the extracted release.

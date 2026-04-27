@@ -6900,6 +6900,13 @@ Code quality improvements were completed as part of Option A:
 - Updated `DownloadService` shutdown cancellation filters to unwrap aggregate/inner exceptions and avoid error-path cleanup for expected host-stop download cancellation.
 - Published and manually deployed `0.25.1-slskdn.183+manual.17603b6ee` to `kspls0`, then restarted that same fixed binary and ran a post-restart soak. Validation was clean: service active/running, `NRestarts=0`, expected listeners present, no warning/error/stack matches, no old directory timeout signature, and no coredumps.
 
+## 2026-04-27 01:55:00Z
+
+- Prepared follow-up stable release `0.25.1-slskdn.184` for the `kspls0` live-noise fixes.
+- Updated active README/docs/package metadata and the root/staged Homebrew formula versions from `0.25.1-slskdn.183` to `0.25.1-slskdn.184`.
+- Added a curated `docs/CHANGELOG.md` section for `184` covering the controlled directory timeout response, concise expected directory failure logs, and aggregate-wrapped shutdown download cancellation fix.
+- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `bash scripts/generate-release-notes.sh 0.25.1-slskdn.184 /tmp/slskdn-184-notes.md HEAD`, `bash ./bin/lint`, and `git diff --check`.
+
 ## 2026-04-20 03:20:00Z
 
 - Continued the strict local release-candidate cycle by debugging the one remaining non-gate `./bin/build` failure in the full Release integration sweep.

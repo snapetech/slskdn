@@ -1262,3 +1262,7 @@
 - [x] Fix shutdown download cancellation stack noise
   - Status: completed (2026-04-27)
   - Notes: Manual `kspls0` deploys while downloads were in flight showed `Retry.Do(...)` wrapping expected host-stop cancellation in `AggregateException`, bypassing the direct `OperationCanceledException` shutdown filters and logging error stacks. `DownloadService` now classifies aggregate-wrapped shutdown cancellation before generic failure handling.
+
+- [x] Prepare follow-up stable release 0.25.1-slskdn.184
+  - Status: completed (2026-04-27)
+  - Notes: Updated active release docs/package metadata from `0.25.1-slskdn.183` to `0.25.1-slskdn.184` and added curated changelog notes for the directory timeout/logging and shutdown cancellation fixes. Validation passed with packaging metadata validation, release-note generation, `bash ./bin/lint`, and `git diff --check`.

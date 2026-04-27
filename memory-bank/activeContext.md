@@ -1,3 +1,14 @@
+## Update 2026-04-27 01:45:00Z
+
+- Current task: Follow-up stable release `0.25.1-slskdn.184` metadata is prepared and validated.
+- Last activity:
+  - fixed and live-validated the two actionable `kspls0` findings from `183`: controlled directory browse timeout responses/logging, and aggregate-wrapped shutdown download cancellation noise
+  - updated active README/docs/package metadata and curated changelog notes from `0.25.1-slskdn.183` to `0.25.1-slskdn.184`
+- Next steps:
+  1. Commit and push the `184` release metadata.
+  2. Push `build-main-0.25.1-slskdn.184` to trigger the tag-only release build.
+  3. Watch the tag workflow and inspect failures if any.
+
 ## Update 2026-04-27 00:38:36Z
 
 - Current task: `kspls0` post-release `0.25.1-slskdn.183` log inspection and live-noise cleanup.

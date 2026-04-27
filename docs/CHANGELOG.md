@@ -20,6 +20,12 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
 
+## [0.25.1-slskdn.184] — 2026-04-27
+
+- Fixed remote user directory browse timeouts so `POST /api/v0/users/{username}/directory` returns a controlled 503 when a Soulseek peer does not answer instead of emitting unhandled middleware stack traces.
+- Quieted controlled remote user directory browse failures so expected offline, connection, and timeout outcomes still return 404/503 without printing exception stack traces at information level.
+- Quieted shutdown download cancellation during manual deploys when retry wrappers surface expected host-stop cancellation as `AggregateException`.
+
 ## [0.25.1-slskdn.183] — 2026-04-26
 
 - Synced slskdN with upstream `slskd` through 0.25.1 while preserving the fork-specific feature set and packaging/release channels.
@@ -29,9 +35,6 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
-- Quieted shutdown download cancellation during manual deploys when retry wrappers surface expected host-stop cancellation as `AggregateException`.
-- Quieted controlled remote user directory browse failures so expected offline, connection, and timeout outcomes still return 404/503 without printing exception stack traces at information level.
-- Fixed remote user directory browse timeouts so `POST /api/v0/users/{username}/directory` returns a controlled 503 when a Soulseek peer does not answer instead of emitting unhandled middleware stack traces.
 - Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.
 - Added CSV playlist import for issue `#216`: TuneMyMusic-style exports can now be imported from the Wishlist page into wishlist searches, with optional album terms, filters, enabled state, max results, and auto-download settings.
 - Fixed a Soulseek upload reachability bug where runtime changes to `soulseek.listen_port` or `soulseek.listen_ip_address` could restart the local listener without making the Soulseek server advertise the new endpoint; these options now correctly require a reconnect so peers do not keep trying a stale port.
