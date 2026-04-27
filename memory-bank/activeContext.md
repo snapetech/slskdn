@@ -1,3 +1,16 @@
+## Update 2026-04-27 00:38:36Z
+
+- Current task: `kspls0` post-release `0.25.1-slskdn.183` log inspection and live-noise cleanup.
+- Last activity:
+  - confirmed `kspls0` is running `0.25.1-slskdn.183`, systemd is active with `NRestarts=0`, expected listeners are present on `5030`, `50300`, `50305`, `50306`, and `50400`, and there are no coredumps in the sampled window
+  - narrowed the only actionable error-level signal to remote peer directory browse timeouts escaping as unhandled 500s for `POST /api/v0/users/{username}/directory`
+  - documented the gotcha in ADR-0001 and committed it immediately
+  - patched `UsersController.Directory` to return controlled `503` responses for direct or wrapped timeout failures, with focused unit coverage
+  - validation passed: focused `UsersControllerTests`, `bash ./bin/lint`, and `git diff --check`
+- Next steps:
+  1. Commit and push the directory-timeout API fix.
+  2. Decide whether to tag a follow-up stable build carrying the fix.
+
 ## Update 2026-04-26 21:22:00Z
 
 - Current task: Correcting 0.25.1 release numbering to continue the slskdN sequence.

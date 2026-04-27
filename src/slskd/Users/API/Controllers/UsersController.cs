@@ -276,6 +276,16 @@ namespace slskd.Users.API
                 Log.Information(ex, "Unable to connect to user {Username} for directory browse", username);
                 return StatusCode(503, "Unable to retrieve directory contents from user");
             }
+            catch (SoulseekClientException ex) when (IsExpectedDirectoryFailure(ex))
+            {
+                Log.Information(ex, "Unable to retrieve directory contents from user {Username}", username);
+                return StatusCode(503, "Unable to retrieve directory contents from user");
+            }
+            catch (TimeoutException ex)
+            {
+                Log.Information(ex, "Timed out retrieving directory contents from user {Username}", username);
+                return StatusCode(503, "Unable to retrieve directory contents from user");
+            }
         }
 
         /// <summary>
@@ -350,6 +360,11 @@ namespace slskd.Users.API
         private static bool IsExpectedUserInfoFailure(SoulseekClientException exception)
         {
             return exception.InnerException is ConnectionException or TimeoutException;
+        }
+
+        private static bool IsExpectedDirectoryFailure(SoulseekClientException exception)
+        {
+            return exception.InnerException is TimeoutException;
         }
 
         /// <summary>

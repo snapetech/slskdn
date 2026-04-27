@@ -262,5 +262,65 @@ namespace slskd.Tests.Unit.Users
             Assert.Equal(503, unavailable.StatusCode);
             Assert.Equal("Unable to retrieve directory contents from user", unavailable.Value);
         }
+
+        [Fact]
+        public async Task Directory_WhenPeerDirectoryTimesOut_ReturnsServiceUnavailable()
+        {
+            var soulseekClientMock = new Mock<ISoulseekClient>();
+            soulseekClientMock.SetupGet(x => x.State).Returns(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn);
+            soulseekClientMock
+                .Setup(x => x.GetDirectoryContentsAsync(
+                    "testuser",
+                    "Music",
+                    It.IsAny<int?>(),
+                    It.IsAny<CancellationToken?>()))
+                .ThrowsAsync(new TimeoutException("The wait timed out after 5000 milliseconds"));
+
+            var controller = new UsersController(
+                soulseekClient: soulseekClientMock.Object,
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: Mock.Of<IUserService>(),
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Directory(
+                "testuser",
+                new DirectoryContentsRequest { Directory = "Music" });
+
+            var unavailable = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(503, unavailable.StatusCode);
+            Assert.Equal("Unable to retrieve directory contents from user", unavailable.Value);
+        }
+
+        [Fact]
+        public async Task Directory_WhenWrappedPeerDirectoryTimesOut_ReturnsServiceUnavailable()
+        {
+            var soulseekClientMock = new Mock<ISoulseekClient>();
+            soulseekClientMock.SetupGet(x => x.State).Returns(SoulseekClientStates.Connected | SoulseekClientStates.LoggedIn);
+            soulseekClientMock
+                .Setup(x => x.GetDirectoryContentsAsync(
+                    "testuser",
+                    "Music",
+                    It.IsAny<int?>(),
+                    It.IsAny<CancellationToken?>()))
+                .ThrowsAsync(new SoulseekClientException(
+                    "Failed to retrieve directory contents",
+                    new TimeoutException("The wait timed out after 5000 milliseconds")));
+
+            var controller = new UsersController(
+                soulseekClient: soulseekClientMock.Object,
+                browseTracker: Mock.Of<IBrowseTracker>(),
+                userService: Mock.Of<IUserService>(),
+                safetyLimiter: Mock.Of<ISoulseekSafetyLimiter>(),
+                optionsSnapshot: Mock.Of<Microsoft.Extensions.Options.IOptionsSnapshot<slskd.Options>>());
+
+            var result = await controller.Directory(
+                "testuser",
+                new DirectoryContentsRequest { Directory = "Music" });
+
+            var unavailable = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(503, unavailable.StatusCode);
+            Assert.Equal("Unable to retrieve directory contents from user", unavailable.Value);
+        }
     }
 }

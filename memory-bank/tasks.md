@@ -1254,3 +1254,7 @@
 - [x] Add optional live-account mesh search/transfer smoke
   - Status: completed (2026-04-22)
   - Notes: Added and live-validated a full-instance integration smoke that uses `tests/slskd.Tests.Integration/local-mesh-accounts.env` or matching environment variables to start two real slskdN processes with live Soulseek test credentials, wait for login, host a generated probe file on beta, mesh-search it from alpha, download it through the pod path, and byte-compare the transfer. Fresh short alphanumeric Soulseek test accounts were generated, stored in the gitignored env file and in OpenBao at `secret/slskdn/mesh-live-test-accounts`, and `TwoNodeMeshFullInstanceTests` passed with the public-network live-account path exercised.
+
+- [x] Fix user directory browse timeout API noise
+  - Status: completed (2026-04-27)
+  - Notes: Live `kspls0` `0.25.1-slskdn.183` logs showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when remote Soulseek peers did not answer within the Soulseek.NET 5-second directory wait. `UsersController.Directory` now returns a controlled 503 for direct and wrapped timeout failures, with focused unit coverage.

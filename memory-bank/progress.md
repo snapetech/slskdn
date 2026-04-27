@@ -6877,6 +6877,14 @@ Code quality improvements were completed as part of Option A:
 - Fixed the DHT warning/config mismatch by documenting `dht.lan_only` in `config/slskd.example.yml` and changing the public warning from internal `DhtRendezvous.*` option names to the YAML keys operators can set.
 - Documented the public-option-name gotcha in ADR-0001 and committed that entry separately as required.
 
+## 2026-04-27 00:38:36Z
+
+- Inspected live `kspls0` after the `0.25.1-slskdn.183` install. The service is active, reports `0.25.1-slskdn.183`, has `NRestarts=0`, no coredumps, and is listening on the expected web, Soulseek, overlay, DHT, and UDP overlay ports.
+- Confirmed the last 30 minutes had no warning/error/fatal lines. The broader startup window showed expected DHT public-exposure warnings and mesh reachability churn, plus one actionable bug: remote user directory browse timeouts escaped as unhandled API 500s and repeated middleware stack traces.
+- Documented the remote-peer-timeout gotcha in ADR-0001 and committed it immediately.
+- Fixed `UsersController.Directory` so direct `TimeoutException` and wrapped `SoulseekClientException` timeout failures return a controlled `503 Unable to retrieve directory contents from user` instead of reaching global middleware.
+- Validation passed: focused `UsersControllerTests` (`13` passed), `bash ./bin/lint`, and `git diff --check`.
+
 ## 2026-04-20 03:20:00Z
 
 - Continued the strict local release-candidate cycle by debugging the one remaining non-gate `./bin/build` failure in the full Release integration sweep.
