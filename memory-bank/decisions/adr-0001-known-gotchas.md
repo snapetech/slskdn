@@ -98,6 +98,34 @@ publish:
 
 **Why This Keeps Happening**: Release-note synthesis is only safe for small, linear deltas. Major upstream syncs and branch-history repairs need a curated changelog section, and the generator must fail closed when the fallback commit list is too large to be useful.
 
+### 0z137. Remote Peer Timeouts Must Be Handled At API Boundaries
+
+**The Bug**: Live `0.25.1-slskdn.183` logs on `kspls0` showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when `ISoulseekClient.GetDirectoryContentsAsync()` timed out waiting for a remote peer. The timeout was expected peer/network behavior, but it bubbled through MVC, security middleware, and the exception handler, producing repeated error stack traces.
+
+**Files Affected**:
+- `src/slskd/Users/API/Controllers/UsersController.cs`
+
+**Wrong**:
+```csharp
+var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
+return Ok(result);
+```
+
+**Correct**:
+```csharp
+try
+{
+    var result = await Client.GetDirectoryContentsAsync(username, request.Directory);
+    return Ok(result);
+}
+catch (TimeoutException)
+{
+    return StatusCode(503, "Unable to retrieve directory contents from user");
+}
+```
+
+**Why This Keeps Happening**: Soulseek peer operations are remote-network calls. Timeouts, offline users, and direct/indirect connection failures are normal peer outcomes, not app faults. Controller actions that call Soulseek peers must translate those exceptions into 404/503 responses before they reach global middleware.
+
 ### 0z134. Soulseek Listen Endpoint Changes Need Server Reconnect Semantics
 
 **The Bug**: Runtime updates to `soulseek.listen_port` or `soulseek.listen_ip_address` can restart the local Soulseek.NET listener without making the server learn the new advertised port. Soulseek.NET sends `SetListenPort` during login/config messages, not from `ReconfigureOptionsAsync()`, so remote peers may keep connecting to the stale port and uploads can appear broken even though the local listener is healthy.
