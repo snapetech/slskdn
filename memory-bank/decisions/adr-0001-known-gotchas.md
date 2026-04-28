@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z139. Empty Cached User Groups Must Resolve To Default
+
+**The Bug**: Tester upload logs showed uploads enqueueing and staying queued, while incoming search response resolution threw `A group with the name  could not be found`. `UserService.Configure()` clears removed or transient user-defined group membership to an empty string, but `GetGroup()` treated any non-null value as authoritative, so upload queue forecasting and queue processing looked for a group named `""`.
+
+**Files Affected**:
+- `src/slskd/Users/UserService.cs`
+- `src/slskd/Transfers/Uploads/UploadQueue.cs`
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+if (user.Group != null)
+{
+    return user.Group;
+}
+```
+
+**Correct**:
+```csharp
+if (!string.IsNullOrWhiteSpace(user.Group))
+{
+    return user.Group;
+}
+```
+
+**Why This Keeps Happening**: Cached user records can represent both configured group membership and transient watched users. An empty configured group is not a real group name; hot paths must treat empty or whitespace cached groups as "not configured" and fall back to the default group.
+
 ### 0z135. Build Tags Cannot Nix-Smoke Unpublished Stable Release Assets
 
 **The Bug**: `build-main-0.25.1-slskdn.1` failed before publishing release assets because `build-on-tag.yml` made `publish` depend on a pre-publish `nix-smoke` job. The smoke script builds the checked-in stable flake, which fetches `https://github.com/snapetech/slskdn/releases/download/<version>/slskdn-main-linux-glibc-x64.zip`; for a brand-new release tag that asset does not exist yet, so Nix gets a 404 and blocks every release job.
