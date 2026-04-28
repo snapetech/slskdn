@@ -1266,3 +1266,11 @@
 - [x] Prepare follow-up stable release 0.25.1-slskdn.184
   - Status: completed (2026-04-27)
   - Notes: Updated active release docs/package metadata from `0.25.1-slskdn.183` to `0.25.1-slskdn.184` and added curated changelog notes for the directory timeout/logging and shutdown cancellation fixes. Validation passed with packaging metadata validation, release-note generation, `bash ./bin/lint`, and `git diff --check`.
+
+- [x] Fix tester upload queue group fallback and DHT YAML alias binding
+  - Status: completed (2026-04-28)
+  - Notes: `UserService.GetGroup()` now treats empty cached group names as unset so upload queue/governor paths fall back to built-in groups instead of looking up `""`. Runtime YAML binding now honors public `[YamlMember]` aliases such as `dht:` so `dht.lan_only: true` suppresses the public DHT exposure warning without requiring the internal `dhtRendezvous:` key.
+
+- [x] Prepare stable release 0.25.1-slskdn.185
+  - Status: completed (2026-04-28)
+  - Notes: Updated active release docs/package metadata from `0.25.1-slskdn.184` to `0.25.1-slskdn.185` and added curated changelog notes for the upload queue group fallback and DHT YAML alias binding fixes.

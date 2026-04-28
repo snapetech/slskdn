@@ -197,7 +197,7 @@ namespace slskd.Users
                     return Application.PrivilegedGroup;
                 }
 
-                if (user.Group != null)
+                if (!string.IsNullOrWhiteSpace(user.Group))
                 {
                     return user.Group;
                 }

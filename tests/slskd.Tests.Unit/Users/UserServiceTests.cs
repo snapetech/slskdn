@@ -77,6 +77,40 @@ namespace slskd.Tests.Unit.Users
 
                 Assert.Equal(group, service.GetGroup(username));
             }
+
+            [Theory, AutoData]
+            public void Returns_Non_Empty_Built_In_Group_After_User_Is_Removed_From_User_Defined_Group(string group, string username)
+            {
+                var options = new Options()
+                {
+                    Transfers = new Options.TransfersOptions
+                    {
+                        Groups = new Options.TransfersOptions.GroupsOptions()
+                        {
+                            UserDefined = new Dictionary<string, Options.TransfersOptions.GroupsOptions.UserDefinedOptions>()
+                            {
+                                {
+                                    group,
+                                    new Options.TransfersOptions.GroupsOptions.UserDefinedOptions()
+                                    {
+                                        Members = new[] { username },
+                                    }
+                                },
+                            }
+                        }
+                    }
+                };
+
+                var (service, mocks) = GetFixture(options);
+
+                Assert.Equal(group, service.GetGroup(username));
+
+                mocks.OptionsMonitor.RaiseOnChange(new Options());
+
+                var resolvedGroup = service.GetGroup(username);
+
+                Assert.Contains(resolvedGroup, new[] { Application.DefaultGroup, Application.LeecherGroup });
+            }
         }
 
         public class IsBlacklisted

@@ -1,3 +1,19 @@
+## Update 2026-04-28 18:38:49Z
+
+- Current task: None. Tester upload queue group fallback and DHT public YAML alias binding are fixed and locally validated.
+- Last activity:
+  - kept the existing upload-group fix where empty cached groups fall back to built-in groups instead of reaching upload queue lookup as `""`
+  - re-evaluated Bas's DHT config report and fixed the runtime YAML provider so public aliases like `dht:` bind to `Options.DhtRendezvous`
+  - documented the DHT alias gotcha in ADR-0001 and committed the docs-only entry immediately as `9a87f04d6`
+  - added focused YAML alias tests and reran focused user-service tests
+  - updated active release/package metadata and curated changelog notes for `0.25.1-slskdn.185`
+  - validation passed: `git diff --check`, `bash ./bin/lint`, and full `dotnet test --no-restore`
+- Next steps:
+  1. Commit and push the implementation/test/release metadata update.
+  2. Push `build-main-0.25.1-slskdn.185` to trigger the tag-only release build.
+  3. Tell Bas to use `dht.lan_only: true` under the public `dht:` block once this build is available; `dhtRendezvous:` should no longer be necessary.
+  4. Continue upload troubleshooting with the diagnostics endpoint/log checklist if uploads still do not leave the queue on the fixed build.
+
 ## Update 2026-04-27 01:45:00Z
 
 - Current task: Follow-up stable release `0.25.1-slskdn.184` metadata is prepared and validated.

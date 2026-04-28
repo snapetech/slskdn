@@ -20,6 +20,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
 
+## [0.25.1-slskdn.185] — 2026-04-28
+
+- Fixed upload queue group resolution when a user is removed from a user-defined transfer group so cached empty group names fall back to built-in groups instead of blocking queue processing with `A group with the name  could not be found`.
+- Fixed runtime YAML binding for public option aliases so the documented `dht.lan_only: true` setting suppresses the DHT public-discoverability warning without requiring the internal `dhtRendezvous:` key.
+
 ## [0.25.1-slskdn.184] — 2026-04-27
 
 - Fixed remote user directory browse timeouts so `POST /api/v0/users/{username}/directory` returns a controlled 503 when a Soulseek peer does not answer instead of emitting unhandled middleware stack traces.
@@ -35,6 +40,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed upload queue group resolution when a user is removed from a user-defined transfer group so cached empty group names fall back to built-in groups instead of blocking queue processing with `A group with the name  could not be found`.
+- Fixed runtime YAML binding for public option aliases so the documented `dht.lan_only: true` setting suppresses the DHT public-discoverability warning without requiring the internal `dhtRendezvous:` key.
 - Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.
 - Added CSV playlist import for issue `#216`: TuneMyMusic-style exports can now be imported from the Wishlist page into wishlist searches, with optional album terms, filters, enabled state, max results, and auto-download settings.
 - Fixed a Soulseek upload reachability bug where runtime changes to `soulseek.listen_port` or `soulseek.listen_ip_address` could restart the local listener without making the Soulseek server advertise the new endpoint; these options now correctly require a reconnect so peers do not keep trying a stale port.

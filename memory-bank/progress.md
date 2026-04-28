@@ -6984,3 +6984,13 @@ Code quality improvements were completed as part of Option A:
 - Stored the live test credentials in the gitignored `tests/slskd.Tests.Integration/local-mesh-accounts.env` file with mode `600` and in OpenBao at `secret/slskdn/mesh-live-test-accounts`; verification read back only redacted values/metadata.
 - Fixed the full-instance harness so live-login configs emit the Soulseek server endpoint and a unique listen port per child process, and changed mutating API calls in the smoke to use API-key auth so CSRF does not block local test setup.
 - Validation: the standalone live-account test passed, and the full `TwoNodeMeshFullInstanceTests` class passed (`3` tests, including public-network live-account mesh search + pod download + byte comparison).
+
+## 2026-04-28 18:38:49Z
+
+- Resumed tester upload/DHT feedback work after the interrupted validation run.
+- Fixed the upload queue group regression where removed user-defined groups left cached users with an empty group string, causing hot paths to look up a group named `""` instead of falling back to `default`/`leechers`.
+- Re-evaluated Bas's DHT report and found the sample `dht:` block did not bind at runtime because the YAML configuration provider ignored `[YamlMember(Alias = "dht")]`; only internal `dhtRendezvous:` keys changed behavior.
+- Documented the DHT alias gotcha in ADR-0001 and committed it immediately as `9a87f04d6`.
+- Updated the YAML provider to resolve public YAML aliases to canonical option-property keys while preserving dictionary keys, and added focused regression coverage for `dht.lan_only`.
+- Validation passed: focused `YamlConfigurationSourceTests` + `UserServiceTests` (`22` tests), `git diff --check`, `bash ./bin/lint`, and full `dotnet test --no-restore` (`46` functional, `3674` unit, `276` integration tests).
+- Prepared stable release `0.25.1-slskdn.185` metadata and curated changelog notes for the upload queue group fallback and DHT YAML alias binding fixes.

@@ -87,8 +87,8 @@ To trigger a build, create and push a tag:
 
 ```bash
 # Main/stable release
-git tag build-main-0.25.1-slskdn.184
-git push origin build-main-0.25.1-slskdn.184
+git tag build-main-0.25.1-slskdn.185
+git push origin build-main-0.25.1-slskdn.185
 
 # Dev release
 VERSION="0.25.1.dev.$(date -u +%Y%m%d.%H%M%S)"
@@ -110,8 +110,8 @@ See `memory-bank/decisions/adr-0005-tagging-system.md` for complete tag format d
 
 **For stable releases:**
 ```bash
-git tag build-main-0.25.1-slskdn.184
-git push origin build-main-0.25.1-slskdn.184
+git tag build-main-0.25.1-slskdn.185
+git push origin build-main-0.25.1-slskdn.185
 ```
 
 **For dev releases:**

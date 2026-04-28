@@ -21,14 +21,17 @@
 namespace slskd.Configuration
 {
     using System;
+    using System.Collections;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
     using System.Text;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.FileProviders;
     using Microsoft.Extensions.FileProviders.Physical;
     using YamlDotNet.Core;
     using YamlDotNet.RepresentationModel;
+    using YamlDotNet.Serialization;
 
     /// <summary>
     ///     Extension methods for adding <see cref="YamlConfigurationProvider"/>.
@@ -164,7 +167,7 @@ namespace slskd.Configuration
                     if (yaml.Documents.Count > 0)
                     {
                         var rootNode = (YamlMappingNode)yaml.Documents[0].RootNode;
-                        Traverse(rootNode, Namespace);
+                        Traverse(rootNode, Namespace, TargetType);
                     }
                 }
                 finally
@@ -178,10 +181,8 @@ namespace slskd.Configuration
             }
         }
 
-        private void Traverse(YamlNode root, string? path = null)
+        private void Traverse(YamlNode root, string? path = null, Type? targetType = null)
         {
-            string? Normalize(string? str) => NormalizeKeys ? str?.Replace("_", string.Empty).Replace("-", string.Empty).ToLowerInvariant() : str;
-
             if (root is YamlScalarNode scalar)
             {
                 var value = scalar.Value == null || NullValues.Contains(scalar.Value.ToLower()) ? null : scalar.Value;
@@ -201,19 +202,83 @@ namespace slskd.Configuration
                 foreach (var node in map.Children)
                 {
                     var rawKey = ((YamlScalarNode)node.Key).Value;
-                    var key = Normalize(rawKey);
+                    var key = ResolveConfigurationKey(targetType, rawKey);
                     var nextPath = path == null ? key : ConfigurationPath.Combine(path, key ?? string.Empty);
-                    Traverse(node.Value, nextPath);
+                    Traverse(node.Value, nextPath, GetChildType(targetType, key));
                 }
             }
             else if (root is YamlSequenceNode sequence)
             {
+                var elementType = GetSequenceElementType(targetType);
+
                 for (int i = 0; i < sequence.Children.Count; i++)
                 {
-                    Traverse(sequence.Children[i], ConfigurationPath.Combine(path ?? string.Empty, i.ToString()));
+                    Traverse(sequence.Children[i], ConfigurationPath.Combine(path ?? string.Empty, i.ToString()), elementType);
                 }
             }
         }
+
+        private string? Normalize(string? str) => NormalizeKeys ? str?.Replace("_", string.Empty).Replace("-", string.Empty).ToLowerInvariant() : str;
+
+        private string? ResolveConfigurationKey(Type? targetType, string? rawKey)
+        {
+            var normalizedKey = Normalize(rawKey);
+
+            if (targetType == null || IsDictionary(targetType))
+            {
+                return normalizedKey;
+            }
+
+            var property = targetType
+                .GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(p =>
+                    string.Equals(Normalize(p.Name), normalizedKey, StringComparison.Ordinal) ||
+                    string.Equals(GetYamlAlias(p), normalizedKey, StringComparison.Ordinal));
+
+            return property == null ? normalizedKey : Normalize(property.Name);
+        }
+
+        private Type? GetChildType(Type? targetType, string? normalizedKey)
+        {
+            if (targetType == null)
+            {
+                return null;
+            }
+
+            if (IsDictionary(targetType))
+            {
+                return targetType.GetGenericArguments().Length == 2 ? targetType.GetGenericArguments()[1] : null;
+            }
+
+            return targetType
+                .GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(p => string.Equals(Normalize(p.Name), normalizedKey, StringComparison.Ordinal))
+                ?.PropertyType;
+        }
+
+        private static Type? GetSequenceElementType(Type? targetType)
+        {
+            if (targetType == null)
+            {
+                return null;
+            }
+
+            if (targetType.IsArray)
+            {
+                return targetType.GetElementType();
+            }
+
+            return targetType.IsGenericType ? targetType.GetGenericArguments().FirstOrDefault() : null;
+        }
+
+        private string? GetYamlAlias(PropertyInfo property)
+        {
+            var alias = property.GetCustomAttribute<YamlMemberAttribute>()?.Alias;
+            return string.IsNullOrWhiteSpace(alias) ? null : Normalize(alias);
+        }
+
+        private static bool IsDictionary(Type type) => typeof(IDictionary).IsAssignableFrom(type) ||
+            (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(System.Collections.Generic.Dictionary<,>));
     }
 
     /// <summary>
