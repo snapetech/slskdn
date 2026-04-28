@@ -7,11 +7,11 @@ InstallerSwitches:
   Silent: ""
   SilentWithProgress: ""
 UpgradeBehavior: install
-ReleaseDate: 2026-04-26
+ReleaseDate: 2026-04-28
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.185/slskdn-main-win-x64.zip
-    InstallerSha256: 8807d84d2ee96304748b1af5a3c2a21c868b5c5db89a5a977ecc6757b3e1588f
+    InstallerSha256: 585b4e1807db552b66265327971ceda8ac6222ca0aab7dca3c862788c0ccd34f
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: slskd.exe

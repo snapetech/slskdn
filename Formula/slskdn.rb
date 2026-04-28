@@ -6,16 +6,16 @@ class Slskdn < Formula
   on_macos do
     on_arm do
       url "https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.185/slskdn-main-osx-arm64.zip"
-      sha256 "072e77e66f2b4a281dc8c851c7b6295d29e27e022e0d75092333f4c5d9f1c0fc"
+      sha256 "fdd931b32694feeec4a98b411885684fdc538c30b141727b443c9ed3f60c94a6"
     end
     on_intel do
       url "https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.185/slskdn-main-osx-x64.zip"
-      sha256 "618c393d3cea914457ab643466aff8721425fa171a310be7f7afff41bc0e1a96"
+      sha256 "0870410b485a54525241eb9c52b25eee9e93e5542cf1ffdc2581a479706dfc97"
     end
   end
   on_linux do
     url "https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.185/slskdn-main-linux-glibc-x64.zip"
-    sha256 "e16b829325fb6c14b3f098be057783bbea7c82527aa178ed71888712fcfc8a07"
+    sha256 "8a93dbda85b0fb00acf9ea76efb297d45fc31ead9584fdc36114e885ead6bb2c"
   end
   def install
     libexec.install Dir["*"]
