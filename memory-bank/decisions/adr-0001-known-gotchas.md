@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z140. Public YAML Aliases Must Bind In Runtime Configuration
+
+**The Bug**: Tester config copied from `config/slskd.example.yml` with `dht.lan_only: true` still emitted the public DHT exposure warning. The runtime YAML configuration provider normalized keys but ignored `[YamlMember(Alias = "dht")]`, so `dht:` was valid documentation/API YAML but did not bind to `Options.DhtRendezvous`; only the internal `dhtRendezvous:` key changed runtime behavior.
+
+**Files Affected**:
+- `src/slskd/Common/Configuration/YamlConfigurationSource.cs`
+- `src/slskd/Core/Options.cs`
+- `config/slskd.example.yml`
+
+**Wrong**:
+```yaml
+dht:
+  lan_only: true
+```
+
+```csharp
+var key = Normalize(rawKey);
+```
+
+**Correct**:
+```csharp
+var key = ResolveKeyAlias(path, Normalize(rawKey));
+```
+
+**Why This Keeps Happening**: slskd has two YAML paths: direct object serialization honors `YamlMember` aliases, while the runtime `IConfiguration` provider manually flattens YAML into keys. Any public alias shown in examples must be understood by the runtime configuration provider, not only by object deserialization.
+
 ### 0z139. Empty Cached User Groups Must Resolve To Default
 
 **The Bug**: Tester upload logs showed uploads enqueueing and staying queued, while incoming search response resolution threw `A group with the name  could not be found`. `UserService.Configure()` clears removed or transient user-defined group membership to an empty string, but `GetGroup()` treated any non-null value as authoritative, so upload queue forecasting and queue processing looked for a group named `""`.
