@@ -79,7 +79,7 @@ ip = ip.NormalizeMappedIPv4();
 
 ### 0z141. Dockerfile Must Invoke Bash Scripts With Bash
 
-**The Bug**: The `2026042900-slskdn.187` Docker publish job failed after `bin/build` gained Bash regex syntax for slskdN date versions, because the Dockerfile web stage still invoked it as `sh ./bin/build`. Alpine `sh` parsed the Bash regex group as a syntax error before the build reached Node.
+**The Bug**: The `2026042900-slskdn.187` Docker publish job failed after `bin/build` gained Bash regex syntax for slskdN date versions, because the Dockerfile web stage still invoked it as `sh ./bin/build`. Alpine `sh` parsed the Bash regex group as a syntax error before the build reached Node. The follow-up `2026042900-slskdn.188` Docker job failed too because `node:20-alpine` does not include Bash by default, so `bash ./bin/build` also needs `apk add --no-cache bash` in that stage.
 
 **Files Affected**:
 - `Dockerfile`
@@ -93,10 +93,11 @@ RUN DISABLE_ESLINT_PLUGIN=true sh ./bin/build --web-only --skip-tests --version 
 
 **Correct**:
 ```dockerfile
+RUN apk add --no-cache bash
 RUN DISABLE_ESLINT_PLUGIN=true bash ./bin/build --web-only --skip-tests --version $VERSION
 ```
 
-**Why This Keeps Happening**: The helper scripts have `#!/bin/bash` and use Bash-only syntax, but Docker `RUN sh ./script` bypasses the shebang and forces POSIX shell parsing. Any Dockerfile or workflow command that executes repo helper scripts must either run them directly when executable or invoke `bash`, never `sh`.
+**Why This Keeps Happening**: The helper scripts have `#!/bin/bash` and use Bash-only syntax, but Docker `RUN sh ./script` bypasses the shebang and forces POSIX shell parsing. Alpine-based Docker stages also omit Bash unless it is installed explicitly. Any Dockerfile or workflow command that executes repo helper scripts must either run them directly when executable or invoke `bash`, never `sh`, and Alpine stages must install Bash first.
 
 ### 0z140. Public YAML Aliases Must Bind In Runtime Configuration
 
