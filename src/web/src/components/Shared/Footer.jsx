@@ -1,7 +1,9 @@
 import './Footer.css';
 import * as mesh from '../../lib/mesh';
 import * as session from '../../lib/session';
+import * as slskdnAPI from '../../lib/slskdn';
 import * as transfers from '../../lib/transfers';
+import { urlBase } from '../../config';
 import React, { Component } from 'react';
 import { Icon } from 'semantic-ui-react';
 
@@ -30,11 +32,19 @@ const formatSpeed = (bytesPerSec) => {
   return { unit: 'B', value: bytesPerSec.toFixed(0) };
 };
 
+const formatCount = (value) => {
+  if (value === undefined || value === null) return '0';
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toString();
+};
+
 class Footer extends Component {
   constructor(props) {
     super(props);
     this.state = {
       interval: null,
+      slskdnStats: null,
       speeds: null,
       stats: null,
     };
@@ -64,8 +74,17 @@ class Footer extends Component {
     }
 
     try {
-      const stats = await mesh.getStats();
-      this.setState({ stats });
+      const [transportStats, slskdnStats] = await Promise.allSettled([
+        mesh.getStats(),
+        slskdnAPI.getSlskdnStats(),
+      ]);
+
+      this.setState({
+        slskdnStats:
+          slskdnStats.status === 'fulfilled' ? slskdnStats.value : null,
+        stats:
+          transportStats.status === 'fulfilled' ? transportStats.value : null,
+      });
     } catch (error) {
       // Silently fail - stats are non-critical
       console.debug('Failed to fetch mesh stats:', error);
@@ -88,11 +107,28 @@ class Footer extends Component {
 
   render() {
     const year = new Date().getFullYear();
-    const { speeds, stats } = this.state;
+    const { slskdnStats, speeds, stats } = this.state;
     const isLoggedIn = session.isLoggedIn();
+    const dht = slskdnStats?.dht || {};
+    const hashDb = slskdnStats?.hashDb || {};
+    const meshStats = slskdnStats?.mesh || {};
+    const swarmJobs = Array.isArray(slskdnStats?.swarmJobs)
+      ? slskdnStats.swarmJobs
+      : [];
+    const dhtNodes = Number(dht.dhtNodeCount) || Number(stats?.dht) || 0;
+    const discoveredPeers = Number(dht.discoveredPeerCount) || 0;
+    const displayedDhtPeers = discoveredPeers || dhtNodes;
+    const meshPeers = Number(meshStats.connectedPeerCount) || 0;
+    const hashCount = Number(hashDb.totalEntries) || 0;
+    const seqId =
+      Number(hashDb.currentSeqId) || Number(meshStats.localSeqId) || 0;
+    const isSyncing = Boolean(meshStats.isSyncing);
+    const backfillActive = Boolean(slskdnStats?.backfill?.isActive);
+    const activeSwarms = swarmJobs.length;
+    const karma = Number.parseInt(localStorage.getItem('slskdn-karma') || '0', 10);
 
     // Determine if stats are connected
-    const isDhtConnected = isLoggedIn && stats && stats.dht > 0;
+    const isDhtConnected = isLoggedIn && displayedDhtPeers > 0;
     const isOverlayConnected = isLoggedIn && stats && stats.overlay > 0;
     const isNatResolved =
       isLoggedIn && stats && stats.natType && stats.natType !== 'Unknown';
@@ -102,6 +138,9 @@ class Footer extends Component {
       isLoggedIn && stats
         ? `NAT Type: ${stats.natType || 'Unknown'}`
         : 'NAT: Login to see stats';
+    const networkTooltip = isLoggedIn
+      ? `DHT peers: ${displayedDhtPeers}; DHT nodes: ${dhtNodes}; mesh peers: ${meshPeers}; hashes: ${hashCount}; seq: ${seqId}`
+      : 'Login to see slskdN network stats';
 
     return (
       <footer className="slskdn-footer">
@@ -203,6 +242,74 @@ class Footer extends Component {
 
           {/* Right: Stats icons and quote */}
           <div className="slskdn-footer-right">
+            <a
+              className={`slskdn-footer-network ${isLoggedIn && slskdnStats ? 'active' : ''}`}
+              href={`${urlBase}/system/network`}
+              title={networkTooltip}
+            >
+              <span className="slskdn-footer-network-item">
+                <Icon
+                  color={displayedDhtPeers > 0 ? 'green' : 'grey'}
+                  name="rss"
+                />
+                {formatCount(displayedDhtPeers)} dht
+              </span>
+              <span className="slskdn-footer-divider">|</span>
+              <span className="slskdn-footer-network-item">
+                <Icon
+                  color={meshPeers > 0 ? 'green' : 'grey'}
+                  name="sitemap"
+                />
+                {formatCount(meshPeers)} mesh
+              </span>
+              <span className="slskdn-footer-divider">|</span>
+              <span className="slskdn-footer-network-item">
+                <Icon
+                  color={hashCount > 0 ? 'blue' : 'grey'}
+                  name="database"
+                />
+                {formatCount(hashCount)} hashes
+              </span>
+              <span className="slskdn-footer-divider">|</span>
+              <span
+                className={`slskdn-footer-network-item ${isSyncing ? 'syncing' : ''}`}
+              >
+                <Icon
+                  color={isSyncing ? 'yellow' : 'grey'}
+                  loading={isSyncing}
+                  name="sync"
+                />
+                seq:{seqId}
+              </span>
+              {activeSwarms > 0 && (
+                <>
+                  <span className="slskdn-footer-divider">|</span>
+                  <span className="slskdn-footer-network-item active">
+                    <Icon name="bolt" />
+                    {activeSwarms} swarm{activeSwarms === 1 ? '' : 's'}
+                  </span>
+                </>
+              )}
+              {backfillActive && (
+                <>
+                  <span className="slskdn-footer-divider">|</span>
+                  <span className="slskdn-footer-network-item active">
+                    <Icon
+                      loading
+                      name="clock"
+                    />
+                    backfill
+                  </span>
+                </>
+              )}
+              <span className="slskdn-footer-divider">|</span>
+              <span className="slskdn-footer-network-item">
+                <Icon name="trophy" />
+                {karma > 0 ? '+' : ''}
+                {karma}
+              </span>
+            </a>
+            <span className="slskdn-footer-divider">•</span>
             <div className="slskdn-footer-stats">
               <Icon
                 className={

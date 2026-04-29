@@ -7,9 +7,4 @@ export { default as Nbsp } from './Nbsp';
 export { default as PlaceholderSegment } from './PlaceholderSegment';
 export { default as ShrinkableButton } from './ShrinkableButton';
 export { default as ShrinkableDropdownButton } from './ShrinkableDropdownButton';
-export {
-  isStatusBarVisible,
-  default as SlskdnStatusBar,
-  toggleStatusBarVisibility,
-} from './SlskdnStatusBar';
 export { default as Switch } from './Switch';

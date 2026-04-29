@@ -161,6 +161,48 @@ html:not(.dark) .slskdn-footer-emoji-link:hover em {
     gap: 8px;
 }
 
+.slskdn-footer-network {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 2px 8px;
+    border: 1px solid var(--slskdn-accent-primary-border, rgba(88, 166, 255, 0.1));
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--slskdn-accent-primary, #58a6ff) 5%, transparent);
+    transition: all 0.2s ease;
+}
+
+.slskdn-footer-network.active {
+    color: rgba(255, 255, 255, 0.7);
+    border-color: var(--slskdn-accent-primary-border, rgba(88, 166, 255, 0.16));
+}
+
+.slskdn-footer-network:hover {
+    color: var(--slskdn-accent-primary, #58a6ff);
+    background: var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.1));
+    text-decoration: none;
+}
+
+.slskdn-footer-network-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.slskdn-footer-network-item .icon {
+    margin: 0 !important;
+}
+
+.slskdn-footer-network-item.active,
+.slskdn-footer-network-item.syncing {
+    color: var(--slskdn-accent-warm, #d29922);
+}
+
 .slskdn-footer-stat-icon {
     transition: all 0.3s ease;
     opacity: 0.4;
@@ -180,6 +222,21 @@ html:not(.dark) .slskdn-footer-stat-icon {
 html:not(.dark) .slskdn-footer-stat-icon.connected {
     color: #0969da;
     text-shadow: 0 0 8px rgba(9, 105, 218, 0.4);
+}
+
+html:not(.dark) .slskdn-footer-network {
+    color: rgba(0, 0, 0, 0.48);
+    background: rgba(9, 105, 218, 0.04);
+    border-color: rgba(9, 105, 218, 0.1);
+}
+
+html:not(.dark) .slskdn-footer-network.active {
+    color: rgba(0, 0, 0, 0.66);
+}
+
+html:not(.dark) .slskdn-footer-network:hover {
+    color: #0969da;
+    background: rgba(9, 105, 218, 0.1);
 }
 
 .slskdn-footer-sponsor {

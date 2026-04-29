@@ -1317,3 +1317,7 @@
 - [x] Prepare `2026042900-slskdn.192` stable release
   - Status: completed (2026-04-29)
   - Notes: Moved the Discovery Graph fix note from Unreleased into a versioned `.192` changelog section and pushed the matching `build-main-2026042900-slskdn.192` tag for the tag-only release workflow.
+
+- [x] Remove the slskdN top status drawer from the Web UI
+  - Status: completed (2026-04-29)
+  - Notes: Deleted the top drawer/toggle UI and surfaced its DHT, mesh, hash, sequence, swarm, backfill, and karma counters in the persistent footer with focused footer regression coverage.

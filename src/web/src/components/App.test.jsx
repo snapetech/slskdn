@@ -56,11 +56,6 @@ vi.mock('./LoginForm', () => ({ default: () => <div>Login Form</div> }));
 vi.mock('./Pods/Pods', () => ({ default: () => <div>Pods</div> }));
 vi.mock('./Rooms/Rooms', () => ({ default: () => <div>Rooms</div> }));
 vi.mock('./Search/Searches', () => ({ default: () => <div>Searches</div> }));
-vi.mock('./Shared', () => ({
-  isStatusBarVisible: vi.fn(() => false),
-  SlskdnStatusBar: () => <div>Status Bar</div>,
-  toggleStatusBarVisibility: vi.fn(() => false),
-}));
 vi.mock('./Shared/ErrorSegment', () => ({
   default: ({ caption }) => <div>{caption}</div>,
 }));

@@ -15,11 +15,6 @@ import LoginForm from './LoginForm';
 import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
-import {
-  isStatusBarVisible,
-  SlskdnStatusBar,
-  toggleStatusBarVisibility,
-} from './Shared';
 import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
 import ShareGroups from './ShareGroups/ShareGroups';
@@ -77,7 +72,6 @@ const initialState = {
     pending: false,
   },
   retriesExhausted: false,
-  statusBarVisible: isStatusBarVisible(),
 };
 
 const ModeSpecificConnectButton = ({
@@ -230,27 +224,15 @@ class App extends Component {
   }
 
   componentDidMount() {
-    // Listen for status bar toggle from the status bar's close button
-    window.addEventListener('slskdn-status-toggle', this.handleStatusBarToggle);
-
     this.init();
   }
 
   componentWillUnmount() {
-    window.removeEventListener(
-      'slskdn-status-toggle',
-      this.handleStatusBarToggle,
-    );
-
     if (this.applicationHub) {
       this.applicationHub.stop().catch(() => {});
       this.applicationHub = undefined;
     }
   }
-
-  handleStatusBarToggle = () => {
-    this.setState({ statusBarVisible: isStatusBarVisible() });
-  };
 
   startApplicationHub = () => {
     if (this.applicationHub) {
@@ -388,11 +370,6 @@ class App extends Component {
     this.setState({ theme: nextTheme });
   };
 
-  toggleStatusBar = () => {
-    const newVisible = toggleStatusBarVisibility();
-    this.setState({ statusBarVisible: newVisible });
-  };
-
   handleLogin = (username, password, rememberMe) => {
     this.setState(
       (previousState) => ({
@@ -434,7 +411,6 @@ class App extends Component {
       initialized,
       login,
       retriesExhausted,
-      statusBarVisible,
       theme = normalizeTheme(this.getSavedTheme() || 'slskdn'),
     } = this.state;
     const semanticTheme = getSemanticTheme(theme);
@@ -644,21 +620,6 @@ class App extends Component {
               className="right"
               inverted
             >
-              <Menu.Item
-                className={`slskdn-toggle ${statusBarVisible ? 'active' : ''}`}
-                onClick={() => this.toggleStatusBar()}
-                title={
-                  statusBarVisible
-                    ? 'Hide slskdn status bar'
-                    : 'Show slskdn status bar'
-                }
-              >
-                <Icon
-                  color={statusBarVisible ? 'green' : 'grey'}
-                  name={statusBarVisible ? 'toggle on' : 'toggle off'}
-                  size="small"
-                />
-              </Menu.Item>
               <Dropdown
                 className="theme-menu"
                 data-testid="theme-menu"
@@ -783,9 +744,6 @@ class App extends Component {
             </Menu>
           </Sidebar>
           <Sidebar.Pusher className="app-content">
-            {session.isLoggedIn() || isPassthroughEnabled() ? (
-              <SlskdnStatusBar />
-            ) : null}
             <AppContext.Provider
               // Note: Context value object recreated on each render (class component limitation)
               // Deferred: Optimize with useMemo when converting to functional component

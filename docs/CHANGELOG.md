@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Removed the top slskdN status drawer and navigation toggle, and moved its
+  DHT, mesh, hash, sequence, swarm, backfill, and karma counters into the
+  persistent footer.
 - Fixed the slskdN theme picker contrast and dropdown surface styling so the
   selector is visible in the top navigation and the default dark palette has
   clearer separation between the page, panels, inputs, and active controls.

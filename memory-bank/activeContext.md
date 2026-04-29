@@ -1,3 +1,13 @@
+## Update 2026-04-29 17:12:30Z
+
+- Current task: None. The slskdN top status drawer has been removed and its unique stats now render in the footer.
+- Last activity:
+  - deleted the status drawer component, nav toggle, visibility state, and fixed top padding
+  - moved DHT, mesh, hash, sequence, swarm, backfill, and karma counters into the persistent footer
+  - added footer regression coverage and validated frontend lint, focused tests, build, and diff checks
+- Next steps:
+  1. Commit and push the Web UI footer/status cleanup.
+
 ## Update 2026-04-29 16:56:39Z
 
 - Current task: None. The transient full-instance overlay-connect integration failure is fixed and validated.

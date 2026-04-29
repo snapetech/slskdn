@@ -7065,3 +7065,10 @@ Code quality improvements were completed as part of Option A:
 - Normalized slskdN-only C# files so they carry only the `slskdN Team` copyright block.
 - Documented and fixed the StyleCop `SA1512` gotcha from stacked single-line copyright comments before committing the sweep.
 - Validation: the repeat audit covered `1,549` non-generated tracked C# files (`235` upstream-path files, `1,314` slskdN-only files) and reported zero attribution mismatches; `git diff --check -- '*.cs'` passed; `dotnet build --no-restore` passed with existing warning classes; `bash ./bin/lint` passed.
+
+## 2026-04-29 17:12:30Z
+
+- Removed the slskdN top status drawer, its navigation toggle, persisted visibility helpers, and the fixed-content offset it required.
+- Moved the drawer-only slskdN network stats into the footer: DHT peers, mesh peers, hash count, local sequence, active swarms, backfill activity, and karma now live beside the existing footer transport/NAT indicators.
+- Added focused footer regression coverage for the migrated stats.
+- Validation: `npm run lint -- --max-warnings=0`, `npm run test -- App Footer`, `npm run build`, and `git diff --check` passed. The web build still reports the existing large-bundle warning.
