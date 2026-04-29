@@ -42,6 +42,7 @@ const Transfers = ({ direction, server }) => {
   const [bulkCounts, setBulkCounts] = useState({ retry: 0, cancel: 0, remove: 0 });
 
   const [autoReplaceEnabled, setAutoReplaceEnabled] = useState(false);
+  const [acceleratedEnabled, setAcceleratedEnabled] = useState(false);
   const autoReplaceThreshold = AUTO_REPLACE_THRESHOLD;
 
   const bulkQueueRef = useRef([]);
@@ -417,20 +418,24 @@ const Transfers = ({ direction, server }) => {
   };
 
   useEffect(() => {
-    const fetchAutoReplaceStatus = async () => {
+    const fetchDownloadModeStatus = async () => {
       if (direction !== 'download') {
         return;
       }
 
       try {
-        const status = await autoReplaceLibrary.getAutoReplaceStatus();
-        setAutoReplaceEnabled(status?.enabled ?? false);
+        const [autoReplaceStatus, acceleratedStatus] = await Promise.all([
+          autoReplaceLibrary.getAutoReplaceStatus(),
+          transfersLibrary.getAcceleratedMode(),
+        ]);
+        setAutoReplaceEnabled(autoReplaceStatus?.enabled ?? false);
+        setAcceleratedEnabled(acceleratedStatus?.enabled ?? false);
       } catch (error) {
-        console.error('Failed to fetch auto-replace status:', error);
+        console.error('Failed to fetch download mode status:', error);
       }
     };
 
-    fetchAutoReplaceStatus();
+    fetchDownloadModeStatus();
   }, [direction]);
 
   const handleAutoReplaceChange = async (enabled) => {
@@ -452,6 +457,21 @@ const Transfers = ({ direction, server }) => {
     }
   };
 
+  const handleAcceleratedChange = async (enabled) => {
+    try {
+      const status = await transfersLibrary.setAcceleratedMode({ enabled });
+      setAcceleratedEnabled(status?.enabled ?? enabled);
+      toast.info(
+        enabled
+          ? 'Accelerated mode enabled. Slow or stalled downloads can use verified alternate sources.'
+          : 'Accelerated mode disabled',
+      );
+    } catch (error) {
+      console.error('Failed to toggle accelerated mode:', error);
+      toast.error('Failed to toggle accelerated mode');
+    }
+  };
+
   if (connecting) {
     return <LoaderSegment />;
   }
@@ -459,11 +479,13 @@ const Transfers = ({ direction, server }) => {
   return (
     <div data-testid={testId}>
       <TransfersHeader
+        acceleratedEnabled={acceleratedEnabled}
         autoReplaceEnabled={autoReplaceEnabled}
         autoReplaceThreshold={autoReplaceThreshold}
         cancelling={cancelling}
         direction={direction}
         onAutoReplaceChange={handleAutoReplaceChange}
+        onAcceleratedChange={handleAcceleratedChange}
         onCancelAll={cancelAll}
         onRemoveAll={removeAll}
         onRetryAll={retryAll}

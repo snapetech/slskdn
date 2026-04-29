@@ -251,13 +251,14 @@ The following advanced features are **fully implemented and production-ready**:
 ### 🚀 Multi-Source Swarm Downloads
 Resilient acquisition built **on top of** the regular Soulseek path — not in place of it.
 
-- **Default downloads are unchanged.** The standard single-source Soulseek flow handles all normal transfers; multi-source is opt-in or kicks in only after a normal download stalls.
-- **Three entry points only**: explicit user/API call, `RescueService` (after stall + missing ranges), and `LibraryHealthRemediationService` (auto-fix bad transcodes).
+- **Default downloads are unchanged.** The standard single-source Soulseek flow handles normal transfers; acceleration only runs when enabled from the Downloads header or when called explicitly by an integration.
+- **First-class Downloads toggle** — the Downloads section exposes an `Accelerated` switch. When off, underperformance rescue is suppressed. When on, queued-too-long, slow, or stalled downloads can be rescued under the same network-health guardrails.
+- **Conservative entry points**: explicit user/API call, Downloads `Accelerated` rescue after underperformance, and `LibraryHealthRemediationService` auto-fix for bad transcodes.
 - **Trust-aware policy split:**
   - *Mesh-overlay peers* (other slskdN nodes): protocol-aware → **parallel chunked downloads**.
   - *Public Soulseek peers*: not protocol-aware → **sequential failover** (one peer at a time, resume offset preserved on stall) so no chunk-by-chunk cancellation noise lands on Nicotine+/SoulseekQt UIs.
 - **Hard floor before chunking** — declines multi-source unless ≥2 sources share a verified content hash, or all sources are mesh-overlay.
-- **SHA-256 verification with a per-peer-per-day probe budget** — ensures bit-identity across sources without hammering any single uploader with verification probes.
+- **SHA-256 verification with a persistent per-peer-per-day probe budget** — ensures bit-identity across sources without hammering any single uploader with verification or discovery hash probes.
 - **HashDb mesh gossip** fills the protocol-level gap that Soulseek has no content hashes.
 - **Observability** — Prometheus counters for cancellations, probes, hard-floor fallbacks, and failover events surface the network impact directly.
 

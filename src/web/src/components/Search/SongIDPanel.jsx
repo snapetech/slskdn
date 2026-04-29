@@ -684,7 +684,10 @@ const SongIDPanel = ({ disabled }) => {
 
   return (
     <>
-    <Segment raised>
+    <Segment
+      className="songid-panel"
+      raised
+    >
       <Header as="h4">SongID</Header>
       <p style={{ marginTop: 0 }}>
         Identify a likely track, album, or artist from a YouTube URL, Spotify
@@ -726,7 +729,10 @@ const SongIDPanel = ({ disabled }) => {
 
       <Grid stackable columns={2} style={{ marginTop: '1em' }}>
         <Grid.Column width={5}>
-          <Segment secondary>
+          <Segment
+            className="songid-queue-panel"
+            secondary
+          >
             <Header as="h5" style={{ marginTop: 0 }}>
               Queue
             </Header>
@@ -813,7 +819,10 @@ const SongIDPanel = ({ disabled }) => {
         </Grid.Column>
         <Grid.Column width={11}>
       {run ? (
-        <Segment secondary>
+            <Segment
+              className="songid-result-panel"
+              secondary
+            >
           <Header as="h5" style={{ marginTop: 0 }}>
             Result
           </Header>
@@ -837,7 +846,7 @@ const SongIDPanel = ({ disabled }) => {
               }
             />
           </div>
-          <Segment>
+                  <Segment className="songid-result-summary">
             <Header as="h4" style={{ marginTop: 0 }}>
               {bestTrack
                 ? `${bestTrack.artist} - ${bestTrack.title}`

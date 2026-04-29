@@ -1,5 +1,6 @@
 import * as discoveryGraph from '../../lib/discoveryGraph';
 import * as searches from '../../lib/searches';
+import './Search.css';
 import DiscoveryGraphAtlas from './DiscoveryGraphAtlas';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -193,7 +194,10 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
   );
 
   return (
-    <Segment raised>
+    <Segment
+      className="discovery-graph-atlas-panel"
+      raised
+    >
       <Header as="h4">Discovery Graph Atlas</Header>
       <p style={{ marginTop: 0 }}>
         Persistent graph surface for wandering the neighborhood around a seed
@@ -420,7 +424,12 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
           </List>
         </>
       ) : (
-        <Segment placeholder secondary style={{ marginTop: '1em' }}>
+        <Segment
+          className="discovery-graph-empty-state"
+          placeholder
+          secondary
+          style={{ marginTop: '1em' }}
+        >
           Build an atlas from a seed above or restore a saved branch.
         </Segment>
       )}

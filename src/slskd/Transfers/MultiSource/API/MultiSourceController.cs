@@ -1404,8 +1404,8 @@ namespace slskd.Transfers.MultiSource.API
         /// <summary>Gets or sets the search timeout in ms (default 30s). Only used if not using discovery DB.</summary>
         public int SearchTimeout { get; set; } = 30000;
 
-        /// <summary>Gets or sets whether to skip verification (faster).</summary>
-        public bool SkipVerification { get; set; } = true;
+        /// <summary>Gets or sets whether to skip verification (faster, but unsafe for raw Soulseek alternates).</summary>
+        public bool SkipVerification { get; set; } = false;
 
         /// <summary>Gets or sets whether to use the pre-built discovery database instead of a fresh search (default true).</summary>
         public bool UseDiscoveryDb { get; set; } = true;

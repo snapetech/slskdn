@@ -178,3 +178,87 @@
 .album-track-label {
   margin-left: 0.4rem !important;
 }
+
+.discovery-graph-canvas-shell {
+  background: radial-gradient(
+    circle at top,
+    rgba(59, 130, 246, 0.12),
+    rgba(15, 23, 42, 0.04) 45%,
+    rgba(255, 255, 255, 0.96) 100%
+  );
+  border-radius: 8px;
+  padding: 0.75em;
+}
+
+:root.dark .songid-panel.ui.segment,
+:root.dark .songid-queue-panel.ui.secondary.segment,
+:root.dark .songid-result-summary.ui.segment,
+:root.dark .discovery-graph-atlas-panel.ui.segment,
+:root.dark .discovery-graph-empty-state.ui.secondary.segment {
+  background: var(--slskd-secondary-background) !important;
+  border: 1px solid var(--slskd-tertiary-border-color) !important;
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-result-panel.ui.secondary.segment,
+:root.dark .discovery-graph-atlas-card.ui.secondary.segment {
+  background: var(--slskd-overlay-background) !important;
+  border: 1px solid var(--slskd-tertiary-border-color) !important;
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-panel .ui.header,
+:root.dark .songid-panel .header,
+:root.dark .discovery-graph-atlas-panel .ui.header,
+:root.dark .discovery-graph-atlas-panel .header,
+:root.dark .discovery-graph-atlas-card .ui.header,
+:root.dark .discovery-graph-atlas-card .header {
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-panel .ui.progress .label,
+:root.dark .discovery-graph-atlas-panel .ui.form .field > label,
+:root.dark .discovery-graph-atlas-panel .ui.progress .label {
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-panel .ui.input > input,
+:root.dark .discovery-graph-atlas-panel .ui.input > input,
+:root.dark .discovery-graph-atlas-panel .ui.selection.dropdown {
+  background: var(--slskd-color-inset) !important;
+  border-color: var(--slskd-tertiary-border-color) !important;
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-panel .ui.input > input::placeholder,
+:root.dark .discovery-graph-atlas-panel .ui.input > input::placeholder,
+:root.dark .discovery-graph-atlas-panel .ui.selection.dropdown .default.text {
+  color: var(--slskd-color-subtle) !important;
+}
+
+:root.dark .discovery-graph-atlas-panel .ui.selection.dropdown > .text,
+:root.dark .discovery-graph-atlas-panel .ui.selection.dropdown > .dropdown.icon {
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-panel .ui.labeled.input > .label,
+:root.dark .discovery-graph-atlas-panel .ui.labeled.input > .label {
+  background: var(--slskd-tertiary-background) !important;
+  border-color: var(--slskd-tertiary-border-color) !important;
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .songid-panel .description,
+:root.dark .discovery-graph-atlas-panel .description {
+  color: var(--slskd-color-subtle) !important;
+}
+
+:root.dark .discovery-graph-canvas-shell {
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgba(184, 154, 246, 0.2),
+    rgba(36, 36, 43, 0.92) 48%,
+    rgba(9, 10, 12, 0.98) 100%
+  );
+  border: 1px solid var(--slskd-tertiary-border-color);
+}

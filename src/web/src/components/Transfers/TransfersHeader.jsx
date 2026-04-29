@@ -60,10 +60,12 @@ const getRemovableFiles = ({ files, removeOption }) => {
 };
 
 const TransfersHeader = ({
+  acceleratedEnabled = false,
   autoReplaceEnabled = false,
   autoReplaceThreshold = 5,
   cancelling = false,
   direction,
+  onAcceleratedChange,
   onAutoReplaceChange,
   onCancelAll,
   onRemoveAll,
@@ -169,6 +171,22 @@ const TransfersHeader = ({
         >
           {`Remove All ${removeOption}`}
         </ShrinkableDropdownButton>
+        <Nbsp />
+        <Popup
+          content="Allow slow or stalled downloads to use verified alternate sources. Soulseek peers use sequential failover; true multipart chunking is reserved for trusted slskdN mesh peers."
+          position="bottom right"
+          trigger={
+            <Checkbox
+              checked={acceleratedEnabled}
+              className="accelerated-downloads-toggle"
+              disabled={!server.isConnected}
+              hidden={direction === 'upload'}
+              label="Accelerated"
+              onChange={(_, data) => onAcceleratedChange?.(data.checked)}
+              toggle
+            />
+          }
+        />
         <Nbsp />
         <Popup
           content={`Automatically find and replace stuck downloads with alternative sources. Replacements must be within ${autoReplaceThreshold}% file size.`}

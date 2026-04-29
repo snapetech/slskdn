@@ -213,7 +213,10 @@ const Network = ({ theme }) => {
   return (
     <div className="network-dashboard">
       {shouldExplainLanOnlyDht && (
-        <Message info>
+        <Message
+          className="network-diagnostic-message"
+          info
+        >
           <Message.Header>LAN-only DHT is isolated</Message.Header>
           <p>
             DHT rendezvous is running with <code>dhtRendezvous.lanOnly: true</code>,
@@ -231,7 +234,10 @@ const Network = ({ theme }) => {
         </Message>
       )}
       {shouldWarnAboutConnectivity && (
-        <Message warning>
+        <Message
+          className="network-diagnostic-message"
+          warning
+        >
           <Message.Header>Connectivity diagnostics</Message.Header>
           <p>
             slskdN is not seeing reachable peers yet. If you can log into the
@@ -248,6 +254,7 @@ const Network = ({ theme }) => {
       )}
       {shouldShowDhtExposureNotice && (
         <Message
+          className="network-diagnostic-message"
           info
           onDismiss={dismissDhtExposureConsent}
         >

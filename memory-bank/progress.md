@@ -1,3 +1,12 @@
+## 2026-04-29 23:20Z - Added conservative accelerated-downloads toggle
+
+- Added a runtime accelerated-downloads toggle to the Downloads header and exposed matching transfer API endpoints for the current policy state.
+- Wired the underperformance detector through that toggle so queued-too-long, slow, and stalled downloads can opt into conservative rescue acceleration without changing the normal single-source Soulseek path.
+- Kept network-health boundaries intact: raw Soulseek alternates use verified sequential failover, true multipart chunking remains mesh-overlay-only, discovery hash probes now share the persistent per-peer daily probe budget, and explicit swarm API requests default to verification enabled.
+- Updated README, `docs/multipart-downloads.md`, and the changelog so the first-class Downloads toggle, runtime-only behavior, underperformance gate, and persistent shared probe budget are documented with the implementation.
+- Documented the discovery probe-budget gotcha in ADR-0001 and committed that documentation immediately as `12e8075bd`.
+- Validation: `dotnet build src/slskd/slskd.csproj` passed; focused Transfers frontend test passed. Focused backend unit validation is blocked before running these tests by existing unrelated test compile errors in `YamlConfigurationSourceTests` and `ProgramPathNormalizationTests`.
+
 ## 2026-04-29 22:35Z - Applied upstream-compatibility gap plan
 
 - Added fork-specific compatibility for the post-0.25 config shape: `transfers` aliases the internal transfer/global options, `integrations` aliases integration options, and group limits nested under `upload` bind back to existing group limit options.
@@ -7138,3 +7147,12 @@ Code quality improvements were completed as part of Option A:
 - Reworked the footer CSS to use a flexible dock layout, wrap the network/status pill internally, tighten icon alignment, and strengthen light-theme pill borders/backgrounds.
 - Documented the footer layout validation gotcha in ADR-0001 and committed that documentation immediately.
 - Validation: injected the fixed local CSS into the live `kspls0` page and rechecked `1920`, `1366`, and `390` pixel footer captures with no visible-element overflow; stress-tested local counters with large speed/hash/sequence/swarm/backfill values. `npm --prefix src/web test -- src/components/Shared/Footer.test.jsx`, `npm --prefix src/web run lint`, `npm --prefix src/web run build`, and `git diff --check` passed. The web build still reports the existing large-bundle warning.
+
+## 2026-04-29 23:22:41Z
+
+- Pulled the latest `origin/main` README edits with rebase/autostash, preserving the existing dirty accelerated-downloads work.
+- Reviewed all README showcase images and found dark-mode failures in `songid-cc-youtube-result.png`, `songid-discovery-graph.png`, and the Network dashboard diagnostic panels.
+- Added targeted dark-theme coverage for SongID result panels, Discovery Graph atlas panels/canvas shells/forms, and Network info/warning messages/subheaders.
+- Deployed the rebuilt Web UI bundle to `kspls0` for browser verification and recaptured the three affected README PNGs from the live app.
+- Documented the Semantic UI dark-theme variant gotcha in ADR-0001 and committed that documentation immediately as `0623ac344`.
+- Validation: `npm --prefix src/web run lint -- --quiet`, `npm --prefix src/web test -- Network --watch=false`, `npm --prefix src/web run build`, `node src/web/scripts/verify-build-output.mjs`, and `git diff --check` passed. The web build still reports the existing large-bundle warning.

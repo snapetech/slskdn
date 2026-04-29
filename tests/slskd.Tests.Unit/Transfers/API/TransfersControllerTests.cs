@@ -175,6 +175,51 @@ public class TransfersControllerTests
     }
 
     [Fact]
+    public void GetAcceleratedDownloadMode_ReturnsCurrentState()
+    {
+        var accelerated = new Mock<IAcceleratedDownloadService>();
+        accelerated
+            .Setup(service => service.GetState())
+            .Returns(new AcceleratedDownloadState
+            {
+                Enabled = true,
+                UpdatedAt = DateTime.UtcNow,
+                Policy = "policy",
+            });
+
+        var controller = CreateController(acceleratedDownloads: accelerated);
+
+        var result = controller.GetAcceleratedDownloadMode();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var state = Assert.IsType<AcceleratedDownloadState>(ok.Value);
+        Assert.True(state.Enabled);
+    }
+
+    [Fact]
+    public void SetAcceleratedDownloadMode_UpdatesRuntimeState()
+    {
+        var accelerated = new Mock<IAcceleratedDownloadService>();
+        accelerated
+            .Setup(service => service.SetEnabled(true))
+            .Returns(new AcceleratedDownloadState
+            {
+                Enabled = true,
+                UpdatedAt = DateTime.UtcNow,
+                Policy = "policy",
+            });
+
+        var controller = CreateController(acceleratedDownloads: accelerated);
+
+        var result = controller.SetAcceleratedDownloadMode(new AcceleratedDownloadModeRequest { Enabled = true });
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var state = Assert.IsType<AcceleratedDownloadState>(ok.Value);
+        Assert.True(state.Enabled);
+        accelerated.Verify(service => service.SetEnabled(true), Times.Once);
+    }
+
+    [Fact]
     public async Task GetUploadDiagnostics_WhenListenerAndSharesLookBad_ReturnsActionableWarnings()
     {
         var uploads = new Mock<IUploadService>();
@@ -286,6 +331,7 @@ public class TransfersControllerTests
     private static TransfersController CreateController(
         Mock<IDownloadService>? downloads = null,
         Mock<IUploadService>? uploads = null,
+        Mock<IAcceleratedDownloadService>? acceleratedDownloads = null,
         slskd.Options? options = null,
         slskd.State? state = null)
     {
@@ -310,6 +356,7 @@ public class TransfersControllerTests
             optionsSnapshot.Object,
             stateSnapshot.Object,
             Mock.Of<IAutoReplaceService>(),
-            autoReplaceBackgroundService);
+            autoReplaceBackgroundService,
+            (acceleratedDownloads ?? new Mock<IAcceleratedDownloadService>()).Object);
     }
 }

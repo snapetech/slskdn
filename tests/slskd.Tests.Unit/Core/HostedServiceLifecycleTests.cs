@@ -168,6 +168,7 @@ public class HostedServiceLifecycleTests
         var service = new UnderperformanceDetectorHostedService(
             Mock.Of<IDownloadService>(),
             Mock.Of<IRescueService>(),
+            Mock.Of<IAcceleratedDownloadService>(),
             optionsMonitor.Object);
 
         using var previousLoopCts = new CancellationTokenSource();

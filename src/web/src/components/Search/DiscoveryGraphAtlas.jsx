@@ -27,7 +27,10 @@ const DiscoveryGraphAtlas = ({
   }, {});
 
   return (
-    <Segment secondary>
+    <Segment
+      className="discovery-graph-atlas-card"
+      secondary
+    >
       <Header as="h5" style={{ marginTop: 0 }}>
         Atlas
       </Header>
@@ -43,14 +46,7 @@ const DiscoveryGraphAtlas = ({
         ))}
         <Label size="tiny">Edges {visibleEdges.length}</Label>
       </div>
-      <div
-        style={{
-          background:
-            'radial-gradient(circle at top, rgba(59,130,246,0.12), rgba(15,23,42,0.04) 45%, rgba(255,255,255,0.96) 100%)',
-          borderRadius: 8,
-          padding: '0.75em',
-        }}
-      >
+      <div className="discovery-graph-canvas-shell">
         <DiscoveryGraphCanvas
           edgeTypes={edgeTypes}
           graph={{

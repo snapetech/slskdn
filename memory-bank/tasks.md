@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **feature**: Add a downloads-section toggle for conservative accelerated downloads.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Added a runtime Downloads header toggle that gates underperformance-triggered rescue acceleration. Normal Soulseek downloads remain single-source unless they are slow/stalled enough for rescue; raw Soulseek alternate sets use verified sequential failover, while true multipart chunking remains limited to trusted mesh-overlay peers. Discovery hash probes now share the persistent per-peer daily verification budget, and explicit swarm downloads default to verification enabled. Updated README, multipart-downloads, and changelog documentation for the toggle and policy.
+
 - [x] **compat**: Re-implement post-0.25 upstream compatibility gap plan without copying upstream diffs.
  - Status: completed (2026-04-29)
  - Priority: P1
@@ -1363,3 +1368,7 @@
 - [x] Redesign the Web UI footer status dock
   - Status: completed (2026-04-29)
   - Notes: Reorganized the footer into brand/support, speed, network/index, transport-health, and fork-note groups while keeping the same telemetry and attribution data. Rechecked against live `kspls0` rendering and changed the layout from a rigid grid to a flexible dock with wrapping status pills.
+
+- [x] Fix README showcase dark-mode screenshots
+  - Status: completed (2026-04-29)
+  - Notes: Pulled the remote README changes, inspected all README showcase PNGs, identified the SongID result, Discovery Graph atlas, and Network dashboard captures as carrying light-theme Semantic UI surfaces, fixed the affected dark-mode selectors, deployed the refreshed web bundle to `kspls0` for verification, and recaptured the three affected README images.

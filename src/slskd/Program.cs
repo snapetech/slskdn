@@ -2375,6 +2375,7 @@ namespace slskd
             services.AddSingleton<Transfers.MultiSource.IMultiSourceDownloadService, Transfers.MultiSource.MultiSourceDownloadService>();
             services.AddSingleton<Transfers.MultiSource.Analytics.ISwarmAnalyticsService, Transfers.MultiSource.Analytics.SwarmAnalyticsService>();
             services.AddSingleton<Transfers.MultiSource.Discovery.IAdvancedDiscoveryService, Transfers.MultiSource.Discovery.AdvancedDiscoveryService>();
+            services.AddSingleton<IAcceleratedDownloadService, AcceleratedDownloadService>();
             services.AddSingleton<IRescueGuardrailService, RescueGuardrailService>();
             services.AddSingleton<IRescueService>(sp => new RescueService(
                 sp.GetService<HashDb.IHashDbService>(),

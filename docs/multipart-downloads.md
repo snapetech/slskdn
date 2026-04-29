@@ -2,10 +2,13 @@
 
 ## TL;DR
 
-- **Default downloads use the standard single-source Soulseek path.** The slskdN multi-source code is not in the regular download flow.
-- Multi-source is reached only from three opt-in entry points:
-  1. `MultiSourceController` — explicit REST/UI request,
-  2. `RescueService` — kicks in only after a normal download stalls or has missing byte ranges,
+- **Default downloads use the standard single-source Soulseek path.** The slskdN multi-source code is not used for a healthy normal transfer.
+- The Downloads page has an **Accelerated** runtime toggle:
+  - **Off**: underperformance rescue is suppressed; normal downloads stay single-source.
+  - **On**: queued-too-long, slow, or stalled downloads may enter `RescueService` under the guardrails below.
+- Multi-source is reached from three conservative entry points:
+  1. `MultiSourceController` — explicit REST/UI or integration request,
+  2. `RescueService` — only after a normal download underperforms and accelerated downloads are enabled,
   3. `LibraryHealthRemediationService` — auto-fixes detected bad transcodes.
 - **Trust is split by source kind.**
   - **Mesh-overlay peers** (other slskdN nodes, discovered via the mesh DHT) are protocol-aware and use **parallel chunked downloads**.
@@ -29,8 +32,9 @@ slskdN addresses both by:
 | Component | Uses multi-source? | Default? |
 |-----------|---------------------|----------|
 | `DownloadService` (the normal Soulseek download path) | **No** | Default download path is unchanged |
-| `MultiSourceController` (`/api/v0/multisource/*`, `/swarm`, `/swarm/async`) | Yes — explicit user/integration call | Opt-in |
-| `RescueService` | Yes — but only after a normal download stalls / has missing ranges | Auto, behind guardrails |
+| Downloads `Accelerated` toggle (`/api/v0/transfers/downloads/accelerated`) | Gates underperformance-triggered rescue | Runtime opt-in switch |
+| `MultiSourceController` (`/api/v0/multisource/*`, `/swarm`, `/swarm/async`) | Yes — explicit user/integration call | Opt-in; verification enabled by default |
+| `RescueService` | Yes — but only after a normal download queues too long, slows down, stalls, or has missing ranges | Auto only while `Accelerated` is enabled |
 | `LibraryHealthRemediationService` | Yes — to redownload library files flagged as bad transcodes | Behind library-health remediation |
 
 ## Verification before chunking
@@ -39,7 +43,8 @@ slskdN addresses both by:
 
 Mitigations for the cost of those probes (each one is itself a mid-stream cancel, visible to the candidate as a failed transfer):
 
-- **Per-peer-per-day probe budget** — each Soulseek peer can be probed at most `MaxProbesPerPeerPerDay` times per process lifetime per UTC day (currently 10). Over-budget candidates are skipped, not probed; this caps the visible noise we cause on any individual uploader.
+- **Persistent per-peer-per-day probe budget** — each Soulseek peer can be probed at most `MaxProbesPerPeerPerDay` times per UTC day (currently 10). The budget is stored in `verification-probe-budget.json`, so a restart does not reset it. Over-budget candidates are skipped, not probed; this caps the visible noise we cause on any individual uploader.
+- **Shared discovery budget** — discovery hash probes use the same budget as verification probes. A peer cannot be probed extra times just because the hash came from the discovery path instead of the verification path.
 - **Mesh-source skip** — when a request supplies `MeshOverlaySourceCount >= 2`, all Soulseek-side probes are skipped entirely. The mesh sources are trusted and probing public peers wouldn't change the outcome.
 - **HashDb cache** — when `TryGetKnownHashAsync` finds a previously-verified hash for `(filename, fileSize)`, it's reused as the expected hash and propagated to the mesh.
 
@@ -88,7 +93,9 @@ transfers:
     retry_delay_ms: 5000
 ```
 
-(The hard floor and per-peer probe budget are not user-configurable; they are baseline safety properties.)
+The Downloads `Accelerated` toggle is a runtime switch exposed by the transfer API. It initializes from `rescue_mode.enabled`, but changing it in the UI does not rewrite `config/slskd.yml`.
+
+The hard floor and per-peer probe budget are not user-configurable; they are baseline safety properties.
 
 ## Defense against the common critique
 
@@ -97,8 +104,8 @@ transfers:
 Yes — if the implementation parallel-chunked every download across raw Soulseek peers, that critique would be correct. slskdN does not do that:
 
 - The default download path is unchanged from upstream slskd.
-- Multi-source is opt-in (or opt-in-after-failure) and the rescue path uses mesh-overlay peers, not public Soulseek peers.
-- For the cases where multi-source does talk to public peers (explicit-API calls), the path is sequential failover, not parallel chunking — it consumes one slot at a time and produces one cancellation per failover, not one per chunk.
+- Multi-source is opt-in or toggle-gated after underperformance, and the rescue path prefers mesh-overlay peers.
+- For the cases where multi-source does talk to public peers, the path is sequential failover, not parallel chunking — it consumes one slot at a time and produces one cancellation per failover, not one per chunk.
 - Multi-source is declined entirely when the source pool can't pass the hard floor.
 
 > *"You can't safely splice chunks because Soulseek has no content hashes."*
@@ -117,6 +124,8 @@ Yes. The verification probe and the parallel-chunk path both produce mid-stream 
 | Hard floor | `MultiSourceDownloadService.ApplyHardFloor` |
 | Sequential failover | `MultiSourceDownloadService.DownloadSequentialFailoverAsync` |
 | Probe budget | `ContentVerificationService.TryConsumeProbeBudget` |
+| Runtime accelerated toggle | `AcceleratedDownloadService` + `TransfersController.GetAcceleratedDownloadMode` / `SetAcceleratedDownloadMode` |
+| Underperformance gate | `UnderperformanceDetectorHostedService` |
 | Mesh-skip flag | `ContentVerificationRequest.MeshOverlaySourceCount` |
 | Trust discriminator | `VerificationMethod.MeshOverlay` + `VerifiedSourceExtensions.IsMeshOverlay` |
 

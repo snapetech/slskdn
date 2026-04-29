@@ -22,6 +22,7 @@ namespace slskd.Transfers.Rescue
     {
         private readonly IDownloadService downloadService;
         private readonly IRescueService rescueService;
+        private readonly IAcceleratedDownloadService acceleratedDownloads;
         private readonly IOptionsMonitor<slskd.Options> options;
         private readonly ILogger log = Log.ForContext<UnderperformanceDetectorHostedService>();
         private CancellationTokenSource? loopCts;
@@ -33,10 +34,12 @@ namespace slskd.Transfers.Rescue
         public UnderperformanceDetectorHostedService(
             IDownloadService downloadService,
             IRescueService rescueService,
+            IAcceleratedDownloadService acceleratedDownloads,
             IOptionsMonitor<slskd.Options> options)
         {
             this.downloadService = downloadService;
             this.rescueService = rescueService;
+            this.acceleratedDownloads = acceleratedDownloads;
             this.options = options;
         }
 
@@ -88,7 +91,7 @@ namespace slskd.Transfers.Rescue
                 try
                 {
                     var rescue = options.CurrentValue?.RescueMode;
-                    if (rescue?.Enabled != true)
+                    if (rescue == null || !acceleratedDownloads.IsEnabled)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(rescue?.CheckIntervalSeconds ?? 45), ct).ConfigureAwait(false);
                         continue;

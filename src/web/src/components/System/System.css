@@ -92,3 +92,29 @@
 .file-management-header {
   margin-bottom: -15px !important;
 }
+
+:root.dark .network-diagnostic-message.ui.info.message,
+:root.dark .network-diagnostic-message.ui.warning.message {
+  background: var(--slskd-overlay-background) !important;
+  border: 1px solid var(--slskdn-accent-warm-muted) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18) inset !important;
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .network-diagnostic-message.ui.info.message .header,
+:root.dark .network-diagnostic-message.ui.warning.message .header {
+  color: var(--slskdn-accent-warm-hover) !important;
+}
+
+:root.dark .network-diagnostic-message.ui.info.message code,
+:root.dark .network-diagnostic-message.ui.warning.message code {
+  background: var(--slskd-color-inset);
+  color: var(--slskdn-accent-primary-hover);
+}
+
+:root.dark .network-dashboard .ui.header .sub.header,
+:root.dark .network-dashboard .ui.card .meta,
+:root.dark .network-dashboard .ui.card .description,
+:root.dark .network-dashboard .ui.segment .description {
+  color: var(--slskd-color-subtle) !important;
+}

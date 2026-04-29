@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a first-class Downloads `Accelerated` toggle and API state endpoint,
+  persistent discovery/verification probe budgeting, and related UI/docs
+  polish for the guarded multi-source rescue path.
 - Redesigned the Web UI footer status dock into clearer brand, speed,
   network, transport-health, and fork-note groups with responsive spacing.
 - Fixed the Web UI theme picker so browser clicks open a portal-backed menu
@@ -48,6 +51,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   and the nuspec is written with Chocolatey's normalized package version while
   keeping installer URLs pointed at the original GitHub release tag.
 - Multi-source / swarm download safety pass:
+  - Added a first-class Downloads `Accelerated` toggle and transfer API state
+    endpoint. Turning it off suppresses underperformance-triggered rescue;
+    turning it on lets queued-too-long, slow, or stalled downloads enter the
+    conservative rescue path.
   - Added `VerificationMethod.MeshOverlay` so trusted slskdN mesh peers are no
     longer conflated with size-only Soulseek matches, and tagged rescue-mode
     overlay peers accordingly.
@@ -61,11 +68,13 @@ For dev or build tags, use the same logical version string embedded in the tag.
     (caller falls back to single-source) unless ≥2 sources share a verified
     content hash or every source is mesh-overlay; the explicit-API endpoints
     return a clear 400 instead of silently degrading.
-  - Added a per-peer-per-day verification probe budget and a
+  - Added a persistent per-peer-per-day verification probe budget and a
     `MeshOverlaySourceCount` request flag that skips Soulseek-side 32 KB
     SHA-256 probes entirely when mesh-overlay sources already cover the
     request, capping the visible "transfer cancelled" noise on any single
     Soulseek uploader.
+  - Made discovery hash probes share that same budget so discovery cannot
+    create extra probe noise beyond the verification cap.
   - Added Prometheus counters for mid-stream cancellations
     (`slskd_swarm_midstream_cancellations_total`), verification probe
     outcomes (`slskd_swarm_verification_probes_total`), hard-floor fallbacks
@@ -74,9 +83,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
     of the multi-source path is measurable directly.
   - Rewrote `docs/multipart-downloads.md` and the README multi-source
     section to be explicit about scope (default downloads use the standard
-    single-source Soulseek path; multi-source is rescue/remediation/
-    explicit-API only) and document the trust split, hard floor, and
-    probe budget.
+    single-source Soulseek path; acceleration is toggle-gated or explicit)
+    and document the trust split, hard floor, and probe budget.
 
 ## [2026042900-slskdn.197] — 2026-04-29
 

@@ -16,6 +16,8 @@ vi.mock('../../lib/autoReplace', () => ({
 
 vi.mock('../../lib/transfers', () => ({
   getAll: vi.fn(),
+  getAcceleratedMode: vi.fn(),
+  setAcceleratedMode: vi.fn(),
   getPlaceInQueue: vi.fn(),
   download: vi.fn(),
   isStateRetryable: (state) =>
@@ -34,7 +36,7 @@ vi.mock('./TransferGroup', () => ({
 }));
 
 vi.mock('./TransfersHeader', () => ({
-  default: ({ onRemoveAll, onRetryAll, transfers }) => {
+  default: ({ acceleratedEnabled, onAcceleratedChange, onRemoveAll, onRetryAll, transfers }) => {
     const files = transfers.flatMap((user) =>
       user.directories.flatMap((directory) => directory.files),
     );
@@ -46,6 +48,9 @@ vi.mock('./TransfersHeader', () => ({
         ))}
         <button onClick={() => onRetryAll(files)}>retry-all</button>
         <button onClick={() => onRetryAll(files)}>retry-all-again</button>
+        <button onClick={() => onAcceleratedChange(!acceleratedEnabled)}>
+          toggle-accelerated
+        </button>
         <button onClick={() => onRemoveAll(files, false, { useBulkClear: true })}>
           remove-completed
         </button>
@@ -94,6 +99,8 @@ describe('Transfers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     transfersLibrary.getAll.mockResolvedValue(makeTransfers());
+    transfersLibrary.getAcceleratedMode.mockResolvedValue({ enabled: false });
+    transfersLibrary.setAcceleratedMode.mockResolvedValue({ enabled: true });
     autoReplaceLibrary.getAutoReplaceStatus.mockResolvedValue({
       enabled: false,
     });
@@ -247,6 +254,26 @@ describe('Transfers', () => {
     });
     expect(toast.error).toHaveBeenCalledWith(
       expect.stringContaining('Failed to retry 2 transfer(s).'),
+    );
+  });
+
+  it('toggles accelerated downloads from the downloads header', async () => {
+    render(
+      <Transfers
+        direction="download"
+        server={{ isConnected: true }}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'toggle-accelerated' }));
+
+    await waitFor(() => {
+      expect(transfersLibrary.setAcceleratedMode).toHaveBeenCalledWith({
+        enabled: true,
+      });
+    });
+    expect(toast.info).toHaveBeenCalledWith(
+      expect.stringContaining('Accelerated mode enabled'),
     );
   });
 });

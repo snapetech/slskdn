@@ -4,12 +4,12 @@
 namespace slskd.Transfers.MultiSource
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using Serilog;
@@ -36,36 +36,96 @@ namespace slskd.Transfers.MultiSource
         /// </summary>
         public const int MaxProbesPerPeerPerDay = 10;
 
-        // username -> (UTC date, probe count) — process-lifetime budget tracker.
-        private static readonly ConcurrentDictionary<string, (DateTime Day, int Count)> ProbeBudget = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly object ProbeBudgetSyncRoot = new();
+        private static readonly Dictionary<string, ProbeBudgetEntry> ProbeBudget = new(StringComparer.OrdinalIgnoreCase);
+        private static bool probeBudgetLoaded;
 
         private static bool TryConsumeProbeBudget(string username)
         {
-            var today = DateTime.UtcNow.Date;
-            while (true)
+            lock (ProbeBudgetSyncRoot)
             {
-                (DateTime Day, int Count) current = ProbeBudget.TryGetValue(username, out var existing)
-                    ? existing
-                    : (today, 0);
-                (DateTime Day, int Count) rolled = current.Day == today ? current : (today, 0);
-                if (rolled.Count >= MaxProbesPerPeerPerDay)
+                EnsureProbeBudgetLoaded();
+
+                var today = DateTime.UtcNow.Date;
+                if (!ProbeBudget.TryGetValue(username, out var current) || current.Day != today)
+                {
+                    current = new ProbeBudgetEntry { Day = today, Count = 0 };
+                }
+
+                if (current.Count >= MaxProbesPerPeerPerDay)
                 {
                     return false;
                 }
 
-                (DateTime Day, int Count) next = (rolled.Day, rolled.Count + 1);
-                if (ProbeBudget.TryGetValue(username, out var observed))
+                ProbeBudget[username] = new ProbeBudgetEntry { Day = today, Count = current.Count + 1 };
+                SaveProbeBudget();
+                return true;
+            }
+        }
+
+        private static void EnsureProbeBudgetLoaded()
+        {
+            if (probeBudgetLoaded)
+            {
+                return;
+            }
+
+            probeBudgetLoaded = true;
+
+            try
+            {
+                var path = GetProbeBudgetPath();
+                if (!System.IO.File.Exists(path))
                 {
-                    if (ProbeBudget.TryUpdate(username, next, observed))
-                    {
-                        return true;
-                    }
+                    return;
                 }
-                else if (ProbeBudget.TryAdd(username, next))
+
+                var entries = JsonSerializer.Deserialize<Dictionary<string, ProbeBudgetEntry>>(System.IO.File.ReadAllText(path));
+                if (entries == null)
                 {
-                    return true;
+                    return;
+                }
+
+                var today = DateTime.UtcNow.Date;
+                foreach (var entry in entries.Where(entry => entry.Value.Day == today))
+                {
+                    ProbeBudget[entry.Key] = entry.Value;
                 }
             }
+            catch
+            {
+                // Probe budgets are best-effort; if the file is unreadable, start a fresh daily budget.
+            }
+        }
+
+        private static void SaveProbeBudget()
+        {
+            try
+            {
+                var path = GetProbeBudgetPath();
+                System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                System.IO.File.WriteAllText(path, JsonSerializer.Serialize(ProbeBudget));
+            }
+            catch
+            {
+                // Probe budgets remain enforced in-process if persistence fails.
+            }
+        }
+
+        private static string GetProbeBudgetPath()
+        {
+            var appDirectory = string.IsNullOrWhiteSpace(Program.AppDirectory)
+                ? Program.DefaultAppDirectory
+                : Program.AppDirectory;
+
+            return Path.Combine(appDirectory, "verification-probe-budget.json");
+        }
+
+        private sealed class ProbeBudgetEntry
+        {
+            public DateTime Day { get; set; }
+
+            public int Count { get; set; }
         }
 
         /// <summary>
@@ -338,6 +398,16 @@ namespace slskd.Transfers.MultiSource
             long fileSize,
             CancellationToken cancellationToken = default)
         {
+            if (!TryConsumeProbeBudget(username))
+            {
+                Telemetry.SwarmMetrics.SwarmVerificationProbesTotal.WithLabels("soulseek", "skipped_budget").Inc();
+                Log.Information(
+                    "[VERIFY] Skipping probe for {Username}: per-peer-per-day budget exhausted ({Cap})",
+                    username,
+                    MaxProbesPerPeerPerDay);
+                return null;
+            }
+
             var (_, hash, _, _, error) = await VerifySingleSourceAsync(
                 username,
                 filename,

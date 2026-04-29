@@ -1,3 +1,33 @@
+## Update 2026-04-29 23:22:41Z
+
+- Current task: None. README showcase dark-mode screenshots are fixed locally.
+- Last activity:
+  - pulled the remote README edits with rebase/autostash
+  - inspected the README showcase screenshots and identified light-theme leaks in SongID, Discovery Graph, and Network
+  - added explicit dark-theme styling for the affected Semantic UI variants and nested text
+  - rebuilt and deployed the web bundle to `kspls0` for screenshot verification
+  - recaptured `songid-cc-youtube-result.png`, `songid-discovery-graph.png`, and `network-health-dashboard.png`
+  - documented and committed the dark-theme Semantic UI variant gotcha separately
+- Next steps:
+  1. Commit and push the README screenshot/dark-theme styling changes when ready.
+  2. Keep the unrelated accelerated-downloads dirty work intact unless explicitly asked to include or split it.
+
+## Update 2026-04-29 23:20:00Z
+
+- Current task: None. The accelerated-downloads toggle and conservative rescue wiring are implemented locally.
+- Last activity:
+  - added the Downloads header `Accelerated` toggle with tooltip and runtime transfer API endpoints
+  - routed the underperformance detector through the toggle so slow/stalled downloads can enter rescue acceleration only when enabled
+  - preserved the trust policy: normal Soulseek downloads stay single-source, raw Soulseek alternates use verified sequential failover, and true multipart remains mesh-overlay-only
+  - made discovery hash probes consume the same persistent per-peer daily verification budget as verification probes
+  - changed explicit swarm download requests to default to verification enabled
+  - updated README, multipart-downloads, and changelog documentation for the toggle and network-health policy
+  - documented and committed the discovery probe-budget gotcha separately
+- Next steps:
+  1. Resolve the unrelated unit-test compile errors in `YamlConfigurationSourceTests` and `ProgramPathNormalizationTests` so the new backend tests can run in a fresh build.
+  2. Decide whether the accelerated-downloads toggle should be persisted to config/UI storage or remain runtime-only.
+  3. Commit and push the accelerated-downloads implementation after review.
+
 ## Update 2026-04-29 22:35:00Z
 
 - Current task: None. The post-0.25 upstream-compatibility gap plan is implemented locally.

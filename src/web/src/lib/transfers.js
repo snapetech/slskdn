@@ -18,6 +18,18 @@ export const getSpeeds = async () => {
   return response.data;
 };
 
+export const getAcceleratedMode = async () => {
+  const response = await api.get('/transfers/downloads/accelerated');
+  return response.data;
+};
+
+export const setAcceleratedMode = async ({ enabled }) => {
+  const response = await api.put('/transfers/downloads/accelerated', {
+    enabled,
+  });
+  return response.data;
+};
+
 export const download = ({ username, files = [], destination }) => {
   const parameters = destination
     ? `?destination=${encodeURIComponent(destination)}`

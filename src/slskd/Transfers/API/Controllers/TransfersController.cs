@@ -35,6 +35,7 @@ namespace slskd.Transfers.API
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
     using slskd.Transfers.AutoReplace;
+    using slskd.Transfers.Downloads;
     using slskd.Core.Security;
 
     /// <summary>
@@ -55,18 +56,21 @@ namespace slskd.Transfers.API
         /// <param name="transferService"></param>
         /// <param name="autoReplaceService"></param>
         /// <param name="autoReplaceBackgroundService"></param>
+        /// <param name="acceleratedDownloads"></param>
         public TransfersController(
             ITransferService transferService,
             IOptionsSnapshot<Options> optionsSnapshot,
             IStateSnapshot<State> stateSnapshot,
             IAutoReplaceService autoReplaceService,
-            AutoReplaceBackgroundService autoReplaceBackgroundService)
+            AutoReplaceBackgroundService autoReplaceBackgroundService,
+            IAcceleratedDownloadService acceleratedDownloads)
         {
             Transfers = transferService;
             OptionsSnapshot = optionsSnapshot;
             StateSnapshot = stateSnapshot;
             AutoReplace = autoReplaceService;
             AutoReplaceBackgroundService = autoReplaceBackgroundService;
+            AcceleratedDownloads = acceleratedDownloads;
         }
 
         private static SemaphoreSlim DownloadRequestLimiter { get; } = new SemaphoreSlim(2, 2);
@@ -75,7 +79,39 @@ namespace slskd.Transfers.API
         private IStateSnapshot<State> StateSnapshot { get; }
         private IAutoReplaceService AutoReplace { get; }
         private AutoReplaceBackgroundService AutoReplaceBackgroundService { get; }
+        private IAcceleratedDownloadService AcceleratedDownloads { get; }
         private ILogger Log { get; set; } = Serilog.Log.ForContext<TransfersController>();
+
+        /// <summary>
+        ///     Gets the accelerated download mode status.
+        /// </summary>
+        /// <returns>The current accelerated download mode state.</returns>
+        [HttpGet("downloads/accelerated")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(AcceleratedDownloadState), 200)]
+        public IActionResult GetAcceleratedDownloadMode()
+        {
+            return Ok(AcceleratedDownloads.GetState());
+        }
+
+        /// <summary>
+        ///     Enables or disables accelerated download mode.
+        /// </summary>
+        /// <param name="request">The requested accelerated download mode state.</param>
+        /// <returns>The updated accelerated download mode state.</returns>
+        [HttpPut("downloads/accelerated")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(typeof(AcceleratedDownloadState), 200)]
+        [ProducesResponseType(typeof(string), 400)]
+        public IActionResult SetAcceleratedDownloadMode([FromBody, Required] AcceleratedDownloadModeRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request is required");
+            }
+
+            return Ok(AcceleratedDownloads.SetEnabled(request.Enabled));
+        }
 
         /// <summary>
         ///     Cancels the specified download.
@@ -961,6 +997,11 @@ namespace slskd.Transfers.API
         public int FailedDownloads { get; set; }
         public long TotalBytes { get; set; }
         public DateTime? LastDownloadAt { get; set; }
+    }
+
+    public class AcceleratedDownloadModeRequest
+    {
+        public bool Enabled { get; set; }
     }
 
     public class UploadDiagnosticsResponse
