@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z151. Do Not Log Legacy Credential File Paths
+
+**The Bug**: The overlay certificate hardening stopped reading `overlay_cert.key`, but still logged `_legacyPasswordPath` after deletion. CodeQL treated that as another `cs/cleartext-storage-of-sensitive-information` flow because the legacy credential path remains sensitive metadata.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/CertificateManager.cs`
+
+**Wrong**:
+```csharp
+File.Delete(_legacyPasswordPath);
+_logger.LogDebug("Removed legacy overlay certificate password file {Path}", _legacyPasswordPath);
+```
+
+**Correct**:
+```csharp
+File.Delete(_legacyPasswordPath);
+_logger.LogDebug("Removed legacy overlay certificate password file");
+```
+
+**Why This Keeps Happening**: Once a file path is specifically a legacy credential location, logging or otherwise propagating that path can keep static-analysis secret flows alive even if the file contents are never read. Legacy secret cleanup paths should avoid logging the exact credential path and should only report the action.
+
 ### 0z150. LAN-Only DHT With Zero Nodes Is Not A Port-Forwarding Failure
 
 **The Bug**: The Network dashboard showed the generic connectivity warning when `dhtRendezvous.lanOnly: true` left the DHT with zero nodes and zero peers, which made operators chase port-forwarding even though the service deliberately skips public bootstrap routers in LAN-only mode.
