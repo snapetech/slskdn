@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z148. Do Not Read Legacy Overlay Certificate Password Files
+
+**The Bug**: Overlay certificate migration still read `overlay_cert.key` as a cleartext password when loading an old password-protected `overlay_cert.pfx`, which kept a CodeQL `cs/cleartext-storage-of-sensitive-information` alert open.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/Security/CertificateManager.cs`
+
+**Wrong**:
+```csharp
+var password = File.ReadAllText(_legacyPasswordPath).Trim();
+return X509CertificateLoader.LoadPkcs12FromFile(path, password, ...);
+```
+
+**Correct**:
+```csharp
+DeleteLegacyPasswordFile();
+throw; // Let the caller generate a fresh passwordless overlay certificate.
+```
+
+**Why This Keeps Happening**: Compatibility migration can look harmless because the file is deleted after a successful migration, but reading a persisted cleartext secret is still sensitive-data handling. Overlay certificates are self-signed and can be regenerated, so legacy cleartext password files should be deleted without reading them instead of migrated through the old password.
+
 ### 0z147. Frontend Must Normalize Backend Boolean Names Before Warning On Them
 
 **The Bug**: The Network dashboard showed the public DHT exposure warning even when runtime configuration had `dhtRendezvous.lanOnly: true`. The backend `/api/v0/dht/status` response serializes `LanOnly` as `lanOnly`, but the frontend warning condition checked `stats.dht.isLanOnly`, so `undefined` was treated as false and LAN-only nodes looked publicly exposed.
