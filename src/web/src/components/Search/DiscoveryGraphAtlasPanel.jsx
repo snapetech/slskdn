@@ -204,7 +204,7 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
         without opening a modal. Use manual seeds, canonical ids, or saved
         branches to keep exploration in the page flow.
       </p>
-      <Form>
+      <Form className="discovery-graph-seed-form">
         <Form.Field>
           <label>Seed Scope</label>
           <Dropdown
@@ -302,31 +302,33 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
           }
         />
       </Form>
-      <div style={{ marginTop: '1em' }}>
-        <Label size="tiny">Max depth {maxDepth}</Label>
-        <Input
-          max={4}
-          min={0}
-          onChange={(_event, { value }) =>
-            setMaxDepth(Number.parseInt(value || '0', 10) || 0)
-          }
-          step={1}
-          type="range"
-          value={maxDepth}
-        />
-        <Label size="tiny" style={{ marginLeft: '0.75em' }}>
-          Min weight {Math.round((minNodeWeight || 0) * 100)}
-        </Label>
-        <Input
-          max={1}
-          min={0}
-          onChange={(_event, { value }) =>
-            setMinNodeWeight(Number.parseFloat(value || '0') || 0)
-          }
-          step={0.05}
-          type="range"
-          value={minNodeWeight}
-        />
+      <div className="discovery-graph-controls">
+        <label className="discovery-graph-range">
+          <span>Depth {maxDepth}</span>
+          <Input
+            max={4}
+            min={0}
+            onChange={(_event, { value }) =>
+              setMaxDepth(Number.parseInt(value || '0', 10) || 0)
+            }
+            step={1}
+            type="range"
+            value={maxDepth}
+          />
+        </label>
+        <label className="discovery-graph-range">
+          <span>Weight {Math.round((minNodeWeight || 0) * 100)}</span>
+          <Input
+            max={1}
+            min={0}
+            onChange={(_event, { value }) =>
+              setMinNodeWeight(Number.parseFloat(value || '0') || 0)
+            }
+            step={0.05}
+            type="range"
+            value={minNodeWeight}
+          />
+        </label>
       </div>
       {savedBranches.length > 0 ? (
         <div style={{ marginTop: '1em' }}>

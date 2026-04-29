@@ -20,6 +20,7 @@ const DiscoveryGraphAtlas = ({
       visibleNodeIds.has(edge.targetNodeId) &&
       (edgeTypes.length === 0 || edgeTypes.includes(edge.edgeType)),
   );
+  const sparse = visibleNodes.length <= 1 || visibleEdges.length === 0;
 
   const typeCounts = visibleNodes.reduce((accumulator, node) => {
     accumulator[node.nodeType] = (accumulator[node.nodeType] || 0) + 1;
@@ -46,7 +47,16 @@ const DiscoveryGraphAtlas = ({
         ))}
         <Label size="tiny">Edges {visibleEdges.length}</Label>
       </div>
-      <div className="discovery-graph-canvas-shell">
+      {sparse ? (
+        <p className="discovery-graph-sparse-note">
+          This seed has no visible neighbors at the current depth and weight.
+          Lower the weight threshold, broaden the seed, or open a SongID run with
+          candidate tracks to expand the atlas.
+        </p>
+      ) : null}
+      <div
+        className={`discovery-graph-canvas-shell ${sparse ? 'sparse' : ''}`}
+      >
         <DiscoveryGraphCanvas
           edgeTypes={edgeTypes}
           graph={{
@@ -54,6 +64,7 @@ const DiscoveryGraphAtlas = ({
             edges: visibleEdges,
             nodes: visibleNodes,
           }}
+          height={sparse ? 280 : 440}
           onNodeClick={onNodeClick}
         />
       </div>

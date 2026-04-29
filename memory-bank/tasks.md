@@ -1372,3 +1372,7 @@
 - [x] Fix README showcase dark-mode screenshots
   - Status: completed (2026-04-29)
   - Notes: Pulled the remote README changes, inspected all README showcase PNGs, identified the SongID result, Discovery Graph atlas, and Network dashboard captures as carrying light-theme Semantic UI surfaces, fixed the affected dark-mode selectors, deployed the refreshed web bundle to `kspls0` for verification, and recaptured the three affected README images.
+
+- [x] Principal UI pass over README showcase surfaces
+  - Status: completed (2026-04-29)
+  - Notes: Re-reviewed every README screenshot for layout, spacing, chrome, and contrast issues. Compacted the desktop nav, reduced fixed footer height, made the mobile footer a one-row scroll rail, tightened search result cards and file lists, made Discovery Graph controls deliberate, added sparse graph messaging, deployed to `kspls0`, and recaptured the README gallery.

@@ -19,12 +19,15 @@ const FileList = ({
   const [folded, setFolded] = useState(false);
 
   return (
-    <div style={{ opacity: locked ? 0.5 : 1 }}>
+    <div
+      className="filelist"
+      style={{ opacity: locked ? 0.5 : 1 }}
+    >
       <Header
         className="filelist-header"
         size="small"
       >
-        <div>
+        <div className="filelist-title">
           <Icon
             link={!locked}
             name={locked ? 'lock' : folded ? 'folder' : 'folder open'}
@@ -47,7 +50,7 @@ const FileList = ({
       {!folded && files && files.length > 0 && (
         <List>
           <List.Item>
-            <Table>
+            <Table className="filelist-table">
               <Table.Header>
                 <Table.Row>
                   <Table.HeaderCell className="filelist-selector">

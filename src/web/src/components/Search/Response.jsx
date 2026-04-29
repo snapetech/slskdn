@@ -502,161 +502,157 @@ class Response extends Component {
           raised
         >
           <Card.Content>
-          <Card.Header>
-            <Icon
-              link
-              name={isFolded ? 'chevron right' : 'chevron down'}
-              onClick={this.handleToggleFolded}
-            />
-            <Icon
-              color={free ? 'green' : 'yellow'}
-              name="circle"
-            />
-            <Link
-              style={{ color: 'inherit' }}
-              title="Browse files"
-              to={{
-                pathname: '/browse',
-                state: { user: response.username },
-              }}
-            >
-              <UserCard username={response.username}>
-                {response.username}
-              </UserCard>
-            </Link>
-            {!userGroupLoading &&
-              userGroup &&
-              (() => {
-                const indicator = getGroupIndicator(userGroup);
-                return indicator ? (
+          <Card.Header className="result-card-header">
+            <div className="result-card-identity">
+              <Icon
+                className="result-card-fold"
+                link
+                name={isFolded ? 'chevron right' : 'chevron down'}
+                onClick={this.handleToggleFolded}
+              />
+              <span
+                className={`result-card-presence ${free ? 'free' : 'queued'}`}
+                title={free ? 'Free upload slot available' : 'No free upload slot'}
+              />
+              <Link
+                className="result-card-user"
+                title="Browse files"
+                to={{
+                  pathname: '/browse',
+                  state: { user: response.username },
+                }}
+              >
+                <UserCard username={response.username}>
+                  {response.username}
+                </UserCard>
+              </Link>
+              <div className="result-card-badges">
+                {!userGroupLoading &&
+                  userGroup &&
+                  (() => {
+                    const indicator = getGroupIndicator(userGroup);
+                    return indicator ? (
+                      <Popup
+                        content={indicator.tooltip}
+                        position="top center"
+                        trigger={
+                          <Icon
+                            color={indicator.color}
+                            name={indicator.icon}
+                            size="small"
+                          />
+                        }
+                      />
+                    ) : null;
+                  })()}
+                {downloadStats && (
                   <Popup
-                    content={indicator.tooltip}
+                    content={`${downloadStats.successfulDownloads} successful, ${downloadStats.failedDownloads} failed downloads from this user`}
                     position="top center"
                     trigger={
-                      <Icon
-                        color={indicator.color}
-                        name={indicator.icon}
-                        size="small"
-                        style={{ marginLeft: '4px' }}
+                      <Label
+                        color={badgeColor}
+                        size="tiny"
+                      >
+                        <Icon name="download" />
+                        {downloadStats.successfulDownloads}
+                      </Label>
+                    }
+                  />
+                )}
+                {smartScore !== undefined && (
+                  <Popup
+                    content={`Smart ranking score: ${smartScore.toFixed(1)} points`}
+                    position="top center"
+                    trigger={
+                      <Label
+                        color="purple"
+                        size="tiny"
+                      >
+                        <Icon name="star" />
+                        {smartScore.toFixed(0)}
+                      </Label>
+                    }
+                  />
+                )}
+                {userNote && (
+                  <Popup
+                    content={userNote.note || 'User Note'}
+                    position="top center"
+                    trigger={
+                      <Label
+                        circular
+                        color={userNote.color || 'grey'}
+                        empty={!userNote.icon}
+                        icon={userNote.icon}
+                        size="tiny"
                       />
                     }
                   />
-                ) : null;
-              })()}
-            {downloadStats && (
-              <Popup
-                content={`${downloadStats.successfulDownloads} successful, ${downloadStats.failedDownloads} failed downloads from this user`}
-                position="top center"
-                trigger={
-                  <Label
-                    color={badgeColor}
-                    size="tiny"
-                    style={{ marginLeft: '8px' }}
-                  >
-                    <Icon name="download" />
-                    {downloadStats.successfulDownloads}
-                  </Label>
-                }
-              />
-            )}
-            {smartScore !== undefined && (
-              <Popup
-                content={`Smart ranking score: ${smartScore.toFixed(1)} points`}
-                position="top center"
-                trigger={
-                  <Label
-                    color="purple"
-                    size="tiny"
-                    style={{ marginLeft: '4px' }}
-                  >
-                    <Icon name="star" />
-                    {smartScore.toFixed(0)}
-                  </Label>
-                }
-              />
-            )}
-            {userNote && (
-              <Popup
-                content={userNote.note || 'User Note'}
-                position="top center"
-                trigger={
-                  <Label
-                    circular
-                    color={userNote.color || 'grey'}
-                    empty={!userNote.icon}
-                    icon={userNote.icon}
-                    size="tiny"
-                    style={{ marginLeft: '4px' }}
-                  />
-                }
-              />
-            )}
-            {/* Scene ↔ Pod Bridging provenance badges */}
-            {response.sourceProviders &&
-              response.sourceProviders.length > 0 && (
-                <>
-                  {response.sourceProviders.includes('pod') && (
-                    <Popup
-                      content="Available from Pod/Mesh network"
-                      position="top center"
-                      trigger={
-                        <Label
-                          color="blue"
-                          size="tiny"
-                          style={{ marginLeft: '4px' }}
-                        >
-                          POD
-                        </Label>
-                      }
-                    />
+                )}
+                {response.sourceProviders &&
+                  response.sourceProviders.length > 0 && (
+                    <>
+                      {response.sourceProviders.includes('pod') && (
+                        <Popup
+                          content="Available from Pod/Mesh network"
+                          position="top center"
+                          trigger={
+                            <Label
+                              color="blue"
+                              size="tiny"
+                            >
+                              POD
+                            </Label>
+                          }
+                        />
+                      )}
+                      {response.sourceProviders.includes('scene') && (
+                        <Popup
+                          content="Available from Soulseek Scene"
+                          position="top center"
+                          trigger={
+                            <Label
+                              color="purple"
+                              size="tiny"
+                            >
+                              SCENE
+                            </Label>
+                          }
+                        />
+                      )}
+                      {response.sourceProviders.length > 1 && (
+                        <Popup
+                          content={`Available from both Pod and Scene. Preferred: ${response.primarySource?.toUpperCase() || 'POD'}`}
+                          position="top center"
+                          trigger={
+                            <Label
+                              color="teal"
+                              size="tiny"
+                            >
+                              POD+SCENE
+                            </Label>
+                          }
+                        />
+                      )}
+                    </>
                   )}
-                  {response.sourceProviders.includes('scene') && (
-                    <Popup
-                      content="Available from Soulseek Scene"
-                      position="top center"
-                      trigger={
-                        <Label
-                          color="purple"
-                          size="tiny"
-                          style={{ marginLeft: '4px' }}
-                        >
-                          SCENE
-                        </Label>
-                      }
+                <UserNoteModal
+                  onClose={onNoteUpdate}
+                  trigger={
+                    <Icon
+                      color="grey"
+                      link
+                      name="pencil alternate"
+                      size="small"
+                      title="Edit User Note"
                     />
-                  )}
-                  {response.sourceProviders.length > 1 && (
-                    <Popup
-                      content={`Available from both Pod and Scene. Preferred: ${response.primarySource?.toUpperCase() || 'POD'}`}
-                      position="top center"
-                      trigger={
-                        <Label
-                          color="teal"
-                          size="tiny"
-                          style={{ marginLeft: '4px' }}
-                        >
-                          POD+SCENE
-                        </Label>
-                      }
-                    />
-                  )}
-                </>
-              )}
-            <UserNoteModal
-              onClose={onNoteUpdate}
-              trigger={
-                <Icon
-                  color="grey"
-                  link
-                  name="pencil alternate"
-                  size="small"
-                  style={{ marginLeft: '4px', opacity: 0.5 }}
-                  title="Edit User Note"
+                  }
+                  username={response.username}
                 />
-              }
-              username={response.username}
-            />
-            <span style={{ float: 'right' }}>
+              </div>
+            </div>
+            <div className="result-card-actions">
               <Popup
                 content="Open a Discovery Graph centered on this result so you can branch into adjacent identity and context instead of treating search as a flat list."
                 position="top center"
@@ -666,7 +662,6 @@ class Response extends Component {
                     link
                     name="share alternate"
                     onClick={() => this.openDiscoveryGraph(this.buildFallbackGraphRequest())}
-                    style={{ marginRight: '8px' }}
                   />
                 }
               />
@@ -679,7 +674,6 @@ class Response extends Component {
                     link
                     name="crosshairs"
                     onClick={() => this.openDiscoveryGraph(this.buildFallbackGraphRequest())}
-                    style={{ marginRight: '8px' }}
                   />
                 }
               />
@@ -696,7 +690,6 @@ class Response extends Component {
                     link
                     name={isBlocked ? 'ban' : 'user cancel'}
                     onClick={isBlocked ? onUnblock : onBlock}
-                    style={{ marginRight: '8px' }}
                   />
                 }
               />
@@ -707,7 +700,7 @@ class Response extends Component {
                 name="close"
                 onClick={() => this.props.onHide()}
               />
-            </span>
+            </div>
           </Card.Header>
           <Card.Meta className="result-meta">
             <span>

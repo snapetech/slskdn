@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Rebuilt the README showcase UI surfaces with compact desktop navigation,
+  a shorter fixed footer, a one-row mobile footer rail, cleaner search result
+  cards/file lists, and clearer Discovery Graph controls/sparse-state
+  messaging.
 - Added a first-class Downloads `Accelerated` toggle and API state endpoint,
   persistent discovery/verification probe budgeting, and related UI/docs
   polish for the guarded multi-source rescue path.

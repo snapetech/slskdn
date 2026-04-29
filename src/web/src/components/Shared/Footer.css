@@ -3,9 +3,9 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 9999;
+    z-index: 950;
     pointer-events: none;
-    padding: 8px 14px;
+    padding: 6px 12px;
     background: var(--slskdn-footer-background, linear-gradient(135deg, #121315 0%, #25232d 52%, #171411 100%));
     border-top: 1px solid var(--slskdn-accent-primary-border, rgba(184, 154, 246, 0.34));
     box-shadow: var(--slskdn-footer-shadow, 0 -4px 20px rgba(10, 8, 7, 0.62));
@@ -17,7 +17,7 @@
     justify-content: space-between;
     gap: 14px;
     width: 100%;
-    min-height: 32px;
+    min-height: 28px;
     color: rgba(238, 233, 227, 0.72);
     font-size: 12px;
     pointer-events: auto;
@@ -127,8 +127,8 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-height: 30px;
-    padding: 4px 9px;
+    min-height: 26px;
+    padding: 3px 8px;
     color: rgba(238, 233, 227, 0.58);
     font-family: 'Courier New', monospace;
     font-size: 11px;
@@ -221,8 +221,8 @@
     align-items: center;
     flex: 0 0 auto;
     gap: 8px;
-    min-height: 30px;
-    padding: 4px 8px;
+    min-height: 26px;
+    padding: 3px 8px;
 }
 
 .slskdn-footer-stat-icon {
@@ -249,8 +249,8 @@
     align-items: center;
     flex: 0 0 auto;
     gap: 5px;
-    min-height: 30px;
-    padding: 4px 9px;
+    min-height: 26px;
+    padding: 3px 8px;
     color: rgba(238, 233, 227, 0.52);
     white-space: nowrap;
 }
@@ -339,6 +339,12 @@ html:not(.dark) .slskdn-footer-sponsor .icon {
     color: #bf3989;
 }
 
+@media (max-width: 1780px) {
+    .slskdn-footer-quote {
+        display: none;
+    }
+}
+
 @media (max-width: 1500px) {
     .slskdn-footer-content {
         gap: 10px;
@@ -353,9 +359,6 @@ html:not(.dark) .slskdn-footer-sponsor .icon {
         display: none;
     }
 
-    .slskdn-footer-quote {
-        display: none;
-    }
 }
 
 @media (max-width: 980px) {
@@ -393,7 +396,21 @@ html:not(.dark) .slskdn-footer-sponsor .icon {
 }
 
 @media (max-width: 620px) {
+    .slskdn-footer {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 5px 8px;
+        scrollbar-width: thin;
+    }
+
+    .slskdn-footer-content {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        min-width: max-content;
+    }
+
     .slskdn-footer-brand {
+        flex: 0 0 auto;
         gap: 8px;
     }
 
@@ -409,8 +426,15 @@ html:not(.dark) .slskdn-footer-sponsor .icon {
         padding: 4px 7px;
     }
 
+    .slskdn-footer-speeds,
+    .slskdn-footer-status,
+    .slskdn-footer-network {
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+
     .slskdn-footer-group-label {
-        width: 100%;
-        text-align: center;
+        display: none;
     }
 }

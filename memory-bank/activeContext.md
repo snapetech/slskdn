@@ -1,3 +1,18 @@
+## Update 2026-04-29 23:36:10Z
+
+- Current task: None. The principal UI pass over the README showcase surfaces is implemented locally.
+- Last activity:
+  - reviewed all six README screenshots for chrome, spacing, contrast, and hierarchy problems
+  - compacted the desktop nav and reduced the fixed footer footprint
+  - made the mobile footer a single scrollable status rail instead of a stacked block
+  - rebuilt result-card identity/action layout and file-list spacing
+  - tightened Discovery Graph controls and added sparse graph messaging
+  - deployed the rebuilt frontend to `kspls0` and recaptured the README gallery
+  - documented and committed the fixed-chrome screenshot validation gotcha separately
+- Next steps:
+  1. Commit and push the UI pass plus README screenshot changes when ready.
+  2. Keep unrelated accelerated-downloads dirty work intact unless explicitly asked to include or split it.
+
 ## Update 2026-04-29 23:22:41Z
 
 - Current task: None. README showcase dark-mode screenshots are fixed locally.

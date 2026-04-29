@@ -7156,3 +7156,14 @@ Code quality improvements were completed as part of Option A:
 - Deployed the rebuilt Web UI bundle to `kspls0` for browser verification and recaptured the three affected README PNGs from the live app.
 - Documented the Semantic UI dark-theme variant gotcha in ADR-0001 and committed that documentation immediately as `0623ac344`.
 - Validation: `npm --prefix src/web run lint -- --quiet`, `npm --prefix src/web test -- Network --watch=false`, `npm --prefix src/web run build`, `node src/web/scripts/verify-build-output.mjs`, and `git diff --check` passed. The web build still reports the existing large-bundle warning.
+
+## 2026-04-29 23:36:10Z
+
+- Re-reviewed all six README showcase screenshots as a principal UI pass and fixed the highest-leverage defects surfaced by the gallery.
+- Compacted the top navigation so the full desktop chrome fits without clipping at the README viewport, while preserving horizontal scrolling at narrow widths.
+- Reduced the fixed footer height and changed the mobile footer from a stacked block into a single horizontal rail so it no longer eats the bottom of the page.
+- Rebuilt search result cards and file-list spacing with structured identity/action rows instead of floated icon clusters.
+- Tightened Discovery Graph controls and added a sparse graph note/shorter canvas when a seed only has one visible edge or no useful neighborhood.
+- Recaptured the README showcase gallery from the live `kspls0` UI after deploying the rebuilt bundle.
+- Documented the fixed-chrome screenshot validation gotcha in ADR-0001 and committed it immediately as `c6168eb5c`.
+- Validation: `npm --prefix src/web run lint -- --quiet`, `npm --prefix src/web run build`, `npm --prefix src/web test -- Network --watch=false`, `node src/web/scripts/verify-build-output.mjs`, Playwright desktop/mobile screenshot audits, and `git diff --check` passed. The web build still reports the existing large-bundle warning.
