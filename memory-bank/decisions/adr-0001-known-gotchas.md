@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z142. Normalize IPv4-Mapped IPv6 Before CIDR Checks
+
+**The Bug**: IPv4 peers presented as IPv4-mapped IPv6 addresses, such as `::ffff:1.2.4.42`, bypassed IPv4 CIDR checks because blacklist and trust code compared raw address byte lengths before mapping the address back to IPv4.
+
+**Files Affected**:
+- `src/slskd/Core/Blacklist.cs`
+- `src/slskd/Users/UserService.cs`
+- `src/slskd/Common/Authentication/PassthroughAuthentication.cs`
+- `src/slskd/Core/Security/SecurityService.cs`
+
+**Wrong**:
+```csharp
+if (ip.GetAddressBytes().Length != range.BaseAddress.GetAddressBytes().Length)
+{
+    return false;
+}
+```
+
+**Correct**:
+```csharp
+ip = ip.NormalizeMappedIPv4();
+```
+
+**Why This Keeps Happening**: Kestrel, proxies, and dual-stack sockets can surface IPv4 clients as IPv6 addresses. Any code that applies IPv4 CIDRs, trusted proxy ranges, or managed blacklist checks must normalize mapped IPv4 first, then compare address families.
+
 ### 0z141. Dockerfile Must Invoke Bash Scripts With Bash
 
 **The Bug**: The `2026042900-slskdn.187` Docker publish job failed after `bin/build` gained Bash regex syntax for slskdN date versions, because the Dockerfile web stage still invoked it as `sh ./bin/build`. Alpine `sh` parsed the Bash regex group as a syntax error before the build reached Node.
