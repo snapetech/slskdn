@@ -32,7 +32,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
   application package line so dependency submission restores do not hit NuGet
   downgrade errors.
 - Fixed the CodeQL cleartext-secret alert by deleting legacy overlay
-  certificate password files without reading their contents and regenerating
+  certificate password files without reading or logging them and regenerating
   the self-signed overlay certificate when needed.
 - Clarified the System Network diagnostics when DHT rendezvous is intentionally
   isolated by `dhtRendezvous.lanOnly: true`.

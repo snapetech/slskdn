@@ -223,7 +223,7 @@ public sealed class CertificateManager
         try
         {
             File.Delete(_legacyPasswordPath);
-            _logger.LogDebug("Removed legacy overlay certificate password file {Path}", _legacyPasswordPath);
+            _logger.LogDebug("Removed legacy overlay certificate password file");
         }
         catch (Exception ex)
         {
