@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z161. Dark Theme Needs Explicit Semantic UI Variant Coverage
+
+**The Bug**: README showcase screenshots exposed dark-theme pages with light or unreadable Semantic UI internals because `Segment secondary`, `Message info/warning`, dropdowns, labeled inputs, progress labels, and header subheaders do not all inherit the app-level dark variables.
+
+**Files Affected**:
+- `src/web/src/components/Search/Search.css`
+- `src/web/src/components/System/System.css`
+- `src/web/src/components/Search/SongIDPanel.jsx`
+- `src/web/src/components/Search/DiscoveryGraphAtlas.jsx`
+- `src/web/src/components/Search/DiscoveryGraphAtlasPanel.jsx`
+- `src/web/src/components/System/Network/index.jsx`
+
+**Wrong**:
+```jsx
+<Segment secondary>
+  <Header.Subheader>Visible in light mode only</Header.Subheader>
+</Segment>
+```
+
+without a component class and dark selectors for Semantic UI's variant-specific children.
+
+**Correct**:
+```jsx
+<Segment className="songid-result-panel" secondary>
+```
+
+with `:root.dark` selectors for the panel, headers, subheaders, labels, inputs, dropdown text, progress labels, and message variants that appear inside the screenshot surface.
+
+**Why This Keeps Happening**: The global Semantic UI variable bridge covers common components, but variant classes and nested children still ship their own light-theme colors. Any new dark-mode screenshot surface needs a quick browser pass for both panel backgrounds and nested text contrast.
+
 ### 0z160. Discovery Hash Probes Must Share The Verification Probe Budget
 
 **The Bug**: Continuous discovery FLAC hash verification called `GetContentHashAsync()` directly, bypassing the per-peer verification probe budget used by `VerifySourcesAsync()`, so peers could see more cancelled 32KB probe transfers than intended.
