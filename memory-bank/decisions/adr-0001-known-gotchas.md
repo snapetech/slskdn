@@ -9753,3 +9753,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** These tests mixed policy assertions with real network resolution. That makes unit outcomes depend on runner DNS reachability, socket availability, and external hostname behavior instead of only the code's decision logic.
 
 **How to prevent it:** Unit tests must use deterministic IP literals for success-path host validation or inject/mock the DNS validation dependency explicitly. Do not use public hostnames like `example.com` in unit tests unless the test is specifically about the DNS resolver itself and owns the resolution mechanism.
+
+### 0z66. Dense Footers Need Live-Width Stress Tests, Not Just Mocked Happy-Path Screenshots
+
+**What went wrong:** The Web UI footer redesign looked acceptable in mocked screenshots, but live rendering on `kspls0` exposed awkward spacing and content pushing against pill edges. The rigid three-column grid also left odd empty space in light theme and made the operational cluster brittle when real counters, icon metrics, or theme font rendering differed from the mock data.
+
+**Why it happened:** The first validation used representative but still too-small data and treated hidden elements with zero-size boxes as overflow noise. It did not stress long speed values, larger hash/sequence counters, active swarm/backfill labels, and the live light-theme rendering together.
+
+**How to prevent it:** Dense footer/status UI must be validated with worst-case realistic counters at desktop, mid-width, and mobile sizes. Prefer flexible wrapping groups over rigid grid columns, and ignore `display:none` elements in overflow checks so the signal is about visible layout defects.
