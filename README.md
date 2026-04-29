@@ -48,7 +48,7 @@ If you've ever seen a feature request closed with *"this can be done via the API
         <img src="docs/assets/readme-showcase/search-cc-track-results.png" alt="Search results" width="100%">
       </a>
       <br>
-      <sub>Smart-ranked Creative Commons search results</sub>
+      <sub>Smart-ranked search results</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/assets/readme-showcase/search-cc-track-result-card.png">
