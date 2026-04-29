@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z144. Do Not Promote Weak SongID Evidence Into Discovery Graph Neighborhoods
+
+**The Bug**: SongID runs with `needs_manual_review` identity evidence could still build Discovery Graph neighborhoods from transcript/OCR/chapter-derived MusicBrainz candidates. Generic catalog artifacts such as `TV Show`, chapter labels, or unrelated artist names then appeared as real neighboring artists/releases when a graph node was clicked.
+
+**Files Affected**:
+- `src/slskd/DiscoveryGraph/DiscoveryGraphService.cs`
+- `src/slskd/SongID/SongIdService.cs`
+- `src/web/src/components/Search/SongIDPanel.jsx`
+
+**Wrong**:
+```csharp
+foreach (var artist in run.Artists.Take(3))
+{
+    AddNode(graph, $"artist:{artist.ArtistId}", artist.Name, "artist", artist.ActionScore, 1, "neighbor", ...);
+}
+```
+
+**Correct**:
+```csharp
+if (CanExpandCatalogContext(run))
+{
+    foreach (var artist in GetGraphArtistCandidates(run))
+    {
+        AddNode(graph, $"artist:{artist.ArtistId}", artist.Name, "artist", artist.ActionScore, 1, "neighbor", ...);
+    }
+}
+```
+
+**Why This Keeps Happening**: SongID intentionally collects weak forensic clues for manual review, but Discovery Graph is an action surface. Anything that looks like a graph neighbor is treated as music identity/corpus topology, so graph expansion must require strong identity evidence and must keep transcript/OCR/comment/chapter hints as diagnostics until they resolve to high-confidence track identities.
+
 ### 0z143. Docker Placeholder Users Must Avoid Fixed UID/GID Collisions
 
 **The Bug**: The `2026042900-slskdn.190` Docker publish job failed because the runtime image tried to create `slskdn` with fixed UID/GID `1000`, but `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble` already contained GID `1000`.
