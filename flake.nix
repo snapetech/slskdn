@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        version = "2026042900-slskdn.188";
+        version = "2026042900-slskdn.189";
         devVersion = "0.24.1.dev.91769727133";
         devTag = "build-dev-${devVersion}";
         
@@ -81,8 +81,8 @@
         
         stableSources = {
           "x86_64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/2026042900-slskdn.188/slskdn-main-linux-glibc-x64.zip";
-            sha256 = "sha256-Vc8mcvKrjGPPN2zbZfGQ7Q+a/WActeKb41KpWAUX6sI="; # x86_64-linux (glibc)
+            url = "https://github.com/snapetech/slskdn/releases/download/2026042900-slskdn.189/slskdn-main-linux-glibc-x64.zip";
+            sha256 = "sha256-lWOfdavd/vc74wZtBh/EDqgR4Hb3vDVxspkuNpHYRns="; # x86_64-linux (glibc)
           };
           "aarch64-linux" = {
             url = "https://github.com/snapetech/slskdn/releases/download/${version}/slskdn-main-linux-glibc-arm64.zip";
