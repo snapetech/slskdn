@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z147. Frontend Must Normalize Backend Boolean Names Before Warning On Them
+
+**The Bug**: The Network dashboard showed the public DHT exposure warning even when runtime configuration had `dhtRendezvous.lanOnly: true`. The backend `/api/v0/dht/status` response serializes `LanOnly` as `lanOnly`, but the frontend warning condition checked `stats.dht.isLanOnly`, so `undefined` was treated as false and LAN-only nodes looked publicly exposed.
+
+**Files Affected**:
+- `src/web/src/lib/slskdn.js`
+- `src/web/src/components/System/Network/index.jsx`
+- `src/web/src/components/System/Network/index.test.jsx`
+
+**Wrong**:
+```js
+const dht = await getDhtStatus();
+return { dht };
+```
+
+```js
+!(stats?.dht?.isLanOnly ?? false)
+```
+
+**Correct**:
+```js
+const normalizedDht = {
+  ...rawDht,
+  isLanOnly: rawDht.isLanOnly ?? rawDht.lanOnly ?? false,
+};
+```
+
+**Why This Keeps Happening**: C# boolean properties with an `Is` prefix serialize as `isEnabled`, but `LanOnly` has no prefix and serializes as `lanOnly`. UI warning logic must consume a normalized frontend contract instead of assuming all backend booleans have the `is*` shape.
+
 ### 0z146. AUR Source Builds Must Use MSBuild-Safe Date Release Versions
 
 **The Bug**: The `slskdn` AUR source package for `2026042900-slskdn.193` mapped `pkgver=2026042900.slskdn.193` to `-p:Version=2026042900.193`, which made .NET generate invalid assembly version `2026042900.193.0.0` and fail the install after a wall of unrelated generated-code warnings.
