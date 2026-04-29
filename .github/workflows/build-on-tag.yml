@@ -1807,9 +1807,10 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $Version = "${{ needs.parse.outputs.version }}"
+          $PackageVersion = $Version -replace '^(\d{10})-slskdn\.(\d+)$', '$1.0.0-slskdn.$2'
           $Url = "https://github.com/${{ github.repository }}/releases/download/${{ needs.parse.outputs.version }}/slskdn-main-win-x64.zip"
           $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
-          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
+          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$PackageVersion</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
           cd packaging/chocolatey

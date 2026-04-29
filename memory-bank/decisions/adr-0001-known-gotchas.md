@@ -67,12 +67,13 @@ exit 0
 
 **Correct**:
 ```powershell
+$PackageVersion = $Version -replace '^(\d{10})-slskdn\.(\d+)$', '$1.0.0-slskdn.$2'
 $pushText = $pushOutput -join "`n"
 Write-Host "Chocolatey push failed after $maxRetries attempts (likely transient)"
 exit 1
 ```
 
-**Why This Keeps Happening**: Release workflows often treat external package hosts as flaky and try to keep the overall release moving. That is acceptable for optional channels only if the failure is clearly reported. For a publish job named as successful, exhausted retries must fail the job so the missing downstream package is visible. PowerShell command output can also be an array of lines, so match retryable output against a joined string instead of using `-match` / `-notmatch` directly on the array.
+**Why This Keeps Happening**: Release workflows often treat external package hosts as flaky and try to keep the overall release moving. That is acceptable for optional channels only if the failure is clearly reported. For a publish job named as successful, exhausted retries must fail the job so the missing downstream package is visible. PowerShell command output can also be an array of lines, so match retryable output against a joined string instead of using `-match` / `-notmatch` directly on the array. Chocolatey/NuGet may normalize date-based slskdN versions, so write the normalized package version into the nuspec explicitly while keeping download URLs pointed at the real GitHub release tag.
 
 ### 0z154. Transfer Bulk Actions Must Mask Accepted Terminal Rows
 

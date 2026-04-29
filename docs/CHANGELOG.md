@@ -27,7 +27,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   published, and added a Chocolatey-only manual publish workflow for retrying
   an existing GitHub release with the stored Chocolatey secret. The retry
   matcher now joins PowerShell command output before checking for `504` /
-  timeout responses so transient Chocolatey failures are retried correctly.
+  timeout responses so transient Chocolatey failures are retried correctly,
+  and the nuspec is written with Chocolatey's normalized package version while
+  keeping installer URLs pointed at the original GitHub release tag.
 
 ## [2026042900-slskdn.197] — 2026-04-29
 
