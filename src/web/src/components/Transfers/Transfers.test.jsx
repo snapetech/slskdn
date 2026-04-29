@@ -95,11 +95,31 @@ const makeTransfers = (state = 'Completed, Errored') => [
   },
 ];
 
+const makeQueuedTransfers = (count = 6) => [
+  {
+    username: 'alice',
+    directories: [
+      {
+        directory: 'Album',
+        files: Array.from({ length: count }, (_, index) => ({
+          direction: 'download',
+          filename: `queued-${index}.mp3`,
+          id: `queued-${index}`,
+          size: index + 1,
+          state: 'Queued, Remotely',
+          username: 'alice',
+        })),
+      },
+    ],
+  },
+];
+
 describe('Transfers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     transfersLibrary.getAll.mockResolvedValue(makeTransfers());
     transfersLibrary.getAcceleratedMode.mockResolvedValue({ enabled: false });
+    transfersLibrary.getPlaceInQueue.mockResolvedValue({ data: 7 });
     transfersLibrary.setAcceleratedMode.mockResolvedValue({ enabled: true });
     autoReplaceLibrary.getAutoReplaceStatus.mockResolvedValue({
       enabled: false,
@@ -232,6 +252,21 @@ describe('Transfers', () => {
       expect(screen.queryByText('one.mp3')).not.toBeInTheDocument();
     });
     expect(screen.queryByText('two.mp3')).not.toBeInTheDocument();
+  });
+
+  it('limits automatic queue position lookups to a small batch', async () => {
+    transfersLibrary.getAll.mockResolvedValue(makeQueuedTransfers(6));
+
+    render(
+      <Transfers
+        direction="download"
+        server={{ isConnected: true }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(transfersLibrary.getPlaceInQueue).toHaveBeenCalledTimes(5);
+    });
   });
 
   it('shows one bulk retry error instead of a toast per file', async () => {

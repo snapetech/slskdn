@@ -30,6 +30,8 @@ const getTransferKey = ({ file, suffix = '' }) => {
 };
 
 const OPTIMISTIC_HIDE_MS = 15_000;
+const QUEUE_POSITION_REFRESH_MS = 30_000;
+const MAX_QUEUE_POSITION_LOOKUPS_PER_FETCH = 5;
 
 const Transfers = ({ direction, server }) => {
   const testId = direction === 'download' ? 'downloads-root' : 'uploads-root';
@@ -50,6 +52,9 @@ const Transfers = ({ direction, server }) => {
   const bulkQueueRunningRef = useRef(false);
   const hiddenTransfersRef = useRef(new Map());
   const latestFetchIdRef = useRef(0);
+  const lastQueuePositionBatchAtRef = useRef(0);
+  const queuePositionCacheRef = useRef(new Map());
+  const queuePositionRequestsRef = useRef(new Set());
 
   const retrying = retryingSingle || bulkCounts.retry > 0;
   const cancelling = cancellingSingle || bulkCounts.cancel > 0;
@@ -176,6 +181,77 @@ const Transfers = ({ direction, server }) => {
     runBulkQueue();
   };
 
+  const refreshQueuePositions = async (users) => {
+    if (direction !== 'download') {
+      return;
+    }
+
+    const now = Date.now();
+    const queuedDownloads = users
+      .flatMap((user) => user.directories.flatMap((dir) => dir.files))
+      .filter((file) => file.state && file.state.includes('Queued'));
+
+    queuedDownloads.forEach((file) => {
+      const cached = queuePositionCacheRef.current.get(getTransferKey({ file }));
+      if (cached?.placeInQueue) {
+        file.placeInQueue = cached.placeInQueue;
+      }
+    });
+
+    if (
+      lastQueuePositionBatchAtRef.current > 0 &&
+      now - lastQueuePositionBatchAtRef.current < QUEUE_POSITION_REFRESH_MS
+    ) {
+      return;
+    }
+
+    const dueDownloads = queuedDownloads
+      .filter((file) => {
+        const key = getTransferKey({ file });
+        const cached = queuePositionCacheRef.current.get(key);
+
+        return (
+          !queuePositionRequestsRef.current.has(key) &&
+          (!cached || now - cached.updatedAt >= QUEUE_POSITION_REFRESH_MS)
+        );
+      })
+      .slice(0, MAX_QUEUE_POSITION_LOOKUPS_PER_FETCH);
+
+    if (dueDownloads.length === 0) {
+      return;
+    }
+
+    lastQueuePositionBatchAtRef.current = now;
+
+    const queuePositionPromises = dueDownloads.map(async (file) => {
+      const key = getTransferKey({ file });
+      queuePositionRequestsRef.current.add(key);
+
+      try {
+        const queueResponse = await transfersLibrary.getPlaceInQueue({
+          id: file.id,
+          username: file.username,
+        });
+
+        queuePositionCacheRef.current.set(key, {
+          placeInQueue: queueResponse.data,
+          updatedAt: Date.now(),
+        });
+        file.placeInQueue = queueResponse.data;
+      } catch (error) {
+        console.debug(
+          'Failed to fetch queue position for',
+          file.filename,
+          error,
+        );
+      } finally {
+        queuePositionRequestsRef.current.delete(key);
+      }
+    });
+
+    await Promise.allSettled(queuePositionPromises);
+  };
+
   const fetch = async () => {
     const fetchId = latestFetchIdRef.current + 1;
     latestFetchIdRef.current = fetchId;
@@ -183,43 +259,7 @@ const Transfers = ({ direction, server }) => {
     try {
       const response = await transfersLibrary.getAll({ direction });
 
-      // Automatically fetch queue positions for queued downloads
-      if (direction === 'download') {
-        const queuedDownloads = response
-          .flatMap((user) => user.directories.flatMap((dir) => dir.files))
-          .filter((file) => file.state && file.state.includes('Queued'));
-
-        // Update queue positions in parallel
-        const queuePositionPromises = queuedDownloads.map(async (file) => {
-          try {
-            const queueResponse = await transfersLibrary.getPlaceInQueue({
-              id: file.id,
-              username: file.username,
-            });
-
-            // Find and update the transfer in the response data
-            for (const user of response) {
-              for (const dir of user.directories) {
-                const transfer = dir.files.find(
-                  (f) => f.id === file.id && f.username === file.username,
-                );
-                if (transfer) {
-                  transfer.placeInQueue = queueResponse.data;
-                }
-              }
-            }
-          } catch (error) {
-            // Silently fail individual queue position fetches to avoid spam
-            console.debug(
-              'Failed to fetch queue position for',
-              file.filename,
-              error,
-            );
-          }
-        });
-
-        await Promise.allSettled(queuePositionPromises);
-      }
+      await refreshQueuePositions(response);
 
       if (fetchId === latestFetchIdRef.current) {
         setTransfers(filterHiddenTransfers(response));

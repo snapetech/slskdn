@@ -25,6 +25,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Reworked the fixed Web UI header and footer chrome so primary navigation,
   utility actions, brand, speeds, network counters, and transport icons align
   as distinct rails instead of crowding together in live screenshots.
+- Polished transfer rows with peer browse links, throttled queued-position
+  refreshes, and batch-aware delete cleanup for completed batch downloads.
 - Limited automatic queue-position checks on the Downloads page to a small,
   cached refresh batch instead of asking every queued peer every second.
 - Linked transfer user headers to Browse so upload/download rows provide the

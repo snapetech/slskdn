@@ -841,7 +841,7 @@ namespace slskd.Transfers.Downloads
                             ? OptionsMonitor.CurrentValue.Directories.Downloads
                             : OptionsMonitor.CurrentValue.Directories.Incomplete;
 
-                        var localFilename = transfer.Filename.ToLocalFilename(baseDirectory);
+                        var localFilename = GetLocalFilenameForRemoval(transfer, baseDirectory);
 
                         if (System.IO.File.Exists(localFilename))
                         {
@@ -883,6 +883,20 @@ namespace slskd.Transfers.Downloads
                 Log.Error(ex, "Failed to remove download {Id}: {Message}", id, ex.Message);
                 throw;
             }
+        }
+
+        private static string GetLocalFilenameForRemoval(Transfer transfer, string baseDirectory)
+        {
+            if (transfer.State.HasFlag(TransferStates.Succeeded) && transfer.BatchId.HasValue)
+            {
+                var originalLocalFilename = transfer.Filename.ToLocalFilename(baseDirectory);
+                return System.IO.Path.Combine(
+                    baseDirectory,
+                    transfer.BatchId.Value.ToString(),
+                    System.IO.Path.GetFileName(originalLocalFilename));
+            }
+
+            return transfer.Filename.ToLocalFilename(baseDirectory);
         }
 
         /// <summary>

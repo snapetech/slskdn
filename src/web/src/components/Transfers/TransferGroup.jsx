@@ -2,6 +2,7 @@ import * as transfers from '../../lib/transfers';
 import UserCard from '../Shared/UserCard';
 import TransferList from './TransferList';
 import React, { Component } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, Card, Icon } from 'semantic-ui-react';
 
 class TransferGroup extends Component {
@@ -122,7 +123,13 @@ class TransferGroup extends Component {
               name={isFolded ? 'chevron right' : 'chevron down'}
               onClick={() => this.toggleFolded()}
             />
-            <UserCard username={user.username}>{user.username}</UserCard>
+            <Link
+              state={{ user: user.username }}
+              title="Browse this user's files"
+              to="/browse"
+            >
+              <UserCard username={user.username}>{user.username}</UserCard>
+            </Link>
           </Card.Header>
           {user.directories &&
             !isFolded &&

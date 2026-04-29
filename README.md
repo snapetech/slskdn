@@ -178,6 +178,7 @@ Set your preferred search filters once and forget them.
 ### 🔍 Advanced Search Filters & Page Size
 Power user filtering with a visual interface.
 - **Visual Filter Editor**: Bitrate, Duration, File Size (Min/Max), CBR/VBR/Lossless toggles
+- **Text syntax**: include words normally, exclude with `-term`, restrict formats with `ext:flac,mp3`, and combine quality filters like `minbr:320`, `minbd:16`, `minsr:44100`, `minfs:100mb`, `maxfs:2gb`, `minlen:180`, `minfif:8`, `islossless`, `islossy`, `iscbr`, or `isvbr`
 - **Page Size**: 25, 50, 100, 200, 500 results per page
 - Settings persist across sessions
 
@@ -536,7 +537,9 @@ dotnet run --project src/slskd/slskd.csproj
 | User download history badges | ❌ | ✅ |
 | Block users from search | ❌ | ✅ |
 | Delete files on disk | ❌ | ✅ |
+| Batch-aware delete cleanup | ❌ | ✅ |
 | Save default filters | ❌ | ✅ |
+| Documented advanced filter syntax | ❌ | ✅ |
 | Multi-select folder downloads | ❌ | ✅ |
 | Ntfy/Pushover notifications | ❌ | ✅ |
 | Tabbed browsing | ❌ | ✅ |
@@ -548,6 +551,8 @@ dotnet run --project src/slskd/slskd.csproj
 | File type restrictions per group | ❌ | ✅ |
 | Prometheus metrics UI | ❌ | ✅ |
 | User score badges everywhere | ❌ | ✅ |
+| Transfer peer browse links | ❌ | ✅ |
+| Conservative queue-position refresh | ❌ | ✅ |
 | **Multi-source downloads** | ❌ | ✅ |
 | **DHT mesh networking** | ❌ | ✅ |
 | **Security hardening** | ❌ | ✅ |
