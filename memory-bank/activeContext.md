@@ -1,3 +1,15 @@
+## Update 2026-04-29 17:31:00Z
+
+- Current task: None. The Web UI theme picker, transfer bulk-action flicker, and footer speed fallback are fixed locally.
+- Last activity:
+  - switched the theme picker to a controlled Semantic UI dropdown and added click coverage
+  - made transfer polling monotonic and hid rows after accepted bulk retry/remove operations
+  - made footer speed totals use active transfer bytes-over-elapsed-time when `AverageSpeed` is still zero
+  - documented the UI gotchas in ADR-0001 and committed that docs entry separately
+  - validation passed for frontend lint, focused frontend/backend tests, web build, and diff checks
+- Next steps:
+  1. Commit and push the implementation/docs updates.
+
 ## Update 2026-04-29 17:17:00Z
 
 - Current task: Prepare stable release `2026042900-slskdn.196`.

@@ -229,6 +229,60 @@ public class TransfersControllerTests
         Assert.Single(response.RecentUploads);
     }
 
+    [Fact]
+    public void GetSpeeds_UsesTransferredBytesWhenAverageSpeedHasNotUpdatedYet()
+    {
+        var downloads = new Mock<IDownloadService>();
+        downloads
+            .Setup(service => service.List(It.IsAny<Expression<Func<SlskdTransfer, bool>>>()))
+            .Returns(new List<SlskdTransfer>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Username = "remote-user",
+                    Filename = "Music/song.flac",
+                    BytesTransferred = 20_000,
+                    StartedAt = DateTime.UtcNow.AddSeconds(-10),
+                    State = TransferStates.InProgress,
+                },
+            });
+
+        var uploads = new Mock<IUploadService>();
+        uploads
+            .Setup(service => service.List(It.IsAny<Expression<Func<SlskdTransfer, bool>>>(), false))
+            .Returns(new List<SlskdTransfer>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Username = "remote-user",
+                    Filename = "Uploads/song.flac",
+                    AverageSpeed = 3_000,
+                    State = TransferStates.InProgress,
+                },
+            });
+
+        var controller = CreateController(downloads: downloads, uploads: uploads);
+
+        var result = controller.GetSpeeds();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var total = GetDoubleProperty(ok.Value!, "total");
+        var download = GetDoubleProperty(ok.Value!, "download");
+        var upload = GetDoubleProperty(ok.Value!, "upload");
+        Assert.InRange(download, 1_500, 2_500);
+        Assert.Equal(3_000, upload);
+        Assert.InRange(total, 4_500, 5_500);
+    }
+
+    private static double GetDoubleProperty(object source, string propertyName)
+    {
+        var property = source.GetType().GetProperty(propertyName);
+        Assert.NotNull(property);
+        return Convert.ToDouble(property.GetValue(source));
+    }
+
     private static TransfersController CreateController(
         Mock<IDownloadService>? downloads = null,
         Mock<IUploadService>? uploads = null,

@@ -18,6 +18,8 @@ vi.mock('../../lib/transfers', () => ({
   getAll: vi.fn(),
   getPlaceInQueue: vi.fn(),
   download: vi.fn(),
+  isStateRetryable: (state) =>
+    state.includes('Completed') && state !== 'Completed, Succeeded',
   cancel: vi.fn(),
   clearCompleted: vi.fn(),
 }));
@@ -39,6 +41,9 @@ vi.mock('./TransfersHeader', () => ({
 
     return (
       <div>
+        {files.map((file) => (
+          <span key={file.id}>{file.filename}</span>
+        ))}
         <button onClick={() => onRetryAll(files)}>retry-all</button>
         <button onClick={() => onRetryAll(files)}>retry-all-again</button>
         <button onClick={() => onRemoveAll(files, false, { useBulkClear: true })}>
@@ -199,6 +204,27 @@ describe('Transfers', () => {
     await waitFor(() => {
       expect(transfersLibrary.clearCompleted).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('hides cleared completed rows without waiting for the next backend snapshot', async () => {
+    transfersLibrary.getAll.mockResolvedValue(makeTransfers('Completed, Succeeded'));
+    transfersLibrary.clearCompleted.mockResolvedValue({});
+
+    render(
+      <Transfers
+        direction="download"
+        server={{ isConnected: true }}
+      />,
+    );
+
+    expect(await screen.findByText('one.mp3')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'remove-completed' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('one.mp3')).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText('two.mp3')).not.toBeInTheDocument();
   });
 
   it('shows one bulk retry error instead of a toast per file', async () => {

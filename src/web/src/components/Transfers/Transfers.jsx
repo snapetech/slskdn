@@ -29,6 +29,8 @@ const getTransferKey = ({ file, suffix = '' }) => {
   return `${file.username}:${file.id}${suffix ? `:${suffix}` : ''}`;
 };
 
+const OPTIMISTIC_HIDE_MS = 15_000;
+
 const Transfers = ({ direction, server }) => {
   const testId = direction === 'download' ? 'downloads-root' : 'uploads-root';
   const [connecting, setConnecting] = useState(true);
@@ -45,6 +47,8 @@ const Transfers = ({ direction, server }) => {
   const bulkQueueRef = useRef([]);
   const queuedBulkKeysRef = useRef(new Set());
   const bulkQueueRunningRef = useRef(false);
+  const hiddenTransfersRef = useRef(new Map());
+  const latestFetchIdRef = useRef(0);
 
   const retrying = retryingSingle || bulkCounts.retry > 0;
   const cancelling = cancellingSingle || bulkCounts.cancel > 0;
@@ -55,6 +59,54 @@ const Transfers = ({ direction, server }) => {
       ...previousCounts,
       [action]: Math.max(0, previousCounts[action] + delta),
     }));
+  };
+
+  const isOptimisticallyHidden = (file, now = Date.now()) => {
+    const entry = hiddenTransfersRef.current.get(getTransferKey({ file }));
+
+    if (!entry) {
+      return false;
+    }
+
+    if (entry.until <= now) {
+      hiddenTransfersRef.current.delete(getTransferKey({ file }));
+      return false;
+    }
+
+    return entry.matches(file);
+  };
+
+  const filterHiddenTransfers = (users) => {
+    const now = Date.now();
+
+    return users
+      .map((user) => ({
+        ...user,
+        directories: user.directories
+          .map((directory) => ({
+            ...directory,
+            files: directory.files.filter(
+              (file) => !isOptimisticallyHidden(file, now),
+            ),
+          }))
+          .filter((directory) => directory.files.length > 0),
+      }))
+      .filter((user) => user.directories.length > 0);
+  };
+
+  const hideTransfers = (files, matches = () => true) => {
+    const until = Date.now() + OPTIMISTIC_HIDE_MS;
+
+    files.forEach((file) => {
+      hiddenTransfersRef.current.set(getTransferKey({ file }), {
+        matches,
+        until,
+      });
+    });
+
+    setTransfers((previousTransfers) =>
+      filterHiddenTransfers(previousTransfers),
+    );
   };
 
   const runBulkQueue = async () => {
@@ -124,9 +176,11 @@ const Transfers = ({ direction, server }) => {
   };
 
   const fetch = async () => {
+    const fetchId = latestFetchIdRef.current + 1;
+    latestFetchIdRef.current = fetchId;
+
     try {
       const response = await transfersLibrary.getAll({ direction });
-      setTransfers(response);
 
       // Automatically fetch queue positions for queued downloads
       if (direction === 'download') {
@@ -164,7 +218,10 @@ const Transfers = ({ direction, server }) => {
         });
 
         await Promise.allSettled(queuePositionPromises);
-        setTransfers([...response]);
+      }
+
+      if (fetchId === latestFetchIdRef.current) {
+        setTransfers(filterHiddenTransfers(response));
       }
     } catch (error) {
       console.error(error);
@@ -228,12 +285,16 @@ const Transfers = ({ direction, server }) => {
       operations: transfersToRetry.map((file) => ({
         key: `retry:${getTransferKey({ file })}`,
         label: `${file.username}/${file.filename}`,
-        run: () =>
-          retry({
+        run: async () => {
+          await retry({
             file,
             suppressErrorToast: true,
             suppressStateChange: true,
-          }),
+          });
+          hideTransfers([file], (candidate) =>
+            transfersLibrary.isStateRetryable(candidate.state),
+          );
+        },
       })),
     });
   };
@@ -327,7 +388,10 @@ const Transfers = ({ direction, server }) => {
           {
             key: `remove:clear-completed:${direction}`,
             label: `all completed ${direction}s`,
-            run: () => transfersLibrary.clearCompleted({ direction }),
+            run: async () => {
+              await transfersLibrary.clearCompleted({ direction });
+              hideTransfers(transfersToRemove);
+            },
           },
         ],
       });
@@ -339,13 +403,15 @@ const Transfers = ({ direction, server }) => {
       operations: transfersToRemove.map((file) => ({
         key: `remove:${getTransferKey({ file, suffix: deleteFile ? 'delete' : 'keep' })}`,
         label: `${file.username}/${file.filename}`,
-        run: () =>
-          remove({
+        run: async () => {
+          await remove({
             deleteFile,
             file,
             suppressErrorToast: true,
             suppressStateChange: true,
-          }),
+          });
+          hideTransfers([file]);
+        },
       })),
     });
   };

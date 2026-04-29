@@ -583,8 +583,8 @@ namespace slskd.Transfers.API
             var activeUploads = Transfers.Uploads.List(t =>
                 t.State == Soulseek.TransferStates.InProgress, includeRemoved: false);
 
-            var totalDownloadSpeed = activeDownloads.Sum(t => t.AverageSpeed);
-            var totalUploadSpeed = activeUploads.Sum(t => t.AverageSpeed);
+            var totalDownloadSpeed = activeDownloads.Sum(GetLiveSpeed);
+            var totalUploadSpeed = activeUploads.Sum(GetLiveSpeed);
             var totalSpeed = totalDownloadSpeed + totalUploadSpeed;
 
             // TODO: Distinguish mesh vs soulseek transfers
@@ -600,6 +600,22 @@ namespace slskd.Transfers.API
                 download = totalDownloadSpeed,
                 upload = totalUploadSpeed
             });
+        }
+
+        private static double GetLiveSpeed(global::slskd.Transfers.Transfer transfer)
+        {
+            if (transfer.AverageSpeed > 0)
+            {
+                return transfer.AverageSpeed;
+            }
+
+            var elapsed = transfer.ElapsedTime;
+            if (elapsed == null || elapsed.Value.TotalSeconds <= 0 || transfer.BytesTransferred <= 0)
+            {
+                return 0;
+            }
+
+            return transfer.BytesTransferred / elapsed.Value.TotalSeconds;
         }
 
         /// <summary>

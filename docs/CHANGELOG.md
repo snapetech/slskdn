@@ -22,6 +22,13 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the Web UI theme picker so it opens reliably and applies selected
+  themes through Semantic UI's controlled dropdown path.
+- Smoothed transfer bulk actions by ignoring stale transfer polls and
+  optimistically hiding rows after accepted retry/remove operations.
+- Made footer transfer speed totals fall back to bytes-over-elapsed-time for
+  active transfers when Soulseek has not populated `AverageSpeed` yet.
+
 ## [2026042900-slskdn.196] — 2026-04-29
 
 - Removed the top slskdN status drawer and navigation toggle, and moved its

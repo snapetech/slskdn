@@ -1325,3 +1325,7 @@
 - [x] Prepare `2026042900-slskdn.196` stable release
   - Status: completed (2026-04-29)
   - Notes: Promoted the current Unreleased notes into a `.196` changelog section and generated release notes for the tag-only release workflow.
+
+- [x] Fix Web UI theme picker, transfer bulk flicker, and footer speeds
+  - Status: completed (2026-04-29)
+  - Notes: Reworked the theme selector onto a controlled Semantic UI dropdown, made transfer polling monotonic with short-lived optimistic row hiding after accepted bulk actions, and made footer speeds use an elapsed-time fallback when active transfer average speed is still zero.

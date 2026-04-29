@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import App from './App';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
 const {
@@ -103,6 +103,7 @@ describe('App', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    document.documentElement.className = '';
   });
 
   it('redirects the root route to searches without logging a route miss', async () => {
@@ -136,5 +137,22 @@ describe('App', () => {
 
     expect(createApplicationHubConnection).toHaveBeenCalledTimes(1);
     expect(check).toHaveBeenCalled();
+  });
+
+  it('opens the theme menu and applies the selected theme', async () => {
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const themeMenu = await screen.findByTestId('theme-menu');
+    fireEvent.click(themeMenu);
+    fireEvent.click(await screen.findByText('Light'));
+
+    await waitFor(() => {
+      expect(localStorage.getItem('slskd-theme')).toBe('light');
+      expect(document.documentElement).toHaveClass('light');
+    });
   });
 });

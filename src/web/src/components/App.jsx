@@ -72,6 +72,7 @@ const initialState = {
     pending: false,
   },
   retriesExhausted: false,
+  themeMenuOpen: false,
 };
 
 const ModeSpecificConnectButton = ({
@@ -367,7 +368,15 @@ class App extends Component {
   setTheme = (theme) => {
     const nextTheme = normalizeTheme(theme);
     localStorage.setItem('slskd-theme', nextTheme);
-    this.setState({ theme: nextTheme });
+    this.setState({ theme: nextTheme, themeMenuOpen: false });
+  };
+
+  openThemeMenu = () => {
+    this.setState({ themeMenuOpen: true });
+  };
+
+  closeThemeMenu = () => {
+    this.setState({ themeMenuOpen: false });
   };
 
   handleLogin = (username, password, rememberMe) => {
@@ -412,6 +421,7 @@ class App extends Component {
       login,
       retriesExhausted,
       theme = normalizeTheme(this.getSavedTheme() || 'slskdn'),
+      themeMenuOpen,
     } = this.state;
     const semanticTheme = getSemanticTheme(theme);
     const {
@@ -623,32 +633,21 @@ class App extends Component {
               <Dropdown
                 className="theme-menu"
                 data-testid="theme-menu"
+                icon="paint brush"
                 item
+                onChange={(_, data) => this.setTheme(data.value)}
+                onClose={this.closeThemeMenu}
+                onOpen={this.openThemeMenu}
+                open={themeMenuOpen}
+                options={THEME_OPTIONS.map((option) => ({
+                  ...option,
+                  icon: 'theme',
+                }))}
+                selectOnBlur={false}
+                text={THEME_LABELS[theme]}
                 title="Choose the web UI color theme"
-                trigger={(
-                  <span className="theme-menu-trigger">
-                    <Icon name="paint brush" />
-                    <span className="theme-menu-label">{THEME_LABELS[theme]}</span>
-                  </span>
-                )}
-              >
-                <Dropdown.Menu>
-                  {THEME_OPTIONS.map((option) => (
-                    <Dropdown.Item
-                      active={theme === option.value}
-                      data-testid={`theme-option-${option.value}`}
-                      key={option.key}
-                      onClick={() => this.setTheme(option.value)}
-                    >
-                      <Icon
-                        color={theme === option.value ? 'violet' : undefined}
-                        name="theme"
-                      />
-                      {option.text}
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Menu>
-              </Dropdown>
+                value={theme}
+              />
               <ModeSpecificConnectButton
                 connectionWatchdog={connectionWatchdog}
                 controller={controller}

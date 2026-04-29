@@ -7078,3 +7078,11 @@ Code quality improvements were completed as part of Option A:
 - Prepared stable release `2026042900-slskdn.196` from the current post-`.195` commit range.
 - Promoted the rolling Unreleased notes into a `.196` changelog section so generated GitHub release notes do not publish the Unreleased section.
 - Validation: `scripts/generate-release-notes.sh 2026042900-slskdn.196` produced the expected notes and `git diff --check` passed.
+
+## 2026-04-29 17:31:00Z
+
+- Fixed the Web UI theme picker by replacing the custom-trigger menu with a controlled Semantic UI dropdown wired through `options`, `value`, and `onChange`.
+- Reduced noisy transfer bulk-action flicker by applying only the latest poll result and temporarily hiding rows after accepted retry/remove operations so stale backend snapshots do not flash old terminal rows back into view.
+- Made `/api/v0/transfers/speeds` report a live fallback from active transfer bytes and elapsed time when `AverageSpeed` has not populated yet, which keeps footer speed totals from staying at zero during active transfers.
+- Documented the theme-picker and transfer bulk-action gotchas in ADR-0001 and committed that documentation separately.
+- Validation: frontend lint, focused App/Transfers/Footer tests, focused `TransfersControllerTests`, web production build, and `git diff --check` passed. Existing generated-code/analyzer warnings remain.
