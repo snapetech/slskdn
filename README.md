@@ -40,10 +40,7 @@
 
 If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. The Big 'N' also stands for the Big Network we have integrated and layered into slskdN that extends the client functionality and network in ways that we think improve trust, fidelity, security, and quality.
 
-## Showcase
-
-Open-license examples captured from slskdN in action. Click any thumbnail to open the full-size image.
-
+## Screenshots
 <table>
   <tr>
     <td align="center" width="33%">
