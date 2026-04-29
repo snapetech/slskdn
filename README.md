@@ -199,18 +199,19 @@ Install slskdN as an app on your phone.
 The following advanced features are **fully implemented and production-ready**:
 
 ### 🚀 Multi-Source Swarm Downloads
-Download files from multiple peers simultaneously for faster, more reliable transfers.
-- **Parallel chunk downloads** from multiple sources
-- **Automatic source discovery** finds all peers with matching files
-- **Intelligent stitching** assembles chunks seamlessly
-- **Failure resilience** continues from other sources if one fails
-- **SHA-256 verification** ensures content integrity
-- **Network-friendly** — distributes load instead of hammering single users
-- **Advanced discovery** — content-aware matching with fuzzy/variant classification
-- **Adaptive scheduling** — learns from chunk outcomes to optimize assignment
-- **Domain-aware swarming** — Movies, TV, Books, and GenericFile support
+Resilient acquisition built **on top of** the regular Soulseek path — not in place of it.
 
-📖 **Design docs**: [Network impact analysis](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Roadmap](docs/multi-swarm-roadmap.md) • [Rescue mode](docs/phase2-rescue-mode-design.md) • [Scheduling](docs/phase2-swarm-scheduling-design.md)
+- **Default downloads are unchanged.** The standard single-source Soulseek flow handles all normal transfers; multi-source is opt-in or kicks in only after a normal download stalls.
+- **Three entry points only**: explicit user/API call, `RescueService` (after stall + missing ranges), and `LibraryHealthRemediationService` (auto-fix bad transcodes).
+- **Trust-aware policy split:**
+  - *Mesh-overlay peers* (other slskdN nodes): protocol-aware → **parallel chunked downloads**.
+  - *Public Soulseek peers*: not protocol-aware → **sequential failover** (one peer at a time, resume offset preserved on stall) so no chunk-by-chunk cancellation noise lands on Nicotine+/SoulseekQt UIs.
+- **Hard floor before chunking** — declines multi-source unless ≥2 sources share a verified content hash, or all sources are mesh-overlay.
+- **SHA-256 verification with a per-peer-per-day probe budget** — ensures bit-identity across sources without hammering any single uploader with verification probes.
+- **HashDb mesh gossip** fills the protocol-level gap that Soulseek has no content hashes.
+- **Observability** — Prometheus counters for cancellations, probes, hard-floor fallbacks, and failover events surface the network impact directly.
+
+📖 **Design docs**: [Scope, mechanics, and network impact](docs/multipart-downloads.md) • [Architecture](docs/multi-swarm-architecture.md) • [Roadmap](docs/multi-swarm-roadmap.md) • [Rescue mode](docs/phase2-rescue-mode-design.md) • [Scheduling](docs/phase2-swarm-scheduling-design.md)
 
 ### 📊 Swarm Analytics & Insights
 Understand swarm performance and make data-driven optimizations.

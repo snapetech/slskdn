@@ -4,6 +4,7 @@
 namespace slskd.Transfers.MultiSource
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
@@ -16,6 +17,7 @@ namespace slskd.Transfers.MultiSource
     using slskd.HashDb;
     using slskd.HashDb.Models;
     using slskd.Mesh;
+    using slskd.Telemetry;
 
     /// <summary>
     ///     Service for verifying file content identity across multiple Soulseek sources.
@@ -26,6 +28,45 @@ namespace slskd.Transfers.MultiSource
         ///     Size of verification chunk for non-FLAC files (32KB).
         /// </summary>
         public const int VerificationChunkSize = 32768;
+
+        /// <summary>
+        ///     Per-peer-per-day cap on verification probes.
+        ///     A probe issues a 32KB read followed by a mid-stream cancel which appears as a failed transfer
+        ///     on official Soulseek clients; this limits the visible noise we cause on any single uploader.
+        /// </summary>
+        public const int MaxProbesPerPeerPerDay = 10;
+
+        // username -> (UTC date, probe count) — process-lifetime budget tracker.
+        private static readonly ConcurrentDictionary<string, (DateTime Day, int Count)> ProbeBudget = new(StringComparer.OrdinalIgnoreCase);
+
+        private static bool TryConsumeProbeBudget(string username)
+        {
+            var today = DateTime.UtcNow.Date;
+            while (true)
+            {
+                (DateTime Day, int Count) current = ProbeBudget.TryGetValue(username, out var existing)
+                    ? existing
+                    : (today, 0);
+                (DateTime Day, int Count) rolled = current.Day == today ? current : (today, 0);
+                if (rolled.Count >= MaxProbesPerPeerPerDay)
+                {
+                    return false;
+                }
+
+                (DateTime Day, int Count) next = (rolled.Day, rolled.Count + 1);
+                if (ProbeBudget.TryGetValue(username, out var observed))
+                {
+                    if (ProbeBudget.TryUpdate(username, next, observed))
+                    {
+                        return true;
+                    }
+                }
+                else if (ProbeBudget.TryAdd(username, next))
+                {
+                    return true;
+                }
+            }
+        }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ContentVerificationService"/> class.
@@ -154,11 +195,44 @@ namespace slskd.Transfers.MultiSource
                 result.ExpectedHash = knownHash;
             }
 
-            // Verify all candidates in parallel
+            // Skip Soulseek-side probes entirely when the caller already has >=2 mesh-overlay sources.
+            // Probing public Soulseek peers in that case adds visible "transfer cancelled" entries to
+            // their UIs without changing the outcome (we'll prefer the mesh sources anyway).
+            if (request.MeshOverlaySourceCount >= 2)
+            {
+                foreach (var kvp in sourcesToVerify)
+                {
+                    Telemetry.SwarmMetrics.SwarmVerificationProbesTotal.WithLabels("soulseek", "skipped_mesh").Inc();
+                }
+
+                Log.Information(
+                    "[VERIFY] Skipping {Count} Soulseek probes; {MeshCount} mesh-overlay sources already verified",
+                    sourcesToVerify.Count,
+                    request.MeshOverlaySourceCount);
+                SetBestSemanticKey(result);
+                return result;
+            }
+
+            // Verify all candidates in parallel (skipping any that exceed the per-peer-per-day probe budget).
             var verificationTasks = new List<Task<(string Username, string? Hash, VerificationMethod Method, long TimeMs, string? Error)>>();
 
             foreach (var kvp in sourcesToVerify)
             {
+                if (!TryConsumeProbeBudget(kvp.Key))
+                {
+                    Telemetry.SwarmMetrics.SwarmVerificationProbesTotal.WithLabels("soulseek", "skipped_budget").Inc();
+                    Log.Information(
+                        "[VERIFY] Skipping probe for {Username}: per-peer-per-day budget exhausted ({Cap})",
+                        kvp.Key,
+                        MaxProbesPerPeerPerDay);
+                    result.FailedSources.Add(new FailedSource
+                    {
+                        Username = kvp.Key,
+                        Reason = $"Verification probe budget exhausted ({MaxProbesPerPeerPerDay}/day)",
+                    });
+                    continue;
+                }
+
                 verificationTasks.Add(VerifySingleSourceAsync(
                     kvp.Key,       // username
                     kvp.Value,     // each user's specific filename
@@ -326,6 +400,7 @@ namespace slskd.Transfers.MultiSource
                 catch (OperationCanceledException) when (limitedStream.LimitReached)
                 {
                     // Expected - we cancelled after getting enough bytes
+                    Telemetry.SwarmMetrics.SwarmMidStreamCancellationsTotal.WithLabels("soulseek", "verification_probe").Inc();
                     Log.Debug("Got {Bytes} bytes from {Username}, cancelled remaining transfer", bytesNeeded, username);
                 }
 
@@ -359,17 +434,20 @@ namespace slskd.Transfers.MultiSource
                 }
 
                 stopwatch.Stop();
+                Telemetry.SwarmMetrics.SwarmVerificationProbesTotal.WithLabels("soulseek", "hashed").Inc();
                 return (username, hash, method, stopwatch.ElapsedMilliseconds, null);
             }
             catch (OperationCanceledException)
             {
                 stopwatch.Stop();
+                Telemetry.SwarmMetrics.SwarmVerificationProbesTotal.WithLabels("soulseek", "failed").Inc();
                 Log.Warning("Verification timeout for {Username} on {Filename}", username, filename);
                 return (username, null, default, stopwatch.ElapsedMilliseconds, "Timeout");
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
+                Telemetry.SwarmMetrics.SwarmVerificationProbesTotal.WithLabels("soulseek", "failed").Inc();
                 Log.Warning(ex, "Verification failed for {Username} on {Filename}: {Message}", username, filename, ex.Message);
                 return (username, null, default, stopwatch.ElapsedMilliseconds, "Verification failed");
             }

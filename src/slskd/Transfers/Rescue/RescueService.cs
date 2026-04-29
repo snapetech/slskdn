@@ -178,7 +178,7 @@ namespace slskd.Transfers.Rescue
                             Username = p.PeerId,
                             FullPath = filename,  // Use filename as path for overlay peers
                             MusicBrainzRecordingId = recordingId,
-                            Method = VerificationMethod.None,  // Overlay peers are trusted
+                            Method = VerificationMethod.MeshOverlay,
                         }).ToList(),
                         TargetMusicBrainzRecordingId = recordingId,
                         OutputPath = GetOutputPathForTransfer(transferId),

@@ -114,4 +114,52 @@ public static class SwarmMetrics
     public static readonly Gauge SwarmDownloadRateBytesPerSecond = Prometheus.Metrics.CreateGauge(
         "slskd_swarm_download_rate_bytes_per_second",
         "Current download rate in bytes per second across all active swarm downloads");
+
+    /// <summary>
+    /// Mid-stream cancellations issued to remote peers, labelled by peer kind.
+    /// "soulseek" cancellations show up as failed transfers on official Soulseek clients;
+    /// keeping this counter near zero is a goal of the swarm subsystem.
+    /// </summary>
+    public static readonly Counter SwarmMidStreamCancellationsTotal = Prometheus.Metrics.CreateCounter(
+        "slskd_swarm_midstream_cancellations_total",
+        "Mid-stream transfer cancellations issued to peers (soulseek/mesh)",
+        new CounterConfiguration
+        {
+            LabelNames = new[] { "peer_kind", "reason" },
+        });
+
+    /// <summary>
+    /// Verification probes (32KB SHA256 prefix reads) issued to peers, labelled by peer kind.
+    /// </summary>
+    public static readonly Counter SwarmVerificationProbesTotal = Prometheus.Metrics.CreateCounter(
+        "slskd_swarm_verification_probes_total",
+        "Verification probes issued to peers (soulseek/mesh)",
+        new CounterConfiguration
+        {
+            LabelNames = new[] { "peer_kind", "outcome" }, // outcome: hashed, skipped_budget, skipped_mesh, failed
+        });
+
+    /// <summary>
+    /// Number of times the multi-source path declined to chunk and fell back to single-source
+    /// because the hard floor (>=2 hash-matched OR all-mesh sources) was not met.
+    /// </summary>
+    public static readonly Counter SwarmHardFloorFallbacksTotal = Prometheus.Metrics.CreateCounter(
+        "slskd_swarm_hard_floor_fallbacks_total",
+        "Multi-source declined; fallback to single-source",
+        new CounterConfiguration
+        {
+            LabelNames = new[] { "reason" }, // insufficient_hash_group, mixed_untrusted, no_sources
+        });
+
+    /// <summary>
+    /// Sequential-failover events: count of times an active Soulseek-source download
+    /// was switched to the next source mid-transfer (resume offset preserved).
+    /// </summary>
+    public static readonly Counter SwarmSequentialFailoverTotal = Prometheus.Metrics.CreateCounter(
+        "slskd_swarm_sequential_failover_total",
+        "Sequential failover events (Soulseek-source path)",
+        new CounterConfiguration
+        {
+            LabelNames = new[] { "reason" }, // stalled, errored, queue_too_deep
+        });
 }

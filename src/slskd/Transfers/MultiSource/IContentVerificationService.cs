@@ -68,6 +68,13 @@ namespace slskd.Transfers.MultiSource
         ///     Gets or sets the timeout for each verification attempt in milliseconds.
         /// </summary>
         public int TimeoutMs { get; set; } = 30000;
+
+        /// <summary>
+        ///     Gets or sets the count of mesh-overlay sources already known for this content.
+        ///     When this is >= 2, Soulseek-side probes are skipped entirely (the mesh is trusted
+        ///     and probing public Soulseek peers would only add cancellation noise on their UIs).
+        /// </summary>
+        public int MeshOverlaySourceCount { get; set; } = 0;
     }
 
     /// <summary>
@@ -227,7 +234,7 @@ namespace slskd.Transfers.MultiSource
     public enum VerificationMethod
     {
         /// <summary>
-        ///     No verification - size match only.
+        ///     No verification - size match only. Untrusted Soulseek peer.
         /// </summary>
         None,
 
@@ -240,5 +247,28 @@ namespace slskd.Transfers.MultiSource
         ///     SHA256 of first 32KB of file content.
         /// </summary>
         ContentSha256,
+
+        /// <summary>
+        ///     Trusted slskdN mesh-overlay peer; chunking is protocol-aware.
+        /// </summary>
+        MeshOverlay,
+    }
+
+    /// <summary>
+    ///     Helpers for classifying verified sources by trust/transport.
+    /// </summary>
+    public static class VerifiedSourceExtensions
+    {
+        /// <summary>
+        ///     True when the source is a slskdN mesh-overlay peer (parallel chunking is safe).
+        /// </summary>
+        public static bool IsMeshOverlay(this VerifiedSource source)
+            => source.Method == VerificationMethod.MeshOverlay;
+
+        /// <summary>
+        ///     True when the source is a raw Soulseek peer (parallel chunking causes mid-stream cancellations on their UI).
+        /// </summary>
+        public static bool IsSoulseekPeer(this VerifiedSource source)
+            => source.Method != VerificationMethod.MeshOverlay;
     }
 }

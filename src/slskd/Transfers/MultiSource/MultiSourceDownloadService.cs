@@ -152,6 +152,8 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         // If file is available from both Soulseek and mesh peers, coordinate parallel downloads
         // using MediaCore chunking to reassemble from multiple sources
 
+        List<VerifiedSource> selected;
+
         // Use MediaCore swarm intelligence if available
         if (_mediaCoreSwarmService != null)
         {
@@ -169,7 +171,8 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                     "[MediaCore] Selected {PeerCount} optimal peers using {Strategy} strategy",
                     peerSelection.SelectedPeers.Count, peerSelection.Strategy);
 
-                return peerSelection.SelectedPeers.Select(p => p.Source).ToList();
+                selected = peerSelection.SelectedPeers.Select(p => p.Source).ToList();
+                return ApplyHardFloor(selected);
             }
             catch (Exception ex)
             {
@@ -185,13 +188,15 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
 
         if (canonicalStatsService == null || string.IsNullOrWhiteSpace(recordingId))
         {
-            return semanticSources.Count >= 2 ? semanticSources : bestSources;
+            selected = semanticSources.Count >= 2 ? semanticSources : bestSources;
+            return ApplyHardFloor(selected);
         }
 
         var candidates = await canonicalStatsService.GetCanonicalVariantCandidatesAsync(recordingId, cancellationToken).ConfigureAwait(false);
         if (candidates == null || candidates.Count == 0)
         {
-            return semanticSources.Count >= 2 ? semanticSources : bestSources;
+            selected = semanticSources.Count >= 2 ? semanticSources : bestSources;
+            return ApplyHardFloor(selected);
         }
 
         // Prefer sources that match the canonical recording
@@ -201,10 +206,52 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
 
         if (canonicalSources.Count >= 2)
         {
-            return canonicalSources;
+            return ApplyHardFloor(canonicalSources);
         }
 
-        return semanticSources.Count >= 2 ? semanticSources : bestSources;
+        selected = semanticSources.Count >= 2 ? semanticSources : bestSources;
+        return ApplyHardFloor(selected);
+    }
+
+    /// <summary>
+    ///     Hard floor for multi-source eligibility: refuse to chunk unless we have either
+    ///     >=2 hash-matched sources, or all candidates are trusted mesh-overlay peers.
+    ///     Returning an empty list signals to callers "do not chunk; fall back to single-source."
+    /// </summary>
+    private List<VerifiedSource> ApplyHardFloor(List<VerifiedSource> selected)
+    {
+        if (selected == null || selected.Count == 0)
+        {
+            Telemetry.SwarmMetrics.SwarmHardFloorFallbacksTotal.WithLabels("no_sources").Inc();
+            return new List<VerifiedSource>();
+        }
+
+        var allMesh = selected.All(s => s.IsMeshOverlay());
+        if (allMesh)
+        {
+            return selected;
+        }
+
+        var hashGroup = selected
+            .Where(s => !string.IsNullOrEmpty(s.ContentHash))
+            .GroupBy(s => s.ContentHash, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault();
+
+        if (hashGroup != null && hashGroup.Count() >= 2)
+        {
+            return hashGroup.ToList();
+        }
+
+        // Mixed/untrusted set without a >=2 hash group: refuse to chunk.
+        var reason = selected.Any(s => !s.IsMeshOverlay() && string.IsNullOrEmpty(s.ContentHash))
+            ? "mixed_untrusted"
+            : "insufficient_hash_group";
+        Telemetry.SwarmMetrics.SwarmHardFloorFallbacksTotal.WithLabels(reason).Inc();
+        _logger.LogInformation(
+            "[SWARM] Hard-floor: declining multi-source ({Reason}); caller should fall back to single-source",
+            reason);
+        return new List<VerifiedSource>();
     }
 
     /// <inheritdoc/>
@@ -394,6 +441,18 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
                 result.Error = "No verified sources provided";
                 result.Success = false;
                 return result;
+            }
+
+            // Policy split: parallel chunking is only safe for trusted mesh-overlay peers.
+            // Soulseek peers (or mixed sets) use sequential failover so we never produce
+            // mid-stream cancellations that show as "transfer failed" on Nicotine+/SoulseekQt UIs.
+            var allMesh = request.Sources.All(s => s.IsMeshOverlay());
+            if (!allMesh)
+            {
+                _logger.LogInformation(
+                    "[SWARM] Soulseek/mixed source set ({Count} sources); using sequential failover instead of parallel chunking",
+                    request.Sources.Count);
+                return await DownloadSequentialFailoverAsync(request, status, result, stopwatch, activity, cancellationToken);
             }
 
             // Calculate chunks - optimize chunk size if optimizer available
@@ -771,6 +830,266 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         {
             activity?.Dispose();
             ActiveDownloads.TryRemove(request.Id, out _);
+        }
+    }
+
+    /// <summary>
+    ///     Sequential failover for Soulseek (or mixed) source sets. One peer streams the file
+    ///     from the current resume offset to EOF; on stall/error we close the stream cleanly
+    ///     and switch to the next peer at the byte position we have. This produces at most one
+    ///     mid-stream cancellation per failover (vs. one per chunk per peer for parallel chunking),
+    ///     which is what the receiving Soulseek client sees as a "transfer failed" entry.
+    /// </summary>
+    private async Task<MultiSourceDownloadResult> DownloadSequentialFailoverAsync(
+        MultiSourceDownloadRequest request,
+        MultiSourceDownloadStatus status,
+        MultiSourceDownloadResult result,
+        Stopwatch stopwatch,
+        Activity? activity,
+        CancellationToken cancellationToken)
+    {
+        const int absoluteMinSpeedBps = 5 * 1024;
+        const int slowDurationMs = 12000;
+        const int peerTimeoutSeconds = 30;
+
+        var outputDir = IOPath.GetDirectoryName(request.OutputPath);
+        if (!string.IsNullOrEmpty(outputDir))
+        {
+            IODirectory.CreateDirectory(outputDir);
+        }
+
+        var triedSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sourcesUsed = 0;
+        long bytesReceived = 0;
+
+        // FileStream stays open across failover attempts; each peer resumes at bytesReceived.
+        await using var fileStream = new FileStream(
+            request.OutputPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None);
+
+        while (bytesReceived < request.FileSize && !cancellationToken.IsCancellationRequested)
+        {
+            // Pick the next untried source, preferring sources we haven't visited yet.
+            var source = request.Sources.FirstOrDefault(s => !triedSources.Contains(s.Username));
+            if (source == null)
+            {
+                _logger.LogWarning("[FAILOVER] All sources tried; {Got}/{Total} bytes received",
+                    bytesReceived, request.FileSize);
+                break;
+            }
+
+            triedSources.Add(source.Username);
+            sourcesUsed++;
+
+            _logger.LogInformation(
+                "[FAILOVER] Attempting {Username} from offset {Offset} ({Remaining} bytes remaining)",
+                source.Username,
+                bytesReceived,
+                request.FileSize - bytesReceived);
+
+            using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var attemptStartBytes = bytesReceived;
+            DateTime? slowSince = null;
+            long lastBytesObservedForSpeed = bytesReceived;
+            string? attemptError = null;
+            var stalledForFailover = false;
+
+            // Speed monitor: detect stall and trigger clean failover.
+            var speedMonitorTask = Task.Run(async () =>
+            {
+                while (!attemptCts.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(2000 + Random.Shared.Next(1000), attemptCts.Token).ConfigureAwait(false);
+
+                    var current = Interlocked.Read(ref bytesReceived);
+                    var deltaBps = (current - lastBytesObservedForSpeed) / 2;
+                    lastBytesObservedForSpeed = current;
+
+                    if (deltaBps < absoluteMinSpeedBps && current > attemptStartBytes)
+                    {
+                        slowSince ??= DateTime.UtcNow;
+                        if ((DateTime.UtcNow - slowSince.Value).TotalMilliseconds >= slowDurationMs)
+                        {
+                            _logger.LogWarning(
+                                "[FAILOVER] {Username} stalled at {Bps} bytes/s; switching peer (clean cancel)",
+                                source.Username,
+                                deltaBps);
+                            stalledForFailover = true;
+                            attemptError = "Stalled";
+                            status.SetPeerTimeout(source.Username, TimeSpan.FromSeconds(peerTimeoutSeconds));
+                            Telemetry.SwarmMetrics.SwarmSequentialFailoverTotal.WithLabels("stalled").Inc();
+                            attemptCts.Cancel();
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        slowSince = null;
+                    }
+                }
+            }, attemptCts.Token);
+
+            try
+            {
+                fileStream.Seek(bytesReceived, SeekOrigin.Begin);
+                var counter = new ProgressCountingStream(fileStream, b => Interlocked.Add(ref bytesReceived, b));
+
+                try
+                {
+                    await _client.DownloadAsync(
+                        username: source.Username,
+                        remoteFilename: source.FullPath,
+                        outputStreamFactory: () => Task.FromResult<Stream>(counter),
+                        size: request.FileSize,
+                        startOffset: bytesReceived,
+                        cancellationToken: attemptCts.Token,
+                        options: new TransferOptions(
+                            maximumLingerTime: 1500,
+                            disposeOutputStreamOnCompletion: false));
+                }
+                catch (OperationCanceledException) when (stalledForFailover)
+                {
+                    // Stall-cancel produces exactly one mid-stream cancellation visible to the peer.
+                    Telemetry.SwarmMetrics.SwarmMidStreamCancellationsTotal.WithLabels("soulseek", "failover_stall").Inc();
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    attemptError = ex.Message;
+                    Telemetry.SwarmMetrics.SwarmSequentialFailoverTotal.WithLabels("errored").Inc();
+                    _logger.LogWarning(ex, "[FAILOVER] {Username} errored: {Message}", source.Username, ex.Message);
+                }
+            }
+            finally
+            {
+                try { attemptCts.Cancel(); } catch { /* ignore */ }
+                try { await speedMonitorTask.ConfigureAwait(false); } catch { /* ignore */ }
+            }
+
+            status.BytesDownloaded = bytesReceived;
+
+            if (bytesReceived >= request.FileSize)
+            {
+                break;
+            }
+
+            if (attemptError != null)
+            {
+                _logger.LogInformation(
+                    "[FAILOVER] {Username} produced {Bytes} bytes before failure ({Reason}); will try next source",
+                    source.Username,
+                    bytesReceived - attemptStartBytes,
+                    attemptError);
+            }
+            else if (bytesReceived == attemptStartBytes)
+            {
+                // Peer accepted the request but produced no data (queued / no slot). Move on.
+                Telemetry.SwarmMetrics.SwarmSequentialFailoverTotal.WithLabels("queue_too_deep").Inc();
+                _logger.LogInformation("[FAILOVER] {Username} produced no bytes; trying next source", source.Username);
+            }
+        }
+
+        await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+        result.SourcesUsed = sourcesUsed;
+        result.BytesDownloaded = bytesReceived;
+        stopwatch.Stop();
+        result.TotalTimeMs = stopwatch.ElapsedMilliseconds;
+
+        if (bytesReceived < request.FileSize)
+        {
+            result.Error = $"Sequential failover exhausted; received {bytesReceived}/{request.FileSize} bytes from {sourcesUsed} sources";
+            result.Success = false;
+            status.State = MultiSourceDownloadState.Failed;
+            activity?.SetTag("swarm.download.success", false);
+            return result;
+        }
+
+        // Final hash + fingerprint verification (same as parallel path).
+        status.State = MultiSourceDownloadState.VerifyingFinal;
+        var finalHash = await ComputeFileHashAsync(request.OutputPath, cancellationToken).ConfigureAwait(false);
+        result.FinalHash = finalHash;
+
+        if (!string.IsNullOrEmpty(request.ExpectedHash) &&
+            !finalHash.Equals(request.ExpectedHash, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "[FAILOVER] Final hash mismatch! Expected: {Expected}, Got: {Actual}",
+                request.ExpectedHash,
+                finalHash);
+            result.Error = "Final hash verification failed";
+            result.Success = false;
+            status.State = MultiSourceDownloadState.Failed;
+            return result;
+        }
+
+        var verification = string.IsNullOrWhiteSpace(request.TargetFingerprint)
+            && string.IsNullOrWhiteSpace(request.TargetSemanticKey)
+            && string.IsNullOrWhiteSpace(request.TargetMusicBrainzRecordingId)
+            ? new FingerprintVerificationResult(null, false, null)
+            : await VerifyFinalFileAsync(
+                request.OutputPath,
+                request.TargetFingerprint,
+                request.TargetSemanticKey,
+                request.TargetMusicBrainzRecordingId,
+                request.FileSize,
+                status,
+                cancellationToken).ConfigureAwait(false);
+        result.Fingerprint = verification.Fingerprint ?? string.Empty;
+        result.FingerprintVerified = verification.Verified;
+        result.ResolvedRecordingId = verification.ResolvedRecordingId;
+        status.Fingerprint = verification.Fingerprint ?? string.Empty;
+        status.FingerprintVerified = verification.Verified;
+        status.ResolvedRecordingId = verification.ResolvedRecordingId;
+
+        result.Success = true;
+        status.State = MultiSourceDownloadState.Completed;
+        activity?.SetTag("swarm.download.success", true);
+        activity?.SetTag("swarm.download.policy", "sequential_failover");
+        Telemetry.SwarmMetrics.SwarmDownloadsTotal.WithLabels("success").Inc();
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Pass-through write stream that reports bytes written to a callback; used so the
+    ///     sequential-failover loop can update <see cref="MultiSourceDownloadStatus.BytesDownloaded"/>
+    ///     in real time without having to poll the underlying FileStream position.
+    /// </summary>
+    private sealed class ProgressCountingStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly Action<long> _onBytesWritten;
+
+        public ProgressCountingStream(Stream inner, Action<long> onBytesWritten)
+        {
+            _inner = inner;
+            _onBytesWritten = onBytesWritten;
+        }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => _inner.Length;
+        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+
+        public override void Flush() => _inner.Flush();
+        public override Task FlushAsync(CancellationToken cancellationToken) => _inner.FlushAsync(cancellationToken);
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            _inner.Write(buffer, offset, count);
+            if (count > 0) _onBytesWritten(count);
+        }
+
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            await _inner.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            if (count > 0) _onBytesWritten(count);
         }
     }
 

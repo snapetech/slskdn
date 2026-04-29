@@ -574,6 +574,16 @@ namespace slskd.Transfers.MultiSource.API
                 verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, cancellationToken);
                 expectedHash = verificationResult.BestSemanticFingerprint ?? verificationResult.BestHash;
 
+                if (verifiedSources.Count < 2)
+                {
+                    return BadRequest(new
+                    {
+                        error = "Multi-source declined by hard floor (need >=2 hash-matched sources or all-mesh sources)",
+                        hashGroups = verificationResult.SourcesByHash.Count,
+                        failedSources = verificationResult.FailedSources.Count,
+                    });
+                }
+
                 Log.Information("[SWARM] Verified {Count} sources with matching hash {Hash}",
                     verifiedSources.Count, expectedHash?.Substring(0, 16) + "...");
             }
@@ -709,8 +719,18 @@ namespace slskd.Transfers.MultiSource.API
                     });
                 }
 
-                verifiedSources = verificationResult.BestSources;
+                verifiedSources = await MultiSource.SelectCanonicalSourcesAsync(verificationResult, HttpContext.RequestAborted);
                 expectedHash = verificationResult.BestHash;
+
+                if (verifiedSources.Count < 2)
+                {
+                    return BadRequest(new
+                    {
+                        error = "Multi-source declined by hard floor (need >=2 hash-matched sources or all-mesh sources)",
+                        hashGroups = verificationResult.SourcesByHash.Count,
+                        failedSources = verificationResult.FailedSources.Count,
+                    });
+                }
 
                 Log.Information("[SWARM ASYNC] Verified {Count} sources with matching hash {Hash}",
                     verifiedSources.Count, expectedHash?.Substring(0, 16) + "...");
