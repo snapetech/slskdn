@@ -72,6 +72,25 @@ private const double MinimumTrackIdentityForWeakRun = 0.70;
 
 **Why This Keeps Happening**: SongID intentionally emits ambiguity candidates for manual-review and source-original cases. Discovery Graph is supposed to show that neighborhood, but overly strict catalog-recognition thresholds hide every candidate unless the run is already highly recognized. Keep graph thresholds separate from final identity verdict thresholds so review-needed runs still produce useful topology.
 
+### 0z158. User Namespace Classes Must Fully Qualify Core Options
+
+**The Bug**: New classes under `slskd.Users` that inject `IOptionsMonitor<Options>` can accidentally bind `Options` to a static type in the same namespace instead of the root configuration type, breaking compilation with `CS0718` / `CS0721`.
+
+**Files Affected**:
+- `src/slskd/Users/RegexUsernameMatcher.cs`
+
+**Wrong**:
+```csharp
+private void Configure(Options options)
+```
+
+**Correct**:
+```csharp
+private void Configure(Core.Options options)
+```
+
+**Why This Keeps Happening**: `slskd.Users` already contains an `Options` symbol, so unqualified `Options` is ambiguous or resolves to the wrong type inside that namespace. Use `Core.Options` or an explicit alias when injecting configuration from user-domain classes.
+
 ### 0z156. Network DHT Warnings Must Use Status Counters, Not Just List Endpoints
 
 **The Bug**: The Network dashboard could keep showing public-DHT and no-peer warnings even after DHT rendezvous had healthy node and discovered-peer counters because the warning logic only looked at empty mesh/discovered peer list endpoints.
