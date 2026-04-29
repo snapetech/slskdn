@@ -29,12 +29,12 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import {
   Button,
-  Dropdown,
   Header,
   Icon,
   Loader,
   Menu,
   Modal,
+  Popup,
   Segment,
   Sidebar,
 } from 'semantic-ui-react';
@@ -628,24 +628,43 @@ class App extends Component {
               className="right"
               inverted
             >
-              <Dropdown
-                className="theme-menu"
-                data-testid="theme-menu"
-                icon="paint brush"
-                item
-                onChange={(_, data) => this.setTheme(data.value)}
+              <Popup
+                basic
+                className="theme-picker-popup"
+                on="click"
                 onClose={this.closeThemeMenu}
                 onOpen={this.openThemeMenu}
                 open={themeMenuOpen}
-                options={THEME_OPTIONS.map((option) => ({
-                  ...option,
-                  icon: 'theme',
-                }))}
-                selectOnBlur={false}
-                text={THEME_LABELS[theme]}
-                title="Choose the web UI color theme"
-                value={theme}
-              />
+                pinned
+                position="bottom right"
+                trigger={(
+                  <Menu.Item
+                    className="theme-menu"
+                    data-testid="theme-menu"
+                    title="Choose the web UI color theme"
+                  >
+                    <Icon name="paint brush" />
+                    <span className="theme-menu-label">Theme</span>
+                  </Menu.Item>
+                )}
+              >
+                <Menu
+                  className="theme-picker-menu"
+                  vertical
+                >
+                  {THEME_OPTIONS.map((option) => (
+                    <Menu.Item
+                      active={theme === option.value}
+                      data-testid={`theme-option-${option.value}`}
+                      key={option.value}
+                      onClick={() => this.setTheme(option.value)}
+                    >
+                      <Icon name="theme" />
+                      {option.text}
+                    </Menu.Item>
+                  ))}
+                </Menu>
+              </Popup>
               <ModeSpecificConnectButton
                 connectionWatchdog={connectionWatchdog}
                 controller={controller}

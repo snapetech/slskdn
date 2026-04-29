@@ -217,45 +217,45 @@ body {
     color: var(--slskd-color, inherit) !important;
 }
 
-.theme-menu-trigger {
-    align-items: center;
-    display: inline-flex;
-    gap: 0.45rem;
-    justify-content: center;
-    min-width: 86px;
-}
-
-.theme-menu-trigger .icon {
-    margin: 0 !important;
-}
-
 .theme-menu-label {
     line-height: 1.15;
     white-space: nowrap;
 }
 
-.navigation .theme-menu .menu {
+.ui.popup.theme-picker-popup {
     background: var(--slskdn-theme-menu-background, #2f3037) !important;
     border: 1px solid var(--slskdn-accent-primary-border, rgba(255,255,255,0.16)) !important;
     box-shadow: var(--slskdn-theme-menu-shadow, 0 12px 28px rgba(0,0,0,0.36)) !important;
-    min-width: 170px !important;
-    z-index: 1600 !important;
+    padding: 0 !important;
+    z-index: 3000 !important;
 }
 
-.navigation .theme-menu .menu > .item {
+.ui.popup.theme-picker-popup::before {
+    background: var(--slskdn-theme-menu-background, #2f3037) !important;
+    box-shadow: -1px -1px 0 0 var(--slskdn-accent-primary-border, rgba(255,255,255,0.16)) !important;
+}
+
+.theme-picker-menu.ui.vertical.menu {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    min-width: 170px !important;
+}
+
+.theme-picker-menu.ui.vertical.menu > .item {
     align-items: center;
     color: var(--slskd-color, inherit) !important;
     display: flex !important;
     gap: 0.4rem;
 }
 
-.navigation .theme-menu .menu > .item:hover,
-.navigation .theme-menu .menu > .item.selected {
+.theme-picker-menu.ui.vertical.menu > .item:hover {
     background: var(--slskd-hover-background, rgba(255,255,255,0.12)) !important;
     color: var(--slskd-color, inherit) !important;
 }
 
-.navigation .theme-menu .menu > .item.active {
+.theme-picker-menu.ui.vertical.menu > .item.active {
     background: var(--slskdn-theme-menu-active-background, rgba(255,255,255,0.16)) !important;
     color: var(--slskd-color, inherit) !important;
 }

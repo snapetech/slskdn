@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z159. Keep The Nav Theme Picker Out Of The Overflowing Menu
+
+**The Bug**: The Web UI theme picker rendered options in the DOM, but browser clicks either left the dropdown closed (`aria-expanded="false"`) or opened a menu clipped behind the overflowing top navigation, especially visible in Firefox/LibreWolf.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+
+**Wrong**:
+```jsx
+<Dropdown
+  onClose={closeThemeMenu}
+  onOpen={openThemeMenu}
+  open={themeMenuOpen}
+  options={themeOptions}
+/>
+```
+
+**Correct**:
+```jsx
+<Popup
+  on="click"
+  trigger={<Menu.Item>Theme</Menu.Item>}
+>
+  <Menu vertical>{themeItems}</Menu>
+</Popup>
+```
+
+**Why This Keeps Happening**: Semantic UI dropdown menus stay inside the top navigation's stacking and overflow context. The state can look open in the DOM while the menu is clipped or layered under page content. Render the theme choices through a click `Popup` portal and keep the nav trigger labeled by its function (`Theme`), not by the currently selected theme name.
+
 ### 0z157. Discovery Graph Must Preserve Manual-Review SongID Candidates
 
 **The Bug**: SongID runs with useful manual-review candidates collapsed into a single Discovery Graph seed node because graph expansion required exact or very high identity scores.

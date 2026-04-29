@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the Web UI theme picker so browser clicks open a portal-backed menu
+  reliably, with the nav trigger labeled as `Theme`.
 - Added upstream-compatible configuration aliases for `transfers`,
   `integrations`, nested upload group limits, username blacklist regex
   patterns, reverse-proxy-safe Web UI icon paths, and retry-delay clamping,
