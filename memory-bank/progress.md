@@ -4,6 +4,7 @@
 - Updated the source PKGBUILD to use the same date-release mapping as `bin/build` and `bin/publish`: MSBuild gets `0.0.0-slskdn.2026042900.193`, while package metadata keeps `2026042900-slskdn.193` as the informational/public version.
 - Bumped the AUR source package template to `pkgrel=2` so the live AUR package can supersede the broken `193-1` recipe without a new release tag.
 - Documented the gotcha in ADR-0001 and committed that docs entry separately as required.
+- Published the live AUR `slskdn` recipe as commit `b14afe2` (`pkgrel=2`) with regenerated `.SRCINFO`.
 
 ## 2026-04-29 15:46:20Z
 

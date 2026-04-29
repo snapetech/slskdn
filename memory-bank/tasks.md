@@ -14,7 +14,7 @@
 - [x] **bug**: Fix AUR source install for `2026042900-slskdn.193`.
  - Status: completed (2026-04-29)
  - Priority: P1
- - Notes: Diagnosed the visible CS8981 output as non-fatal generated-code warnings and reproduced the real failure as MSBuild rejecting generated assembly version `2026042900.193.0.0`. The source PKGBUILD now maps date-based public releases to `0.0.0-slskdn.YYYYMMDDmm.NNN` for `Version`/`PackageVersion`, keeps `InformationalVersion=YYYYMMDDmm-slskdn.NNN`, and bumps the AUR source package to `pkgrel=2`.
+ - Notes: Diagnosed the visible CS8981 output as non-fatal generated-code warnings and reproduced the real failure as MSBuild rejecting generated assembly version `2026042900.193.0.0`. The source PKGBUILD now maps date-based public releases to `0.0.0-slskdn.YYYYMMDDmm.NNN` for `Version`/`PackageVersion`, keeps `InformationalVersion=YYYYMMDDmm-slskdn.NNN`, and bumps the AUR source package to `pkgrel=2`. Live AUR `slskdn` was published as commit `b14afe2`.
 
 - [x] **ux**: Rebrand the default Web UI dark theme.
  - Status: completed (2026-04-29)
