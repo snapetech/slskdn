@@ -28,6 +28,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Upgraded Dependabot PR dependency bumps for NuGet and npm, including patched
   OpenTelemetry `1.15.3` packages and npm `uuid` `14.0.0` to clear the open
   package advisories.
+- Aligned test project Microsoft package references with the `10.0.7`
+  application package line so dependency submission restores do not hit NuGet
+  downgrade errors.
 - Fixed the CodeQL cleartext-secret alert by deleting legacy overlay
   certificate password files without reading their contents and regenerating
   the self-signed overlay certificate when needed.
