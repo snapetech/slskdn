@@ -1,3 +1,9 @@
+## 2026-04-29 16:56Z - Fixed transient overlay-connect integration failure
+
+- Reproduced the previously failing live full-instance overlay test as passing in isolation, then confirmed the DHT full-instance group passes with the fix.
+- Changed the two-node DHT rendezvous integration tests to wait through transient `/api/v0/overlay/connect` `502` responses before failing the mesh peer-connect attempt.
+- Validation passed for `TwoNodeMeshFullInstanceTests` (`3/3`).
+
 ## 2026-04-29 16:32Z - Resolved open security alerts and Dependabot bumps
 
 - Triage found three open Dependabot alerts: `OpenTelemetry.Api`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and npm `uuid`.

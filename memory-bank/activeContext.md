@@ -1,3 +1,13 @@
+## Update 2026-04-29 16:56:39Z
+
+- Current task: None. The transient full-instance overlay-connect integration failure is fixed and validated.
+- Last activity:
+  - reproduced `OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh` passing in isolation
+  - changed the DHT full-instance tests to wait through transient `/api/v0/overlay/connect` `502` responses before failing
+  - validated all `TwoNodeMeshFullInstanceTests`
+- Next steps:
+  1. Push the integration-test stability fix to `main`.
+
 ## Update 2026-04-29 16:32:00Z
 
 - Current task: Resolve open security warnings and Dependabot bump PRs.

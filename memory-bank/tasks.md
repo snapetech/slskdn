@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **test**: Stabilize two-node DHT rendezvous full-instance overlay connect coverage.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: The live full-instance mesh test could fail on a transient `/api/v0/overlay/connect` `502` in full integration runs even though it passed by itself. The two-node DHT rendezvous tests now wait through transient connect readiness failures, and `TwoNodeMeshFullInstanceTests` passes `3/3`.
+
 - [x] **security**: Resolve open dependency and CodeQL security alerts.
  - Status: completed (2026-04-29)
  - Priority: P1
