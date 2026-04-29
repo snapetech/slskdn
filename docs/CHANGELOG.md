@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.196] — 2026-04-29
+
 - Removed the top slskdN status drawer and navigation toggle, and moved its
   DHT, mesh, hash, sequence, swarm, backfill, and karma counters into the
   persistent footer.

@@ -7072,3 +7072,9 @@ Code quality improvements were completed as part of Option A:
 - Moved the drawer-only slskdN network stats into the footer: DHT peers, mesh peers, hash count, local sequence, active swarms, backfill activity, and karma now live beside the existing footer transport/NAT indicators.
 - Added focused footer regression coverage for the migrated stats.
 - Validation: `npm run lint -- --max-warnings=0`, `npm run test -- App Footer`, `npm run build`, and `git diff --check` passed. The web build still reports the existing large-bundle warning.
+
+## 2026-04-29 17:17:00Z
+
+- Prepared stable release `2026042900-slskdn.196` from the current post-`.195` commit range.
+- Promoted the rolling Unreleased notes into a `.196` changelog section so generated GitHub release notes do not publish the Unreleased section.
+- Validation: `scripts/generate-release-notes.sh 2026042900-slskdn.196` produced the expected notes and `git diff --check` passed.

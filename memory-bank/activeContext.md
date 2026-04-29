@@ -1,3 +1,15 @@
+## Update 2026-04-29 17:17:00Z
+
+- Current task: Prepare stable release `2026042900-slskdn.196`.
+- Last activity:
+  - promoted the current Unreleased notes into a `.196` changelog section
+  - generated release notes for `2026042900-slskdn.196`
+  - confirmed no non-ignored dirty files were present before release prep
+- Next steps:
+  1. Commit and push the `.196` release-note update.
+  2. Push tag `build-main-2026042900-slskdn.196`.
+  3. Watch the tag-only release workflow.
+
 ## Update 2026-04-29 17:12:30Z
 
 - Current task: None. The slskdN top status drawer has been removed and its unique stats now render in the footer.

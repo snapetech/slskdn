@@ -1321,3 +1321,7 @@
 - [x] Remove the slskdN top status drawer from the Web UI
   - Status: completed (2026-04-29)
   - Notes: Deleted the top drawer/toggle UI and surfaced its DHT, mesh, hash, sequence, swarm, backfill, and karma counters in the persistent footer with focused footer regression coverage.
+
+- [x] Prepare `2026042900-slskdn.196` stable release
+  - Status: completed (2026-04-29)
+  - Notes: Promoted the current Unreleased notes into a `.196` changelog section and generated release notes for the tag-only release workflow.
