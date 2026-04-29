@@ -472,7 +472,7 @@ dotnet run --project src/slskd/slskd.csproj
 
 ## Comparison with slskd
 
-| Feature | slskd | slskdN |
+| Feature | slskd 0.24.5 | slskdN |
 |---------|:-----:|:------:|
 | Core Soulseek functionality | ✅ | ✅ |
 | Web UI & REST API | ✅ | ✅ |
