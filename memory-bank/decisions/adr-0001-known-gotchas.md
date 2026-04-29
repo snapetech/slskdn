@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z162. Fixed Chrome Must Be Checked Against Showcase Viewports
+
+**The Bug**: The top navigation and footer status dock looked acceptable in isolation but produced clipped navigation, hidden content, and a three-row mobile footer in README/browser screenshots.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Shared/Footer.css`
+- `src/web/src/components/Search/Search.css`
+- `src/web/src/components/Search/DiscoveryGraphAtlas.jsx`
+
+**Wrong**:
+```css
+.slskdn-footer-content {
+  flex-wrap: wrap;
+}
+```
+
+on mobile with a fixed footer, because the footer can grow over the page content.
+
+**Correct**:
+```css
+.slskdn-footer-content {
+  flex-wrap: nowrap;
+  min-width: max-content;
+}
+```
+
+with the footer itself scrolling horizontally at narrow widths and the app content retaining enough bottom padding for the fixed rail.
+
+**Why This Keeps Happening**: Fixed application chrome is easy to judge from component screenshots and easy to miss in viewport screenshots. Validate desktop and mobile with the real top nav, footer, route content, and README capture dimensions before declaring a UI pass complete.
+
 ### 0z161. Dark Theme Needs Explicit Semantic UI Variant Coverage
 
 **The Bug**: README showcase screenshots exposed dark-theme pages with light or unreadable Semantic UI internals because `Segment secondary`, `Message info/warning`, dropdowns, labeled inputs, progress labels, and header subheaders do not all inherit the app-level dark variables.
