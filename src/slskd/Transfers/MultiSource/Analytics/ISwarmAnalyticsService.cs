@@ -1,7 +1,6 @@
 // <copyright file="ISwarmAnalyticsService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Transfers.MultiSource.Analytics;
 
 using System;

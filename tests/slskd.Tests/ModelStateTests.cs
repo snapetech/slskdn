@@ -1,7 +1,6 @@
 // <copyright file="ModelStateTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests;
 
 using System.Net;

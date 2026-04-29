@@ -1,7 +1,6 @@
 // <copyright file="Obfs4VersionChecker.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Diagnostics;
 
 namespace slskd.Common.Security;

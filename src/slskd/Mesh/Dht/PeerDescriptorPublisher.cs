@@ -1,7 +1,6 @@
 // <copyright file="PeerDescriptorPublisher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;

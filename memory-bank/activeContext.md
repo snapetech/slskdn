@@ -1,3 +1,17 @@
+## Update 2026-04-29 15:30:45Z
+
+- Current task: Copyright and attribution audit.
+- Last activity:
+  - compared tracked non-generated C# files against upstream `0.24.5`
+  - preserved upstream `slskd Team` AGPL headers on upstream-derived files
+  - added separate `slskdN Team` copyright blocks where upstream-derived files have slskdN changes
+  - normalized slskdN-only C# files to slskdN-only attribution
+  - fixed and documented the stacked-comment `SA1512` header-layout gotcha
+  - validation passed for the repeat attribution audit, C# diff check, `dotnet build --no-restore`, and `bash ./bin/lint`
+- Next steps:
+  1. Commit the attribution normalization.
+  2. Leave unrelated release/packaging metadata edits unstaged.
+
 ## Update 2026-04-29 07:45:00Z
 
 - Current task: None. Copyright and branding attribution pass is implemented locally and ready for validation.

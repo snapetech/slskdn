@@ -1,3 +1,7 @@
+// <copyright file="IntentQueueProcessorTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Intent Queue Processor Tests
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Processing
 {

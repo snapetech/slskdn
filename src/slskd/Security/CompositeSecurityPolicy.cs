@@ -1,7 +1,6 @@
 // <copyright file="CompositeSecurityPolicy.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 
 namespace slskd.Security;

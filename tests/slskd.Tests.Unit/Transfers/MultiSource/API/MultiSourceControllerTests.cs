@@ -1,7 +1,6 @@
 // <copyright file="MultiSourceControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Transfers.MultiSource.API;
 
 using Microsoft.AspNetCore.Http;

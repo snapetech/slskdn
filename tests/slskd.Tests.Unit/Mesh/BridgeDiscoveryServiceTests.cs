@@ -1,7 +1,6 @@
 // <copyright file="BridgeDiscoveryServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using Moq;
@@ -218,5 +217,3 @@ public class BridgeStatistics
     public int ActiveBridges { get; set; }
     public int FailedBridges { get; set; }
 }
-
-

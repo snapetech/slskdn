@@ -1,3 +1,6 @@
+// <copyright file="TimedBatcherTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;

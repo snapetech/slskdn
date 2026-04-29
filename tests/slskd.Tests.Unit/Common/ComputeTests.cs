@@ -1,3 +1,6 @@
+// <copyright file="ComputeTests.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Common
 {
     using Xunit;

@@ -1,7 +1,6 @@
 // <copyright file="MeshContentFetcher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Streaming;
 
 using System;

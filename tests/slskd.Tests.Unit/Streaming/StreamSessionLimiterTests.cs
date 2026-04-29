@@ -1,7 +1,6 @@
 // <copyright file="StreamSessionLimiterTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Streaming;
 
 using slskd.Streaming;

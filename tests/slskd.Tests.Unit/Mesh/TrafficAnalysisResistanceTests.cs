@@ -1,7 +1,6 @@
 // <copyright file="TrafficAnalysisResistanceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;
@@ -42,5 +41,3 @@ public class TrafficAnalysisResistanceTests
         throw new NotImplementedException("TrafficAnalysisResistanceTests not yet implemented");
     }
 }
-
-

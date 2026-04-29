@@ -1,7 +1,6 @@
 // <copyright file="PlanStatus.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.v2.Planning
 {
     /// <summary>

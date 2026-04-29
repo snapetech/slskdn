@@ -1,7 +1,6 @@
 // <copyright file="HashDbOptimizationServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.HashDb.Optimization;
 
 using slskd.HashDb.Optimization;

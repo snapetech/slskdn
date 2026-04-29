@@ -1,7 +1,6 @@
 // <copyright file="TorSocksTransportTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;

@@ -1,3 +1,6 @@
+// <copyright file="RouterStatsTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.ServiceFabric;
@@ -113,4 +116,3 @@ public class RouterStatsTests
         }
     }
 }
-

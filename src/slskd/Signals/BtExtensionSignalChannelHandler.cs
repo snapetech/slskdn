@@ -1,7 +1,6 @@
 // <copyright file="BtExtensionSignalChannelHandler.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Signals;
 
 using System.Text.Json;

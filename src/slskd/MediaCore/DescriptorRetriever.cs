@@ -1,7 +1,6 @@
 // <copyright file="DescriptorRetriever.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;

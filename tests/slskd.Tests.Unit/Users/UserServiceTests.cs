@@ -1,3 +1,10 @@
+// <copyright file="UserServiceTests.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+// </copyright>
+
+// <copyright file="UserServiceTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Users
 {
     using System.Collections.Generic;

@@ -1,7 +1,6 @@
 // <copyright file="IMeshService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;

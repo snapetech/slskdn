@@ -1,7 +1,3 @@
-// <copyright file="MessageDirection.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
-
 // <copyright file="MessageDirection.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //

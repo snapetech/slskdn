@@ -1,3 +1,10 @@
+// <copyright file="AesTests.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+// </copyright>
+
+// <copyright file="AesTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Common.Cryptography
 {
     using System.Text;

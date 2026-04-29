@@ -1,3 +1,7 @@
+// <copyright file="MeshTorrentBackendTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // MeshDht and Torrent backend tests
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {

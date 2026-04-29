@@ -1,3 +1,7 @@
+// <copyright file="QualityScorerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Tests for QualityScorer
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Matching
 {

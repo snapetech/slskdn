@@ -1,7 +1,6 @@
 // <copyright file="NowPlayingControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.NowPlaying;
 
 using System.Text;

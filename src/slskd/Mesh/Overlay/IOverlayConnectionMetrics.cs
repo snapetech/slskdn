@@ -1,7 +1,6 @@
 // <copyright file="IOverlayConnectionMetrics.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Mesh.Overlay;
 
 /// <summary>

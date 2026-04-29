@@ -1,7 +1,6 @@
 // <copyright file="SceneServicesTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 #nullable enable
 
 using System.Collections.Concurrent;

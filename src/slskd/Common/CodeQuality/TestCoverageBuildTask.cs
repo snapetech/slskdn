@@ -1,7 +1,6 @@
 // <copyright file="TestCoverageBuildTask.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Common.CodeQuality
 {
     using System;

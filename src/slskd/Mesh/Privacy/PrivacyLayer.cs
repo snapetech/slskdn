@@ -1,7 +1,6 @@
 // <copyright file="PrivacyLayer.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using slskd.Common.Security;

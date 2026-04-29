@@ -1,3 +1,6 @@
+// <copyright file="MusicAdaptersTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music;
 
 using System;
@@ -408,4 +411,3 @@ public class MusicDomainMappingTests
         Assert.NotEqual(workId.Value, itemId.Value);
     }
 }
-

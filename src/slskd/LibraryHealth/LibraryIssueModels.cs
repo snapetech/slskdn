@@ -1,7 +1,6 @@
 // <copyright file="LibraryIssueModels.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.LibraryHealth
 {
     using System;

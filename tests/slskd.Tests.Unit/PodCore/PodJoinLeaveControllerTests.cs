@@ -1,7 +1,6 @@
 // <copyright file="PodJoinLeaveControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.PodCore;
 
 using Microsoft.AspNetCore.Mvc;

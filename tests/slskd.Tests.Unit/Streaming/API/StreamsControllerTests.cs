@@ -1,7 +1,6 @@
 // <copyright file="StreamsControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Streaming.API;
 
 using System;

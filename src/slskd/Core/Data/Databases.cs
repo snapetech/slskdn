@@ -15,6 +15,10 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
+// <copyright file="Databases.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 /// <summary>
 ///     A primitive type for Database names and a static value for each of them. And a list.
 /// </summary>

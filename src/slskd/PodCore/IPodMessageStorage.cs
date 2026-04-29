@@ -1,7 +1,6 @@
-// <copyright file="IPodMessageStorage.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
+// <copyright file="IPodMessageStorage.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.PodCore;
 
 using System;

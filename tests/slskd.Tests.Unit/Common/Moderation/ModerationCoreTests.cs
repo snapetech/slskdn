@@ -1,3 +1,6 @@
+// <copyright file="ModerationCoreTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Common.Moderation;
 
 using System;
@@ -385,4 +388,3 @@ public class CompositeModerationProviderTests
             Microsoft.Extensions.Options.Options.Create(opts));
     }
 }
-

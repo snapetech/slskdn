@@ -1,7 +1,6 @@
 // <copyright file="ReleaseGraph.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Integrations.MusicBrainz.Models
 {
     using System;

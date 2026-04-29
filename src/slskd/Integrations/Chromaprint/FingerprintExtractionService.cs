@@ -1,7 +1,6 @@
 // <copyright file="FingerprintExtractionService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Integrations.Chromaprint
 {
     using System;

@@ -1,7 +1,6 @@
 // <copyright file="MdnsAdvertiserTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 #nullable enable
 
 namespace slskd.Tests.Unit.Identity;

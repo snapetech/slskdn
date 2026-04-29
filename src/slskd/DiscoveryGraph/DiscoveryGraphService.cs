@@ -1,7 +1,6 @@
 // <copyright file="DiscoveryGraphService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.DiscoveryGraph;
 
 using slskd.Integrations.MusicBrainz;

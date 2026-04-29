@@ -1,7 +1,6 @@
 // <copyright file="ImageSteganographyTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;
@@ -44,5 +43,3 @@ public class ImageSteganography
         throw new NotImplementedException("ImageSteganography not yet implemented");
     }
 }
-
-

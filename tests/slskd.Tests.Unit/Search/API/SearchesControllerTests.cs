@@ -1,7 +1,6 @@
 // <copyright file="SearchesControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Search.API;
 
 using System.Linq;

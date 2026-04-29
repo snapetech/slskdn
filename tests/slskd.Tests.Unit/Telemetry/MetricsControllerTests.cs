@@ -1,7 +1,6 @@
 // <copyright file="MetricsControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Telemetry;
 
 using System.Collections.Generic;

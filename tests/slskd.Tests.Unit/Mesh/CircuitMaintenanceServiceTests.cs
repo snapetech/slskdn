@@ -1,7 +1,6 @@
 // <copyright file="CircuitMaintenanceServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 using System.Reflection;
 using Microsoft.Extensions.Logging;

@@ -1,7 +1,6 @@
 // <copyright file="NowPlayingService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.NowPlaying;
 
 using System;

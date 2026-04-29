@@ -1,7 +1,3 @@
-// <copyright file="CacheKeys.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
-
 // <copyright file="CacheKeys.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //

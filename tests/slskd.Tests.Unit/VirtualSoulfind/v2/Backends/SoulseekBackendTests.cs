@@ -1,3 +1,7 @@
+// <copyright file="SoulseekBackendTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Soulseek Backend Tests
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {

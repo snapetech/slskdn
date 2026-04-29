@@ -1,7 +1,6 @@
 // <copyright file="TransportPerformanceBenchmarks.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
@@ -395,5 +394,3 @@ public class TransportStatusBenchmarks
         // Actual transport classes may not be available in this context
     }
 }
-
-

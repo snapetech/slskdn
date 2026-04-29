@@ -1,7 +1,6 @@
 // <copyright file="CensorshipSimulationServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -58,5 +57,3 @@ public interface INetworkSimulator
 {
     Task SimulateConnectionBlockingAsync(string target, CancellationToken cancellationToken);
 }
-
-

@@ -1,7 +1,6 @@
 // <copyright file="IpldMapperTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.MediaCore;
 
 using slskd.MediaCore;
@@ -269,4 +268,3 @@ public class IpldMapperTests
         Assert.Contains(link1, album1Targets);
     }
 }
-

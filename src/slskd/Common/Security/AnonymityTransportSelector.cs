@@ -1,7 +1,6 @@
 // <copyright file="AnonymityTransportSelector.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Mesh;
 using slskd.Mesh.Transport;
 using slskd.Mesh.Overlay;

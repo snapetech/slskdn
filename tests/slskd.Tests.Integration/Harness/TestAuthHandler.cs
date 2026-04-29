@@ -1,3 +1,6 @@
+// <copyright file="TestAuthHandler.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.Harness;
 
 using System.Security.Claims;
@@ -26,4 +29,3 @@ internal class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptio
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }
-

@@ -1,3 +1,7 @@
+// <copyright file="bug-test-backend-async-void.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 /**
  * Bug Reproduction Test: async void event handler
  * 
@@ -99,8 +103,3 @@ namespace BugTest
         }
     }
 }
-
-
-
-
-

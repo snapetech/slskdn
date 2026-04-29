@@ -1,7 +1,6 @@
 // <copyright file="PrivacyLayerIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;

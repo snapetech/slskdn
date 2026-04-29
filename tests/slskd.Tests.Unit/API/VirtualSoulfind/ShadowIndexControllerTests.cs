@@ -1,7 +1,6 @@
 // <copyright file="ShadowIndexControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.API.VirtualSoulfind;
 
 using Microsoft.AspNetCore.Mvc;

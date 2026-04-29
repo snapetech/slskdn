@@ -1,3 +1,6 @@
+// <copyright file="MeshSimulator.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.Mesh;
 
 using System.Collections.Concurrent;

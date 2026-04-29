@@ -1,7 +1,6 @@
 // <copyright file="ConnectionThrottlerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh;
@@ -199,5 +198,3 @@ public class ConnectionThrottlerTests
         Assert.True(stats.GlobalConnectionTokens >= 0);
     }
 }
-
-

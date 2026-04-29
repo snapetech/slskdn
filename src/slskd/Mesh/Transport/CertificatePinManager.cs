@@ -1,7 +1,6 @@
 // <copyright file="CertificatePinManager.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Concurrent;
 using System.Security.Cryptography.X509Certificates;
 

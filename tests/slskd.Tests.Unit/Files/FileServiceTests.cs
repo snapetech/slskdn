@@ -1,3 +1,10 @@
+// <copyright file="FileServiceTests.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+// </copyright>
+
+// <copyright file="FileServiceTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using Microsoft.Extensions.Options;
 
 namespace slskd.Tests.Unit.Files
@@ -196,4 +203,3 @@ namespace slskd.Tests.Unit.Files
         }
     }
 }
-

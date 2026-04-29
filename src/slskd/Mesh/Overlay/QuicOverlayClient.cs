@@ -1,7 +1,6 @@
 // <copyright file="QuicOverlayClient.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 #pragma warning disable CA2252 // Preview features - QUIC APIs require preview features
 #pragma warning disable CA1416 // Runtime IsSupported guards already gate QUIC-only code paths
 

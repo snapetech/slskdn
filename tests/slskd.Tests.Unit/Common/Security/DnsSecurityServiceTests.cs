@@ -1,7 +1,6 @@
 // <copyright file="DnsSecurityServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -381,4 +380,3 @@ public class DnsSecurityServiceTests : IDisposable
         Assert.Contains(publicIp, result.AllowedIPs);
     }
 }
-

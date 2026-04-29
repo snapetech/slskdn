@@ -1,3 +1,6 @@
+// <copyright file="MultiSourceIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.MultiSource;
 
 using System;
@@ -87,4 +90,3 @@ public class MultiSourceIntegrationTests : IClassFixture<StubWebApplicationFacto
         Assert.NotNull(multiSourceService);
     }
 }
-

@@ -15,6 +15,9 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
+// <copyright file="VPNStatus.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System.Net;
 
 namespace slskd;

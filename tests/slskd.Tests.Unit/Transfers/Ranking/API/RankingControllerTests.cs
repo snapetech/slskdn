@@ -1,7 +1,6 @@
-// <copyright file="RankingControllerTests.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
+// <copyright file="RankingControllerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Transfers.Ranking.API;
 
 using System.Linq;

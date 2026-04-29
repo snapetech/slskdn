@@ -1,7 +1,6 @@
 // <copyright file="AdvancedDiscoveryServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Transfers.MultiSource.Discovery;
 
 using System;

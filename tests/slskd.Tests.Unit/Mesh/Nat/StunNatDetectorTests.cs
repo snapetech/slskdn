@@ -1,7 +1,6 @@
 // <copyright file="StunNatDetectorTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.Nat;
 
 using System.Net;

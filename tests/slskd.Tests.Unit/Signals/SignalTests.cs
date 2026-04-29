@@ -1,3 +1,6 @@
+// <copyright file="SignalTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Signals;
 
 using System;
@@ -135,4 +138,3 @@ public class SignalTests
         Assert.True(isExpired); // Just past TTL
     }
 }
-

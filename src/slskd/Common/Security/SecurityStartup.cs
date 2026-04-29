@@ -1,8 +1,6 @@
-// <copyright file="SecurityStartup.cs" company="slskdN">
-//     Copyright (c) slskdN. All rights reserved.
-//     Licensed under the AGPL-3.0 license. See LICENSE file in the project root for full license information.
+// <copyright file="SecurityStartup.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Common.Security;
 
 using Microsoft.AspNetCore.Builder;

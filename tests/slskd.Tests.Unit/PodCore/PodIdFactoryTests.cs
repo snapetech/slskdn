@@ -1,7 +1,6 @@
 // <copyright file="PodIdFactoryTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Messaging;
 using Xunit;
 
@@ -115,5 +114,3 @@ public class PodIdFactoryTests
         Assert.Matches(@"^pod:[a-f0-9]{32}$", podId); // Should be "pod:" followed by 32 hex chars
     }
 }
-
-

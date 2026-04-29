@@ -1,7 +1,6 @@
 // <copyright file="DescriptorPublisher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Text;
 using MessagePack;
 using Microsoft.Extensions.Logging;

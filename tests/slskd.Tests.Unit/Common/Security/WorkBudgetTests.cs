@@ -1,3 +1,6 @@
+// <copyright file="WorkBudgetTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using slskd.Common.Security;
 using System;
 using System.Threading.Tasks;
@@ -255,4 +258,3 @@ public class WorkBudgetTests
         Assert.True(budget.InitialUnits > 1000000);
     }
 }
-

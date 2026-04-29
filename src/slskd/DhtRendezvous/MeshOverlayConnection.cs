@@ -1,8 +1,6 @@
-// <copyright file="MeshOverlayConnection.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
-//     Licensed under the AGPL-3.0 license. See LICENSE file in the project root for full license information.
+// <copyright file="MeshOverlayConnection.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.DhtRendezvous;
 
 using System;

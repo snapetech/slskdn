@@ -1,7 +1,6 @@
 // <copyright file="VirtualSoulfindOptions.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Core;
 
 using slskd.VirtualSoulfind.ShadowIndex;

@@ -1,3 +1,7 @@
+// <copyright file="LanBackendTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // LAN Backend tests
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {

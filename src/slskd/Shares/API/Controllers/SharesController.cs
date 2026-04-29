@@ -15,6 +15,9 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
+// <copyright file="SharesController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Shares.API
 {
     using System.Collections.Generic;

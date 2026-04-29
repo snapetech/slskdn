@@ -1,3 +1,7 @@
+// <copyright file="HttpBackendTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // HTTP Backend tests (SIMPLIFIED FOR SPEED)
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Backends
 {

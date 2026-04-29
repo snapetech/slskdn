@@ -1,3 +1,6 @@
+// <copyright file="MeshServiceRouterSecurityTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using slskd.Common.Security;

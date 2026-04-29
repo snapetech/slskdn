@@ -1,7 +1,6 @@
 // <copyright file="NormalizationPipeline.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.Capture;
 
 using System;

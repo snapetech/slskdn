@@ -1,7 +1,6 @@
 // <copyright file="DisasterModeCoordinator.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.DisasterMode;
 
 using System.Threading;

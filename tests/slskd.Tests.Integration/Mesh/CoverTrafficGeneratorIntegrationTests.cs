@@ -1,7 +1,6 @@
 // <copyright file="CoverTrafficGeneratorIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Integration.Mesh;
@@ -26,5 +25,3 @@ public class CoverTrafficGeneratorIntegrationTests
         Assert.True(true, "Placeholder test - CoverTrafficGeneratorIntegrationTests.AdaptiveTrafficGeneration not yet implemented");
     }
 }
-
-

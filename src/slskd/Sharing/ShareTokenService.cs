@@ -1,7 +1,6 @@
 // <copyright file="ShareTokenService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Sharing;
 
 using System;

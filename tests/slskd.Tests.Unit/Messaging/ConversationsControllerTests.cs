@@ -1,7 +1,6 @@
 // <copyright file="ConversationsControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Messaging;
 
 using Microsoft.AspNetCore.Mvc;

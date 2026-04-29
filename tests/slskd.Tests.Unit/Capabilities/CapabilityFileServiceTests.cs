@@ -1,7 +1,6 @@
 // <copyright file="CapabilityFileServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Capabilities;
 
 using System.Text;

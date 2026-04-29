@@ -1,7 +1,6 @@
 // <copyright file="IAdvancedDiscoveryService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Transfers.MultiSource.Discovery;
 
 using System.Collections.Generic;

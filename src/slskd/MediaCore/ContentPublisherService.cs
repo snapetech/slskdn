@@ -1,7 +1,6 @@
 // <copyright file="ContentPublisherService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

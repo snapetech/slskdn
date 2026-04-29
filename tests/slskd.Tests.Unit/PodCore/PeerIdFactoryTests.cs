@@ -1,7 +1,6 @@
 // <copyright file="PeerIdFactoryTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.PodCore;
 using Xunit;
 
@@ -89,5 +88,3 @@ public class PeerIdFactoryTests
         Assert.Equal(peerId1, peerId2);
     }
 }
-
-

@@ -1,3 +1,6 @@
+// <copyright file="FeatureIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.Features;
 
 using slskd.Tests.Integration.Harness;

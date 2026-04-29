@@ -1,7 +1,6 @@
-// <copyright file="TransfersControllerTests.cs" company="slskd Team">
-//     Copyright (c) slskd Team. All rights reserved.
+// <copyright file="TransfersControllerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Transfers.API;
 
 using System.Linq;

@@ -1,7 +1,6 @@
 // <copyright file="IdentitySeparationEnforcerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Common.Security
 {
     using slskd.Common.Security;
@@ -138,5 +137,3 @@ namespace slskd.Tests.Unit.Common.Security
         }
     }
 }
-
-

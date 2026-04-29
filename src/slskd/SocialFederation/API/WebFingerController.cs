@@ -1,7 +1,6 @@
 // <copyright file="WebFingerController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.SocialFederation.API
 {
     using System;

@@ -1,3 +1,6 @@
+// <copyright file="MeshServiceRouterTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -248,4 +251,3 @@ public class MeshServiceRouterTests
         }
     }
 }
-

@@ -1,7 +1,6 @@
 // <copyright file="IPrivacyLayer.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Common.Security;
 
 namespace slskd.Mesh.Privacy;

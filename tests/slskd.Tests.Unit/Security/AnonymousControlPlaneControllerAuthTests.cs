@@ -1,7 +1,6 @@
 // <copyright file="AnonymousControlPlaneControllerAuthTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Security;
 
 using System;

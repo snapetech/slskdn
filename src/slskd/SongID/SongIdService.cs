@@ -1,7 +1,6 @@
 // <copyright file="SongIdService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.SongID;
 
 using System.Collections.Concurrent;

@@ -1,3 +1,6 @@
+// <copyright file="ManagedStateTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Core;
 
 using System;

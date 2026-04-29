@@ -1,7 +1,6 @@
 // <copyright file="PodValidationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.PodCore;
 using Xunit;
 

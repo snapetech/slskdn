@@ -1,7 +1,6 @@
 // <copyright file="LabelCrateJobsController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Jobs.API
 {
     using System.Threading;

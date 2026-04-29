@@ -1,7 +1,6 @@
 // <copyright file="PodDhtPublisher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.PodCore;
 
 using System.Collections.Concurrent;

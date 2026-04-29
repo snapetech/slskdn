@@ -1,7 +1,6 @@
 // <copyright file="OpenTelemetryExtensions.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Telemetry;
 
 using System.Diagnostics;

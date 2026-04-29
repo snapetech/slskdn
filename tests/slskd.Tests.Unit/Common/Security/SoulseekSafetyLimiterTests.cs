@@ -1,3 +1,6 @@
+// <copyright file="SoulseekSafetyLimiterTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Common.Security;
 
 using System;
@@ -245,4 +248,3 @@ public class SoulseekSafetyLimiterTests
         public IDisposable OnChange(Action<T, string> listener) => null;
     }
 }
-

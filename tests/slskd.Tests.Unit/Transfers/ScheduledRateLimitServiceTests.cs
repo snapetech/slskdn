@@ -1,3 +1,6 @@
+// <copyright file="ScheduledRateLimitServiceTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Transfers
 {
     using System;

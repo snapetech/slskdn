@@ -1,7 +1,6 @@
 // <copyright file="PeerReputationStoreTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Common.Moderation
 {
     using System;
@@ -254,4 +253,3 @@ namespace slskd.Tests.Unit.Common.Moderation
         }
     }
 }
-

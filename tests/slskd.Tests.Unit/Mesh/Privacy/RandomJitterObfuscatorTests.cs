@@ -1,7 +1,6 @@
 // <copyright file="RandomJitterObfuscatorTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -184,5 +183,3 @@ public class RandomJitterObfuscatorTests : IDisposable
         Assert.Equal(TimeSpan.FromMilliseconds(1000), obfuscator.MaxDelay);
     }
 }
-
-

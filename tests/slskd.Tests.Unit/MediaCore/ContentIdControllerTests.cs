@@ -1,7 +1,6 @@
 // <copyright file="ContentIdControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.MediaCore;
 
 using Microsoft.AspNetCore.Mvc;

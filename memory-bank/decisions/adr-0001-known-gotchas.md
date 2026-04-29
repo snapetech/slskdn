@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z145. Stacked Single-Line Copyright Headers Must Not Leave A Blank Before Code
+
+**The Bug**: A bulk copyright-header normalization added a blank line after stacked `// <copyright>` comment blocks, which made StyleCop emit `SA1512` warnings across upstream-derived files.
+
+**Files Affected**:
+- `src/slskd/**/*.cs`
+- `tests/**/*.cs`
+
+**Wrong**:
+```csharp
+// </copyright>
+
+using Microsoft.Extensions.Options;
+```
+
+**Correct**:
+```csharp
+// </copyright>
+using Microsoft.Extensions.Options;
+```
+
+**Why This Keeps Happening**: The XML-looking copyright block is still made of single-line comments to StyleCop. For stacked single-line comment headers, preserve any intentional blank between separate attribution blocks, but do not leave a blank line between the final `// </copyright>` and the first `using`, `namespace`, preprocessor directive, or code line.
+
 ### 0z144. Do Not Promote Weak SongID Evidence Into Discovery Graph Neighborhoods
 
 **The Bug**: SongID runs with `needs_manual_review` identity evidence could still build Discovery Graph neighborhoods from transcript/OCR/chapter-derived MusicBrainz candidates. Generic catalog artifacts such as `TV Show`, chapter labels, or unrelated artist names then appeared as real neighboring artists/releases when a graph node was clicked.

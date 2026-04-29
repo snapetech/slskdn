@@ -1,7 +1,6 @@
 // <copyright file="DomainFrontedTransportTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Common.Security;
@@ -60,5 +59,3 @@ public class DomainFrontingOptions
     public string BackDomain { get; set; } = string.Empty;
     public bool Enabled { get; set; }
 }
-
-

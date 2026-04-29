@@ -1,8 +1,6 @@
 // <copyright file="ValidateCsrfForCookiesOnlyAttribute.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
-//     Licensed under the AGPL-3.0 license. See LICENSE file in the project root for full license information.
 // </copyright>
-
 namespace slskd.Core.Security;
 
 using System;

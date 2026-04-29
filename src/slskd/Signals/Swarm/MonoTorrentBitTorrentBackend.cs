@@ -1,7 +1,6 @@
-// <copyright file="MonoTorrentBitTorrentBackend.cs" company="slskd Team">
-//     Copyright (c) slskd Team. All rights reserved.
+// <copyright file="MonoTorrentBitTorrentBackend.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Signals.Swarm;
 
 using System;

@@ -1,7 +1,6 @@
 // <copyright file="GenericFileItem.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.Core.GenericFile
 {
     using System;

@@ -1,7 +1,6 @@
 // <copyright file="BucketPadderTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Privacy;
@@ -208,5 +207,3 @@ public class BucketPadderTests : IDisposable
         Assert.Equal(6, BucketPadder.StandardBucketSizes.Length);
     }
 }
-
-

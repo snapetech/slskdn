@@ -1,7 +1,6 @@
 // <copyright file="ServicePayloadParser.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Text;
 using slskd.Mesh.Transport;
 

@@ -1,7 +1,6 @@
 // <copyright file="MeshServiceFabricOptions.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Mesh.ServiceFabric;
 
 /// <summary>

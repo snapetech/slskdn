@@ -1,7 +1,6 @@
 // <copyright file="SecurityUtilsTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using slskd.Mesh.Transport;
@@ -241,5 +240,3 @@ public class ConnectionRateLimiterTests
         Assert.True(allowed);
     }
 }
-
-

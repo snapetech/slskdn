@@ -1,3 +1,6 @@
+// <copyright file="CoverTrafficGeneratorTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Logging;

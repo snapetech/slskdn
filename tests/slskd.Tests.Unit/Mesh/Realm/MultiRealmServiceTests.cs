@@ -1,7 +1,6 @@
 // <copyright file="MultiRealmServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.Realm
 {
     using System;
@@ -326,5 +325,3 @@ namespace slskd.Tests.Unit.Mesh.Realm
         }
     }
 }
-
-

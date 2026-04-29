@@ -1,7 +1,6 @@
 // <copyright file="RelayClient.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;

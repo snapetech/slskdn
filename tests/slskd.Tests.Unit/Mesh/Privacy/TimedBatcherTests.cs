@@ -1,7 +1,6 @@
 // <copyright file="TimedBatcherTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Privacy;
@@ -271,5 +270,3 @@ public class TimedBatcherTests : IDisposable
         Assert.Equal(0, batcher.CurrentBatchSize);
     }
 }
-
-

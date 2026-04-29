@@ -1,7 +1,6 @@
 // <copyright file="TvDomainMapping.cs" company="slskdN Team">
-// Copyright (c) slskdN Team. All rights reserved.
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.Core.Tv;
 
 using System;

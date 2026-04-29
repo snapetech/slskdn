@@ -1,7 +1,6 @@
 // <copyright file="SelfSignedCertificate.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 

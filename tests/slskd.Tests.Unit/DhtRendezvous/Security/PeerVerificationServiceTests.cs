@@ -1,7 +1,6 @@
 // <copyright file="PeerVerificationServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.DhtRendezvous.Security;
 
 using Microsoft.Extensions.Logging;

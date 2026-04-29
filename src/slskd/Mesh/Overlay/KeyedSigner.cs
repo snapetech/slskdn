@@ -1,7 +1,6 @@
 // <copyright file="KeyedSigner.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using NSec.Cryptography;

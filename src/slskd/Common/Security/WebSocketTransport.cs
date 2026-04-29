@@ -1,7 +1,6 @@
 // <copyright file="WebSocketTransport.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System;
 using System.IO;
 using System.Net.WebSockets;

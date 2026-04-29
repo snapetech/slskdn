@@ -1,3 +1,6 @@
+// <copyright file="LoadTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.VirtualSoulfind;
 
 using System.Net.Http;
@@ -106,4 +109,3 @@ Integration and load tests (as smokes) run on every PR.
 Full load scenarios (10k shards, 1k queries, 24h) are for nightly runs.
 ";
 }
-

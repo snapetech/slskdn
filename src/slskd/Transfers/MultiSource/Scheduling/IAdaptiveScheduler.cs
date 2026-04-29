@@ -1,7 +1,6 @@
 // <copyright file="IAdaptiveScheduler.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Transfers.MultiSource.Scheduling;
 
 using System.Collections.Generic;

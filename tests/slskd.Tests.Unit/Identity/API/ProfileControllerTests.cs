@@ -1,7 +1,6 @@
 // <copyright file="ProfileControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Identity.API;
 
 using System;

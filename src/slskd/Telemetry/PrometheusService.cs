@@ -1,5 +1,5 @@
-// <copyright file="PrometheusService.cs" company="slskdN">
-//     Copyright (c) slskdN. All rights reserved.
+// <copyright file="PrometheusService.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
 //     it under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,9 @@
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
 
+// <copyright file="PrometheusService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Telemetry;
 
 using System;

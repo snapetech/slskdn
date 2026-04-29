@@ -1,7 +1,6 @@
 // <copyright file="DiscoveryGraphModels.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.DiscoveryGraph;
 
 public sealed class DiscoveryGraphRequest

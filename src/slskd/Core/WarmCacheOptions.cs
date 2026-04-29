@@ -1,7 +1,6 @@
 // <copyright file="WarmCacheOptions.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd
 {
     using System.Collections.Generic;

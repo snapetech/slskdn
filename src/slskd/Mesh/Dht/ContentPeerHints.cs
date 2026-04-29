@@ -1,7 +1,6 @@
 // <copyright file="ContentPeerHints.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using MessagePack;
 
 namespace slskd.Mesh.Dht;

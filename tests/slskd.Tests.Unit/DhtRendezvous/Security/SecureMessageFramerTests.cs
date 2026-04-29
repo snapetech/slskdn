@@ -1,7 +1,6 @@
 // <copyright file="SecureMessageFramerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.DhtRendezvous.Security;
 
 using System.Buffers.Binary;

@@ -1,7 +1,6 @@
 // <copyright file="IdentitySeparationValidatorTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Common.Security
 {
     using System.Collections.Generic;
@@ -117,5 +116,3 @@ namespace slskd.Tests.Unit.Common.Security
         }
     }
 }
-
-

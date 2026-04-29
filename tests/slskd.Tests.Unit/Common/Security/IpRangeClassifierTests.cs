@@ -1,7 +1,6 @@
 // <copyright file="IpRangeClassifierTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Common.Security;
 using System.Net;
 using Xunit;
@@ -261,5 +260,3 @@ public class IpRangeClassifierTests
         }
     }
 }
-
-

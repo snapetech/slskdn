@@ -1,7 +1,6 @@
 // <copyright file="CanonicalSerializationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Mesh.Dht;
 using slskd.Mesh.Overlay;
 using slskd.Mesh.Transport;
@@ -167,5 +166,3 @@ public class CanonicalSerializationTests
         };
     }
 }
-
-

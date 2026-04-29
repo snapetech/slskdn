@@ -25,6 +25,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Clarified slskdN fork attribution across docs, web metadata, package
   metadata, generated release copy, service metadata, and API surfaces while
   preserving compatibility names for existing installs.
+- Normalized C# source headers against upstream `0.24.5` so unchanged upstream
+  files remain upstream-attributed, modified upstream files carry slskdN
+  co-attribution, and slskdN-only files use slskdN-only copyright notices.
 
 ## [2026042900-slskdn.192] — 2026-04-29
 

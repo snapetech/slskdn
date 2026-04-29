@@ -1,7 +1,6 @@
 // <copyright file="PeerReputationEventType.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Common.Moderation
 {
     /// <summary>

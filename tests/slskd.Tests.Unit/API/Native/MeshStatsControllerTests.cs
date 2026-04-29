@@ -1,7 +1,6 @@
 // <copyright file="MeshStatsControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.API.Native;
 
 using Microsoft.AspNetCore.Mvc;

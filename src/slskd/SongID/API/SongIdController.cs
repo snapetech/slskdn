@@ -1,7 +1,6 @@
 // <copyright file="SongIdController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.SongID.API;
 
 using Asp.Versioning;

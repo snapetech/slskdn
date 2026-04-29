@@ -1,7 +1,6 @@
 // <copyright file="DescriptorRetrieverTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.MediaCore;
 
 using Microsoft.Extensions.Logging.Abstractions;

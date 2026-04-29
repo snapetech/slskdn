@@ -1,7 +1,6 @@
 // <copyright file="TransfersHub.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Transfers.API
 {
     using System.Threading.Tasks;

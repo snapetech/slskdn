@@ -1,7 +1,6 @@
 // <copyright file="BridgeProxyServerIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Integration.VirtualSoulfind.Bridge;
 
 using System.Net;

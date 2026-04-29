@@ -1,3 +1,6 @@
+// <copyright file="ContentDomainTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 #nullable enable
 
 namespace slskd.Tests.Unit.VirtualSoulfind.Core;

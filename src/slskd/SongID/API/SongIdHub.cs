@@ -1,7 +1,6 @@
 // <copyright file="SongIdHub.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.SongID.API;
 
 using Microsoft.AspNetCore.Authorization;

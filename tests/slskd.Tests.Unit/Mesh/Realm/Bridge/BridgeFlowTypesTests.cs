@@ -1,7 +1,6 @@
 // <copyright file="BridgeFlowTypesTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.Realm.Bridge
 {
     using System.Linq;
@@ -202,5 +201,3 @@ namespace slskd.Tests.Unit.Mesh.Realm.Bridge
         }
     }
 }
-
-

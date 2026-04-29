@@ -1,3 +1,6 @@
+// <copyright file="SoulbeetAdvancedModeTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.Soulbeet;
 
 using System.Net.Http.Json;

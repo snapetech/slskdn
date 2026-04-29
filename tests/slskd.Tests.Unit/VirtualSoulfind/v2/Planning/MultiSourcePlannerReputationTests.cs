@@ -1,7 +1,6 @@
 // <copyright file="MultiSourcePlannerReputationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Planning
 {
     using System;

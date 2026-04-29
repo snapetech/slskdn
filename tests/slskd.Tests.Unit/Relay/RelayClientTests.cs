@@ -1,3 +1,6 @@
+// <copyright file="RelayClientTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;

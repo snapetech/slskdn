@@ -1,3 +1,6 @@
+// <copyright file="QualityScorerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Audio
 {
     using slskd.Audio;
@@ -46,5 +49,3 @@ namespace slskd.Tests.Unit.Audio
         }
     }
 }
-
-

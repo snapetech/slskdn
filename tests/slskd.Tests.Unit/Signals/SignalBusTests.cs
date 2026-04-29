@@ -1,3 +1,6 @@
+// <copyright file="SignalBusTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Signals;
 
 using System;

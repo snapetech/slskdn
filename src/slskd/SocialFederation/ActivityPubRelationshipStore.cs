@@ -1,7 +1,6 @@
 // <copyright file="ActivityPubRelationshipStore.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.SocialFederation;
 
 using Microsoft.Data.Sqlite;

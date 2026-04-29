@@ -1,7 +1,6 @@
 // <copyright file="DeniableVolumeStorageTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;
@@ -55,5 +54,3 @@ public class DeniableVolumeStorage
         throw new NotImplementedException("DeniableVolumeStorage not yet implemented");
     }
 }
-
-

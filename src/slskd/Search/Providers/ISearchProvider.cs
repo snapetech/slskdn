@@ -1,7 +1,6 @@
 // <copyright file="ISearchProvider.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Search.Providers;
 
 using System.Collections.Generic;

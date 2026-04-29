@@ -1,7 +1,6 @@
 // <copyright file="SolidFetchPolicy.cs" company="slskdN Team">
-// Copyright (c) slskdN Team. All rights reserved.
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Solid;
 
 using System;

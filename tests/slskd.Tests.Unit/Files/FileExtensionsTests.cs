@@ -1,3 +1,10 @@
+// <copyright file="FileExtensionsTests.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+// </copyright>
+
+// <copyright file="FileExtensionsTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System;
 using System.IO;
 using slskd.Files;

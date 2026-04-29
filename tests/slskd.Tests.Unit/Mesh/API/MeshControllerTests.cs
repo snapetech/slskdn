@@ -1,7 +1,6 @@
-// <copyright file="MeshControllerTests.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
+// <copyright file="MeshControllerTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.API;
 
 using System.Linq;

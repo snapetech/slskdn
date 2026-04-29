@@ -1,7 +1,6 @@
 // <copyright file="OverlayControlTypes.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Mesh.Overlay;
 
 public static class OverlayControlTypes

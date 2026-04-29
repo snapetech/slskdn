@@ -1,7 +1,6 @@
 // <copyright file="ThrowController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests;
 
 using Microsoft.AspNetCore.Authorization;

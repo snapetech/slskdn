@@ -1,7 +1,6 @@
 // <copyright file="DestinationsControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Destinations;
 
 using Microsoft.AspNetCore.Mvc;

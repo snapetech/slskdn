@@ -1,7 +1,6 @@
 // <copyright file="HashDbOptimizationService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.HashDb.Optimization;
 
 using System;

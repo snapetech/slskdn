@@ -1,12 +1,8 @@
 // <copyright file="FuzzyMatcher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.MediaCore;
 
-// <copyright file="FuzzyMatcher.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,7 +1,6 @@
 // <copyright file="LoggingSanitizerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Common.Security
 {
     using System.Net;
@@ -184,4 +183,3 @@ namespace slskd.Tests.Unit.Common.Security
         }
     }
 }
-

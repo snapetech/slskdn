@@ -1,7 +1,6 @@
 // <copyright file="MediaCoreStatsService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.MediaCore;
 
 using System.Collections.Concurrent;

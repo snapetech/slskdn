@@ -1,7 +1,6 @@
 // <copyright file="WishlistCsvImport.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Wishlist;
 
 using System;

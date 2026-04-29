@@ -1,7 +1,6 @@
 // <copyright file="SoulseekProtocolParserTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.VirtualSoulfind.Bridge.Protocol;
 
 using System.IO;

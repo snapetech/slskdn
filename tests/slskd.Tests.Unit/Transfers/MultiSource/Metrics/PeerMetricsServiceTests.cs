@@ -1,3 +1,6 @@
+// <copyright file="PeerMetricsServiceTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Unit.Transfers.MultiSource.Metrics
 {
     using System.Threading;

@@ -1,7 +1,6 @@
 // <copyright file="RealmConfigTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.Realm
 {
     using System.Linq;
@@ -239,5 +238,3 @@ namespace slskd.Tests.Unit.Mesh.Realm
         }
     }
 }
-
-

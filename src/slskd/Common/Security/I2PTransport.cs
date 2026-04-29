@@ -1,7 +1,6 @@
 // <copyright file="I2PTransport.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net.Sockets;
 
 namespace slskd.Common.Security;

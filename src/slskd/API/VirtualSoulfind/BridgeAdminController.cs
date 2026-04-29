@@ -1,7 +1,6 @@
 // <copyright file="BridgeAdminController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.API.VirtualSoulfind;
 
 using Asp.Versioning;

@@ -1,7 +1,6 @@
 // <copyright file="DiscographyJob.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Jobs
 {
     using System;

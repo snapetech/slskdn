@@ -1,7 +1,3 @@
-// <copyright file="SoulseekFileFactory.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
-// </copyright>
-
 // <copyright file="SoulseekFileFactory.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
@@ -17,6 +13,10 @@
 //
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
+// </copyright>
+
+// <copyright file="SoulseekFileFactory.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 using System.IO;
 using slskd.Files;

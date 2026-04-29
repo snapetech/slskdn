@@ -1,3 +1,6 @@
+// <copyright file="MultiClientIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.MultiClient;
 
 using slskd.Tests.Integration.Harness;

@@ -1,7 +1,6 @@
 // <copyright file="ShadowIndexBuilderImpl.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

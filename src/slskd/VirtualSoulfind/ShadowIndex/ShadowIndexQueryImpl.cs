@@ -1,7 +1,6 @@
 // <copyright file="ShadowIndexQueryImpl.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.ShadowIndex;
 
 using slskd.VirtualSoulfind.Capture;

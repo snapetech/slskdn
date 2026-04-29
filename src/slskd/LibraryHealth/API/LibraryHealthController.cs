@@ -1,7 +1,6 @@
 // <copyright file="LibraryHealthController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.LibraryHealth.API
 {
     using System.Collections.Generic;

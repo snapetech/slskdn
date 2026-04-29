@@ -1,7 +1,6 @@
 // <copyright file="MetadataFacadeTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Integrations.MetadataFacade;
 
 using Microsoft.Extensions.Caching.Memory;

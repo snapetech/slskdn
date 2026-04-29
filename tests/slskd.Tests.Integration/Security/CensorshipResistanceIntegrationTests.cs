@@ -1,7 +1,6 @@
 // <copyright file="CensorshipResistanceIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Integration.Security;
@@ -26,5 +25,3 @@ public class CensorshipResistanceIntegrationTests
         Assert.True(true, "Placeholder test - CensorshipResistanceIntegrationTests.TransportFallback not yet implemented");
     }
 }
-
-

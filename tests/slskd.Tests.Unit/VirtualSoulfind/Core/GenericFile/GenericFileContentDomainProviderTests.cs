@@ -1,7 +1,6 @@
 // <copyright file="GenericFileContentDomainProviderTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
 {
     using System.Threading.Tasks;
@@ -146,5 +145,3 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.GenericFile
         }
     }
 }
-
-

@@ -1,3 +1,6 @@
+// <copyright file="MusicBrainzDtos.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Integrations.MusicBrainz;
 
 public class MbRecording
@@ -68,4 +71,3 @@ public class MbSearchResults<T>
     public int Offset { get; set; }
     public List<T> Results { get; set; } = new();
 }
-

@@ -1,8 +1,6 @@
-// <copyright file="ISourceRankingService.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
-//     Licensed under the GNU Affero General Public License v3.0.
+// <copyright file="ISourceRankingService.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Transfers.Ranking
 {
     using System.Collections.Generic;

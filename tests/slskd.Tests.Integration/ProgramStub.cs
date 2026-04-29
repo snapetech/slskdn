@@ -1,3 +1,6 @@
+// <copyright file="ProgramStub.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration;
 
 using Microsoft.Extensions.Hosting;
@@ -14,4 +17,3 @@ public class ProgramStub
         return new HostBuilder();
     }
 }
-

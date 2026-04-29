@@ -1,7 +1,6 @@
 // <copyright file="ServiceCallReply.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using MessagePack;
 using System;
 

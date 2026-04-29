@@ -1,7 +1,6 @@
 // <copyright file="RateLimiterTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Transport;
@@ -132,5 +131,3 @@ public class RateLimiterTests : IDisposable
         Assert.Equal(0, stats.TotalRequestsBlocked);
     }
 }
-
-

@@ -1,7 +1,6 @@
 // <copyright file="MeshCircuit.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 using slskd.Common.Security;
 

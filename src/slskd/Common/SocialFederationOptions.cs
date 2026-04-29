@@ -1,7 +1,6 @@
 // <copyright file="SocialFederationOptions.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Common
 {
     using System;

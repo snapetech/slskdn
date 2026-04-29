@@ -1,7 +1,6 @@
 // <copyright file="HardeningValidator.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Common.Security
 {
     using System;

@@ -1,3 +1,6 @@
+// <copyright file="Phase8MeshTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System;
 using System.Net;
 using Microsoft.Extensions.Diagnostics.HealthChecks;

@@ -1,7 +1,6 @@
-// <copyright file="MessagePadder.cs" company="slskd Team">
-//     Copyright (c) slskd Team. All rights reserved.
+// <copyright file="MessagePadder.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Privacy;
 
 using System;

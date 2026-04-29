@@ -1,7 +1,6 @@
 // <copyright file="DescriptorSigningServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -180,5 +179,3 @@ public class DescriptorSigningServiceTests
         Assert.Contains("key1", dataString);
     }
 }
-
-

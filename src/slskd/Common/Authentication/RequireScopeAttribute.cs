@@ -1,7 +1,6 @@
 // <copyright file="RequireScopeAttribute.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Authentication;
 
 using System;

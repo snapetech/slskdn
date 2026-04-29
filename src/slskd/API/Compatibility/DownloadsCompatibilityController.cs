@@ -1,7 +1,6 @@
 // <copyright file="DownloadsCompatibilityController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.API.Compatibility;
 
 using slskd.Core.Security;

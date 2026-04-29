@@ -1,7 +1,6 @@
 // <copyright file="SharesControllerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Shares.API.Controllers;
 
 using Microsoft.AspNetCore.Mvc;

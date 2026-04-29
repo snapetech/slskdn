@@ -1,7 +1,6 @@
 // <copyright file="PodPrivateServicePolicyTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Unit.PodCore;
@@ -45,5 +44,3 @@ public class PodPrivateServicePolicyStub
         throw new NotImplementedException("PodPrivateServicePolicy not yet implemented");
     }
 }
-
-

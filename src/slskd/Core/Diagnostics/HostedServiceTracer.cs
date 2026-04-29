@@ -1,7 +1,6 @@
-// <copyright file="HostedServiceTracer.cs" company="slskd Team">
-//     Copyright (c) slskd Team. All rights reserved.
+// <copyright file="HostedServiceTracer.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

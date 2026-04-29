@@ -1,7 +1,6 @@
 // <copyright file="OverlayPrivacyIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -248,5 +247,3 @@ internal class TestableQuicOverlayClient : QuicOverlayClient
     // Expose protected methods for testing if needed
     // (Currently using public interface for testing)
 }
-
-

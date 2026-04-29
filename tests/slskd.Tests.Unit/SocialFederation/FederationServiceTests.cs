@@ -1,7 +1,6 @@
 // <copyright file="FederationServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.SocialFederation
 {
     using System;

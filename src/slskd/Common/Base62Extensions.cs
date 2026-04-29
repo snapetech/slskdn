@@ -1,5 +1,5 @@
-// <copyright file="Base62Extensions.cs" company="slskdN Team">
-//     Copyright (c) slskdN Team. All rights reserved.
+// <copyright file="Base62Extensions.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
 // </copyright>
 
 ﻿/*

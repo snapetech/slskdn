@@ -1,7 +1,6 @@
 // <copyright file="ShareGroupsController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Sharing.API;
 
 using System;

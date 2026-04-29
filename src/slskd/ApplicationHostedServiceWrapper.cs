@@ -1,7 +1,6 @@
-// <copyright file="ApplicationHostedServiceWrapper.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
+// <copyright file="ApplicationHostedServiceWrapper.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

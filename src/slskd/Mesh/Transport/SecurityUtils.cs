@@ -1,7 +1,6 @@
 // <copyright file="SecurityUtils.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Collections.Concurrent;
 using System.Net.Security;
 using System.Security.Cryptography;

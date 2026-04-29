@@ -1,3 +1,6 @@
+// <copyright file="FilesControllerSecurityTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using Microsoft.Extensions.Options;
 
 namespace slskd.Tests.Unit.Files

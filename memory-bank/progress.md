@@ -7004,3 +7004,11 @@ Code quality improvements were completed as part of Option A:
 
 - Prepared stable release `2026042900-slskdn.192` for the weak SongID Discovery Graph neighborhood fix.
 - Promoted the Unreleased changelog bullet into the `.192` versioned section so the tag workflow can publish repo-backed release notes without including rolling Unreleased content.
+
+## 2026-04-29 15:30:45Z
+
+- Audited tracked C# source and test attribution against upstream `slskd/slskd` tag `0.24.5`.
+- Normalized upstream-derived files so unchanged upstream files carry only the upstream `slskd Team` header, and files changed in slskdN carry the preserved upstream AGPL header plus a separate `slskdN Team` copyright block.
+- Normalized slskdN-only C# files so they carry only the `slskdN Team` copyright block.
+- Documented and fixed the StyleCop `SA1512` gotcha from stacked single-line copyright comments before committing the sweep.
+- Validation: the repeat audit covered `1,549` non-generated tracked C# files (`235` upstream-path files, `1,314` slskdN-only files) and reported zero attribution mismatches; `git diff --check -- '*.cs'` passed; `dotnet build --no-restore` passed with existing warning classes; `bash ./bin/lint` passed.

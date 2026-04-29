@@ -1,7 +1,6 @@
 // <copyright file="DescriptorSigningService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Security.Cryptography;
 using slskd.Mesh.Dht;
 

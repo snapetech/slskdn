@@ -1,7 +1,6 @@
 // <copyright file="VirtualSoulfindValidationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.VirtualSoulfind.Core
 {
     using slskd.VirtualSoulfind.Core;
@@ -141,5 +140,3 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core
         }
     }
 }
-
-

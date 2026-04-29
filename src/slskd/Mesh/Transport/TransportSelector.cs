@@ -1,7 +1,6 @@
 // <copyright file="TransportSelector.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 using slskd.Mesh.Dht;
 

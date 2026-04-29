@@ -1,7 +1,6 @@
 // <copyright file="SearchActionsController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Search.API;
 
 using System;

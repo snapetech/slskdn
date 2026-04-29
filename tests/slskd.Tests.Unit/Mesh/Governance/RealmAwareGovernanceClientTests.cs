@@ -1,7 +1,6 @@
 // <copyright file="RealmAwareGovernanceClientTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.Governance
 {
     using System;
@@ -221,5 +220,3 @@ namespace slskd.Tests.Unit.Mesh.Governance
         }
     }
 }
-
-

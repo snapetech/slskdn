@@ -1,7 +1,6 @@
 // <copyright file="MusicContentDomainProviderTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
 {
     using System.Threading;
@@ -145,5 +144,3 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
         }
     }
 }
-
-

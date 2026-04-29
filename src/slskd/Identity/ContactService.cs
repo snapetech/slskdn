@@ -1,7 +1,6 @@
 // <copyright file="ContactService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Identity;
 
 using System;

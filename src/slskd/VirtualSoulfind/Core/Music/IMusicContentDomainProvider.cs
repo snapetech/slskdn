@@ -1,7 +1,6 @@
 // <copyright file="IMusicContentDomainProvider.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.Core.Music
 {
     using System.Threading;

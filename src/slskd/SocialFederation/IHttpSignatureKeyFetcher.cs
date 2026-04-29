@@ -1,7 +1,6 @@
 // <copyright file="IHttpSignatureKeyFetcher.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.SocialFederation
 {
     using System.Threading;

@@ -1,7 +1,6 @@
 // <copyright file="IdentityDbContext.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Identity;
 
 using Microsoft.EntityFrameworkCore;

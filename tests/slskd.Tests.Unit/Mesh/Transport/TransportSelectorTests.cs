@@ -1,7 +1,6 @@
 // <copyright file="TransportSelectorTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh;
@@ -275,4 +274,3 @@ public class TransportSelectorTests
         public DialerStatistics GetStatistics() => new DialerStatistics { TransportType = TransportType };
     }
 }
-

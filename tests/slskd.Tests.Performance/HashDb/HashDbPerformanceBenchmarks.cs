@@ -1,7 +1,6 @@
 // <copyright file="HashDbPerformanceBenchmarks.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Performance.HashDb;
 
 using slskd.HashDb.Models;

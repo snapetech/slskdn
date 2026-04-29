@@ -1,3 +1,6 @@
+// <copyright file="PodCoreIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.PodCore;
 
 using System;
@@ -390,4 +393,3 @@ public class PodCoreIntegrationTests : IClassFixture<StubWebApplicationFactory>
         Assert.Empty(history);
     }
 }
-

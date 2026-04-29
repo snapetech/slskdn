@@ -1,3 +1,10 @@
+// <copyright file="BlacklistTests.cs" company="slskd Team">
+//     Copyright (c) slskd Team. All rights reserved.
+// </copyright>
+
+// <copyright file="BlacklistTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System;
 using System.Collections.Generic;
 using System.IO;

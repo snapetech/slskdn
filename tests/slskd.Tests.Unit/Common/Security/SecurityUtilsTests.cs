@@ -1,7 +1,6 @@
 // <copyright file="SecurityUtilsTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Common.Security;
 using System;
 using System.Diagnostics;

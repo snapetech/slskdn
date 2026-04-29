@@ -1,3 +1,6 @@
+// <copyright file="BackfillIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.Backfill;
 
 using System;
@@ -142,4 +145,3 @@ public class BackfillIntegrationTests : IClassFixture<StubWebApplicationFactory>
         Assert.NotNull(backfillService);
     }
 }
-

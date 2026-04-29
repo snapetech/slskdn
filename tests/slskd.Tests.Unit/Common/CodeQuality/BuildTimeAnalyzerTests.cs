@@ -1,7 +1,6 @@
 // <copyright file="BuildTimeAnalyzerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Common.CodeQuality
 {
     using System.Linq;
@@ -211,5 +210,3 @@ public class TestClass
         }
     }
 }
-
-

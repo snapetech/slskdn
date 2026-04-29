@@ -1,7 +1,6 @@
 // <copyright file="MeshServiceClientTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Mesh.ServiceFabric;
 
 using Microsoft.Extensions.Logging;

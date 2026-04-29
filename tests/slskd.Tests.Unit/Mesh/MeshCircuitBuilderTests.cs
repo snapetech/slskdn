@@ -1,7 +1,6 @@
 // <copyright file="MeshCircuitBuilderTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 using Microsoft.Extensions.Logging;
 using Moq;

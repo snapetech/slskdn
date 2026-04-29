@@ -1,7 +1,6 @@
-// <copyright file="PodContentController.cs" company="slskdn Team">
-//     Copyright (c) slskdn Team. All rights reserved.
+// <copyright file="PodContentController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.PodCore.API.Controllers;
 
 using slskd.Core.Security;

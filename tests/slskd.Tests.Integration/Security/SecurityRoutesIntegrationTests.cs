@@ -1,7 +1,6 @@
 // <copyright file="SecurityRoutesIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Integration.Security;
 
 using System.Net;

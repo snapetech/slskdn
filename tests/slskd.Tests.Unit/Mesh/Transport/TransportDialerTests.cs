@@ -1,7 +1,6 @@
 // <copyright file="TransportDialerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -330,4 +329,3 @@ public class I2pSocksDialerTests
         Assert.True(stats.TotalAttempts >= 0);
     }
 }
-

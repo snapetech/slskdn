@@ -1,7 +1,6 @@
 // <copyright file="ReleaseOnDisposeStreamTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Tests.Unit.Streaming;
 
 using System;

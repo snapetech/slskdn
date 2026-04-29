@@ -1,7 +1,6 @@
 // <copyright file="Ed25519SignerTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.Mesh.Transport;
 using Xunit;
 
@@ -178,5 +177,3 @@ public class Ed25519SignerTests : IDisposable
         Assert.False(result);
     }
 }
-
-

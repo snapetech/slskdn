@@ -1,7 +1,6 @@
 // <copyright file="MusicBrainzTargetResponse.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Integrations.MusicBrainz.API.DTO
 {
     using slskd.Integrations.MusicBrainz.Models;

@@ -1,7 +1,6 @@
 // <copyright file="CoverTrafficGeneratorTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh.Privacy;
@@ -291,4 +290,3 @@ public class CoverTrafficGeneratorTests : IDisposable
         Assert.True(messageCount < 5, "Should generate fewer messages when activity is recorded");
     }
 }
-

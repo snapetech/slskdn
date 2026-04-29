@@ -1,3 +1,7 @@
+// <copyright file="IntentQueueTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
 // Intent Queue tests
 namespace slskd.Tests.Unit.VirtualSoulfind.v2.Intents
 {

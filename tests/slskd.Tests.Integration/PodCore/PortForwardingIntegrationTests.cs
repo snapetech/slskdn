@@ -1,7 +1,6 @@
 // <copyright file="PortForwardingIntegrationTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Integration.PodCore;
@@ -26,5 +25,3 @@ public class PortForwardingIntegrationTests
         Assert.True(true, "Placeholder test - PortForwardingIntegrationTests.ConnectionPooling not yet implemented");
     }
 }
-
-

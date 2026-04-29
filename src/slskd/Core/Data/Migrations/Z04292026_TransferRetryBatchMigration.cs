@@ -1,7 +1,6 @@
 // <copyright file="Z04292026_TransferRetryBatchMigration.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Migrations;
 
 using System;

@@ -1,7 +1,6 @@
 // <copyright file="ControlEnvelopeValidator.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Options;
 using slskd.Mesh;
 using slskd.Mesh.Dht;

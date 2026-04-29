@@ -1,7 +1,6 @@
 // <copyright file="DecoyPodServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh;
@@ -54,5 +53,3 @@ public class DecoyPodService
         throw new NotImplementedException("DecoyPodService not yet implemented");
     }
 }
-
-

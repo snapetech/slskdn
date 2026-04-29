@@ -1,7 +1,6 @@
 // <copyright file="MusicBrainzController.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.Integrations.MusicBrainz.API
 {
     using System.Collections.Generic;

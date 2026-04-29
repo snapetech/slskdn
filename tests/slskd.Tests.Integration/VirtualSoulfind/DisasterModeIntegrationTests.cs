@@ -1,3 +1,6 @@
+// <copyright file="DisasterModeIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.VirtualSoulfind;
 
 using System.Net.Http;
@@ -58,4 +61,3 @@ public class DisasterModeIntegrationTests : IClassFixture<StubWebApplicationFact
         r.EnsureSuccessStatusCode();
     }
 }
-

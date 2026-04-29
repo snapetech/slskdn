@@ -1,7 +1,6 @@
 // <copyright file="NatEndpointParsingTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using slskd.DhtRendezvous;
 
 namespace slskd.Tests.Unit.Mesh.Nat;

@@ -1,7 +1,6 @@
 // <copyright file="SceneChatService.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 namespace slskd.VirtualSoulfind.Scenes;
 
 using Microsoft.Extensions.Options;

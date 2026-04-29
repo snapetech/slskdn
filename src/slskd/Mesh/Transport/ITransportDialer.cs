@@ -1,7 +1,6 @@
 // <copyright file="ITransportDialer.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using System.Net;
 
 namespace slskd.Mesh.Transport;

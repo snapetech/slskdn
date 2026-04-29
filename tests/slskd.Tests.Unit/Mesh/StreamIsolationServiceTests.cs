@@ -1,7 +1,6 @@
 // <copyright file="StreamIsolationServiceTests.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
-
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;
@@ -39,5 +38,3 @@ public class StreamIsolationService
         throw new NotImplementedException("StreamIsolationService not yet implemented");
     }
 }
-
-

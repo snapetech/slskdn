@@ -1,3 +1,6 @@
+// <copyright file="MeshServiceDescriptorTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 using System;
 using System.Collections.Generic;
 using slskd.Mesh.ServiceFabric;
@@ -190,4 +193,3 @@ public class MeshServiceDescriptorTests
         Assert.Equal(bytes1, bytes2);
     }
 }
-

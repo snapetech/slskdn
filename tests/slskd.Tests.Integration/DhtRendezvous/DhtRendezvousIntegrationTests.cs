@@ -1,3 +1,6 @@
+// <copyright file="DhtRendezvousIntegrationTests.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
 namespace slskd.Tests.Integration.DhtRendezvous;
 
 using System;
@@ -173,4 +176,3 @@ public class DhtRendezvousIntegrationTests : IClassFixture<StubWebApplicationFac
         }
     }
 }
-
