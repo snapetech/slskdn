@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.199] — 2026-04-29
+
 - Made the Search page secondary panels collapsed by default and persisted
   each panel's open/collapsed state per browser.
 - Rebuilt the README showcase UI surfaces with compact desktop navigation,
