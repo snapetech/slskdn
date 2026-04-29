@@ -45,7 +45,7 @@ If you've ever seen a feature request closed with *"this can be done via the API
   <tr>
     <td align="center" width="33%">
       <a href="docs/assets/readme-showcase/search-cc-track-results.png">
-        <img src="docs/assets/readme-showcase/search-cc-track-results.png" alt="Search results for a Creative Commons track" width="100%">
+        <img src="docs/assets/readme-showcase/search-cc-track-results.png" alt="Search results" width="100%">
       </a>
       <br>
       <sub>Smart-ranked Creative Commons search results</sub>
@@ -59,10 +59,10 @@ If you've ever seen a feature request closed with *"this can be done via the API
     </td>
     <td align="center" width="33%">
       <a href="docs/assets/readme-showcase/songid-cc-youtube-result.png">
-        <img src="docs/assets/readme-showcase/songid-cc-youtube-result.png" alt="SongID result for a Creative Commons YouTube source" width="100%">
+        <img src="docs/assets/readme-showcase/songid-cc-youtube-result.png" alt="SongID result for YouTube source" width="100%">
       </a>
       <br>
-      <sub>SongID handoff from a Creative Commons YouTube source</sub>
+      <sub>SongID handoff from a YouTube source</sub>
     </td>
   </tr>
   <tr>
