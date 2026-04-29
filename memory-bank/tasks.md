@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **release**: Switch corrective rollback release to `YYYYMMDDmm-slskdn.###` versioning.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Prepared `2026042900-slskdn.187` so downstream package managers sort the license-compliance rollback newer than removed `0.25.1-slskdn.*` packages without implying upstream slskd `0.26`. Release notes, tag scanning, tag-build publishing, local build/publish scripts, and stable metadata update patterns now understand the public date-based version while mapping MSBuild/NuGet inputs to `0.0.0-slskdn.2026042900.187`.
+
 - [x] **release**: Backport release-critical fixes onto the 0.24.x rollback branch.
  - Status: completed (2026-04-29)
  - Priority: P1

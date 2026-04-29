@@ -72,6 +72,12 @@ if [ -z "$version" ]; then
   version=$tag+$sha
 fi
 
+public_version=$version
+dotnet_version=$version
+if [[ "$public_version" =~ ^([0-9]{8,10})-slskdn\.([0-9]+)$ ]]; then
+  dotnet_version="0.0.0-slskdn.${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+fi
+
 if [ -z "$runtime" ]; then
     echo "💥  error: no runtime specified; provide a valid RID (https://docs.microsoft.com/en-us/dotnet/core/rid-catalog)"
     exit 1
@@ -82,8 +88,8 @@ if [ -z "$output" ]; then
 fi
 
 if [ "$prebuild" == true ]; then
-    echo $'\n\t🛠️  bin/build --version '$version$'\n'
-    bin/build
+    echo $'\n\t🛠️  bin/build --version '$public_version$'\n'
+    bin/build --version "$public_version"
 else
     echo $'\n\t⏩  pre-build skipped\n'
 fi
@@ -91,14 +97,15 @@ fi
 cd src/slskd
 echo $'\n\t📍  '$(pwd)$'\n'
 
-echo $'\n\t🛠️  dotnet publish ... --runtime '$runtime$' -p:Version '$version$' --output '$output$'\n'
+echo $'\n\t🛠️  dotnet publish ... --runtime '$runtime$' -p:Version '$dotnet_version$' -p:InformationalVersion '$public_version$' --output '$output$'\n'
 rm -rf dist/$runtime/*
 
 dotnet publish \
     --configuration Release \
     -p:PublishReadyToRun=false \
     -p:CopyOutputSymbolsToPublishDirectory=false \
-    -p:Version=$version \
+    -p:Version="$dotnet_version" \
+    -p:InformationalVersion="$public_version" \
     --self-contained \
     --runtime $runtime \
     --output $output

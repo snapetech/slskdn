@@ -117,9 +117,14 @@ jobs:
 
       - name: Build ${{ matrix.runtime }}
         run: |
-          # Convert version back to hyphen format for .NET (dots for package managers, hyphens for NuGet/assembly)
-          DOTNET_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/\.dev\./-dev-/')
+          PUBLIC_VERSION="${{ needs.parse.outputs.version }}"
+          if [[ "$PUBLIC_VERSION" =~ ^([0-9]{8,10})-slskdn\.([0-9]+)$ ]]; then
+            DOTNET_VERSION="0.0.0-slskdn.${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          else
+            DOTNET_VERSION=$(echo "$PUBLIC_VERSION" | sed 's/\.dev\./-dev-/')
+          fi
           echo "Building with version: $DOTNET_VERSION"
+          echo "Public version: $PUBLIC_VERSION"
           # Explicit Version + InformationalVersion so the binary always reports the correct version
           dotnet publish src/slskd/slskd.csproj \
             -c Release \
@@ -127,7 +132,7 @@ jobs:
             --self-contained true \
             -r ${{ matrix.runtime }} \
             /p:Version="$DOTNET_VERSION" \
-            /p:InformationalVersion="$DOTNET_VERSION" \
+            /p:InformationalVersion="$PUBLIC_VERSION" \
             /p:PackageVersion="$DOTNET_VERSION"
 
       - name: Create Archive
@@ -719,8 +724,12 @@ jobs:
       - name: Convert Version for Docker Build
         id: docker_version
         run: |
-          # Docker build needs hyphenated version for .NET
-          DOTNET_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/\.dev\./-dev-/')
+          PUBLIC_VERSION="${{ needs.parse.outputs.version }}"
+          if [[ "$PUBLIC_VERSION" =~ ^([0-9]{8,10})-slskdn\.([0-9]+)$ ]]; then
+            DOTNET_VERSION="0.0.0-slskdn.${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          else
+            DOTNET_VERSION=$(echo "$PUBLIC_VERSION" | sed 's/\.dev\./-dev-/')
+          fi
           echo "dotnet_version=$DOTNET_VERSION" >> $GITHUB_OUTPUT
           echo "Building Docker with version: $DOTNET_VERSION"
 

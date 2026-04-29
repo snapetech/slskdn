@@ -1,3 +1,11 @@
+## 2026-04-29 05:35Z - Switched corrective stable release to date versioning
+
+- Corrected the post-rollback versioning plan after `0.24.5-slskdn.186` sorted older than removed `0.25.1-slskdn.*` packages in downstream package managers.
+- Added release-note support for the public `YYYYMMDDmm-slskdn.###` stable version shape, with `2026042900-slskdn.187` as the corrective release.
+- Split public slskdN release versions from .NET/NuGet-safe build versions for tag builds and local `bin/build` / `bin/publish`: public release metadata keeps `2026042900-slskdn.187`, while MSBuild receives `0.0.0-slskdn.2026042900.187` and `InformationalVersion` carries the public value.
+- Hardened stable metadata update patterns so future stable bumps are not tied to `0.24.5-slskdn.*`.
+- Validation passed: release-note generation for `2026042900-slskdn.187`, `git diff --check`, `./bin/build --dotnet-only --skip-tests --version 2026042900-slskdn.187`, and `bash ./bin/lint`.
+
 ## 2026-04-29 04:47Z - Continued 0.24.x rollback backport cleanup
 
 - Resumed Claude's partial `rollback/0.24.x` backport state and kept the changes surgical instead of replaying post-sync version bumps or changelog content.

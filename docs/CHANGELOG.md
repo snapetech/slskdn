@@ -20,6 +20,68 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
 
+## [2026042900-slskdn.187] — 2026-04-29
+
+This is a corrective slskdN-versioned release for package-manager ordering. The
+previous rollback build, `0.24.5-slskdn.186`, correctly restored the
+license-compliant slskd 0.24.5 codebase, but it sorted older than already
+published `0.25.1-slskdn.*` packages in AUR and other downstream repositories.
+
+Starting with this build, stable slskdN releases use the independent
+`YYYYMMDDmm-slskdn.###` version shape. This release is newer than the removed
+`0.25.1-slskdn.*` line for package managers, but it does not claim upstream
+slskd 0.26 or newer code. The application code remains on the slskd 0.24.5
+AGPLv3 rollback base with slskdN-owned backports only.
+
+The `0.24.5-slskdn.186` release is superseded by this build for the same
+license-compliance reason older releases were purged: users and packagers should
+resolve to the current rollback line, not the post-0.25.0 upstream-sync line.
+
+Included from the rollback line:
+
+- Soulseek.NET client minor version set to the slskdN-owned range `7700000`.
+- Runtime YAML alias binding for public keys such as `dht:`.
+- Controlled 503 responses for expected remote directory browse timeouts.
+- Shutdown-safe download cancellation classification.
+- Empty cached user groups now fall back to built-in groups.
+- Release-note generation fails closed if synthetic commit lists get too large.
+- Tag publishing is no longer blocked by pre-publish Nix smoke checks that need
+  already-published assets.
+
+Relevant non-documentation commits preserved in this rollback line:
+
+- `6edafc5d3` feat(wishlist): add CSV import
+- `ca51715dd` fix(transfers): require reconnect for listen endpoint changes
+- `1fcfbcece` feat(transfers): add upload diagnostics
+- `d8df4d15c` fix(dht): use YAML option names in exposure warning
+- `00742f9cd` fix(search): publish mesh results before Soulseek timeout
+- `7214f310c` fix(aur): normalize release payload permissions
+- `33148d54d` test: remove dns-dependent unit flakes
+- `248b81981` fix(packaging): harden aur binary zip staging
+- `950a87ff3` test(mesh): validate live account mesh smoke
+- `f436d48f2` test(mesh): add optional live account smoke
+- `fff4367d1` chore(mesh): log mesh search peer outcomes
+- `73c9ee89b` fix(mesh): advertise only routable self endpoints
+- `9d60cb319` fix(search): honor API timeout seconds
+- `7457f4c4d` fix(search): separate auto-replace safety budget
+- `5c085b3f0` fix(mesh): quiet issue 209 live maintenance noise
+- `db2119ea4` fix: Improve SongID results UX
+- `b72258ba4` fix: quiet entropy and auto-replace log noise
+- `a17d43868` fix: clean startup identity log polish
+- `dc3898c66` fix: classify Soulseek read timeout churn
+- `3f901d944` fix: quiet overlay endpoint cooldown noise
+- `8a1c89643` ci: remove snap publishing from releases
+- `a1f105521` fix: avoid duplicate mesh descriptor publish on startup
+- `defa3ee75` fix: quiet expected shutdown and Soulseek timer noise
+- `abd55416d` fix: harden package startup and release announcements
+- `9c1d3f14d` fix: quiet optional user info badge misses
+- `2e4cc934c` fix: discover target framework in test launchers
+- `15ba2a423` fix: quiet shutdown-cancelled searches
+- `56a25b31d` fix: quiet controlled user info logs
+- `393e2cea4` fix: make mesh QUIC opt-in
+- `3e65a5778` fix: backport rollback release fixes
+- `6b6dcee6e` chore: restore main to 0.24.x rollback line
+
 ## [0.24.5-slskdn.186] — 2026-04-29
 
 This release is the license-compliance rollback build. It intentionally returns

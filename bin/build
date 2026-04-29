@@ -59,6 +59,12 @@ if [ -z "$version" ]; then
   fi
 fi
 
+public_version=$version
+dotnet_version=$version
+if [[ "$public_version" =~ ^([0-9]{8,10})-slskdn\.([0-9]+)$ ]]; then
+  dotnet_version="0.0.0-slskdn.${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+fi
+
 if [ "$dotnet_only" == true ]; then
   echo $'\n\t⏩  web build skipped\n'
 else 
@@ -100,8 +106,8 @@ else
     cd src/slskd
     echo $'\n\t📍 '$(pwd)$'\n'
 
-    echo $'\n\t🛠️  dotnet build --no-incremental --nologo --configuration Release -p:Version '$version$'\n'
-    dotnet build --no-incremental --nologo --configuration Release -p:Version=$version
+    echo $'\n\t🛠️  dotnet build --no-incremental --nologo --configuration Release -p:Version '$dotnet_version$' -p:InformationalVersion '$public_version$'\n'
+    dotnet build --no-incremental --nologo --configuration Release -p:Version="$dotnet_version" -p:InformationalVersion="$public_version"
 
     if [ "$skip_tests" == true ]; then
         echo $'\n\t⏩  dotnet tests skipped\n'

@@ -50,6 +50,17 @@ extract_changelog_section() {
   ' "$CHANGELOG_PATH" | trim_blank_edges
 }
 
+extract_changelog_release_date() {
+  local version="$1"
+  [[ -f "$CHANGELOG_PATH" ]] || return 0
+  awk -v ver="$version" '
+    $0 ~ "^## \\[" ver "\\] — [0-9]{4}-[0-9]{2}-[0-9]{2}$" {
+      print substr($0, length("## [" ver "] — ") + 1)
+      exit
+    }
+  ' "$CHANGELOG_PATH"
+}
+
 normalize_remote_url() {
   local raw="$1"
   case "$raw" in
@@ -109,7 +120,8 @@ is_release_hygiene_subject() {
 }
 
 logical_is_release_version() {
-  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$ ]]
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$ ]] ||
+    [[ "$1" =~ ^[0-9]{8,10}-slskdn\.[0-9]+$ ]]
 }
 
 strip_build_prefix() {
@@ -151,7 +163,7 @@ find_previous_tag() {
 
   if [[ "$current_tag" =~ ^build-main- ]]; then
     git tag --sort=-v:refname |
-      grep -E '^build-main-[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' |
+      grep -E '^build-main-([0-9]+\.[0-9]+\.[0-9]+|[0-9]{8,10})-slskdn\.[0-9]+$' |
       awk -v cur="$current_tag" '$0 != cur { print; exit }' || true
     return 0
   fi
@@ -165,7 +177,7 @@ find_previous_tag() {
 
   if logical_is_release_version "$current_tag"; then
     git tag --sort=-v:refname |
-      grep -E '^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$' |
+      grep -E '^([0-9]+\.[0-9]+\.[0-9]+|[0-9]{8,10})-slskdn\.[0-9]+$' |
       awk -v cur="$current_tag" '$0 != cur { print; exit }' || true
     return 0
   fi
@@ -184,7 +196,7 @@ find_previous_published_release_version() {
   [[ -n "$repo_slug" ]] || return 0
 
   while IFS= read -r tag; do
-    [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+-slskdn\.[0-9]+$ ]] || continue
+    logical_is_release_version "$tag" || continue
     if [[ "$tag" == "$logical" ]]; then
       break
     fi
@@ -227,7 +239,10 @@ fi
 
 git rev-parse -q --verify "$GIT_REF" >/dev/null || err "git ref not found: $GIT_REF"
 
-RELEASE_DATE="$(git log -1 --format=%cs "$GIT_REF")"
+RELEASE_DATE="$(extract_changelog_release_date "$LOGICAL_VERSION")"
+if [[ -z "$RELEASE_DATE" ]]; then
+  RELEASE_DATE="$(git log -1 --format=%cs "$GIT_REF")"
+fi
 PREV_RELEASE_VERSION="$(find_previous_published_release_version "$LOGICAL_VERSION" "$REPO_SLUG")"
 PREV_TAG=""
 PREV_DISPLAY_TAG=""
