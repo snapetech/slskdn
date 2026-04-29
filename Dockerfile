@@ -53,8 +53,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   /var/cache/apt/* \
   /var/tmp/*
 
-RUN groupadd --gid 1000 slskdn \
-  && useradd --uid 1000 --gid 1000 --home-dir /app --shell /usr/sbin/nologin slskdn \
+RUN groupadd --system slskdn \
+  && useradd --system --gid slskdn --home-dir /app --shell /usr/sbin/nologin slskdn \
   && mkdir -p /.net \
   && chmod 777 /.net
 

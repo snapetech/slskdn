@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **release**: Prepare `2026042900-slskdn.191` for Docker UID/GID collision fix.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: `2026042900-slskdn.190` failed Docker publishing because the runtime image assumed UID/GID `1000:1000` was available. Docker now creates the internal `slskdn` placeholder user/group with system-allocated IDs and the packaging validator rejects fixed Docker `1000` user/group creation.
+
 - [x] **release**: Prepare `2026042900-slskdn.190` for post-rollback alignment changes.
  - Status: completed (2026-04-29)
  - Priority: P1

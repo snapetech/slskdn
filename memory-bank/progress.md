@@ -1,3 +1,9 @@
+## 2026-04-29 06:34Z - Prepared Docker collision fix for release 191
+
+- `2026042900-slskdn.190` completed release/package work but failed main Docker publishing because the runtime image tried to create fixed `1000:1000` `slskdn` user/group IDs that already exist in the .NET runtime base image.
+- Documented the gotcha in ADR-0001 and switched the Docker placeholder user/group to system-allocated IDs; runtime `PUID`/`PGID` remapping still sets the requested host IDs at container startup.
+- Added packaging metadata validation to prevent reintroducing fixed Docker `1000` user/group creation.
+
 ## 2026-04-29 06:25Z - Prepared corrective stable release 190
 
 - Reviewed the post-`.189` `main` change set and confirmed it is release-worthy: Docker `PUID`/`PGID` and non-root runtime handling, packaging metadata checks, transfer retry/resume and batch persistence, IPv4-mapped address normalization, and regression tests.

@@ -1,3 +1,15 @@
+## Update 2026-04-29 06:34:00Z
+
+- Current task: Prepare `2026042900-slskdn.191` after `.190` Docker publish failed.
+- Last activity:
+  - diagnosed `.190` Docker failure: `groupadd --gid 1000 slskdn` collided with an existing GID in `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble`
+  - documented the fixed-ID Docker gotcha in ADR-0001 and committed it as `88e29be3d`
+  - changed the Dockerfile to use system-allocated placeholder user/group IDs and added packaging validation to reject fixed `1000` Docker user/group creation
+- Next steps:
+  1. Validate release notes and packaging metadata for `2026042900-slskdn.191`.
+  2. Push `main` and tag `build-main-2026042900-slskdn.191`.
+  3. Watch `.191`; purge superseded releases after a successful replacement is live.
+
 ## Update 2026-04-29 06:25:00Z
 
 - Current task: Prepare `2026042900-slskdn.190` after upstream-alignment changes landed on `main`.

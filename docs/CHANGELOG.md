@@ -22,6 +22,25 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.191] — 2026-04-29
+
+This supersedes `2026042900-slskdn.190`, which created GitHub release assets and
+package metadata but failed Docker publishing because the runtime image assumed
+UID/GID `1000:1000` was available in the .NET runtime base image. Docker now
+creates the internal `slskdn` placeholder user/group with system-allocated IDs
+and still remaps it at container startup when `PUID`/`PGID` are supplied.
+
+It carries forward the `.190` runtime and transfer changes:
+
+- Added slskdN-native Docker runtime handling for `PUID`/`PGID`, non-root
+  `--user` runs, writable app-directory validation, and packaging metadata
+  checks without creating release tags.
+- Added configurable direct-download retry/resume behavior and batch metadata
+  for multi-file queue requests, including transfer persistence, API DTO fields,
+  migration support, and regression coverage.
+- Normalized IPv4-mapped IPv6 addresses before CIDR/proxy/API checks and made
+  option diffs tolerate null values.
+
 ## [2026042900-slskdn.190] — 2026-04-29
 
 This release follows the corrective `2026042900-slskdn.189` date-versioned

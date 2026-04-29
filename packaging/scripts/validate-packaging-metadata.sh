@@ -102,6 +102,8 @@ expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outpu
 expect_literal Dockerfile 'gosu'
 expect_literal Dockerfile 'COPY packaging/docker/slskdn-container-start /usr/local/bin/slskdn-container-start'
 expect_literal Dockerfile 'SLSKD_DOCKER_REVISION=$REVISION'
+reject_literal Dockerfile 'groupadd --gid 1000'
+reject_literal Dockerfile 'useradd --uid 1000'
 reject_literal Dockerfile 'SLSKD_DOCKER_REVISON'
 reject_literal Dockerfile 'VOLUME /app'
 test -x packaging/docker/slskdn-container-start || fail 'packaging/docker/slskdn-container-start must be executable'
