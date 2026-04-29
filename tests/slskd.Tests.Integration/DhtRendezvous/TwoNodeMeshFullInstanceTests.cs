@@ -54,18 +54,11 @@ public class TwoNodeMeshFullInstanceTests
         alphaClient.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", "integration-test");
         betaClient.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", "integration-test");
 
-        var connectResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/overlay/connect?api_key=integration-test",
-            new ConnectOverlayPeerRequest
-            {
-                Address = "127.0.0.1",
-                Port = beta.OverlayPort.Value,
-            });
-
-        connectResponse.EnsureSuccessStatusCode();
-        var connectBody = await connectResponse.Content.ReadFromJsonAsync<OverlayConnectResultResponse>();
-        Assert.NotNull(connectBody);
-        Assert.True(connectBody!.Connected);
+        var connectBody = await WaitForOverlayConnectAsync(
+            alphaClient,
+            beta.OverlayPort.Value,
+            TimeSpan.FromSeconds(20));
+        Assert.True(connectBody.Connected);
         Assert.Equal(beta.OverlayPort.Value, connectBody.Port);
 
         string? overlayFailureDetails = null;
@@ -160,15 +153,10 @@ public class TwoNodeMeshFullInstanceTests
             TimeSpan.FromSeconds(20),
             () => "beta share repository did not index the probe file");
 
-        var connectResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/overlay/connect?api_key=integration-test",
-            new ConnectOverlayPeerRequest
-            {
-                Address = "127.0.0.1",
-                Port = beta.OverlayPort.Value,
-            });
-
-        connectResponse.EnsureSuccessStatusCode();
+        await WaitForOverlayConnectAsync(
+            alphaClient,
+            beta.OverlayPort.Value,
+            TimeSpan.FromSeconds(20));
 
         await WaitForAsync(
             async () =>
@@ -263,16 +251,10 @@ public class TwoNodeMeshFullInstanceTests
             TimeSpan.FromSeconds(20),
             () => "beta live-account share repository did not index the probe file");
 
-        var connectResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/overlay/connect?api_key=integration-test",
-            new ConnectOverlayPeerRequest
-            {
-                Address = "127.0.0.1",
-                Port = beta.OverlayPort!.Value,
-            });
-        Assert.True(
-            connectResponse.IsSuccessStatusCode,
-            $"Overlay connect request failed: {(int)connectResponse.StatusCode} {await connectResponse.Content.ReadAsStringAsync()}");
+        await WaitForOverlayConnectAsync(
+            alphaClient,
+            beta.OverlayPort!.Value,
+            TimeSpan.FromSeconds(20));
 
         await WaitForAsync(
             async () =>
@@ -416,6 +398,46 @@ public class TwoNodeMeshFullInstanceTests
             () => "mesh search result did not include beta's content-routed probe file\n" + failureDetails);
 
         return failureDetails!;
+    }
+
+    private static async Task<OverlayConnectResultResponse> WaitForOverlayConnectAsync(
+        HttpClient client,
+        int overlayPort,
+        TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        string? failureDetails = null;
+
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            using var response = await client.PostAsJsonAsync(
+                "/api/v0/overlay/connect?api_key=integration-test",
+                new ConnectOverlayPeerRequest
+                {
+                    Address = "127.0.0.1",
+                    Port = overlayPort,
+                });
+
+            var body = await response.Content.ReadAsStringAsync();
+            failureDetails = $"{(int)response.StatusCode} {body}";
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<OverlayConnectResultResponse>(
+                    body,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result is not null && result.Connected)
+                {
+                    return result;
+                }
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+        }
+
+        Assert.Fail($"Overlay connect request did not succeed within {timeout.TotalSeconds:n0}s: {failureDetails}");
+        throw new InvalidOperationException("Unreachable after Assert.Fail");
     }
 
     private static async Task WaitForSoulseekLoggedInAsync(HttpClient client, string nodeName)
