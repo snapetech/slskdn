@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the slskdN theme picker contrast and dropdown surface styling so the
+  selector is visible in the top navigation and the default dark palette has
+  clearer separation between the page, panels, inputs, and active controls.
+
 ## [2026042900-slskdn.195] — 2026-04-29
 
 - Fixed the Network dashboard public DHT exposure warning so nodes with

@@ -661,14 +661,21 @@ class App extends Component {
               </Menu.Item>
               <Dropdown
                 className="theme-menu"
+                data-testid="theme-menu"
                 item
-                text={THEME_LABELS[theme]}
                 title="Choose the web UI color theme"
+                trigger={(
+                  <span className="theme-menu-trigger">
+                    <Icon name="paint brush" />
+                    <span className="theme-menu-label">{THEME_LABELS[theme]}</span>
+                  </span>
+                )}
               >
                 <Dropdown.Menu>
                   {THEME_OPTIONS.map((option) => (
                     <Dropdown.Item
                       active={theme === option.value}
+                      data-testid={`theme-option-${option.value}`}
                       key={option.key}
                       onClick={() => this.setTheme(option.value)}
                     >
