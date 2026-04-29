@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z146. AUR Source Builds Must Use MSBuild-Safe Date Release Versions
+
+**The Bug**: The `slskdn` AUR source package for `2026042900-slskdn.193` mapped `pkgver=2026042900.slskdn.193` to `-p:Version=2026042900.193`, which made .NET generate invalid assembly version `2026042900.193.0.0` and fail the install after a wall of unrelated generated-code warnings.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD`
+- `packaging/scripts/validate-packaging-metadata.sh`
+- `bin/build`
+- `bin/publish`
+
+**Wrong**:
+```bash
+_assembly_ver="${pkgver%.slskdn.*}.${pkgver##*.}"
+dotnet publish src/slskd/slskd.csproj -p:Version="$_assembly_ver"
+```
+
+**Correct**:
+```bash
+_version="${pkgver//.slskdn/-slskdn}"
+if [[ "${pkgver}" =~ ^([0-9]{10})\.slskdn\.([0-9]+)$ ]]; then
+    _dotnet_version="0.0.0-slskdn.${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+else
+    _dotnet_version="${_version}"
+fi
+dotnet publish src/slskd/slskd.csproj \
+    -p:Version="$_dotnet_version" \
+    -p:InformationalVersion="$_version" \
+    -p:PackageVersion="$_dotnet_version"
+```
+
+**Why This Keeps Happening**: slskdN public release tags use a date-based version (`YYYYMMDDmm-slskdn.NNN`) that is valid for release labels but not for .NET assembly versions. Any source-based package path must mirror `bin/build` and `bin/publish`: keep the public release string in `InformationalVersion`, but pass a SemVer/MSBuild-safe prerelease value such as `0.0.0-slskdn.YYYYMMDDmm.NNN` for `Version` and `PackageVersion`.
+
 ### 0z145. Stacked Single-Line Copyright Headers Must Not Leave A Blank Before Code
 
 **The Bug**: A bulk copyright-header normalization added a blank line after stacked `// <copyright>` comment blocks, which made StyleCop emit `SA1512` warnings across upstream-derived files.
@@ -173,6 +205,36 @@ RUN DISABLE_ESLINT_PLUGIN=true bash ./bin/build --web-only --skip-tests --versio
 ```
 
 **Why This Keeps Happening**: The helper scripts have `#!/bin/bash` and use Bash-only syntax, but Docker `RUN sh ./script` bypasses the shebang and forces POSIX shell parsing. Alpine-based Docker stages also omit Bash unless it is installed explicitly. Any Dockerfile or workflow command that executes repo helper scripts must either run them directly when executable or invoke `bash`, never `sh`, and Alpine stages must install Bash first.
+
+### 0z142. Date-Style Public Versions Must Not Become .NET Assembly Versions
+
+**The Bug**: The AUR source package for `2026042900-slskdn.192` tried to compile with `-p:Version=2026042900.192`, which caused generated assembly metadata to contain `2026042900.192.0.0`. .NET assembly versions only accept bounded numeric components, so source builds failed with `CS7034` even though binary packages worked.
+
+**Files Affected**:
+- `packaging/aur/PKGBUILD`
+- `packaging/scripts/validate-packaging-metadata.sh`
+- `.github/workflows/build-on-tag.yml`
+- `bin/build`
+- `bin/publish`
+
+**Wrong**:
+```bash
+_assembly_ver="${pkgver%.slskdn.*}.${pkgver##*.}"
+dotnet publish ... -p:Version="$_assembly_ver" -p:PackageVersion="$_version"
+```
+
+**Correct**:
+```bash
+_version="${pkgver//.slskdn/-slskdn}"
+if [[ "${pkgver}" =~ ^([0-9]{10})\.slskdn\.([0-9]+)$ ]]; then
+    _dotnet_version="0.0.0-slskdn.${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+else
+    _dotnet_version="${_version}"
+fi
+dotnet publish ... -p:Version="$_dotnet_version" -p:InformationalVersion="$_version" -p:PackageVersion="$_dotnet_version"
+```
+
+**Why This Keeps Happening**: The public package version is deliberately date-first so distro package managers sort slskdN rollback builds newer than removed upstream-prefixed builds. That public version is not a valid assembly version input. Every build path must keep `InformationalVersion` as the public `YYYYMMDDmm-slskdn.N` string and pass a safe SemVer-compatible value such as `0.0.0-slskdn.YYYYMMDDmm.N` to MSBuild `Version` and `PackageVersion`.
 
 ### 0z140. Public YAML Aliases Must Bind In Runtime Configuration
 
