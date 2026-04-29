@@ -14,6 +14,11 @@ public interface IDiscoveryGraphService
 
 public sealed class DiscoveryGraphService : IDiscoveryGraphService
 {
+    private const double MinimumTrackIdentityForWeakRun = 0.85;
+    private const double MinimumSegmentConfidenceForGraph = 0.65;
+    private const double MinimumSegmentCandidateIdentityForGraph = 0.63;
+    private const double MinimumMixIdentityForGraph = 0.60;
+
     private readonly ISongIdService _songIdService;
     private readonly IArtistReleaseGraphService _releaseGraphService;
 
@@ -61,6 +66,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
 
     private async Task BuildArtistGraphAsync(DiscoveryGraphResult graph, DiscoveryGraphRequest request, SongIdRun? run, CancellationToken cancellationToken)
     {
+        var canExpandCatalog = CanExpandCatalogContext(run);
         var artistId = request.ArtistId
             ?? run?.Artists.FirstOrDefault()?.ArtistId
             ?? run?.Tracks.FirstOrDefault()?.MusicBrainzArtistId;
@@ -73,7 +79,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
 
         if (run != null)
         {
-            foreach (var track in run.Tracks.Where(track => string.Equals(track.MusicBrainzArtistId, artistId, StringComparison.OrdinalIgnoreCase)).Take(4))
+            foreach (var track in GetGraphTrackCandidates(run).Where(track => string.Equals(track.MusicBrainzArtistId, artistId, StringComparison.OrdinalIgnoreCase)).Take(4))
             {
                 var nodeId = $"track:{track.RecordingId}";
                 AddNode(graph, nodeId, track.Title, "track", track.ActionScore, 1, "recording", "Track candidate attached to the selected artist.");
@@ -93,7 +99,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                     $"SongID track candidate {track.CandidateId}");
             }
 
-            foreach (var otherArtist in run.Artists.Where(candidate => !string.Equals(candidate.ArtistId, artistId, StringComparison.OrdinalIgnoreCase)).Take(4))
+            foreach (var otherArtist in GetGraphArtistCandidates(run).Where(candidate => !string.Equals(candidate.ArtistId, artistId, StringComparison.OrdinalIgnoreCase)).Take(4))
             {
                 var nodeId = $"artist:{otherArtist.ArtistId}";
                 AddNode(graph, nodeId, otherArtist.Name, "artist", otherArtist.ActionScore, 1, "neighbor", "Nearby artist candidate surfaced in the same SongID context.");
@@ -115,7 +121,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(artistId))
+        if (!string.IsNullOrWhiteSpace(artistId) && canExpandCatalog)
         {
             var releaseGraph = await _releaseGraphService.GetArtistReleaseGraphAsync(artistId, false, cancellationToken).ConfigureAwait(false);
             foreach (var releaseGroup in releaseGraph?.ReleaseGroups?.Take(6) ?? Enumerable.Empty<Integrations.MusicBrainz.Models.ReleaseGroup>())
@@ -156,7 +162,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
 
         if (run != null)
         {
-            foreach (var track in run.Tracks.Where(track => string.Equals(track.Artist, album?.Artist ?? request.Artist, StringComparison.OrdinalIgnoreCase)).Take(5))
+            foreach (var track in GetGraphTrackCandidates(run).Where(track => string.Equals(track.Artist, album?.Artist ?? request.Artist, StringComparison.OrdinalIgnoreCase)).Take(5))
             {
                 var nodeId = $"track:{track.RecordingId}";
                 AddNode(graph, nodeId, track.Title, "track", track.ActionScore, 1, "recording", "Track candidate sits near this album in the same SongID context.");
@@ -195,7 +201,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
 
         if (run != null)
         {
-            foreach (var sibling in run.Tracks.Where(candidate => !string.Equals(candidate.RecordingId, track?.RecordingId, StringComparison.OrdinalIgnoreCase)).Take(5))
+            foreach (var sibling in GetGraphTrackCandidates(run).Where(candidate => !string.Equals(candidate.RecordingId, track?.RecordingId, StringComparison.OrdinalIgnoreCase)).Take(5))
             {
                 var nodeId = $"track:{sibling.RecordingId}";
                 AddNode(graph, nodeId, $"{sibling.Artist} - {sibling.Title}", "track", sibling.ActionScore, 1, "candidate", "Alternative or adjacent track candidate from the same SongID run.");
@@ -216,7 +222,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                     $"Track candidate {sibling.CandidateId} from the same SongID run");
             }
 
-            foreach (var segment in run.Segments.Take(4))
+            foreach (var segment in GetGraphSegments(run).Take(4))
             {
                 var nodeId = $"segment:{segment.SegmentId}";
                 AddNode(graph, nodeId, segment.Label, "segment", segment.Confidence, 1, "segment", segment.DecompositionLabel);
@@ -255,7 +261,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
         var seedNodeId = $"songid:{run.Id:D}";
         AddNode(graph, seedNodeId, seedLabel, "songid_run", 1, 0, "center", "SongID run seed. Near nodes come from identity, ambiguity, and evidence context.");
 
-        foreach (var track in run.Tracks.Take(4))
+        foreach (var track in GetGraphTrackCandidates(run).Take(4))
         {
             var nodeId = $"track:{track.RecordingId}";
             AddNode(graph, nodeId, $"{track.Artist} - {track.Title}", "track", track.ActionScore, 1, "candidate", "Ranked SongID track candidate.");
@@ -276,7 +282,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                 $"Track candidate {track.CandidateId}");
         }
 
-        foreach (var album in run.Albums.Take(3))
+        foreach (var album in GetGraphAlbumCandidates(run).Take(3))
         {
             var nodeId = $"album:{album.ReleaseId}";
             AddNode(graph, nodeId, $"{album.Artist} - {album.Title}", "album", album.ActionScore, 1, "release", "Album candidate near the current SongID result.");
@@ -297,7 +303,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                 $"Album candidate {album.CandidateId}");
         }
 
-        foreach (var artist in run.Artists.Take(3))
+        foreach (var artist in GetGraphArtistCandidates(run).Take(3))
         {
             var nodeId = $"artist:{artist.ArtistId}";
             AddNode(graph, nodeId, artist.Name, "artist", artist.ActionScore, 1, "neighbor", "Artist candidate near the current SongID result.");
@@ -318,7 +324,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                 $"Artist candidate {artist.CandidateId}");
         }
 
-        foreach (var segment in run.Segments.Take(4))
+        foreach (var segment in GetGraphSegments(run).Take(4))
         {
             var nodeId = $"segment:{segment.SegmentId}";
             AddNode(graph, nodeId, segment.Label, "segment", segment.Confidence, 1, "segment", segment.DecompositionLabel);
@@ -336,29 +342,29 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                 },
                 segment.DecompositionLabel);
 
-            foreach (var candidate in segment.Candidates.Take(2))
+            foreach (var candidate in GetGraphSegmentCandidates(segment).Take(2))
             {
                 var candidateNodeId = $"track:{candidate.RecordingId}";
                 AddNode(graph, candidateNodeId, $"{candidate.Artist} - {candidate.Title}", "track", candidate.ActionScore, 2, "candidate", "Candidate attached to a decomposed SongID segment.");
                 AddEdge(
-                graph,
-                nodeId,
-                candidateNodeId,
-                "segment_candidate",
-                candidate.IdentityScore,
-                "Segment-level candidate search path.",
-                "songid_segment",
-                new Dictionary<string, double>
-                {
-                    ["identity"] = candidate.IdentityScore,
-                    ["byzantine"] = candidate.ByzantineScore,
-                    ["action"] = candidate.ActionScore,
-                },
-                $"Segment candidate {candidate.CandidateId}");
+                    graph,
+                    nodeId,
+                    candidateNodeId,
+                    "segment_candidate",
+                    candidate.IdentityScore,
+                    "Segment-level candidate search path.",
+                    "songid_segment",
+                    new Dictionary<string, double>
+                    {
+                        ["identity"] = candidate.IdentityScore,
+                        ["byzantine"] = candidate.ByzantineScore,
+                        ["action"] = candidate.ActionScore,
+                    },
+                    $"Segment candidate {candidate.CandidateId}");
             }
         }
 
-        foreach (var mix in run.MixGroups.Take(3))
+        foreach (var mix in GetGraphMixGroups(run).Take(3))
         {
             var mixNodeId = $"mix:{mix.MixId}";
             AddNode(graph, mixNodeId, mix.Label, "mix", mix.ActionScore, 1, "segment", "Mix cluster aggregated from contiguous segments.");
@@ -513,7 +519,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
 
         if (string.Equals(nodeType, "artist", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var track in run.Tracks.Where(track => string.Equals(track.MusicBrainzArtistId, rawId, StringComparison.OrdinalIgnoreCase)).Take(3))
+            foreach (var track in GetGraphTrackCandidates(run).Where(track => string.Equals(track.MusicBrainzArtistId, rawId, StringComparison.OrdinalIgnoreCase)).Take(3))
             {
                 var nodeId = $"track:{track.RecordingId}";
                 AddNode(graph, nodeId, $"{track.Artist} - {track.Title}", "track", track.ActionScore, 2, "candidate", "Track attached to the pinned comparison artist.");
@@ -533,6 +539,112 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
                     $"Track candidate {track.CandidateId}");
             }
         }
+    }
+
+    private static IEnumerable<SongIdTrackCandidate> GetGraphTrackCandidates(SongIdRun run)
+    {
+        var canExpand = CanExpandCatalogContext(run);
+
+        return run.Tracks
+            .Where(track =>
+                !string.IsNullOrWhiteSpace(track.RecordingId) &&
+                !string.IsNullOrWhiteSpace(track.Title) &&
+                !string.IsNullOrWhiteSpace(track.Artist))
+            .Where(track => canExpand || track.IsExact || track.IdentityScore >= MinimumTrackIdentityForWeakRun)
+            .OrderByDescending(track => track.ActionScore)
+            .ThenByDescending(track => track.IdentityScore);
+    }
+
+    private static IEnumerable<SongIdAlbumCandidate> GetGraphAlbumCandidates(SongIdRun run)
+    {
+        if (!CanExpandCatalogContext(run))
+        {
+            return Enumerable.Empty<SongIdAlbumCandidate>();
+        }
+
+        return run.Albums
+            .Where(album =>
+                !string.IsNullOrWhiteSpace(album.ReleaseId) &&
+                !string.IsNullOrWhiteSpace(album.Title))
+            .OrderByDescending(album => album.ActionScore)
+            .ThenByDescending(album => album.IdentityScore);
+    }
+
+    private static IEnumerable<SongIdArtistCandidate> GetGraphArtistCandidates(SongIdRun run)
+    {
+        if (!CanExpandCatalogContext(run))
+        {
+            return Enumerable.Empty<SongIdArtistCandidate>();
+        }
+
+        return run.Artists
+            .Where(artist =>
+                !string.IsNullOrWhiteSpace(artist.ArtistId) &&
+                !string.IsNullOrWhiteSpace(artist.Name))
+            .OrderByDescending(artist => artist.ActionScore)
+            .ThenByDescending(artist => artist.IdentityScore);
+    }
+
+    private static IEnumerable<SongIdSegmentResult> GetGraphSegments(SongIdRun run)
+    {
+        if (!CanExpandCatalogContext(run))
+        {
+            return Enumerable.Empty<SongIdSegmentResult>();
+        }
+
+        return run.Segments
+            .Where(segment =>
+                segment.Confidence >= MinimumSegmentConfidenceForGraph &&
+                GetGraphSegmentCandidates(segment).Any())
+            .OrderByDescending(segment => segment.Confidence);
+    }
+
+    private static IEnumerable<SongIdTrackCandidate> GetGraphSegmentCandidates(SongIdSegmentResult segment)
+        => segment.Candidates
+            .Where(candidate =>
+                !string.IsNullOrWhiteSpace(candidate.RecordingId) &&
+                !string.IsNullOrWhiteSpace(candidate.Title) &&
+                !string.IsNullOrWhiteSpace(candidate.Artist) &&
+                candidate.IdentityScore >= MinimumSegmentCandidateIdentityForGraph)
+            .OrderByDescending(candidate => candidate.ActionScore)
+            .ThenByDescending(candidate => candidate.IdentityScore);
+
+    private static IEnumerable<SongIdMixGroup> GetGraphMixGroups(SongIdRun run)
+    {
+        if (!CanExpandCatalogContext(run))
+        {
+            return Enumerable.Empty<SongIdMixGroup>();
+        }
+
+        var graphSegmentIds = GetGraphSegments(run)
+            .Select(segment => segment.SegmentId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return run.MixGroups
+            .Where(mix =>
+                mix.IdentityScore >= MinimumMixIdentityForGraph &&
+                mix.SegmentIds.Any(graphSegmentIds.Contains))
+            .OrderByDescending(mix => mix.ActionScore)
+            .ThenByDescending(mix => mix.IdentityScore);
+    }
+
+    private static bool CanExpandCatalogContext(SongIdRun? run)
+    {
+        if (run == null)
+        {
+            return true;
+        }
+
+        if (run.Tracks.Any(track => track.IsExact || track.IdentityScore >= MinimumTrackIdentityForWeakRun))
+        {
+            return true;
+        }
+
+        var verdict = run.IdentityAssessment?.Verdict ?? run.Assessment?.Verdict ?? string.Empty;
+        var confidence = run.IdentityAssessment?.Confidence ?? run.Assessment?.Confidence ?? 0;
+
+        return (string.Equals(verdict, "recognized_cataloged_track", StringComparison.OrdinalIgnoreCase) && confidence >= 0.65)
+            || (string.Equals(verdict, "candidate_match_found", StringComparison.OrdinalIgnoreCase) && confidence >= 0.75);
     }
 
     private static Dictionary<string, double> BuildComparisonScores(DiscoveryGraphResult graph, string compareNodeId, SongIdRun? run)

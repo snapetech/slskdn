@@ -1269,3 +1269,7 @@
 - [x] Add transfer retry/resume and batch grouping support
   - Status: completed (2026-04-29)
   - Notes: Added configurable `global.download.retry`, transfer `BatchId`/`Attempts`/`NextAttemptAt` persistence, migration coverage, controller batch grouping for multi-file queue requests, retry state updates, incomplete-file resume behavior, and focused regression tests.
+
+- [x] Fix weak SongID Discovery Graph neighborhood promotion
+  - Status: completed (2026-04-29)
+  - Notes: Discovery Graph now requires trusted SongID identity before promoting albums, artists, segments, mixes, or MusicBrainz artist release groups into graph neighborhoods. Weak manual-review runs remain centered on the SongID seed unless they have exact/high-confidence track candidates.

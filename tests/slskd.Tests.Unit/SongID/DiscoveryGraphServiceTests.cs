@@ -91,6 +91,11 @@ public sealed class DiscoveryGraphServiceTests
         {
             Id = runId,
             Query = "mix seed",
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "recognized_cataloged_track",
+                Confidence = 0.82,
+            },
             Segments = new List<SongIdSegmentResult>
             {
                 new()
@@ -105,6 +110,8 @@ public sealed class DiscoveryGraphServiceTests
                         {
                             CandidateId = "track-1",
                             RecordingId = "rec-1",
+                            Artist = "Artist One",
+                            Title = "Track One",
                             IdentityScore = 0.66,
                             ByzantineScore = 0.61,
                             ActionScore = 0.64,
@@ -123,6 +130,8 @@ public sealed class DiscoveryGraphServiceTests
                         {
                             CandidateId = "track-2",
                             RecordingId = "rec-2",
+                            Artist = "Artist Two",
+                            Title = "Track Two",
                             IdentityScore = 0.63,
                             ByzantineScore = 0.60,
                             ActionScore = 0.62,
@@ -166,6 +175,11 @@ public sealed class DiscoveryGraphServiceTests
         const string artistId = "artist-1";
         var run = new SongIdRun
         {
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "recognized_cataloged_track",
+                Confidence = 0.82,
+            },
             Artists = new List<SongIdArtistCandidate>
             {
                 new()
@@ -212,6 +226,148 @@ public sealed class DiscoveryGraphServiceTests
 
         Assert.Contains(graph.Nodes, node => node.NodeId == "release-group:rg-1");
         Assert.Contains(graph.Edges, edge => edge.EdgeType == "release_group");
+    }
+
+    [Fact]
+    public async Task BuildAsync_WithWeakSongIdRun_DoesNotPromoteSecondaryEvidenceIntoNeighborhood()
+    {
+        var runId = Guid.NewGuid();
+        var run = new SongIdRun
+        {
+            Id = runId,
+            Query = "Worakls - red herring",
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "needs_manual_review",
+                Confidence = 0.58,
+            },
+            Tracks = new List<SongIdTrackCandidate>
+            {
+                new()
+                {
+                    CandidateId = "weak-track",
+                    RecordingId = "weak-rec",
+                    Artist = "Bloum",
+                    Title = "Unverified Candidate",
+                    MusicBrainzArtistId = "artist-bloum",
+                    IdentityScore = 0.72,
+                    ByzantineScore = 0.58,
+                    ActionScore = 0.67,
+                },
+            },
+            Albums = new List<SongIdAlbumCandidate>
+            {
+                new()
+                {
+                    CandidateId = "album-tv-show",
+                    ReleaseId = "album-tv-show",
+                    Artist = "Bloum",
+                    Title = "TV Show",
+                    IdentityScore = 0.72,
+                    ByzantineScore = 0.58,
+                    ActionScore = 0.67,
+                },
+            },
+            Artists = new List<SongIdArtistCandidate>
+            {
+                new()
+                {
+                    CandidateId = "artist-bloum",
+                    ArtistId = "artist-bloum",
+                    Name = "Bloum",
+                    IdentityScore = 0.68,
+                    ByzantineScore = 0.60,
+                    ActionScore = 0.74,
+                },
+            },
+            Segments = new List<SongIdSegmentResult>
+            {
+                new()
+                {
+                    SegmentId = "segment-tv-show",
+                    Label = "TV Show",
+                    Confidence = 0.91,
+                    Candidates = new List<SongIdTrackCandidate>
+                    {
+                        new()
+                        {
+                            CandidateId = "segment-track",
+                            RecordingId = "segment-rec",
+                            Artist = "Faith",
+                            Title = "TV Show",
+                            IdentityScore = 0.70,
+                            ByzantineScore = 0.60,
+                            ActionScore = 0.65,
+                        },
+                    },
+                },
+            },
+        };
+
+        var songIdService = new Mock<ISongIdService>();
+        songIdService.Setup(service => service.Get(runId)).Returns(run);
+
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>(MockBehavior.Strict);
+        var service = new DiscoveryGraphService(songIdService.Object, releaseGraphService.Object);
+
+        var graph = await service.BuildAsync(new DiscoveryGraphRequest
+        {
+            Scope = "songid_run",
+            SongIdRunId = runId,
+        });
+
+        Assert.Equal($"songid:{runId:D}", graph.SeedNodeId);
+        Assert.DoesNotContain(graph.Nodes, node => node.NodeType == "artist");
+        Assert.DoesNotContain(graph.Nodes, node => node.NodeType == "album");
+        Assert.DoesNotContain(graph.Nodes, node => node.NodeType == "segment");
+        Assert.DoesNotContain(graph.Nodes, node => node.Label == "TV Show");
+    }
+
+    [Fact]
+    public async Task BuildAsync_WithWeakArtistScope_DoesNotFetchReleaseGraph()
+    {
+        const string artistId = "artist-bloum";
+        var runId = Guid.NewGuid();
+        var run = new SongIdRun
+        {
+            Id = runId,
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "needs_manual_review",
+                Confidence = 0.58,
+            },
+            Artists = new List<SongIdArtistCandidate>
+            {
+                new()
+                {
+                    CandidateId = artistId,
+                    ArtistId = artistId,
+                    Name = "Bloum",
+                    IdentityScore = 0.68,
+                    ByzantineScore = 0.60,
+                    ActionScore = 0.74,
+                },
+            },
+        };
+
+        var songIdService = new Mock<ISongIdService>();
+        songIdService.Setup(service => service.Get(runId)).Returns(run);
+
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>(MockBehavior.Strict);
+        var service = new DiscoveryGraphService(songIdService.Object, releaseGraphService.Object);
+
+        var graph = await service.BuildAsync(new DiscoveryGraphRequest
+        {
+            Scope = "artist",
+            SongIdRunId = runId,
+            ArtistId = artistId,
+        });
+
+        Assert.Single(graph.Nodes);
+        Assert.Equal($"artist:{artistId}", graph.SeedNodeId);
+        releaseGraphService.Verify(
+            service => service.GetArtistReleaseGraphAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

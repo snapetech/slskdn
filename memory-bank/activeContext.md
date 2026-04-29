@@ -1,3 +1,16 @@
+## Update 2026-04-29 07:07:57Z
+
+- Current task: None. Weak SongID Discovery Graph neighborhood promotion is fixed locally and ready to commit.
+- Last activity:
+  - traced the bogus graph neighborhoods to secondary SongID evidence being promoted into graph nodes even when the run verdict was `needs_manual_review`
+  - documented the gotcha in ADR-0001 and committed that documentation as `cbe735818`
+  - gated artist/album/segment/mix graph expansion on trusted identity, while still allowing exact or high-confidence track candidates through
+  - added regression tests proving weak runs do not fetch MusicBrainz artist release graphs or render secondary-evidence neighborhoods
+  - validation passed for build, lint, diff check, and focused Discovery Graph tests; full `dotnet test --no-build` still failed the known unrelated full-instance overlay `502` integration cases
+- Next steps:
+  1. Commit the implementation/docs update.
+  2. Push only if requested; do not create release/build tags.
+
 ## Update 2026-04-29 06:34:00Z
 
 - Current task: Prepare `2026042900-slskdn.191` after `.190` Docker publish failed.

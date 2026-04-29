@@ -6984,3 +6984,11 @@ Code quality improvements were completed as part of Option A:
 - Stored the live test credentials in the gitignored `tests/slskd.Tests.Integration/local-mesh-accounts.env` file with mode `600` and in OpenBao at `secret/slskdn/mesh-live-test-accounts`; verification read back only redacted values/metadata.
 - Fixed the full-instance harness so live-login configs emit the Soulseek server endpoint and a unique listen port per child process, and changed mutating API calls in the smoke to use API-key auth so CSRF does not block local test setup.
 - Validation: the standalone live-account test passed, and the full `TwoNodeMeshFullInstanceTests` class passed (`3` tests, including public-network live-account mesh search + pod download + byte comparison).
+
+## 2026-04-29 07:07:57Z
+
+- Fixed the SongID Discovery Graph neighborhood builder so weak `needs_manual_review` runs no longer promote secondary transcript/OCR/chapter/MusicBrainz evidence into clickable artist, album, segment, or mix neighborhoods.
+- Artist-scope graph expansion now skips MusicBrainz release-group fetches when the selected artist only came from weak SongID context, preventing bogus neighborhoods such as `TV Show` from appearing after clicking an untrusted graph node.
+- Added focused regression coverage for weak-run graph suppression and kept recognized runs able to render track, segment, mix, artist, and release-group neighborhoods.
+- Documented the gotcha in ADR-0001 and committed it immediately as `cbe735818`.
+- Validation: `dotnet build --no-restore` passed with existing warnings; focused `DiscoveryGraphServiceTests`/`DiscoveryGraphControllerTests` passed; `bash ./bin/lint` passed; `git diff --check` passed; full `dotnet test --no-build` passed core/unit projects and failed only the known unrelated full-instance overlay `502` integration cases.
