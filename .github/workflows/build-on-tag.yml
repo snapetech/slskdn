@@ -627,7 +627,7 @@ jobs:
           sed -i 's/^Package: slskdn$/Package: slskdn-dev/' debian/control
           sed -i 's/^Conflicts: slskd$/Conflicts: slskd, slskdn/' debian/control
           sed -i 's/^Replaces: slskd$/Replaces: slskd, slskdn/' debian/control
-          sed -i 's/^Description:.*/Description: 🔋 DEV: The batteries included, ***EXPERIMENTAL*** fork of slskd. Feature-rich, including multi-source downloads, DHT mesh sync, swarm mode \& more/' debian/control
+          sed -i 's/^Description:.*/Description: slskdN dev, an unofficial experimental fork of slskd with multi-source downloads, DHT mesh sync, swarm mode \& more/' debian/control
           
           # Use timestamp-based PPA revision
           PPA_REV=$(date +%Y%m%d%H%M)
@@ -1052,7 +1052,7 @@ jobs:
           cd tap
           cat > Formula/slskdn-dev.rb <<EOF
           class SlskdnDev < Formula
-            desc "Batteries-included Soulseek web client (Development Build)"
+            desc "Unofficial slskd fork with batteries-included Soulseek features (Development Build)"
             homepage "https://github.com/snapetech/slskdn"
             license "AGPL-3.0-or-later"
             version "${VERSION}"
@@ -1105,7 +1105,7 @@ jobs:
           mkdir -p Formula
           cat > Formula/slskdn-dev.rb <<FORMULA
           class SlskdnDev < Formula
-            desc "Batteries-included Soulseek web client (Development Build)"
+            desc "Unofficial slskd fork with batteries-included Soulseek features (Development Build)"
             homepage "https://github.com/snapetech/slskdn"
             license "AGPL-3.0-or-later"
             version "${VERSION}"
@@ -2044,7 +2044,7 @@ jobs:
           cd tap
           cat > Formula/slskdn.rb <<EOF
           class Slskdn < Formula
-            desc "Batteries-included Soulseek web client"
+            desc "Unofficial slskd fork with batteries-included Soulseek features"
             homepage "https://github.com/snapetech/slskdn"
             license "AGPL-3.0-or-later"
             version "${VERSION}"

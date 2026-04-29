@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=slskdN
-Comment=A decentralized mesh community service for Soulseek with VPN and advanced networking
+Comment=Unofficial slskd fork with batteries-included Soulseek features
 Exec=slskdn-wrapper
 Icon=io.github.slskd.slskdn
 Terminal=false

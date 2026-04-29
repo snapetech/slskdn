@@ -185,16 +185,16 @@ class Footer extends Component {
                 href={GITHUB_BASE}
                 rel="noopener noreferrer"
                 target="_blank"
-                title="slskdN - the fork"
+                title="slskdN project"
               >
                 slskdN
               </a>
-              {' · built on the most excellent '}
+              {' · an unofficial fork of '}
               <a
                 href={SLSKD_GITHUB}
                 rel="noopener noreferrer"
                 target="_blank"
-                title="slskd - the original project"
+                title="slskd upstream project"
               >
                 slskd
               </a>
@@ -251,7 +251,7 @@ class Footer extends Component {
                 target="_blank"
                 title="What is slskdN?"
               >
-                <em>"built on the backs of giants"</em>
+                <em>"unofficial fork, original respect"</em>
               </a>{' '}
               <a
                 className="slskdn-footer-emoji-link"

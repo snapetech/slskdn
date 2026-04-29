@@ -1,3 +1,14 @@
+## Update 2026-04-29 07:45:00Z
+
+- Current task: None. Copyright and branding attribution pass is implemented locally and ready for validation.
+- Last activity:
+  - clarified slskdN as an unofficial fork of slskd across docs, web metadata/footer/title text, Swagger/API metadata, default Soulseek profile text, package metadata, and generated release copy
+  - changed slskdN support links to target `snapetech/slskdn` while preserving upstream slskd as an attribution/reference link
+  - documented compatibility names that should remain `slskd` because they affect existing installs, config, metrics, or API expectations
+- Next steps:
+  1. Run packaging, frontend, backend, lint, and diff validation.
+  2. Commit and push the attribution pass if validation is clean.
+
 ## Update 2026-04-29 07:11:17Z
 
 - Current task: Prepare `2026042900-slskdn.192` for the weak SongID Discovery Graph fix.

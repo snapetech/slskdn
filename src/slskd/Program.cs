@@ -148,7 +148,7 @@ namespace slskd
         /// <summary>
         ///     The url to the issues/support site.
         /// </summary>
-        public static readonly string IssuesUrl = "https://github.com/slskd/slskd/issues";
+        public static readonly string IssuesUrl = "https://github.com/snapetech/slskdn/issues";
 
         /// <summary>
         ///     The global prefix for environment variables.
@@ -2998,17 +2998,17 @@ namespace slskd
                     options.SwaggerDoc("v0", new OpenApiInfo
                     {
                         Version = "v0",
-                        Title = AppName,
-                        Description = "A modern client-server application for the Soulseek community service network",
+                        Title = "slskdN API",
+                        Description = "slskdN is an unofficial fork of slskd for the Soulseek community service network",
                         Contact = new OpenApiContact
                         {
-                            Name = "GitHub",
-                            Url = new Uri("https://github.com/slskd/slskd"),
+                            Name = "slskdN on GitHub",
+                            Url = new Uri("https://github.com/snapetech/slskdn"),
                         },
                         License = new OpenApiLicense
                         {
                             Name = "AGPL-3.0 license",
-                            Url = new Uri("https://github.com/slskd/slskd/blob/master/LICENSE"),
+                            Url = new Uri("https://github.com/snapetech/slskdn/blob/main/LICENSE"),
                         },
                     });
 

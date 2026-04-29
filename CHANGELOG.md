@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to slskdn are documented here. slskdn is a distribution of slskd with advanced features and experimental subsystems.
+All notable changes to slskdn are documented here. [slskdN](https://github.com/snapetech/slskdn) is an unofficial fork of [slskd](https://github.com/slskd/slskd) with advanced features and experimental subsystems.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 

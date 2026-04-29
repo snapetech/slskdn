@@ -1,7 +1,7 @@
 Name:           slskdn
 Version:        2026042900.slskdn.192
 Release:        1%{?dist}
-Summary:        🔋 The batteries included fork of slskd with 24+ new features
+Summary:        slskdN, an unofficial batteries-included fork of slskd
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn
@@ -26,7 +26,7 @@ Requires:       libicu
 Conflicts:      slskd
 
 %description
-The batteries included fork of slskd with 24+ new features: decentralized pods,
+slskdN is an unofficial batteries-included fork of slskd with decentralized pods,
 content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
 security hardening.
 
@@ -59,7 +59,8 @@ Advanced Features:
 - MusicBrainz integration - Metadata enrichment, library health scanning, AcoustID fingerprinting
 - Service fabric - Generic mesh service layer for decentralized applications
 
-Modern web UI for the Soulseek network. Drop-in replacement for slskd.
+Modern web UI for the Soulseek network. Unofficial fork and drop-in replacement
+for slskd.
 
 %prep
 %setup -q -c

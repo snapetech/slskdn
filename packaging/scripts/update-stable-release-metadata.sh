@@ -35,7 +35,7 @@ bash packaging/scripts/update-winget-manifests.sh     stable     "$VERSION"     
 
 cat > Formula/slskdn.rb <<EOF
 class Slskdn < Formula
-  desc "Batteries-included Soulseek web client"
+  desc "Unofficial slskd fork with batteries-included Soulseek features"
   homepage "https://github.com/snapetech/slskdn"
   license "AGPL-3.0-or-later"
   version "$VERSION"
@@ -63,7 +63,7 @@ EOF
 
 cat > packaging/homebrew/Formula/slskdn.rb <<EOF
 class Slskdn < Formula
-  desc "Batteries-included Soulseek web client"
+  desc "Unofficial slskd fork with batteries-included Soulseek features"
   homepage "https://github.com/snapetech/slskdn"
   license "AGPL-3.0-or-later"
   version "$VERSION"

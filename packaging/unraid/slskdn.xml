@@ -13,7 +13,7 @@
   <Support>https://github.com/snapetech/slskdn/issues</Support>
   <Project>https://github.com/snapetech/slskdn</Project>
   <Overview>
-slskdn is a feature-rich Soulseek web client - a batteries-included fork of slskd.
+slskdN is a feature-rich Soulseek web client and an unofficial batteries-included fork of slskd.
 
 FEATURES:
 - Auto-replace stuck downloads with alternative sources
@@ -35,7 +35,7 @@ No scripts required. Everything built-in.
   <TemplateURL>https://raw.githubusercontent.com/snapetech/slskdn/master/packaging/unraid/slskdn.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png</Icon>
   <ExtraParams>--restart=unless-stopped</ExtraParams>
-  <Description>slskdn - Feature-rich Soulseek web client with auto-replace, wishlist, smart ranking, and more. Batteries included.</Description>
+  <Description>slskdN - Unofficial slskd fork with auto-replace, wishlist, smart ranking, and more. Batteries included.</Description>
   <Networking>
     <Mode>bridge</Mode>
     <Publish>
@@ -100,7 +100,6 @@ No scripts required. Everything built-in.
   <Config Name="Soulseek Username" Target="SLSKD_SLSK_USERNAME" Default="" Mode="" Description="Your Soulseek username (or set in web UI)" Type="Variable" Display="always" Required="false" Mask="false"></Config>
   <Config Name="Soulseek Password" Target="SLSKD_SLSK_PASSWORD" Default="" Mode="" Description="Your Soulseek password (or set in web UI)" Type="Variable" Display="always" Required="false" Mask="true"></Config>
 </Container>
-
 
 
 

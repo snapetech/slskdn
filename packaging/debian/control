@@ -13,7 +13,7 @@ Package: slskdn
 Architecture: amd64 arm64
 Depends: ${misc:Depends}, libicu76 | libicu74 | libicu70
 Conflicts: slskd
-Description: 🔋 The batteries included fork of slskd with 24+ new features
+Description: slskdN, an unofficial batteries-included fork of slskd
  Decentralized pods, content validation, swarm downloads, DHT mesh networking,
  auto-replace, wishlist, security hardening. Modern web UI for the Soulseek
  network.
@@ -28,5 +28,5 @@ Description: 🔋 The batteries included fork of slskd with 24+ new features
  Advanced Features: Decentralized pod communities, Byzantine consensus &
  proof-of-storage content validation, MusicBrainz integration, service fabric.
  .
- Drop-in replacement for slskd, preserves existing configuration.
-
+ Unofficial fork of slskd. Drop-in replacement for slskd, preserves existing
+ configuration.

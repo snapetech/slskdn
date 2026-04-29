@@ -1,7 +1,7 @@
 Name:           slskdn-dev
 Version:        0.24.1.dev.202412080000
 Release:        1%{?dist}
-Summary:        🔋 The batteries included fork of slskd with 24+ new features [EXPERIMENTAL]
+Summary:        slskdN dev, an unofficial experimental fork of slskd
 
 License:        AGPL-3.0-or-later
 URL:            https://github.com/snapetech/slskdn/tree/experimental/multi-source-swarm
@@ -24,7 +24,7 @@ Conflicts:      slskd
 Conflicts:      slskdn
 
 %description
-The batteries included fork of slskd with 24+ new features: decentralized pods,
+slskdN dev is an unofficial experimental fork of slskd with decentralized pods,
 content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
 security hardening. [EXPERIMENTAL]
 
@@ -40,7 +40,8 @@ proof-of-storage content validation, multi-source swarm downloads, DHT mesh
 networking with TLS, CSRF protection & security hardening, MusicBrainz
 integration & library health, service fabric for mesh applications.
 
-Modern web UI for the Soulseek network. Drop-in replacement for slskd.
+Modern web UI for the Soulseek network. Unofficial fork and drop-in replacement
+for slskd.
 
 %prep
 %setup -q -c
@@ -121,4 +122,3 @@ echo ""
 - Overlay protocol with TLS security
 - Hash database with mesh sync
 - Phase 6.5 enhancements (NAT detection, peer verification, etc.)
-

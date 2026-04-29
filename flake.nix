@@ -1,5 +1,5 @@
 {
-  description = "Batteries-included Soulseek web client";
+  description = "slskdN, an unofficial slskd fork with batteries-included Soulseek features";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -69,7 +69,7 @@
               '';
 
               meta = with pkgs.lib; {
-                description = "Batteries-included Soulseek web client" + 
+                description = "Unofficial slskd fork with batteries-included Soulseek features" +
                   (if pname == "slskdn-dev" then " (Development Build)" else "");
                 homepage = "https://github.com/snapetech/slskdn";
                 license = licenses.agpl3Plus;

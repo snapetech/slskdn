@@ -10,8 +10,8 @@
 #   6. Start: sudo systemctl start slskd
 
 [Unit]
-Description=slskd - Soulseek Client
-Documentation=https://github.com/slskd/slskd
+Description=slskdN - Unofficial slskd Fork
+Documentation=https://github.com/snapetech/slskdn https://github.com/slskd/slskd
 After=network.target network-online.target
 Wants=network-online.target
 
@@ -126,4 +126,3 @@ SyslogFacility=daemon
 
 [Install]
 WantedBy=multi-user.target
-

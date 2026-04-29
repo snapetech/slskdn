@@ -43,6 +43,8 @@ import {
   Sidebar,
 } from 'semantic-ui-react';
 
+const SLSKDN_RELEASES_URL = 'https://github.com/snapetech/slskdn/releases';
+
 const initialState = {
   applicationOptions: {},
   applicationState: {},
@@ -486,6 +488,9 @@ class App extends Component {
     }
 
     const isAgent = mode === 'Agent';
+    document.title = current
+      ? `slskdN ${current} - An unofficial fork of slskd`
+      : 'slskdN - An unofficial fork of slskd';
 
     if (theme === 'dark') {
       document.documentElement.classList.add(theme);
@@ -698,7 +703,7 @@ class App extends Component {
                   <Modal.Actions>
                     <Button
                       fluid
-                      href="https://github.com/slskd/slskd/releases"
+                      href={SLSKDN_RELEASES_URL}
                       primary
                       style={{ marginLeft: 0 }}
                     >

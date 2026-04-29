@@ -971,7 +971,7 @@ namespace slskd.Shares
 
                 if (!reader.Read() || reader.GetInt32(0) != 1)
                 {
-                    var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/slskd/slskd/issues";
+                    var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/snapetech/slskdn/issues";
                     Log.Fatal(msg);
                     Environment.Exit(1);
                     throw new DataMisalignedException(msg);
@@ -988,7 +988,7 @@ namespace slskd.Shares
             catch (SqliteException ex) when (ex.SqliteErrorCode == 1)
             {
                 // Table doesn't exist or is corrupted
-                var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/slskd/slskd/issues";
+                var msg = "The internal share database has been corrupted or lost, and the application cannot continue to run. Please report this in a GitHub issue here: https://github.com/snapetech/slskdn/issues";
                 Log.Fatal(ex, msg);
                 Environment.Exit(1);
                 throw new DataMisalignedException(msg, ex);

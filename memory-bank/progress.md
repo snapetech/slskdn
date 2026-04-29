@@ -1,3 +1,10 @@
+## 2026-04-29 07:45Z - Clarified slskdN fork attribution and branding
+
+- Audited visible copyright, branding, package, release, and support surfaces for stale upstream-first or ambiguous slskdN copy.
+- Added slskdN-first unofficial-fork attribution to repository docs, web metadata/footer/title text, Swagger/API metadata, default Soulseek profile text, package metadata, and generated release copy.
+- Repointed slskdN support links at `snapetech/slskdn` while keeping upstream slskd links as attribution/reference links.
+- Documented compatibility names that should remain `slskd` to avoid breaking existing installs, configs, metrics, and API expectations.
+
 ## 2026-04-29 06:34Z - Prepared Docker collision fix for release 191
 
 - `2026042900-slskdn.190` completed release/package work but failed main Docker publishing because the runtime image tried to create fixed `1000:1000` `slskdn` user/group IDs that already exist in the .NET runtime base image.

@@ -1,6 +1,6 @@
 # slskdN - Synology Package Center (SPK)
 
-Install slskdN (Soulseek Network Client - Next Generation) on Synology NAS devices through Package Center. Features advanced VPN and mesh networking capabilities for secure, private decentralized community services.
+Install slskdN, an unofficial fork of slskd, on Synology NAS devices through Package Center. Features advanced VPN and mesh networking capabilities for secure, private decentralized community services.
 
 ## Installation
 
@@ -13,7 +13,7 @@ Install slskdN (Soulseek Network Client - Next Generation) on Synology NAS devic
 
 ### Installing the Package
 
-1. **Download the SPK file** from the [releases page](https://github.com/slskd/slskd/releases)
+1. **Download the SPK file** from the [slskdN releases page](https://github.com/snapetech/slskdn/releases)
 2. **Open Package Center** on your Synology DSM
 3. **Click "Manual Install"** (top right)
 4. **Upload the SPK file** (`slskdn.spk`)
@@ -349,8 +349,9 @@ VPN tunnels provide encrypted, authenticated connections allowing secure access 
 
 ## Support
 
-- **Documentation**: https://github.com/slskd/slskd/wiki
-- **Issues**: https://github.com/slskd/slskd/issues
+- **Documentation**: https://github.com/snapetech/slskdn#readme
+- **Issues**: https://github.com/snapetech/slskdn/issues
+- **Upstream slskd**: https://github.com/slskd/slskd
 - **Synology Forums**: Community support
 - **Soulseek Forums**: Network-specific help
 

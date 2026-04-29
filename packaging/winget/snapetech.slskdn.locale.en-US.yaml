@@ -10,10 +10,10 @@ PackageName: slskdN
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Soulseek client with built-in SongID and Discovery Graph
+ShortDescription: Unofficial slskd fork with built-in SongID and Discovery Graph
 Description: |-
-  slskdN is the batteries-included fork of slskd that makes identity and
-  discovery first-class features for Soulseek.
+  slskdN is an unofficial batteries-included fork of slskd that makes identity
+  and discovery first-class features for Soulseek.
   
   Stable features include:
   - SongID for YouTube, Spotify, text, and local-file identification

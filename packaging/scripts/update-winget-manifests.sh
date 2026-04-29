@@ -22,8 +22,8 @@ case "$CHANNEL" in
         COMMAND_ALIAS="slskdn"
         SHORT_DESCRIPTION="Soulseek client with built-in SongID and Discovery Graph"
         DESCRIPTION=$(cat <<'EOF'
-slskdN is the batteries-included fork of slskd that makes identity and
-discovery first-class features for Soulseek.
+  slskdN is an unofficial batteries-included fork of slskd that makes identity
+  and discovery first-class features for Soulseek.
 
 Stable features include:
 - SongID for YouTube, Spotify, text, and local-file identification

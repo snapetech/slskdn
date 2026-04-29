@@ -10,10 +10,11 @@ PackageName: slskdN (Development)
 PackageUrl: https://github.com/snapetech/slskdn
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE
-ShortDescription: Dev Soulseek client with SongID and Discovery Graph first
+ShortDescription: Dev build of the unofficial slskd fork slskdN
 Description: |-
-  slskdN development builds ship the newest identity and discovery work first,
-  especially SongID and Discovery Graph changes.
+  slskdN development builds are unofficial slskd fork builds that ship the
+  newest identity and discovery work first, especially SongID and Discovery
+  Graph changes.
   
   WARNING: This is an unstable development build.
   

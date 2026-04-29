@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **docs**: Clarify slskdN copyright, branding, and fork attribution.
+ - Status: completed (2026-04-29)
+ - Priority: P2
+ - Notes: Added slskdN-first unofficial-fork attribution across docs, web metadata, API/package surfaces, release generators, and support links while documenting compatibility names that should remain `slskd`.
+
 - [x] **release**: Prepare `2026042900-slskdn.191` for Docker UID/GID collision fix.
  - Status: completed (2026-04-29)
  - Priority: P1

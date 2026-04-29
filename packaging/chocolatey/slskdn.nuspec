@@ -9,8 +9,8 @@
     <licenseUrl>https://github.com/snapetech/slskdn/blob/master/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <tags>slskdn soulseek p2p community-service content-sharing</tags>
-    <summary>🔋 The batteries included fork of slskd with 24+ new features</summary>
-    <description>The batteries included fork of slskd with 24+ new features: decentralized pods, content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist, security hardening. Modern web UI for the Soulseek network.</description>
+    <summary>slskdN, an unofficial batteries-included fork of slskd</summary>
+    <description>slskdN is an unofficial fork of slskd with batteries-included Soulseek features: SongID, Discovery Graph, multi-source downloads, DHT mesh networking, auto-replace, wishlist, and security hardening.</description>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />

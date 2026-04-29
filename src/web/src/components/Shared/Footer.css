@@ -62,11 +62,11 @@
 }
 
 /* Special styling for slskd parent project link */
-.slskdn-footer-copyright a[title="slskd - the original project"] {
+.slskdn-footer-copyright a[title="slskd upstream project"] {
     color: #f0883e;
 }
 
-.slskdn-footer-copyright a[title="slskd - the original project"]:hover {
+.slskdn-footer-copyright a[title="slskd upstream project"]:hover {
     color: #ffa657;
     text-shadow: 0 0 8px rgba(240, 136, 62, 0.5);
 }
@@ -287,4 +287,3 @@ html:not(.dark) .slskdn-footer-sponsor:hover {
 html:not(.dark) .slskdn-footer-sponsor .icon {
     color: #bf3989;
 }
-

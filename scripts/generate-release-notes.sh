@@ -322,6 +322,9 @@ fi
 PRODUCT_NAME="${RELEASE_NOTES_PRODUCT_NAME:-}"
 if [[ -z "$PRODUCT_NAME" ]]; then
   PRODUCT_NAME="$(basename "$(git config --get remote.origin.url || echo slskdn)" .git)"
+  if [[ "$PRODUCT_NAME" == "slskdn" ]]; then
+    PRODUCT_NAME="slskdN"
+  fi
 fi
 
 mkdir -p "$(dirname "$OUT_PATH")"

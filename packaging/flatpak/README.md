@@ -306,8 +306,9 @@ To contribute to the Flatpak package:
 
 ## Support
 
-- **Documentation**: https://github.com/slskd/slskd/wiki
-- **Issues**: https://github.com/slskd/slskd/issues
+- **Documentation**: https://github.com/snapetech/slskdn#readme
+- **Issues**: https://github.com/snapetech/slskdn/issues
+- **Upstream slskd**: https://github.com/slskd/slskd
 - **Flathub**: https://flathub.org/apps/io.github.slskd.slskdn (when available)
 
 ## License

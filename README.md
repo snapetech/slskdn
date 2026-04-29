@@ -2,6 +2,11 @@
 <h1 align="center">slskdN(OT)</h1>
 <p align="center"><strong>The batteries-included Soulseek web client</strong></p>
 <p align="center">
+  <a href="https://github.com/snapetech/slskdn"><strong>slskdN</strong></a>
+  is an unofficial fork of
+  <a href="https://github.com/slskd/slskd"><strong>slskd</strong></a>.
+</p>
+<p align="center">
   <a href="https://github.com/snapetech/slskdn/releases">Releases</a> •
   <a href="https://github.com/snapetech/slskdn/issues">Issues</a> •
   <a href="#features">Features</a> •
@@ -30,7 +35,7 @@
 <small>
 
 ## What is slskdN?
-**slskdN(OT)** (as in, NOT slskd), is a richly feature-added fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
+**[slskdN(OT)](https://github.com/snapetech/slskdn)** (as in, NOT slskd), is a richly feature-added, unofficial fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
 > **Everything built-in. No scripts required.**
 
 If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. We have also extended the client functionality and network in ways that we think improve security, longevity, and quality.
@@ -667,7 +672,7 @@ Development builds use epoch-based versioning: `0.24.1-dev-91769014133` for prop
 **slskdn** is built on the excellent work of others:
 
 ### Upstream Project
-This project is a fork of **[slskd](https://github.com/slskd/slskd)** by jpdillingham and contributors.
+**[slskdN](https://github.com/snapetech/slskdn)** is an unofficial fork of **[slskd](https://github.com/slskd/slskd)** by jpdillingham and contributors.
 - **slskd** is a modern, headless Soulseek client with a web interface and REST API
 - Licensed under AGPL-3.0
 - We maintain the same license and contribute our changes back to the community

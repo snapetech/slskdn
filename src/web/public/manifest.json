@@ -13,12 +13,11 @@
       "type": "image/png"
     }
   ],
-  "name": "slskdn - Soulseek Client",
-  "short_name": "slskd",
+  "name": "slskdN - Unofficial slskd Fork",
+  "short_name": "slskdN",
   "start_url": ".",
   "theme_color": "#2185d0"
 }
-
 
 
 

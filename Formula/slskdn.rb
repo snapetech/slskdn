@@ -1,5 +1,5 @@
 class Slskdn < Formula
-  desc "Batteries-included Soulseek web client"
+  desc "Unofficial slskd fork with batteries-included Soulseek features"
   homepage "https://github.com/snapetech/slskdn"
   license "AGPL-3.0-or-later"
   version "2026042900-slskdn.192"

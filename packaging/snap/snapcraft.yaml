@@ -1,11 +1,11 @@
 name: slskdn
 base: core22
 version: '0.24.5-slskdn.170'
-summary: 🔋 The batteries included fork of slskd with 24+ new features
+summary: slskdN, an unofficial batteries-included fork of slskd
 description: |
-  The batteries included fork of slskd with 24+ new features: decentralized pods,
-  content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
-  security hardening. Modern web UI for the Soulseek network.
+  slskdN is an unofficial fork of slskd with batteries-included Soulseek features:
+  SongID, Discovery Graph, multi-source downloads, DHT mesh networking,
+  auto-replace, wishlist, and security hardening.
 grade: stable
 confinement: strict
 architectures:

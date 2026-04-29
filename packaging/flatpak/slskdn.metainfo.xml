@@ -4,13 +4,13 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <name>slskdN</name>
-  <summary>🔋 The batteries included fork of slskd with 24+ new features</summary>
+  <summary>slskdN, an unofficial batteries-included fork of slskd</summary>
 
   <description>
     <p>
-      The batteries included fork of slskd with 24+ new features: decentralized pods,
-      content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist,
-      security hardening.
+      slskdN is an unofficial fork of slskd with batteries-included Soulseek
+      features: SongID, Discovery Graph, multi-source downloads, DHT mesh
+      networking, auto-replace, wishlist, and security hardening.
     </p>
     <p>Stable Features (17):</p>
     <ul>
@@ -36,8 +36,11 @@
       <li>Service fabric - Generic mesh service layer for decentralized applications</li>
     </ul>
     <p>
-      Modern web UI for the Soulseek network. Drop-in replacement for slskd, preserves
-      existing configuration.
+      Modern web UI for the Soulseek network. Unofficial fork and drop-in
+      replacement for slskd, preserving existing configuration.
+    </p>
+    <p>
+      Upstream slskd project: https://github.com/slskd/slskd
     </p>
   </description>
 
@@ -69,9 +72,10 @@
     <keyword>secure</keyword>
   </keywords>
 
-  <url type="homepage">https://github.com/slskd/slskd</url>
-  <url type="bugtracker">https://github.com/slskd/slskd/issues</url>
-  <url type="help">https://github.com/slskd/slskd/wiki</url>
+  <url type="homepage">https://github.com/snapetech/slskdn</url>
+  <url type="bugtracker">https://github.com/snapetech/slskdn/issues</url>
+  <url type="help">https://github.com/snapetech/slskdn#readme</url>
+  <url type="vcs-browser">https://github.com/snapetech/slskdn</url>
 
   <provides>
     <binary>slskdn</binary>

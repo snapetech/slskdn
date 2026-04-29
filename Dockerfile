@@ -79,13 +79,14 @@ ENV SHELL=/usr/bin/bash \
   SLSKD_DOCKER_BUILD_DATE=$BUILD_DATE
 
 LABEL org.opencontainers.image.title=slskdn \
-  org.opencontainers.image.description="🔋 The batteries included fork of slskd with 24+ new features: decentralized pods, content validation, swarm downloads, DHT mesh networking, auto-replace, wishlist, security hardening" \
+  org.opencontainers.image.description="slskdN is an unofficial fork of slskd with batteries-included Soulseek features: SongID, Discovery Graph, multi-source downloads, DHT mesh networking, auto-replace, wishlist, and security hardening" \
   org.opencontainers.image.authors="slskdN Team" \
   org.opencontainers.image.vendor="slskdN Team" \
   org.opencontainers.image.licenses=AGPL-3.0 \
   org.opencontainers.image.url=https://github.com/snapetech/slskdn \
   org.opencontainers.image.source=https://github.com/snapetech/slskdn \
   org.opencontainers.image.documentation=https://github.com/snapetech/slskdn \
+  org.opencontainers.image.ref.name="slskdN - unofficial fork of slskd" \
   org.opencontainers.image.version=$VERSION \
   org.opencontainers.image.revision=$REVISION \
   org.opencontainers.image.created=$BUILD_DATE

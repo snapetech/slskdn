@@ -319,8 +319,9 @@ slskdN includes many advanced community service features:
 
 ## Support
 
-- **Documentation**: https://github.com/slskd/slskd/wiki
-- **Issues**: https://github.com/slskd/slskd/issues
+- **Documentation**: https://github.com/snapetech/slskdn#readme
+- **Issues**: https://github.com/snapetech/slskdn/issues
+- **Upstream slskd**: https://github.com/slskd/slskd
 - **Discussions**: GitHub Discussions
 - **Soulseek Forums**: Community support
 

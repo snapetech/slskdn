@@ -8,12 +8,12 @@ We don't maintain a Contributor License Agreement (CLA) but we do require that a
 * You have the right to assign the copyright of your contribution.
 * By making your contribution, you are giving up copyright of your contribution.
 
-This application is released under the [AGPL 3.0](https://github.com/slskd/slskd/blob/master/LICENSE) license, and no single individual or entity owns
+This application is released under the [AGPL 3.0](LICENSE) license, and no single individual or entity owns
 or will ever own the copyright.
 
 ## slskdn Fork Attribution Policy
 
-This is a fork of [slskd/slskd](https://github.com/slskd/slskd). We maintain the following copyright attribution policy:
+[slskdN](https://github.com/snapetech/slskdn) is an unofficial fork of [slskd/slskd](https://github.com/slskd/slskd). We maintain the following copyright attribution policy:
 
 ### Existing Files (from upstream slskd)
 Files that exist in the upstream repository retain their original copyright:
