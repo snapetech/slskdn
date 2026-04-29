@@ -1,3 +1,15 @@
+## Update 2026-04-29 15:46:20Z
+
+- Current task: Prepare stable release `2026042900-slskdn.193` from `main`.
+- Last activity:
+  - verified GitHub write target is `snapetech/slskdn`
+  - confirmed `main` is clean and current with `origin/main`
+  - promoted the current Unreleased attribution/theme bullets into the `.193` changelog section
+- Next steps:
+  1. Validate generated `.193` release notes.
+  2. Commit and push the release-note update.
+  3. Push tag `build-main-2026042900-slskdn.193`.
+
 ## Update 2026-04-29 16:05:00Z
 
 - Current task: None. slskdN Web UI theme rebrand is implemented locally and ready for validation.

@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.193] — 2026-04-29
+
 - Added a slskdN default web theme using brown, gray, and purple tones, kept
   the upstream-style dark theme as `Classic Dark`, and preserved the light
   theme as a selectable option.
@@ -31,6 +33,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Normalized C# source headers against upstream `0.24.5` so unchanged upstream
   files remain upstream-attributed, modified upstream files carry slskdN
   co-attribution, and slskdN-only files use slskdN-only copyright notices.
+- Clarified README comparison wording so the upstream baseline is explicitly
+  framed as slskd `0.24.5` instead of current upstream `master`.
 
 ## [2026042900-slskdn.192] — 2026-04-29
 

@@ -1,3 +1,8 @@
+## 2026-04-29 15:46:20Z
+
+- Prepared stable release `2026042900-slskdn.193` from current `main`.
+- Promoted the attribution, branding, copyright-header, and default Web UI theme bullets from Unreleased into a versioned `.193` changelog section.
+
 ## 2026-04-29 16:05Z - Rebranded the default Web UI theme
 
 - Confirmed the old dark Web UI palette came from upstream `0.24.5`.
