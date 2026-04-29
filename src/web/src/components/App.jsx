@@ -478,9 +478,7 @@ class App extends Component {
     }
 
     const isAgent = mode === 'Agent';
-    document.title = current
-      ? `slskdN ${current} - An unofficial fork of slskd`
-      : 'slskdN - An unofficial fork of slskd';
+    document.title = 'slskdN';
 
     document.documentElement.classList.remove(
       'classic-dark',

@@ -1329,3 +1329,7 @@
 - [x] Fix Web UI theme picker, transfer bulk flicker, and footer speeds
   - Status: completed (2026-04-29)
   - Notes: Reworked the theme selector onto a controlled Semantic UI dropdown, made transfer polling monotonic with short-lived optimistic row hiding after accepted bulk actions, and made footer speeds use an elapsed-time fallback when active transfer average speed is still zero.
+
+- [x] Restore short slskdN browser tab title
+  - Status: completed (2026-04-29)
+  - Notes: Changed the runtime document title back to `slskdN` and added App coverage so version/fork attribution stays out of the browser tab.

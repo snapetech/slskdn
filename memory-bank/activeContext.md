@@ -1,3 +1,14 @@
+## Update 2026-04-29 17:35:00Z
+
+- Current task: None. Browser tab title is restored to `slskdN` locally.
+- Last activity:
+  - changed runtime `document.title` to the short slskdN brand
+  - added App test coverage for the tab title
+  - updated changelog, tasks, and progress notes
+- Next steps:
+  1. Validate, commit, and push the title fix.
+  2. Continue with the requested `.197` release after the title fix lands.
+
 ## Update 2026-04-29 17:31:00Z
 
 - Current task: None. The Web UI theme picker, transfer bulk-action flicker, and footer speed fallback are fixed locally.

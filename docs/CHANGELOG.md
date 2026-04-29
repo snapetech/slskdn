@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Restored the browser tab title to the short slskdN brand name instead of
+  showing the release version and fork attribution.
 - Fixed the Web UI theme picker so it opens reliably and applies selected
   themes through Semantic UI's controlled dropdown path.
 - Smoothed transfer bulk actions by ignoring stale transfer polls and

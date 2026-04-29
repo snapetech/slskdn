@@ -155,4 +155,18 @@ describe('App', () => {
       expect(document.documentElement).toHaveClass('light');
     });
   });
+
+  it('keeps the browser tab title focused on slskdN branding', async () => {
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Searches')).toBeInTheDocument();
+    });
+
+    expect(document.title).toBe('slskdN');
+  });
 });

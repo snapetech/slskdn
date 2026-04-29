@@ -7086,3 +7086,8 @@ Code quality improvements were completed as part of Option A:
 - Made `/api/v0/transfers/speeds` report a live fallback from active transfer bytes and elapsed time when `AverageSpeed` has not populated yet, which keeps footer speed totals from staying at zero during active transfers.
 - Documented the theme-picker and transfer bulk-action gotchas in ADR-0001 and committed that documentation separately.
 - Validation: frontend lint, focused App/Transfers/Footer tests, focused `TransfersControllerTests`, web production build, and `git diff --check` passed. Existing generated-code/analyzer warnings remain.
+
+## 2026-04-29 17:35:00Z
+
+- Restored the browser tab title to the short `slskdN` brand name, removing version and fork attribution from the runtime document title.
+- Added App coverage to keep the browser title concise.
