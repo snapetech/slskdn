@@ -5,6 +5,8 @@ ARG VERSION=0.0.1.65534-local
 
 WORKDIR /slskd
 
+RUN apk add --no-cache bash
+
 COPY bin bin/.
 COPY src/web src/web/.
 

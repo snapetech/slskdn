@@ -2,13 +2,13 @@
 
 - Current task: Corrective stable release versioning after the license-compliance rollback.
 - Last activity:
-  - prepared `2026042900-slskdn.188` as the public stable version format requested for slskdN, avoiding any `0.26` implication while sorting newer than removed `0.25.1-slskdn.*` packages
+  - prepared `2026042900-slskdn.189` as the public stable version format requested for slskdN, avoiding any `0.26` implication while sorting newer than removed `0.25.1-slskdn.*` packages
   - updated release-note detection, CI tag scanning, tag-build publishing, and local build/publish scripts to support `YYYYMMDDmm-slskdn.###`
-  - kept .NET/NuGet build inputs valid by mapping the public release version to `0.0.0-slskdn.2026042900.188` for MSBuild and keeping `InformationalVersion=2026042900-slskdn.188`
+  - kept .NET/NuGet build inputs valid by mapping the public release version to `0.0.0-slskdn.2026042900.189` for MSBuild and keeping `InformationalVersion=2026042900-slskdn.189`
   - generated the release notes and verified a local dotnet-only build with the new public version
 - Next steps:
   1. Commit and push the versioning support to `origin/main`.
-  2. Push tag `build-main-2026042900-slskdn.188` and watch the tag-only release workflow.
+  2. Push tag `build-main-2026042900-slskdn.189` and watch the tag-only release workflow.
   3. After the new release exists, delete the superseded `0.24.5-slskdn.186` release and cleanup tag so only the corrective rollback release remains.
 
 ## Update 2026-04-29 04:47:48Z
