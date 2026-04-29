@@ -1829,11 +1829,12 @@ jobs:
           $success = $false
           while ($retryCount -lt $maxRetries -and -not $success) {
             $pushOutput = cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $apiKey --execution-timeout 300 2>&1"
-            Write-Host $pushOutput
+            $pushText = $pushOutput -join "`n"
+            Write-Host $pushText
             if ($LASTEXITCODE -eq 0) {
               $success = $true
               Write-Host "✅ Published to Chocolatey: slskdn (stable)"
-            } elseif ($pushOutput -match "504|Gateway Timeout|timeout") {
+            } elseif ($pushText -match "504|Gateway Timeout|timeout") {
               $retryCount++
               if ($retryCount -lt $maxRetries) {
                 Write-Host "⚠️ Chocolatey timeout (attempt $retryCount/${maxRetries}), retrying in 10 seconds..."

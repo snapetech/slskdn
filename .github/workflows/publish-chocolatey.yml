@@ -61,14 +61,15 @@ jobs:
           for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
             Write-Host "Pushing $nupkgPath to Chocolatey (attempt $attempt/$maxRetries)"
             $pushOutput = cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout 300 2>&1"
-            Write-Host $pushOutput
+            $pushText = $pushOutput -join "`n"
+            Write-Host $pushText
 
             if ($LASTEXITCODE -eq 0) {
               Write-Host "Published to Chocolatey: slskdn $Version"
               exit 0
             }
 
-            if ($pushOutput -notmatch "504|Gateway Timeout|timeout") {
+            if ($pushText -notmatch "504|Gateway Timeout|timeout") {
               Write-Error "choco push failed with exit code $LASTEXITCODE"
               exit $LASTEXITCODE
             }

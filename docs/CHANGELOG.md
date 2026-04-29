@@ -25,7 +25,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed the stable Chocolatey publish job so repeated transient push failures
   fail the workflow instead of reporting a green release with no package
   published, and added a Chocolatey-only manual publish workflow for retrying
-  an existing GitHub release with the stored Chocolatey secret.
+  an existing GitHub release with the stored Chocolatey secret. The retry
+  matcher now joins PowerShell command output before checking for `504` /
+  timeout responses so transient Chocolatey failures are retried correctly.
 
 ## [2026042900-slskdn.197] — 2026-04-29
 
