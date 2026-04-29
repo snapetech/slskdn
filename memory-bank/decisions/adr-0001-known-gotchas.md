@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z150. LAN-Only DHT With Zero Nodes Is Not A Port-Forwarding Failure
+
+**The Bug**: The Network dashboard showed the generic connectivity warning when `dhtRendezvous.lanOnly: true` left the DHT with zero nodes and zero peers, which made operators chase port-forwarding even though the service deliberately skips public bootstrap routers in LAN-only mode.
+
+**Files Affected**:
+- `src/web/src/components/System/Network/index.jsx`
+- `src/web/src/components/System/Network/index.test.jsx`
+
+**Wrong**:
+```js
+const shouldWarnAboutConnectivity =
+  meshPeers.length === 0 &&
+  discoveredPeers.length === 0 &&
+  (stats?.dht?.dhtNodeCount ?? 0) === 0;
+```
+
+**Correct**:
+```js
+const shouldExplainLanOnlyDht =
+  dhtIsLanOnly &&
+  (stats?.dht?.isDhtRunning ?? false) &&
+  (stats?.dht?.dhtNodeCount ?? 0) === 0;
+const shouldWarnAboutConnectivity = !shouldExplainLanOnlyDht && ...;
+```
+
+**Why This Keeps Happening**: Public DHT health and local port reachability are related but not equivalent. In LAN-only mode slskdN intentionally disables public bootstrap and avoids saved public node tables, so `0 nodes` can be the expected privacy-preserving state unless another local/private discovery path seeds peers.
+
 ### 0z149. Theme Menus Need Their Own Surface And Contrast Tokens
 
 **The Bug**: The slskdN web theme made the top navigation, active theme picker, dropdown menu, panels, and inputs use near-identical dark warm colors, so the theme picker looked broken and the page lost usable visual hierarchy.
