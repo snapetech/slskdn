@@ -7167,3 +7167,9 @@ Code quality improvements were completed as part of Option A:
 - Recaptured the README showcase gallery from the live `kspls0` UI after deploying the rebuilt bundle.
 - Documented the fixed-chrome screenshot validation gotcha in ADR-0001 and committed it immediately as `c6168eb5c`.
 - Validation: `npm --prefix src/web run lint -- --quiet`, `npm --prefix src/web run build`, `npm --prefix src/web test -- Network --watch=false`, `node src/web/scripts/verify-build-output.mjs`, Playwright desktop/mobile screenshot audits, and `git diff --check` passed. The web build still reports the existing large-bundle warning.
+
+## 2026-04-29 23:39:14Z
+
+- Changed the Search page secondary panels (`SongID`, `MusicBrainz Lookup`, `Discovery Graph Atlas`, and `Album Completion`) to default collapsed.
+- Added per-browser persistence for all Search page collapsible panels so the Web UI remembers the user's last open/collapsed state.
+- Validation: `npm --prefix src/web test -- src/components/Search/Searches.test.jsx`, `npm --prefix src/web run lint`, and `git diff --check -- src/web/src/components/Search/Searches.jsx src/web/src/components/Search/Searches.test.jsx` passed.

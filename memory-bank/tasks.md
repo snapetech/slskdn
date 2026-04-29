@@ -1376,3 +1376,7 @@
 - [x] Principal UI pass over README showcase surfaces
   - Status: completed (2026-04-29)
   - Notes: Re-reviewed every README screenshot for layout, spacing, chrome, and contrast issues. Compacted the desktop nav, reduced fixed footer height, made the mobile footer a one-row scroll rail, tightened search result cards and file lists, made Discovery Graph controls deliberate, added sparse graph messaging, deployed to `kspls0`, and recaptured the README gallery.
+
+- [x] Persist Search page collapsible section state
+  - Status: completed (2026-04-29)
+  - Notes: SongID, MusicBrainz Lookup, Discovery Graph Atlas, and Album Completion now default collapsed; every Search page collapsible section stores its last open/collapsed state in browser local storage.

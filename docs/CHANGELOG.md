@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Made the Search page secondary panels collapsed by default and persisted
+  each panel's open/collapsed state per browser.
 - Rebuilt the README showcase UI surfaces with compact desktop navigation,
   a shorter fixed footer, a one-row mobile footer rail, cleaner search result
   cards/file lists, and clearer Discovery Graph controls/sparse-state

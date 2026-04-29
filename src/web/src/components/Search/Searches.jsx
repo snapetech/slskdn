@@ -32,9 +32,33 @@ import { v4 as uuidv4 } from 'uuid';
 const CollapsibleSection = ({
   children,
   defaultOpen = true,
+  storageKey,
   title,
 }) => {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(() => {
+    if (!storageKey || typeof window === 'undefined') {
+      return defaultOpen;
+    }
+
+    const stored = window.localStorage.getItem(storageKey);
+    if (stored === null) {
+      return defaultOpen;
+    }
+
+    return stored === 'open';
+  });
+
+  const toggleOpen = () => {
+    setOpen((current) => {
+      const next = !current;
+
+      if (storageKey && typeof window !== 'undefined') {
+        window.localStorage.setItem(storageKey, next ? 'open' : 'closed');
+      }
+
+      return next;
+    });
+  };
 
   return (
     <Segment raised>
@@ -63,7 +87,7 @@ const CollapsibleSection = ({
             <Button
               aria-label={`${open ? 'Collapse' : 'Expand'} ${title}`}
               icon
-              onClick={() => setOpen((current) => !current)}
+              onClick={toggleOpen}
               size="mini"
             >
               <Icon name={open ? 'angle up' : 'angle down'} />
@@ -347,7 +371,10 @@ const Searches = ({ server } = {}) => {
 
   return (
     <>
-      <CollapsibleSection title="Search">
+      <CollapsibleSection
+        storageKey="slskdn.search.section.search"
+        title="Search"
+      >
         <Segment className="search-segment">
           <div className="search-segment-icon">
             <Icon
@@ -466,20 +493,37 @@ const Searches = ({ server } = {}) => {
           )}
         </Segment>
       </CollapsibleSection>
-      <CollapsibleSection title="SongID">
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.songid"
+        title="SongID"
+      >
         <SongIDPanel disabled={!normalizedServer.isConnected} />
       </CollapsibleSection>
-      <CollapsibleSection title="MusicBrainz Lookup">
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.musicbrainz"
+        title="MusicBrainz Lookup"
+      >
         <MusicBrainzLookup disabled={!normalizedServer.isConnected} />
       </CollapsibleSection>
-      <CollapsibleSection title="Discovery Graph Atlas">
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.discoveryGraphAtlas"
+        title="Discovery Graph Atlas"
+      >
         <DiscoveryGraphAtlasPanel disabled={!normalizedServer.isConnected} />
       </CollapsibleSection>
-      <CollapsibleSection title="Album Completion">
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.albumCompletion"
+        title="Album Completion"
+      >
         <AlbumCompletionPanel disabled={!normalizedServer.isConnected} />
       </CollapsibleSection>
       <CollapsibleSection
         defaultOpen
+        storageKey="slskdn.search.section.searchResults"
         title="Search Results"
       >
         {Object.keys(searches).length === 0 ? (

@@ -1208,3 +1208,14 @@ dotnet test
 - Next steps:
   1. Commit/push the footer CSS/JSX and memory-bank updates when ready.
   2. Deploy or release so `kspls0` gets the fixed CSS without local injection.
+
+## Update 2026-04-29 23:39:14Z
+
+- Current task: Search page collapsible section persistence is implemented locally.
+- Last activity:
+  - made SongID, MusicBrainz Lookup, Discovery Graph Atlas, and Album Completion default collapsed
+  - added stable local-storage keys so Search page panels remember the user's last open/collapsed state
+  - added focused Search page tests for default collapsed secondary panels and stored collapsed primary-panel state
+- Next steps:
+  1. Commit and push the full workspace.
+  2. Release/deploy when the UI behavior should land on `kspls0`.

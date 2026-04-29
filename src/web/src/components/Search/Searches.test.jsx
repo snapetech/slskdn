@@ -26,13 +26,15 @@ vi.mock('../../lib/searches', () => ({
 vi.mock('./AlbumCompletionPanel', () => ({ default: () => null }));
 vi.mock('./DiscoveryGraphAtlasPanel', () => ({ default: () => null }));
 vi.mock('./MusicBrainzLookup', () => ({ default: () => null }));
-vi.mock('./SongIDPanel', () => ({ default: () => null }));
+vi.mock('./SongIDPanel', () => ({
+  default: () => <div data-testid="songid-panel">SongID panel</div>,
+}));
 vi.mock('./Detail/SearchDetail', () => ({ default: () => null }));
 vi.mock('./List/SearchList', () => ({ default: () => null }));
 
 const callbacks = {};
 
-const renderSearches = async () => {
+const renderSearches = async ({ waitForInput = true } = {}) => {
   callbacks.list = undefined;
   createSearchHubConnection.mockReturnValue({
     on: vi.fn((eventName, callback) => {
@@ -53,12 +55,13 @@ const renderSearches = async () => {
     </MemoryRouter>,
   );
 
-  return screen.findByTestId('search-input');
+  return waitForInput ? screen.findByTestId('search-input') : undefined;
 };
 
 describe('Searches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     getCapabilities.mockResolvedValue({ features: [] });
     library.create.mockResolvedValue({});
   });
@@ -99,5 +102,26 @@ describe('Searches', () => {
         searchText: 'beatles',
       }),
     );
+  });
+
+  it('defaults secondary search sections closed and remembers expanded state', async () => {
+    await renderSearches();
+
+    expect(screen.getByRole('button', { name: 'Expand SongID' })).toBeInTheDocument();
+    expect(screen.queryByTestId('songid-panel')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand SongID' }));
+
+    expect(screen.getByTestId('songid-panel')).toBeInTheDocument();
+    expect(localStorage.getItem('slskdn.search.section.songid')).toBe('open');
+  });
+
+  it('uses stored collapsed state for primary search sections', async () => {
+    localStorage.setItem('slskdn.search.section.search', 'closed');
+
+    await renderSearches({ waitForInput: false });
+
+    expect(screen.getByRole('button', { name: 'Expand Search' })).toBeInTheDocument();
+    expect(screen.queryByTestId('search-input')).not.toBeInTheDocument();
   });
 });
