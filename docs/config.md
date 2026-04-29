@@ -327,30 +327,13 @@ A change to slot limits requires an application restart to take effect, while sp
 
 #### **YAML**
 ```yaml
-transfers:
+global:
   upload:
     slots: 20
     speed_limit: 1000 # kibibytes
   download:
     slots: 500
     speed_limit: 1000
-```
-
-## Retry Behavior
-
-Failed downloads can be retried automatically up to the configured number of attempts. If an attempt fails initially, the application delays the second attempt by the configured delay, and an exponential backoff is used to compute the delay for all subsequent attempts, up to the configured maximum delay.
-
-By default, partial downloads are resumed based on the size of the incomplete file. Users can choose to always overwrite incomplete files instead.
-
-**YAML**
-```yaml
-transfers:
-  download:
-    retry:
-      incomplete: resume # 'overwrite' or 'resume'
-      attempts: 3
-      delay: 5000 # initial time between retries, in milliseconds
-      max_delay: 60000 # maximum time between retries, in milliseconds
 ```
 
 ## Global Upload Limits
@@ -367,20 +350,19 @@ Note that while it's possible to set the `failures` option for `queued`, it has 
 
 #### **YAML**
 ```yaml
-transfers:
-  upload:
-    limits:
-      queued:
-        files: 500
-        megabytes: 5000
-      daily:
-        files: 1000
-        megabytes: 10000
-        failures: 200
-      weekly:
-        files: 5000
-        megabytes: 50000
-        failures: 1000
+global:
+  limits:
+    queued:
+      files: 500
+      megabytes: 5000
+    daily:
+      files: 1000
+      megabytes: 10000
+      failures: 200
+    weekly:
+      files: 5000
+      megabytes: 50000
+      failures: 1000
 ```
 
 ## Groups
@@ -404,18 +386,18 @@ upload:
   strategy: roundrobin # roundrobin or firstinfirstout
   slots: 10 # 1 to 2147483647
   speed_limit: 100 # in KiB/s, 1 to 2147483647
-  limits:
-    queued:
-      files: 500 # 1 to 2147483647
-      megabytes: 5000 # 1 to 2147483647
-    daily:
-      files: 1000
-      megabytes: 10000
-      failures: 200 # 1 to 2147483647
-    weekly:
-      files: 5000
-      megabytes: 50000
-      failures: 1000
+limits:
+  queued:
+    files: 500 # 1 to 2147483647
+    megabytes: 5000 # 1 to 2147483647
+  daily:
+    files: 1000
+    megabytes: 10000
+    failures: 200 # 1 to 2147483647
+  weekly:
+    files: 5000
+    megabytes: 50000
+    failures: 1000
 ```
 
 ## Built-In Groups
@@ -430,46 +412,45 @@ It is impossible to explicitly assign users to these built-in groups, but the pr
 
 #### **YAML**
 ```yaml
-transfers:
-  groups:
-    default:
-      upload:
-        priority: 1
-        strategy: roundrobin
-        slots: 10
-        speed_limit: 50000 # kibibytes
-        limits:
-          queued:
-            files: 150
-            megabytes: 1500
-          daily:
-            files: 2147483647 # effectively unlimited, weekly still applies
-            megabytes: 2147483647
-          weekly:
-            files: 1500
-            megabytes: 15000
-            failures: 150
-    leechers:
-      thresholds:
-        files: 1
-        directories: 1
-      upload:
-        priority: 99
-        strategy: roundrobin
-        slots: 1
-        speed_limit: 100
-        limits:
-          queued:
-            files: 15
-            megabytes: 150
-          daily:
-            files: 30
-            megabytes: 300
-            failures: 10
-          weekly:
-            files: 150
-            megabytes: 1500
-            failures: 30
+groups:
+  default:
+    upload:
+      priority: 1
+      strategy: roundrobin
+      slots: 10
+      speed_limit: 50000 # kibibytes
+    limits:
+      queued:
+        files: 150
+        megabytes: 1500
+      daily:
+        files: 2147483647 # effectively unlimited, weekly still applies
+        megabytes: 2147483647
+      weekly:
+        files: 1500
+        megabytes: 15000
+        failures: 150
+  leechers:
+    thresholds:
+      files: 1
+      directories: 1
+    upload:
+      priority: 99
+      strategy: roundrobin
+      slots: 1
+      speed_limit: 100
+    limits:
+      queued:
+        files: 15
+        megabytes: 150
+      daily:
+        files: 30
+        megabytes: 300
+        failures: 10
+      weekly:
+        files: 150
+        megabytes: 1500
+        failures: 30
 ```
 
 ## User Blacklist
@@ -486,8 +467,6 @@ Private and chat room messages from blacklisted users are also ignored.
 
 Users can be blacklisted by adding their username to the `members` list. Additionally, users can be blacklisted by IP address, or range of addresses by adding a CIDR entry to the `cidrs` list.
 
-The `patterns` list accepts regular expressions matched against usernames. Any username matching one or more patterns will be blacklisted. This is useful for blocking bots or automated clients that share a common username prefix or suffix; for example, `^user` would block any username starting with `user`, and `_bot$` would block any username ending with `_bot`. Patterns follow the same case sensitivity rules as other user-defined regular expressions in the application: case insensitive by default, controlled by the `flags.case_sensitive_regex` option.
-
 Users added to the blacklist will be blocked from enqueueing any new files.  Any existing active or queued transfers will need to be cancelled manually.
 
 A managed blacklist file may also be used to achieve the same effects.  Read more about this in the [Managed Blacklist](#managed-blacklist) section below.
@@ -498,8 +477,6 @@ groups:
   blacklisted:
     members:
       - <username to blacklist>
-    patterns:
-      - <regular expression to match against usernames>
     cidrs:
       - <CIDR to blacklist, e.g. 255.255.255.255/32>
 ```

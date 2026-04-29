@@ -29,7 +29,7 @@ jobs:
             TAG="${{ github.ref_name }}"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          # Convert 0.25.1-slskdn.7 to 0.25.1.slskdn.7 for debian version
+          # Convert 0.24.1-slskdn.7 to 0.24.1.slskdn.7 for debian version
           VERSION=$(echo "$TAG" | sed 's/-slskdn/.slskdn/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 

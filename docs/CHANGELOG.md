@@ -20,48 +20,71 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
 
-## [0.25.1-slskdn.185] — 2026-04-28
+## [0.24.5-slskdn.186] — 2026-04-29
 
-- Fixed upload queue group resolution when a user is removed from a user-defined transfer group so cached empty group names fall back to built-in groups instead of blocking queue processing with `A group with the name  could not be found`.
-- Fixed runtime YAML binding for public option aliases so the documented `dht.lan_only: true` setting suppresses the DHT public-discoverability warning without requiring the internal `dhtRendezvous:` key.
+This release is the license-compliance rollback build. It intentionally returns
+slskdN to the pre-0.25.0 slskd 0.24.x AGPLv3 codebase and keeps only the
+fork-owned slskdN work that can ship on that base. Releases and artifacts older
+than this build are being removed from GitHub to prevent accidental installation
+of builds made from the post-0.25.0 upstream-sync line.
 
-## [0.25.1-slskdn.184] — 2026-04-27
+The build also carries the release-critical backports needed to make the 0.24.x
+line usable: Soulseek.NET client minor-version registration for slskdN,
+release-note guardrails that fail closed on oversized synthesized commit lists,
+runtime YAML alias binding for public keys such as `dht:`, controlled 503
+responses for expected remote directory browse timeouts, shutdown-safe download
+cancellation classification, fallback handling for empty cached user groups, and
+tag publishing unblocked from pre-publish Nix smoke checks that require already
+published release assets.
 
-- Fixed remote user directory browse timeouts so `POST /api/v0/users/{username}/directory` returns a controlled 503 when a Soulseek peer does not answer instead of emitting unhandled middleware stack traces.
-- Quieted controlled remote user directory browse failures so expected offline, connection, and timeout outcomes still return 404/503 without printing exception stack traces at information level.
-- Quieted shutdown download cancellation during manual deploys when retry wrappers surface expected host-stop cancellation as `AggregateException`.
+Relevant non-documentation commits preserved in this rollback line:
 
-## [0.25.1-slskdn.183] — 2026-04-26
-
-- Synced slskdN with upstream `slskd` through 0.25.1 while preserving the fork-specific feature set and packaging/release channels.
-- Reconciled overlapping upstream work for transfer retry/resume, server-side blacklist/search handling, delete-on-disk support, search result filtering/sorting, batch download tracking API coverage, and the Prometheus metrics endpoint.
-- Retained slskdN-specific additions where they still go beyond upstream, including auto-replace/download continuation workflows, folder-selection UI, saved search defaults, Prometheus metrics UI/dashboard, VPN/Gluetun integration, and slskdN packaging/release metadata.
-- Updated README, badges, docs, comparison tables, and package metadata from the 0.24.x base line to the 0.25.1 base line and continued the stable fork sequence as `0.25.1-slskdn.183`.
+- `6edafc5d3` feat(wishlist): add CSV import
+- `ca51715dd` fix(transfers): require reconnect for listen endpoint changes
+- `1fcfbcece` feat(transfers): add upload diagnostics
+- `d8df4d15c` fix(dht): use YAML option names in exposure warning
+- `00742f9cd` fix(search): publish mesh results before Soulseek timeout
+- `7214f310c` fix(aur): normalize release payload permissions
+- `33148d54d` test: remove dns-dependent unit flakes
+- `248b81981` fix(packaging): harden aur binary zip staging
+- `950a87ff3` test(mesh): validate live account mesh smoke
+- `f436d48f2` test(mesh): add optional live account smoke
+- `fff4367d1` chore(mesh): log mesh search peer outcomes
+- `73c9ee89b` fix(mesh): advertise only routable self endpoints
+- `9d60cb319` fix(search): honor API timeout seconds
+- `7457f4c4d` fix(search): separate auto-replace safety budget
+- `5c085b3f0` fix(mesh): quiet issue 209 live maintenance noise
+- `db2119ea4` fix: Improve SongID results UX
+- `b72258ba4` fix: quiet entropy and auto-replace log noise
+- `a17d43868` fix: clean startup identity log polish
+- `dc3898c66` fix: classify Soulseek read timeout churn
+- `3f901d944` fix: quiet overlay endpoint cooldown noise
+- `8a1c89643` ci: remove snap publishing from releases
+- `a1f105521` fix: avoid duplicate mesh descriptor publish on startup
+- `defa3ee75` fix: quiet expected shutdown and Soulseek timer noise
+- `abd55416d` fix: harden package startup and release announcements
+- `9c1d3f14d` fix: quiet optional user info badge misses
+- `2e4cc934c` fix: discover target framework in test launchers
+- `15ba2a423` fix: quiet shutdown-cancelled searches
+- `56a25b31d` fix: quiet controlled user info logs
+- `393e2cea4` fix: make mesh QUIC opt-in
+- `5bd0e0b88` fix: return 503 for unavailable user info
+- `c875206b3` fix: preserve spacing in DHT exposure copy
+- `f343ca80c` fix: classify Soulseek TCP double-disconnect race
+- `c26ed38c7` fix: quiet shutdown disconnect stack noise
+- `139af4e8d` fix: reduce background search log noise
+- `ed5a7dd9a` fix: quiet auto-replace shutdown cancellation
 
 ## [Unreleased]
 
-- Fixed upload queue group resolution when a user is removed from a user-defined transfer group so cached empty group names fall back to built-in groups instead of blocking queue processing with `A group with the name  could not be found`.
-- Fixed runtime YAML binding for public option aliases so the documented `dht.lan_only: true` setting suppresses the DHT public-discoverability warning without requiring the internal `dhtRendezvous:` key.
-- Updated dependency security maintenance: `uuid` is now `14.0.0`, and OpenTelemetry core/OTLP exporter now resolve the vulnerable OpenTelemetry API transitive packages to `1.15.3`.
+- **License rollback to slskd 0.24.x base.** slskdN no longer incorporates changes from slskd 0.25.0 or later; the project tracks the pre-0.25.0 plain-AGPLv3 codebase only, and future development is independent of upstream slskd. See `memory-bank/license-rollback-plan.md` for the full rationale and migration plan.
+- Backported release-critical fixes onto the 0.24.x rollback branch: release notes now fail closed instead of synthesizing oversized commit dumps, tag builds no longer block publishing on pre-publish Nix smoke checks for unpublished stable assets, public YAML aliases such as `dht:` bind in runtime configuration, remote directory browse timeouts return controlled 503 responses, shutdown-wrapped download cancellations stay out of error logs, and empty cached user groups fall back to built-in groups.
+- Changed the Soulseek client minor version from 760 to 7700000 to comply with Soulseek.NET license §5 (unique client-version requirement). The previous value conflicted with the reserved range (760-7699999) allocated to upstream slskd. slskdN claims the adjacent range 7700000-7709999, registered via PR to the Soulseek.NET README registry.
+- Removed namespace claims on the upstream `slskd` package name from AUR/RPM/deb packaging metadata (`provides`, `replaces`); slskdN packages now provide their own names only and continue to declare a file-level `conflicts` with `slskd` (both binaries install to `/usr/bin/slskd`). Drop-in compatibility at the binary path is preserved.
+- Removed the upstream slskd PNG referenced in the README header for trademark hygiene; an slskdN-original logo is pending.
+- Added a NOTICE file at the project root with the slskdN fork attestation.
 - Added CSV playlist import for issue `#216`: TuneMyMusic-style exports can now be imported from the Wishlist page into wishlist searches, with optional album terms, filters, enabled state, max results, and auto-download settings.
 - Fixed a Soulseek upload reachability bug where runtime changes to `soulseek.listen_port` or `soulseek.listen_ip_address` could restart the local listener without making the Soulseek server advertise the new endpoint; these options now correctly require a reconnect so peers do not keep trying a stale port.
-- Updated active release, packaging, and build documentation metadata to the new `0.25.1` upstream base and `0.25.1-slskdn.183` fork release line; manually deployed and smoke-checked the synced build on `kspls0`.
-- Aligned upload governor speed buckets with the upstream `transfers.groups` option tree while retaining legacy global upload speed fallback.
-- Ported upstream relay IPv6-mapped IPv4 handling so relay agent CIDR checks work behind IPv6-capable HTTP stacks.
-- Ported upstream automatic download retry/resume behavior, retry configuration docs, transfer attempt reporting, and completed-transfer report filtering.
-- Ported upstream username-pattern blacklist support, blacklist decision caching, and network/API guards for blacklisted users.
-- Ported upstream option-diff null handling so configuration changes involving nullable nested values are detected instead of crashing or being skipped.
-- Ported upstream AGPL additional-terms legal artifacts and startup license notice, with slskdN fork attribution preserved in `NOTICE` and the banner.
-- Ported upstream transfer configuration documentation and Docker user-mode documentation while retaining slskdN's existing integration key.
-- Ported upstream Docker legacy root-mode compatibility for containers without `--user` or `PUID`/`PGID`.
-- Ported upstream Docker non-root runtime support for `--user` and `PUID`/`PGID`, preserving slskdN image metadata.
-- Applied upstream favicon metadata while keeping slskdN's newer frontend dependency graph in place.
-- Confirmed upstream share-scan count synchronization matches slskdN's existing snapshot-based progress accounting.
-- Ported upstream Soulseek option diff handling so live option reconfiguration also observes the new transfer upload/download option tree.
-- Fixed the upstream transfer-option sync to compile against slskdN's existing integration option naming while preserving the new upstream retry/group option types.
-- Began upstream `slskd` 0.25.1 synchronization by porting the upstream search-again fix and date-ordered transfer migration updates, including the new transfer retry/batch metadata migration.
-- Ported upstream retry helper changes so callers can set a base retry delay and cap retained retry exception history.
-- Ported upstream transfer-option plumbing for retry and group behavior while keeping the existing slskdN legacy option surfaces present during the sync.
 - Added upload diagnostics for troubleshooting remote upload failures: `/api/v0/transfers/uploads/diagnostics` now reports configured listener state, a local TCP listener probe, share/index status, upload counters, recent upload records, and actionable warnings; inbound upload enqueue requests also emit structured `[UPLOAD-DIAG]` logs.
 - Fixed the DHT public-discoverability warning and sample config to use the YAML keys operators actually set (`dht.lan_only` / `dht.enabled`) instead of internal option object names.
 - Published mesh/pod search results as soon as the mesh overlay responds instead of waiting behind the normal Soulseek search timeout; the search detail view now refetches when early result counts appear.
@@ -138,7 +161,6 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed a live `kspls0` source-ranking database race where concurrent transfer history updates could trip `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username`. Download success/failure counters now use a single atomic SQLite upsert, with regression coverage proving concurrent first writes for the same username preserve every counter update.
 - Fixed DHT rendezvous diagnostics authentication so configured API keys can access `/api/v0/dht/status`, `/api/v0/dht/peers`, and `/api/v0/overlay/stats` instead of those endpoints falling through to bearer-only auth despite the rest of the operator API accepting API keys.
 - Resolved the remaining Dependabot security alert without suppressions: removed the vulnerable deprecated `OpenTelemetry.Exporter.Jaeger` package, kept `exporter: jaeger` working through the supported OTLP exporter path for Jaeger collectors, bumped `AWSSDK.S3` to `4.0.21.2`, and refreshed the npm lockfiles for the active Dependabot-managed package ranges.
-
 - Fixed the latest issue `#209` overlay-search root cause: reciprocal mesh connections now keep independent inbound and outbound lifecycles, outbound sockets run the same message loop as inbound sockets, and mesh search responses are routed through a request router instead of competing readers on the same TLS stream. This prevents two healthy peers from disposing or starving each other's live connection after DHT discovery succeeds, and the loopback integration proof now repeats real `MeshOverlaySearchService` searches over the same outbound connection to prove the path stays usable.
 - Fixed the AUR binary package source cache trap: the GitHub Linux glibc zips for `slskdn-bin` and `slskdn-dev` are now saved under versioned local source filenames, so yay/makepkg cannot build a package labeled with a newer `pkgver` while silently reusing an older cached release zip.
 - Fixed the issue `#209` privacy leak in DHT/overlay logs: mesh usernames, peer ids, and public endpoints now go through `OverlayLogSanitizer` before operator logs, so pasted remote logs no longer expose raw Soulseek names like the earlier `Accepted mesh connection from ...` messages.

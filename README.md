@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/slskd/slskd/master/docs/slskd.png" width="100" height="100" alt="slskdN logo">
-</p>
+<!-- TODO: replace with slskdN-original logo. Upstream slskd PNG removed. -->
 <h1 align="center">slskdN(OT)</h1>
 <p align="center"><strong>The batteries-included Soulseek web client</strong></p>
 <p align="center">
@@ -22,7 +20,7 @@
   <a href="https://snapcraft.io/slskdn"><img src="https://img.shields.io/badge/snap-slskdn-E95420?logo=snapcraft" alt="Snap"></a>
   <a href="https://community.chocolatey.org/packages/slskdn"><img src="https://img.shields.io/badge/choco-slskdn-80B5E3?logo=chocolatey" alt="Chocolatey"></a>
   <a href="https://github.com/microsoft/winget-pkgs/tree/master/manifests/s/snapetech/slskdn"><img src="https://img.shields.io/badge/winget-slskdn-00D1F1?logo=windows" alt="Winget"></a>
-  <a href="https://github.com/slskd/slskd/releases"><img src="https://img.shields.io/badge/base%20slskd-0.25.1-purple" alt="Based on slskd"></a>
+  <a href="https://github.com/slskd/slskd/releases/tag/0.24.5"><img src="https://img.shields.io/badge/base%20slskd-0.24.x-purple" alt="Based on slskd 0.24.x"></a>
   <a href="https://github.com/snapetech/slskdn/blob/main/LICENSE"><img src="https://img.shields.io/github/license/snapetech/slskdn" alt="License"></a>
   <a href="https://discord.gg/NRzj8xycQZ"><img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
@@ -59,7 +57,6 @@ Native identification pipeline that turns messy sources into ranked acquisition 
 
 ### 🔄 Auto-Replace Stuck Downloads
 Downloads get stuck. Users go offline. Transfers time out. Instead of manually searching for alternatives, slskdN does it automatically.
-- **Upstream parity** — slskd 0.25.1 now includes native same-source transfer retry/resume. slskdN stays aligned with that retry foundation and adds alternate-source search, ranking, cancellation, and replacement automation.
 - Toggle switch in Downloads header ("Auto-Replace")
 - Detects stuck downloads (timed out, errored, rejected, cancelled)
 - Searches network for alternatives, filters by extension and size (default 5%)
@@ -68,9 +65,6 @@ Downloads get stuck. Users go offline. Transfers time out. Instead of manually s
 ```bash
 --auto-replace-enabled  --auto-replace-max-size-diff-percent 5.0  --auto-replace-interval 60
 ```
-
-### 🔁 Transfer Retry & Resume
-slskd 0.25.1 added first-class retry tracking for downloads, including attempt counts, retry delays, batch-aware incomplete paths, and resume/overwrite behavior for incomplete files. slskdN uses that upstream implementation directly and layers auto-replace, source ranking, and multi-source recovery on top.
 
 ### ⭐ Wishlist / Background Search
 Save searches that run automatically in the background. Never miss rare content again.
@@ -112,16 +106,14 @@ See at a glance which users you've successfully downloaded from before.
 - Hover for exact counts
 
 ### 🚫 Block Users from Search Results
-Hide or blacklist specific users from your search results.
-- **Upstream parity** — slskd 0.25.1 now has server-side blacklist members, CIDRs, and username regex patterns that suppress search, browse, download, and messaging interactions.
-- slskdN keeps quick per-browser search-result blocking: click user icon (👤✕), then use **"Hide Blocked Users (N)"**
-- Local search-result block list stored in localStorage, persists across sessions
+Hide specific users from your search results.
+- Click user icon (👤✕) to block, **"Hide Blocked Users (N)"** toggle
+- Block list stored in localStorage, persists across sessions
 
 ### 🗑️ Delete Files on Disk
 Clean up unwanted downloads directly from the UI.
-- **Upstream parity** — slskd supports deleting files and directories from application-controlled file-management areas.
 - **"Remove and Delete File(s) from Disk"** button in Downloads
-- slskdN also adds transfer-list delete actions that delete the completed download, remove the transfer row, and clean empty parent directories
+- Deletes file AND removes from list, cleans empty parent directories
 
 ### 💾 Save Search Filters
 Set your preferred search filters once and forget them.
@@ -130,7 +122,6 @@ Set your preferred search filters once and forget them.
 
 ### 🔍 Advanced Search Filters & Page Size
 Power user filtering with a visual interface.
-- **Upstream parity** — slskd already includes search-result sorting and text filter expressions.
 - **Visual Filter Editor**: Bitrate, Duration, File Size (Min/Max), CBR/VBR/Lossless toggles
 - **Page Size**: 25, 50, 100, 200, 500 results per page
 - Settings persist across sessions
@@ -146,10 +137,8 @@ Enhanced interaction in chat rooms.
 
 ### 📂 Multi-Select Folder Downloads
 Download multiple folders at once with checkbox selection.
-- **Upstream parity** — slskd 0.25.1 includes batch download tracking/API support, including batch IDs, grouped destination handling, and retry-aware incomplete paths.
 - In Browse view, check folders and click "Download Selected"
 - Recursively collects all files in folders/subfolders
-- slskdN adds the browse-tree folder-selection UI on top of the shared batch-download foundation
 
 ### 📱 Ntfy & Pushover Notifications
 Get notified on your phone when important things happen.
@@ -187,7 +176,6 @@ groups:
 
 ### 📊 Prometheus Metrics Dashboard
 Built-in metrics UI in the System section. View transfer counts, search rates, memory usage, and all `slskd_*` metrics — no external Grafana required.
-- **Upstream parity** — slskd exposes the Prometheus `/metrics` endpoint. slskdN adds an in-app dashboard for those metrics.
 - **System → Metrics** tab
 - KPI panels: Transfers, Search, Process, Network
 - Full raw metrics table with descriptions
@@ -371,8 +359,8 @@ This issue is **Arch/AUR-only**; other platforms are unaffected by this script.
 For Linux GitHub releases, use the bundled installer helper instead of manually unpacking a zip over an existing `slskd` service install. It rewrites the systemd unit to the extracted release tree so you do not keep launching an older package-managed binary by accident.
 
 ```bash
-wget https://github.com/snapetech/slskdn/releases/download/0.25.1-slskdn.185/install-linux-release.sh
-sudo SLSKDN_VERSION=0.25.1-slskdn.185 bash install-linux-release.sh
+wget https://github.com/snapetech/slskdn/releases/download/0.24.5-slskdn.133/install-linux-release.sh
+sudo SLSKDN_VERSION=0.24.5-slskdn.133 bash install-linux-release.sh
 ```
 
 The installer places the release under `/opt/slskdn`, keeps config at `/etc/slskd/slskd.yml`, and points `slskd.service` at the extracted release.
@@ -381,9 +369,9 @@ The installer places the release under `/opt/slskdn`, keeps config at `/etc/slsk
 For latest experimental features:
 
 <!-- BEGIN_DEV_BUILD -->
-**[Development Build master →](https://github.com/snapetech/slskdn/releases/tag/master)**
+**[Development Build master →](https://github.com/snapetech/slskdn/releases/tag/master)** 
 
-Version: `0.25.1-dev-9EPOCH` | Branch: `master`
+Version: `0.24.1-dev-91769043447` | Branch: `master` 
 
 ```bash
 # Arch Linux (AUR)
@@ -483,19 +471,15 @@ dotnet run --project src/slskd/slskd.csproj
 |---------|:-----:|:------:|
 | Core Soulseek functionality | ✅ | ✅ |
 | Web UI & REST API | ✅ | ✅ |
-| Transfer retry/resume | ✅ | ✅ |
 | Auto-replace stuck downloads | ❌ | ✅ |
 | Wishlist/background search | ❌ | ✅ |
 | Multiple download destinations | ❌ | ✅ |
 | Clear all searches | ❌ | ✅ |
-| Search result filters/sorting | ✅ | ✅ |
 | Smart result ranking | ❌ | ✅ |
 | User download history badges | ❌ | ✅ |
-| Server-side blacklist for search/network interactions | ✅ | ✅ |
-| Quick per-browser search-result blocking | ❌ | ✅ |
-| Delete files on disk | ✅ | ✅ |
+| Block users from search | ❌ | ✅ |
+| Delete files on disk | ❌ | ✅ |
 | Save default filters | ❌ | ✅ |
-| Batch download tracking/API | ✅ | ✅ |
 | Multi-select folder downloads | ❌ | ✅ |
 | Ntfy/Pushover notifications | ❌ | ✅ |
 | Tabbed browsing | ❌ | ✅ |
@@ -505,7 +489,6 @@ dotnet run --project src/slskd/slskd.csproj
 | Now Playing / Scrobble | ❌ | ✅ |
 | Cancel transfers on ban | ❌ | ✅ |
 | File type restrictions per group | ❌ | ✅ |
-| Prometheus metrics endpoint | ✅ | ✅ |
 | Prometheus metrics UI | ❌ | ✅ |
 | User score badges everywhere | ❌ | ✅ |
 | **Multi-source downloads** | ❌ | ✅ |
@@ -663,9 +646,9 @@ Features that prove stable may be submitted as PRs to upstream slskd. Our auto-r
 ---
 
 ## Versioning
-slskdN follows slskd's version numbers with a suffix: `0.25.1-slskdN.1` = First slskdN release based on slskd 0.25.1
+slskdN follows slskd's version numbers with a suffix: `0.24.1-slskdN.1` = First slskdN release based on slskd 0.24.1
 
-Development builds use epoch-based versioning: `0.25.1-dev-9EPOCH` for proper sorting.
+Development builds use epoch-based versioning: `0.24.1-dev-91769014133` for proper sorting.
 
 ---
 
@@ -728,7 +711,7 @@ If you're reading this code, you should assume that:
 
 ## 📈 Development Statistics
 
-**Based on slskd 0.25.1** with extensive enhancements:
+**Based on slskd 0.24.1** with extensive enhancements:
 
 - **Commits ahead**: 4,473+ commits
 - **New systems**: 7 major subsystems (Mesh, Swarm, Security, Pods, MediaCore, VirtualSoulfind, Service Fabric)

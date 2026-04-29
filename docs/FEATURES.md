@@ -707,9 +707,9 @@ See LICENSE file for details.
 
 ## Status
 
-**Current Version**: 0.25.1 (main: 0.25.1-slskdn.185; dev: timestamped builds)
-**Branch**: master
-**Status**: Active development
+**Current Version**: 0.24.1 (main: 0.24.1-slskdn.40; dev: timestamped builds)  
+**Branch**: master  
+**Status**: Active development  
 **Production Ready**: Main channel suitable for production; dev channel is experimental.
 
 **Implemented**:

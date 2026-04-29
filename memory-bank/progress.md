@@ -1,30 +1,17 @@
-## 2026-04-26 21:22Z - Corrected 0.25.1 release numbering to slskdN sequence
+## 2026-04-29 04:47Z - Continued 0.24.x rollback backport cleanup
 
-- Corrected the release line from reset-style `0.25.1-slskdn.2` to sequence-continuing `0.25.1-slskdn.183`.
-- Canceled the incorrect `build-main-0.25.1-slskdn.2` run, deleted the incorrect `0.25.1-slskdn.2` GitHub release, and removed the wrong `build-main-0.25.1-slskdn.1` / `.2` trigger tags from origin.
-- Rebasing over the release-bot metadata commit from the canceled `.2` run preserved the generated metadata file changes while replacing the version with `.183`.
-- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and no active metadata references to `.2` remain.
+- Resumed Claude's partial `rollback/0.24.x` backport state and kept the changes surgical instead of replaying post-sync version bumps or changelog content.
+- Completed the missing selective backports: removed `nix-smoke` from the build-on-tag publish dependency chain, fixed empty cached user groups falling through to built-in groups, and added focused coverage for that regression.
+- Preserved the already-applied backports for oversized release-note guardrails, runtime YAML alias binding, directory browse timeout handling, and shutdown-wrapped download cancellation classification.
+- Validation passed: focused unit tests for `YamlConfigurationSourceTests` and `UserServiceTests`; release-note generator fail-closed smoke with `RELEASE_NOTES_SYNTHETIC_COMMIT_LIMIT=0`; `git diff --check`; and `bash ./bin/lint`.
+- Full `dotnet test --no-restore` passed unit/non-integration projects and failed only the known transient full-instance overlay `502` cases; rerunning the exact two failed integration tests passed.
 
-## 2026-04-26 21:15Z - Updated README upstream parity feature comparison
+## 2026-04-26 19:45Z - Implemented issue 216 CSV wishlist import
 
-- Reviewed README feature claims against upstream `slskd/slskd` 0.25.1 code/docs now merged into `main`.
-- Updated README feature descriptions to note upstream parity for transfer retry/resume, server-side blacklist/search blocking, application file deletion, search filters/sorting, batch download tracking/API, and Prometheus metrics endpoint support.
-- Split comparison rows so slskd gets checkmarks for exact upstream capabilities while slskdN-only layers such as auto-replace, quick browser search-result blocking, folder-selection UI, saved default filters, and in-app metrics dashboard remain marked as fork-specific.
-- Validation passed: `git diff --check`.
-
-## 2026-04-26 21:06Z - Retrying 0.25.1 stable release after pre-publish Nix smoke failure
-
-- Merged PR #217 into `main` at `881453d29`, deleted the remote/local `sync/upstream-0.25.1` branch, and pushed `build-main-0.25.1-slskdn.1`.
-- The first tag run built the web content successfully but failed before publishing because the pre-publish `Nix Package Smoke` job tried to build the stable flake from release assets that did not exist yet.
-- Documented the release-ordering gotcha in ADR-0001, removed the pre-publish Nix smoke dependency from `build-on-tag.yml`, and bumped active release metadata to `0.25.1-slskdn.183` for the replacement tag.
-- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, and `bash ./bin/lint`.
-
-## 2026-04-26 20:37Z - Updated 0.25.1 base references and deployed kspls0 manual build
-
-- Updated active user-facing and packaging metadata from the 0.24.x upstream base to `0.25.1` / `0.25.1-slskdn.183`, including README badges/install examples, build/dev documentation, workflow fallback examples, AUR/RPM/Debian/Homebrew/Chocolatey/Winget/Flatpak/Helm/TrueNAS/Synology/Snap metadata, and the stable metadata updater.
-- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `git diff --check`, full `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`.
-- Published the Linux x64 manual artifact with the release-aligned multi-file profile and deployed it to `kspls0` under `/usr/lib/slskd/releases/manual-39a4f2c16`.
-- Live `kspls0` validation: `/usr/lib/slskd/current/slskd --version` reports `0.25.1-slskdn.1+manual.39a4f2c16`, systemd is active with `NRestarts=0`, listeners are present on `5030`, `50300`, `50305`, `50306`, and `50400`, Soulseek logged in, a mesh neighbor reconnected, no current-process error/fatal/exception matches were found, and no new coredumps appeared.
+- Built GitHub issue `#216` into the Wishlist workflow with authenticated `POST /api/v0/wishlist/import/csv` and a Web UI import modal for TuneMyMusic-style CSV exports.
+- The importer parses quoted CSV, recognizes track/artist/album headers, supports optional album search terms, filter, max results, enabled state, and auto-download, and deduplicates against existing/imported wishlist searches.
+- The import creates conservative wishlist entries instead of firing an immediate bulk Soulseek search burst; auto-download follows the existing wishlist scheduler/manual run path.
+- Validation passed: focused `WishlistControllerTests`, frontend lint, frontend production build, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`. Full `dotnet test --no-restore` passed unit/non-integration projects and had one optional live mesh setup-time `502`; the exact failed integration test passed on rerun.
 
 ## 2026-04-24 16:10Z - Pushed pending fixes and checked release status
 
@@ -6872,40 +6859,8 @@ Code quality improvements were completed as part of Option A:
 
 - Investigated tester onboarding feedback about failed uploads and confusing mesh public-discoverability warnings.
 - Confirmed upload troubleshooting should start from the Soulseek listener and enqueue path: startup logs include `Listening for incoming connections on {IP}:{Port}`, remote upload attempts log `Enqueue` or explicit rejection reasons, and current uploads are exposed through `/api/v0/transfers/uploads`.
-- 2026-04-26 20:25:00Z: Completed the upstream `slskd` 0.25.1 sync evaluation/port on branch `sync/upstream-0.25.1`. Ported upstream search/migration/retry/options/Docker/docs/license/config-diff/blacklist/retries/relay changes while preserving slskdN fork features and documenting the batch retry incomplete-path gotcha. Superseded/not-applicable upstream work: frontend dependency bumps were older than slskdN's stack, .NET 10 was already present, integration-test removal does not apply, config sentinel for old `global`/`groups`/`integration` was not taken because compatibility is retained, and upstream share-count logic matched slskdN's existing implementation. Validation passed: generated web assets for integration tests, `dotnet test`, `bash ./bin/lint`, and `git diff --check`.
-
 - Fixed the DHT warning/config mismatch by documenting `dht.lan_only` in `config/slskd.example.yml` and changing the public warning from internal `DhtRendezvous.*` option names to the YAML keys operators can set.
 - Documented the public-option-name gotcha in ADR-0001 and committed that entry separately as required.
-
-## 2026-04-27 00:38:36Z
-
-- Inspected live `kspls0` after the `0.25.1-slskdn.183` install. The service is active, reports `0.25.1-slskdn.183`, has `NRestarts=0`, no coredumps, and is listening on the expected web, Soulseek, overlay, DHT, and UDP overlay ports.
-- Confirmed the last 30 minutes had no warning/error/fatal lines. The broader startup window showed expected DHT public-exposure warnings and mesh reachability churn, plus one actionable bug: remote user directory browse timeouts escaped as unhandled API 500s and repeated middleware stack traces.
-- Documented the remote-peer-timeout gotcha in ADR-0001 and committed it immediately.
-- Fixed `UsersController.Directory` so direct `TimeoutException` and wrapped `SoulseekClientException` timeout failures return a controlled `503 Unable to retrieve directory contents from user` instead of reaching global middleware.
-- Validation passed: focused `UsersControllerTests` (`13` passed), `bash ./bin/lint`, and `git diff --check`.
-
-## 2026-04-27 01:10:00Z
-
-- Continued live `kspls0` log inspection after deploying the manual `0.25.1-slskdn.183+manual.69da16e2e` build.
-- Confirmed the old directory timeout failure no longer reaches exception middleware, but expected remote peer timeouts still logged full `System.TimeoutException` stacks at information level because the controlled catch blocks passed exception objects to Serilog.
-- Updated `UsersController.Directory` to log concise expected peer failure summaries for offline, connection, and timeout cases while preserving the same controlled 404/503 API responses.
-- Validation passed: focused `UsersControllerTests` (`13` passed), `bash ./bin/lint`, and `git diff --check`.
-
-## 2026-04-27 01:25:00Z
-
-- Continued the `kspls0` manual-build soak after deploying `0.25.1-slskdn.183+manual.aed1ba25a`.
-- Found deploy-time download shutdown noise from the previous PID: active downloads cancelled by the intentional `systemctl stop` were wrapped by `Retry.Do(...)` in `AggregateException`, missed the direct shutdown cancellation catch filters, and logged error stack traces.
-- Documented the aggregate-wrapped shutdown cancellation gotcha in ADR-0001 and committed that docs-only entry before changing code.
-- Updated `DownloadService` shutdown cancellation filters to unwrap aggregate/inner exceptions and avoid error-path cleanup for expected host-stop download cancellation.
-- Published and manually deployed `0.25.1-slskdn.183+manual.17603b6ee` to `kspls0`, then restarted that same fixed binary and ran a post-restart soak. Validation was clean: service active/running, `NRestarts=0`, expected listeners present, no warning/error/stack matches, no old directory timeout signature, and no coredumps.
-
-## 2026-04-27 01:55:00Z
-
-- Prepared follow-up stable release `0.25.1-slskdn.184` for the `kspls0` live-noise fixes.
-- Updated active README/docs/package metadata and the root/staged Homebrew formula versions from `0.25.1-slskdn.183` to `0.25.1-slskdn.184`.
-- Added a curated `docs/CHANGELOG.md` section for `184` covering the controlled directory timeout response, concise expected directory failure logs, and aggregate-wrapped shutdown download cancellation fix.
-- Validation passed: `bash packaging/scripts/validate-packaging-metadata.sh`, `bash scripts/generate-release-notes.sh 0.25.1-slskdn.184 /tmp/slskdn-184-notes.md HEAD`, `bash ./bin/lint`, and `git diff --check`.
 
 ## 2026-04-20 03:20:00Z
 
@@ -6933,6 +6888,21 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`: passed
   - `git diff --check`: passed
   - manual disposable-node verification on `http://127.0.0.1:5040`: `/`, `/searches`, `/pods`, `/system/info`, and `/system/mediacore` all loaded without page errors; authenticated `/api/v0/pods` returned `200`; a burst of `25` authenticated `/api/v0/session` requests stayed `200`; repeated browser navigation produced no `429`; first-run share bootstrap logged recreate/scan without a fake corruption exception
+
+## 2026-04-26 20:08:00Z
+
+- Implemented GitHub issue `#216` by adding CSV playlist import to the Wishlist workflow instead of starting an immediate bulk Soulseek search/download burst.
+- Added a TuneMyMusic-friendly CSV parser for track/artist/album columns with quoted field support, duplicate detection, skipped-row reporting, and optional album inclusion.
+- Added authenticated `POST /api/v0/wishlist/import/csv` and frontend Wishlist import controls for CSV file/text input, filter, max results, enabled state, and auto-download.
+- Validation passed: focused `WishlistControllerTests`, frontend lint, `dotnet build --no-restore`, `bash ./bin/lint`, and `git diff --check`.
+
+## 2026-04-26 19:33:25Z
+
+- Re-audited Bas's upload failure path assuming a product bug rather than user error: listener startup, runtime listener reconfiguration, inbound peer queue handling, upload queue release, share lookup, Soulseek.NET endpoint resolution, and transfer connection setup.
+- Found a concrete reachability bug: `soulseek.listen_port` / `soulseek.listen_ip_address` runtime changes can restart the local listener through Soulseek.NET without refreshing the port advertised to the Soulseek server. That can leave peers trying the old port and make uploads look broken even though local port probes pass.
+- Documented the gotcha in ADR-0001 and committed it immediately as `d326113fc`.
+- Marked the listen endpoint options as `[RequiresReconnect]` and added `ApplicationLifecycleTests.OptionsChanged_WhenListenPortChangesWhileConnected_SetsPendingReconnect` so connected option changes now surface the required reconnect instead of silently leaving stale server-advertised endpoint state.
+- Validation: `git diff --check` for touched files passed, `bash ./bin/lint` passed, focused `ApplicationLifecycleTests` passed, full `dotnet test` passed unit/non-integration projects but hit the known optional live mesh account setup flake once (`Overlay connect request failed: 502`); rerunning that exact integration test by itself passed.
 
 ## 2026-04-20 04:05:00Z
 
@@ -6984,13 +6954,3 @@ Code quality improvements were completed as part of Option A:
 - Stored the live test credentials in the gitignored `tests/slskd.Tests.Integration/local-mesh-accounts.env` file with mode `600` and in OpenBao at `secret/slskdn/mesh-live-test-accounts`; verification read back only redacted values/metadata.
 - Fixed the full-instance harness so live-login configs emit the Soulseek server endpoint and a unique listen port per child process, and changed mutating API calls in the smoke to use API-key auth so CSRF does not block local test setup.
 - Validation: the standalone live-account test passed, and the full `TwoNodeMeshFullInstanceTests` class passed (`3` tests, including public-network live-account mesh search + pod download + byte comparison).
-
-## 2026-04-28 18:38:49Z
-
-- Resumed tester upload/DHT feedback work after the interrupted validation run.
-- Fixed the upload queue group regression where removed user-defined groups left cached users with an empty group string, causing hot paths to look up a group named `""` instead of falling back to `default`/`leechers`.
-- Re-evaluated Bas's DHT report and found the sample `dht:` block did not bind at runtime because the YAML configuration provider ignored `[YamlMember(Alias = "dht")]`; only internal `dhtRendezvous:` keys changed behavior.
-- Documented the DHT alias gotcha in ADR-0001 and committed it immediately as `9a87f04d6`.
-- Updated the YAML provider to resolve public YAML aliases to canonical option-property keys while preserving dictionary keys, and added focused regression coverage for `dht.lan_only`.
-- Validation passed: focused `YamlConfigurationSourceTests` + `UserServiceTests` (`22` tests), `git diff --check`, `bash ./bin/lint`, and full `dotnet test --no-restore` (`46` functional, `3674` unit, `276` integration tests).
-- Prepared stable release `0.25.1-slskdn.185` metadata and curated changelog notes for the upload queue group fallback and DHT YAML alias binding fixes.

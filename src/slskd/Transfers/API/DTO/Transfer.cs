@@ -129,11 +129,6 @@ namespace slskd.Transfers.API
         /// </summary>
         public string? Exception { get; set; }
 
-        /// <summary>
-        ///     Gets the number of transfer attempts.
-        /// </summary>
-        public int Attempts { get; set; }
-
         public static Transfer FromSoulseekTransfer(Soulseek.Transfer transfer)
         {
             return new Transfer()

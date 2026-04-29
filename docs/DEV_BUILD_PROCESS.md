@@ -7,20 +7,20 @@ This document maps out the complete dev build process for slskdn, including vers
 
 ### Method 1: `build-on-tag.yml` (Recommended)
 **Tag Format**: `build-dev-<VERSION>`
-- Example: `build-dev-0.25.1.dev.91769029946`
-- Version format: `0.25.1.dev.<EPOCH>` (dots for package managers)
+- Example: `build-dev-0.24.1.dev.91769029946`
+- Version format: `0.24.1.dev.<EPOCH>` (dots for package managers)
 - Creates release under the same tag name
 
 ### Method 2: `dev-release.yml` (Legacy)
 **Tag Format**: `dev-*`
-- Automatically generates version: `0.25.1-dev-9<EPOCH>`
+- Automatically generates version: `0.24.1-dev-9<EPOCH>`
 - EPOCH = Unix timestamp prefixed with '9' for lexicographic sorting
-- Example: `0.25.1-dev-91769029946`
+- Example: `0.24.1-dev-91769029946`
 
 ## Version Calculation
 
 ### Base Configuration
-- **BASE_VERSION**: `0.25.1` (hardcoded in workflow)
+- **BASE_VERSION**: `0.24.1` (hardcoded in workflow)
 - **EPOCH**: `date +%s` (Unix timestamp)
 - **TIMESTAMP**: `9${EPOCH}` (prefixed for sorting)
 
@@ -28,15 +28,15 @@ This document maps out the complete dev build process for slskdn, including vers
 
 | Context | Format | Example | Conversion |
 |---------|--------|---------|------------|
-| **.NET Build** | `0.25.1-dev-9EPOCH` | `0.25.1-dev-91769029946` | Hyphens (native) |
-| **Arch/AUR** | `0.25.1.dev.9EPOCH` | `0.25.1.dev.91769029946` | All hyphens → dots |
-| **RPM/COPR** | `0.25.1.dev.9EPOCH` | `0.25.1.dev.91769029946` | All hyphens → dots |
-| **Debian/PPA** | `0.25.1.dev.9EPOCH` | `0.25.1.dev.91769029946` | All hyphens → dots |
-| **Nix Flake** | `0.25.1-dev-9EPOCH` | `0.25.1-dev-91769029946` | Hyphens (kept) |
-| **Chocolatey** | `0.25.1-dev-9EPOCH` | `0.25.1-dev-91769029946` | Dots → hyphens |
-| **Winget** | `0.25.1-dev-9EPOCH` | `0.25.1-dev-91769029946` | Hyphens (kept) |
-| **Homebrew** | `0.25.1-dev-9EPOCH` | `0.25.1-dev-91769029946` | Hyphens (kept) |
-| **Docker** | `0.25.1-dev-9EPOCH` | `0.25.1-dev-91769029946` | Hyphens (kept) |
+| **.NET Build** | `0.24.1-dev-9EPOCH` | `0.24.1-dev-91769029946` | Hyphens (native) |
+| **Arch/AUR** | `0.24.1.dev.9EPOCH` | `0.24.1.dev.91769029946` | All hyphens → dots |
+| **RPM/COPR** | `0.24.1.dev.9EPOCH` | `0.24.1.dev.91769029946` | All hyphens → dots |
+| **Debian/PPA** | `0.24.1.dev.9EPOCH` | `0.24.1.dev.91769029946` | All hyphens → dots |
+| **Nix Flake** | `0.24.1-dev-9EPOCH` | `0.24.1-dev-91769029946` | Hyphens (kept) |
+| **Chocolatey** | `0.24.1-dev-9EPOCH` | `0.24.1-dev-91769029946` | Dots → hyphens |
+| **Winget** | `0.24.1-dev-9EPOCH` | `0.24.1-dev-91769029946` | Hyphens (kept) |
+| **Homebrew** | `0.24.1-dev-9EPOCH` | `0.24.1-dev-91769029946` | Hyphens (kept) |
+| **Docker** | `0.24.1-dev-9EPOCH` | `0.24.1-dev-91769029946` | Hyphens (kept) |
 
 ## Build Artifacts
 
@@ -80,7 +80,7 @@ This document maps out the complete dev build process for slskdn, including vers
 ## Package Manager Channels
 
 ### 1. GitHub Releases
-- **Tag**: Same as build tag (e.g., `build-dev-0.25.1.dev.91769029946`)
+- **Tag**: Same as build tag (e.g., `build-dev-0.24.1.dev.91769029946`)
 - **Assets**: All platform zip files
 - **Release Notes**: Auto-generated with commit SHA, timestamp, features list
 
@@ -89,7 +89,7 @@ This document maps out the complete dev build process for slskdn, including vers
 - **Files Updated**:
   - `PKGBUILD`: `pkgver`, `_commit`, release URL
   - `.SRCINFO`: Auto-generated from PKGBUILD
-- **Version Format**: `0.25.1.dev.9EPOCH` (all hyphens → dots)
+- **Version Format**: `0.24.1.dev.9EPOCH` (all hyphens → dots)
 - **Commit SHA**: Short SHA from build
 - **Release URL**: `https://github.com/snapetech/slskdn/releases/download/<TAG>/slskdn-dev-linux-x64.zip`
 
@@ -97,7 +97,7 @@ This document maps out the complete dev build process for slskdn, including vers
 - **Project**: `slskdn/slskdn-dev`
 - **Files Updated**:
   - `slskdn-dev.spec`: Version field
-- **Version Format**: `0.25.1.dev.9EPOCH` (all hyphens → dots)
+- **Version Format**: `0.24.1.dev.9EPOCH` (all hyphens → dots)
 - **Source**: Downloads zip from GitHub release
 - **Build**: Creates SRPM, uploads to COPR
 
@@ -105,16 +105,16 @@ This document maps out the complete dev build process for slskdn, including vers
 - **PPA**: `~keefshape/ubuntu/slskdn/`
 - **Package**: `slskdn-dev`
 - **Files Updated**:
-  - `debian/changelog`: Version with PPA revision (`0.25.1.dev.9EPOCH-1ppa<YYYYMMDDHHMM>~jammy`)
+  - `debian/changelog`: Version with PPA revision (`0.24.1.dev.9EPOCH-1ppa<YYYYMMDDHHMM>~jammy`)
   - `debian/control`: Package name, conflicts, replaces
-- **Version Format**: `0.25.1.dev.9EPOCH` (all hyphens → dots)
+- **Version Format**: `0.24.1.dev.9EPOCH` (all hyphens → dots)
 - **GPG Key**: Required for signing (from `GPG_PRIVATE_KEY` secret)
 - **Revision**: Timestamp-based (`date +%Y%m%d%H%M`)
 
 ### 5. Docker (GHCR)
 - **Registry**: `ghcr.io/snapetech/slskdn`
 - **Tags**:
-  - `dev-<VERSION>` (e.g., `dev-0.25.1-dev-91769029946`)
+  - `dev-<VERSION>` (e.g., `dev-0.24.1-dev-91769029946`)
   - `dev-latest` (always points to latest dev build)
 - **Platforms**: `linux/amd64`, `linux/arm64`
 - **Build Args**: `VERSION=<hyphenated-version>`
@@ -123,7 +123,7 @@ This document maps out the complete dev build process for slskdn, including vers
 - **File**: `flake.nix`
 - **Branch**: `experimental/multi-source-swarm` (or `experimental/whatAmIThinking`)
 - **Updates**:
-  - `devVersion`: `"0.25.1-dev-9EPOCH"`
+  - `devVersion`: `"0.24.1-dev-9EPOCH"`
   - `devSources.<platform>.sha256`: Base32-encoded SHA256
   - `devSources.<platform>.url`: Release download URL
 - **Hash Calculation**: `nix-hash --type sha256 --flat --base32 <file>`
@@ -136,7 +136,7 @@ This document maps out the complete dev build process for slskdn, including vers
 - **Files Updated**:
   - `slskdn.nuspec`: Version
   - `chocolateyinstall.ps1`: URL, checksum
-- **Version Format**: `0.25.1-dev-9EPOCH` (dots → hyphens: `.dev.` → `-dev-`)
+- **Version Format**: `0.24.1-dev-9EPOCH` (dots → hyphens: `.dev.` → `-dev-`)
 - **Checksum**: SHA256 hex
 - **Channel**: Pre-release (`--prerelease` flag)
 
@@ -146,7 +146,7 @@ This document maps out the complete dev build process for slskdn, including vers
 - **Files Updated**:
   - `installer.yaml`: PackageVersion, InstallerUrl, InstallerSha256
   - `version.yaml`: PackageVersion
-- **Version Format**: `0.25.1-dev-9EPOCH` (hyphens kept)
+- **Version Format**: `0.24.1-dev-9EPOCH` (hyphens kept)
 - **Stable submission**: Main releases can auto-submit a PR to `microsoft/winget-pkgs` via `wingetcreate --submit` when `WINGETCREATE_GITHUB_TOKEN` is configured
 - **Dev note**: Dev releases still only update the local manifests and do not auto-submit to `winget-pkgs`
 
@@ -157,7 +157,7 @@ This document maps out the complete dev build process for slskdn, including vers
 - **Formula**: `Formula/slskdn-dev.rb`
 - **Files Updated**:
   - Formula file with version, URLs, SHA256 for all platforms
-- **Version Format**: `0.25.1-dev-9EPOCH` (hyphens kept)
+- **Version Format**: `0.24.1-dev-9EPOCH` (hyphens kept)
 - **SHA256**: Calculated for Linux, macOS x64, macOS ARM64
 - **URLs**: Platform-specific release download URLs
 
@@ -218,13 +218,13 @@ This document maps out the complete dev build process for slskdn, including vers
 ## Version Iteration Example
 
 ### Current State (from flake.nix)
-- **devVersion**: `0.25.1-dev-91769029946`
+- **devVersion**: `0.24.1-dev-91769029946`
 - **Timestamp**: `91769029946` (prefixed epoch)
 
 ### Next Dev Build
-1. Create tag: `build-dev-0.25.1.dev.$(date +%s | sed 's/^/9/')`
-   - Example: `build-dev-0.25.1.dev.91770000000`
-2. Push tag: `git push origin build-dev-0.25.1.dev.91770000000`
+1. Create tag: `build-dev-0.24.1.dev.$(date +%s | sed 's/^/9/')`
+   - Example: `build-dev-0.24.1.dev.91770000000`
+2. Push tag: `git push origin build-dev-0.24.1.dev.91770000000`
 3. Workflow automatically:
    - Builds all platforms
    - Calculates SHA256 hashes

@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Messaging;
 using slskd.Messaging.API;
-using slskd.Users;
 using Xunit;
 
 public class ConversationsControllerTests
@@ -60,7 +59,6 @@ public class ConversationsControllerTests
         return new ConversationsController(
             stateMonitor.Object,
             messagingService.Object,
-            Mock.Of<IUserService>(),
             optionsSnapshot.Object);
     }
 }

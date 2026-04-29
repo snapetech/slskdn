@@ -29,7 +29,6 @@ namespace slskd.Messaging.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using slskd.Core.Security;
-    using slskd.Users;
 
     /// <summary>
     ///     Conversations.
@@ -47,23 +46,19 @@ namespace slskd.Messaging.API
         /// </summary>
         /// <param name="applicationStateMonitor"></param>
         /// <param name="messagingService"></param>
-        /// <param name="userService"></param>
         /// <param name="optionsSnapshot"></param>
         public ConversationsController(
             IStateMonitor<State> applicationStateMonitor,
             IMessagingService messagingService,
-            IUserService userService,
             IOptionsSnapshot<Options> optionsSnapshot)
         {
             ApplicationStateMonitor = applicationStateMonitor;
             Messages = messagingService;
-            Users = userService;
             OptionsSnapshot = optionsSnapshot;
         }
 
         private IStateMonitor<State> ApplicationStateMonitor { get; }
         private IMessagingService Messages { get; }
-        private IUserService Users { get; }
         private IOptionsSnapshot<Options> OptionsSnapshot { get; }
 
         /// <summary>
@@ -305,11 +300,6 @@ namespace slskd.Messaging.API
             if (string.IsNullOrWhiteSpace(message))
             {
                 return BadRequest("message is required");
-            }
-
-            if (Users.IsBlacklisted(username))
-            {
-                return StatusCode(200);
             }
 
             await Messages.Conversations.SendMessageAsync(username, message);

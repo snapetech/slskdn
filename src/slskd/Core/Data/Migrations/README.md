@@ -11,7 +11,7 @@ The `Migrator` creates a backup of each database prior to running any migrations
 Each migration must be created as a class that implements the `IMigration` interface.  The naming convention for migration classes is:
 
 ```
-Z<YYYY_MM_DD>_<ShortDescription>Migration
+Z<MMDDYYYY>_<ShortDescription>Migration
 ```
 
 Migrations MUST:

@@ -79,7 +79,6 @@ namespace slskd.Integrations.FTP
                     isRetryable: (attempts, ex) => true,
                     onFailure: (attempts, ex) => Log.LogInformation("Failed attempt #{Attempts} to upload {Filename} to FTP: {Message}", attempts, fileAndParentDirectory, ex.Message),
                     maxAttempts: FtpOptions.RetryAttempts,
-                    baseDelayInMilliseconds: 1000,
                     maxDelayInMilliseconds: 30000);
             }
             catch (RetryException ex)

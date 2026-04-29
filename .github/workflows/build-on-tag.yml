@@ -2,14 +2,14 @@ name: Build on Tag
 
 # Trigger: push tag matching build-dev-* or build-main-*
 #
-# Dev builds:   Version must increase for PPA. Use build-dev-0.25.1.dev.9$(date +%s)
+# Dev builds:   Version must increase for PPA. Use build-dev-0.24.3.dev.9$(date +%s)
 #               (9 + Unix epoch). Do NOT use date +%Y%m%d — PPA rejects "older" version.
 #               Push ONLY the tag (do not push master in the same go), so only Build on Tag runs.
-# Main builds:  build-main-0.25.1-slskdn.44
+# Main builds:  build-main-0.24.3-slskdn.44
 #
 # Examples:
-#   git tag build-dev-0.25.1.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
-#   git tag build-main-0.25.1-slskdn.44 && git push origin $_
+#   git tag build-dev-0.24.3.dev.9$(date +%s) && git push origin $(git describe --tags --abbrev=0)
+#   git tag build-main-0.24.3-slskdn.44 && git push origin $_
 
 on:
   push:
@@ -498,7 +498,7 @@ jobs:
           cp packaging/rpm/slskdn-dev.spec ~/rpmbuild/SPECS/
           
           # Convert version for RPM (replace ALL hyphens with dots)
-          # 0.25.1-dev-20251209-203936 → 0.25.1.dev.20251209.203936
+          # 0.24.1-dev-20251209-203936 → 0.24.1.dev.20251209.203936
           RPM_VERSION=$(echo "${{ needs.parse.outputs.version }}" | sed 's/-/./g')
           
           # Update version
@@ -1172,7 +1172,7 @@ jobs:
             "${{ github.sha }}"
           cat release/RELEASE_NOTES.md
 
-      # Creates release under VERSION tag (e.g., 0.25.1-slskdn.35) for backward compatibility
+      # Creates release under VERSION tag (e.g., 0.24.1-slskdn.35) for backward compatibility
       # Build was triggered by build-main-VERSION tag, but release uses traditional format
       - name: Create Main Release
         uses: softprops/action-gh-release@v2

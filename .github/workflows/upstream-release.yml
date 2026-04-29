@@ -38,7 +38,7 @@ jobs:
           
           # Get our current base version (from latest release tag)
           OUR_LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-slskdn.0")
-          # Extract base version (e.g., 0.25.1 from 0.25.1-slskdn.5)
+          # Extract base version (e.g., 0.24.1 from 0.24.1-slskdn.5)
           CURRENT_BASE=$(echo "$OUR_LATEST" | sed 's/-slskdn.*//')
           echo "Our current base: $CURRENT_BASE"
           echo "current_base=${CURRENT_BASE}" >> $GITHUB_OUTPUT

@@ -1,5 +1,5 @@
 Name:           slskdn-dev
-Version:        0.25.1.dev.90000000000
+Version:        0.24.1.dev.202412080000
 Release:        1%{?dist}
 Summary:        🔋 The batteries included fork of slskd with 24+ new features [EXPERIMENTAL]
 
@@ -15,15 +15,13 @@ BuildRequires:  systemd-rpm-macros
 BuildRequires:  unzip
 Requires(pre):  shadow-utils
 Requires:       systemd
-Provides:       slskd
-Provides:       slskdn
+Provides:       slskdn-dev
 
 # Disable debuginfo - this is a pre-built .NET binary
 %global debug_package %{nil}
 %define __strip /bin/true
 Conflicts:      slskd
 Conflicts:      slskdn
-Obsoletes:      slskd < %{version}
 
 %description
 The batteries included fork of slskd with 24+ new features: decentralized pods,
@@ -115,7 +113,7 @@ echo ""
 %dir %attr(755,slskd,slskd) %{_sharedstatedir}/slskd/incomplete
 
 %changelog
-* Sun Dec 08 2024 snapetech <slskdn@proton.me> - 0.25.1.dev.90000000000-1
+* Sun Dec 08 2024 snapetech <slskdn@proton.me> - 0.24.1.dev.202412080000-1
 - Initial dev release from experimental/multi-source-swarm
 - Multi-source swarm downloads with content verification
 - DHT mesh network for peer discovery

@@ -11,20 +11,10 @@
 
 *No high priority tasks currently active
 
-- [x] **chore**: Update active upstream-base references to `0.25.1` and smoke the synced build on `kspls0`.
- - Status: completed (2026-04-26)
+- [x] **release**: Backport release-critical fixes onto the 0.24.x rollback branch.
+ - Status: completed (2026-04-29)
  - Priority: P1
- - Notes: Updated active README/download examples, build/dev docs, workflow fallbacks, and packaging metadata to `0.25.1` / `0.25.1-slskdn.183`. Validation passed with packaging metadata checks, `git diff --check`, full Release build/tests via `bash ./bin/build --version 0.25.1-slskdn.1+manual.39a4f2c16`, and `bash ./bin/lint`. Deployed manual Linux x64 build `0.25.1-slskdn.1+manual.39a4f2c16` to `kspls0` at `/usr/lib/slskd/releases/manual-39a4f2c16`; service stayed active with `NRestarts=0`, expected listeners, Soulseek login, mesh reconnect, no current-process issue matches, and no new coredumps.
-
-- [x] **docs**: Update README upstream parity comparison after the 0.25.1 sync.
- - Status: completed (2026-04-26)
- - Priority: P2
- - Notes: Marked slskd as supporting upstream 0.25.1 capabilities now present in both projects, including transfer retry/resume, search filters/sorting, server-side blacklist interactions, app-controlled file deletion, batch download tracking/API, and Prometheus metrics endpoint support. Split slskdN-only UI/automation layers into separate rows so auto-replace, quick browser-side blocking, folder-selection UI, saved default filters, and the metrics dashboard remain fork-specific. Validation passed with `git diff --check`.
-
-- [x] **release**: Correct 0.25.1 stable numbering to continue the slskdN sequence.
- - Status: completed (2026-04-26)
- - Priority: P1
- - Notes: Canceled the wrong `build-main-0.25.1-slskdn.2` run, deleted the incorrect `0.25.1-slskdn.2` release, removed wrong `.1`/`.2` build trigger tags, and updated active metadata to `0.25.1-slskdn.183`. Validation passed with packaging metadata checks and `git diff --check`.
+ - Notes: Selectively carried forward the post-rollback fixes needed for stable 0.24.x releases without pulling 0.25.x sync content: release-note generation now refuses oversized synthesized commit dumps, tag publishing no longer waits on pre-publish Nix smoke for unpublished assets, runtime YAML binding honors public aliases like `dht:`, directory browse peer timeouts return controlled `503` responses, shutdown-wrapped download cancellations are classified before error logging, and empty cached user groups resolve to built-in groups. Focused unit validation passed for YAML alias binding and user-group fallback.
 
 - [x] **ux**: Publish mesh search results before Soulseek timeout completion.
  - Status: completed (2026-04-24)
@@ -1131,10 +1121,6 @@
 
 - [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.
 
-- [x] Sync slskdN with upstream `slskd` 0.25.1
-  - Status: completed (2026-04-26)
-  - Notes: Ported upstream changes through `upstream/master` `b5bc69742` onto `sync/upstream-0.25.1`, preserving slskdN-specific features and compatibility. Upstream implementations replaced or completed local partials for transfer retry/resume, transfer option groups, blacklist username patterns, option diff null handling, Docker user/root behavior, legal notice artifacts, and relay IPv6 CIDR handling. Validation passed with `dotnet test`, `bash ./bin/lint`, and `git diff --check`.
-
 - [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and fix duplicate startup descriptor publish noise
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package, CLI/API version, service state, Soulseek login, shares, DHT, and overlay listener are healthy on `kspls0`. Current-process logs have no fresh fatal/error/exception/502/coredump/search-rate noise after the auto-replace cycle. Fixed duplicate startup MeshDHT self-descriptor publication by letting `MeshBootstrapService` own the startup publish and starting `PeerDescriptorRefreshService` periodic scheduling from current time. Validation passed with focused and full unit tests, Release build, lint, and diff check.
@@ -1254,23 +1240,9 @@
 - [x] Add optional live-account mesh search/transfer smoke
   - Status: completed (2026-04-22)
   - Notes: Added and live-validated a full-instance integration smoke that uses `tests/slskd.Tests.Integration/local-mesh-accounts.env` or matching environment variables to start two real slskdN processes with live Soulseek test credentials, wait for login, host a generated probe file on beta, mesh-search it from alpha, download it through the pod path, and byte-compare the transfer. Fresh short alphanumeric Soulseek test accounts were generated, stored in the gitignored env file and in OpenBao at `secret/slskdn/mesh-live-test-accounts`, and `TwoNodeMeshFullInstanceTests` passed with the public-network live-account path exercised.
-
-- [x] Fix user directory browse timeout API noise
-  - Status: completed (2026-04-27)
-  - Notes: Live `kspls0` `0.25.1-slskdn.183` logs showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when remote Soulseek peers did not answer within the Soulseek.NET 5-second directory wait. `UsersController.Directory` now returns a controlled 503 for direct and wrapped timeout failures, and follow-up log inspection removed expected peer exception objects from the controlled directory failure logs so normal 404/503 outcomes do not print stack traces at information level. Focused controller coverage passed.
-
-- [x] Fix shutdown download cancellation stack noise
-  - Status: completed (2026-04-27)
-  - Notes: Manual `kspls0` deploys while downloads were in flight showed `Retry.Do(...)` wrapping expected host-stop cancellation in `AggregateException`, bypassing the direct `OperationCanceledException` shutdown filters and logging error stacks. `DownloadService` now classifies aggregate-wrapped shutdown cancellation before generic failure handling.
-
-- [x] Prepare follow-up stable release 0.25.1-slskdn.184
-  - Status: completed (2026-04-27)
-  - Notes: Updated active release docs/package metadata from `0.25.1-slskdn.183` to `0.25.1-slskdn.184` and added curated changelog notes for the directory timeout/logging and shutdown cancellation fixes. Validation passed with packaging metadata validation, release-note generation, `bash ./bin/lint`, and `git diff --check`.
-
-- [x] Fix tester upload queue group fallback and DHT YAML alias binding
-  - Status: completed (2026-04-28)
-  - Notes: `UserService.GetGroup()` now treats empty cached group names as unset so upload queue/governor paths fall back to built-in groups instead of looking up `""`. Runtime YAML binding now honors public `[YamlMember]` aliases such as `dht:` so `dht.lan_only: true` suppresses the public DHT exposure warning without requiring the internal `dhtRendezvous:` key.
-
-- [x] Prepare stable release 0.25.1-slskdn.185
-  - Status: completed (2026-04-28)
-  - Notes: Updated active release docs/package metadata from `0.25.1-slskdn.184` to `0.25.1-slskdn.185` and added curated changelog notes for the upload queue group fallback and DHT YAML alias binding fixes.
+- [x] Fix Soulseek listen endpoint reconnect semantics for upload reachability
+  - Status: completed (2026-04-26)
+  - Notes: Deep upload-path audit found that runtime listen endpoint changes can move the local Soulseek.NET listener without forcing server endpoint advertisement to refresh. Marked `soulseek.listen_ip_address` and `soulseek.listen_port` as reconnect-required and added regression coverage for connected option changes setting `PendingReconnect`.
+- [x] Build CSV playlist import into Wishlist for issue #216
+  - Status: completed (2026-04-26)
+  - Notes: Added `POST /api/v0/wishlist/import/csv` and a Wishlist page import modal for TuneMyMusic-style CSV exports. Rows are imported as conservative wishlist searches with optional auto-download, filter, max results, enabled state, and album inclusion; import deduplicates against existing/imported rows and does not immediately burst-search the Soulseek network.

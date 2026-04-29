@@ -78,11 +78,6 @@
 #     auto_replace_stuck: true
 #     auto_replace_threshold: 5.0
 #     auto_replace_interval: 60
-#     retry:
-#       incomplete: resume # 'overwrite' or 'resume'
-#       attempts: 3
-#       delay: 5000 # initial time between retries, in milliseconds
-#       max_delay: 60000 # maximum time between retries, in milliseconds
 #   wishlist:
 #     enabled: true
 #     interval: 60
@@ -147,8 +142,6 @@
 #   blacklisted:
 #     members:
 #       - <username to blacklist>
-#     patterns:
-#       - <regular expression to match against usernames>
 #     cidrs:
 #       - <CIDR to blacklist, e.g. 255.255.255.255/32>
 #   user_defined:

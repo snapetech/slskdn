@@ -12,9 +12,7 @@ Rules-Requires-Root: no
 Package: slskdn
 Architecture: amd64 arm64
 Depends: ${misc:Depends}, libicu76 | libicu74 | libicu70
-Provides: slskd
 Conflicts: slskd
-Replaces: slskd
 Description: 🔋 The batteries included fork of slskd with 24+ new features
  Decentralized pods, content validation, swarm downloads, DHT mesh networking,
  auto-replace, wishlist, security hardening. Modern web UI for the Soulseek

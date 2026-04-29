@@ -257,12 +257,6 @@ namespace slskd
         public GlobalOptions Global { get; init; } = new GlobalOptions();
 
         /// <summary>
-        ///     Gets transfer options.
-        /// </summary>
-        [Validate]
-        public TransfersOptions Transfers { get; init; } = new TransfersOptions();
-
-        /// <summary>
         ///     Gets the DhtRendezvous options.
         /// </summary>
         [YamlMember(Alias = "dht")]
@@ -1262,42 +1256,6 @@ namespace slskd
                 [Description("enable cost-based scheduling for multi-source downloads")]
                 [RequiresRestart]
                 public bool CostBasedScheduling { get; init; } = true;
-
-                /// <summary>
-                ///     Gets download retry options.
-                /// </summary>
-                [Validate]
-                public RetryOptions Retry { get; init; } = new RetryOptions();
-
-                /// <summary>
-                ///     Download retry options.
-                /// </summary>
-                public class RetryOptions
-                {
-                    /// <summary>
-                    ///     Gets the maximum number of times to retry a failed transfer.
-                    /// </summary>
-                    [Range(1, 10)]
-                    public int Attempts { get; init; } = 3;
-
-                    /// <summary>
-                    ///     Gets the base delay, in milliseconds, between retry attempts.
-                    /// </summary>
-                    [Range(1000, 600000)]
-                    public int Delay { get; init; } = 5000;
-
-                    /// <summary>
-                    ///     Gets the maximum delay, in milliseconds, between retry attempts.
-                    /// </summary>
-                    [Range(30000, 3600000)]
-                    public int MaxDelay { get; init; } = 60000;
-
-                    /// <summary>
-                    ///     Gets the strategy for handling incomplete files upon retry.
-                    /// </summary>
-                    [Enum(typeof(slskd.Transfers.RetryIncompleteStrategy))]
-                    public string Incomplete { get; init; } = slskd.Transfers.RetryIncompleteStrategy.Overwrite.ToString().ToLowerInvariant();
-                }
             }
         }
 
@@ -1523,8 +1481,8 @@ namespace slskd
                 /// <summary>
                 ///     Gets the queue strategy for the group.
                 /// </summary>
-                [Enum(typeof(slskd.Transfers.QueueStrategy))]
-                public string Strategy { get; init; } = slskd.Transfers.QueueStrategy.RoundRobin.ToString().ToLowerInvariant();
+                [Enum(typeof(Transfers.QueueStrategy))]
+                public string Strategy { get; init; } = Transfers.QueueStrategy.RoundRobin.ToString().ToLowerInvariant();
 
                 /// <summary>
                 ///     Gets the limit for the total number of upload slots for the group.
@@ -1544,204 +1502,6 @@ namespace slskd
                 ///     Empty means no restriction.
                 /// </summary>
                 public string[] AllowedFileTypes { get; init; } = Array.Empty<string>();
-            }
-        }
-
-        /// <summary>
-        ///     Transfer options.
-        /// </summary>
-        public class TransfersOptions
-        {
-            /// <summary>
-            ///     Gets global upload options.
-            /// </summary>
-            [Validate]
-            public GlobalUploadOptions Upload { get; init; } = new GlobalUploadOptions();
-
-            /// <summary>
-            ///     Gets global download options.
-            /// </summary>
-            [Validate]
-            public GlobalDownloadOptions Download { get; init; } = new GlobalDownloadOptions();
-
-            /// <summary>
-            ///     Gets user groups.
-            /// </summary>
-            [Validate]
-            public GroupsOptions Groups { get; init; } = new GroupsOptions();
-
-            /// <summary>
-            ///     Global upload options.
-            /// </summary>
-            public class GlobalUploadOptions
-            {
-                [Argument(default, "upload-slots")]
-                [EnvironmentVariable("UPLOAD_SLOTS")]
-                [Description("the total number of upload slots")]
-                [RequiresRestart]
-                [Range(1, int.MaxValue)]
-                public int Slots { get; init; } = 10;
-
-                [Argument(default, "upload-speed-limit")]
-                [EnvironmentVariable("UPLOAD_SPEED_LIMIT")]
-                [Description("the total upload speed limit")]
-                [Range(1, int.MaxValue)]
-                public int SpeedLimit { get; init; } = int.MaxValue;
-
-                [Validate]
-                public LimitsOptions Limits { get; init; } = new LimitsOptions();
-
-                [Validate]
-                public ScheduledSpeedLimitOptions ScheduledLimits { get; init; } = new();
-            }
-
-            /// <summary>
-            ///     Global download options.
-            /// </summary>
-            public class GlobalDownloadOptions
-            {
-                [Argument(default, "download-slots")]
-                [EnvironmentVariable("DOWNLOAD_SLOTS")]
-                [Description("the total number of download slots")]
-                [RequiresRestart]
-                [Range(1, int.MaxValue)]
-                public int Slots { get; init; } = int.MaxValue;
-
-                [Argument(default, "download-speed-limit")]
-                [EnvironmentVariable("DOWNLOAD_SPEED_LIMIT")]
-                [Description("the total download speed limit")]
-                [Range(1, int.MaxValue)]
-                public int SpeedLimit { get; init; } = int.MaxValue;
-
-                [Validate]
-                public ScheduledSpeedLimitOptions ScheduledLimits { get; init; } = new();
-
-                [Validate]
-                public RetryOptions Retry { get; init; } = new RetryOptions();
-
-                public class RetryOptions
-                {
-                    [Range(1, 10)]
-                    public int Attempts { get; init; } = 3;
-
-                    [Range(1000, 600000)]
-                    public int Delay { get; init; } = 5000;
-
-                    [Range(30000, 3600000)]
-                    public int MaxDelay { get; init; } = 60000;
-
-                    [Enum(typeof(slskd.Transfers.RetryIncompleteStrategy))]
-                    public string Incomplete { get; init; } = slskd.Transfers.RetryIncompleteStrategy.Overwrite.ToString().ToLowerInvariant();
-                }
-            }
-
-            /// <summary>
-            ///     User groups.
-            /// </summary>
-            public class GroupsOptions : IValidatableObject
-            {
-                [Validate]
-                public BaseGroupOptions Default { get; init; } = new BaseGroupOptions();
-
-                [Validate]
-                public LeecherOptions Leechers { get; init; } = new LeecherOptions();
-
-                [Validate]
-                public BlacklistedOptions Blacklisted { get; init; } = new BlacklistedOptions();
-
-                [Validate]
-                public Dictionary<string, UserDefinedOptions> UserDefined { get; init; } = new Dictionary<string, UserDefinedOptions>();
-
-                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-                {
-                    var builtInGroups = new[] { Application.PrivilegedGroup, Application.DefaultGroup, Application.LeecherGroup };
-                    var intersection = UserDefined.Keys.Intersect(builtInGroups);
-
-                    return intersection.Select(group => new ValidationResult($"User defined group '{group}' collides with a built in group.  Choose a different name."));
-                }
-
-                public class BaseGroupOptions
-                {
-                    [Validate]
-                    public GroupUploadOptions Upload { get; init; } = new GroupUploadOptions();
-
-                    public class GroupUploadOptions
-                    {
-                        [Range(1, int.MaxValue)]
-                        public int Priority { get; init; } = 1;
-
-                        [Enum(typeof(slskd.Transfers.QueueStrategy))]
-                        public string Strategy { get; init; } = slskd.Transfers.QueueStrategy.RoundRobin.ToString().ToLowerInvariant();
-
-                        [Range(1, int.MaxValue)]
-                        public int Slots { get; init; } = int.MaxValue;
-
-                        [Range(1, int.MaxValue)]
-                        public int SpeedLimit { get; init; } = int.MaxValue;
-
-                        [Validate]
-                        public LimitsOptions Limits { get; init; } = new LimitsOptions();
-                    }
-                }
-
-                public class LeecherOptions : BaseGroupOptions
-                {
-                    [Validate]
-                    public ThresholdOptions Thresholds { get; init; } = new ThresholdOptions();
-
-                    public class ThresholdOptions
-                    {
-                        [Range(1, int.MaxValue)]
-                        public int Files { get; init; } = 1;
-
-                        [Range(1, int.MaxValue)]
-                        public int Directories { get; init; } = 1;
-                    }
-                }
-
-                public class BlacklistedOptions : IValidatableObject
-                {
-                    public string[] Members { get; init; } = Array.Empty<string>();
-                    public string[] Patterns { get; init; } = Array.Empty<string>();
-                    public string[] Cidrs { get; init; } = Array.Empty<string>();
-
-                    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-                    {
-                        var results = new List<ValidationResult>();
-
-                        foreach (var pattern in Patterns ?? Array.Empty<string>())
-                        {
-                            if (!pattern.IsValidRegex())
-                            {
-                                results.Add(new ValidationResult($"Pattern '{pattern}' is not a valid regular expression"));
-                            }
-                        }
-
-                        foreach (var cidr in Cidrs ?? Array.Empty<string>())
-                        {
-                            try
-                            {
-                                if (cidr.StartsWith("::ffff", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    throw new Exception("IPv4 mapped IPv6 addresses are not allowed");
-                                }
-
-                                _ = IPAddressRange.Parse(cidr);
-                            }
-                            catch (Exception)
-                            {
-                                results.Add(new ValidationResult($"CIDR {cidr} is invalid"));
-                            }
-                        }
-
-                        return results;
-                    }
-                }
-
-                public class UserDefinedOptions : BaseGroupOptions
-                {
-                    public string[] Members { get; init; } = Array.Empty<string>();
-                }
             }
         }
 

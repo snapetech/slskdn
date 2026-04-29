@@ -183,9 +183,8 @@ namespace slskd.Relay
                         Log.Warning("Failed attempt #{Attempts} to connect to relay controller: {Message}", attempts, ex.Message);
                     },
                     maxAttempts: int.MaxValue,
-                    baseDelayInMilliseconds: 1000,
                     maxDelayInMilliseconds: 30000,
-                    cancellationToken: StartCancellationTokenSource.Token);
+                    StartCancellationTokenSource.Token);
             }
             finally
             {
@@ -682,7 +681,6 @@ namespace slskd.Relay
                     isRetryable: (_, _) => true,
                     onFailure: (_, ex) => Log.Error(ex, "Failed to handle file download notification for {Filename} ({Token})", filename, GetRelayTokenLogId(token)),
                     maxAttempts: 3,
-                    baseDelayInMilliseconds: 1000,
                     maxDelayInMilliseconds: 60000);
 
                     Log.Information("File {Filename} successfully downloaded to {Destination}", filename, destinationFile);
@@ -716,8 +714,6 @@ namespace slskd.Relay
                 Log.Information("Uploading shares...");
 
                 await UploadSharesAsync();
-
-                Log.Information("Shares uploaded. Ready to relay files.");
             }
             catch (Exception ex)
             {
@@ -728,6 +724,8 @@ namespace slskd.Relay
                 await StopAsync();
                 _ = StartAsync();
             }
+
+            Log.Information("Shares uploaded. Ready to relay files.");
         }
 
         private Task HubConnection_Reconnecting(Exception? arg)
@@ -795,9 +793,8 @@ namespace slskd.Relay
                     isRetryable: (_, _) => true,
                     onFailure: (count, ex) => Log.Warning("Failed attempt #{Attempts} to obtain share upload token: {Message}", count, ex.Message),
                     maxAttempts: 3,
-                    baseDelayInMilliseconds: 1000,
                     maxDelayInMilliseconds: 5000,
-                    cancellationToken: cancellationToken);
+                    cancellationToken);
 
                 Log.Debug("Received share upload token {Token}", GetRelayTokenLogId(token));
 

@@ -59,7 +59,7 @@ jobs:
             BASE_VERSION=$(sed -n 's#^slskdn (\([0-9]\+\.[0-9]\+\.[0-9]\+\)\.slskdn\.[0-9]\+.*#\1#p' packaging/debian/changelog | head -n1)
           fi
           if [ -z "$BASE_VERSION" ]; then
-            BASE_VERSION='0.25.1'
+            BASE_VERSION='0.24.0'
           fi
 
           SHORT_SHA=$(git rev-parse --short HEAD)
@@ -376,7 +376,7 @@ jobs:
           SYS_SUM=$(sha256sum ../packaging/aur/slskd.sysusers | awk '{print $1}')
           
           # Convert version for Arch (replace ALL hyphens with dots)
-          # 0.25.1-dev-20251209-203936 → 0.25.1.dev.20251209.203936
+          # 0.24.1-dev-20251209-203936 → 0.24.1.dev.20251209.203936
           ARCH_VERSION=$(echo "${{ needs.build.outputs.dev_version }}" | sed 's/-/./g')
           
           # Update version, commit, release tag, and checksums (zip checksum stays SKIP)
@@ -670,7 +670,7 @@ jobs:
           cp packaging/rpm/slskdn-dev.spec ~/rpmbuild/SPECS/
           
           # Convert version for RPM (replace ALL hyphens with dots)
-          # 0.25.1-dev-20251209-203936 → 0.25.1.dev.20251209.203936
+          # 0.24.1-dev-20251209-203936 → 0.24.1.dev.20251209.203936
           RPM_VERSION=$(echo "${{ needs.build.outputs.dev_version }}" | sed 's/-/./g')
           
           # Update version

@@ -1,5 +1,5 @@
 package="slskdn"
-version="0.25.1"
+version="0.24.1"
 arch="noarch"
 description="A decentralized mesh community service for Soulseek with VPN and advanced networking - Next Generation"
 description_enu="A decentralized mesh community service for Soulseek with VPN and advanced networking - Next Generation"

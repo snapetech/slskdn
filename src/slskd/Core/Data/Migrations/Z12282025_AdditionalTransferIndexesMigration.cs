@@ -1,4 +1,4 @@
-// <copyright file="Z2025_12_28_AdditionalTransferIndexesMigration.cs" company="slskd Team">
+// <copyright file="Z12282025_AdditionalTransferIndexesMigration.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -25,14 +25,14 @@ using Serilog;
 /// <summary>
 ///     Adds additional indexes to the Transfers table for Removed, Username/Filename, and user upload statistics.
 /// </summary>
-public class Z2025_12_28_AdditionalTransferIndexesMigration : IMigration
+public class Z12282025_AdditionalTransferIndexesMigration : IMigration
 {
-    public Z2025_12_28_AdditionalTransferIndexesMigration(ConnectionStringDictionary connectionStrings)
+    public Z12282025_AdditionalTransferIndexesMigration(ConnectionStringDictionary connectionStrings)
     {
         ConnectionString = connectionStrings[Database.Transfers];
     }
 
-    private ILogger Log { get; } = Serilog.Log.ForContext<Z2025_12_28_AdditionalTransferIndexesMigration>();
+    private ILogger Log { get; } = Serilog.Log.ForContext<Z12282025_AdditionalTransferIndexesMigration>();
     private string ConnectionString { get; }
 
     public bool NeedsToBeApplied()
@@ -57,7 +57,7 @@ public class Z2025_12_28_AdditionalTransferIndexesMigration : IMigration
     {
         if (!NeedsToBeApplied())
         {
-            Log.Information("> Migration {Name} is not necessary or has already been applied", nameof(Z2025_12_28_AdditionalTransferIndexesMigration));
+            Log.Information("> Migration {Name} is not necessary or has already been applied", nameof(Z12282025_AdditionalTransferIndexesMigration));
             return;
         }
 

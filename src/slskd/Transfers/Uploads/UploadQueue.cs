@@ -443,14 +443,14 @@ namespace slskd.Transfers
 
             try
             {
-                var optionsHash = Compute.Sha1Hash(options.Transfers.Groups.ToJson());
+                var optionsHash = Compute.Sha1Hash(options.Groups.ToJson());
 
-                if (optionsHash == LastOptionsHash && options.Transfers.Upload.Slots == LastGlobalSlots)
+                if (optionsHash == LastOptionsHash && options.Global.Upload.Slots == LastGlobalSlots)
                 {
                     return;
                 }
 
-                GlobalSlots = options.Transfers.Upload.Slots;
+                GlobalSlots = options.Global.Upload.Slots;
 
                 // statically add built-in groups
                 var groups = new List<UploadGroup>()
@@ -471,23 +471,23 @@ namespace slskd.Transfers
                     new UploadGroup()
                     {
                         Name = Application.DefaultGroup,
-                        Priority = options.Transfers.Groups.Default.Upload.Priority,
-                        Slots = Math.Min(options.Transfers.Groups.Default.Upload.Slots, GlobalSlots),
+                        Priority = options.Groups.Default.Upload.Priority,
+                        Slots = Math.Min(options.Groups.Default.Upload.Slots, GlobalSlots),
                         UsedSlots = GetExistingUsedSlotsOrDefault(Application.DefaultGroup),
-                        Strategy = options.Transfers.Groups.Default.Upload.Strategy.ToEnum<QueueStrategy>(),
+                        Strategy = options.Groups.Default.Upload.Strategy.ToEnum<QueueStrategy>(),
                     },
                     new UploadGroup()
                     {
                         Name = Application.LeecherGroup,
-                        Priority = options.Transfers.Groups.Leechers.Upload.Priority,
-                        Slots = Math.Min(options.Transfers.Groups.Leechers.Upload.Slots, GlobalSlots),
+                        Priority = options.Groups.Leechers.Upload.Priority,
+                        Slots = Math.Min(options.Groups.Leechers.Upload.Slots, GlobalSlots),
                         UsedSlots = GetExistingUsedSlotsOrDefault(Application.LeecherGroup),
-                        Strategy = options.Transfers.Groups.Leechers.Upload.Strategy.ToEnum<QueueStrategy>(),
+                        Strategy = options.Groups.Leechers.Upload.Strategy.ToEnum<QueueStrategy>(),
                     },
                 };
 
                 // dynamically add user-defined groups
-                groups.AddRange(options.Transfers.Groups.UserDefined.Select(kvp => new UploadGroup()
+                groups.AddRange(options.Groups.UserDefined.Select(kvp => new UploadGroup()
                 {
                     Name = kvp.Key,
                     Priority = kvp.Value.Upload.Priority,
@@ -498,7 +498,7 @@ namespace slskd.Transfers
 
                 Groups = groups.ToDictionary(g => g.Name);
 
-                LastGlobalSlots = options.Transfers.Upload.Slots;
+                LastGlobalSlots = options.Global.Upload.Slots;
                 LastOptionsHash = optionsHash;
             }
             finally

@@ -26,7 +26,6 @@ namespace slskd.Transfers
         {
             return new Transfer()
             {
-                BatchId = transfer.BatchId,
                 Id = transfer.Id,
                 Username = transfer.Username,
                 Direction = transfer.Direction,
@@ -41,8 +40,6 @@ namespace slskd.Transfers
                 BytesTransferred = t.BytesTransferred,
                 AverageSpeed = t.AverageSpeed,
                 Exception = t.Exception?.Message,
-                Attempts = transfer.Attempts,
-                NextAttemptAt = transfer.NextAttemptAt,
             };
         }
     }

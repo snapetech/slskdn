@@ -295,7 +295,7 @@ const SearchDetail = ({
 
   const create = async ({ navigate, search: searchForCreate }) => {
     reset();
-    onCreate({ navigate, search: searchForCreate });
+    onCreate({ navigate, searchForCreate });
   };
 
   const openDiscoveryGraph = async (request) => {

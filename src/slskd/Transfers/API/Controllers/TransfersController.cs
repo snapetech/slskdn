@@ -31,10 +31,8 @@ namespace slskd.Transfers.API
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Serilog;
-    using slskd.Core.Security;
     using slskd.Transfers.AutoReplace;
-    using slskd.Users;
-    using Soulseek;
+    using slskd.Core.Security;
 
     /// <summary>
     ///     Transfers.
@@ -52,19 +50,16 @@ namespace slskd.Transfers.API
         /// <param name="optionsSnapshot"></param>
         /// <param name="stateSnapshot"></param>
         /// <param name="transferService"></param>
-        /// <param name="userService"></param>
         /// <param name="autoReplaceService"></param>
         /// <param name="autoReplaceBackgroundService"></param>
         public TransfersController(
             ITransferService transferService,
-            IUserService userService,
             IOptionsSnapshot<Options> optionsSnapshot,
             IStateSnapshot<State> stateSnapshot,
             IAutoReplaceService autoReplaceService,
             AutoReplaceBackgroundService autoReplaceBackgroundService)
         {
             Transfers = transferService;
-            Users = userService;
             OptionsSnapshot = optionsSnapshot;
             StateSnapshot = stateSnapshot;
             AutoReplace = autoReplaceService;
@@ -73,7 +68,6 @@ namespace slskd.Transfers.API
 
         private static SemaphoreSlim DownloadRequestLimiter { get; } = new SemaphoreSlim(2, 2);
         private ITransferService Transfers { get; }
-        private IUserService Users { get; }
         private IOptionsSnapshot<Options> OptionsSnapshot { get; }
         private IStateSnapshot<State> StateSnapshot { get; }
         private IAutoReplaceService AutoReplace { get; }
@@ -394,21 +388,9 @@ namespace slskd.Transfers.API
 
             try
             {
-                var endpoint = await Users.GetIPEndPointAsync(username);
-
-                if (Users.IsBlacklisted(username, endpoint.Address))
-                {
-                    throw new UserOfflineException($"User {username} appears to be offline");
-                }
-
                 var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, normalizedRequests.Select(r => (r.Filename, r.Size)));
 
                 return StatusCode(201, new { Enqueued = enqueued, Failed = failed });
-            }
-            catch (UserOfflineException ex)
-            {
-                Log.Information(ex, "Rejected enqueue for unavailable or blacklisted user {Username}", username);
-                return StatusCode(403, "User is unavailable");
             }
             catch (Exception ex)
             {

@@ -162,8 +162,10 @@ namespace slskd
 
         /// <summary>
         ///     Soulseek.NET requires a caller-owned minor-version slot.
+        ///     slskdN reserved range: 7700000-7709999 (registry PR pending).
+        ///     Reserved range 760-7699999 belongs to upstream slskd.
         /// </summary>
-        public static readonly int SoulseekMinorVersion = 760;
+        public static readonly int SoulseekMinorVersion = 7700000;
 
         /// <summary>
         ///     The default application data directory.
@@ -3575,8 +3577,6 @@ namespace slskd
 
         private static void ConfigureGlobalLogger()
         {
-            var noColor = OptionsAtStartup.Logger.NoColor || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR"));
-
             Serilog.Log.Logger = (OptionsAtStartup.Debug ? new LoggerConfiguration().MinimumLevel.Debug() : new LoggerConfiguration().MinimumLevel.Information())
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Error)
                 .MinimumLevel.Override("System.Net.Http.HttpClient", OptionsAtStartup.Debug ? LogEventLevel.Warning : LogEventLevel.Fatal)
@@ -3588,8 +3588,7 @@ namespace slskd
                 .Enrich.WithProperty("ProcessId", ProcessId)
                 .Enrich.FromLogContext()
                 .WriteTo.Console(
-                    theme: noColor ? ConsoleTheme.None : SystemConsoleTheme.Literate,
-                    applyThemeToRedirectedOutput: !noColor,
+                    theme: (OptionsAtStartup.Logger.NoColor || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR"))) ? ConsoleTheme.None : SystemConsoleTheme.Literate,
                     outputTemplate: (OptionsAtStartup.Debug ? "[{SourceContext}] " : string.Empty) + "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .WriteTo.Async(config =>
                     config.Conditional(
@@ -3970,10 +3969,9 @@ namespace slskd
                 var banner = @$"
 {logo}
 ╒════════════════════════════════════════════════════════╕
-│ This program is free software under AGPLv3.             │
-│ Additional Terms apply; see LICENSE and NOTICE.         │
-│ slskdN is a modified version of slskd.                  │
-│ https://github.com/snapetech/slskdn                     │
+│           GNU AFFERO GENERAL PUBLIC LICENSE            │
+│                   https://slskd.org                    │
+│                                                        │
 │{centeredVersion}│";
 
                 if (IsDevelopment)

@@ -1,16 +1,11 @@
                                NOTICE
 
+  slskdN is a modified version of slskd. It is not maintained by, endorsed
+by, or affiliated with the slskd project or its author(s).
+
   This software is licensed under the GNU Affero General Public License v3.0
-(AGPLv3) with Additional Terms pursuant to Section 7 of the AGPLv3.
+(AGPLv3). The complete text of the AGPLv3 is contained in the LICENSE file in
+the root directory of this project.
 
-  The Additional Terms impose conditions on the preservation of license notices,
-identification of modified versions, and rebranding of any modified version
-conveyed to third parties.
-
-  The complete text of the AGPLv3 and the Additional Terms is contained in the
-LICENSE file in the root directory of this project. You must read and comply
-with both the AGPLv3 and the Additional Terms before modifying or conveying
-this software or any work based on it.
-
-  slskdN is a modified version of slskd. It is not maintained by, endorsed by,
-or affiliated with the slskd project or its author(s).
+  slskdN tracks slskd up to v0.24.x and does not incorporate changes from
+slskd v0.25.0 or later. Future development is independent of upstream slskd.

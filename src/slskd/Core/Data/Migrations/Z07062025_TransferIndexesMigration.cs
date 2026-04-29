@@ -1,4 +1,4 @@
-// <copyright file="Z2025_07_06_TransferIndexesMigration.cs" company="slskd Team">
+// <copyright file="Z07062025_TransferIndexesMigration.cs" company="slskd Team">
 //     Copyright (c) slskd Team. All rights reserved.
 //
 //     This program is free software: you can redistribute it and/or modify
@@ -25,14 +25,14 @@ using Serilog;
 /// <summary>
 ///     Updates the Transfers table to add indexes on the Direction and State columns.
 /// </summary>
-public class Z2025_07_06_TransferIndexesMigration : IMigration
+public class Z07062025_TransferIndexesMigration : IMigration
 {
-    public Z2025_07_06_TransferIndexesMigration(ConnectionStringDictionary connectionStrings)
+    public Z07062025_TransferIndexesMigration(ConnectionStringDictionary connectionStrings)
     {
         ConnectionString = connectionStrings[Database.Transfers];
     }
 
-    private ILogger Log { get; } = Serilog.Log.ForContext<Z2025_07_06_TransferIndexesMigration>();
+    private ILogger Log { get; } = Serilog.Log.ForContext<Z07062025_TransferIndexesMigration>();
     private string ConnectionString { get; }
 
     public bool NeedsToBeApplied()
@@ -71,7 +71,7 @@ public class Z2025_07_06_TransferIndexesMigration : IMigration
     {
         if (!NeedsToBeApplied())
         {
-            Log.Information("> Migration {Name} is not necessary or has already been applied", nameof(Z2025_07_06_TransferIndexesMigration));
+            Log.Information("> Migration {Name} is not necessary or has already been applied", nameof(Z07062025_TransferIndexesMigration));
             return;
         }
 

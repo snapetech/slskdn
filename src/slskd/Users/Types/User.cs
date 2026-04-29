@@ -30,9 +30,6 @@ namespace slskd.Users
         /// <summary>
         ///     Gets the user's configured group.
         /// </summary>
-        /// <remarks>
-        ///     This is the group under which the username appears in config, not the group derived at runtime.
-        /// </remarks>
         public string Group { get; init; } = string.Empty;
 
         /// <summary>
