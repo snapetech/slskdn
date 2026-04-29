@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the AUR source package build for date-versioned slskdN releases by
+  mapping public versions such as `2026042900-slskdn.193` to MSBuild-safe
+  package versions while preserving the public informational version.
+
 ## [2026042900-slskdn.193] — 2026-04-29
 
 - Added a slskdN default web theme using brown, gray, and purple tones, kept

@@ -1,3 +1,16 @@
+## Update 2026-04-29 16:43:00Z
+
+- Current task: None. `slskdn` AUR source install fix is implemented and validated locally.
+- Last activity:
+  - reproduced the fatal AUR source build failure as invalid MSBuild assembly version `2026042900.193.0.0`
+  - documented the date-version packaging gotcha in ADR-0001 and committed it separately
+  - updated the source PKGBUILD to pass `0.0.0-slskdn.YYYYMMDDmm.NNN` to MSBuild while keeping the public informational version unchanged
+  - bumped the source AUR package template to `pkgrel=2`
+  - validation passed for packaging metadata, direct fixed-version `dotnet publish`, lint, and diff checks
+- Next steps:
+  1. Commit and push the repository fix.
+  2. Publish the corrected live AUR recipe if the AUR repository is reachable.
+
 ## Update 2026-04-29 15:46:20Z
 
 - Current task: Prepare stable release `2026042900-slskdn.193` from `main`.
