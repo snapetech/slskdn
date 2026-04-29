@@ -522,112 +522,122 @@ class App extends Component {
             visible
             width="thin"
           >
-            {version.isCanary && (
-              <Menu.Item>
-                <Icon
-                  color="yellow"
-                  name="flask"
-                />
-                Canary
-              </Menu.Item>
-            )}
-            {isAgent ? (
-              <Menu.Item>
-                <Icon name="detective" />
-                Agent Mode
-              </Menu.Item>
-            ) : (
-              <>
-                <Link to="/searches">
-                  <Menu.Item data-testid="nav-search">
-                    <Icon name="search" />
-                    Search
-                  </Menu.Item>
-                </Link>
-                <Link to="/discovery-graph">
-                  <Menu.Item data-testid="nav-discovery-graph">
-                    <Icon name="crosshairs" />
-                    Discovery Graph
-                  </Menu.Item>
-                </Link>
-                <Link to="/wishlist">
-                  <Menu.Item data-testid="nav-wishlist">
-                    <Icon name="star" />
-                    Wishlist
-                  </Menu.Item>
-                </Link>
-                <Link to="/downloads">
-                  <Menu.Item data-testid="nav-downloads">
-                    <Icon name="download" />
-                    Downloads
-                  </Menu.Item>
-                </Link>
-                <Link to="/uploads">
-                  <Menu.Item data-testid="nav-uploads">
-                    <Icon name="upload" />
-                    Uploads
-                  </Menu.Item>
-                </Link>
-                <Link to="/rooms">
-                  <Menu.Item data-testid="nav-rooms">
-                    <Icon name="comments" />
-                    Rooms
-                  </Menu.Item>
-                </Link>
-                <Link to="/chat">
-                  <Menu.Item data-testid="nav-chat">
-                    <Icon name="comment" />
-                    Chat
-                  </Menu.Item>
-                </Link>
-                <Link to="/users">
-                  <Menu.Item data-testid="nav-users">
-                    <Icon name="users" />
-                    Users
-                  </Menu.Item>
-                </Link>
-                <Link to="/contacts">
-                  <Menu.Item data-testid="nav-contacts">
-                    <Icon name="address book" />
-                    Contacts
-                  </Menu.Item>
-                </Link>
-                <Link to="/solid">
-                  <Menu.Item data-testid="nav-solid">
-                    <Icon name="key" />
-                    Solid
-                  </Menu.Item>
-                </Link>
-                <Link to="/collections">
-                  <Menu.Item data-testid="nav-collections">
-                    <Icon name="list" />
-                    Collections
-                  </Menu.Item>
-                </Link>
-                <Link to="/sharegroups">
-                  <Menu.Item data-testid="nav-groups">
-                    <Icon name="users" />
-                    Share Groups
-                  </Menu.Item>
-                </Link>
-                <Link to="/shared">
-                  <Menu.Item data-testid="nav-shared-with-me">
-                    <Icon name="share" />
-                    Shared with Me
-                  </Menu.Item>
-                </Link>
-                <Link to="/browse">
-                  <Menu.Item data-testid="nav-browse">
-                    <Icon name="folder open" />
-                    Browse
-                  </Menu.Item>
-                </Link>
-              </>
-            )}
+            <div className="navigation-primary">
+              {version.isCanary && (
+                <Menu.Item>
+                  <Icon
+                    color="yellow"
+                    name="flask"
+                  />
+                  Canary
+                </Menu.Item>
+              )}
+              {isAgent ? (
+                <Menu.Item>
+                  <Icon name="detective" />
+                  Agent Mode
+                </Menu.Item>
+              ) : (
+                <>
+                  <Link to="/searches">
+                    <Menu.Item data-testid="nav-search">
+                      <Icon name="search" />
+                      Search
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/discovery-graph">
+                    <Menu.Item data-testid="nav-discovery-graph">
+                      <Icon name="crosshairs" />
+                      Discovery Graph
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/wishlist">
+                    <Menu.Item data-testid="nav-wishlist">
+                      <Icon name="star" />
+                      Wishlist
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/downloads">
+                    <Menu.Item data-testid="nav-downloads">
+                      <Icon name="download" />
+                      Downloads
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/uploads">
+                    <Menu.Item data-testid="nav-uploads">
+                      <Icon name="upload" />
+                      Uploads
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/rooms">
+                    <Menu.Item data-testid="nav-rooms">
+                      <Icon name="comments" />
+                      Rooms
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/chat">
+                    <Menu.Item data-testid="nav-chat">
+                      <Icon name="comment" />
+                      Chat
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/users">
+                    <Menu.Item data-testid="nav-users">
+                      <Icon name="users" />
+                      Users
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/contacts">
+                    <Menu.Item data-testid="nav-contacts">
+                      <Icon name="address book" />
+                      Contacts
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/solid">
+                    <Menu.Item data-testid="nav-solid">
+                      <Icon name="key" />
+                      Solid
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/collections">
+                    <Menu.Item data-testid="nav-collections">
+                      <Icon name="list" />
+                      Collections
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/sharegroups">
+                    <Menu.Item data-testid="nav-groups">
+                      <Icon name="users" />
+                      Share Groups
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/shared">
+                    <Menu.Item data-testid="nav-shared-with-me">
+                      <Icon name="share" />
+                      Shared with Me
+                    </Menu.Item>
+                  </Link>
+                  <Link to="/browse">
+                    <Menu.Item data-testid="nav-browse">
+                      <Icon name="folder open" />
+                      Browse
+                    </Menu.Item>
+                  </Link>
+                </>
+              )}
+            </div>
             <Menu
               className="right"
               inverted
             >
+              <ModeSpecificConnectButton
+                connectionWatchdog={connectionWatchdog}
+                controller={controller}
+                mode={mode}
+                pendingReconnect={pendingReconnect}
+                server={server}
+                user={user}
+              />
               <Popup
                 basic
                 className="theme-picker-popup"
@@ -639,7 +649,7 @@ class App extends Component {
                 position="bottom right"
                 trigger={(
                   <Menu.Item
-                    className="theme-menu"
+                    className={`theme-menu ${themeMenuOpen ? 'visible' : ''}`}
                     data-testid="theme-menu"
                     title="Choose the web UI color theme"
                   >
@@ -665,14 +675,6 @@ class App extends Component {
                   ))}
                 </Menu>
               </Popup>
-              <ModeSpecificConnectButton
-                connectionWatchdog={connectionWatchdog}
-                controller={controller}
-                mode={mode}
-                pendingReconnect={pendingReconnect}
-                server={server}
-                user={user}
-              />
               {(pendingReconnect || pendingRestart || pendingShareRescan) && (
                 <Menu.Item position="right">
                   <Icon.Group className="menu-icon-group">

@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **ux**: Fix Web UI header and footer chrome alignment.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Split the top navigation into primary-route and utility-action rails, reordered the utility cluster as Connected, Theme, System, Log Out, removed the always-highlighted Theme trigger, and rebuilt the fixed footer as brand, speed, and network/transport rails. Live `kspls0` desktop and narrow viewport checks show no vertical overflow.
+
 - [x] **feature**: Add a downloads-section toggle for conservative accelerated downloads.
  - Status: completed (2026-04-29)
  - Priority: P1
@@ -1380,3 +1385,7 @@
 - [x] Persist Search page collapsible section state
   - Status: completed (2026-04-29)
   - Notes: SongID, MusicBrainz Lookup, Discovery Graph Atlas, and Album Completion now default collapsed; every Search page collapsible section stores its last open/collapsed state in browser local storage.
+
+- [x] Integrate low-risk upstream-request affordances
+  - Status: completed (2026-04-29)
+  - Notes: Added conservative queue-position refresh batching, transfer peer Browse links, batch-aware delete-on-remove path resolution, README search-filter syntax documentation, and changelog notes. Larger items such as browser playback and browse UI pagination remain design-sized work rather than safe same-turn changes.

@@ -22,6 +22,17 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Reworked the fixed Web UI header and footer chrome so primary navigation,
+  utility actions, brand, speeds, network counters, and transport icons align
+  as distinct rails instead of crowding together in live screenshots.
+- Limited automatic queue-position checks on the Downloads page to a small,
+  cached refresh batch instead of asking every queued peer every second.
+- Linked transfer user headers to Browse so upload/download rows provide the
+  same direct peer affordance as search results.
+- Fixed delete-on-remove for successful batch downloads so files stored under
+  the batch completion folder are resolved correctly.
+- Documented the supported advanced search filter text syntax in the README.
+
 ## [2026042900-slskdn.199] — 2026-04-29
 
 - Made the Search page secondary panels collapsed by default and persisted

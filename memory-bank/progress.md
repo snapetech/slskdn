@@ -1,3 +1,12 @@
+## 2026-04-29 23:58Z - Fixed Web UI chrome alignment
+
+- Split the header into explicit primary navigation and right-side utility rails so route actions and utility actions no longer read as one unsorted stream.
+- Reordered utilities to Connected, Theme, System, Log Out and stopped the Theme trigger from looking permanently selected when the menu is closed.
+- Rebuilt the footer into left brand, centered speeds, and right network/transport status rails, removing the decorative quote cluster from the fixed chrome.
+- Deployed the rebuilt web bundle to `kspls0` and validated logged-in desktop, 1366px, and mobile-width captures with no vertical overflow.
+- Documented the repeated fixed-chrome grouping gotcha in ADR-0001 and committed that documentation immediately as `ceea55925`.
+- Validation: `npm run lint -- --quiet`, `npm test -- App Footer --watch=false`, `npm run build`, and `git diff --check`.
+
 ## 2026-04-29 23:20Z - Added conservative accelerated-downloads toggle
 
 - Added a runtime accelerated-downloads toggle to the Downloads header and exposed matching transfer API endpoints for the current policy state.
@@ -7174,3 +7183,10 @@ Code quality improvements were completed as part of Option A:
 - Changed the Search page secondary panels (`SongID`, `MusicBrainz Lookup`, `Discovery Graph Atlas`, and `Album Completion`) to default collapsed.
 - Added per-browser persistence for all Search page collapsible panels so the Web UI remembers the user's last open/collapsed state.
 - Validation: `npm --prefix src/web test -- src/components/Search/Searches.test.jsx`, `npm --prefix src/web run lint`, and `git diff --check -- src/web/src/components/Search/Searches.jsx src/web/src/components/Search/Searches.test.jsx` passed.
+
+## 2026-04-29 23:53:57Z
+
+- Implemented a conservative upstream-request pass without changing default protocol behavior: Downloads now refresh queue positions in cached batches of at most five every 30 seconds, transfer user headers link to Browse, and successful batch downloads resolve their batch folder path when delete-on-remove is requested.
+- Documented supported advanced search filter text syntax in the README and added comparison-table rows for the newly surfaced affordances.
+- Documented the batch-download removal path gotcha in ADR-0001 and committed that gotcha entry immediately as `ea0d2142f`.
+- Validation: `npm --prefix src/web test -- src/components/Transfers/Transfers.test.jsx`, focused `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~Transfers"`, `npm --prefix src/web run lint`, `npm --prefix src/web run build`, and `git diff --check` passed. The first focused .NET run exited nonzero due output/noise truncation, then passed when rerun with quieter output.

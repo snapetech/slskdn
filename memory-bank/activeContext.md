@@ -1,3 +1,30 @@
+## Update 2026-04-29 23:53:57Z
+
+- Current task: None. The low-risk upstream-request integration pass is implemented locally.
+- Last activity:
+  - capped automatic queue-position refresh to cached batches of five every 30 seconds
+  - linked transfer peer headers to Browse from Downloads and Uploads
+  - fixed successful batch download delete-on-remove path resolution
+  - documented advanced search filter text syntax in README and comparison rows
+  - documented and committed the batch-removal path gotcha separately
+  - validated focused transfer UI tests, focused transfer backend tests, frontend lint/build, and diff checks
+- Next steps:
+  1. Review whether the pre-existing dirty App/Footer UI files should be included with this work or split before commit.
+  2. Browser playback and large browse pagination remain larger feature work that should get separate design/testing passes.
+
+## Update 2026-04-29 23:58:00Z
+
+- Current task: None. Header and footer chrome alignment has been fixed and deployed to `kspls0`.
+- Last activity:
+  - split the header into primary navigation and utility rails
+  - reordered utilities to Connected, Theme, System, Log Out
+  - removed the permanently-highlighted Theme trigger styling
+  - rebuilt the footer as brand, speed, and network/transport rails
+  - validated live logged-in screenshots at desktop, mid-width, and mobile widths with no vertical overflow
+  - documented and committed the chrome grouping gotcha separately
+- Next steps:
+  1. Commit and push the UI chrome fix when ready.
+
 ## Update 2026-04-29 23:36:10Z
 
 - Current task: None. The principal UI pass over the README showcase surfaces is implemented locally.

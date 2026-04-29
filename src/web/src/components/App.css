@@ -182,6 +182,7 @@ body {
 
 .navigation {
     align-items: stretch !important;
+    display: flex !important;
     min-height: 58px !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
@@ -191,6 +192,19 @@ body {
     background: var(--slskdn-nav-background, var(--smui-menu-inverted-background)) !important;
     border-bottom: 1px solid var(--slskdn-nav-border, transparent) !important;
     scrollbar-width: thin;
+}
+
+.navigation-primary {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.navigation-primary > a,
+.navigation .right.ui.inverted.menu > a {
+    display: flex;
+    color: inherit;
+    text-decoration: none;
 }
 
 .navigation.ui.labeled.icon.menu .item {
@@ -220,16 +234,16 @@ body {
     flex: 0 0 auto;
     margin-left: auto !important;
     background: var(--slskdn-nav-background, var(--smui-menu-inverted-background)) !important;
+    border-left: 1px solid var(--slskdn-nav-border, rgba(255,255,255,0.08)) !important;
 }
 
 .navigation .theme-menu.item {
     align-items: center !important;
-    background: var(--slskdn-theme-trigger-background, rgba(255,255,255,0.08)) !important;
-    border-left: 1px solid var(--slskdn-accent-primary-border, rgba(255,255,255,0.14)) !important;
-    border-right: 1px solid var(--slskdn-accent-primary-border, rgba(255,255,255,0.14)) !important;
+    background: transparent !important;
+    border-left: 1px solid rgba(255,255,255,0.06) !important;
     color: var(--slskd-color, inherit) !important;
     justify-content: center !important;
-    min-width: 72px !important;
+    min-width: 68px !important;
 }
 
 .navigation .theme-menu.item:hover,
@@ -237,6 +251,15 @@ body {
 .navigation .theme-menu.item.visible {
     background: var(--slskdn-theme-trigger-hover-background, rgba(255,255,255,0.14)) !important;
     color: var(--slskd-color, inherit) !important;
+}
+
+.navigation .right.ui.inverted.menu > .item,
+.navigation .right.ui.inverted.menu > a > .item {
+    min-width: 68px !important;
+}
+
+.navigation .right.ui.inverted.menu > .item:first-child {
+    min-width: 74px !important;
 }
 
 .theme-menu-label {

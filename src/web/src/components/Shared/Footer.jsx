@@ -149,91 +149,95 @@ class Footer extends Component {
     return (
       <footer className="slskdn-footer">
         <div className="slskdn-footer-content">
-          <div className="slskdn-footer-brand">
-            <a
-              className="slskdn-footer-sponsor"
-              href="https://github.com/sponsors/snapetech"
-              rel="noopener noreferrer"
-              target="_blank"
-              title="Support development - because Cursor isn't cheap!"
-            >
-              <Icon name="heart" /> Sponsor
-            </a>
-
-            <span className="slskdn-footer-copyright">
-              © {year}{' '}
+          <div className="slskdn-footer-left">
+            <div className="slskdn-footer-brand">
               <a
-                href={GITHUB_BASE}
+                className="slskdn-footer-sponsor"
+                href="https://github.com/sponsors/snapetech"
                 rel="noopener noreferrer"
                 target="_blank"
-                title="slskdN project"
+                title="Support development - because Cursor isn't cheap!"
               >
-                slskdN
+                <Icon name="heart" /> Sponsor
               </a>
-              <span className="slskdn-footer-note">unofficial fork of</span>
-              <a
-                href={SLSKD_GITHUB}
-                rel="noopener noreferrer"
-                target="_blank"
-                title="slskd upstream project"
-              >
-                slskd
-              </a>
-            </span>
+
+              <span className="slskdn-footer-copyright">
+                © {year}{' '}
+                <a
+                  href={GITHUB_BASE}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  title="slskdN project"
+                >
+                  slskdN
+                </a>
+                <span className="slskdn-footer-note">unofficial fork of</span>
+                <a
+                  href={SLSKD_GITHUB}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  title="slskd upstream project"
+                >
+                  slskd
+                </a>
+              </span>
+            </div>
           </div>
 
-          <div
-            className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}
-            aria-label="Transfer speeds"
-          >
-            <span className="slskdn-footer-group-label">Speed</span>
-            <span
-              className="slskdn-footer-speed-item"
-              title={
-                isLoggedIn
-                  ? 'Total transfer speed (upload + download)'
-                  : 'Login to see real-time speeds'
-              }
+          <div className="slskdn-footer-center">
+            <div
+              className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}
+              aria-label="Transfer speeds"
             >
-              <strong>T:</strong>{' '}
-              <span className="speed-value">
-                {totalSpeed ? totalSpeed.value : '0'}
+              <span className="slskdn-footer-group-label">Speed</span>
+              <span
+                className="slskdn-footer-speed-item"
+                title={
+                  isLoggedIn
+                    ? 'Total transfer speed (upload + download)'
+                    : 'Login to see real-time speeds'
+                }
+              >
+                <strong>T:</strong>{' '}
+                <span className="speed-value">
+                  {totalSpeed ? totalSpeed.value : '0'}
+                </span>
+                <span className="speed-unit">{totalSpeed ? totalSpeed.unit : 'B'}</span>
               </span>
-              <span className="speed-unit">{totalSpeed ? totalSpeed.unit : 'B'}</span>
-            </span>
-            <span
-              className="slskdn-footer-speed-item"
-              title={
-                isLoggedIn
-                  ? 'Soulseek network speed'
-                  : 'Login to see real-time speeds'
-              }
-            >
-              <strong>S:</strong>{' '}
-              <span className="speed-value">
-                {soulseekSpeed ? soulseekSpeed.value : '0'}
+              <span
+                className="slskdn-footer-speed-item"
+                title={
+                  isLoggedIn
+                    ? 'Soulseek network speed'
+                    : 'Login to see real-time speeds'
+                }
+              >
+                <strong>S:</strong>{' '}
+                <span className="speed-value">
+                  {soulseekSpeed ? soulseekSpeed.value : '0'}
+                </span>
+                <span className="speed-unit">
+                  {soulseekSpeed ? soulseekSpeed.unit : 'B'}
+                </span>
               </span>
-              <span className="speed-unit">
-                {soulseekSpeed ? soulseekSpeed.unit : 'B'}
+              <span
+                className="slskdn-footer-speed-item"
+                title={
+                  isLoggedIn
+                    ? 'Mesh network speed'
+                    : 'Login to see real-time speeds'
+                }
+              >
+                <strong>M:</strong>{' '}
+                <span className="speed-value">
+                  {meshSpeed ? meshSpeed.value : '0'}
+                </span>
+                <span className="speed-unit">{meshSpeed ? meshSpeed.unit : 'B'}</span>
               </span>
-            </span>
-            <span
-              className="slskdn-footer-speed-item"
-              title={
-                isLoggedIn
-                  ? 'Mesh network speed'
-                  : 'Login to see real-time speeds'
-              }
-            >
-              <strong>M:</strong>{' '}
-              <span className="speed-value">
-                {meshSpeed ? meshSpeed.value : '0'}
-              </span>
-              <span className="speed-unit">{meshSpeed ? meshSpeed.unit : 'B'}</span>
-            </span>
+            </div>
           </div>
 
-          <div className="slskdn-footer-status">
+          <div className="slskdn-footer-right">
             <a
               className={`slskdn-footer-network ${isLoggedIn && slskdnStats ? 'active' : ''}`}
               href={`${urlBase}/system/network`}
@@ -333,45 +337,6 @@ class Footer extends Component {
                 }
               />
             </div>
-
-            <span className="slskdn-footer-quote">
-              <a
-                className="slskdn-footer-emoji-link"
-                href={`${GITHUB_BASE}#what-is-slskdn`}
-                rel="noopener noreferrer"
-                target="_blank"
-                title="What is slskdN?"
-              >
-                <em>"unofficial fork, original respect"</em>
-              </a>{' '}
-              <a
-                className="slskdn-footer-emoji-link"
-                href={`${GITHUB_BASE}#what-is-slskdn`}
-                rel="noopener noreferrer"
-                target="_blank"
-                title="Our Philosophy"
-              >
-                🍦
-              </a>
-              <a
-                className="slskdn-footer-emoji-link"
-                href={`${GITHUB_BASE}#use-of-ai-in-this-project`}
-                rel="noopener noreferrer"
-                target="_blank"
-                title="AI-Assisted Development"
-              >
-                🤖
-              </a>
-              <a
-                className="slskdn-footer-emoji-link"
-                href={`${GITHUB_BASE}#features`}
-                rel="noopener noreferrer"
-                target="_blank"
-                title="Features"
-              >
-                ✨
-              </a>
-            </span>
           </div>
         </div>
       </footer>
