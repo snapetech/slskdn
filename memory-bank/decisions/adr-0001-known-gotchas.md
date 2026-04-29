@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z141. Dockerfile Must Invoke Bash Scripts With Bash
+
+**The Bug**: The `2026042900-slskdn.187` Docker publish job failed after `bin/build` gained Bash regex syntax for slskdN date versions, because the Dockerfile web stage still invoked it as `sh ./bin/build`. Alpine `sh` parsed the Bash regex group as a syntax error before the build reached Node.
+
+**Files Affected**:
+- `Dockerfile`
+- `bin/build`
+- `bin/publish`
+
+**Wrong**:
+```dockerfile
+RUN DISABLE_ESLINT_PLUGIN=true sh ./bin/build --web-only --skip-tests --version $VERSION
+```
+
+**Correct**:
+```dockerfile
+RUN DISABLE_ESLINT_PLUGIN=true bash ./bin/build --web-only --skip-tests --version $VERSION
+```
+
+**Why This Keeps Happening**: The helper scripts have `#!/bin/bash` and use Bash-only syntax, but Docker `RUN sh ./script` bypasses the shebang and forces POSIX shell parsing. Any Dockerfile or workflow command that executes repo helper scripts must either run them directly when executable or invoke `bash`, never `sh`.
+
 ### 0z140. Public YAML Aliases Must Bind In Runtime Configuration
 
 **The Bug**: Tester config copied from `config/slskd.example.yml` with `dht.lan_only: true` still emitted the public DHT exposure warning. The runtime YAML configuration provider normalized keys but ignored `[YamlMember(Alias = "dht")]`, so `dht:` was valid documentation/API YAML but did not bind to `Options.DhtRendezvous`; only the internal `dhtRendezvous:` key changed runtime behavior.
