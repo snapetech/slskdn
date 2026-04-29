@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z164. Header And Footer Chrome Need Explicit Rail Grouping
+
+**The Bug**: The Web UI header and footer rendered as flat item streams, so utility actions mixed visually with primary navigation and footer status pills drifted into awkward spacing under live counters.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+- `src/web/src/components/App.css`
+- `src/web/src/components/Shared/Footer.jsx`
+- `src/web/src/components/Shared/Footer.css`
+
+**Wrong**:
+```jsx
+<Sidebar as={Menu}>
+  <Link to="/browse"><Menu.Item>Browse</Menu.Item></Link>
+  <Menu className="right">...</Menu>
+</Sidebar>
+```
+
+with the footer as one mixed flex row of brand, speed, network, icon stats, and decorative links.
+
+**Correct**:
+```jsx
+<Sidebar as={Menu}>
+  <div className="navigation-primary">...</div>
+  <Menu className="right">...</Menu>
+</Sidebar>
+```
+
+and footer markup split into left, center, and right rails whose pills keep fixed height, avoid vertical wrapping, and use horizontal scrolling at narrow widths.
+
+**Why This Keeps Happening**: Fixed app chrome is judged from still screenshots while the real shell has live counters, variable browser font metrics, and utility actions with different semantic weight. Header and footer changes need live desktop plus narrow viewport checks with overflow metrics, not only component-level tests.
+
 ### 0z163. Batch Downloads Do Not Live At Their Original Relative Path
 
 **The Bug**: Removing a completed batch download with "delete file" looked for the file under the normal downloads tree, even though batch completion moves files into `downloads/<batch-id>/`.
