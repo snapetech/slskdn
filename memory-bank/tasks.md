@@ -1337,3 +1337,11 @@
 - [x] Prepare `2026042900-slskdn.197` stable release
   - Status: completed (2026-04-29)
   - Notes: Promoted the Web UI theme, transfer flicker, footer speed, and browser-title fixes into a `.197` changelog section and generated release notes.
+
+- [x] Multi-source / swarm trust-aware policy and probe budget
+  - Status: completed (2026-04-29)
+  - Notes: Split the multi-source download path so parallel chunked downloads are reserved for trusted mesh-overlay peers; Soulseek and mixed source sets route through a new sequential-failover path that resumes at the current byte offset on stall, producing at most one mid-stream cancellation per failover instead of one per chunk per peer. Added `VerificationMethod.MeshOverlay`, hard-floored `SelectCanonicalSourcesAsync` (>=2 hash-matched OR all-mesh; otherwise fall back to single-source with a clean 400 from explicit endpoints), per-peer-per-day verification probe budget, `MeshOverlaySourceCount`-driven probe skip, and Prometheus counters for mid-stream cancellations, probe outcomes, hard-floor fallbacks, and failover events. Rewrote `docs/multipart-downloads.md` and the README multi-source section to document scope and mechanics honestly.
+
+- [x] Prepare `2026042900-slskdn.198` stable release
+  - Status: completed (2026-04-29)
+  - Notes: Promoted the multi-source trust-aware policy bullets and the rolling Chocolatey publish CI fix bullets into a `.198` changelog section.

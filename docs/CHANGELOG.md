@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.198] — 2026-04-29
+
 - Fixed the stable Chocolatey publish job so repeated transient push failures
   fail the workflow instead of reporting a green release with no package
   published, and added a Chocolatey-only manual publish workflow for retrying

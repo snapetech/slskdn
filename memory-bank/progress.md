@@ -7096,3 +7096,8 @@ Code quality improvements were completed as part of Option A:
 
 - Prepared stable release `2026042900-slskdn.197` with the Web UI theme-picker, transfer bulk-action flicker, footer speed fallback, and concise browser-title fixes.
 - Validation: generated `.197` release notes from the versioned changelog section and passed `git diff --check`.
+
+## 2026-04-29 21:43:00Z
+
+- Prepared stable release `2026042900-slskdn.198` with the trust-aware multi-source policy split, hard-floor source selection, per-peer-per-day verification probe budget, mesh-overlay probe-skip, sequential-failover path for Soulseek source sets, new Prometheus counters for cancellations / probes / fallbacks / failovers, and the rewritten multi-source documentation. Also includes the Chocolatey publish workflow and retry/version fixes from the rolling Unreleased section.
+- Validation: targeted `dotnet test` on `slskd.Tests.Unit` MultiSource / ContentVerification / Rescue filter passed (92/92), full `dotnet build src/slskd/slskd.csproj` is clean (0 warnings, 0 errors).

@@ -1,3 +1,15 @@
+## Update 2026-04-29 21:43:00Z
+
+- Current task: Prepare stable release `2026042900-slskdn.198`.
+- Last activity:
+  - landed the multi-source / swarm trust-aware policy split, hard floor, probe budget, and metrics
+  - rewrote `docs/multipart-downloads.md` and the README multi-source section to be explicit about scope (default downloads use the standard single-source Soulseek path; multi-source is rescue / remediation / explicit-API only)
+  - promoted the unreleased Chocolatey CI fix bullets and the new swarm bullets into the `.198` changelog section
+- Next steps:
+  1. Commit and push the `.198` release-note update.
+  2. Push tag `build-main-2026042900-slskdn.198`.
+  3. Watch the release workflow.
+
 ## Update 2026-04-29 18:07:00Z
 
 - Current task: Prepare stable release `2026042900-slskdn.197`.
