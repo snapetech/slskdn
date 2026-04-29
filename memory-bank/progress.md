@@ -7125,3 +7125,16 @@ Code quality improvements were completed as part of Option A:
 - Added the selected PNGs under `docs/assets/readme-showcase/` and inserted a clickable thumbnail gallery into `README.md`.
 - Documented the Discovery Graph candidate-filter gotcha and the user-options namespace gotcha in ADR-0001, committing each documentation entry immediately per repo rules.
 - Validation: visually inspected every retained screenshot; local graph API returned `8` nodes and `7` edges for the replacement atlas. Focused `dotnet test` could not complete because existing dirty `YamlConfigurationSourceTests` still reference a removed `MusicBrainz.Enabled` option.
+
+## 2026-04-29 22:54:04Z
+
+- Redesigned the persistent Web UI footer into grouped brand/support, transfer speed, network/index, transport-health, and fork-note regions while preserving the existing DHT, mesh, hash, sequence, swarm, backfill, karma, NAT, overlay, speed, sponsor, and fork attribution data.
+- Added responsive footer behavior so lower-priority labels/quote collapse before crowding the operational counters, with browser checks at `1920`, `1366`, and `390` pixel widths reporting no footer overflow.
+- Validation: `npm --prefix src/web test -- src/components/Shared/Footer.test.jsx`, `npm --prefix src/web run lint`, `npm --prefix src/web run build`, and `git diff --check -- src/web/src/components/Shared/Footer.jsx src/web/src/components/Shared/Footer.css` passed. The web build still reports the existing large-bundle warning.
+
+## 2026-04-29 23:01:14Z
+
+- Re-inspected the footer against the live `kspls0` Web UI after the first redesign and found the previous rigid grid/light-theme styling was still fragile.
+- Reworked the footer CSS to use a flexible dock layout, wrap the network/status pill internally, tighten icon alignment, and strengthen light-theme pill borders/backgrounds.
+- Documented the footer layout validation gotcha in ADR-0001 and committed that documentation immediately.
+- Validation: injected the fixed local CSS into the live `kspls0` page and rechecked `1920`, `1366`, and `390` pixel footer captures with no visible-element overflow; stress-tested local counters with large speed/hash/sequence/swarm/backfill values. `npm --prefix src/web test -- src/components/Shared/Footer.test.jsx`, `npm --prefix src/web run lint`, `npm --prefix src/web run build`, and `git diff --check` passed. The web build still reports the existing large-bundle warning.

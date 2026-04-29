@@ -126,6 +126,10 @@ class Footer extends Component {
     const backfillActive = Boolean(slskdnStats?.backfill?.isActive);
     const activeSwarms = swarmJobs.length;
     const karma = Number.parseInt(localStorage.getItem('slskdn-karma') || '0', 10);
+    const totalSpeed = isLoggedIn && speeds ? formatSpeed(speeds.total) : null;
+    const soulseekSpeed =
+      isLoggedIn && speeds ? formatSpeed(speeds.soulseek) : null;
+    const meshSpeed = isLoggedIn && speeds ? formatSpeed(speeds.mesh) : null;
 
     // Determine if stats are connected
     const isDhtConnected = isLoggedIn && displayedDhtPeers > 0;
@@ -145,8 +149,7 @@ class Footer extends Component {
     return (
       <footer className="slskdn-footer">
         <div className="slskdn-footer-content">
-          {/* Left: Sponsor link */}
-          <div className="slskdn-footer-left">
+          <div className="slskdn-footer-brand">
             <a
               className="slskdn-footer-sponsor"
               href="https://github.com/sponsors/snapetech"
@@ -156,68 +159,7 @@ class Footer extends Component {
             >
               <Icon name="heart" /> Sponsor
             </a>
-          </div>
 
-          {/* Center-Left: Transfer Speeds */}
-          <div
-            className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}
-          >
-            <span
-              className="slskdn-footer-speed-item"
-              title={
-                isLoggedIn
-                  ? 'Total transfer speed (upload + download)'
-                  : 'Login to see real-time speeds'
-              }
-            >
-              <strong>T:</strong>{' '}
-              <span className="speed-value">
-                {isLoggedIn && speeds ? formatSpeed(speeds.total).value : '0'}
-              </span>
-              <span className="speed-unit">
-                {isLoggedIn && speeds ? formatSpeed(speeds.total).unit : 'B'}
-              </span>
-            </span>
-            <span className="slskdn-footer-divider">•</span>
-            <span
-              className="slskdn-footer-speed-item"
-              title={
-                isLoggedIn
-                  ? 'Soulseek network speed'
-                  : 'Login to see real-time speeds'
-              }
-            >
-              <strong>S:</strong>{' '}
-              <span className="speed-value">
-                {isLoggedIn && speeds
-                  ? formatSpeed(speeds.soulseek).value
-                  : '0'}
-              </span>
-              <span className="speed-unit">
-                {isLoggedIn && speeds ? formatSpeed(speeds.soulseek).unit : 'B'}
-              </span>
-            </span>
-            <span className="slskdn-footer-divider">•</span>
-            <span
-              className="slskdn-footer-speed-item"
-              title={
-                isLoggedIn
-                  ? 'Mesh network speed'
-                  : 'Login to see real-time speeds'
-              }
-            >
-              <strong>M:</strong>{' '}
-              <span className="speed-value">
-                {isLoggedIn && speeds ? formatSpeed(speeds.mesh).value : '0'}
-              </span>
-              <span className="speed-unit">
-                {isLoggedIn && speeds ? formatSpeed(speeds.mesh).unit : 'B'}
-              </span>
-            </span>
-          </div>
-
-          {/* Center: Copyright */}
-          <div className="slskdn-footer-center">
             <span className="slskdn-footer-copyright">
               © {year}{' '}
               <a
@@ -228,7 +170,7 @@ class Footer extends Component {
               >
                 slskdN
               </a>
-              {' · an unofficial fork of '}
+              <span className="slskdn-footer-note">unofficial fork of</span>
               <a
                 href={SLSKD_GITHUB}
                 rel="noopener noreferrer"
@@ -240,13 +182,64 @@ class Footer extends Component {
             </span>
           </div>
 
-          {/* Right: Stats icons and quote */}
-          <div className="slskdn-footer-right">
+          <div
+            className={`slskdn-footer-speeds ${isLoggedIn && speeds ? 'active' : ''}`}
+            aria-label="Transfer speeds"
+          >
+            <span className="slskdn-footer-group-label">Speed</span>
+            <span
+              className="slskdn-footer-speed-item"
+              title={
+                isLoggedIn
+                  ? 'Total transfer speed (upload + download)'
+                  : 'Login to see real-time speeds'
+              }
+            >
+              <strong>T:</strong>{' '}
+              <span className="speed-value">
+                {totalSpeed ? totalSpeed.value : '0'}
+              </span>
+              <span className="speed-unit">{totalSpeed ? totalSpeed.unit : 'B'}</span>
+            </span>
+            <span
+              className="slskdn-footer-speed-item"
+              title={
+                isLoggedIn
+                  ? 'Soulseek network speed'
+                  : 'Login to see real-time speeds'
+              }
+            >
+              <strong>S:</strong>{' '}
+              <span className="speed-value">
+                {soulseekSpeed ? soulseekSpeed.value : '0'}
+              </span>
+              <span className="speed-unit">
+                {soulseekSpeed ? soulseekSpeed.unit : 'B'}
+              </span>
+            </span>
+            <span
+              className="slskdn-footer-speed-item"
+              title={
+                isLoggedIn
+                  ? 'Mesh network speed'
+                  : 'Login to see real-time speeds'
+              }
+            >
+              <strong>M:</strong>{' '}
+              <span className="speed-value">
+                {meshSpeed ? meshSpeed.value : '0'}
+              </span>
+              <span className="speed-unit">{meshSpeed ? meshSpeed.unit : 'B'}</span>
+            </span>
+          </div>
+
+          <div className="slskdn-footer-status">
             <a
               className={`slskdn-footer-network ${isLoggedIn && slskdnStats ? 'active' : ''}`}
               href={`${urlBase}/system/network`}
               title={networkTooltip}
             >
+              <span className="slskdn-footer-group-label">Network</span>
               <span className="slskdn-footer-network-item">
                 <Icon
                   color={displayedDhtPeers > 0 ? 'green' : 'grey'}
@@ -254,7 +247,6 @@ class Footer extends Component {
                 />
                 {formatCount(displayedDhtPeers)} dht
               </span>
-              <span className="slskdn-footer-divider">|</span>
               <span className="slskdn-footer-network-item">
                 <Icon
                   color={meshPeers > 0 ? 'green' : 'grey'}
@@ -262,7 +254,6 @@ class Footer extends Component {
                 />
                 {formatCount(meshPeers)} mesh
               </span>
-              <span className="slskdn-footer-divider">|</span>
               <span className="slskdn-footer-network-item">
                 <Icon
                   color={hashCount > 0 ? 'blue' : 'grey'}
@@ -270,7 +261,6 @@ class Footer extends Component {
                 />
                 {formatCount(hashCount)} hashes
               </span>
-              <span className="slskdn-footer-divider">|</span>
               <span
                 className={`slskdn-footer-network-item ${isSyncing ? 'syncing' : ''}`}
               >
@@ -282,35 +272,31 @@ class Footer extends Component {
                 seq:{seqId}
               </span>
               {activeSwarms > 0 && (
-                <>
-                  <span className="slskdn-footer-divider">|</span>
-                  <span className="slskdn-footer-network-item active">
-                    <Icon name="bolt" />
-                    {activeSwarms} swarm{activeSwarms === 1 ? '' : 's'}
-                  </span>
-                </>
+                <span className="slskdn-footer-network-item active">
+                  <Icon name="bolt" />
+                  {activeSwarms} swarm{activeSwarms === 1 ? '' : 's'}
+                </span>
               )}
               {backfillActive && (
-                <>
-                  <span className="slskdn-footer-divider">|</span>
-                  <span className="slskdn-footer-network-item active">
-                    <Icon
-                      loading
-                      name="clock"
-                    />
-                    backfill
-                  </span>
-                </>
+                <span className="slskdn-footer-network-item active">
+                  <Icon
+                    loading
+                    name="clock"
+                  />
+                  backfill
+                </span>
               )}
-              <span className="slskdn-footer-divider">|</span>
               <span className="slskdn-footer-network-item">
                 <Icon name="trophy" />
                 {karma > 0 ? '+' : ''}
                 {karma}
               </span>
             </a>
-            <span className="slskdn-footer-divider">•</span>
-            <div className="slskdn-footer-stats">
+
+            <div
+              className="slskdn-footer-stats"
+              aria-label="Transport health"
+            >
               <Icon
                 className={
                   isDhtConnected
@@ -324,7 +310,6 @@ class Footer extends Component {
                     : 'DHT: Login to see stats'
                 }
               />
-              <span className="slskdn-footer-divider">|</span>
               <Icon
                 className={
                   isNatResolved
@@ -334,7 +319,6 @@ class Footer extends Component {
                 name="shield alternate"
                 title={natTooltip}
               />
-              <span className="slskdn-footer-divider">|</span>
               <Icon
                 className={
                   isOverlayConnected
@@ -349,7 +333,7 @@ class Footer extends Component {
                 }
               />
             </div>
-            <span className="slskdn-footer-divider">•</span>
+
             <span className="slskdn-footer-quote">
               <a
                 className="slskdn-footer-emoji-link"

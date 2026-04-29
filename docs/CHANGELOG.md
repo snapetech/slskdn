@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Redesigned the Web UI footer status dock into clearer brand, speed,
+  network, transport-health, and fork-note groups with responsive spacing.
 - Fixed the Web UI theme picker so browser clicks open a portal-backed menu
   reliably, with the nav trigger labeled as `Theme`.
 - Added upstream-compatible configuration aliases for `transfers`,

@@ -1141,3 +1141,25 @@ dotnet test
 - Next steps:
   1. Resolve the existing dirty `YamlConfigurationSourceTests` / `MusicBrainz.Enabled` compile mismatch before relying on full unit-test status.
   2. Review the README gallery layout in GitHub-rendered markdown and adjust captions/order if desired.
+
+## Update 2026-04-29 22:54:04Z
+
+- Current task: Web UI footer redesign is implemented locally.
+- Last activity:
+  - reorganized the footer into clearer brand/support, transfer speed, network/index, transport-health, and fork-note groups
+  - added responsive footer behavior so lower-priority labels and the quote do not crowd the operational counters on narrower screens
+  - browser-checked mocked logged-in footer states at `1920`, `1366`, and `390` pixel widths with no detected footer overflow
+- Next steps:
+  1. Review the footer against a real logged-in instance if you want to tune exact spacing/colors further.
+  2. Commit/push the footer redesign once the surrounding dirty worktree state is ready.
+
+## Update 2026-04-29 23:01:14Z
+
+- Current task: Web UI footer live-rendering correction is implemented locally.
+- Last activity:
+  - inspected the live `kspls0` footer and confirmed the first redesign still had brittle spacing in real light-theme rendering
+  - changed the footer from rigid grid columns to a flex dock with wrapping network/status content and tighter icon alignment
+  - injected the fixed CSS into the live `kspls0` page and rechecked desktop, mid-width, and mobile footer captures with no visible-element overflow
+- Next steps:
+  1. Commit/push the footer CSS/JSX and memory-bank updates when ready.
+  2. Deploy or release so `kspls0` gets the fixed CSS without local injection.

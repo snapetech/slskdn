@@ -1359,3 +1359,7 @@
 - [x] Add README showcase gallery with open-license screenshots
   - Status: completed (2026-04-29)
   - Notes: Captured and inspected a varied headless screenshot set, copied final PNGs to `docs/assets/readme-showcase/`, added a clickable thumbnail gallery to `README.md`, and replaced the Discovery Graph image with a multi-node SongID atlas from the fixed local build.
+
+- [x] Redesign the Web UI footer status dock
+  - Status: completed (2026-04-29)
+  - Notes: Reorganized the footer into brand/support, speed, network/index, transport-health, and fork-note groups while keeping the same telemetry and attribution data. Rechecked against live `kspls0` rendering and changed the layout from a rigid grid to a flexible dock with wrapping status pills.
