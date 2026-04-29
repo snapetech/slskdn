@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z160. Discovery Hash Probes Must Share The Verification Probe Budget
+
+**The Bug**: Continuous discovery FLAC hash verification called `GetContentHashAsync()` directly, bypassing the per-peer verification probe budget used by `VerifySourcesAsync()`, so peers could see more cancelled 32KB probe transfers than intended.
+
+**Files Affected**:
+- `src/slskd/Transfers/MultiSource/ContentVerificationService.cs`
+- `src/slskd/Transfers/MultiSource/Discovery/SourceDiscoveryService.cs`
+
+**Wrong**:
+```csharp
+var hash = await verificationService.GetContentHashAsync(username, filename, size, cancellationToken);
+```
+
+without a budget check inside `GetContentHashAsync()`.
+
+**Correct**:
+```csharp
+if (!TryConsumeProbeBudget(username))
+{
+    return null;
+}
+```
+
+and persist the budget so restarting the process does not reset peer-visible probe noise.
+
+**Why This Keeps Happening**: Multi-source verification has multiple entry points. New callers can accidentally use the lower-level single-source helper and skip the guardrails that were added to the batch verification path. Keep rate/noise limits at the lowest public helper that contacts Soulseek peers.
+
 ### 0z159. Keep The Nav Theme Picker Out Of The Overflowing Menu
 
 **The Bug**: The Web UI theme picker rendered options in the DOM, but browser clicks either left the dropdown closed (`aria-expanded="false"`) or opened a menu clipped behind the overflowing top navigation, especially visible in Firefox/LibreWolf.
