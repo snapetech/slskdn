@@ -22,6 +22,13 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Changed the Network dashboard public-DHT exposure warning into a dismissable
+  info notice that is remembered per browser, because public rendezvous is an
+  intended slskdN feature state that only needs operator awareness.
+- Fixed false Network dashboard no-peer diagnostics by treating
+  `/api/v0/dht/status` node, discovered-peer, and active-mesh counters as peer
+  evidence when the older mesh/discovered peer list endpoints are empty.
+
 ## [2026042900-slskdn.198] — 2026-04-29
 
 - Fixed the stable Chocolatey publish job so repeated transient push failures

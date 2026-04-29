@@ -7,7 +7,6 @@ import {
   Divider,
   Grid,
   Header,
-  Button,
   Icon,
   Label,
   List,
@@ -17,7 +16,6 @@ import {
   Segment,
   Statistic,
   Table,
-  Modal,
 } from 'semantic-ui-react';
 
 const DHT_EXPOSURE_CONSENT_KEY = 'slskdn:ui:dht-public-exposure:consent-v1';
@@ -84,7 +82,14 @@ const Network = ({ theme }) => {
   const [syncing, setSyncing] = useState({});
   const [backfilling, setBackfilling] = useState(false);
   const [backfillProgress, setBackfillProgress] = useState(null);
-  const [showDhtExposureConsent, setShowDhtExposureConsent] = useState(false);
+  const [dhtExposureAcknowledged, setDhtExposureAcknowledged] = useState(() => {
+    try {
+      return window.localStorage.getItem(DHT_EXPOSURE_CONSENT_KEY) === 'acknowledged';
+    }
+    catch {
+      return false;
+    }
+  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -105,24 +110,15 @@ const Network = ({ theme }) => {
     }
   }, []);
 
-  const hasSeenDhtExposureConsent = () => {
-    try {
-      return window.localStorage.getItem(DHT_EXPOSURE_CONSENT_KEY) === 'acknowledged';
-    }
-    catch {
-      return false;
-    }
-  };
-
   const dismissDhtExposureConsent = () => {
     try {
       window.localStorage.setItem(DHT_EXPOSURE_CONSENT_KEY, 'acknowledged');
     }
     catch {
-      // LocalStorage may be unavailable in unusual browser modes; still close the modal.
+      // LocalStorage may be unavailable in unusual browser modes; still close the notice.
     }
 
-    setShowDhtExposureConsent(false);
+    setDhtExposureAcknowledged(true);
   };
 
   useEffect(() => {
@@ -180,38 +176,35 @@ const Network = ({ theme }) => {
   const dhtIsLanOnly = stats?.dht?.isLanOnly ?? stats?.dht?.lanOnly ?? false;
   const dhtIsRunning = stats?.dht?.isDhtRunning ?? false;
   const dhtNodeCount = stats?.dht?.dhtNodeCount ?? 0;
+  const dhtDiscoveredPeerCount =
+    stats?.dht?.discoveredPeerCount ?? stats?.dht?.totalPeersDiscovered ?? 0;
+  const dhtActiveMeshCount = stats?.dht?.activeMeshConnections ?? 0;
+  const observedMeshPeerCount = Math.max(
+    meshPeers.length,
+    mesh?.connectedPeerCount ?? 0,
+    dhtActiveMeshCount,
+  );
+  const observedDiscoveredPeerCount = Math.max(
+    discoveredPeers.length,
+    dhtDiscoveredPeerCount,
+  );
   const shouldExplainLanOnlyDht =
     dhtIsLanOnly &&
     dhtIsRunning &&
     dhtNodeCount === 0 &&
-    meshPeers.length === 0 &&
-    discoveredPeers.length === 0;
+    observedMeshPeerCount === 0 &&
+    observedDiscoveredPeerCount === 0;
   const shouldWarnAboutConnectivity =
     !shouldExplainLanOnlyDht &&
-    ((meshPeers.length === 0 && discoveredPeers.length === 0) ||
-      ((mesh?.connectedPeerCount ?? 0) === 0 &&
-        dhtNodeCount === 0 &&
-        dhtIsRunning));
-  const shouldWarnAboutDhtExposure =
+    dhtIsRunning &&
+    dhtNodeCount === 0 &&
+    observedMeshPeerCount === 0 &&
+    observedDiscoveredPeerCount === 0;
+  const shouldShowDhtExposureNotice =
     (stats?.dht?.isEnabled ?? false) &&
     !dhtIsLanOnly &&
     dhtIsRunning &&
-    meshPeers.length === 0 &&
-    discoveredPeers.length === 0;
-
-  useEffect(() => {
-    setShowDhtExposureConsent(
-      shouldWarnAboutDhtExposure && !hasSeenDhtExposureConsent(),
-    );
-  }, [
-    shouldWarnAboutDhtExposure,
-    meshPeers.length,
-    discoveredPeers.length,
-    stats?.dht?.isEnabled,
-    stats?.dht?.isLanOnly,
-    stats?.dht?.lanOnly,
-    stats?.dht?.isDhtRunning,
-  ]);
+    !dhtExposureAcknowledged;
 
   if (loading) {
     return <LoaderSegment />;
@@ -253,49 +246,17 @@ const Network = ({ theme }) => {
           </p>
         </Message>
       )}
-      <Modal
-        closeOnEscape={false}
-        closeOnDimmerClick={false}
-        onClose={dismissDhtExposureConsent}
-        open={showDhtExposureConsent}
-      >
-        <Modal.Header>Public DHT exposure consent</Modal.Header>
-        <Modal.Content>
-          <p>
-            DHT rendezvous is currently enabled and this node can publish your public
-            network endpoint into the public DHT. Any peer able to query the DHT can
-            discover this node as a candidate relay source.
-          </p>
-          <p>
-            On a fresh install with no local mesh peers yet, this means your node is
-            intentionally operating with public discovery by default.
-          </p>
-          <p>
-            If you prefer private-only discovery, set <code>dht.lan_only=true</code>{' '}
-            in the configuration and restart the service.
-          </p>
-        </Modal.Content>
-        <Modal.Actions>
-          <Popup
-            content="Acknowledge this warning so it does not appear again on this browser."
-            trigger={
-              <Button
-                onClick={dismissDhtExposureConsent}
-                primary
-              >
-                I understand
-              </Button>
-            }
-          />
-        </Modal.Actions>
-      </Modal>
-      {shouldWarnAboutDhtExposure && (
-        <Message warning>
+      {shouldShowDhtExposureNotice && (
+        <Message
+          info
+          onDismiss={dismissDhtExposureConsent}
+        >
           <Message.Header>Public DHT exposure notice</Message.Header>
           <p>
             DHT rendezvous is enabled and this node can publish its public
-            endpoint into the public BitTorrent DHT. That means peers can discover
-            your network address for mesh sync discovery.
+            endpoint into the public BitTorrent DHT. This is expected when public
+            rendezvous is enabled; this notice is only here so operators are aware
+            that other slskdN peers can discover the node for mesh sync.
           </p>
           <p>
             If you want to keep mesh discovery confined to trusted local peers,

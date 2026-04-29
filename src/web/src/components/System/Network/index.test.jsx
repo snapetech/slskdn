@@ -98,15 +98,8 @@ describe('Network', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows the DHT exposure notice for first-run public DHT usage', async () => {
-    render(<Network theme="light" />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Public DHT exposure consent')).toBeInTheDocument();
-      expect(screen.getByText('I understand')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('I understand'));
+  it('shows a dismissable DHT exposure notice for first-run public DHT usage', async () => {
+    const { container } = render(<Network theme="light" />);
 
     await waitFor(() => {
       expect(
@@ -114,23 +107,64 @@ describe('Network', () => {
       ).toBeInTheDocument();
     });
 
+    fireEvent.click(container.querySelector('.close.icon'));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Public DHT exposure notice'),
+      ).not.toBeInTheDocument();
+    });
+
     expect(
-      screen.getByText(/dht rendezvous is enabled/i),
-    ).toBeInTheDocument();
+      window.localStorage.getItem('slskdn:ui:dht-public-exposure:consent-v1'),
+    ).toBe('acknowledged');
   });
 
-  it('does not show the DHT consent modal if already acknowledged', async () => {
+  it('does not show the DHT exposure notice if already acknowledged', async () => {
     window.localStorage.setItem('slskdn:ui:dht-public-exposure:consent-v1', 'acknowledged');
 
     render(<Network theme="light" />);
 
     await waitFor(() => {
       expect(
-        screen.getByText('Public DHT exposure notice'),
-      ).toBeInTheDocument();
+        screen.queryByText('Public DHT exposure notice'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not show connectivity diagnostics when DHT status has peers', async () => {
+    window.localStorage.setItem('slskdn:ui:dht-public-exposure:consent-v1', 'acknowledged');
+    slskdnAPI.getSlskdnStats.mockResolvedValueOnce({
+      backfill: {
+        completedToday: 0,
+        discoveryRate: 0,
+        isActive: false,
+        pendingCount: 0,
+      },
+      capabilities: { features: [], version: 'slskdn' },
+      dht: {
+        activeMeshConnections: 1,
+        dhtNodeCount: 155,
+        discoveredPeerCount: 37,
+        isEnabled: true,
+        isLanOnly: false,
+        isDhtRunning: true,
+      },
+      hashDb: { currentSeqId: 0, totalEntries: 0 },
+      mesh: {
+        connectedPeerCount: 0,
+        warnings: [],
+      },
+      swarmJobs: [],
     });
 
-    expect(screen.queryByText('Public DHT exposure consent')).not.toBeInTheDocument();
+    render(<Network theme="light" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mesh Sync Security')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Connectivity diagnostics')).not.toBeInTheDocument();
   });
 
   it('does not show the DHT exposure notice when DHT is LAN-only', async () => {

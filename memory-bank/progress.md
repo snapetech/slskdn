@@ -7101,3 +7101,11 @@ Code quality improvements were completed as part of Option A:
 
 - Prepared stable release `2026042900-slskdn.198` with the trust-aware multi-source policy split, hard-floor source selection, per-peer-per-day verification probe budget, mesh-overlay probe-skip, sequential-failover path for Soulseek source sets, new Prometheus counters for cancellations / probes / fallbacks / failovers, and the rewritten multi-source documentation. Also includes the Chocolatey publish workflow and retry/version fixes from the rolling Unreleased section.
 - Validation: targeted `dotnet test` on `slskd.Tests.Unit` MultiSource / ContentVerification / Rescue filter passed (92/92), full `dotnet build src/slskd/slskd.csproj` is clean (0 warnings, 0 errors).
+
+## 2026-04-29 22:02:31Z
+
+- Inspected live `kspls0` DHT logs after the UI reported no peers. The service is running `.197`, DHT is ready, and the recent summary showed `nodes=155`, `activeMesh=1`, and `discovered=37`; the remaining low-success pattern is mostly remote candidate timeout/no-route failures, not a zero-peer local state.
+- Changed the Network dashboard so connectivity diagnostics use the newer DHT status counters in addition to the mesh/discovered peer list endpoints, preventing false no-peer warnings when `/api/v0/dht/status` already reports peers.
+- Replaced the persistent public-DHT warning/modal flow with a dismissable info notice stored under `slskdn:ui:dht-public-exposure:consent-v1`, because public rendezvous is an intended feature state that needs operator awareness rather than repeated alarm.
+- Documented the DHT warning counter gotcha in ADR-0001 and committed it separately.
+- Validation: `npm --prefix src/web test -- src/components/System/Network/index.test.jsx` passed (`8/8`), and focused frontend lint passed for the touched Network files.

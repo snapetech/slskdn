@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **ux**: Make public DHT exposure notice dismissable and fix false no-peer diagnostics.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: `kspls0` showed healthy DHT status counters (`nodes=155`, `discovered=37`, `activeMesh=1`) while the Network dashboard could still warn from empty mesh/discovered list endpoints. The dashboard now treats DHT status counters as peer evidence and shows public-DHT exposure as a one-time dismissable info notice.
+
 - [x] **test**: Stabilize two-node DHT rendezvous full-instance overlay connect coverage.
  - Status: completed (2026-04-29)
  - Priority: P1

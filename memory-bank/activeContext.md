@@ -1,3 +1,16 @@
+## Update 2026-04-29 22:02:31Z
+
+- Current task: None. The Network dashboard public-DHT notice and false no-peer diagnostics are fixed locally.
+- Last activity:
+  - inspected `kspls0` DHT logs and confirmed the live node is not at zero peers (`nodes=155`, `discovered=37`, `activeMesh=1`)
+  - made the public-DHT exposure notice a dismissable info message instead of a persistent warning/modal
+  - made connectivity diagnostics consider DHT status peer counters as well as list endpoints
+  - documented the warning-counter gotcha in ADR-0001 and committed that docs entry separately
+  - validation passed for focused Network tests and frontend lint
+- Next steps:
+  1. Commit and push the Network dashboard fix.
+  2. Create a tag-only release only if explicitly requested.
+
 ## Update 2026-04-29 21:43:00Z
 
 - Current task: Prepare stable release `2026042900-slskdn.198`.
