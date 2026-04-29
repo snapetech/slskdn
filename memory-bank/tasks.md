@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **ux**: Rebrand the default Web UI dark theme.
+ - Status: completed (2026-04-29)
+ - Priority: P2
+ - Notes: Confirmed the old dark palette matched upstream `0.24.5`, added slskdN as the default brown/gray/purple theme, and kept Classic Dark plus Light selectable from the Theme menu.
+
 - [x] **docs**: Clarify slskdN copyright, branding, and fork attribution.
  - Status: completed (2026-04-29)
  - Priority: P2

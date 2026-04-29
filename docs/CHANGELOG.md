@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a slskdN default web theme using brown, gray, and purple tones, kept
+  the upstream-style dark theme as `Classic Dark`, and preserved the light
+  theme as a selectable option.
 - Clarified slskdN fork attribution across docs, web metadata, package
   metadata, generated release copy, service metadata, and API surfaces while
   preserving compatibility names for existing installs.

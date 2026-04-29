@@ -1,3 +1,9 @@
+## 2026-04-29 16:05Z - Rebranded the default Web UI theme
+
+- Confirmed the old dark Web UI palette came from upstream `0.24.5`.
+- Added a slskdN default theme with brown, gray, and purple tones for the main UI, status bar, footer, PWA metadata, and browser theme color.
+- Kept the upstream-looking dark palette as `Classic Dark` and preserved `Light` as selectable Theme menu options.
+
 ## 2026-04-29 07:45Z - Clarified slskdN fork attribution and branding
 
 - Audited visible copyright, branding, package, release, and support surfaces for stale upstream-first or ambiguous slskdN copy.

@@ -34,6 +34,7 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import {
   Button,
+  Dropdown,
   Header,
   Icon,
   Loader,
@@ -44,6 +45,27 @@ import {
 } from 'semantic-ui-react';
 
 const SLSKDN_RELEASES_URL = 'https://github.com/snapetech/slskdn/releases';
+
+const THEME_OPTIONS = [
+  { key: 'slskdn', text: 'slskdN', value: 'slskdn' },
+  { key: 'classic-dark', text: 'Classic Dark', value: 'classic-dark' },
+  { key: 'light', text: 'Light', value: 'light' },
+];
+
+const THEME_LABELS = THEME_OPTIONS.reduce(
+  (labels, option) => ({ ...labels, [option.value]: option.text }),
+  {},
+);
+
+const normalizeTheme = (theme) => {
+  if (theme === 'light' || theme === 'classic-dark') {
+    return theme;
+  }
+
+  return 'slskdn';
+};
+
+const getSemanticTheme = (theme) => (theme === 'light' ? 'light' : 'dark');
 
 const initialState = {
   applicationOptions: {},
@@ -208,21 +230,6 @@ class App extends Component {
   }
 
   componentDidMount() {
-    if (this.getSavedTheme() == null) {
-      window
-        .matchMedia('(prefers-color-scheme: dark)')
-        .addEventListener(
-          'change',
-          (event) => event.matches && this.setState({ theme: 'dark' }),
-        );
-      window
-        .matchMedia('(prefers-color-scheme: light)')
-        .addEventListener(
-          'change',
-          (event) => event.matches && this.setState({ theme: 'light' }),
-        );
-    }
-
     // Listen for status bar toggle from the status bar's close button
     window.addEventListener('slskdn-status-toggle', this.handleStatusBarToggle);
 
@@ -371,15 +378,14 @@ class App extends Component {
   };
 
   getSavedTheme = () => {
-    return localStorage.getItem('slskd-theme');
+    const savedTheme = localStorage.getItem('slskd-theme');
+    return savedTheme == null ? null : normalizeTheme(savedTheme);
   };
 
-  toggleTheme = () => {
-    this.setState((state) => {
-      const newTheme = state.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('slskd-theme', newTheme);
-      return { theme: newTheme };
-    });
+  setTheme = (theme) => {
+    const nextTheme = normalizeTheme(theme);
+    localStorage.setItem('slskd-theme', nextTheme);
+    this.setState({ theme: nextTheme });
   };
 
   toggleStatusBar = () => {
@@ -429,11 +435,9 @@ class App extends Component {
       login,
       retriesExhausted,
       statusBarVisible,
-      theme = this.getSavedTheme() ||
-        (window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'),
+      theme = normalizeTheme(this.getSavedTheme() || 'slskdn'),
     } = this.state;
+    const semanticTheme = getSemanticTheme(theme);
     const {
       connectionWatchdog = {},
       pendingReconnect,
@@ -492,10 +496,15 @@ class App extends Component {
       ? `slskdN ${current} - An unofficial fork of slskd`
       : 'slskdN - An unofficial fork of slskd';
 
-    if (theme === 'dark') {
-      document.documentElement.classList.add(theme);
-    } else {
-      document.documentElement.classList.remove('dark');
+    document.documentElement.classList.remove(
+      'classic-dark',
+      'dark',
+      'light',
+      'slskdn',
+    );
+    document.documentElement.classList.add(theme);
+    if (semanticTheme === 'dark') {
+      document.documentElement.classList.add('dark');
     }
 
     return (
@@ -650,10 +659,28 @@ class App extends Component {
                   size="small"
                 />
               </Menu.Item>
-              <Menu.Item onClick={() => this.toggleTheme()}>
-                <Icon name="theme" />
-                Theme
-              </Menu.Item>
+              <Dropdown
+                className="theme-menu"
+                item
+                text={THEME_LABELS[theme]}
+                title="Choose the web UI color theme"
+              >
+                <Dropdown.Menu>
+                  {THEME_OPTIONS.map((option) => (
+                    <Dropdown.Item
+                      active={theme === option.value}
+                      key={option.key}
+                      onClick={() => this.setTheme(option.value)}
+                    >
+                      <Icon
+                        color={theme === option.value ? 'violet' : undefined}
+                        name="theme"
+                      />
+                      {option.text}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
               <ModeSpecificConnectButton
                 connectionWatchdog={connectionWatchdog}
                 controller={controller}
@@ -972,7 +999,7 @@ class App extends Component {
                         <System
                           options={applicationOptions}
                           state={applicationState}
-                          theme={theme}
+                          theme={semanticTheme}
                         />,
                       )
                     }
@@ -984,7 +1011,7 @@ class App extends Component {
                         <System
                           options={applicationOptions}
                           state={applicationState}
-                          theme={theme}
+                          theme={semanticTheme}
                         />,
                       )
                     }

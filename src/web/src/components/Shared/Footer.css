@@ -3,12 +3,12 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
-    border-top: 1px solid rgba(88, 166, 255, 0.2);
+    background: var(--slskdn-footer-background, linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%));
+    border-top: 1px solid var(--slskdn-accent-primary-border, rgba(88, 166, 255, 0.2));
     padding: 10px 16px;
     z-index: 9999;
     pointer-events: none;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--slskdn-footer-shadow, 0 -4px 20px rgba(0, 0, 0, 0.5));
 }
 
 .slskdn-footer-content {
@@ -49,26 +49,26 @@
 }
 
 .slskdn-footer-copyright a {
-    color: #58a6ff;
+    color: var(--slskdn-accent-primary, #58a6ff);
     text-decoration: none;
     font-weight: 600;
     transition: all 0.2s ease;
 }
 
 .slskdn-footer-copyright a:hover {
-    color: #79c0ff;
+    color: var(--slskdn-accent-primary-hover, #79c0ff);
     text-decoration: underline;
-    text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+    text-shadow: 0 0 8px var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.5));
 }
 
 /* Special styling for slskd parent project link */
 .slskdn-footer-copyright a[title="slskd upstream project"] {
-    color: #f0883e;
+    color: var(--slskdn-accent-warm, #f0883e);
 }
 
 .slskdn-footer-copyright a[title="slskd upstream project"]:hover {
-    color: #ffa657;
-    text-shadow: 0 0 8px rgba(240, 136, 62, 0.5);
+    color: var(--slskdn-accent-warm-hover, #ffa657);
+    text-shadow: 0 0 8px var(--slskdn-accent-warm-muted, rgba(240, 136, 62, 0.5));
 }
 
 .slskdn-footer-divider {
@@ -82,7 +82,7 @@
 }
 
 .slskdn-footer-link:hover {
-    color: #58a6ff;
+    color: var(--slskdn-accent-primary, #58a6ff);
 }
 
 .slskdn-footer-link .icon {
@@ -106,13 +106,13 @@
 }
 
 .slskdn-footer-emoji-link:hover {
-    color: #58a6ff;
-    background: rgba(88, 166, 255, 0.15);
+    color: var(--slskdn-accent-primary, #58a6ff);
+    background: var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.15));
     text-decoration: none;
 }
 
 .slskdn-footer-emoji-link:hover em {
-    color: #58a6ff;
+    color: var(--slskdn-accent-primary, #58a6ff);
 }
 
 /* Light theme adjustments */
@@ -169,8 +169,8 @@ html:not(.dark) .slskdn-footer-emoji-link:hover em {
 
 .slskdn-footer-stat-icon.connected {
     opacity: 1;
-    color: #58a6ff;
-    text-shadow: 0 0 8px rgba(88, 166, 255, 0.6);
+    color: var(--slskdn-accent-primary, #58a6ff);
+    text-shadow: 0 0 8px var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.6));
 }
 
 html:not(.dark) .slskdn-footer-stat-icon {
@@ -210,18 +210,18 @@ html:not(.dark) .slskdn-footer-stat-icon.connected {
     font-family: 'Courier New', monospace;
     color: rgba(255, 255, 255, 0.4);
     padding: 2px 8px;
-    background: rgba(88, 166, 255, 0.02);
+    background: color-mix(in srgb, var(--slskdn-accent-primary, #58a6ff) 6%, transparent);
     border-radius: 4px;
-    border: 1px solid rgba(88, 166, 255, 0.08);
+    border: 1px solid var(--slskdn-accent-primary-border, rgba(88, 166, 255, 0.08));
     min-width: 200px; /* Fixed minimum width */
     transition: all 0.3s ease;
 }
 
 .slskdn-footer-speeds.active {
     color: rgba(255, 255, 255, 0.7);
-    background: rgba(88, 166, 255, 0.05);
-    border-color: rgba(88, 166, 255, 0.15);
-    box-shadow: 0 0 10px rgba(88, 166, 255, 0.1);
+    background: var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.05));
+    border-color: var(--slskdn-accent-primary-border, rgba(88, 166, 255, 0.15));
+    box-shadow: 0 0 10px var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.1));
 }
 
 .slskdn-footer-speed-item {
@@ -232,14 +232,14 @@ html:not(.dark) .slskdn-footer-stat-icon.connected {
 }
 
 .slskdn-footer-speed-item strong {
-    color: rgba(88, 166, 255, 0.4);
+    color: var(--slskdn-accent-primary, rgba(88, 166, 255, 0.4));
     margin-right: 3px;
     transition: all 0.3s ease;
 }
 
 .slskdn-footer-speeds.active .slskdn-footer-speed-item strong {
-    color: #58a6ff;
-    text-shadow: 0 0 6px rgba(88, 166, 255, 0.4);
+    color: var(--slskdn-accent-primary, #58a6ff);
+    text-shadow: 0 0 6px var(--slskdn-accent-primary-muted, rgba(88, 166, 255, 0.4));
 }
 
 .slskdn-footer-speed-item .speed-value {

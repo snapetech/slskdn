@@ -1,5 +1,5 @@
 {
-  "background_color": "#1b1c1d",
+  "background_color": "#161311",
   "display": "standalone",
   "icons": [
     {
@@ -16,8 +16,5 @@
   "name": "slskdN - Unofficial slskd Fork",
   "short_name": "slskdN",
   "start_url": ".",
-  "theme_color": "#2185d0"
+  "theme_color": "#7650a8"
 }
-
-
-

@@ -1,3 +1,14 @@
+## Update 2026-04-29 16:05:00Z
+
+- Current task: None. slskdN Web UI theme rebrand is implemented locally and ready for validation.
+- Last activity:
+  - confirmed the existing dark palette matches upstream `0.24.5`
+  - added slskdN as the default brown/gray/purple theme
+  - kept Classic Dark and Light selectable from the Theme menu
+- Next steps:
+  1. Run frontend lint/tests and diff checks.
+  2. Commit and push the scoped web theme update if validation is clean.
+
 ## Update 2026-04-29 15:30:45Z
 
 - Current task: Copyright and attribution audit.
