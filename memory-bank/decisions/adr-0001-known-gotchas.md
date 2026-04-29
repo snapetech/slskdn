@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z156. Network DHT Warnings Must Use Status Counters, Not Just List Endpoints
+
+**The Bug**: The Network dashboard could keep showing public-DHT and no-peer warnings even after DHT rendezvous had healthy node and discovered-peer counters because the warning logic only looked at empty mesh/discovered peer list endpoints.
+
+**Files Affected**:
+- `src/web/src/components/System/Network/index.jsx`
+- `src/web/src/components/System/Network/index.test.jsx`
+
+**Wrong**:
+```js
+const shouldWarnAboutConnectivity =
+  meshPeers.length === 0 && discoveredPeers.length === 0;
+```
+
+**Correct**:
+```js
+const observedMeshPeerCount = Math.max(
+  meshPeers.length,
+  mesh?.connectedPeerCount ?? 0,
+  stats?.dht?.activeMeshConnections ?? 0,
+);
+const observedDiscoveredPeerCount = Math.max(
+  discoveredPeers.length,
+  stats?.dht?.discoveredPeerCount ?? stats?.dht?.totalPeersDiscovered ?? 0,
+);
+```
+
+**Why This Keeps Happening**: The Network page mixes older capability-list endpoints with newer DHT rendezvous status counters. The list endpoints can legitimately be empty while `/api/v0/dht/status` already reports DHT nodes, discovered peers, and active mesh connections. Public-DHT exposure is also an intended feature state, so it should be a dismissable awareness notice instead of a persistent warning.
+
 ### 0z155. Package Publish Jobs Must Fail When Retries Are Exhausted
 
 **The Bug**: The stable Chocolatey publish job returned success after three `504 Gateway Timeout` responses, so the tag workflow looked green even though no package was published to Chocolatey.
