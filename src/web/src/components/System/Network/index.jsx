@@ -178,15 +178,24 @@ const Network = ({ theme }) => {
   const { backfill, capabilities, hashDb, mesh, swarmJobs } = stats;
   const darkTheme = theme === 'dark';
   const dhtIsLanOnly = stats?.dht?.isLanOnly ?? stats?.dht?.lanOnly ?? false;
+  const dhtIsRunning = stats?.dht?.isDhtRunning ?? false;
+  const dhtNodeCount = stats?.dht?.dhtNodeCount ?? 0;
+  const shouldExplainLanOnlyDht =
+    dhtIsLanOnly &&
+    dhtIsRunning &&
+    dhtNodeCount === 0 &&
+    meshPeers.length === 0 &&
+    discoveredPeers.length === 0;
   const shouldWarnAboutConnectivity =
-    (meshPeers.length === 0 && discoveredPeers.length === 0) ||
-    ((mesh?.connectedPeerCount ?? 0) === 0 &&
-      (stats?.dht?.dhtNodeCount ?? 0) === 0 &&
-      (stats?.dht?.isDhtRunning ?? false));
+    !shouldExplainLanOnlyDht &&
+    ((meshPeers.length === 0 && discoveredPeers.length === 0) ||
+      ((mesh?.connectedPeerCount ?? 0) === 0 &&
+        dhtNodeCount === 0 &&
+        dhtIsRunning));
   const shouldWarnAboutDhtExposure =
     (stats?.dht?.isEnabled ?? false) &&
     !dhtIsLanOnly &&
-    (stats?.dht?.isDhtRunning ?? false) &&
+    dhtIsRunning &&
     meshPeers.length === 0 &&
     discoveredPeers.length === 0;
 
@@ -210,6 +219,24 @@ const Network = ({ theme }) => {
 
   return (
     <div className="network-dashboard">
+      {shouldExplainLanOnlyDht && (
+        <Message info>
+          <Message.Header>LAN-only DHT is isolated</Message.Header>
+          <p>
+            DHT rendezvous is running with <code>dhtRendezvous.lanOnly: true</code>,
+            so slskdN intentionally skips the public BitTorrent DHT bootstrap
+            routers. Seeing <code>0</code> DHT nodes and <code>0</code> discovered
+            peers can be expected in this privacy mode even when the overlay and
+            DHT ports are open.
+          </p>
+          <p>
+            To discover public slskdN peers through DHT rendezvous, set
+            <code> dhtRendezvous.lanOnly: false</code> and restart. Keep LAN-only
+            enabled if you want discovery limited to local or already-known
+            private peers.
+          </p>
+        </Message>
+      )}
       {shouldWarnAboutConnectivity && (
         <Message warning>
           <Message.Header>Connectivity diagnostics</Message.Header>

@@ -63,6 +63,41 @@ describe('Network', () => {
     ).toBeInTheDocument();
   });
 
+  it('explains zero-node DHT when LAN-only mode disables public bootstrap', async () => {
+    slskdnAPI.getSlskdnStats.mockResolvedValueOnce({
+      backfill: {
+        completedToday: 0,
+        discoveryRate: 0,
+        isActive: false,
+        pendingCount: 0,
+      },
+      capabilities: { features: [], version: 'slskdn' },
+      dht: {
+        dhtNodeCount: 0,
+        isEnabled: true,
+        isLanOnly: true,
+        isDhtRunning: true,
+      },
+      hashDb: { currentSeqId: 0, totalEntries: 0 },
+      mesh: {
+        connectedPeerCount: 0,
+        warnings: [],
+      },
+      swarmJobs: [],
+    });
+
+    render(<Network theme="light" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('LAN-only DHT is isolated')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Connectivity diagnostics')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/intentionally skips the public BitTorrent DHT bootstrap/i),
+    ).toBeInTheDocument();
+  });
+
   it('shows the DHT exposure notice for first-run public DHT usage', async () => {
     render(<Network theme="light" />);
 

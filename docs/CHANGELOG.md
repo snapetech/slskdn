@@ -31,6 +31,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed the CodeQL cleartext-secret alert by deleting legacy overlay
   certificate password files without reading their contents and regenerating
   the self-signed overlay certificate when needed.
+- Clarified the System Network diagnostics when DHT rendezvous is intentionally
+  isolated by `dhtRendezvous.lanOnly: true`.
 
 ## [2026042900-slskdn.195] — 2026-04-29
 
