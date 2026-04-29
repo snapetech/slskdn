@@ -1333,3 +1333,7 @@
 - [x] Restore short slskdN browser tab title
   - Status: completed (2026-04-29)
   - Notes: Changed the runtime document title back to `slskdN` and added App coverage so version/fork attribution stays out of the browser tab.
+
+- [x] Prepare `2026042900-slskdn.197` stable release
+  - Status: completed (2026-04-29)
+  - Notes: Promoted the Web UI theme, transfer flicker, footer speed, and browser-title fixes into a `.197` changelog section and generated release notes.

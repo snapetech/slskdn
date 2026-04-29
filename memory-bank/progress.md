@@ -7091,3 +7091,8 @@ Code quality improvements were completed as part of Option A:
 
 - Restored the browser tab title to the short `slskdN` brand name, removing version and fork attribution from the runtime document title.
 - Added App coverage to keep the browser title concise.
+
+## 2026-04-29 18:07:00Z
+
+- Prepared stable release `2026042900-slskdn.197` with the Web UI theme-picker, transfer bulk-action flicker, footer speed fallback, and concise browser-title fixes.
+- Validation: generated `.197` release notes from the versioned changelog section and passed `git diff --check`.

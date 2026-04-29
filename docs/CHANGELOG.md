@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.197] — 2026-04-29
+
 - Restored the browser tab title to the short slskdN brand name instead of
   showing the release version and fork attribution.
 - Fixed the Web UI theme picker so it opens reliably and applies selected

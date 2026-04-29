@@ -1,3 +1,15 @@
+## Update 2026-04-29 18:07:00Z
+
+- Current task: Prepare stable release `2026042900-slskdn.197`.
+- Last activity:
+  - promoted Web UI fix notes into the `.197` changelog section
+  - generated release notes for `2026042900-slskdn.197`
+  - confirmed `.197` notes include theme picker, transfer flicker, footer speed fallback, and title fixes
+- Next steps:
+  1. Commit and push the `.197` release-note update.
+  2. Push tag `build-main-2026042900-slskdn.197`.
+  3. Watch the release workflow.
+
 ## Update 2026-04-29 17:35:00Z
 
 - Current task: None. Browser tab title is restored to `slskdN` locally.
