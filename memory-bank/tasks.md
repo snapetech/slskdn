@@ -1273,3 +1273,7 @@
 - [x] Fix weak SongID Discovery Graph neighborhood promotion
   - Status: completed (2026-04-29)
   - Notes: Discovery Graph now requires trusted SongID identity before promoting albums, artists, segments, mixes, or MusicBrainz artist release groups into graph neighborhoods. Weak manual-review runs remain centered on the SongID seed unless they have exact/high-confidence track candidates.
+
+- [x] Prepare `2026042900-slskdn.192` stable release
+  - Status: completed (2026-04-29)
+  - Notes: Moved the Discovery Graph fix note from Unreleased into a versioned `.192` changelog section and pushed the matching `build-main-2026042900-slskdn.192` tag for the tag-only release workflow.

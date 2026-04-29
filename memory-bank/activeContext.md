@@ -1,3 +1,14 @@
+## Update 2026-04-29 07:11:17Z
+
+- Current task: Prepare `2026042900-slskdn.192` for the weak SongID Discovery Graph fix.
+- Last activity:
+  - promoted the Discovery Graph fix note into a versioned `.192` changelog section
+  - left stable package metadata on `.191`; the tag workflow updates metadata after `.192` release assets and hashes exist
+- Next steps:
+  1. Validate generated release notes for `2026042900-slskdn.192`.
+  2. Commit and push the release-note update.
+  3. Push tag `build-main-2026042900-slskdn.192`.
+
 ## Update 2026-04-29 07:07:57Z
 
 - Current task: None. Weak SongID Discovery Graph neighborhood promotion is fixed locally and ready to commit.

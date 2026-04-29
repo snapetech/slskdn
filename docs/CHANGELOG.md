@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.192] — 2026-04-29
+
 - Fixed Discovery Graph neighborhood building so weak SongID manual-review
   evidence no longer promotes secondary transcript/OCR/chapter/MusicBrainz
   guesses into clickable artist, album, segment, or mix neighborhoods.

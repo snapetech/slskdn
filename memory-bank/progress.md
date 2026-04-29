@@ -6992,3 +6992,8 @@ Code quality improvements were completed as part of Option A:
 - Added focused regression coverage for weak-run graph suppression and kept recognized runs able to render track, segment, mix, artist, and release-group neighborhoods.
 - Documented the gotcha in ADR-0001 and committed it immediately as `cbe735818`.
 - Validation: `dotnet build --no-restore` passed with existing warnings; focused `DiscoveryGraphServiceTests`/`DiscoveryGraphControllerTests` passed; `bash ./bin/lint` passed; `git diff --check` passed; full `dotnet test --no-build` passed core/unit projects and failed only the known unrelated full-instance overlay `502` integration cases.
+
+## 2026-04-29 07:11:17Z
+
+- Prepared stable release `2026042900-slskdn.192` for the weak SongID Discovery Graph neighborhood fix.
+- Promoted the Unreleased changelog bullet into the `.192` versioned section so the tag workflow can publish repo-backed release notes without including rolling Unreleased content.
