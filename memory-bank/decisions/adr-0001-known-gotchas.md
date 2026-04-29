@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z157. Discovery Graph Must Preserve Manual-Review SongID Candidates
+
+**The Bug**: SongID runs with useful manual-review candidates collapsed into a single Discovery Graph seed node because graph expansion required exact or very high identity scores.
+
+**Files Affected**:
+- `src/slskd/DiscoveryGraph/DiscoveryGraphService.cs`
+- `tests/slskd.Tests.Unit/SongID/DiscoveryGraphServiceTests.cs`
+
+**Wrong**:
+```csharp
+private const double MinimumTrackIdentityForWeakRun = 0.85;
+```
+
+**Correct**:
+```csharp
+private const double MinimumTrackIdentityForWeakRun = 0.70;
+```
+
+**Why This Keeps Happening**: SongID intentionally emits ambiguity candidates for manual-review and source-original cases. Discovery Graph is supposed to show that neighborhood, but overly strict catalog-recognition thresholds hide every candidate unless the run is already highly recognized. Keep graph thresholds separate from final identity verdict thresholds so review-needed runs still produce useful topology.
+
 ### 0z156. Network DHT Warnings Must Use Status Counters, Not Just List Endpoints
 
 **The Bug**: The Network dashboard could keep showing public-DHT and no-peer warnings even after DHT rendezvous had healthy node and discovered-peer counters because the warning logic only looked at empty mesh/discovered peer list endpoints.
