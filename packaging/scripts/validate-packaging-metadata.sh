@@ -38,6 +38,14 @@ reject_line() {
     fi
 }
 
+reject_literal() {
+    local file="$1"
+    local pattern="$2"
+    if grep -Fq -- "$pattern" "$file"; then
+        fail "$file contains forbidden literal: $pattern"
+    fi
+}
+
 extract_release_from_url() {
     local url="$1"
     printf '%s\n' "${url##*/releases/download/}" | sed 's#/.*##'
@@ -90,6 +98,13 @@ expect_literal .github/workflows/build-on-tag.yml 'sha256sum *.zip slskd.service
 expect_literal .github/workflows/build-on-tag.yml 'cp packaging/aur/slskd.service packaging/aur/slskd.yml packaging/aur/slskd.sysusers release/'
 
 expect_line .github/workflows/release-packages.yml '\$\{\{ steps\.version\.outputs\.tag \}\}-linux-x64\.zip'
+
+expect_literal Dockerfile 'gosu'
+expect_literal Dockerfile 'COPY packaging/docker/slskdn-container-start /usr/local/bin/slskdn-container-start'
+expect_literal Dockerfile 'SLSKD_DOCKER_REVISION=$REVISION'
+reject_literal Dockerfile 'SLSKD_DOCKER_REVISON'
+reject_literal Dockerfile 'VOLUME /app'
+test -x packaging/docker/slskdn-container-start || fail 'packaging/docker/slskdn-container-start must be executable'
 
 expect_line packaging/aur/PKGBUILD '^source=\($'
 expect_literal packaging/aur/PKGBUILD-bin '"slskdn-${pkgver}-main-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/${pkgver//.slskdn/-slskdn}/slskdn-main-linux-glibc-x64.zip"'

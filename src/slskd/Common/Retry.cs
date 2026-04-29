@@ -35,18 +35,30 @@ namespace slskd
         /// </summary>
         /// <param name="task">The logic to execute.</param>
         /// <param name="isRetryable">A function returning a value indicating whether the last Exception is retryable.</param>
+        /// <param name="onRetry">An action to execute before each retry delay.</param>
         /// <param name="onFailure">An action to execute on failure.</param>
         /// <param name="maxAttempts">The maximum number of retry attempts.</param>
+        /// <param name="baseDelayInMilliseconds">The initial delay in milliseconds.</param>
         /// <param name="maxDelayInMilliseconds">The maximum delay in milliseconds.</param>
+        /// <param name="exceptionHistoryLimit">The maximum number of exceptions to keep for the final aggregate exception.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <returns>The execution context.</returns>
-        public static async Task Do(Func<Task> task, Func<int, Exception, bool>? isRetryable = null, Action<int, Exception>? onFailure = null, int maxAttempts = 3, int maxDelayInMilliseconds = int.MaxValue, CancellationToken cancellationToken = default)
+        public static async Task Do(
+            Func<Task> task,
+            Func<int, Exception, bool>? isRetryable = null,
+            Action<int, int>? onRetry = null,
+            Action<int, Exception>? onFailure = null,
+            int maxAttempts = 3,
+            int baseDelayInMilliseconds = 1000,
+            int maxDelayInMilliseconds = int.MaxValue,
+            int exceptionHistoryLimit = 5,
+            CancellationToken cancellationToken = default)
         {
             await Do<object>(async () =>
             {
                 await task();
                 return null!;
-            }, isRetryable, onFailure, maxAttempts, maxDelayInMilliseconds, cancellationToken);
+            }, isRetryable, onRetry, onFailure, maxAttempts, baseDelayInMilliseconds, maxDelayInMilliseconds, exceptionHistoryLimit, cancellationToken);
         }
 
         /// <summary>
@@ -54,45 +66,62 @@ namespace slskd
         /// </summary>
         /// <param name="task">The logic to execute.</param>
         /// <param name="isRetryable">A function returning a value indicating whether the last Exception is retryable.</param>
+        /// <param name="onRetry">An action to execute before each retry delay.</param>
         /// <param name="onFailure">An action to execute on failure.</param>
         /// <param name="maxAttempts">The maximum number of retry attempts.</param>
+        /// <param name="baseDelayInMilliseconds">The initial delay in milliseconds.</param>
         /// <param name="maxDelayInMilliseconds">The maximum delay in milliseconds.</param>
+        /// <param name="exceptionHistoryLimit">The maximum number of exceptions to keep for the final aggregate exception.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
         /// <typeparam name="T">The Type of the logic return value.</typeparam>
         /// <returns>The execution context.</returns>
-        public static async Task<T> Do<T>(Func<Task<T>> task, Func<int, Exception, bool>? isRetryable = null, Action<int, Exception>? onFailure = null, int maxAttempts = 3, int maxDelayInMilliseconds = int.MaxValue, CancellationToken cancellationToken = default)
+        public static async Task<T> Do<T>(
+            Func<Task<T>> task,
+            Func<int, Exception, bool>? isRetryable = null,
+            Action<int, int>? onRetry = null,
+            Action<int, Exception>? onFailure = null,
+            int maxAttempts = 3,
+            int baseDelayInMilliseconds = 1000,
+            int maxDelayInMilliseconds = int.MaxValue,
+            int exceptionHistoryLimit = 5,
+            CancellationToken cancellationToken = default)
         {
-            isRetryable ??= (_, _) => true;
-            onFailure ??= (_, _) => { };
+            maxAttempts = Math.Max(1, maxAttempts);
+            baseDelayInMilliseconds = Math.Max(0, baseDelayInMilliseconds);
+            exceptionHistoryLimit = Math.Max(1, exceptionHistoryLimit);
 
-            var exceptions = new List<Exception>();
+            var attempt = 1;
+            var history = new Queue<Exception>();
+            var canRetry = isRetryable ?? ((_, _) => true);
 
-            for (int attempts = 0; attempts < maxAttempts; attempts++)
+            while (attempt <= maxAttempts)
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException();
-                }
+                cancellationToken.ThrowIfCancellationRequested();
 
                 try
                 {
-                    if (attempts > 0)
+                    if (attempt > 1)
                     {
-                        var (delay, jitter) = Compute.ExponentialBackoffDelay(attempts, maxDelayInMilliseconds);
-                        await Task.Delay(delay + jitter, cancellationToken);
+                        var pause = GetRetryDelay(attempt - 1, baseDelayInMilliseconds, maxDelayInMilliseconds);
+                        onRetry?.Invoke(attempt, pause);
+
+                        if (pause > 0)
+                        {
+                            await Task.Delay(pause, cancellationToken);
+                        }
                     }
 
                     return await task();
                 }
                 catch (Exception ex)
                 {
-                    exceptions.Add(ex);
+                    Remember(history, ex, exceptionHistoryLimit);
 
                     try
                     {
-                        onFailure(attempts + 1, ex);
+                        onFailure?.Invoke(attempt, ex);
 
-                        if (!isRetryable(attempts + 1, ex))
+                        if (!canRetry(attempt, ex))
                         {
                             break;
                         }
@@ -104,9 +133,27 @@ namespace slskd
                             new AggregateException(ex, retryCallbackException));
                     }
                 }
+
+                attempt++;
             }
 
-            throw new AggregateException(exceptions);
+            throw new AggregateException(history);
+        }
+
+        private static int GetRetryDelay(int completedFailures, int baseDelayInMilliseconds, int maxDelayInMilliseconds)
+        {
+            var (delay, jitter) = Compute.ExponentialBackoffDelay(completedFailures, baseDelayInMilliseconds, maxDelayInMilliseconds);
+            return delay + jitter;
+        }
+
+        private static void Remember(Queue<Exception> history, Exception exception, int limit)
+        {
+            history.Enqueue(exception);
+
+            while (history.Count > limit)
+            {
+                history.Dequeue();
+            }
         }
     }
 }

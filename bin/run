@@ -1,6 +1,19 @@
-if [ -z "$1" ]; then
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [ -z "${1:-}" ]; then
     echo "💥  error: no image specified; provide a valid image and tag (e.g. ghcr.io/snapetech/slskdn:latest)"
     exit 1
+fi
+
+extra_env=()
+if [ -n "${PUID:-}" ]; then
+    extra_env+=(-e "PUID=$PUID")
+fi
+
+if [ -n "${PGID:-}" ]; then
+    extra_env+=(-e "PGID=$PGID")
 fi
 
 docker run -i \
@@ -16,4 +29,5 @@ docker run -i \
     -e "SLSKD_SHARED_DIR=${SLSKD_SHARED_DIR:-/music}" \
     -e "SLSKD_DOWNLOADS_DIR=${SLSKD_DOWNLOADS_DIR:-/downloads}" \
     -e "SLSKD_APP_DIR=${SLSKD_APP_DIR:-/app}" \
-    $1
+    "${extra_env[@]}" \
+    "$1"

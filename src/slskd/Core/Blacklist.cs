@@ -313,6 +313,8 @@ public class Blacklist
     /// <returns>A value indicating whether the specified IP is contained within the blacklist.</returns>
     public virtual bool Contains(IPAddress ip)
     {
+        ip = ip.NormalizeMappedIPv4();
+
         var addressBytes = ip.GetAddressBytes();
         if (addressBytes.Length != 4)
         {

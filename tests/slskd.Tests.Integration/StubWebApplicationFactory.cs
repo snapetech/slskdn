@@ -570,9 +570,12 @@ internal sealed class StubDownloadService : IDownloadService
     }
 
     public Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size)> files, CancellationToken cancellationToken = default)
+        => EnqueueAsync(username, files.Select(file => (file.Filename, file.Size, BatchId: (Guid?)null)), cancellationToken);
+
+    public Task<(List<Transfer> Enqueued, List<string> Failed)> EnqueueAsync(string username, IEnumerable<(string Filename, long Size, Guid? BatchId)> files, CancellationToken cancellationToken = default)
     {
         var enqueued = new List<Transfer>();
-        foreach (var (fn, size) in files)
+        foreach (var (fn, size, batchId) in files)
         {
             var t = new Transfer
             {
@@ -584,7 +587,8 @@ internal sealed class StubDownloadService : IDownloadService
                 State = TransferStates.Queued,
                 BytesTransferred = 0,
                 AverageSpeed = 0,
-                RequestedAt = DateTime.UtcNow
+                RequestedAt = DateTime.UtcNow,
+                BatchId = batchId,
             };
             _storage[t.Id] = t;
             enqueued.Add(t);

@@ -26,6 +26,7 @@ namespace slskd
     using System.IdentityModel.Tokens.Jwt;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Reflection;
     using System.Text.Json;
     using System.Text.Json.Serialization;
@@ -97,8 +98,18 @@ namespace slskd
         /// <param name="right">The right side of the comparison.</param>
         /// <param name="parentFqn">The root path for recursive calls.</param>
         /// <returns>A list of differences between the two objects.</returns>
-        public static IEnumerable<(PropertyInfo Property, string FQN, object? Left, object? Right)> DiffWith(this object left, object right, string? parentFqn = null)
+        public static IEnumerable<(PropertyInfo? Property, string FQN, object? Left, object? Right)> DiffWith(this object? left, object? right, string? parentFqn = null)
         {
+            if (left is null || right is null)
+            {
+                if (left is null && right is null)
+                {
+                    return [];
+                }
+
+                return [(null, parentFqn ?? string.Empty, left, right)];
+            }
+
             var leftType = left.GetType();
             var rightType = right.GetType();
             if (leftType != rightType)
@@ -106,7 +117,7 @@ namespace slskd
                 throw new InvalidCastException($"Unable to diff types {leftType} and {rightType}");
             }
 
-            var differences = new List<(PropertyInfo Property, string FQN, object? Left, object? Right)>();
+            var differences = new List<(PropertyInfo? Property, string FQN, object? Left, object? Right)>();
 
             foreach (var prop in leftType.GetProperties())
             {
@@ -358,6 +369,14 @@ namespace slskd
         /// <param name="obj">The object to serialize.</param>
         /// <returns>A string containing the serialized object.</returns>
         public static string ToJson(this object obj) => JsonSerializer.Serialize(obj, GetJsonSerializerOptions());
+
+        /// <summary>
+        ///     Returns an IPv4 address for IPv4-mapped IPv6 input; otherwise returns the original address.
+        /// </summary>
+        /// <param name="address">The address to normalize.</param>
+        /// <returns>The normalized address.</returns>
+        public static IPAddress NormalizeMappedIPv4(this IPAddress address)
+            => address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
 
         /// <summary>
         ///     Serializes this object to yaml.

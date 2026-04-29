@@ -39,6 +39,9 @@ namespace slskd.Transfers
         public string Filename { get; init; } = string.Empty;
         public long Size { get; set; }
         public long StartOffset { get; init; }
+        public Guid? BatchId { get; init; }
+        public int Attempts { get; set; } = 1;
+        public DateTime? NextAttemptAt { get; set; }
 
         public TransferStates State { get; set; } = TransferStates.None;
 

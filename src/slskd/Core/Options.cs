@@ -1223,6 +1223,12 @@ namespace slskd
                 public ScheduledSpeedLimitOptions ScheduledLimits { get; init; } = new();
 
                 /// <summary>
+                ///     Gets direct Soulseek download retry options.
+                /// </summary>
+                [Validate]
+                public DownloadRetryOptions Retry { get; init; } = new DownloadRetryOptions();
+
+                /// <summary>
                 ///     Gets a value indicating whether auto-replace for stuck downloads is enabled.
                 /// </summary>
                 [Argument(default, "auto-replace-stuck")]
@@ -1256,6 +1262,37 @@ namespace slskd
                 [Description("enable cost-based scheduling for multi-source downloads")]
                 [RequiresRestart]
                 public bool CostBasedScheduling { get; init; } = true;
+
+                /// <summary>
+                ///     Direct Soulseek download retry options.
+                /// </summary>
+                public class DownloadRetryOptions
+                {
+                    /// <summary>
+                    ///     Gets a value indicating how partial files are handled before a retry.
+                    /// </summary>
+                    [Description("how to handle partial files when retrying a direct Soulseek download: overwrite or resume")]
+                    [Enum(typeof(slskd.Transfers.RetryIncompleteStrategy))]
+                    public string Incomplete { get; init; } = slskd.Transfers.RetryIncompleteStrategy.Resume.ToString().ToLowerInvariant();
+
+                    /// <summary>
+                    ///     Gets the maximum number of direct Soulseek transfer attempts.
+                    /// </summary>
+                    [Range(1, 20)]
+                    public int Attempts { get; init; } = 1;
+
+                    /// <summary>
+                    ///     Gets the initial retry delay in milliseconds.
+                    /// </summary>
+                    [Range(0, 3600000)]
+                    public int Delay { get; init; } = 5000;
+
+                    /// <summary>
+                    ///     Gets the maximum retry delay in milliseconds.
+                    /// </summary>
+                    [Range(1000, 86400000)]
+                    public int MaxDelay { get; init; } = 60000;
+                }
             }
         }
 

@@ -63,7 +63,7 @@ namespace slskd.Authentication
         /// <returns>A successful authentication result, or failure when remote and AllowRemoteNoAuth is false.</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            var remote = Context.Connection.RemoteIpAddress;
+            var remote = Context.Connection.RemoteIpAddress?.NormalizeMappedIPv4();
             var isLoopback = remote != null && IPAddress.IsLoopback(remote);
 
             if (!isLoopback)

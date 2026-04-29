@@ -157,4 +157,14 @@ public class BlacklistTests
 
         Assert.False(bl.Contains(IPAddress.IPv6Loopback));
     }
+
+    [Fact]
+    public async Task Contains_Ipv4MappedIpv6_NormalizesBeforeCidrMatch()
+    {
+        var bl = new Blacklist();
+        await bl.Load("Data/Blacklist/cidr.txt", BlacklistFormat.CIDR);
+
+        Assert.True(bl.Contains(IPAddress.Parse("::ffff:1.2.4.42")));
+        Assert.False(bl.Contains(IPAddress.Parse("::ffff:4.4.4.4")));
+    }
 }

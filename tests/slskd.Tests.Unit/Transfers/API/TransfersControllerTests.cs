@@ -34,7 +34,7 @@ public class TransfersControllerTests
         downloads.Verify(
             service => service.EnqueueAsync(
                 It.IsAny<string>(),
-                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<IEnumerable<(string Filename, long Size, Guid? BatchId)>>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -46,7 +46,7 @@ public class TransfersControllerTests
         downloads
             .Setup(service => service.EnqueueAsync(
                 It.IsAny<string>(),
-                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<IEnumerable<(string Filename, long Size, Guid? BatchId)>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<SlskdTransfer>(), new List<string>()));
 
@@ -61,10 +61,40 @@ public class TransfersControllerTests
         downloads.Verify(
             service => service.EnqueueAsync(
                 "alice",
-                It.Is<IEnumerable<(string Filename, long Size)>>(files =>
-                    files.Single().Filename == "Music/song.flac"),
+                It.Is<IEnumerable<(string Filename, long Size, Guid? BatchId)>>(files =>
+                    files.Single().Filename == "Music/song.flac" && files.Single().BatchId == null),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_WithMultipleFiles_AssignsSharedBatchId()
+    {
+        var downloads = new Mock<IDownloadService>();
+        List<(string Filename, long Size, Guid? BatchId)> queued = new();
+        downloads
+            .Setup(service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<(string Filename, long Size, Guid? BatchId)>>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IEnumerable<(string Filename, long Size, Guid? BatchId)>, CancellationToken>((_, files, _) => queued = files.ToList())
+            .ReturnsAsync((new List<SlskdTransfer>(), new List<string>()));
+
+        var controller = CreateController(downloads);
+
+        var result = await controller.EnqueueAsync(
+            "alice",
+            new[]
+            {
+                new QueueDownloadRequest { Filename = "Music/one.flac", Size = 10 },
+                new QueueDownloadRequest { Filename = "Music/two.flac", Size = 20 },
+            });
+
+        var created = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(201, created.StatusCode);
+        Assert.Equal(2, queued.Count);
+        Assert.NotNull(queued[0].BatchId);
+        Assert.Equal(queued[0].BatchId, queued[1].BatchId);
     }
 
     [Fact]
@@ -107,7 +137,7 @@ public class TransfersControllerTests
         downloads
             .Setup(service => service.EnqueueAsync(
                 It.IsAny<string>(),
-                It.IsAny<IEnumerable<(string Filename, long Size)>>(),
+                It.IsAny<IEnumerable<(string Filename, long Size, Guid? BatchId)>>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("sensitive detail"));
 

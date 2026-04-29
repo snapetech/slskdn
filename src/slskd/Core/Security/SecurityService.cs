@@ -88,6 +88,8 @@ namespace slskd
 
         public (string Name, Role Role, string[] Scopes) AuthenticateWithApiKey(string key, IPAddress callerIpAddress)
         {
+            callerIpAddress = callerIpAddress.NormalizeMappedIPv4();
+
             var inputKeyBytes = System.Text.Encoding.UTF8.GetBytes(key ?? string.Empty);
             var record = OptionsMonitor.CurrentValue.Web.Authentication.ApiKeys
                 .FirstOrDefault(k =>

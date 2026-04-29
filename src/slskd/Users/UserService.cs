@@ -299,6 +299,7 @@ namespace slskd.Users
         public bool IsBlacklisted(string username, IPAddress? ipAddress = null)
         {
             var blacklist = OptionsMonitor.CurrentValue.Groups.Blacklisted;
+            var normalizedAddress = ipAddress?.NormalizeMappedIPv4();
 
             if (blacklist.Members.Contains(username))
             {
@@ -308,11 +309,11 @@ namespace slskd.Users
             // check the user-curated list of blacklisted CIDRs that exists along with the list of
             // blacklisted usernames.  these CIDRs should be one-offs and would not be expected to appear in a
             // blacklist supplied by a third party (but might?)
-            if (ipAddress is not null)
+            if (normalizedAddress is not null)
             {
                 foreach (var cidr in blacklist.Cidrs)
                 {
-                    if (!string.IsNullOrWhiteSpace(cidr) && IPAddressRange.TryParse(cidr, out var range) && range.Contains(ipAddress))
+                    if (!string.IsNullOrWhiteSpace(cidr) && IPAddressRange.TryParse(cidr, out var range) && range.Contains(normalizedAddress))
                     {
                         return true;
                     }
@@ -320,7 +321,7 @@ namespace slskd.Users
             }
 
             // check the managed blacklist loaded from a third party blacklist file
-            if (ipAddress is not null && Blacklist.Contains(ipAddress))
+            if (normalizedAddress is not null && Blacklist.Contains(normalizedAddress))
             {
                 return true;
             }

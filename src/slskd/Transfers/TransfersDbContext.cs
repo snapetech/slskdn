@@ -61,6 +61,11 @@ namespace slskd.Transfers
 
             modelBuilder
                 .Entity<Transfer>()
+                .Property(e => e.NextAttemptAt)
+                .HasConversion(v => v, v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : null);
+
+            modelBuilder
+                .Entity<Transfer>()
                 .Property(d => d.Direction)
                 .HasConversion(new EnumToStringConverter<Soulseek.TransferDirection>());
 

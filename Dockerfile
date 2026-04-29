@@ -42,6 +42,7 @@ ARG REVISION=0
 ARG BUILD_DATE
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
+  gosu \
   jq \
   wget \
   tini \
@@ -52,12 +53,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   /var/cache/apt/* \
   /var/tmp/*
 
-RUN bash -c 'mkdir -p /app/{incomplete,downloads} \ 
-  && chmod -R 777 /app \
+RUN groupadd --gid 1000 slskdn \
+  && useradd --uid 1000 --gid 1000 --home-dir /app --shell /usr/sbin/nologin slskdn \
   && mkdir -p /.net \
-  && chmod 777 /.net'
-
-VOLUME /app
+  && chmod 777 /.net
 
 HEALTHCHECK --interval=60s --timeout=3s --start-period=60m --retries=3 CMD wget -q -O - http://localhost:${SLSKD_HTTP_PORT}/health
 
@@ -66,7 +65,7 @@ ENV SHELL=/usr/bin/bash \
   DOTNET_BUNDLE_EXTRACT_BASE_DIR=/.net \
   DOTNET_gcServer=0 \
   DOTNET_gcConcurrent=1 \
-  DOTNET_GCHeapHardLimit=0x80000000	\
+  DOTNET_GCHeapHardLimit=0x80000000 \
   DOTNET_GCConserveMemory=9 \
   SLSKD_UMASK=0022 \
   SLSKD_HTTP_ADDRESS=0.0.0.0 \
@@ -76,7 +75,7 @@ ENV SHELL=/usr/bin/bash \
   SLSKD_APP_DIR=/app \
   SLSKD_DOCKER_TAG=$TAG \
   SLSKD_DOCKER_VERSION=$VERSION \
-  SLSKD_DOCKER_REVISON=$REVISION \
+  SLSKD_DOCKER_REVISION=$REVISION \
   SLSKD_DOCKER_BUILD_DATE=$BUILD_DATE
 
 LABEL org.opencontainers.image.title=slskdn \
@@ -94,7 +93,8 @@ LABEL org.opencontainers.image.title=slskdn \
 WORKDIR /slskd
 COPY --from=publish /slskd/dist/${TARGETPLATFORM} .
 
-RUN echo "umask \$SLSKD_UMASK && ./slskd" > start.sh \
-  && chmod +x start.sh
+COPY packaging/docker/slskdn-container-start /usr/local/bin/slskdn-container-start
+RUN chmod +x /usr/local/bin/slskdn-container-start
 
-ENTRYPOINT ["/usr/bin/tini", "--", "./start.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/slskdn-container-start"]
+CMD ["./slskd"]

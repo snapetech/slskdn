@@ -33,4 +33,37 @@ public class RetryTests
         Assert.Contains(aggregate.InnerExceptions, ex => ex is InvalidOperationException ioe && ioe.Message == "primary failure");
         Assert.Contains(aggregate.InnerExceptions, ex => ex is ApplicationException ae && ae.Message == "retryable failure");
     }
+
+    [Fact]
+    public async Task Do_WhenOperationRetries_InvokesRetryCallbackWithNextAttempt()
+    {
+        var attempts = 0;
+        var retryAttempt = 0;
+        var retryDelay = -1;
+
+        await Retry.Do(
+            task: () =>
+            {
+                attempts++;
+
+                if (attempts == 1)
+                {
+                    throw new InvalidOperationException("transient");
+                }
+
+                return Task.CompletedTask;
+            },
+            onRetry: (attempt, delay) =>
+            {
+                retryAttempt = attempt;
+                retryDelay = delay;
+            },
+            maxAttempts: 2,
+            baseDelayInMilliseconds: 0,
+            maxDelayInMilliseconds: 0);
+
+        Assert.Equal(2, attempts);
+        Assert.Equal(2, retryAttempt);
+        Assert.Equal(0, retryDelay);
+    }
 }

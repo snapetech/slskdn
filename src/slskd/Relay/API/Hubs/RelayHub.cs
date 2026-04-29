@@ -99,7 +99,7 @@ namespace slskd.Relay
         private IOptionsMonitor<Options> OptionsMonitor { get; }
         private OptionsAtStartup OptionsAtStartup { get; }
         private RelayMode OperationMode => OptionsAtStartup.Relay.Mode.ToEnum<RelayMode>();
-        private IPAddress? RemoteIpAddress => Context.Features.Get<IHttpConnectionFeature>()?.RemoteIpAddress;
+        private IPAddress? RemoteIpAddress => Context.Features.Get<IHttpConnectionFeature>()?.RemoteIpAddress?.NormalizeMappedIPv4();
 
         private static string GetAgentLogId(string agentName)
         {

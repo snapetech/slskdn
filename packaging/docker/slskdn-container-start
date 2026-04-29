@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+app_dir="${SLSKD_APP_DIR:-/app}"
+umask "${SLSKD_UMASK:-0022}"
+
+warn_ephemeral_app_dir() {
+  if ! mountpoint -q "$app_dir"; then
+    echo "slskdN warning: $app_dir is not a mounted volume; config and databases may be lost when this container is removed." >&2
+  fi
+}
+
+require_app_dir_access() {
+  if [ ! -r "$app_dir" ] || [ ! -w "$app_dir" ]; then
+    echo "slskdN error: $app_dir must be readable and writable by $(id -u):$(id -g)." >&2
+    echo "slskdN hint: fix host ownership or run with PUID/PGID matching the directory owner." >&2
+    exit 1
+  fi
+}
+
+if [ "$(id -u)" -ne 0 ]; then
+  if [ -n "${PUID:-}" ] || [ -n "${PGID:-}" ]; then
+    echo "slskdN error: do not combine Docker --user/user: with PUID or PGID." >&2
+    exit 1
+  fi
+
+  mkdir -p "$app_dir" 2>/dev/null || true
+  require_app_dir_access
+  warn_ephemeral_app_dir
+  exec "$@"
+fi
+
+if [ -z "${PUID:-}" ] && [ -z "${PGID:-}" ]; then
+  mkdir -p "$app_dir"
+  warn_ephemeral_app_dir
+  exec "$@"
+fi
+
+case "${PUID:-1000}" in
+  ''|*[!0-9]*)
+    echo "slskdN error: PUID must be a numeric user id." >&2
+    exit 1
+    ;;
+esac
+
+case "${PGID:-1000}" in
+  ''|*[!0-9]*)
+    echo "slskdN error: PGID must be a numeric group id." >&2
+    exit 1
+    ;;
+esac
+
+target_uid="${PUID:-1000}"
+target_gid="${PGID:-1000}"
+
+if [ "$(getent group slskdn | cut -d: -f3)" != "$target_gid" ]; then
+  groupmod --gid "$target_gid" --non-unique slskdn
+fi
+
+if [ "$(id -u slskdn)" != "$target_uid" ] || [ "$(id -g slskdn)" != "$target_gid" ]; then
+  usermod --uid "$target_uid" --gid "$target_gid" --non-unique slskdn
+fi
+
+mkdir -p "$app_dir"
+
+if [ "$(stat -c '%u:%g' "$app_dir")" != "$target_uid:$target_gid" ]; then
+  chown "$target_uid:$target_gid" "$app_dir"
+fi
+
+require_app_dir_access
+warn_ephemeral_app_dir
+exec gosu "$target_uid:$target_gid" "$@"

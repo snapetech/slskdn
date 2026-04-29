@@ -184,7 +184,7 @@ namespace slskd.Relay
                     },
                     maxAttempts: int.MaxValue,
                     maxDelayInMilliseconds: 30000,
-                    StartCancellationTokenSource.Token);
+                    cancellationToken: StartCancellationTokenSource.Token);
             }
             finally
             {
@@ -794,7 +794,7 @@ namespace slskd.Relay
                     onFailure: (count, ex) => Log.Warning("Failed attempt #{Attempts} to obtain share upload token: {Message}", count, ex.Message),
                     maxAttempts: 3,
                     maxDelayInMilliseconds: 5000,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
 
                 Log.Debug("Received share upload token {Token}", GetRelayTokenLogId(token));
 

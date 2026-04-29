@@ -1251,3 +1251,11 @@
 - [x] Build CSV playlist import into Wishlist for issue #216
   - Status: completed (2026-04-26)
   - Notes: Added `POST /api/v0/wishlist/import/csv` and a Wishlist page import modal for TuneMyMusic-style CSV exports. Rows are imported as conservative wishlist searches with optional auto-download, filter, max results, enabled state, and album inclusion; import deduplicates against existing/imported rows and does not immediately burst-search the Soulseek network.
+
+- [x] Adapt upstream 0.24.5-to-current packaging/runtime alignment for slskdN
+  - Status: completed (2026-04-29)
+  - Notes: Implemented slskdN-native IPv4-mapped IPv6 normalization, null-safe config diffs, retry callback plumbing, Docker `PUID`/`PGID`/`--user` entrypoint handling, packaging validation guards, and direct-download retry/resume/batch metadata without copying upstream implementation text.
+
+- [x] Add transfer retry/resume and batch grouping support
+  - Status: completed (2026-04-29)
+  - Notes: Added configurable `global.download.retry`, transfer `BatchId`/`Attempts`/`NextAttemptAt` persistence, migration coverage, controller batch grouping for multi-file queue requests, retry state updates, incomplete-file resume behavior, and focused regression tests.

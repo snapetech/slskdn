@@ -45,6 +45,21 @@ namespace slskd.Transfers.API
         public long BytesTransferred { get; set; }
 
         /// <summary>
+        ///     Gets the batch id shared by downloads queued together, if any.
+        /// </summary>
+        public Guid? BatchId { get; set; }
+
+        /// <summary>
+        ///     Gets the number of direct Soulseek attempts made for this transfer.
+        /// </summary>
+        public int Attempts { get; set; }
+
+        /// <summary>
+        ///     Gets the next retry time, if the transfer is waiting to retry.
+        /// </summary>
+        public DateTime? NextAttemptAt { get; set; }
+
+        /// <summary>
         ///     Gets the transfer direction.
         /// </summary>
         public TransferDirection Direction { get; set; }
@@ -134,6 +149,7 @@ namespace slskd.Transfers.API
             return new Transfer()
             {
                 AverageSpeed = transfer.AverageSpeed,
+                Attempts = 1,
                 BytesRemaining = transfer.BytesRemaining,
                 BytesTransferred = transfer.BytesTransferred,
                 Direction = transfer.Direction,

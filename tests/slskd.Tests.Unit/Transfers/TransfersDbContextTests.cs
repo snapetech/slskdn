@@ -34,9 +34,9 @@ public sealed class TransfersDbContextTests
             command.CommandText =
                 """
                 INSERT INTO Transfers
-                (Id, Username, Direction, Filename, Size, StartOffset, State, StateDescription, RequestedAt, EnqueuedAt, StartedAt, EndedAt, BytesTransferred, AverageSpeed, PlaceInQueue, Exception, Removed)
+                (Id, Username, Direction, Filename, Size, StartOffset, State, StateDescription, RequestedAt, EnqueuedAt, StartedAt, EndedAt, BytesTransferred, AverageSpeed, PlaceInQueue, Exception, Removed, Attempts)
                 VALUES
-                ($id, $username, $direction, $filename, $size, $startOffset, $state, NULL, $requestedAt, NULL, NULL, NULL, $bytesTransferred, $averageSpeed, NULL, NULL, 0)
+                ($id, $username, $direction, $filename, $size, $startOffset, $state, NULL, $requestedAt, NULL, NULL, NULL, $bytesTransferred, $averageSpeed, NULL, NULL, 0, 1)
                 """;
             command.Parameters.AddWithValue("$id", Guid.NewGuid());
             command.Parameters.AddWithValue("$username", "legacy-user");

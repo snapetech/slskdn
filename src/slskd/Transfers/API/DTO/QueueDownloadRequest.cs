@@ -18,6 +18,7 @@
 //     You should have received a copy of the GNU Affero General Public License
 //     along with this program.  If not, see https://www.gnu.org/licenses/.
 // </copyright>
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace slskd.Transfers.API
@@ -34,5 +35,10 @@ namespace slskd.Transfers.API
         ///     Gets or sets the size of the file.
         /// </summary>
         public long Size { get; set; }
+
+        /// <summary>
+        ///     Gets or sets an optional id used to keep files from one queue request together.
+        /// </summary>
+        public Guid? BatchId { get; set; }
     }
 }

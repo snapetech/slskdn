@@ -1,3 +1,17 @@
+## Update 2026-04-29 06:08:44Z
+
+- Current task: None. Upstream-alignment items `1`, `2`, and `3` are implemented locally and validated.
+- Last activity:
+  - added slskdN-native low-risk upstream alignment fixes for IPv4-mapped IPv6 CIDR/proxy/API handling, null-safe config diffs, and retry callbacks/backoff controls
+  - added Docker packaging/runtime support for `PUID`/`PGID`, non-root `--user` operation, app-dir access validation, corrected Docker revision metadata, and packaging validator coverage
+  - added configurable direct-download retry/resume behavior plus transfer batch metadata, API batch grouping, persistence migration, DTO fields, and focused regression tests
+  - compared the implementation against current upstream and refactored the retry/download retry code paths so the expression is slskdN-specific rather than structurally mirroring upstream
+  - documented the IPv4-mapped IPv6 gotcha in ADR-0001 and committed it as `5f80585f4`
+  - validation passed: `dotnet build --no-restore`, focused unit slices, packaging metadata validation, shell syntax checks, `bash ./bin/lint`, and `git diff --check`; full `dotnet test --no-build` passed unit/non-integration projects and hit the known transient full-instance overlay `502` once, then the exact failed integration test passed on rerun
+- Next steps:
+  1. Review the diff, then commit the implementation if it matches the intended copyright-safe alignment scope.
+  2. Do not create release/build tags unless explicitly requested.
+
 ## Update 2026-04-29 05:35:00Z
 
 - Current task: Corrective stable release versioning after the license-compliance rollback.

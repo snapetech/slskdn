@@ -6884,6 +6884,15 @@ Code quality improvements were completed as part of Option A:
   - `bash ./bin/lint`: passed
   - `git diff --check`: passed
 
+## 2026-04-29 06:08:44Z
+
+- Adapted the low-risk upstream alignment set in slskdN-native code: normalized IPv4-mapped IPv6 addresses before CIDR/proxy/API checks, made config diffs null-safe, and extended retry/backoff helpers with retry callbacks and bounded exception history.
+- Added unique slskdN packaging/runtime behavior for Docker: explicit `slskdn` runtime user, `gosu` entrypoint, `PUID`/`PGID` support, `--user` conflict checks, app-dir access validation, no baked-in `/app` volume, corrected `SLSKD_DOCKER_REVISION`, and packaging metadata checks for those invariants.
+- Added direct download retry/resume/batch support: `global.download.retry` config, transfer `BatchId`/`Attempts`/`NextAttemptAt` columns and DTO fields, migration, API batch grouping for multi-file requests, incomplete-file resume or overwrite behavior, and batch destination grouping.
+- Documented the IPv4-mapped IPv6 CIDR gotcha in ADR-0001 and committed that docs-only entry as `5f80585f4`.
+- Refactored the retry helper and direct-download retry implementation after comparing against current upstream so the code expresses slskdN-specific control flow, helper names, and logging rather than mirroring upstream structure.
+- Validation passed: `dotnet build --no-restore`, focused unit tests for common extensions/blacklist/retry/transfers/downloads, `bash packaging/scripts/validate-packaging-metadata.sh`, shell syntax checks, `bash ./bin/lint`, and `git diff --check`. Full `dotnet test --no-build` passed unit/non-integration projects and hit the known transient full-instance overlay `502` once; rerunning the exact failed integration test passed.
+
 ## 2026-04-20 03:45:00Z
 
 - Fixed the full set of UI/runtime issues from the admin/page audit instead of just triaging them.

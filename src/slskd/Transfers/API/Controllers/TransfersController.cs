@@ -372,7 +372,8 @@ namespace slskd.Transfers.API
                 .Select(r => new QueueDownloadRequest
                 {
                     Filename = r!.Filename?.Trim() ?? string.Empty,
-                    Size = r.Size
+                    Size = r.Size,
+                    BatchId = r.BatchId,
                 })
                 .ToList();
 
@@ -388,7 +389,13 @@ namespace slskd.Transfers.API
 
             try
             {
-                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(username, normalizedRequests.Select(r => (r.Filename, r.Size)));
+                var batchId = normalizedRequests.Count > 1
+                    ? normalizedRequests.FirstOrDefault(r => r.BatchId.HasValue)?.BatchId ?? Guid.NewGuid()
+                    : normalizedRequests.FirstOrDefault()?.BatchId;
+
+                var (enqueued, failed) = await Transfers.Downloads.EnqueueAsync(
+                    username,
+                    normalizedRequests.Select(r => (r.Filename, r.Size, r.BatchId ?? batchId)));
 
                 return StatusCode(201, new { Enqueued = enqueued, Failed = failed });
             }
