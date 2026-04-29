@@ -1,3 +1,15 @@
+## Update 2026-04-29 06:25:00Z
+
+- Current task: Prepare `2026042900-slskdn.190` after upstream-alignment changes landed on `main`.
+- Last activity:
+  - confirmed `origin/main` advanced past `.189` with `9b31faa4d feat: Adapt upstream packaging and transfer alignment`
+  - reviewed the diff: Docker runtime user handling, packaging validation, configurable transfer retry/resume and batch metadata, IPv4-mapped address normalization, and focused tests
+  - promoted the Unreleased changelog notes into `2026042900-slskdn.190` while keeping the date-versioned rollback explanation explicit
+- Next steps:
+  1. Validate release-note generation for `2026042900-slskdn.190`.
+  2. Push `build-main-2026042900-slskdn.190`.
+  3. Continue watching `.189`/`.190`; purge superseded releases after the replacement release is live.
+
 ## Update 2026-04-29 06:08:44Z
 
 - Current task: None. Upstream-alignment items `1`, `2`, and `3` are implemented locally and validated.

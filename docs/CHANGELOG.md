@@ -22,6 +22,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.190] — 2026-04-29
+
+This release follows the corrective `2026042900-slskdn.189` date-versioned
+rollback build with runtime and transfer robustness work that landed while the
+`.189` Docker publish was still finishing. It keeps the same public
+`YYYYMMDDmm-slskdn.###` version shape, remains on the slskd 0.24.5
+license-compliance rollback base, and does not imply upstream slskd 0.26 code.
+
 - Added slskdN-native Docker runtime handling for `PUID`/`PGID`, non-root
   `--user` runs, writable app-directory validation, and packaging metadata
   checks without creating release tags.

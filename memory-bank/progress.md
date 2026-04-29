@@ -1,3 +1,9 @@
+## 2026-04-29 06:25Z - Prepared corrective stable release 190
+
+- Reviewed the post-`.189` `main` change set and confirmed it is release-worthy: Docker `PUID`/`PGID` and non-root runtime handling, packaging metadata checks, transfer retry/resume and batch persistence, IPv4-mapped address normalization, and regression tests.
+- Promoted the Unreleased changelog notes into `2026042900-slskdn.190` while preserving the no-`0.26` date-versioned rollback explanation.
+- `.189` remains in progress with only the main Docker job still running at the time this release prep started.
+
 ## 2026-04-29 05:35Z - Switched corrective stable release to date versioning
 
 - Corrected the post-rollback versioning plan after `0.24.5-slskdn.186` sorted older than removed `0.25.1-slskdn.*` packages in downstream package managers.

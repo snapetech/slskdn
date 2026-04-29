@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **release**: Prepare `2026042900-slskdn.190` for post-rollback alignment changes.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Promoted the Docker runtime, packaging validation, direct-download retry/resume, transfer batch metadata, and IPv4-mapped address normalization changes into a new date-versioned stable release section. This remains on the slskd 0.24.5 license-compliance rollback base and keeps the `YYYYMMDDmm-slskdn.###` public version shape.
+
 - [x] **release**: Switch corrective rollback release to `YYYYMMDDmm-slskdn.###` versioning.
  - Status: completed (2026-04-29)
  - Priority: P1
