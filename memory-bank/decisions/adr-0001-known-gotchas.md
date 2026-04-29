@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z155. Package Publish Jobs Must Fail When Retries Are Exhausted
+
+**The Bug**: The stable Chocolatey publish job returned success after three `504 Gateway Timeout` responses, so the tag workflow looked green even though no package was published to Chocolatey.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```powershell
+Write-Host "Chocolatey push failed after $maxRetries attempts (likely transient)"
+exit 0
+```
+
+**Correct**:
+```powershell
+Write-Host "Chocolatey push failed after $maxRetries attempts (likely transient)"
+exit 1
+```
+
+**Why This Keeps Happening**: Release workflows often treat external package hosts as flaky and try to keep the overall release moving. That is acceptable for optional channels only if the failure is clearly reported. For a publish job named as successful, exhausted retries must fail the job so the missing downstream package is visible.
+
 ### 0z154. Transfer Bulk Actions Must Mask Accepted Terminal Rows
 
 **The Bug**: Downloads/uploads flashed old/new/old/new rows after `Retry All Failed` or `Remove All Succeeded` because one-second polling kept rendering stale terminal transfer snapshots while the backend was still converging.

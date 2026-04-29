@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the stable Chocolatey publish job so repeated transient push failures
+  fail the workflow instead of reporting a green release with no package
+  published.
+
 ## [2026042900-slskdn.197] — 2026-04-29
 
 - Restored the browser tab title to the short slskdN brand name instead of

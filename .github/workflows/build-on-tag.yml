@@ -1840,7 +1840,7 @@ jobs:
                 Start-Sleep -Seconds 10
               } else {
                 Write-Host "⚠️ Chocolatey push failed after $maxRetries attempts (likely transient)"
-                exit 0
+                exit 1
               }
             } else {
               Write-Host "❌ Chocolatey push failed with exit code $LASTEXITCODE"; exit 1
