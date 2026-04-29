@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.194] — 2026-04-29
+
 - Fixed the AUR source package build for date-versioned slskdN releases by
   mapping public versions such as `2026042900-slskdn.193` to MSBuild-safe
   package versions while preserving the public informational version.

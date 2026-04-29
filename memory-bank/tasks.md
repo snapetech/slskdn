@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **release**: Prepare `2026042900-slskdn.194` for AUR source build fix.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Promoted the AUR source date-version build fix into a `.194` changelog section and validated generated release notes before pushing the tag-only release.
+
 - [x] **bug**: Fix AUR source install for `2026042900-slskdn.193`.
  - Status: completed (2026-04-29)
  - Priority: P1

@@ -1,3 +1,15 @@
+## Update 2026-04-29 17:10:00Z
+
+- Current task: Prepare stable release `2026042900-slskdn.194` for the AUR source build fix.
+- Last activity:
+  - promoted the AUR source date-version build fix into a `.194` changelog section
+  - generated release notes for `2026042900-slskdn.194`
+  - validation passed for release-note generation, packaging metadata, and diff checks
+- Next steps:
+  1. Commit and push the `.194` release-note update.
+  2. Push tag `build-main-2026042900-slskdn.194`.
+  3. Watch the tag-only release workflow.
+
 ## Update 2026-04-29 16:43:00Z
 
 - Current task: None. `slskdn` AUR source install fix is implemented, pushed, and published to AUR.

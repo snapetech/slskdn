@@ -1,3 +1,9 @@
+## 2026-04-29 17:10Z - Prepared stable release 194
+
+- Promoted the AUR source date-version build fix from Unreleased into `2026042900-slskdn.194`.
+- Generated release notes for `.194`; the notes include the AUR fix and follow-up repair record.
+- Validation passed for release-note generation, packaging metadata, and diff checks before tagging.
+
 ## 2026-04-29 16:43Z - Fixed AUR source date-version build
 
 - Reproduced the `slskdn 193` AUR source install failure locally and found the fatal error behind the warning noise: .NET rejected generated assembly version `2026042900.193.0.0`.
