@@ -52,6 +52,57 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z154. Transfer Bulk Actions Must Mask Accepted Terminal Rows
+
+**The Bug**: Downloads/uploads flashed old/new/old/new rows after `Retry All Failed` or `Remove All Succeeded` because one-second polling kept rendering stale terminal transfer snapshots while the backend was still converging.
+
+**Files Affected**:
+- `src/web/src/components/Transfers/Transfers.jsx`
+- `src/web/src/components/Transfers/Transfers.test.jsx`
+
+**Wrong**:
+```js
+await transfersLibrary.clearCompleted({ direction });
+// Wait for a later poll to remove rows.
+```
+
+**Correct**:
+```js
+await transfersLibrary.clearCompleted({ direction });
+hideTransfers(transfersToRemove);
+```
+
+**Why This Keeps Happening**: Bulk transfer actions are accepted asynchronously by the backend, and the UI polls frequently enough for stale snapshots to race with newer ones. The page needs monotonic fetch application plus short-lived optimistic suppression for rows whose retry/remove action already succeeded.
+
+### 0z153. Semantic UI Theme Pickers Should Use Controlled Dropdown Options
+
+**The Bug**: The Web UI theme picker looked clickable but did not reliably open or apply choices when implemented as a custom-trigger `Dropdown` with manual `Dropdown.Item` children inside the inverted navigation.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+- `src/web/src/components/App.test.jsx`
+
+**Wrong**:
+```jsx
+<Dropdown trigger={<span>Theme</span>}>
+  <Dropdown.Menu>
+    <Dropdown.Item onClick={() => setTheme('light')}>Light</Dropdown.Item>
+  </Dropdown.Menu>
+</Dropdown>
+```
+
+**Correct**:
+```jsx
+<Dropdown
+  onChange={(_, data) => setTheme(data.value)}
+  open={themeMenuOpen}
+  options={themeOptions}
+  value={theme}
+/>
+```
+
+**Why This Keeps Happening**: Semantic UI dropdowns in a `Menu.Item` have their own open/change lifecycle. Mixing a custom trigger, manual child items, and nav-specific styling can make the visible trigger diverge from the dropdown's controlled value path. Use controlled `options`/`value`/`onChange` for this selector and cover it with a click test.
+
 ### 0z152. Full-Instance Overlay Connect Tests Must Wait Through Transient 502s
 
 **The Bug**: The live full-instance overlay mesh integration test failed in full-suite runs when `/api/v0/overlay/connect` returned a transient `502` even though the same test passed by itself and the overlay listener had already accepted TCP probes.
