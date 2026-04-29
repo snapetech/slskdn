@@ -20,7 +20,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ---
 
-## [2026042900-slskdn.187] — 2026-04-29
+## [2026042900-slskdn.188] — 2026-04-29
 
 This is a corrective slskdN-versioned release for package-manager ordering. The
 previous rollback build, `0.24.5-slskdn.186`, correctly restored the
@@ -36,6 +36,9 @@ AGPLv3 rollback base with slskdN-owned backports only.
 The `0.24.5-slskdn.186` release is superseded by this build for the same
 license-compliance reason older releases were purged: users and packagers should
 resolve to the current rollback line, not the post-0.25.0 upstream-sync line.
+This also supersedes `2026042900-slskdn.187`, which created the GitHub release
+and package metadata but failed the Docker publish job because the Dockerfile
+invoked a Bash-only build script through `sh`.
 
 Included from the rollback line:
 
@@ -81,6 +84,7 @@ Relevant non-documentation commits preserved in this rollback line:
 - `393e2cea4` fix: make mesh QUIC opt-in
 - `3e65a5778` fix: backport rollback release fixes
 - `6b6dcee6e` chore: restore main to 0.24.x rollback line
+- `8f597c0f5` chore: switch stable release versioning to slskdN dates
 
 ## [0.24.5-slskdn.186] — 2026-04-29
 
