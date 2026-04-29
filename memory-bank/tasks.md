@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **release**: Prepare `2026042900-slskdn.195` for LAN-only DHT warning fix.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Promoted the Network dashboard LAN-only DHT warning fix into a `.195` changelog section and validated generated release notes before pushing the tag-only release.
+
 - [x] **bug**: Fix false public DHT warning for LAN-only nodes.
  - Status: completed (2026-04-29)
  - Priority: P1

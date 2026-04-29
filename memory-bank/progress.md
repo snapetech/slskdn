@@ -1,3 +1,9 @@
+## 2026-04-29 16:19:50Z - Prepared stable release 195
+
+- Promoted the LAN-only DHT warning fix from Unreleased into `2026042900-slskdn.195`.
+- Generated release notes for `.195`; the notes include only the false public-DHT warning fix after filtering release hygiene commits.
+- Validation passed for release-note generation, packaging metadata, and diff checks before tagging.
+
 ## 2026-04-29 16:17:24Z - Fixed false DHT exposure warning for LAN-only nodes
 
 - Confirmed the tester config screenshot had `dhtRendezvous.lanOnly: true`, so the public DHT exposure warning was a UI bug rather than expected operator guidance.

@@ -1,3 +1,15 @@
+## Update 2026-04-29 16:19:50Z
+
+- Current task: Prepare stable release `2026042900-slskdn.195` for the LAN-only DHT warning fix.
+- Last activity:
+  - promoted the Network dashboard LAN-only warning fix into a `.195` changelog section
+  - generated release notes for `2026042900-slskdn.195`
+  - validation passed for release-note generation, packaging metadata, and diff checks
+- Next steps:
+  1. Commit and push the `.195` release-note update.
+  2. Push tag `build-main-2026042900-slskdn.195`.
+  3. Watch the tag-only release workflow.
+
 ## Update 2026-04-29 16:17:24Z
 
 - Current task: None. False Network dashboard public DHT warning for LAN-only nodes is fixed locally and ready to push.
