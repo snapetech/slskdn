@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z149. Theme Menus Need Their Own Surface And Contrast Tokens
+
+**The Bug**: The slskdN web theme made the top navigation, active theme picker, dropdown menu, panels, and inputs use near-identical dark warm colors, so the theme picker looked broken and the page lost usable visual hierarchy.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/App.jsx`
+
+**Wrong**:
+```css
+--slskd-primary-background: #161311;
+--slskd-secondary-background: #221e1b;
+--slskd-overlay-background: #211b1e;
+--smui-menu-background: var(--slskd-hover-background);
+```
+
+**Correct**:
+```css
+--slskd-primary-background: #121315;
+--slskd-secondary-background: #211d1a;
+--slskd-overlay-background: #24242b;
+--slskdn-theme-menu-background: #27252d;
+```
+
+**Why This Keeps Happening**: Semantic UI dropdowns inherit menu and active-item tokens from the surrounding inverted navigation. If a custom theme only tweaks global dark variables, the trigger and popup can visually merge with the header. Theme pickers need explicit trigger, popup, active, hover, border, and shadow styling separate from page background tokens.
+
 ### 0z148. Do Not Read Legacy Overlay Certificate Password Files
 
 **The Bug**: Overlay certificate migration still read `overlay_cert.key` as a cleartext password when loading an old password-protected `overlay_cert.pfx`, which kept a CodeQL `cs/cleartext-storage-of-sensitive-information` alert open.
