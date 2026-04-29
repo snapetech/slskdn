@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z143. Docker Placeholder Users Must Avoid Fixed UID/GID Collisions
+
+**The Bug**: The `2026042900-slskdn.190` Docker publish job failed because the runtime image tried to create `slskdn` with fixed UID/GID `1000`, but `mcr.microsoft.com/dotnet/runtime-deps:10.0-noble` already contained GID `1000`.
+
+**Files Affected**:
+- `Dockerfile`
+- `packaging/docker/slskdn-container-start`
+
+**Wrong**:
+```dockerfile
+RUN groupadd --gid 1000 slskdn \
+  && useradd --uid 1000 --gid 1000 --home-dir /app --shell /usr/sbin/nologin slskdn
+```
+
+**Correct**:
+```dockerfile
+RUN groupadd --system slskdn \
+  && useradd --system --gid slskdn --home-dir /app --shell /usr/sbin/nologin slskdn
+```
+
+**Why This Keeps Happening**: Docker base images can add or change built-in users and groups at any time. If an entrypoint later remaps a placeholder user with `PUID`/`PGID`, the image build should let the base OS allocate non-conflicting placeholder IDs instead of assuming `1000:1000` is free.
+
 ### 0z142. Normalize IPv4-Mapped IPv6 Before CIDR Checks
 
 **The Bug**: IPv4 peers presented as IPv4-mapped IPv6 addresses, such as `::ffff:1.2.4.42`, bypassed IPv4 CIDR checks because blacklist and trust code compared raw address byte lengths before mapping the address back to IPv4.
