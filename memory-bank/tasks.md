@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **security**: Resolve open dependency and CodeQL security alerts.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Applied the open Dependabot bump PRs for NuGet and npm, explicitly upgraded vulnerable OpenTelemetry packages to `1.15.3`, upgraded npm `uuid` to `14.0.0`, and removed cleartext legacy overlay certificate password reads that kept CodeQL alert `2550` open.
+
 - [x] **release**: Prepare `2026042900-slskdn.195` for LAN-only DHT warning fix.
  - Status: completed (2026-04-29)
  - Priority: P1

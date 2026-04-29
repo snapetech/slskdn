@@ -184,19 +184,7 @@ public sealed class CertificateManager
         }
 
         _logger.LogDebug("Saved certificate to {Path}", path);
-
-        if (File.Exists(_legacyPasswordPath))
-        {
-            try
-            {
-                File.Delete(_legacyPasswordPath);
-                _logger.LogDebug("Removed legacy overlay certificate password file {Path}", _legacyPasswordPath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not remove legacy overlay certificate password file");
-            }
-        }
+        DeleteLegacyPasswordFile();
     }
 
     /// <summary>
@@ -214,54 +202,32 @@ public sealed class CertificateManager
         }
         catch (CryptographicException ex) when (File.Exists(_legacyPasswordPath))
         {
-            _logger.LogDebug(ex, "Loading overlay certificate without password failed, attempting legacy password-protected path");
-
-            var password = TryReadLegacyCertificatePassword();
-            if (string.IsNullOrWhiteSpace(password))
-            {
-                throw;
-            }
-
-            var certificate = X509CertificateLoader.LoadPkcs12FromFile(
-                path,
-                password,
-                X509KeyStorageFlags.Exportable,
-                new Pkcs12LoaderLimits());
-
-            try
-            {
-                // Migrate legacy password-protected overlays to the new passwordless format.
-                SaveCertificate(certificate, path);
-            }
-            catch (Exception migrationEx)
-            {
-                _logger.LogWarning(migrationEx, "Failed to migrate legacy overlay certificate to passwordless format");
-            }
-
-            return certificate;
+            _logger.LogWarning(
+                ex,
+                "Overlay certificate uses a legacy cleartext password file; deleting legacy credentials and regenerating certificate");
+            DeleteLegacyPasswordFile();
+            throw;
         }
     }
 
     /// <summary>
-    /// Read legacy password file for compatibility with pre-hardening certificate artifacts.
+    /// Delete the pre-hardening cleartext password file without reading its contents.
     /// </summary>
-    private string? TryReadLegacyCertificatePassword()
+    private void DeleteLegacyPasswordFile()
     {
+        if (!File.Exists(_legacyPasswordPath))
+        {
+            return;
+        }
+
         try
         {
-            var password = File.ReadAllText(_legacyPasswordPath).Trim();
-            if (string.IsNullOrWhiteSpace(password))
-            {
-                _logger.LogWarning("Legacy overlay certificate password file exists but is empty");
-                return null;
-            }
-
-            return password;
+            File.Delete(_legacyPasswordPath);
+            _logger.LogDebug("Removed legacy overlay certificate password file {Path}", _legacyPasswordPath);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not read overlay certificate legacy password file");
-            return null;
+            _logger.LogWarning(ex, "Could not remove legacy overlay certificate password file");
         }
     }
 }

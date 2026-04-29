@@ -25,6 +25,12 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed the slskdN theme picker contrast and dropdown surface styling so the
   selector is visible in the top navigation and the default dark palette has
   clearer separation between the page, panels, inputs, and active controls.
+- Upgraded Dependabot PR dependency bumps for NuGet and npm, including patched
+  OpenTelemetry `1.15.3` packages and npm `uuid` `14.0.0` to clear the open
+  package advisories.
+- Fixed the CodeQL cleartext-secret alert by deleting legacy overlay
+  certificate password files without reading their contents and regenerating
+  the self-signed overlay certificate when needed.
 
 ## [2026042900-slskdn.195] — 2026-04-29
 

@@ -1,3 +1,17 @@
+## Update 2026-04-29 16:32:00Z
+
+- Current task: Resolve open security warnings and Dependabot bump PRs.
+- Last activity:
+  - identified three open Dependabot alerts and one open CodeQL cleartext-secret alert
+  - applied Dependabot PR `#222`, `#220`, and `#218` dependency upgrades into `main`
+  - explicitly upgraded vulnerable OpenTelemetry packages to `1.15.3` and npm `uuid` to `14.0.0`
+  - changed overlay certificate handling so legacy cleartext password files are deleted without being read
+  - documented the legacy password gotcha in ADR-0001 and committed that docs entry separately
+- Next steps:
+  1. Run focused backend/frontend validation and security checks.
+  2. Commit and push the security remediation.
+  3. Confirm GitHub alerts/checks after push.
+
 ## Update 2026-04-29 16:19:50Z
 
 - Current task: Prepare stable release `2026042900-slskdn.195` for the LAN-only DHT warning fix.

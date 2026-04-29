@@ -1,3 +1,11 @@
+## 2026-04-29 16:32Z - Resolved open security alerts and Dependabot bumps
+
+- Triage found three open Dependabot alerts: `OpenTelemetry.Api`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and npm `uuid`.
+- Applied the three open Dependabot bump PRs into `main` instead of ignoring them, and corrected the OpenTelemetry exporter package to the patched `1.15.3` version because the PR did not bump that vulnerable package far enough.
+- Upgraded npm `uuid` to `14.0.0`; local production npm audit now reports zero vulnerabilities.
+- Fixed CodeQL alert `2550` by deleting legacy overlay certificate password files without reading their cleartext contents and regenerating the overlay certificate as needed.
+- Added focused certificate-manager coverage for the legacy cleartext password path and documented the gotcha in ADR-0001.
+
 ## 2026-04-29 16:19:50Z - Prepared stable release 195
 
 - Promoted the LAN-only DHT warning fix from Unreleased into `2026042900-slskdn.195`.
