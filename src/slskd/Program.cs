@@ -671,6 +671,11 @@ namespace slskd
             Log.Information("Using application directory {AppDirectory}", AppDirectory);
             Log.Information("Using configuration file {ConfigurationFile}", ConfigurationFile);
 
+            foreach (var warning in GetConfigurationCompatibilityWarnings(ConfigurationFile, OptionsAtStartup))
+            {
+                Log.Warning("{Warning}", warning);
+            }
+
             if (OptionsAtStartup.Flags.NoConfigWatch)
             {
                 Log.Warning("Configuration watch DISABLED; all configuration changes will require a restart to take effect");
@@ -1294,6 +1299,7 @@ namespace slskd
                     searchProviders);
             });
 
+            services.AddSingleton<IUsernameMatcher, RegexUsernameMatcher>();
             services.AddSingleton<IUserService, UserService>();
 
             services.AddSingleton<IRoomService, RoomService>();
@@ -3718,6 +3724,107 @@ namespace slskd
 
             Log.Information("[Config] Configuration providers added, YAML file: {ConfigFile}", configurationFile);
             return result;
+        }
+
+        internal static IReadOnlyList<string> GetConfigurationCompatibilityWarnings(string configurationFile, Options options)
+        {
+            if (!IOFile.Exists(configurationFile))
+            {
+                return Array.Empty<string>();
+            }
+
+            var warnings = new List<string>();
+            var lines = IOFile.ReadAllLines(configurationFile);
+            var hasCanonicalTransfers = HasTopLevelKey(lines, "transfers");
+            var hasCanonicalIntegrations = HasTopLevelKey(lines, "integrations");
+
+            if (HasTopLevelKey(lines, "global") && !hasCanonicalTransfers)
+            {
+                warnings.Add("Configuration key 'global' is deprecated; slskdN accepts it for now, but 'transfers' is the canonical transfer-rate and retry section.");
+            }
+
+            if (HasTopLevelKey(lines, "integration") && !hasCanonicalIntegrations)
+            {
+                warnings.Add("Configuration key 'integration' is deprecated; slskdN accepts it for now, but 'integrations' is the canonical external integration section.");
+            }
+
+            if (HasGroupLevelLimits(lines))
+            {
+                warnings.Add("Group-level 'limits' entries are accepted for compatibility; place them under each group's 'upload' section in new configuration files.");
+            }
+
+            if (options.Global.Download.Retry.MaxDelay < MinimumRetryMaxDelayMilliseconds)
+            {
+                warnings.Add($"Download retry max_delay is below {MinimumRetryMaxDelayMilliseconds}ms; slskdN will clamp retry scheduling to that floor.");
+            }
+
+            return warnings.AsReadOnly();
+        }
+
+        private const int MinimumRetryMaxDelayMilliseconds = 30_000;
+
+        private static bool HasTopLevelKey(IEnumerable<string> lines, string key)
+        {
+            var prefix = $"{key}:";
+            return lines
+                .Select(StripYamlComment)
+                .Any(line => line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool HasGroupLevelLimits(IEnumerable<string> lines)
+        {
+            var inGroups = false;
+            var groupsIndent = 0;
+            var groupIndent = 0;
+
+            foreach (var rawLine in lines.Select(StripYamlComment))
+            {
+                if (string.IsNullOrWhiteSpace(rawLine))
+                {
+                    continue;
+                }
+
+                var indent = rawLine.TakeWhile(char.IsWhiteSpace).Count();
+                var trimmed = rawLine.TrimStart();
+
+                if (indent == 0)
+                {
+                    inGroups = trimmed.StartsWith("groups:", StringComparison.OrdinalIgnoreCase);
+                    groupsIndent = 0;
+                    groupIndent = 0;
+                    continue;
+                }
+
+                if (!inGroups)
+                {
+                    continue;
+                }
+
+                if (indent <= groupsIndent)
+                {
+                    inGroups = false;
+                    continue;
+                }
+
+                if (groupIndent == 0 && trimmed.EndsWith(":", StringComparison.Ordinal))
+                {
+                    groupIndent = indent;
+                    continue;
+                }
+
+                if (groupIndent > 0 && indent == groupIndent + 2 && trimmed.StartsWith("limits:", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string StripYamlComment(string line)
+        {
+            var index = line.IndexOf('#');
+            return index >= 0 ? line[..index].TrimEnd() : line.TrimEnd();
         }
 
         private static IServiceCollection AddDbContext<T>(this IServiceCollection services, string connectionString)

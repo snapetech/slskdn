@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added upstream-compatible configuration aliases for `transfers`,
+  `integrations`, nested upload group limits, username blacklist regex
+  patterns, reverse-proxy-safe Web UI icon paths, and retry-delay clamping,
+  while preserving slskdN's legacy config compatibility with startup warnings.
 - Changed the Network dashboard public-DHT exposure warning into a dismissable
   info notice that is remembered per browser, because public rendezvous is an
   intended slskdN feature state that only needs operator awareness.

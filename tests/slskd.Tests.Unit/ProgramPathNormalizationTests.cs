@@ -147,8 +147,8 @@ public class ProgramPathNormalizationTests
         var rules = Program.CreateWebHtmlRewriteRules("/system");
 
         var html = """
-            <link rel="manifest" href="/manifest.json" />
-            <link rel="apple-touch-icon" href="/logo192.png" />
+            <link rel="manifest" href="./manifest.json" />
+            <link rel="apple-touch-icon" href="./logo192.png" />
             <script type="module" src="/assets/index.js"></script>
             """;
 
@@ -157,9 +157,59 @@ public class ProgramPathNormalizationTests
             html = System.Text.RegularExpressions.Regex.Replace(html, pattern, replacement);
         }
 
-        Assert.Contains("href=\"/system/manifest.json\"", html);
-        Assert.Contains("href=\"/system/logo192.png\"", html);
+        Assert.Contains("href=\"./manifest.json\"", html);
+        Assert.Contains("href=\"./logo192.png\"", html);
         Assert.Contains("src=\"/system/assets/index.js\"", html);
+    }
+
+    [Fact]
+    public void GetConfigurationCompatibilityWarnings_ReportsLegacyConfigKeysAndRetryFloor()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"slskdn-config-warning-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            var path = Path.Combine(directory, "slskd.yml");
+            File.WriteAllText(path, """
+                global:
+                  download:
+                    retry:
+                      max_delay: 1000
+                integration:
+                  webhooks: {}
+                groups:
+                  default:
+                    limits:
+                      queued:
+                        files: 5
+                """);
+
+            var warnings = Program.GetConfigurationCompatibilityWarnings(
+                path,
+                new Options
+                {
+                    Global = new Options.GlobalOptions
+                    {
+                        Download = new Options.GlobalOptions.GlobalDownloadOptions
+                        {
+                            Retry = new Options.GlobalOptions.GlobalDownloadOptions.DownloadRetryOptions
+                            {
+                                MaxDelay = 1000,
+                            },
+                        },
+                    },
+                });
+
+            Assert.Contains(warnings, warning => warning.Contains("'global'", StringComparison.Ordinal));
+            Assert.Contains(warnings, warning => warning.Contains("'integration'", StringComparison.Ordinal));
+            Assert.Contains(warnings, warning => warning.Contains("Group-level 'limits'", StringComparison.Ordinal));
+            Assert.Contains(warnings, warning => warning.Contains("30000ms", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     [Fact]

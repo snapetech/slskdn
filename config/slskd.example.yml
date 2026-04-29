@@ -56,7 +56,7 @@
 #     retention: ~ # retain indefinitely (do not automatically re-scan)
 # rooms:
 #   - ~
-# global:
+# transfers:
 #   upload:
 #     slots: 20
 #     speed_limit: 1000 # in kibibytes
@@ -114,15 +114,15 @@
 #       priority: 500
 #       strategy: roundrobin
 #       slots: 10
-#     limits:
-#       queued:
-#         files: 150
-#         megabytes: 1500
-#       daily: ~ # no daily limits (weekly still apply)
-#       weekly:
-#         files: 1500
-#         megabytes: 15000
-#         failures: 150
+#       limits:
+#         queued:
+#           files: 150
+#           megabytes: 1500
+#         daily: ~ # no daily limits (weekly still apply)
+#         weekly:
+#           files: 1500
+#           megabytes: 15000
+#           failures: 150
 #   leechers:
 #     thresholds:
 #       files: 1
@@ -132,32 +132,34 @@
 #       strategy: roundrobin
 #       slots: 1
 #       speed_limit: 100
-#     limits:
-#       queued:
-#         files: 15
-#         megabytes: 150
-#       daily:
-#         files: 30
-#         megabytes: 300
-#         failures: 10
-#       weekly:
-#         files: 150
-#         megabytes: 1500
-#         failures: 30
+#       limits:
+#         queued:
+#           files: 15
+#           megabytes: 150
+#         daily:
+#           files: 30
+#           megabytes: 300
+#           failures: 10
+#         weekly:
+#           files: 150
+#           megabytes: 1500
+#           failures: 30
 #   blacklisted:
 #     members:
 #       - <username to blacklist>
 #     cidrs:
 #       - <CIDR to blacklist, e.g. 255.255.255.255/32>
+#     patterns:
+#       - ^spammer_[0-9]+$
 #   user_defined:
 #     my_buddies:
 #       upload:
 #         priority: 250
 #         strategy: firstinfirstout
 #         slots: 10
-#       limits:
-#         queued:
-#           files: 1000 # override global default
+#         limits:
+#           queued:
+#             files: 1000 # override global default
 #       members:
 #         - alice
 #         - bob
@@ -367,7 +369,7 @@
 # overlay_data:
 #   enable: false        # QUIC data plane; requires a stable MsQuic/runtime stack
 #   listen_port: 50401
-# integration:
+# integrations:
 #   webhooks:
 #     my_webhook:
 #       on:

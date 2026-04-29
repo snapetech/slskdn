@@ -9,6 +9,7 @@ namespace slskd.Tests.Unit.Users
 {
     using System.Collections.Generic;
     using AutoFixture.Xunit2;
+    using Microsoft.Extensions.Caching.Memory;
     using Moq;
     using slskd.Users;
     using Soulseek;
@@ -172,6 +173,25 @@ namespace slskd.Tests.Unit.Users
 
                 Assert.Equal(group0, service.GetGroup(user));
             }
+
+            [Theory, AutoData]
+            public void IsBlacklisted_Returns_True_For_Username_Matching_BlacklistPattern(string username)
+            {
+                var options = new Options()
+                {
+                    Groups = new Options.GroupsOptions()
+                    {
+                        Blacklisted = new Options.GroupsOptions.BlacklistedOptions
+                        {
+                            Patterns = new[] { $"^{username}$" },
+                        },
+                    },
+                };
+
+                var (service, _) = GetFixture(options);
+
+                Assert.True(service.IsBlacklisted(username));
+            }
         }
 
         private static (UserService service, Mocks mocks) GetFixture(Options options = null)
@@ -179,7 +199,8 @@ namespace slskd.Tests.Unit.Users
             var mocks = new Mocks(options);
             var service = new UserService(
                 mocks.SoulseekClient.Object,
-                mocks.OptionsMonitor);
+                mocks.OptionsMonitor,
+                new RegexUsernameMatcher(mocks.OptionsMonitor, mocks.MemoryCache));
 
             return (service, mocks);
         }
@@ -193,6 +214,7 @@ namespace slskd.Tests.Unit.Users
 
             public Mock<ISoulseekClient> SoulseekClient { get; } = new Mock<ISoulseekClient>();
             public TestOptionsMonitor<Options> OptionsMonitor { get; init; }
+            public IMemoryCache MemoryCache { get; } = new MemoryCache(new MemoryCacheOptions());
         }
     }
 }

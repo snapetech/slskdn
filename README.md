@@ -40,6 +40,59 @@
 
 If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. The Big 'N' also stands for the Big Network we have integrated and layered into slskdN that extends the client functionality and network in ways that we think improve trust, fidelity, security, and quality.
 
+## Showcase
+
+Open-license examples captured from slskdN in action. Click any thumbnail to open the full-size image.
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/search-cc-track-results.png">
+        <img src="docs/assets/readme-showcase/search-cc-track-results.png" alt="Search results for a Creative Commons track" width="100%">
+      </a>
+      <br>
+      <sub>Smart-ranked Creative Commons search results</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/search-cc-track-result-card.png">
+        <img src="docs/assets/readme-showcase/search-cc-track-result-card.png" alt="Expanded search result with source ranking badges" width="100%">
+      </a>
+      <br>
+      <sub>Expanded source card with ranking signals</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/songid-cc-youtube-result.png">
+        <img src="docs/assets/readme-showcase/songid-cc-youtube-result.png" alt="SongID result for a Creative Commons YouTube source" width="100%">
+      </a>
+      <br>
+      <sub>SongID handoff from a Creative Commons YouTube source</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/songid-discovery-graph.png">
+        <img src="docs/assets/readme-showcase/songid-discovery-graph.png" alt="Discovery Graph Atlas with SongID candidate neighborhood" width="100%">
+      </a>
+      <br>
+      <sub>Discovery Graph Atlas candidate neighborhood</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/network-health-dashboard.png">
+        <img src="docs/assets/readme-showcase/network-health-dashboard.png" alt="Network health and mesh capability dashboard" width="100%">
+      </a>
+      <br>
+      <sub>Network health, DHT, mesh, and capability status</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/system-overview-version.png">
+        <img src="docs/assets/readme-showcase/system-overview-version.png" alt="System overview and version screen" width="100%">
+      </a>
+      <br>
+      <sub>System overview and slskdN build details</sub>
+    </td>
+  </tr>
+</table>
+
 ## Features
 
 ### 🌌 Discovery Graph / Constellation

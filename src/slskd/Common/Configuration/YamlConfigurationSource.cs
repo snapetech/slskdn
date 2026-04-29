@@ -168,6 +168,7 @@ namespace slskd.Configuration
                     {
                         var rootNode = (YamlMappingNode)yaml.Documents[0].RootNode;
                         Traverse(rootNode, Namespace, TargetType);
+                        AddCompatibilityKeys();
                     }
                 }
                 finally
@@ -275,6 +276,31 @@ namespace slskd.Configuration
         {
             var alias = property.GetCustomAttribute<YamlMemberAttribute>()?.Alias;
             return string.IsNullOrWhiteSpace(alias) ? null : Normalize(alias);
+        }
+
+        private void AddCompatibilityKeys()
+        {
+            foreach (var item in Data.ToArray())
+            {
+                if (!item.Key.StartsWith($"{Namespace}:groups:", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                const string UploadLimits = ":upload:limits:";
+                var index = item.Key.IndexOf(UploadLimits, StringComparison.Ordinal);
+
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                var groupLimitKey = item.Key.Remove(index + 1, "upload:".Length);
+                if (!Data.ContainsKey(groupLimitKey))
+                {
+                    Data[groupLimitKey] = item.Value;
+                }
+            }
         }
 
         private static bool IsDictionary(Type type) => typeof(IDictionary).IsAssignableFrom(type) ||

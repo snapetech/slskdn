@@ -1166,6 +1166,7 @@ namespace slskd.Transfers.Downloads
                     : null;
 
                 var retryOptions = OptionsMonitor.CurrentValue.Global.Download.Retry;
+                var maxRetryDelay = Math.Max(30_000, retryOptions.MaxDelay);
                 var incompleteStrategy = retryOptions.Incomplete.ToEnum<RetryIncompleteStrategy>();
                 var incompleteFilename = GetIncompleteRetryFilename(transfer);
 
@@ -1224,7 +1225,7 @@ namespace slskd.Transfers.Downloads
                     onFailure: MarkFailedAttempt,
                     maxAttempts: retryOptions.Attempts,
                     baseDelayInMilliseconds: retryOptions.Delay,
-                    maxDelayInMilliseconds: retryOptions.MaxDelay,
+                    maxDelayInMilliseconds: maxRetryDelay,
                     cancellationToken: cancellationToken);
 
                 string GetIncompleteRetryFilename(Transfer pendingTransfer)

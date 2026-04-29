@@ -1806,6 +1806,11 @@ namespace slskd
         {
             try
             {
+                if (Users.IsBlacklisted(username, endpoint.Address))
+                {
+                    return Task.FromResult<int?>(null);
+                }
+
                 var place = Transfers.Uploads.Queue.EstimatePosition(username, filename);
                 return Task.FromResult((int?)place);
             }

@@ -257,6 +257,7 @@ namespace slskd
         ///     Gets global options.
         /// </summary>
         [Validate]
+        [YamlMember(Alias = "transfers")]
         public GlobalOptions Global { get; init; } = new GlobalOptions();
 
         /// <summary>
@@ -396,6 +397,7 @@ namespace slskd
         ///     Gets options for external integrations.
         /// </summary>
         [Validate]
+        [YamlMember(Alias = "integrations")]
         public IntegrationOptions Integration { get; init; } = new IntegrationOptions();
 
         /// <summary>
@@ -1437,6 +1439,11 @@ namespace slskd
                 public string[] Cidrs { get; init; } = Array.Empty<string>();
 
                 /// <summary>
+                ///     Gets the list of regular expression patterns matched against usernames.
+                /// </summary>
+                public string[] Patterns { get; init; } = Array.Empty<string>();
+
+                /// <summary>
                 ///     Extended validation.
                 /// </summary>
                 /// <param name="validationContext"></param>
@@ -1459,6 +1466,18 @@ namespace slskd
                         catch (Exception)
                         {
                             results.Add(new ValidationResult($"CIDR {cidr} is invalid"));
+                        }
+                    }
+
+                    foreach (var pattern in Patterns ?? Array.Empty<string>())
+                    {
+                        try
+                        {
+                            _ = new Regex(pattern);
+                        }
+                        catch (ArgumentException)
+                        {
+                            results.Add(new ValidationResult($"Blacklist pattern {pattern} is invalid"));
                         }
                     }
 

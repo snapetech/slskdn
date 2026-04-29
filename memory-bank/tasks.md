@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **compat**: Re-implement post-0.25 upstream compatibility gap plan without copying upstream diffs.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: Added dual config schema support for `transfers`/legacy `global`, `integrations`/legacy `integration`, and group upload-nested limits with startup compatibility warnings. Added regex username blacklist patterns, fixed Search Again payload mapping, made web metadata paths subpath-safe, clamped direct-download retry max delay to 30s, covered YAML reload regression behavior, verified no SignalR typed hub exception catch pattern remains, and added fork guidance.
+
 - [x] **ux**: Make public DHT exposure notice dismissable and fix false no-peer diagnostics.
  - Status: completed (2026-04-29)
  - Priority: P1
@@ -1350,3 +1355,7 @@
 - [x] Prepare `2026042900-slskdn.198` stable release
   - Status: completed (2026-04-29)
   - Notes: Promoted the multi-source trust-aware policy bullets and the rolling Chocolatey publish CI fix bullets into a `.198` changelog section.
+
+- [x] Add README showcase gallery with open-license screenshots
+  - Status: completed (2026-04-29)
+  - Notes: Captured and inspected a varied headless screenshot set, copied final PNGs to `docs/assets/readme-showcase/`, added a clickable thumbnail gallery to `README.md`, and replaced the Discovery Graph image with a multi-node SongID atlas from the fixed local build.

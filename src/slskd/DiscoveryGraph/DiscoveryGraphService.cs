@@ -13,7 +13,7 @@ public interface IDiscoveryGraphService
 
 public sealed class DiscoveryGraphService : IDiscoveryGraphService
 {
-    private const double MinimumTrackIdentityForWeakRun = 0.85;
+    private const double MinimumTrackIdentityForWeakRun = 0.70;
     private const double MinimumSegmentConfidenceForGraph = 0.65;
     private const double MinimumSegmentCandidateIdentityForGraph = 0.63;
     private const double MinimumMixIdentityForGraph = 0.60;

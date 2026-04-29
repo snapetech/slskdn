@@ -73,13 +73,16 @@ namespace slskd.Users
         /// </summary>
         /// <param name="soulseekClient"></param>
         /// <param name="optionsMonitor"></param>
+        /// <param name="usernameMatcher"></param>
         public UserService(
             ISoulseekClient soulseekClient,
-            IOptionsMonitor<Options> optionsMonitor)
+            IOptionsMonitor<Options> optionsMonitor,
+            IUsernameMatcher usernameMatcher)
         {
             Client = soulseekClient;
 
             OptionsMonitor = optionsMonitor;
+            UsernameMatcher = usernameMatcher;
             OptionsMonitorRegistration = OptionsMonitor.OnChange(options => Configure(options));
 
             UserStatisticsChangedHandler = (_, userStatistics) => UpdateStatistics(userStatistics.Username, userStatistics.ToStatistics());
@@ -136,6 +139,7 @@ namespace slskd.Users
         private string LastBlacklistOptionsHash { get; set; } = string.Empty;
         private ILogger Log { get; set; } = Serilog.Log.ForContext<UserService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
+        private IUsernameMatcher UsernameMatcher { get; }
         private IDisposable? OptionsMonitorRegistration { get; set; }
         private Blacklist Blacklist { get; } = new Blacklist();
 
@@ -303,8 +307,9 @@ namespace slskd.Users
         {
             var blacklist = OptionsMonitor.CurrentValue.Groups.Blacklisted;
             var normalizedAddress = ipAddress?.NormalizeMappedIPv4();
+            var normalizedUsername = username ?? string.Empty;
 
-            if (blacklist.Members.Contains(username))
+            if (blacklist.Members.Contains(normalizedUsername, StringComparer.OrdinalIgnoreCase) || UsernameMatcher.IsMatch(normalizedUsername))
             {
                 return true;
             }

@@ -1,3 +1,17 @@
+## Update 2026-04-29 22:35:00Z
+
+- Current task: None. The post-0.25 upstream-compatibility gap plan is implemented locally.
+- Last activity:
+  - added dual config schema binding and startup warnings for legacy keys
+  - added regex username blacklist patterns through a cached matcher
+  - fixed Search Again payload mapping and reverse-proxy-safe web metadata paths
+  - verified batch retry directories were already present, clamped retry max delay to 30s, covered YAML reload, and added fork guidance
+  - confirmed no SignalR typed hub exception catch pattern was present to remove
+- Next steps:
+  1. Run full `dotnet test` and `./bin/lint`.
+  2. Commit and push the compatibility implementation.
+  3. Create a tag-only release only if explicitly requested.
+
 ## Update 2026-04-29 22:02:31Z
 
 - Current task: None. The Network dashboard public-DHT notice and false no-peer diagnostics are fixed locally.
@@ -1115,3 +1129,15 @@ dotnet test
 - Next steps:
   1. Commit/push the retry/backoff fix if the worktree stays clean.
   2. Continue narrowing the live peer pool by filtering or deprioritizing clearly bad/non-overlay endpoints before they dominate mesh retries.
+
+## Update 2026-04-29 22:35:00Z
+
+- Current task: README screenshot showcase gallery is implemented locally.
+- Last activity:
+  - captured a varied open-license screenshot set and copied selected PNGs into `docs/assets/readme-showcase/`
+  - added a clickable thumbnail gallery to `README.md`
+  - patched Discovery Graph candidate filtering so manual-review SongID runs can render useful track-candidate atlas neighborhoods instead of collapsing to a single node
+  - fixed the dirty `RegexUsernameMatcher` options type reference enough for the main project to compile past that file
+- Next steps:
+  1. Resolve the existing dirty `YamlConfigurationSourceTests` / `MusicBrainz.Enabled` compile mismatch before relying on full unit-test status.
+  2. Review the README gallery layout in GitHub-rendered markdown and adjust captions/order if desired.

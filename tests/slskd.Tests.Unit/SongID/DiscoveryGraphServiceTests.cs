@@ -228,7 +228,7 @@ public sealed class DiscoveryGraphServiceTests
     }
 
     [Fact]
-    public async Task BuildAsync_WithWeakSongIdRun_DoesNotPromoteSecondaryEvidenceIntoNeighborhood()
+    public async Task BuildAsync_WithManualReviewSongIdRun_KeepsTrackCandidatesButNotSecondaryContext()
     {
         var runId = Guid.NewGuid();
         var run = new SongIdRun
@@ -316,6 +316,8 @@ public sealed class DiscoveryGraphServiceTests
         });
 
         Assert.Equal($"songid:{runId:D}", graph.SeedNodeId);
+        Assert.Contains(graph.Nodes, node => node.NodeId == "track:weak-rec");
+        Assert.Contains(graph.Edges, edge => edge.EdgeType == "identity_candidate");
         Assert.DoesNotContain(graph.Nodes, node => node.NodeType == "artist");
         Assert.DoesNotContain(graph.Nodes, node => node.NodeType == "album");
         Assert.DoesNotContain(graph.Nodes, node => node.NodeType == "segment");

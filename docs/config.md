@@ -327,7 +327,7 @@ A change to slot limits requires an application restart to take effect, while sp
 
 #### **YAML**
 ```yaml
-global:
+transfers:
   upload:
     slots: 20
     speed_limit: 1000 # kibibytes
@@ -335,6 +335,8 @@ global:
     slots: 500
     speed_limit: 1000
 ```
+
+The older `global` key is still accepted so existing deployments can upgrade without an immediate edit. New configuration should use `transfers`.
 
 ## Global Upload Limits
 
@@ -350,7 +352,7 @@ Note that while it's possible to set the `failures` option for `queued`, it has 
 
 #### **YAML**
 ```yaml
-global:
+transfers:
   limits:
     queued:
       files: 500
@@ -377,6 +379,8 @@ Groups have a queue strategy, either `FirstInFirstOut` or `RoundRobin`. This set
 
 [Upload limits](#global-upload-limits) can be configured at the group level to override the global defaults.  If neither global defaults nor group limits are set, uploads are unlimited.  If global defaults are set and unlimited uploads for a group are desired, set values to `int.MaxValue` or `2147483647`.  While not technically unlimited, this number translates to over 2 petabytes, which would be an impressive amount of data to move peer to peer in a week.
 
+For compatibility, slskdN still accepts `limits` as a sibling of `upload` inside each group. New configuration should nest group limits under `upload`.
+
 The general configuration for a group is as follows:
 
 #### **YAML**
@@ -386,18 +390,18 @@ upload:
   strategy: roundrobin # roundrobin or firstinfirstout
   slots: 10 # 1 to 2147483647
   speed_limit: 100 # in KiB/s, 1 to 2147483647
-limits:
-  queued:
-    files: 500 # 1 to 2147483647
-    megabytes: 5000 # 1 to 2147483647
-  daily:
-    files: 1000
-    megabytes: 10000
-    failures: 200 # 1 to 2147483647
-  weekly:
-    files: 5000
-    megabytes: 50000
-    failures: 1000
+  limits:
+    queued:
+      files: 500 # 1 to 2147483647
+      megabytes: 5000 # 1 to 2147483647
+    daily:
+      files: 1000
+      megabytes: 10000
+      failures: 200 # 1 to 2147483647
+    weekly:
+      files: 5000
+      megabytes: 50000
+      failures: 1000
 ```
 
 ## Built-In Groups
@@ -419,17 +423,17 @@ groups:
       strategy: roundrobin
       slots: 10
       speed_limit: 50000 # kibibytes
-    limits:
-      queued:
-        files: 150
-        megabytes: 1500
-      daily:
-        files: 2147483647 # effectively unlimited, weekly still applies
-        megabytes: 2147483647
-      weekly:
-        files: 1500
-        megabytes: 15000
-        failures: 150
+      limits:
+        queued:
+          files: 150
+          megabytes: 1500
+        daily:
+          files: 2147483647 # effectively unlimited, weekly still applies
+          megabytes: 2147483647
+        weekly:
+          files: 1500
+          megabytes: 15000
+          failures: 150
   leechers:
     thresholds:
       files: 1
@@ -439,18 +443,18 @@ groups:
       strategy: roundrobin
       slots: 1
       speed_limit: 100
-    limits:
-      queued:
-        files: 15
-        megabytes: 150
-      daily:
-        files: 30
-        megabytes: 300
-        failures: 10
-      weekly:
-        files: 150
-        megabytes: 1500
-        failures: 30
+      limits:
+        queued:
+          files: 15
+          megabytes: 150
+        daily:
+          files: 30
+          megabytes: 300
+          failures: 10
+        weekly:
+          files: 150
+          megabytes: 1500
+          failures: 30
 ```
 
 ## User Blacklist
@@ -465,7 +469,7 @@ Blacklisted users are prevented from:
 
 Private and chat room messages from blacklisted users are also ignored.
 
-Users can be blacklisted by adding their username to the `members` list. Additionally, users can be blacklisted by IP address, or range of addresses by adding a CIDR entry to the `cidrs` list.
+Users can be blacklisted by adding their username to the `members` list. Additionally, users can be blacklisted by IP address, or range of addresses by adding a CIDR entry to the `cidrs` list. Username regular expressions can be added to `patterns` for families of abusive or disposable usernames.
 
 Users added to the blacklist will be blocked from enqueueing any new files.  Any existing active or queued transfers will need to be cancelled manually.
 
@@ -479,6 +483,8 @@ groups:
       - <username to blacklist>
     cidrs:
       - <CIDR to blacklist, e.g. 255.255.255.255/32>
+    patterns:
+      - ^spammer_[0-9]+$
 ```
 
 ## User Defined Groups
@@ -499,9 +505,9 @@ groups:
         strategy: roundrobin
         slots: 10
         speed_limit: 100
-      limits:
-        queued:
-          files: 1000 # override global default
+        limits:
+          queued:
+            files: 1000 # override global default
       members:
         - bob
         - alice
@@ -516,7 +522,7 @@ In the following example:
 * Users in the `my_buddies` group share 20 slots among them and can download at the global maximum speed. Ten upload slots are reserved for users in this group, and users `alice` and `bob` are members.
 
 ```yaml
-global:
+transfers:
   upload:
     slots: 20
     speed_limit: 1000
@@ -1015,7 +1021,7 @@ If unconfigured, the default timeout for requests is 5 seconds, and each request
 
 #### **YAML**
 ```yaml
-integration:
+integrations:
   webhooks:
     my_basic_webhook_using_defaults:
       on:
@@ -1040,6 +1046,8 @@ integration:
         attempts: 3
 ```
 
+The older singular `integration` key remains readable for existing files. New configuration should use `integrations`.
+
 ### Scripts
 
 User-defined scripts can be configured to run when application events are raised.  Scripts are given a name (useful for troubleshooting!), a list of triggering events, and a `run` configuration that's used to execute the script.
@@ -1062,7 +1070,7 @@ The data associated with the event that's invoking your script is stringified to
 
 #### **YAML**
 ```yaml
-integration:
+integrations:
   scripts:
     my_post_download_script:
       on:
@@ -1112,7 +1120,7 @@ Uploads are attempted up to the maximum configured retry count and then discarde
 
 #### **YAML**
 ```yaml
-integration:
+integrations:
   ftp:
     enabled: false
     address: ~
@@ -1149,7 +1157,7 @@ Notification API calls are made up to the maximum configured retry count and the
 
 #### **YAML**
 ```yaml
-integration:
+integrations:
   pushbullet:
     enabled: false
     access_token: ~

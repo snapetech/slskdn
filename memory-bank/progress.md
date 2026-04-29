@@ -1,3 +1,11 @@
+## 2026-04-29 22:35Z - Applied upstream-compatibility gap plan
+
+- Added fork-specific compatibility for the post-0.25 config shape: `transfers` aliases the internal transfer/global options, `integrations` aliases integration options, and group limits nested under `upload` bind back to existing group limit options.
+- Added startup warnings for legacy `global`, legacy `integration`, group-level sibling `limits`, and retry max-delay values below the 30 second operational floor.
+- Added regex username blacklist patterns through a DI-backed matcher and wired them into existing blacklist checks.
+- Fixed Search Again to pass the intended `search` field, switched favicon/manifest/icon references to reverse-proxy-safe relative paths, and added `FORKING.md`.
+- Verified the existing retry batch file layout was already present, added the 30 second retry max-delay clamp, added reload/schema regression coverage, and confirmed no SignalR `HubException` catch pattern needed removal.
+
 ## 2026-04-29 16:56Z - Fixed transient overlay-connect integration failure
 
 - Reproduced the previously failing live full-instance overlay test as passing in isolation, then confirmed the DHT full-instance group passes with the fix.
@@ -7109,3 +7117,11 @@ Code quality improvements were completed as part of Option A:
 - Replaced the persistent public-DHT warning/modal flow with a dismissable info notice stored under `slskdn:ui:dht-public-exposure:consent-v1`, because public rendezvous is an intended feature state that needs operator awareness rather than repeated alarm.
 - Documented the DHT warning counter gotcha in ADR-0001 and committed it separately.
 - Validation: `npm --prefix src/web test -- src/components/System/Network/index.test.jsx` passed (`8/8`), and focused frontend lint passed for the touched Network files.
+
+## 2026-04-29 22:35:00Z
+
+- Rebuilt the README screenshot set from headless browser captures using open-license examples: live search for `Sneaky Snitch Kevin MacLeod`, SongID on `Kevin MacLeod ~ Monkeys Spinning Monkeys`, network health, and system/version screens.
+- Replaced the weak single-node Discovery Graph capture with a patched local build that preserves manual-review SongID track candidates in the atlas while still suppressing secondary album/artist/segment context.
+- Added the selected PNGs under `docs/assets/readme-showcase/` and inserted a clickable thumbnail gallery into `README.md`.
+- Documented the Discovery Graph candidate-filter gotcha and the user-options namespace gotcha in ADR-0001, committing each documentation entry immediately per repo rules.
+- Validation: visually inspected every retained screenshot; local graph API returned `8` nodes and `7` edges for the replacement atlas. Focused `dotnet test` could not complete because existing dirty `YamlConfigurationSourceTests` still reference a removed `MusicBrainz.Enabled` option.
