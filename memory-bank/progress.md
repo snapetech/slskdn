@@ -7164,6 +7164,7 @@ Code quality improvements were completed as part of Option A:
 - Reduced the fixed footer height and changed the mobile footer from a stacked block into a single horizontal rail so it no longer eats the bottom of the page.
 - Rebuilt search result cards and file-list spacing with structured identity/action rows instead of floated icon clusters.
 - Tightened Discovery Graph controls and added a sparse graph note/shorter canvas when a seed only has one visible edge or no useful neighborhood.
+- Made secondary Search page sections default closed and persist their expanded state so the default page no longer opens as a long stack of auxiliary panels.
 - Recaptured the README showcase gallery from the live `kspls0` UI after deploying the rebuilt bundle.
 - Documented the fixed-chrome screenshot validation gotcha in ADR-0001 and committed it immediately as `c6168eb5c`.
 - Validation: `npm --prefix src/web run lint -- --quiet`, `npm --prefix src/web run build`, `npm --prefix src/web test -- Network --watch=false`, `node src/web/scripts/verify-build-output.mjs`, Playwright desktop/mobile screenshot audits, and `git diff --check` passed. The web build still reports the existing large-bundle warning.

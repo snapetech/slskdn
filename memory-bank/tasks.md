@@ -1375,7 +1375,7 @@
 
 - [x] Principal UI pass over README showcase surfaces
   - Status: completed (2026-04-29)
-  - Notes: Re-reviewed every README screenshot for layout, spacing, chrome, and contrast issues. Compacted the desktop nav, reduced fixed footer height, made the mobile footer a one-row scroll rail, tightened search result cards and file lists, made Discovery Graph controls deliberate, added sparse graph messaging, deployed to `kspls0`, and recaptured the README gallery.
+  - Notes: Re-reviewed every README screenshot for layout, spacing, chrome, and contrast issues. Compacted the desktop nav, reduced fixed footer height, made the mobile footer a one-row scroll rail, tightened search result cards and file lists, made Discovery Graph controls deliberate, added sparse graph messaging, defaulted secondary Search page panels closed with persisted state, deployed to `kspls0`, and recaptured the README gallery.
 
 - [x] Persist Search page collapsible section state
   - Status: completed (2026-04-29)

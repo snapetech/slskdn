@@ -7,6 +7,7 @@
   - made the mobile footer a single scrollable status rail instead of a stacked block
   - rebuilt result-card identity/action layout and file-list spacing
   - tightened Discovery Graph controls and added sparse graph messaging
+  - defaulted secondary Search page panels closed and persisted their state
   - deployed the rebuilt frontend to `kspls0` and recaptured the README gallery
   - documented and committed the fixed-chrome screenshot validation gotcha separately
 - Next steps:
