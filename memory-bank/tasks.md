@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Fix false public DHT warning for LAN-only nodes.
+ - Status: completed (2026-04-29)
+ - Priority: P1
+ - Notes: The backend reports `LanOnly` as `lanOnly`, while the Network dashboard checked only `isLanOnly`, causing `dhtRendezvous.lanOnly: true` nodes to show the public exposure warning. DHT status normalization and Network coverage now accept both field names.
+
 - [x] **release**: Prepare `2026042900-slskdn.194` for AUR source build fix.
  - Status: completed (2026-04-29)
  - Priority: P1

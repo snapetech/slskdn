@@ -128,6 +128,36 @@ describe('Network', () => {
     });
   });
 
+  it('does not show the DHT exposure notice when the backend reports lanOnly', async () => {
+    slskdnAPI.getSlskdnStats.mockResolvedValueOnce({
+      backfill: {
+        completedToday: 0,
+        discoveryRate: 0,
+        isActive: false,
+        pendingCount: 0,
+      },
+      capabilities: { features: [], version: 'slskdn' },
+      dht: {
+        dhtNodeCount: 3,
+        isEnabled: true,
+        lanOnly: true,
+        isDhtRunning: true,
+      },
+      hashDb: { currentSeqId: 0, totalEntries: 0 },
+      mesh: {
+        connectedPeerCount: 0,
+        warnings: [],
+      },
+      swarmJobs: [],
+    });
+
+    render(<Network theme="light" />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Public DHT exposure notice')).not.toBeInTheDocument();
+    });
+  });
+
   it('renders inverted statistics in dark theme', async () => {
     const { container } = render(<Network theme="dark" />);
 

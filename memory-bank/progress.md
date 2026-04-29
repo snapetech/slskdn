@@ -1,3 +1,11 @@
+## 2026-04-29 16:17:24Z - Fixed false DHT exposure warning for LAN-only nodes
+
+- Confirmed the tester config screenshot had `dhtRendezvous.lanOnly: true`, so the public DHT exposure warning was a UI bug rather than expected operator guidance.
+- Found the mismatch: `/api/v0/dht/status` serializes backend `LanOnly` as `lanOnly`, while the Network dashboard only checked `isLanOnly`.
+- Normalized DHT status in `src/web/src/lib/slskdn.js`, made the Network warning condition tolerate both `isLanOnly` and `lanOnly`, and added regression coverage for the backend `lanOnly` response shape.
+- Documented the gotcha in ADR-0001 and committed that docs entry separately.
+- Validation passed for the focused Network component test, frontend lint on the touched files, and `git diff --check`.
+
 ## 2026-04-29 17:10Z - Prepared stable release 194
 
 - Promoted the AUR source date-version build fix from Unreleased into `2026042900-slskdn.194`.

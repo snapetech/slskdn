@@ -1,3 +1,16 @@
+## Update 2026-04-29 16:17:24Z
+
+- Current task: None. False Network dashboard public DHT warning for LAN-only nodes is fixed locally and ready to push.
+- Last activity:
+  - confirmed the tester screenshot uses `dhtRendezvous.lanOnly: true`
+  - traced the false warning to frontend code checking `isLanOnly` while the backend serializes `LanOnly` as `lanOnly`
+  - normalized DHT status and added Network regression coverage for the backend response shape
+  - documented the gotcha in ADR-0001 and committed that docs entry separately
+  - validation passed for focused Network tests, frontend lint on touched files, and diff checks
+- Next steps:
+  1. Commit and push the LAN-only warning fix.
+  2. Prepare a new tag-only release only if explicitly requested.
+
 ## Update 2026-04-29 17:10:00Z
 
 - Current task: Prepare stable release `2026042900-slskdn.194` for the AUR source build fix.

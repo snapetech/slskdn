@@ -100,13 +100,18 @@ export const getSwarmJob = async (jobId) => {
 
 // DHT API
 export const getDhtStatus = async () => {
-  return safeGet('/dht/status', {
+  const dht = await safeGet('/dht/status', {
     dhtNodeCount: 0,
     isLanOnly: false,
     isBeaconCapable: false,
     isDhtRunning: false,
     verifiedBeaconCount: 0,
   });
+
+  return {
+    ...dht,
+    isLanOnly: dht.isLanOnly ?? dht.lanOnly ?? false,
+  };
 };
 
 // Combined stats fetch for dashboard

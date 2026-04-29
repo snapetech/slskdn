@@ -177,6 +177,7 @@ const Network = ({ theme }) => {
 
   const { backfill, capabilities, hashDb, mesh, swarmJobs } = stats;
   const darkTheme = theme === 'dark';
+  const dhtIsLanOnly = stats?.dht?.isLanOnly ?? stats?.dht?.lanOnly ?? false;
   const shouldWarnAboutConnectivity =
     (meshPeers.length === 0 && discoveredPeers.length === 0) ||
     ((mesh?.connectedPeerCount ?? 0) === 0 &&
@@ -184,7 +185,7 @@ const Network = ({ theme }) => {
       (stats?.dht?.isDhtRunning ?? false));
   const shouldWarnAboutDhtExposure =
     (stats?.dht?.isEnabled ?? false) &&
-    !(stats?.dht?.isLanOnly ?? false) &&
+    !dhtIsLanOnly &&
     (stats?.dht?.isDhtRunning ?? false) &&
     meshPeers.length === 0 &&
     discoveredPeers.length === 0;
@@ -199,6 +200,7 @@ const Network = ({ theme }) => {
     discoveredPeers.length,
     stats?.dht?.isEnabled,
     stats?.dht?.isLanOnly,
+    stats?.dht?.lanOnly,
     stats?.dht?.isDhtRunning,
   ]);
 

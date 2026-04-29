@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the Network dashboard public DHT exposure warning so nodes with
+  backend-reported `lanOnly: true` no longer get warned as though they are
+  publishing to public DHT bootstrap routers.
+
 ## [2026042900-slskdn.194] — 2026-04-29
 
 - Fixed the AUR source package build for date-versioned slskdN releases by
