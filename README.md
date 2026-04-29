@@ -38,7 +38,7 @@
 **[slskdN(OT)](https://github.com/snapetech/slskdn)** (as in, NOT slskd), is a richly feature-added, unofficial fork of [slskd](https://github.com/slskd/slskd), the modern web-based Soulseek client. While slskd focuses on being a lean, API-first daemon that lets users implement advanced features via external scripts, **slskdN takes the opposite approach**:
 > **Everything built-in. No scripts required.**
 
-If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. The 'N' also stands for the Big Network we have integrated and layered into slskdN that extends the client functionality and network in ways that we think improve trust, fidelity, security, and quality.
+If you've ever seen a feature request closed with *"this can be done via the API with a script"* and thought *"but I just want it to work"*—slskdN is for you. The big 'N' also stands for the Big Network we have integrated and layered into slskdN that extends the client functionality and network in ways that we think improve trust, fidelity, security, and quality.
 
 ## Features
 
