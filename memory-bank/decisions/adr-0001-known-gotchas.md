@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z152. Full-Instance Overlay Connect Tests Must Wait Through Transient 502s
+
+**The Bug**: The live full-instance overlay mesh integration test failed in full-suite runs when `/api/v0/overlay/connect` returned a transient `502` even though the same test passed by itself and the overlay listener had already accepted TCP probes.
+
+**Files Affected**:
+- `tests/slskd.Tests.Integration/DhtRendezvous/TwoNodeMeshFullInstanceTests.cs`
+
+**Wrong**:
+```csharp
+var connectResponse = await alphaClient.PostAsJsonAsync("/api/v0/overlay/connect", request);
+connectResponse.EnsureSuccessStatusCode();
+```
+
+**Correct**:
+```csharp
+var connectBody = await WaitForOverlayConnectAsync(alphaClient, beta.OverlayPort.Value, timeout);
+Assert.True(connectBody.Connected);
+```
+
+**Why This Keeps Happening**: `SlskdnFullInstanceRunner` can prove the TCP port is listening before the overlay handshake path is fully stable under full-suite load and live-account startup. A single manual-connect `502` should be treated like an eventual-readiness condition in these process-level integration tests.
+
 ### 0z151. Do Not Log Legacy Credential File Paths
 
 **The Bug**: The overlay certificate hardening stopped reading `overlay_cert.key`, but still logged `_legacyPasswordPath` after deletion. CodeQL treated that as another `cs/cleartext-storage-of-sensitive-information` flow because the legacy credential path remains sensitive metadata.
