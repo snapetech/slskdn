@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z163. Batch Downloads Do Not Live At Their Original Relative Path
+
+**The Bug**: Removing a completed batch download with "delete file" looked for the file under the normal downloads tree, even though batch completion moves files into `downloads/<batch-id>/`.
+
+**Files Affected**:
+- `src/slskd/Transfers/Downloads/DownloadService.cs`
+
+**Wrong**:
+```csharp
+var localFilename = transfer.Filename.ToLocalFilename(baseDirectory);
+```
+
+for every completed download, regardless of `BatchId`.
+
+**Correct**:
+```csharp
+var localFilename = GetLocalFilenameForRemoval(transfer, baseDirectory);
+```
+
+with succeeded batch downloads resolving to `downloads/<batch-id>/<file-name>`.
+
+**Why This Keeps Happening**: The enqueue record stores the original remote path, while batch completion intentionally flattens completed files into a batch directory by moving the completed temp filename. Any later filesystem operation must account for that storage layout instead of recomputing only from the remote path.
+
 ### 0z162. Fixed Chrome Must Be Checked Against Showcase Viewports
 
 **The Bug**: The top navigation and footer status dock looked acceptable in isolation but produced clipped navigation, hidden content, and a three-row mobile footer in README/browser screenshots.
