@@ -1,0 +1,83 @@
+name: Publish Chocolatey
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version/tag to publish, e.g. 2026042900-slskdn.197'
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish Chocolatey Stable
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download from Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ inputs.version }}" `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-main-win-x64.zip"
+
+      - name: Pack and Push
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:CHOCO_API_KEY)) {
+            Write-Error "CHOCO_API_KEY secret is not configured"
+            exit 1
+          }
+
+          $Version = "${{ inputs.version }}"
+          $Url = "https://github.com/${{ github.repository }}/releases/download/${{ inputs.version }}/slskdn-main-win-x64.zip"
+          $Checksum = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash
+          (Get-Content packaging/chocolatey/slskdn.nuspec) -replace '<version>.*</version>', "<version>$Version</version>" | Set-Content packaging/chocolatey/slskdn.nuspec
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$url\s*=\s*".*"', "`$url = `"$Url`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+          (Get-Content packaging/chocolatey/tools/chocolateyinstall.ps1) -replace '\$checksum\s*=\s*".*"', "`$checksum = `"$Checksum`"" | Set-Content packaging/chocolatey/tools/chocolateyinstall.ps1
+
+          cd packaging/chocolatey
+          choco pack
+
+          $nupkg = Get-ChildItem -Filter "*.nupkg" | Select-Object -First 1
+          if (-not $nupkg) {
+            Write-Error "No .nupkg file found"
+            exit 1
+          }
+
+          $nupkgPath = $nupkg.FullName
+          $maxRetries = 3
+          for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+            Write-Host "Pushing $nupkgPath to Chocolatey (attempt $attempt/$maxRetries)"
+            $pushOutput = cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout 300 2>&1"
+            Write-Host $pushOutput
+
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "Published to Chocolatey: slskdn $Version"
+              exit 0
+            }
+
+            if ($pushOutput -notmatch "504|Gateway Timeout|timeout") {
+              Write-Error "choco push failed with exit code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
+
+            if ($attempt -lt $maxRetries) {
+              Start-Sleep -Seconds 10
+            }
+          }
+
+          Write-Error "Chocolatey push failed after $maxRetries attempts"
+          exit 1
+        shell: pwsh
