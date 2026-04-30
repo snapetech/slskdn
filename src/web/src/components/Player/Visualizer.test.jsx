@@ -113,6 +113,12 @@ describe('Visualizer', () => {
         'imported.milk',
       );
     });
+
+    fireEvent.click(screen.getByTestId('visualizer-clear-native-preset-library'));
+
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toBeNull();
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary')).toBeNull();
+    expect(screen.queryByTestId('visualizer-native-preset-library')).not.toBeInTheDocument();
   });
 
   it('imports compatible native preset batches and reports skipped files', async () => {

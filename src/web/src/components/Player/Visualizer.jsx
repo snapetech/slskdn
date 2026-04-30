@@ -345,6 +345,13 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     }
   }, [nativePresetLibrary, sizeCanvas]);
 
+  const clearNativePresetLibrary = useCallback(() => {
+    window.localStorage.removeItem(nativePresetStorageKey);
+    window.localStorage.removeItem(nativePresetLibraryStorageKey);
+    setNativePresetLibrary([]);
+    setError(null);
+  }, []);
+
   if (mode === 'off') return null;
 
   const className = `player-visualizer player-visualizer-${mode}`;
@@ -416,6 +423,22 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                         </option>
                       ))}
                     </select>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content="Clear imported native presets from this browser."
+                  trigger={
+                    <Button
+                      aria-label="Clear imported native presets"
+                      data-testid="visualizer-clear-native-preset-library"
+                      icon
+                      onClick={clearNativePresetLibrary}
+                      size="mini"
+                    >
+                      <Icon name="trash alternate outline" />
+                    </Button>
                   }
                 />
               ) : null}
