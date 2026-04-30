@@ -52,6 +52,40 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z169. Winget Block Scalars Must Not Mix Generator Indentation
+
+**The Bug**: The stable Winget locale manifest generated an invalid `Description: |-` block because the description variable already contained leading spaces on its first lines, and the manifest generator added two more spaces to every line. YAML inferred a four-space block indentation from the first content line and then failed when later lines only had two spaces.
+
+**Files Affected**:
+- `packaging/scripts/update-winget-manifests.sh`
+- `packaging/winget/snapetech.slskdn.locale.en-US.yaml`
+
+**Wrong**:
+```bash
+DESCRIPTION=$(cat <<'EOF'
+  slskdN is an unofficial fork...
+
+Stable features include:
+EOF
+)
+
+printf '%s\n' "$DESCRIPTION" | sed 's/^/  /'
+```
+
+**Correct**:
+```bash
+DESCRIPTION=$(cat <<'EOF'
+slskdN is an unofficial fork...
+
+Stable features include:
+EOF
+)
+
+printf '%s\n' "$DESCRIPTION" | sed 's/^/  /'
+```
+
+**Why This Keeps Happening**: Here-doc text that already looks visually indented can become double-indented when a YAML generator adds block-scalar indentation later. Keep generator input unindented and let the YAML writer be the only place that adds block-scalar spaces.
+
 ### 0z168. Security Boundaries Need Boundary-Specific Tests
 
 **The Bug**: Several security checks looked reasonable in isolation but trusted the wrong boundary: ActivityPub outbox publishing was anonymous, share backfill trusted remote stream URLs, file listing used a raw path prefix, and CSRF skipped query-string API keys that authentication does not actually honor.
