@@ -67,44 +67,11 @@ jobs:
             $InstallerSha `
             $ReleaseVersion
 
-          New-Item -ItemType Directory -Force winget-submit | Out-Null
-          $WingetSubmitPath = Join-Path "winget-submit" "snapetech.slskdn.yaml"
-          @(
-            'PackageIdentifier: snapetech.slskdn',
-            "PackageVersion: `"$WingetVersion`"",
-            'PackageLocale: en-US',
-            'Publisher: slskdN Team',
-            'PublisherUrl: https://github.com/snapetech',
-            'PublisherSupportUrl: https://github.com/snapetech/slskdn/issues',
-            'PackageName: slskdN',
-            'PackageUrl: https://github.com/snapetech/slskdn',
-            'License: AGPL-3.0-or-later',
-            'LicenseUrl: https://github.com/snapetech/slskdn/blob/main/LICENSE',
-            'ShortDescription: Soulseek client with built-in SongID and Discovery Graph',
-            'Description: slskdN is an unofficial batteries-included fork of slskd that makes identity and discovery first-class features for Soulseek.',
-            'Moniker: slskdn',
-            'Tags:',
-            '- soulseek',
-            '- p2p',
-            '- music',
-            '- filesharing',
-            "ReleaseNotes: Stable Release $ReleaseVersion",
-            "ReleaseNotesUrl: https://github.com/${{ github.repository }}/releases/tag/$ReleaseVersion",
-            'InstallerType: zip',
-            "ReleaseDate: $(Get-Date -AsUTC -Format yyyy-MM-dd)",
-            'NestedInstallerType: portable',
-            'NestedInstallerFiles:',
-            '- RelativeFilePath: slskd.exe',
-            '  PortableCommandAlias: slskdn',
-            'Commands:',
-            '- slskdn',
-            'Installers:',
-            '- Architecture: x64',
-            "  InstallerUrl: $InstallerUrl",
-            "  InstallerSha256: $InstallerSha",
-            'ManifestType: singleton',
-            'ManifestVersion: 1.6.0'
-          ) | Set-Content -Path $WingetSubmitPath -Encoding utf8
+          $WingetSubmitPath = Join-Path "winget-submit" "manifests/s/snapetech/slskdn/$WingetVersion"
+          New-Item -ItemType Directory -Force $WingetSubmitPath | Out-Null
+          Copy-Item packaging/winget/snapetech.slskdn.yaml $WingetSubmitPath/
+          Copy-Item packaging/winget/snapetech.slskdn.installer.yaml $WingetSubmitPath/
+          Copy-Item packaging/winget/snapetech.slskdn.locale.en-US.yaml $WingetSubmitPath/
           "WINGET_SUBMIT_PATH=$WingetSubmitPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Submit manifests to winget-pkgs

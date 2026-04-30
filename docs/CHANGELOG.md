@@ -30,6 +30,17 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Expanded the Web UI player into a footer-safe drawer with collapse/expand,
   previous/next, rewind, fast-forward, local mute, Media Session handlers, and
   empty-state launchers for Collections plus shared/downloaded local audio.
+- Added Winamp-style Web UI player controls: shared Web Audio graph plumbing,
+  10-band persisted EQ presets, lightweight spectrum/oscilloscope rendering,
+  LRCLIB synced lyrics, ListenBrainz now-playing/scrobble submission, optional
+  crossfade, Document Picture-in-Picture spectrum output, and karaoke-style
+  center-channel reduction.
+- Replaced the player empty-state collection/file dropdowns with full modal
+  browsers: a two-pane collection picker with playable collection items, and a
+  searchable shared/downloaded local-audio table with explicit play actions.
+- Documented the integrated player, modal pickers, local-root streaming,
+  player extras, listening-party behavior, and PWA/mobile playback in the
+  README and feature guides.
 - Made the stream locator resolve `sha256:` and path-based local audio IDs from
   configured share/download roots when the file is allowed locally but has not
   yet been persisted into the indexed `content_items` table.
@@ -85,8 +96,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   stable locale description now emits valid YAML block indentation, and the
   zip portable metadata now follows accepted winget-pkgs layout. Stable Winget
   workflow staging now uses the same numeric dotted package version emitted in
-  the manifests, and the initial submission path now generates a temporary
-  singleton manifest to avoid WingetCreate's multi-file directory validator.
+  the manifests, and the initial submission path uses the generated multi-file
+  version, installer, and default locale manifests instead of a temporary
+  singleton manifest rejected by Winget service validation.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 
