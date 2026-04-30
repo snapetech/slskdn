@@ -219,6 +219,37 @@ static class Commands
 
     public static async Task<int> Split()
     {
+        if (OperatingSystem.IsLinux())
+        {
+            return await SplitLinux();
+        }
+
+        return await PlatformSplit();
+    }
+
+    public static async Task<int> PlatformSplit()
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            return await SplitLinux();
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            return await SplitWindows();
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return await SplitMacOS();
+        }
+
+        Console.Error.WriteLine($"Unsupported platform: {RuntimeInformation.OSDescription}");
+        return 2;
+    }
+
+    private static async Task<int> SplitLinux()
+    {
         for (var i = 0; i < 20; i++)
         {
             if ((await ProcessUtil.Run("ip", "link", "show", AppConfig.VpnIface)).ExitCode == 0)
@@ -283,6 +314,67 @@ static class Commands
         }
 
         Console.WriteLine($"Configured UID {AppConfig.ServiceUid} ({AppConfig.ServiceUser}) routing through {AppConfig.VpnIface} table {AppConfig.VpnTable}");
+        return 0;
+    }
+
+    private static async Task<int> SplitWindows()
+    {
+        var appPath = AppConfig.ApplicationPath;
+        if (string.IsNullOrWhiteSpace(appPath))
+        {
+            Console.Error.WriteLine("SLSKDN_APP_PATH is required for Windows per-program VPN enforcement");
+            return 2;
+        }
+
+        var script = $$$"""
+        $ErrorActionPreference = 'Stop'
+        $group = 'slskdN VPN'
+        $app = '{{{EscapePowerShell(appPath)}}}'
+        $vpn = '{{{EscapePowerShell(AppConfig.VpnIface)}}}'
+        if (-not (Test-Path -LiteralPath $app)) { throw "Application path not found: $app" }
+        Get-NetFirewallRule -Group $group -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+        $interfaces = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.Name -ne $vpn }
+        foreach ($iface in $interfaces) {
+            New-NetFirewallRule -DisplayName "slskdN VPN fail-closed $($iface.Name)" -Group $group -Direction Outbound -Program $app -Action Block -InterfaceAlias $iface.Name -Profile Any | Out-Null
+        }
+        New-NetFirewallRule -DisplayName 'slskdN VPN allow loopback' -Group $group -Direction Outbound -Program $app -Action Allow -RemoteAddress LocalSubnet -Profile Any | Out-Null
+        Write-Output "Configured Windows firewall fail-closed rules for $app; allowed VPN interface: $vpn"
+        """;
+        var shell = await ProcessUtil.CommandExists("pwsh") ? "pwsh" : "powershell";
+        var result = await ProcessUtil.Run(shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script);
+        Console.Write(result.Stdout);
+        if (result.ExitCode != 0)
+        {
+            Console.Error.Write(result.Stderr);
+        }
+
+        return result.ExitCode;
+    }
+
+    private static async Task<int> SplitMacOS()
+    {
+        var anchor = AppConfig.PfAnchorName;
+        var rules = $$$"""
+        pass out quick on lo0 all
+        block drop out quick on ! {{{AppConfig.VpnIface}}} proto { tcp udp } user {{{AppConfig.ServiceUser}}}
+        """;
+        var temp = Path.GetTempFileName();
+        await File.WriteAllTextAsync(temp, rules);
+        try
+        {
+            await MustRun("pfctl", "-a", anchor, "-f", temp);
+            var enabled = await ProcessUtil.Run("pfctl", "-s", "info");
+            if (!enabled.Stdout.Contains("Status: Enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                await MustRun("pfctl", "-e");
+            }
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
+
+        Console.WriteLine($"Configured macOS pf anchor {anchor}: user {AppConfig.ServiceUser} can egress only on {AppConfig.VpnIface}");
         return 0;
     }
 
@@ -523,6 +615,8 @@ static class Commands
     }
 
     private static string Blank(string value) => string.IsNullOrWhiteSpace(value) ? "unknown" : value;
+
+    private static string EscapePowerShell(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
     private static async Task MustRun(params string[] args)
     {
@@ -881,9 +975,10 @@ static class AppConfig
     public static string SlskdUrl { get; } = Env.Get("SLSKD_API_URL", "http://127.0.0.1:5030");
     public static FileInfo SlskdConfig { get; } = new(Env.Get("SLSKD_CONFIG", "/etc/slskd/slskd.yml"));
     public static string ServiceUser { get; } = Env.GetAny(["SLSKDN_SERVICE_USER", "SLSKD_USER"], "slskd");
-    public static int ServiceUid { get; } = ResolveServiceUid();
+    public static int ServiceUid => ResolveServiceUid();
     public static string ProcessName { get; } = Env.GetAny(["SLSKDN_PROCESS_NAME", "SLSKD_PROCESS_NAME"], "slskd");
     public static string ApplicationService { get; } = Env.GetAny(["SLSKDN_SERVICE_NAME", "SLSKD_SERVICE_NAME"], "slskd");
+    public static string ApplicationPath { get; } = Env.Get("SLSKDN_APP_PATH", "");
     public static string TunnelType { get; } = Env.Get("SLSKDN_VPN_TUNNEL_TYPE", "wireguard").Trim().ToLowerInvariant();
     public static string VpnIface { get; } = Env.GetAny(["SLSKDN_VPN_IFACE", "SLSKD_VPN_IFACE"], "slskdN-vpn");
     public static string VpnTable { get; } = Env.GetAny(["SLSKDN_VPN_TABLE", "SLSKD_VPN_TABLE"], "51820");
@@ -914,6 +1009,7 @@ static class AppConfig
     public static string IngressService { get; } = Env.GetAny(["SLSKDN_VPN_INGRESS_SERVICE", "SLSKD_VPN_INGRESS_SERVICE"], "slskdN-vpn-ingress.service");
     public static string IngressRenewTimer { get; } = Env.Get("SLSKDN_VPN_INGRESS_RENEW_TIMER", "slskdN-vpn-ingress-renew.timer");
     public static string WatchdogLogTag { get; } = Env.Get("SLSKDN_VPN_WATCHDOG_LOG_TAG", "slskdN-vpn-watchdog");
+    public static string PfAnchorName { get; } = Env.Get("SLSKDN_VPN_PF_ANCHOR", "slskdN/vpn");
     public static FileInfo StateFile(string name) => new(Path.Combine(StateDir.FullName, name));
 
     private static int ResolveServiceUid()
@@ -1068,6 +1164,12 @@ static class ProcessUtil
 {
     public static async Task<bool> CommandExists(string name)
     {
+        if (OperatingSystem.IsWindows())
+        {
+            var windowsResult = await Run("where.exe", name);
+            return windowsResult.ExitCode == 0;
+        }
+
         var result = await Run("sh", "-c", $"command -v {EscapeForShell(name)} >/dev/null 2>&1");
         return result.ExitCode == 0;
     }

@@ -19,11 +19,21 @@ UID split routing, verification, status, watchdog behavior, and ingress cleanup.
 | `tailscale` | `tailscaled` | Usually static/manual; Tailscale does not provide generic public VPN port forwarding | Private tailnet routing or custom exit-node setups |
 | other | Existing tunnel interface | Static or provider-specific backend | Any Linux tunnel exposing an interface name |
 
-The current enforcement and installer implementation is Linux-first. On
-Windows and macOS, slskdN can still consume the same forwarded-port/status API,
-but process-level fail-closed enforcement, service installation, and route
-management need platform-specific adapters before they should be advertised as
-turnkey.
+The agent includes platform-specific fail-closed enforcement paths:
+
+- Linux: UID policy routing through the VPN routing table plus a blackhole
+  fallback route.
+- Windows: Windows Defender Firewall rules block the configured slskdN program
+  on every currently-up non-VPN interface, leaving the named VPN interface
+  usable.
+- macOS: a `pf` anchor blocks the configured service user from egressing on any
+  interface other than the named VPN interface, while preserving loopback.
+
+Provider port forwarding still depends on the VPN provider. NAT-PMP dynamic
+claiming is strongest on Linux/WireGuard because each ingress slot can own its
+own namespace. Windows/macOS should use the same status API with static or
+provider-managed forwarded ports unless a provider-specific claiming backend is
+added.
 
 ## How Custom This Is
 
@@ -118,20 +128,18 @@ SLSKDN_VPN_TUNNEL_SERVICE=tailscaled
 VPN_PORT_FORWARD_BACKEND=static
 ```
 
-The checked-in enforcement backend is Linux-specific. It requires systemd, `ip
-rule`, and iptables. WireGuard mode also requires WireGuard tools. The C# agent
-and state/API contract are portable, but Windows and macOS need separate
-enforcement adapters:
+The Linux backend requires systemd, `ip rule`, and iptables. WireGuard mode also
+requires WireGuard tools. The C# agent and state/API contract are portable, and
+the `platform-split` command now provides platform-native fail-closed adapters:
 
 - Linux: this backend, using service UID policy routing and netns ingress slots
-- Windows: WireGuardNT or provider client control plus Windows Filtering Platform
-  or firewall rules for process-level fail-closed behavior
-- macOS: utun routing plus `pf` rules or provider-client support; process-level
-  routing is not equivalent to Linux UID routing
+- Windows: Windows Defender Firewall rules for the configured slskdN executable
+  and non-VPN interfaces; set `SLSKDN_APP_PATH` and `SLSKDN_VPN_IFACE`
+- macOS: a `pf` anchor keyed by `SLSKDN_SERVICE_USER` and `SLSKDN_VPN_IFACE`
 
-Do not present the Linux backend as a universal installer for every desktop OS.
-The portable part to reuse across platforms is the slskdN integration contract:
-status API, forwarded-port state, verification, and provider backend selection.
+Provider-specific port claiming is still backend-dependent. Use static/provider
+forward files on Windows and macOS unless your provider exposes a claim API that
+has been added to the agent.
 
 These parts are provider-specific:
 
@@ -480,6 +488,8 @@ Commands:
 - `slskdN-vpn-agent ingress`: discover slskdN listener ports, create VPN ingress namespaces, and claim/write forwarded port state
 - `slskdN-vpn-agent cleanup-ingress`: remove ingress namespaces, veth links, rules, and route tables
 - `slskdN-vpn-agent split`: configure UID policy routing and fail-closed table
+- `slskdN-vpn-agent platform-split`: configure Windows/macOS native firewall
+  enforcement, or Linux UID policy routing
 - `slskdN-vpn-agent verify`: run the full health check
 - `slskdN-vpn-agent status`: alias-style human status check
 - `slskdN-vpn-agent watchdog`: run one watchdog check and recover ingress after repeated failures

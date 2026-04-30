@@ -54,7 +54,7 @@ const setPlayerHeightVariable = (element) => {
   const height = Math.ceil(element.getBoundingClientRect().height);
   if (height > 0) {
     document.documentElement.style.setProperty(
-      '--slskdn-player-height',
+      '--slskdn-player-reserved-height',
       `${height}px`,
     );
   }
@@ -540,6 +540,7 @@ const PlayerBar = () => {
   const audioRef = useRef(null);
   const fadeAudioRef = useRef(null);
   const lastSourceRef = useRef('');
+  const playerBarRef = useRef(null);
   const scrobbledRef = useRef('');
   const pipRef = useRef({ raf: null, win: null });
   const {
@@ -632,6 +633,22 @@ const PlayerBar = () => {
     setPlayerAudioElement(element);
     setAudioElement(element);
   }, [setAudioElement]);
+
+  useLayoutEffect(() => {
+    const element = playerBarRef.current;
+    if (!element) return undefined;
+
+    setPlayerHeightVariable(element);
+    if (typeof window.ResizeObserver !== 'function') {
+      return undefined;
+    }
+
+    const resizeObserver = new window.ResizeObserver(() =>
+      setPlayerHeightVariable(element));
+    resizeObserver.observe(element);
+
+    return () => resizeObserver.disconnect();
+  }, [collapsed, current, eqPanelOpen, lyricsOpen]);
 
   const playAudio = useCallback(async () => {
     if (!audioRef.current) return;
@@ -905,7 +922,10 @@ const PlayerBar = () => {
 
   if (collapsed) {
     return (
-      <div className="player-bar player-bar-collapsed player-bar-modern">
+      <div
+        className="player-bar player-bar-collapsed player-bar-modern"
+        ref={playerBarRef}
+      >
         {audio}
         <div className="player-track player-track-lcd">
           <Icon name="music" />
@@ -959,7 +979,10 @@ const PlayerBar = () => {
   }
 
   return (
-    <div className="player-bar player-bar-modern">
+    <div
+      className="player-bar player-bar-modern"
+      ref={playerBarRef}
+    >
       {audio}
       <div className="player-main-deck">
         <div className="player-display">

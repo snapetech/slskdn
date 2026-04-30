@@ -40,6 +40,18 @@ const formatCount = (value) => {
   return value.toString();
 };
 
+const setFooterHeightVariable = (element) => {
+  if (!element || typeof document === 'undefined') return;
+
+  const height = Math.ceil(element.getBoundingClientRect().height);
+  if (height > 0) {
+    document.documentElement.style.setProperty(
+      '--slskdn-footer-height',
+      `${height}px`,
+    );
+  }
+};
+
 class Footer extends Component {
   constructor(props) {
     super(props);
@@ -49,9 +61,23 @@ class Footer extends Component {
       speeds: null,
       stats: null,
     };
+    this.footerRef = React.createRef();
+    this.footerResizeObserver = null;
   }
 
   componentDidMount() {
+    this.updateFooterHeight();
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.ResizeObserver === 'function' &&
+      this.footerRef.current
+    ) {
+      this.footerResizeObserver = new window.ResizeObserver(
+        this.updateFooterHeight,
+      );
+      this.footerResizeObserver.observe(this.footerRef.current);
+    }
+
     if (session.isLoggedIn()) {
       this.fetchStats();
       this.fetchSpeeds();
@@ -67,7 +93,19 @@ class Footer extends Component {
     if (this.state.interval) {
       clearInterval(this.state.interval);
     }
+    if (this.footerResizeObserver) {
+      this.footerResizeObserver.disconnect();
+      this.footerResizeObserver = null;
+    }
   }
+
+  componentDidUpdate() {
+    this.updateFooterHeight();
+  }
+
+  updateFooterHeight = () => {
+    setFooterHeightVariable(this.footerRef.current);
+  };
 
   fetchStats = async () => {
     if (!session.isLoggedIn()) {
@@ -148,7 +186,10 @@ class Footer extends Component {
       : 'Login to see slskdN network stats';
 
     return (
-      <footer className="slskdn-footer">
+      <footer
+        className="slskdn-footer"
+        ref={this.footerRef}
+      >
         <div className="slskdn-footer-content">
           <div className="slskdn-footer-left">
             <div className="slskdn-footer-brand">
