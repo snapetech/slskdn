@@ -40,6 +40,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   durations and alpha/additive/screen/multiply secondary blend modes.
 - Switched CI self-hosted/GitHub-hosted branching to GitHub's runner
   environment context instead of local runner-name checks.
+- Refined dark-mode surface styling for Semantic UI shells plus chat, rooms,
+  and browse panels.
 - Prepared the `2026042900-slskdn.204` stable release metadata.
 - Made Winget release-version metadata validation opt-in so stable releases
   that intentionally skip Winget are not blocked by stale Winget URLs.

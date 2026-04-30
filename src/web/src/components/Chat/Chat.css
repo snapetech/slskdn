@@ -4,8 +4,8 @@
 }
 
 :root.dark {
-  --slskd-chat-color: #cce2ff;
-  --slskd-self-message-background-color: rgba(255, 255, 255, 0.03);
+  --slskd-chat-color: var(--slskdn-accent-primary-hover, #eadfff);
+  --slskd-self-message-background-color: var(--slskdn-accent-primary-muted, rgba(199, 167, 255, 0.22));
 }
 
 .chat {
@@ -17,6 +17,10 @@
 .chat > .segments {
   width: 100%;
   box-shadow: unset !important;
+}
+
+:root.dark .chat > .segments {
+  box-shadow: var(--slskdn-surface-shadow, 0 18px 46px rgba(0, 0, 0, 0.34)) !important;
 }
 
 .chats {
@@ -72,6 +76,11 @@
   margin-top: unset !important;
 }
 
+:root.dark .conversation-menu.ui.menu {
+  background: var(--slskd-color-inset, #08070d) !important;
+  border-color: var(--slskd-tertiary-border-color, rgba(214, 196, 255, 0.24)) !important;
+}
+
 .conversation-menu > .menu-item {
   font-size: 14pt;
 }
@@ -94,6 +103,12 @@
   scroll-snap-type: y proximity;
   display: grid;
   height: calc(100vh - 292px);
+}
+
+:root.dark .chat-history.ui.segment {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(199, 167, 255, 0.13), transparent 32%),
+    var(--slskd-color-inset, #08070d) !important;
 }
 
 .chat-history > .list {
@@ -120,6 +135,8 @@
 .chat-message-self {
   color: var(--slskd-chat-color);
   background-color: var(--slskd-self-message-background-color);
+  border-left: 3px solid var(--slskdn-accent-primary, #c7a7ff);
+  padding-left: 0.45rem;
 }
 
 .chat-input {

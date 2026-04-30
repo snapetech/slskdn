@@ -1,6 +1,6 @@
 ## Core Development Rules
 
-1. **NEVER include local file paths** (e.g., /home/keith/) in documentation
+1. **NEVER include local file paths** (e.g., /home/user/) in documentation
    - Always use relative paths from repo root (e.g., src/slskd/...)
    - Or use ~/Documents if referencing workspace
    - NO ABSOLUTE PATHS WITH USERNAMES
@@ -19,7 +19,7 @@
    - Either implement properly OR create a task in memory-bank/tasks.md
 
 4. **ALWAYS use RELATIVE PATHS everywhere** - not just in docs
-   - Commit messages: "Modified tests/slskd.Tests.Unit/Mesh/..." NOT "/home/keith/..."
+   - Commit messages: "Modified tests/slskd.Tests.Unit/Mesh/..." NOT "/home/user/..."
    - Error messages: "Failed to load src/slskd/..." NOT absolute paths
    - Log messages: Use relative paths from repo root
    - Documentation: Always relative to repo root or use ~/Documents

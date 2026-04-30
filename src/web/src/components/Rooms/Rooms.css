@@ -16,8 +16,8 @@
 }
 
 :root.dark .rooms {
-  --slskd-room-accent-color: #cce2ff;
-  --slskd-room-note-background: rgba(255, 255, 255, 0.05);
+  --slskd-room-accent-color: var(--slskdn-accent-primary-hover, #eadfff);
+  --slskd-room-note-background: var(--slskdn-accent-primary-muted, rgba(199, 167, 255, 0.22));
 }
 
 .rooms-segment {
@@ -99,6 +99,10 @@
   width: 100% !important;
 }
 
+:root.dark .room-active-card.ui.card {
+  box-shadow: var(--slskdn-surface-shadow, 0 18px 46px rgba(0, 0, 0, 0.34)) !important;
+}
+
 .room-active-card > .content > .room > .segments {
   box-shadow: unset !important;
   margin-bottom: 0px;
@@ -114,6 +118,12 @@
   scroll-snap-type: y proximity;
   display: grid;
   height: calc(100vh - 292px);
+}
+
+:root.dark .room-history.ui.segment {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(199, 167, 255, 0.13), transparent 32%),
+    var(--slskd-color-inset, #08070d) !important;
 }
 
 .room-history > .list {
@@ -136,6 +146,11 @@
   padding: 7px !important;
 }
 
+:root.dark .room-users.ui.segment {
+  background: var(--slskd-overlay-background, #211a2d) !important;
+  border-color: var(--slskd-tertiary-border-color, rgba(214, 196, 255, 0.24)) !important;
+}
+
 .room-message-name {
   font-weight: bold;
 }
@@ -150,6 +165,12 @@
 
 .room-message-self, .room-user-self {
   color: var(--slskd-room-accent-color);
+}
+
+.room-message-self {
+  background: var(--slskd-room-note-background);
+  border-left: 3px solid var(--slskdn-accent-primary, #c7a7ff);
+  padding-left: 0.45rem;
 }
 
 .room-input {
