@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z211. Dark Theme Contrast Must Cover Semantic Color Variants
+
+**The Bug**: The dark theme improved neutral Semantic UI surfaces but still let stock colored controls and hard-coded grey text leak through, leaving bright green/orange buttons, inline `#666`/`grey` copy, and low-depth panels that either failed contrast or blended into the page.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Chat/Chat.css`
+- `src/web/src/components/Rooms/Rooms.css`
+- `src/web/src/components/Browse/Browse.css`
+- `src/web/src/components/Search/Search.css`
+
+**Wrong**:
+```css
+:root.dark .ui.segment {
+  background: var(--slskd-secondary-background);
+}
+```
+
+**Correct**:
+```css
+:root.dark .ui.green.button {
+  background: #147c32 !important;
+  color: #f3fff5 !important;
+}
+
+:root.dark .app-content [style*="color: grey"] {
+  color: var(--slskd-color-subtle) !important;
+}
+```
+
+**Why This Keeps Happening**: Semantic UI color variants and inline status text bypass neutral surface overrides. Dark theme work needs to check buttons, labels, tab menus, form labels, hard-coded grey copy, and page-specific panes, not only `.ui.segment` and `.ui.card`.
+
 ### 0z210. Moq ReturnsAsync Must Match Concrete Task Collection Types
 
 **The Bug**: A unit test mocked a `Task<List<AudioVariant>>` API with array values, so Moq selected an incompatible `ReturnsAsync` overload and the whole test project failed to compile.
