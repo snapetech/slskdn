@@ -8,6 +8,7 @@ const unsupportedPatterns = [
 ];
 
 const allowedExpressionPattern = /^[A-Za-z0-9_.,+\-*/%<>=!&|^~?:()\s]+$/;
+const declarationPattern = /^(float|float2|float3|float4|vec2|vec3|vec4)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/i;
 const shaderQRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
 const shaderAudioVariableNames = ['bass', 'bass_att', 'mid', 'mid_att', 'treb', 'treb_att'];
 const shaderVariableNames = [...shaderAudioVariableNames, ...shaderQRegisterNames];
@@ -18,34 +19,82 @@ const stripShaderComments = (source) =>
     .replace(/\/\/.*$/gm, '')
     .trim();
 
-const extractReturnExpression = (source) => {
-  const cleaned = stripShaderComments(source)
+const normalizeShaderSource = (source) =>
+  stripShaderComments(source)
     .replace(/\btex2D\s*\(\s*sampler_(?:main|fc_main|sampler_main)\s*,/gi, 'texture(previousFrame,')
     .replace(/\btex2D\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,')
     .replace(/\btex\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,')
     .replace(/\btexsize\b/gi, 'textureSize');
-  const retMatch = /\bret\s*=\s*([^;]+)\s*;?/i.exec(cleaned);
-  if (!retMatch) return '';
-  return retMatch[1].trim();
-};
 
-export const translateMilkdropShaderExpression = (source) => {
-  const expression = extractReturnExpression(source);
-  if (!expression) return '';
-  if (unsupportedPatterns.some((pattern) => pattern.test(source))) return '';
-  if (!allowedExpressionPattern.test(expression)) return '';
-  if (/\btexture\s*\(/i.test(expression) && !/\bpreviousFrame\b/.test(expression)) return '';
-  return expression
+const normalizeShaderExpression = (expression) =>
+  expression
     .replace(/\bfloat4\s*\(/gi, 'vec4(')
     .replace(/\bfloat3\s*\(/gi, 'vec3(')
     .replace(/\bfloat2\s*\(/gi, 'vec2(')
     .replace(/\bsaturate\s*\(/gi, 'clamp01(')
-    .replace(/\blerp\s*\(/gi, 'mix(');
+    .replace(/\blerp\s*\(/gi, 'mix(')
+    .replace(/\bfrac\s*\(/gi, 'fract(')
+    .replace(/\bfmod\s*\(/gi, 'mod(')
+    .replace(/\brsqrt\s*\(/gi, 'inversesqrt(')
+    .replace(/\batan2\s*\(/gi, 'atan(');
+
+const normalizeShaderType = (type) =>
+  type.toLowerCase()
+    .replace('float2', 'vec2')
+    .replace('float3', 'vec3')
+    .replace('float4', 'vec4');
+
+const isSafeShaderExpression = (expression) => {
+  if (!expression) return false;
+  if (!allowedExpressionPattern.test(expression)) return false;
+  return !(/\btexture\s*\(/i.test(expression) && !/\bpreviousFrame\b/.test(expression));
+};
+
+const parseShaderProgram = (source) => {
+  if (unsupportedPatterns.some((pattern) => pattern.test(source))) return null;
+  const cleaned = normalizeShaderSource(source);
+  const statements = cleaned
+    .split(';')
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+  const declarations = [];
+  let expression = '';
+
+  for (const statement of statements) {
+    const retMatch = /^ret\s*=\s*(.+)$/i.exec(statement);
+    if (retMatch) {
+      expression = normalizeShaderExpression(retMatch[1].trim());
+      continue;
+    }
+
+    const declarationMatch = declarationPattern.exec(statement);
+    if (declarationMatch) {
+      const declarationExpression = normalizeShaderExpression(declarationMatch[3].trim());
+      if (!isSafeShaderExpression(declarationExpression)) return null;
+      declarations.push(
+        `${normalizeShaderType(declarationMatch[1])} ${declarationMatch[2]} = ${declarationExpression};`,
+      );
+      continue;
+    }
+
+    return null;
+  }
+
+  if (!isSafeShaderExpression(expression)) return null;
+  return {
+    declarations,
+    expression,
+  };
+};
+
+export const translateMilkdropShaderExpression = (source) => {
+  const parsed = parseShaderProgram(source);
+  return parsed?.expression || '';
 };
 
 export const createTranslatedMilkdropFragmentShader = (source) => {
-  const expression = translateMilkdropShaderExpression(source);
-  if (!expression) return '';
+  const parsed = parseShaderProgram(source);
+  if (!parsed) return '';
   const uniformDeclarations = shaderVariableNames
     .map((name) => `uniform float ${name};`)
     .join('\n');
@@ -82,7 +131,8 @@ float get_fft_hz(float hz) {
   return get_fft(hz / nyquist);
 }
 void main() {
-  vec3 ret = vec3(${expression});
+  ${parsed.declarations.join('\n  ')}
+  vec3 ret = vec3(${parsed.expression});
   vec3 previous = texture(previousFrame, clamp(uv, vec2(0.0), vec2(1.0))).rgb;
   outColor = vec4(mix(ret, previous, feedback), outputAlpha);
 }`;

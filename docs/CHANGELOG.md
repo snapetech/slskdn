@@ -79,6 +79,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   `ib_*` preset values.
 - Added first classic native MilkDrop waveform modes with `wave_mode`,
   `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing` support.
+- Expanded the native MilkDrop shader translator to accept safe straight-line
+  temp declarations plus common HLSL helper aliases including `frac`, `fmod`,
+  `rsqrt`, and `atan2`.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

@@ -1,3 +1,10 @@
+## 2026-04-30 18:10Z - Expanded native MilkDrop shader straight-line support
+
+- Native warp/comp shader translation now accepts safe `float/float2/float3/float4` temp declarations before the final `ret = ...`.
+- Common HLSL helper aliases `frac`, `fmod`, `rsqrt`, and `atan2` translate to GLSL equivalents.
+- Compatibility scanning accepts these straight-line shader bodies while still rejecting control flow, mutable temp reassignment, and unsupported sampler paths.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 18:06Z - Added native MilkDrop waveform modes
 
 - Expanded built-in waveform rendering beyond the default centered trace.

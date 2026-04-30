@@ -62,6 +62,7 @@
  - Progress (2026-04-30): Added native primitive-field aliases for common MilkDrop custom wave, shape, and sprite names including `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, `bAdditive`, `bTextured`, `numSides`, and `texName`.
  - Progress (2026-04-30): Added first classic `ob_*` and `ib_*` native MilkDrop screen-border rendering as alpha-blended GPU rings.
  - Progress (2026-04-30): Added first classic native waveform modes with placement, alpha, scaling, and smoothing support from `wave_mode`, `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing`.
+ - Progress (2026-04-30): Expanded native shader translation with safe straight-line temp declarations and common HLSL helper aliases including `frac`, `fmod`, `rsqrt`, and `atan2`.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
