@@ -52,6 +52,25 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z216. Filename Track Numbers Can Be Standalone Parts
+
+**The Bug**: The local metadata matcher only detected track numbers when the number was followed by a separator or whitespace, so filenames split into parts like `Artist - Album - 03 - Title.flac` produced no track number because `03` was a standalone part.
+
+**Files Affected**:
+- `src/web/src/lib/metadataMatcher.js`
+
+**Wrong**:
+```js
+const match = value.match(/^\s*(?:disc\s*)?(\d{1,2})(?:\s*[-._)]|\s+)/i);
+```
+
+**Correct**:
+```js
+const match = value.match(/^\s*(?:disc\s*)?(\d{1,2})(?:\s*[-._)]|\s+|$)/i);
+```
+
+**Why This Keeps Happening**: Filename parsers often operate before or after separator splitting. A token that originally had separators around it can become a clean standalone number, so track-number parsing must accept end-of-string as a valid terminator.
+
 ### 0z215. API Controllers Must Fully Qualify Root Options In Nested Namespaces
 
 **The Bug**: A native API controller declared `IOptionsSnapshot<Options>` inside `slskd.API.Native`, so C# resolved `Options` to a static API helper type instead of the root `slskd.Options` model and the server project failed to compile.
