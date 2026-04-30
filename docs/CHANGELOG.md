@@ -33,6 +33,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added an opt-in slskdN radio directory for listed listening parties, with a
   mesh/DHT-backed announcement index and an integrated host radio stream
   endpoint gated by a separate mesh-streaming toggle.
+- Fixed listening-party startup by keeping the live registry singleton while
+  resolving scoped PodCore message storage per publish operation.
 - Reworked pod, room, chat, and contact social affordances so saved
   conversations and joined rooms rehydrate from server state, pods can be
   created or discovered from the main Pods page, and discovered pods can be

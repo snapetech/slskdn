@@ -7,6 +7,7 @@ namespace slskd.ListeningParty;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Dht;
 using slskd.NowPlaying;
@@ -25,7 +26,7 @@ public sealed class ListeningPartyService : IListeningPartyService
     private readonly IHubContext<ListeningPartyHub> _hub;
     private readonly IMeshDhtClient _dht;
     private readonly IPodMessageRouter _messageRouter;
-    private readonly IPodMessageStorage _messageStorage;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly NowPlayingService _nowPlaying;
     private readonly ILogger<ListeningPartyService> _logger;
     private readonly ConcurrentDictionary<string, ListeningPartyEvent> _states = new();
@@ -36,14 +37,14 @@ public sealed class ListeningPartyService : IListeningPartyService
         IHubContext<ListeningPartyHub> hub,
         IMeshDhtClient dht,
         IPodMessageRouter messageRouter,
-        IPodMessageStorage messageStorage,
+        IServiceScopeFactory scopeFactory,
         NowPlayingService nowPlaying,
         ILogger<ListeningPartyService> logger)
     {
         _hub = hub;
         _dht = dht;
         _messageRouter = messageRouter;
-        _messageStorage = messageStorage;
+        _scopeFactory = scopeFactory;
         _nowPlaying = nowPlaying;
         _logger = logger;
     }
@@ -112,7 +113,9 @@ public sealed class ListeningPartyService : IListeningPartyService
             Signature = string.Empty,
         };
 
-        await _messageStorage.StoreMessageAsync(normalized.PodId, normalized.ChannelId, message, cancellationToken);
+        using var scope = _scopeFactory.CreateScope();
+        var messageStorage = scope.ServiceProvider.GetRequiredService<IPodMessageStorage>();
+        await messageStorage.StoreMessageAsync(normalized.PodId, normalized.ChannelId, message, cancellationToken);
         var routing = await _messageRouter.RouteMessageAsync(message, cancellationToken);
         if (!routing.Success)
         {
