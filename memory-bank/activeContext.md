@@ -1,3 +1,15 @@
+## Update 2026-04-30 17:24:08Z
+
+- Current task: Native MilkDrop has first browser-local preset playlists.
+- Last activity:
+  - added saved native preset playlists stored in browser local storage
+  - users can save the current visible preset bank, including search/favorites filters, as a named playlist
+  - users can select, clear the active scope, or delete a playlist from the visualizer overlay
+  - native next/random/previous navigation now scopes through active playlist, favorites, and search together
+  - validated focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue the next large MilkDrop phase, likely richer playlist editing or deeper shader/audio compatibility.
+
 ## Update 2026-04-30 17:19:40Z
 
 - Current task: Native MilkDrop preset-bank search is implemented locally.

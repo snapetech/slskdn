@@ -828,6 +828,105 @@ describe('Visualizer', () => {
     expect(screen.getByRole('option', { name: 'Second' })).toBeInTheDocument();
   });
 
+  it('saves, scopes, clears, and removes native preset playlists', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'first.milk',
+        id: 'first',
+        source: 'name=First\nwave_r=1',
+        title: 'First',
+      }),
+    );
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPresetLibrary',
+      JSON.stringify([
+        {
+          fileName: 'first.milk',
+          id: 'first',
+          source: 'name=First\nwave_r=1',
+          title: 'First',
+        },
+        {
+          fileName: 'warm-grid.milk',
+          id: 'second',
+          source: 'name=Warm Grid\nwave_r=0.5',
+          title: 'Warm Grid',
+        },
+        {
+          fileName: 'cold-grid.milk',
+          id: 'third',
+          source: 'name=Cold Grid\nwave_b=1',
+          title: 'Cold Grid',
+        },
+      ]),
+    );
+    nativeEngine.loadPresetText.mockImplementation((_source, fileName) =>
+      fileName.replace(/\.milk$/, ''));
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Grid playlist');
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=First\nwave_r=1',
+        'first.milk',
+        { textureAssets: undefined },
+      );
+    });
+
+    fireEvent.change(screen.getByTestId('visualizer-native-preset-search'), {
+      target: { value: 'grid' },
+    });
+    fireEvent.click(screen.getByTestId('visualizer-save-native-playlist'));
+
+    const storedPlaylists = JSON.parse(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropPresetPlaylists'),
+    );
+    expect(storedPlaylists).toHaveLength(1);
+    expect(storedPlaylists[0]).toEqual(expect.objectContaining({
+      name: 'Grid playlist',
+      presetIds: ['second', 'third'],
+    }));
+    expect(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropActivePresetPlaylist'),
+    ).toBe(storedPlaylists[0].id);
+
+    fireEvent.click(screen.getByTestId('visualizer-clear-native-preset-search'));
+    expect(screen.queryByRole('option', { name: 'First' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Warm Grid' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('visualizer-next-preset'));
+    await waitFor(() => {
+      expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('second');
+    });
+    fireEvent.click(screen.getByTestId('visualizer-next-preset'));
+    await waitFor(() => {
+      expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('third');
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-clear-active-native-playlist'));
+    expect(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropActivePresetPlaylist'),
+    ).toBeNull();
+    expect(screen.getByRole('option', { name: 'First' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('visualizer-native-playlist'), {
+      target: { value: storedPlaylists[0].id },
+    });
+    fireEvent.click(screen.getByTestId('visualizer-remove-native-playlist'));
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetPlaylists')).toBeNull();
+    expect(screen.queryByTestId('visualizer-native-playlist')).not.toBeInTheDocument();
+    promptSpy.mockRestore();
+  });
+
   it('surfaces native render errors and clears the persisted imported preset', async () => {
     window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
     window.localStorage.setItem(

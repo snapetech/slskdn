@@ -1,3 +1,10 @@
+## 2026-04-30 17:24Z - Added native MilkDrop preset playlists
+
+- Added browser-local named playlists for imported native MilkDrop presets.
+- Users can save the current visible bank as a playlist, select it later, clear the active playlist scope, or delete the active playlist from the visualizer overlay.
+- Active playlists compose with favorites-only mode and search, and native next/random/previous navigation uses the resulting visible bank.
+- Validation: focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 17:19Z - Added native MilkDrop preset-bank search
 
 - Added a compact search input and clear affordance to the native visualizer overlay for filtering imported presets by title or file name.

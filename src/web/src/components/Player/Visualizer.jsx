@@ -12,8 +12,11 @@ const nativePresetAutomationStorageKey = 'slskdn.player.nativeMilkdropPresetAuto
 const nativePresetFavoritesStorageKey = 'slskdn.player.nativeMilkdropPresetFavorites';
 const nativePresetLibraryModeStorageKey = 'slskdn.player.nativeMilkdropPresetLibraryMode';
 const nativePresetSearchStorageKey = 'slskdn.player.nativeMilkdropPresetSearch';
+const nativePresetPlaylistsStorageKey = 'slskdn.player.nativeMilkdropPresetPlaylists';
+const activeNativePresetPlaylistStorageKey = 'slskdn.player.nativeMilkdropActivePresetPlaylist';
 const nativePresetLibraryLimit = 20;
 const nativePresetHistoryLimit = 12;
+const nativePresetPlaylistLimit = 12;
 const nativeTextureAssetMaxBytes = 1024 * 1024;
 
 const readStoredEngine = () => {
@@ -101,6 +104,34 @@ const readStoredNativePresetSearch = () => {
   return window.localStorage.getItem(nativePresetSearchStorageKey) || '';
 };
 
+const readStoredNativePresetPlaylists = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const playlists = JSON.parse(
+      window.localStorage.getItem(nativePresetPlaylistsStorageKey) || '[]',
+    );
+    return Array.isArray(playlists)
+      ? playlists
+        .filter((playlist) =>
+          playlist?.id
+          && playlist?.name
+          && Array.isArray(playlist?.presetIds))
+        .map((playlist) => ({
+          ...playlist,
+          presetIds: playlist.presetIds.filter((id) => typeof id === 'string' && id.length > 0),
+        }))
+        .filter((playlist) => playlist.presetIds.length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const readStoredActiveNativePresetPlaylistId = () => {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(activeNativePresetPlaylistStorageKey) || '';
+};
+
 const writeStoredNativePresetLibrary = (library) => {
   window.localStorage.setItem(
     nativePresetLibraryStorageKey,
@@ -119,6 +150,17 @@ const writeStoredNativePresetFavorites = (favoriteIds) => {
   );
 };
 
+const writeStoredNativePresetPlaylists = (playlists) => {
+  if (playlists.length === 0) {
+    window.localStorage.removeItem(nativePresetPlaylistsStorageKey);
+    return;
+  }
+  window.localStorage.setItem(
+    nativePresetPlaylistsStorageKey,
+    JSON.stringify(playlists.slice(0, nativePresetPlaylistLimit)),
+  );
+};
+
 const upsertNativePresetLibraryEntry = (library, entry) => [
   entry,
   ...library.filter((preset) => preset.id !== entry.id),
@@ -127,6 +169,17 @@ const upsertNativePresetLibraryEntry = (library, entry) => [
 const pruneNativePresetFavorites = (favoriteIds, library) => {
   const libraryIds = new Set(library.map((preset) => preset.id));
   return favoriteIds.filter((id) => libraryIds.has(id));
+};
+
+const pruneNativePresetPlaylists = (playlists, library) => {
+  const libraryIds = new Set(library.map((preset) => preset.id));
+  return playlists
+    .map((playlist) => ({
+      ...playlist,
+      presetIds: playlist.presetIds.filter((id) => libraryIds.has(id)),
+    }))
+    .filter((playlist) => playlist.presetIds.length > 0)
+    .slice(0, nativePresetPlaylistLimit);
 };
 
 const getNativePresetSearchText = (preset) =>
@@ -141,6 +194,16 @@ const filterNativePresetLibrary = (library, search) => {
     return terms.every((term) => text.includes(term));
   });
 };
+
+const getNativePresetPlaylistName = ({ mode, search }) => {
+  const query = search.trim();
+  if (query) return `Search: ${query}`;
+  if (mode === 'favorites') return 'Favorites';
+  return 'Native playlist';
+};
+
+const getNativePresetPlaylistId = () =>
+  `playlist:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
 
 const getNativePresetFileId = (file) =>
   [file.name, file.size, file.lastModified].filter((part) => part !== undefined).join(':');
@@ -325,12 +388,28 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const [nativePresetHistory, setNativePresetHistory] = useState([]);
   const [nativePresetLibrary, setNativePresetLibrary] = useState(readStoredNativePresetLibrary);
   const [nativePresetSearch, setNativePresetSearch] = useState(readStoredNativePresetSearch);
+  const [nativePresetPlaylists, setNativePresetPlaylists] = useState(
+    readStoredNativePresetPlaylists,
+  );
+  const [activeNativePlaylistId, setActiveNativePlaylistId] = useState(
+    readStoredActiveNativePresetPlaylistId,
+  );
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
 
-  const modeFilteredNativePresetLibrary = nativeLibraryMode === 'favorites'
-    ? nativePresetLibrary.filter((preset) => nativeFavoritePresetIds.includes(preset.id))
+  const activeNativePlaylist = nativePresetPlaylists.find(
+    (playlist) => playlist.id === activeNativePlaylistId,
+  );
+  const playlistScopedNativePresetLibrary = activeNativePlaylist
+    ? activeNativePlaylist.presetIds
+      .map((presetId) => nativePresetLibrary.find((preset) => preset.id === presetId))
+      .filter(Boolean)
     : nativePresetLibrary;
+  const modeFilteredNativePresetLibrary = nativeLibraryMode === 'favorites'
+    ? playlistScopedNativePresetLibrary.filter(
+      (preset) => nativeFavoritePresetIds.includes(preset.id),
+    )
+    : playlistScopedNativePresetLibrary;
   const visibleNativePresetLibrary = filterNativePresetLibrary(
     modeFilteredNativePresetLibrary,
     nativePresetSearch,
@@ -348,6 +427,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const nativeBankNavigationDisabled = engineType === 'native'
     && nativePresetLibrary.length > 0
     && visibleNativePresetLibrary.length === 0;
+  const canSaveNativePlaylist = visibleNativePresetLibrary.length > 0;
 
   const renderLoop = useCallback(() => {
     if (!engineRef.current) return;
@@ -498,6 +578,58 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     window.localStorage.removeItem(nativePresetSearchStorageKey);
   }, []);
 
+  const saveNativePlaylistFromVisibleBank = useCallback(() => {
+    if (visibleNativePresetLibrary.length === 0) return;
+    const defaultName = getNativePresetPlaylistName({
+      mode: nativeLibraryMode,
+      search: nativePresetSearch,
+    });
+    const nextName = window.prompt?.('Name this native MilkDrop playlist', defaultName);
+    if (!nextName || !nextName.trim()) return;
+    const playlist = {
+      createdAt: new Date().toISOString(),
+      id: getNativePresetPlaylistId(),
+      name: nextName.trim(),
+      presetIds: visibleNativePresetLibrary.map((preset) => preset.id),
+    };
+    setNativePresetPlaylists((playlists) => {
+      const nextPlaylists = [
+        playlist,
+        ...playlists.filter((entry) => entry.name !== playlist.name),
+      ].slice(0, nativePresetPlaylistLimit);
+      writeStoredNativePresetPlaylists(nextPlaylists);
+      return nextPlaylists;
+    });
+    setActiveNativePlaylistId(playlist.id);
+    window.localStorage.setItem(activeNativePresetPlaylistStorageKey, playlist.id);
+  }, [nativeLibraryMode, nativePresetSearch, visibleNativePresetLibrary]);
+
+  const selectNativePlaylist = useCallback((event) => {
+    const playlistId = event.target.value;
+    setActiveNativePlaylistId(playlistId);
+    if (playlistId) {
+      window.localStorage.setItem(activeNativePresetPlaylistStorageKey, playlistId);
+    } else {
+      window.localStorage.removeItem(activeNativePresetPlaylistStorageKey);
+    }
+  }, []);
+
+  const clearActiveNativePlaylist = useCallback(() => {
+    setActiveNativePlaylistId('');
+    window.localStorage.removeItem(activeNativePresetPlaylistStorageKey);
+  }, []);
+
+  const removeActiveNativePlaylist = useCallback(() => {
+    if (!activeNativePlaylistId) return;
+    setNativePresetPlaylists((playlists) => {
+      const nextPlaylists = playlists.filter((playlist) => playlist.id !== activeNativePlaylistId);
+      writeStoredNativePresetPlaylists(nextPlaylists);
+      return nextPlaylists;
+    });
+    setActiveNativePlaylistId('');
+    window.localStorage.removeItem(activeNativePresetPlaylistStorageKey);
+  }, [activeNativePlaylistId]);
+
   useEffect(() => {
     if (mode === 'off' || !audioElement || !canvasRef.current) return undefined;
 
@@ -619,7 +751,26 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       const libraryIds = new Set(nativePresetLibrary.map((preset) => preset.id));
       return history.filter((id) => libraryIds.has(id));
     });
-  }, [nativeLibraryMode, nativePresetLibrary]);
+    setNativePresetPlaylists((playlists) => {
+      const nextPlaylists = pruneNativePresetPlaylists(playlists, nativePresetLibrary);
+      if (
+        nextPlaylists.length !== playlists.length
+        || nextPlaylists.some((playlist, index) =>
+          playlist.presetIds.length !== playlists[index].presetIds.length)
+      ) {
+        writeStoredNativePresetPlaylists(nextPlaylists);
+        if (
+          activeNativePlaylistId
+          && !nextPlaylists.some((playlist) => playlist.id === activeNativePlaylistId)
+        ) {
+          setActiveNativePlaylistId('');
+          window.localStorage.removeItem(activeNativePresetPlaylistStorageKey);
+        }
+        return nextPlaylists;
+      }
+      return playlists;
+    });
+  }, [activeNativePlaylistId, nativeLibraryMode, nativePresetLibrary]);
 
   useEffect(() => {
     sizeCanvas();
@@ -809,12 +960,16 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     window.localStorage.removeItem(nativePresetFavoritesStorageKey);
     window.localStorage.removeItem(nativePresetLibraryModeStorageKey);
     window.localStorage.removeItem(nativePresetSearchStorageKey);
+    window.localStorage.removeItem(nativePresetPlaylistsStorageKey);
+    window.localStorage.removeItem(activeNativePresetPlaylistStorageKey);
     setActiveNativePresetId('');
     setNativeFavoritePresetIds([]);
     setNativeLibraryMode('all');
     setNativePresetHistory([]);
     setNativePresetLibrary([]);
     setNativePresetSearch('');
+    setNativePresetPlaylists([]);
+    setActiveNativePlaylistId('');
     setError(null);
   }, []);
 
@@ -933,6 +1088,76 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                       size="mini"
                     >
                       <Icon name="remove" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {nativePresetPlaylists.length > 0 ? (
+                <Popup
+                  content="Use a saved native playlist as the active preset bank."
+                  trigger={
+                    <select
+                      aria-label="Native MilkDrop playlist"
+                      className="player-visualizer-native-library"
+                      data-testid="visualizer-native-playlist"
+                      onChange={selectNativePlaylist}
+                      value={activeNativePlaylistId}
+                    >
+                      <option value="">All imported</option>
+                      {nativePresetPlaylists.map((playlist) => (
+                        <option key={playlist.id} value={playlist.id}>
+                          {playlist.name}
+                        </option>
+                      ))}
+                    </select>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content="Save the current visible native preset bank as a browser-local playlist."
+                  trigger={
+                    <Button
+                      aria-label="Save visible native presets as playlist"
+                      data-testid="visualizer-save-native-playlist"
+                      disabled={!canSaveNativePlaylist}
+                      icon
+                      onClick={saveNativePlaylistFromVisibleBank}
+                      size="mini"
+                    >
+                      <Icon name="save outline" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {activeNativePlaylistId ? (
+                <Popup
+                  content="Return to the full imported native preset bank without deleting this playlist."
+                  trigger={
+                    <Button
+                      aria-label="Clear active native playlist"
+                      data-testid="visualizer-clear-active-native-playlist"
+                      icon
+                      onClick={clearActiveNativePlaylist}
+                      size="mini"
+                    >
+                      <Icon name="list" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {activeNativePlaylistId ? (
+                <Popup
+                  content="Delete the active native playlist from this browser."
+                  trigger={
+                    <Button
+                      aria-label="Delete active native playlist"
+                      data-testid="visualizer-remove-native-playlist"
+                      icon
+                      onClick={removeActiveNativePlaylist}
+                      size="mini"
+                    >
+                      <Icon name="times circle outline" />
                     </Button>
                   }
                 />

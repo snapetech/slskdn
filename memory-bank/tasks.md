@@ -55,6 +55,7 @@
  - Progress (2026-04-30): Added first native beat and timed automatic preset change modes with low-frequency beat detection, render-loop preset updates, and browser-local mode persistence.
  - Progress (2026-04-30): Added first browser-local native preset-bank controls for favorite marking, favorites-only filtering, previous-selection history, next-library cycling, and random imported-preset jumps.
  - Progress (2026-04-30): Added first native preset-bank search that persists locally and scopes imported-preset next/random navigation to the filtered result set.
+ - Progress (2026-04-30): Added first browser-local native preset playlists that save the current filtered bank, select/clear/delete named playlists, and scope navigation to the active playlist.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

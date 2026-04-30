@@ -64,6 +64,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   filtering, previous-preset history, next-library cycling, and random jumps.
 - Added native MilkDrop preset-bank search that persists locally and scopes
   imported-preset next/random navigation to the filtered result set.
+- Added browser-local native MilkDrop preset playlists, including save-from-filter,
+  select, clear-active, delete, and playlist-scoped next/random navigation.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

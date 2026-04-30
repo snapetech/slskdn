@@ -97,6 +97,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first beat and timed automatic preset change modes.
 - [x] Add first favorites, history, next, and random controls for the browser-local native preset bank.
 - [x] Add first search/filter control for the browser-local native preset bank.
+- [x] Add first browser-local native preset playlists.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -136,6 +137,7 @@ Current parser/VM scope:
 - Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
 - The browser-local native preset library now has first preset-bank controls. Users can favorite the active imported preset, filter the selector to favorites, move forward through the imported bank, jump back through recent manual selections, and pick a random imported preset without dropping back to built-in native presets.
 - Native preset-bank search filters imported presets by title or filename, persists the current query locally, and scopes next/random navigation to the filtered set so users can treat a search result as a lightweight playlist.
+- Native preset playlists persist named browser-local lists of imported preset IDs. Users can save the current visible bank as a playlist, switch the active bank to a playlist, clear the playlist scope without deleting it, or delete the active playlist; search/favorites still compose on top of the active playlist.
 - Native mode has clear-library and remove-selected affordances for pruning imported presets from this browser without requiring manual local-storage cleanup.
 - The first shader translator accepts simple shader bodies that assign `ret = ...` using GLSL-like expressions, `tex2D(sampler_main, uv)` sampling, `saturate`, and `lerp`. Supported `warp_shader` bodies run in the feedback pass; supported `comp_shader` bodies run during the screen composite. Control flow, matrix types, general HLSL, and unknown texture/sampler forms remain explicitly unsupported.
 - The first procedural textured-shape path renders parsed `textured`, `texture`, `tex`, or `tex_name` shape references through a generated checker texture and texture-coordinate shader. This proves the texture pipeline without bundling external preset assets yet.
@@ -157,7 +159,7 @@ Current parser/VM scope:
 
 ### Phase 3: Editing And VJ Controls
 
-- Add saved playlists and richer favorites/history views.
+- Add richer playlist editing and richer favorites/history views.
 - Add visual parameter editing and safe save-as/export.
 - Add mashup/randomize controls.
 - Add mouse variables and user texture/image support.
