@@ -2,22 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Icon, Popup } from 'semantic-ui-react';
 import { resumeAudioGraph } from './audioGraph';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
-
-const pickRandomPreset = (presets) => {
-  const names = Object.keys(presets);
-  if (names.length === 0) return null;
-  const name = names[Math.floor(Math.random() * names.length)];
-  return { data: presets[name], name };
-};
-
-const resolveButterchurnApi = (butterchurnModule) => {
-  const candidates = [
-    butterchurnModule,
-    butterchurnModule.default,
-    butterchurnModule.default?.default,
-  ];
-  return candidates.find((candidate) => candidate?.createVisualizer);
-};
+import { createButterchurnEngine } from './visualizers/butterchurnEngine';
 
 const supportsWebGl2 = () => {
   try {
@@ -31,39 +16,39 @@ const supportsWebGl2 = () => {
 const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const visualizerRef = useRef(null);
-  const connectedAudioNodeRef = useRef(null);
+  const engineRef = useRef(null);
   const rafRef = useRef(null);
-  const presetsRef = useRef(null);
+  const engineAudioNodeRef = useRef(null);
   const [fallbackMode, setFallbackMode] = useState(false);
+  const [engineName, setEngineName] = useState('');
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
 
   const renderLoop = useCallback(() => {
-    if (!visualizerRef.current) return;
-    visualizerRef.current.render();
+    if (!engineRef.current) return;
+    engineRef.current.render();
     rafRef.current = window.requestAnimationFrame(renderLoop);
   }, []);
 
   const cyclePreset = useCallback(() => {
-    if (!visualizerRef.current || !presetsRef.current) return;
-    const picked = pickRandomPreset(presetsRef.current);
-    if (!picked) return;
-    visualizerRef.current.loadPreset(picked.data, 2.0);
-    setPresetName(picked.name);
+    if (!engineRef.current) return;
+    const nextPresetName = engineRef.current.nextPreset();
+    if (nextPresetName) {
+      setPresetName(nextPresetName);
+    }
   }, []);
 
   const sizeCanvas = useCallback(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
-    const visualizer = visualizerRef.current;
-    if (!container || !canvas || !visualizer) return;
+    const engine = engineRef.current;
+    if (!container || !canvas || !engine) return;
     const rect = container.getBoundingClientRect();
     const width = Math.max(1, Math.floor(rect.width));
     const height = Math.max(1, Math.floor(rect.height));
     canvas.width = width;
     canvas.height = height;
-    visualizer.setRendererSize(width, height);
+    engine.resize(width, height);
   }, []);
 
   useEffect(() => {
@@ -89,41 +74,21 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           return;
         }
 
-        const [butterchurnModule, presetsModule] = await Promise.all([
-          import('butterchurn'),
-          import('butterchurn-presets'),
-        ]);
-        if (cancelled) return;
-
-        const butterchurn = resolveButterchurnApi(butterchurnModule);
-        if (!butterchurn) {
-          throw new Error('Butterchurn visualizer API was not found.');
+        const engine = await createButterchurnEngine({
+          audioContext: graph.ctx,
+          audioNode: graph.visualizerInput,
+          canvas: canvasRef.current,
+          pixelRatio: window.devicePixelRatio || 1,
+        });
+        if (cancelled) {
+          engine.dispose();
+          return;
         }
 
-        const presetsApi = presetsModule.default || presetsModule;
-        const presets = presetsApi.getPresets();
-        presetsRef.current = presets;
-
-        const visualizer = butterchurn.createVisualizer(
-          graph.ctx,
-          canvasRef.current,
-          {
-            height: 600,
-            pixelRatio: window.devicePixelRatio || 1,
-            textureRatio: 1,
-            width: 800,
-          },
-        );
-        visualizer.connectAudio(graph.visualizerInput);
-        connectedAudioNodeRef.current = graph.visualizerInput;
-
-        const picked = pickRandomPreset(presets);
-        if (picked) {
-          visualizer.loadPreset(picked.data, 0);
-          setPresetName(picked.name);
-        }
-
-        visualizerRef.current = visualizer;
+        engineRef.current = engine;
+        engineAudioNodeRef.current = graph.visualizerInput;
+        setEngineName(engine.name);
+        setPresetName(engine.presetName);
         sizeCanvas();
 
         if (typeof window.ResizeObserver === 'function' && containerRef.current) {
@@ -149,16 +114,16 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
-      if (visualizerRef.current && connectedAudioNodeRef.current) {
+      if (engineRef.current && engineAudioNodeRef.current) {
         try {
-          visualizerRef.current.disconnectAudio(connectedAudioNodeRef.current);
+          engineRef.current.dispose();
         } catch {
-          // Butterchurn may already have disconnected during canvas teardown.
+          // The engine may already have disconnected during canvas teardown.
         }
       }
-      visualizerRef.current = null;
-      connectedAudioNodeRef.current = null;
-      presetsRef.current = null;
+      engineRef.current = null;
+      engineAudioNodeRef.current = null;
+      setEngineName('');
     };
   }, [mode, audioElement, renderLoop, sizeCanvas]);
 
@@ -223,9 +188,9 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       ) : null}
       {error ? <div className="player-visualizer-error">{error}</div> : null}
       <div className="player-visualizer-overlay">
-        {mode !== 'inline' && presetName ? (
+        {mode !== 'inline' && (engineName || presetName) ? (
           <div className="player-visualizer-preset" title={presetName}>
-            {presetName}
+            {[engineName, presetName].filter(Boolean).join(' · ')}
           </div>
         ) : null}
         <div

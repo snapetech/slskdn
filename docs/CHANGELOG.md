@@ -28,6 +28,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added the WebGL MilkDrop3 port design, making the external visualizer
   launcher an interim bridge while the long-term target becomes a
   browser-native MilkDrop3-compatible renderer inside slskdN.
+- Introduced the browser visualizer engine adapter boundary used by the
+  current Butterchurn implementation.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 
@@ -66,6 +68,9 @@ as mandatory.
 - Added an opt-in authenticated external visualizer launcher API and config
   surface so local deployments can start a configured helper such as MilkDrop3
   without allowing arbitrary browser-supplied commands.
+- Added the WebGL MilkDrop3 port design and a visualizer engine boundary that
+  keeps Butterchurn behind an adapter while the browser-native MilkDrop3 path
+  is built incrementally.
 - Added Discography Concierge planning and first implementation pieces,
   including MusicBrainz artist coverage services/API/UI, manual missing-track
   Wishlist promotion, and supporting docs/tasks for mesh/social music

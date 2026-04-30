@@ -7325,7 +7325,7 @@ Code quality improvements were completed as part of Option A:
 - Added `docs/design/webgl-milkdrop3-port.md` covering the WebGL2-first architecture, engine boundary, parser/VM/shader/audio/render modules, phases for `.milk` and `.milk2`, and validation strategy.
 - Updated the active task list and player docs so the external launcher is explicitly an interim bridge while the portable in-app engine becomes the real target.
 - Added the first Phase 0 code slice by moving the current Butterchurn integration behind a player visualizer engine adapter. The future MilkDrop3-compatible engine can now plug into the player without rewriting the player chrome.
-- Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `npm run lint -- --quiet`, and `git diff --check` passed.
+- Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `npm run lint -- --quiet`, `npm run build`, and `git diff --check` passed.
 
 ## 2026-04-30 01:47:00Z
 

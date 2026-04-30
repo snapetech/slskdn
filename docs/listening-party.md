@@ -75,6 +75,8 @@ External launches run on the slskdN host process, not on the browser device. Thi
 
 The browser cannot provide executable paths or arguments. The launch endpoint only uses configured values from `slskd.yml`, is disabled by default, requires normal API auth, and does not contact Soulseek peers.
 
+The long-term target is not the external launcher. The native plan is a WebGL2-first MilkDrop3-compatible engine inside slskdN, with Butterchurn kept as the current browser renderer and the external launcher kept only as a bridge for users who want desktop MilkDrop3 today. See [WebGL MilkDrop3 Port Plan](design/webgl-milkdrop3-port.md).
+
 ## Network And Rights Boundary
 
 Layer 1 is deliberately conservative. It broadcasts only metadata and relies on the existing stream endpoint and authorization boundary for bytes:

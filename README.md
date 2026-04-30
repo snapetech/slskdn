@@ -237,6 +237,7 @@ Play local shared/downloaded audio, collections, and pod listen-along sessions d
 - 10-band browser-local equalizer with persisted presets
 - Lightweight spectrum analyzer and oscilloscope for lower-GPU visual feedback
 - Optional external visualizer launcher for configured host-side tools such as MilkDrop3
+- Tracked native WebGL MilkDrop3-compatible engine project for portable in-app visualizer parity
 - Synced lyrics pane using LRCLIB lookups from the current artist/title
 - Optional ListenBrainz now-playing and scrobble submission with a token stored in browser localStorage
 - Optional five-second crossfade between queue items

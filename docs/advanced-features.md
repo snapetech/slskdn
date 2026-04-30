@@ -203,6 +203,7 @@ The Web UI includes a persistent player drawer for local shared/downloaded audio
 - **Spectrum / Oscilloscope**: lightweight canvas analyzer modes for visual feedback without loading MilkDrop.
 - **MilkDrop**: butterchurn visualizer with inline, full-window, and native fullscreen modes.
 - **External visualizer launcher**: optional configured-only host-side launcher for MilkDrop3 or a compatible wrapper script. The browser can launch only the configured executable and cannot supply paths or arguments.
+- **MilkDrop3-compatible engine plan**: slskdN is tracking a browser-native WebGL2-first visualizer engine so MilkDrop3-style features can run in-app without a Windows desktop process. See [WebGL MilkDrop3 Port Plan](design/webgl-milkdrop3-port.md).
 - **Document Picture-in-Picture**: opens a tiny always-on-top spectrum window on browsers that support `documentPictureInPicture` (currently Chromium-family browsers).
 - **Karaoke**: center-channel reduction using channel split/invert/merge. Results vary by mix and are intentionally a local playback effect only.
 
