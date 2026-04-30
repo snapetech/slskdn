@@ -236,6 +236,7 @@ Play local shared/downloaded audio, collections, and pod listen-along sessions d
 - MilkDrop visualizer with inline, full-window, and fullscreen modes
 - 10-band browser-local equalizer with persisted presets
 - Lightweight spectrum analyzer and oscilloscope for lower-GPU visual feedback
+- Optional external visualizer launcher for configured host-side tools such as MilkDrop3
 - Synced lyrics pane using LRCLIB lookups from the current artist/title
 - Optional ListenBrainz now-playing and scrobble submission with a token stored in browser localStorage
 - Optional five-second crossfade between queue items

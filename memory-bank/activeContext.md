@@ -1577,3 +1577,14 @@ dotnet test
 - Next steps:
   1. Consider adding richer lock-screen media-session metadata once collection items resolve titles/artists reliably.
   2. Keep the content-id stream registration follow-up open so local library rows are consistently playable without manual seeding.
+
+## Update 2026-04-30 04:10:00Z
+
+- Current task: `2026042900-slskdn.203` release handoff is ready.
+- Last activity:
+  - verified GitHub writes target `snapetech/slskdn`
+  - promoted the release notes out of `Unreleased`
+  - added release prep notes for the external visualizer launcher and player/streaming work
+- Next steps:
+  1. Monitor the `build-main-2026042900-slskdn.203` tag workflow after push.
+  2. Triage any release workflow failure before cutting another tag.

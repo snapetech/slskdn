@@ -4,6 +4,7 @@ import { PlayerProvider, usePlayer } from './PlayerContext';
 import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
+import * as externalVisualizer from '../../lib/externalVisualizer';
 
 vi.mock('../../lib/nowPlaying', () => ({
   clearNowPlaying: vi.fn(() => Promise.resolve()),
@@ -38,6 +39,29 @@ vi.mock('../../lib/collections', () => ({
           },
         ],
       },
+    }),
+  ),
+}));
+
+vi.mock('../../lib/externalVisualizer', () => ({
+  getExternalVisualizerStatus: vi.fn(() =>
+    Promise.resolve({
+      arguments: [],
+      available: true,
+      configured: true,
+      enabled: true,
+      name: 'MilkDrop3',
+      path: '/opt/MilkDrop3/MilkDrop 3.exe',
+      resolvedPath: '/opt/MilkDrop3/MilkDrop 3.exe',
+      workingDirectory: '/opt/MilkDrop3',
+    }),
+  ),
+  launchExternalVisualizer: vi.fn(() =>
+    Promise.resolve({
+      error: null,
+      name: 'MilkDrop3',
+      processId: 1234,
+      started: true,
     }),
   ),
 }));
@@ -206,5 +230,23 @@ describe('PlayerBar', () => {
 
     expect(tokenInput).toHaveValue('');
     expect(window.localStorage.getItem('slskdn.listenbrainz.token')).toBeNull();
+  });
+
+  it('shows and launches the configured external visualizer', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByTestId('player-open-integrations'));
+
+    expect(
+      await screen.findByText('Ready to launch on the slskdN host.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('/opt/MilkDrop3/MilkDrop 3.exe')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-launch-external-visualizer'));
+
+    await waitFor(() => {
+      expect(externalVisualizer.launchExternalVisualizer).toHaveBeenCalled();
+    });
+    expect(await screen.findByText('MilkDrop3 launched.')).toBeInTheDocument();
   });
 });

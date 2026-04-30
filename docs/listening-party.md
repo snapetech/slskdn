@@ -67,6 +67,14 @@ Controls include:
 
 The browser owns audio output. A listener can keep following a party while locally muted, and the host can keep playing locally while publishing metadata.
 
+### External Visualizers
+
+The built-in player visualizer uses Butterchurn in the browser. slskdN can also expose an opt-in external visualizer launcher for host-side tools such as MilkDrop3. Configure `player.external_visualizer` in `slskd.yml`, then use **Player Integrations** to check status or launch it.
+
+External launches run on the slskdN host process, not on the browser device. This works best when slskdN runs in the same desktop session as the visualizer and the visualizer can capture system audio or a virtual audio device. Docker, service, SSH, and headless deployments usually need a wrapper script or will not have a display/audio session.
+
+The browser cannot provide executable paths or arguments. The launch endpoint only uses configured values from `slskd.yml`, is disabled by default, requires normal API auth, and does not contact Soulseek peers.
+
 ## Network And Rights Boundary
 
 Layer 1 is deliberately conservative. It broadcasts only metadata and relies on the existing stream endpoint and authorization boundary for bytes:

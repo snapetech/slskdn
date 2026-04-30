@@ -666,6 +666,60 @@
   margin-top: 10px;
 }
 
+.player-external-visualizer {
+  background: rgba(5, 6, 8, 0.42);
+  border: 1px solid rgba(139, 212, 80, 0.2);
+  border-radius: 6px;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.player-external-visualizer-summary {
+  align-items: flex-start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 24px minmax(0, 1fr);
+}
+
+.player-external-visualizer-summary > .icon {
+  color: var(--player-green);
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+
+.player-external-visualizer-name {
+  color: #efffe8;
+  font-weight: 700;
+}
+
+.player-external-visualizer-status {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.player-external-visualizer-path {
+  color: rgba(242, 184, 75, 0.76);
+  font-size: 0.78rem;
+  margin-top: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-external-visualizer-message.ui.message {
+  margin: 10px 0 0;
+}
+
+.player-external-visualizer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 @media (max-width: 720px) {
   .player-bar {
     gap: 0.5rem;

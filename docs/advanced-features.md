@@ -202,6 +202,7 @@ The Web UI includes a persistent player drawer for local shared/downloaded audio
 - **Equalizer**: 10-band Web Audio EQ with Flat, Classical, Dance, Metal, Rock, and Vocal presets. Settings persist in browser localStorage.
 - **Spectrum / Oscilloscope**: lightweight canvas analyzer modes for visual feedback without loading MilkDrop.
 - **MilkDrop**: butterchurn visualizer with inline, full-window, and native fullscreen modes.
+- **External visualizer launcher**: optional configured-only host-side launcher for MilkDrop3 or a compatible wrapper script. The browser can launch only the configured executable and cannot supply paths or arguments.
 - **Document Picture-in-Picture**: opens a tiny always-on-top spectrum window on browsers that support `documentPictureInPicture` (currently Chromium-family browsers).
 - **Karaoke**: center-channel reduction using channel split/invert/merge. Results vary by mix and are intentionally a local playback effect only.
 
@@ -213,6 +214,7 @@ The Web UI includes a persistent player drawer for local shared/downloaded audio
 ### Privacy and Network Impact
 
 - EQ, analyzer, MilkDrop, crossfade, karaoke, local mute, and Picture-in-Picture are browser-local.
+- The external visualizer launcher is disabled by default and runs only on the slskdN host when explicitly configured.
 - Lyrics contact LRCLIB only when the lyrics pane is opened for a track with artist/title metadata.
 - ListenBrainz is opt-in and only submits when a token is present.
 - These player features do not browse remote Soulseek peers or add background network scanning.

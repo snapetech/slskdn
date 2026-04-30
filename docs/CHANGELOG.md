@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Prepared the `2026042900-slskdn.203` stable release metadata.
+
+## [2026042900-slskdn.203] — 2026-04-30
+
 - Added a MilkDrop visualizer (butterchurn) to the Web UI player bar with
   inline-thumbnail, full-browser-window, and native-fullscreen modes. The
   butterchurn engine and preset pack are loaded via dynamic imports so they
@@ -50,6 +54,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   streaming boundary.
 - Improved player visualizer fallback styling so hidden canvases and fallback
   surfaces render cleanly when MilkDrop cannot draw.
+- Added an opt-in authenticated external visualizer launcher API and config
+  surface so local deployments can start a configured helper such as MilkDrop3
+  without allowing arbitrary browser-supplied commands.
 - Added Discography Concierge planning and first implementation pieces,
   including MusicBrainz artist coverage services/API/UI, manual missing-track
   Wishlist promotion, and supporting docs/tasks for mesh/social music

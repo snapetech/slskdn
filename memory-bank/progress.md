@@ -7387,3 +7387,10 @@ Code quality improvements were completed as part of Option A:
 - Documented the gotcha and committed it immediately as `1cd281afe`.
 - Headless browser smoke test played `Sample2-public-domain-bansuri.ogg`, opened MilkDrop, cycled presets, captured the canvas, and confirmed `colors=5032`, nonzero mean/stdev, no MilkDrop console errors, and active audio playback at `readyState: 4`.
 - Validation: focused player tests (`8/8`), `npm run lint`, `npm run build`, `bash bin/lint`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and Playwright screenshot smoke passed. The repo-level `./bin/lint` path itself is not executable in this checkout, so it was run via `bash bin/lint`.
+
+## 2026-04-30 04:10:00Z
+
+- Prepared the dirty player/visualizer workspace for the next stable tag-only release.
+- Added the opt-in external visualizer launcher configuration/API to the release notes and example config, with command execution constrained to server-configured binaries and arguments.
+- Fixed the external visualizer launcher compile issue caused by the app `Options` type colliding with `Microsoft.Extensions.Options.Options`, documented the gotcha, and committed that documentation immediately as `8afea98a9`.
+- Promoted the current `Unreleased` changelog bullets into `2026042900-slskdn.203` so release note generation does not publish the rolling bucket.

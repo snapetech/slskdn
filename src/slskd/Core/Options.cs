@@ -382,6 +382,12 @@ namespace slskd
         public SongIdOptions SongId { get; init; } = new SongIdOptions();
 
         /// <summary>
+        ///     Gets web player options.
+        /// </summary>
+        [Validate]
+        public PlayerOptions Player { get; init; } = new PlayerOptions();
+
+        /// <summary>
         ///     Gets options for the Soulseek client.
         /// </summary>
         [Validate]
@@ -1619,6 +1625,48 @@ namespace slskd
 
             /// <summary>Export pod availability to scene (future feature, keep OFF). When false, pod content is never advertised to scene.</summary>
             public bool ExportPodAvailability { get; init; } = false;
+        }
+
+        /// <summary>
+        ///     Web player options.
+        /// </summary>
+        public class PlayerOptions
+        {
+            /// <summary>
+            ///     Gets external visualizer launcher options.
+            /// </summary>
+            public ExternalVisualizerOptions ExternalVisualizer { get; init; } = new ExternalVisualizerOptions();
+
+            /// <summary>
+            ///     External visualizer launcher options.
+            /// </summary>
+            public class ExternalVisualizerOptions
+            {
+                /// <summary>
+                ///     Gets a value indicating whether the authenticated launch endpoint is enabled.
+                /// </summary>
+                public bool Enabled { get; init; }
+
+                /// <summary>
+                ///     Gets the executable or launcher script path.
+                /// </summary>
+                public string? Path { get; init; }
+
+                /// <summary>
+                ///     Gets command-line arguments passed to the configured launcher.
+                /// </summary>
+                public string[] Arguments { get; init; } = Array.Empty<string>();
+
+                /// <summary>
+                ///     Gets the working directory for the configured launcher.
+                /// </summary>
+                public string? WorkingDirectory { get; init; }
+
+                /// <summary>
+                ///     Gets a display name for the configured launcher.
+                /// </summary>
+                public string Name { get; init; } = "MilkDrop3";
+            }
         }
 
         /// <summary>
