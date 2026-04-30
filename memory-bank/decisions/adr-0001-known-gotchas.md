@@ -52,6 +52,39 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z201. Auto-Replace Must Be Opt-In And Must Exclude Our Own Username
+
+**The Bug**: Auto-replace defaulted to enabled when its state file was missing, even though `AutoReplaceStuck` defaults false. It also excluded only the original failed source from replacement candidates, so the daemon's own Soulseek username could be selected and the host downloaded from itself through the LAN/NAT path.
+
+**Files Affected**:
+- `src/slskd/Transfers/AutoReplace/AutoReplaceBackgroundService.cs`
+- `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
+
+**Wrong**:
+```csharp
+IsEnabled = state?.Enabled ?? true;
+
+if (response.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase))
+{
+    continue;
+}
+```
+
+**Correct**:
+```csharp
+IsEnabled = state?.UserConfigured == true
+    ? state.Enabled
+    : OptionsAtStartup.Global.Download.AutoReplaceStuck;
+
+if (response.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase)
+    || IsOwnUsername(response.Username))
+{
+    continue;
+}
+```
+
+**Why This Keeps Happening**: Background automation has to fail closed. A missing state file is not consent, and search results can include the local daemon's own username when mesh/LAN/NAT paths are involved. Replacement candidate filters must exclude both the failed source and the current client username before ranking.
+
 ### 0z200. Visualizer Render Loops Must Catch Preset Runtime Errors
 
 **The Bug**: The native MilkDrop visualizer could import a preset successfully, then throw later from `engine.render()` when an unsupported function or expression path executed. Because the animation-frame render loop did not catch render errors, the exception escaped the React boundary and the bad imported preset stayed persisted for the next session.

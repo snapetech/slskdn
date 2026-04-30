@@ -115,6 +115,79 @@ public class AutoReplaceServiceTests
     }
 
     [Fact]
+    public async Task FindAlternativesAsync_SkipsOwnSoulseekUsername()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                SearchScope.Network,
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>(),
+                "auto-replace"))
+            .ReturnsAsync((Guid id, SearchQuery _, SearchScope _, SearchOptions _, List<string> _, string _) => new SearchModel
+            {
+                Id = id,
+                State = SearchStates.Completed,
+            });
+
+        searchService
+            .Setup(service => service.FindAsync(
+                It.IsAny<Expression<Func<SearchModel, bool>>>(),
+                true))
+            .ReturnsAsync(new SearchModel
+            {
+                State = SearchStates.Completed,
+                Responses = new[]
+                {
+                    CreateSearchResponse("keef_shape"),
+                    CreateSearchResponse("remote_candidate"),
+                },
+            });
+
+        var rankingService = new Mock<ISourceRankingService>();
+        rankingService
+            .Setup(service => service.RankSourcesAsync(
+                It.IsAny<IEnumerable<SourceCandidate>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<SourceCandidate> candidates, CancellationToken _) => candidates.Select(candidate => new RankedSource
+            {
+                Username = candidate.Username,
+                Filename = candidate.Filename,
+                Size = candidate.Size,
+                HasFreeUploadSlot = candidate.HasFreeUploadSlot,
+                QueueLength = candidate.QueueLength,
+                UploadSpeed = candidate.UploadSpeed,
+                SizeDiffPercent = candidate.SizeDiffPercent,
+                SmartScore = 100,
+            }));
+
+        var client = new Mock<ISoulseekClient>();
+        client.SetupGet(c => c.Username).Returns("keef_shape");
+
+        using var service = new AutoReplaceService(
+            Mock.Of<ITransferService>(),
+            searchService.Object,
+            client.Object,
+            Mock.Of<IOptionsMonitor<SlskdOptions>>(),
+            rankingService.Object,
+            searchCompletionTimeout: TimeSpan.FromMilliseconds(50),
+            searchPollInterval: TimeSpan.FromMilliseconds(1),
+            minimumSearchInterval: TimeSpan.Zero);
+
+        var alternatives = await service.FindAlternativesAsync(new FindAlternativeRequest
+        {
+            Username = "original_source",
+            Filename = "Artist - Track.flac",
+            Size = 1000,
+        });
+
+        var alternative = Assert.Single(alternatives);
+        Assert.Equal("remote_candidate", alternative.Username);
+    }
+
+    [Fact]
     public async Task ProcessStuckDownloadsAsync_WhenSearchBudgetExceeded_SkipsAndStopsCycle()
     {
         var downloads = new List<SlskdTransfer>
@@ -224,5 +297,25 @@ public class AutoReplaceServiceTests
         public void Dispose()
         {
         }
+    }
+
+    private static Response CreateSearchResponse(string username)
+    {
+        return new Response
+        {
+            Username = username,
+            HasFreeUploadSlot = true,
+            QueueLength = 0,
+            UploadSpeed = 1234,
+            Files = new[]
+            {
+                new SearchFile
+                {
+                    Filename = "Artist - Track.flac",
+                    Extension = "flac",
+                    Size = 1000,
+                },
+            },
+        };
     }
 }

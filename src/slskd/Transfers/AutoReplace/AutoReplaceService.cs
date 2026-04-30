@@ -379,7 +379,8 @@ namespace slskd.Transfers.AutoReplace
                 foreach (var response in searchWithResponses.Responses)
                 {
                     // Skip the original source
-                    if (response.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase))
+                    if (response.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase)
+                        || IsOwnUsername(response.Username))
                     {
                         continue;
                     }
@@ -468,6 +469,12 @@ namespace slskd.Transfers.AutoReplace
             }
 
             return (candidates, SearchBudgetExceeded: false);
+        }
+
+        private bool IsOwnUsername(string username)
+        {
+            return !string.IsNullOrWhiteSpace(Client.Username)
+                && string.Equals(username, Client.Username, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <inheritdoc/>

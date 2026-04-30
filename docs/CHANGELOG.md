@@ -32,6 +32,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   current Butterchurn implementation.
 - Rejected incoming Soulseek upload requests from the daemon's own username so
   self-originated requests do not appear as uploads to yourself.
+- Fixed auto-replace so missing/legacy state follows the opt-in
+  `AutoReplaceStuck` setting instead of defaulting enabled, and so replacement
+  candidates exclude the daemon's own Soulseek username.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 
