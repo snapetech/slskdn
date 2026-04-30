@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z197. MilkDrop Custom Wave And Shape Equations Are Indexed Equations, Not Base Values
+
+**The Bug**: The new MilkDrop preset parser treated `shape00_per_frame1` and `wavecode_0_per_point1` keys as static base values because it only recognized indexed equation keys starting with `frame` or `point`. That would silently drop custom wave/shape behavior before rendering.
+
+**Files Affected**:
+- `src/web/src/components/Player/visualizers/milkdrop/presetParser.js`
+
+**Wrong**:
+```js
+if (normalized.startsWith('frame')) {
+  entry.equations.frame = appendStatement(entry.equations.frame, value);
+}
+```
+
+**Correct**:
+```js
+if (normalized.startsWith('frame') || normalized.startsWith('per_frame')) {
+  entry.equations.frame = appendStatement(entry.equations.frame, value);
+}
+```
+
+**Why This Keeps Happening**: MilkDrop stores global equations as `per_frame_1`, but custom wave/shape equations can appear as `shape00_per_frame1` and `wavecode_0_per_point1`. After stripping the indexed prefix, parser logic must still recognize both the short and `per_*` forms.
+
 ### 0z196. Winget Metadata Must Not Block Non-Winget Stable Releases
 
 **The Bug**: A stable tag release failed in the release gate before build/test because `validate-packaging-metadata.sh` unconditionally required checked-in Winget release URLs to match the current stable package metadata, even when the release was not publishing Winget.
