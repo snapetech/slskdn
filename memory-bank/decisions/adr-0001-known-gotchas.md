@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z204. Packaged Config Writes Must Preserve Service Read Access
+
+**The Bug**: Rewriting `/etc/slskd/slskd.yml` with `0600 root:root` made the systemd service fail at startup because the service runs as `slskd:slskd` and could no longer read its config.
+
+**Files Affected**:
+- `/etc/slskd/slskd.yml` on packaged hosts
+- `slskd.service`
+
+**Wrong**:
+```bash
+chown root:root /etc/slskd/slskd.yml
+chmod 600 /etc/slskd/slskd.yml
+```
+
+**Correct**:
+```bash
+chown root:slskd /etc/slskd/slskd.yml
+chmod 640 /etc/slskd/slskd.yml
+systemctl restart slskd.service
+```
+
+**Why This Keeps Happening**: Secret-bearing config files tempt operators to use root-only permissions, but packaged slskd reads the config after dropping to the `slskd` service account. Preserve group read access for the service group whenever rotating credentials or rewriting packaged config.
+
 ### 0z203. MilkDrop3 Double Presets Must Compatibility-Check Every Preset Body
 
 **The Bug**: Native `.milk2` imports parsed both preset bodies but only compatibility-checked `parsed.primary`, so an unsupported secondary preset could be accepted and stored as if the whole file were compatible.
