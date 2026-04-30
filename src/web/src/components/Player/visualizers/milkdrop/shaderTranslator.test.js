@@ -16,6 +16,12 @@ describe('MilkDrop shader translator', () => {
 
     expect(shader).toContain('uniform sampler2D previousFrame;');
     expect(shader).toContain('uniform float fftBins[32];');
+    expect(shader).toContain('uniform vec2 resolution;');
+    expect(shader).toContain('uniform vec2 pixelSize;');
+    expect(shader).toContain('uniform float aspect;');
+    expect(shader).toContain('uniform vec4 texsize;');
+    expect(shader).toContain('float rad = length(centeredUv);');
+    expect(shader).toContain('float ang = atan(centeredUv.y, centeredUv.x);');
     expect(shader).toContain('float get_fft(float position)');
     expect(shader).toContain('float get_fft_hz(float hz)');
     expect(shader).toContain('uniform float bass_att;');
@@ -58,6 +64,22 @@ describe('MilkDrop shader translator', () => {
     expect(shader).toContain('vec3 ret = vec3(tinted * vec3(energy, atan(shifted.y, shifted.x), 1.0));');
     expect(translateMilkdropShaderExpression('float3 tint = vec3(1.0); ret = tint;')).toBe('tint');
     expect(analyzeMilkdropShaderSupport('float2 p = uv; ret = vec3(p, 1.0);').supported).toBe(true);
+  });
+
+  it('accepts viewport and MilkDrop coordinate helpers in shader expressions', () => {
+    const shader = createTranslatedMilkdropFragmentShader(`
+      float2 pixel = pixelSize * texsize.xy;
+      ret = vec3(x * aspect + pixel.x, y + resolution.y * texsize.w, rad + ang * 0.01);
+    `);
+
+    expect(shader).toContain('vec2 pixelSize;');
+    expect(shader).toContain('vec4 texsize;');
+    expect(shader).toContain('float x = uv.x;');
+    expect(shader).toContain('vec2 pixel = pixelSize * texsize.xy;');
+    expect(shader).toContain(
+      'vec3 ret = vec3(vec3(x * aspect + pixel.x, y + resolution.y * texsize.w, rad + ang * 0.01));',
+    );
+    expect(analyzeMilkdropShaderSupport('ret = vec3(x, y, aspect);').supported).toBe(true);
   });
 
   it('rejects shader bodies outside the safe first translation subset', () => {

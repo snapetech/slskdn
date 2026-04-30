@@ -106,6 +106,7 @@ const createFakeGl = () => ({
   uniform1i: vi.fn(),
   uniform2f: vi.fn(),
   uniform3f: vi.fn(),
+  uniform4f: vi.fn(),
   useProgram: vi.fn(),
   vertexAttribPointer: vi.fn(),
   viewport: vi.fn(),
@@ -355,8 +356,8 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
         wave_r=0.5
         q64=0.64
         per_frame_1=q1=0.25;
-        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, get_fft(0.5), 1.0);
-        comp_shader=ret = vec3(get_fft_hz(11025), q64, treb);
+        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, get_fft(0.5), aspect);
+        comp_shader=ret = vec3(get_fft_hz(11025) + pixelSize.x, q64, treb + x + y);
       `).primary,
     });
 
@@ -372,15 +373,19 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
 
     const shaderSources = gl.shaderSource.mock.calls.map(([, source]) => source);
     expect(shaderSources.some((source) =>
-      source.includes('texture(previousFrame, uv).rgb * vec3(q1, get_fft(0.5), 1.0)'))).toBe(true);
+      source.includes('texture(previousFrame, uv).rgb * vec3(q1, get_fft(0.5), aspect)'))).toBe(true);
     expect(shaderSources.some((source) =>
-      source.includes('vec3 ret = vec3(vec3(get_fft_hz(11025), q64, treb))'))).toBe(true);
+      source.includes('vec3 ret = vec3(vec3(get_fft_hz(11025) + pixelSize.x, q64, treb + x + y))'))).toBe(true);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 44100);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 1);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.25);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.64);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.9);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.3);
+    expect(gl.uniform2f).toHaveBeenCalledWith(expect.anything(), 64, 64);
+    expect(gl.uniform2f).toHaveBeenCalledWith(expect.anything(), 1 / 64, 1 / 64);
+    expect(gl.uniform4f).toHaveBeenCalledWith(expect.anything(), 64, 64, 1 / 64, 1 / 64);
     expect(gl.uniform1fv).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ length: 32 }),

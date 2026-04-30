@@ -82,6 +82,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Expanded the native MilkDrop shader translator to accept safe straight-line
   temp declarations plus common HLSL helper aliases including `frac`, `fmod`,
   `rsqrt`, and `atan2`.
+- Added translated native MilkDrop shader viewport context with `resolution`,
+  `pixelSize`, `aspect`, `texsize`, and generated `x/y/rad/ang` coordinates.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

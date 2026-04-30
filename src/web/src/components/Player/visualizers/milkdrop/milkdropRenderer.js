@@ -222,17 +222,21 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
   const program = createProgram(gl, vertexShaderSource, fragmentSource);
   gl.useProgram(program);
   const state = {
+    aspectUniform: gl.getUniformLocation(program, 'aspect'),
     colorUniform: gl.getUniformLocation(program, 'color'),
     feedbackUniform: gl.getUniformLocation(program, 'feedback'),
     fftBinsUniform: gl.getUniformLocation(program, 'fftBins'),
     outputAlphaUniform: gl.getUniformLocation(program, 'outputAlpha'),
+    pixelSizeUniform: gl.getUniformLocation(program, 'pixelSize'),
     previousFrameUniform: gl.getUniformLocation(program, 'previousFrame'),
     program,
+    resolutionUniform: gl.getUniformLocation(program, 'resolution'),
     sampleRateUniform: gl.getUniformLocation(program, 'sampleRate'),
     scopeUniforms: shaderScopeUniformNames.map((name) => ({
       location: gl.getUniformLocation(program, name),
       name,
     })),
+    texsizeUniform: gl.getUniformLocation(program, 'texsize'),
     timeUniform: gl.getUniformLocation(program, 'time'),
   };
   gl.uniform1i(state.previousFrameUniform, 0);
@@ -255,6 +259,12 @@ const bindTranslatedShaderProgram = (
   gl.uniform1f(shaderProgram.timeUniform, time);
   gl.uniform1f(shaderProgram.sampleRateUniform, Number(scope?.sample_rate ?? 44100) || 44100);
   gl.uniform1fv(shaderProgram.fftBinsUniform, createShaderFftBins(scope?.frequency_data || []));
+  const width = Math.max(1, Number(scope?.canvas_width ?? 1) || 1);
+  const height = Math.max(1, Number(scope?.canvas_height ?? 1) || 1);
+  gl.uniform2f(shaderProgram.resolutionUniform, width, height);
+  gl.uniform2f(shaderProgram.pixelSizeUniform, 1 / width, 1 / height);
+  gl.uniform1f(shaderProgram.aspectUniform, width / height);
+  gl.uniform4f(shaderProgram.texsizeUniform, width, height, 1 / width, 1 / height);
   shaderProgram.scopeUniforms.forEach((uniform) => {
     gl.uniform1f(uniform.location, Number(scope?.[uniform.name] ?? 0) || 0);
   });
@@ -1180,6 +1190,8 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         fps: frame.fps ?? scope.fps,
         sample_rate: frame.sampleRate ?? frame.sample_rate ?? scope.sample_rate ?? 44100,
         time: frame.time ?? scope.time,
+        canvas_height: canvas.height,
+        canvas_width: canvas.width,
         ...frame.audio,
       };
 

@@ -102,6 +102,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first shader-uniform binding for q-register and audio variables in translated warp/comp shaders.
 - [x] Add first shader-side `get_fft()` and `get_fft_hz()` support for translated warp/comp shaders.
 - [x] Add safe straight-line temp declarations and common HLSL helper aliases to translated shaders.
+- [x] Add viewport uniforms and generated coordinate helpers to translated shaders.
 - [x] Add first native primitive-field alias support for common custom wave, shape, and sprite names.
 - [x] Add first classic `ob_*` and `ib_*` screen-border rendering.
 - [x] Add first classic `wave_mode`, `wave_x/y`, `wave_a`, and `wave_smoothing` support.
@@ -131,6 +132,7 @@ Current parser/VM scope:
 - Supports analyzer-backed `get_fft(pos)` and `get_fft_hz(freq)` expression helpers against renderer-provided frequency data. Full MilkDrop wave modes and shader-side FFT access are still pending.
 - Supported translated warp/comp shaders can reference `q1`-`q64` plus `bass`, `bass_att`, `mid`, `mid_att`, `treb`, and `treb_att`; the renderer binds those values from the current frame scope as uniforms before each translated shader pass.
 - Translated warp/comp shaders also expose first shader-side `get_fft(pos)` and `get_fft_hz(freq)` helpers backed by a 32-bin normalized FFT uniform array and current sample-rate uniform.
+- Translated warp/comp shaders receive viewport context through `resolution`, `pixelSize`, `aspect`, and `texsize`, and generated MilkDrop-style per-fragment coordinate helpers `x`, `y`, `rad`, and `ang`.
 - Rebinds WebGL vertex attributes before each fullscreen, warp-grid, wave, and shape draw so program switches cannot leave draw calls pointed at stale buffers.
 - Draws presets with global `per_pixel` equations through a CPU-evaluated triangle grid. The grid evaluates MilkDrop `x`, `y`, `rad`, and `ang` values per vertex, converts local `dx/dy/zoom/rot` into source UVs, and samples the previous feedback texture through a dedicated grid shader. This is a compatibility stepping stone before GLSL translation of full warp shaders.
 - Draws first-pass motion vectors from `mv_x`, `mv_y`, `mv_dx`, `mv_dy`, `mv_l`, and `mv_r/g/b/a` values as alpha-blended WebGL line segments.

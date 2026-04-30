@@ -1,3 +1,10 @@
+## 2026-04-30 18:14Z - Added native MilkDrop shader viewport context
+
+- Translated warp/comp shaders now receive `resolution`, `pixelSize`, `aspect`, and `texsize`.
+- Generated shader fragments expose MilkDrop-style per-fragment `x`, `y`, `rad`, and `ang` helpers.
+- The renderer binds viewport uniforms from the active WebGL canvas before translated shader passes.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 18:10Z - Expanded native MilkDrop shader straight-line support
 
 - Native warp/comp shader translation now accepts safe `float/float2/float3/float4` temp declarations before the final `ret = ...`.

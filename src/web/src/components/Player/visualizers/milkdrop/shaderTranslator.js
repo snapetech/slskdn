@@ -23,8 +23,7 @@ const normalizeShaderSource = (source) =>
   stripShaderComments(source)
     .replace(/\btex2D\s*\(\s*sampler_(?:main|fc_main|sampler_main)\s*,/gi, 'texture(previousFrame,')
     .replace(/\btex2D\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,')
-    .replace(/\btex\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,')
-    .replace(/\btexsize\b/gi, 'textureSize');
+    .replace(/\btex\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,');
 
 const normalizeShaderExpression = (expression) =>
   expression
@@ -107,6 +106,10 @@ uniform float outputAlpha;
 uniform float time;
 uniform float sampleRate;
 uniform float fftBins[32];
+uniform vec2 resolution;
+uniform vec2 pixelSize;
+uniform float aspect;
+uniform vec4 texsize;
 ${uniformDeclarations}
 in vec2 uv;
 out vec4 outColor;
@@ -131,6 +134,11 @@ float get_fft_hz(float hz) {
   return get_fft(hz / nyquist);
 }
 void main() {
+  float x = uv.x;
+  float y = uv.y;
+  vec2 centeredUv = uv - vec2(0.5);
+  float rad = length(centeredUv);
+  float ang = atan(centeredUv.y, centeredUv.x);
   ${parsed.declarations.join('\n  ')}
   vec3 ret = vec3(${parsed.expression});
   vec3 previous = texture(previousFrame, clamp(uv, vec2(0.0), vec2(1.0))).rgb;

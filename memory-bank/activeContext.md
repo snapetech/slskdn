@@ -1,3 +1,15 @@
+## Update 2026-04-30 18:14:52Z
+
+- Current task: Native MilkDrop translated shaders have viewport context.
+- Last activity:
+  - generated shader fragments now expose `resolution`, `pixelSize`, `aspect`, and `texsize`
+  - generated shader fragments also expose MilkDrop-style per-fragment `x`, `y`, `rad`, and `ang`
+  - renderer binds viewport uniforms from the current WebGL canvas before translated warp/comp passes
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke
+- Next steps:
+  1. Run whitespace checks, commit, and push.
+  2. Continue the next large MilkDrop phase, likely shader texture access or real-preset compatibility coverage.
+
 ## Update 2026-04-30 18:10:20Z
 
 - Current task: Native MilkDrop shader translator accepts more safe straight-line bodies.
