@@ -7216,3 +7216,9 @@ Code quality improvements were completed as part of Option A:
 - Updated `UserServiceTests.Dispose_UnsubscribesOptionsMonitor_AndSoulseekEvents` to account for the fixture-owned `RegexUsernameMatcher` options listener while still verifying `UserService` unsubscribes its own listener and Soulseek events.
 - Documented the weak SongID graph expansion gotcha in ADR-0001 and committed that entry immediately as `58de4816c`.
 - Validation: focused `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~DiscoveryGraphServiceTests|FullyQualifiedName~UserServiceTests"` passed (`14/14`), full Release-config `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release --no-restore` passed (`3599/3599`), `./bin/lint` passed, and `git diff --check` passed. The .NET runs still report existing analyzer warnings.
+
+## 2026-04-30 00:44:00Z
+
+- Investigated the `.202` stable Winget job and confirmed it reported success only because `WINGETCREATE_GITHUB_TOKEN` was empty and the workflow ran a successful "skip" step.
+- Changed the main Winget release job to fail when the token is missing, removed the token-gated skip behavior from the real `wingetcreate` steps, and added a manual `Publish Winget` workflow that can submit an existing stable release tag to `microsoft/winget-pkgs` after credentials are configured.
+- Validation: parsed `.github/workflows/build-on-tag.yml` and `.github/workflows/publish-winget.yml` as YAML and ran `git diff --check`.

@@ -1,3 +1,15 @@
+## Update 2026-04-30 00:44:00Z
+
+- Current task: Fix fake-green stable Winget publishing.
+- Last activity:
+  - confirmed the `.202` Winget job skipped real submission because `WINGETCREATE_GITHUB_TOKEN` was empty
+  - changed the main Winget release job to fail loudly when the token is missing
+  - added a manual `Publish Winget` workflow for retrying an existing stable release tag after credentials are configured
+- Next steps:
+  1. Commit and push the Winget workflow fix.
+  2. Configure `WINGETCREATE_GITHUB_TOKEN` with a GitHub token that can submit to `microsoft/winget-pkgs`.
+  3. Run the manual `Publish Winget` workflow for `2026042900-slskdn.202`.
+
 ## Update 2026-04-30 00:33:57Z
 
 - Current task: None. AUR upgrade service refresh is implemented locally.

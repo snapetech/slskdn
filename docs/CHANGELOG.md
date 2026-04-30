@@ -25,6 +25,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed AUR upgrade hooks so an already-running `slskd.service` is restarted
   after package upgrades, while fresh installs and stopped services remain
   untouched until the operator starts them.
+- Fixed stable Winget publishing so main release workflows fail loudly when
+  `WINGETCREATE_GITHUB_TOKEN` is missing instead of reporting a fake-green
+  skipped submission, and added a manual Winget publish workflow for retrying
+  an existing release tag after credentials are configured.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 

@@ -1858,8 +1858,14 @@ jobs:
     env:
       WINGETCREATE_GITHUB_TOKEN: ${{ secrets.WINGETCREATE_GITHUB_TOKEN }}
     steps:
+      - name: Require Winget token
+        if: ${{ env.WINGETCREATE_GITHUB_TOKEN == '' }}
+        shell: pwsh
+        run: |
+          Write-Error "WINGETCREATE_GITHUB_TOKEN is not configured; main Winget submission cannot open a PR against microsoft/winget-pkgs"
+          exit 1
+
       - name: Download wingetcreate
-        if: ${{ env.WINGETCREATE_GITHUB_TOKEN != '' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1867,7 +1873,6 @@ jobs:
           Get-Item .\wingetcreate.exe | Format-List Name,Length,LastWriteTime
 
       - name: Submit manifest update to winget-pkgs
-        if: ${{ env.WINGETCREATE_GITHUB_TOKEN != '' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1885,12 +1890,6 @@ jobs:
             -v $WingetVersion `
             -t $env:WINGETCREATE_GITHUB_TOKEN `
             --submit
-
-      - name: Skip if no token
-        if: ${{ env.WINGETCREATE_GITHUB_TOKEN == '' }}
-        shell: pwsh
-        run: |
-          Write-Host "Skipping Winget submission - WINGETCREATE_GITHUB_TOKEN not configured"
 
   metadata-main:
     name: Update Main Repo Metadata

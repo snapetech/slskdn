@@ -1,0 +1,59 @@
+name: Publish Winget
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version/tag to submit, e.g. 2026042900-slskdn.202'
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  WINGETCREATE_GITHUB_TOKEN: ${{ secrets.WINGETCREATE_GITHUB_TOKEN }}
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    name: Submit Winget PR
+    runs-on: windows-latest
+    steps:
+      - name: Require Winget token
+        if: ${{ env.WINGETCREATE_GITHUB_TOKEN == '' }}
+        shell: pwsh
+        run: |
+          Write-Error "WINGETCREATE_GITHUB_TOKEN is not configured; Winget submission cannot open a PR against microsoft/winget-pkgs"
+          exit 1
+
+      - name: Download wingetcreate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          Get-Item .\wingetcreate.exe | Format-List Name,Length,LastWriteTime
+
+      - name: Submit manifest update to winget-pkgs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ReleaseVersion = "${{ inputs.version }}"
+          if ($ReleaseVersion -notmatch '^\d{10}-slskdn\.\d+$') {
+            Write-Error "Expected stable release version like 2026042900-slskdn.202, got '$ReleaseVersion'"
+            exit 1
+          }
+
+          $WingetVersion = $ReleaseVersion.Replace('-', '.')
+          $InstallerUrl = "https://github.com/${{ github.repository }}/releases/download/$ReleaseVersion/slskdn-main-win-x64.zip"
+
+          Write-Host "Submitting Winget update for snapetech.slskdn"
+          Write-Host "Release version: $ReleaseVersion"
+          Write-Host "Winget version:  $WingetVersion"
+          Write-Host "Installer URL:   $InstallerUrl"
+
+          .\wingetcreate.exe update snapetech.slskdn `
+            -u $InstallerUrl `
+            -v $WingetVersion `
+            -t $env:WINGETCREATE_GITHUB_TOKEN `
+            --submit
