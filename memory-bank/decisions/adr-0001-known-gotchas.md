@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z225. Interpolated Raw Strings Need Extra Dollar Signs For JavaScript Braces
+
+**The Bug**: A controller callback HTML response used an interpolated raw string containing JavaScript object braces. The string started with a single `$"""`, so C# treated the JavaScript `{{ ... }}` content as interpolation syntax and the backend failed to compile.
+
+**Files Affected**:
+- `src/slskd/SourceFeeds/API/SpotifyConnectionController.cs`
+
+**Wrong**:
+```csharp
+return $"""
+<script>
+  window.opener.postMessage({{ type: 'connected' }}, window.location.origin);
+</script>
+""";
+```
+
+**Correct**:
+```csharp
+return $$"""
+<script>
+  window.opener.postMessage({ type: 'connected' }, window.location.origin);
+</script>
+""";
+```
+
+**Why This Keeps Happening**: Raw strings make embedded HTML/JavaScript look safe to paste, but interpolation still reserves brace sequences according to the number of leading `$` characters. Use `$$"""` when the content naturally contains single JavaScript braces and reserve `{{value}}` only for C# interpolation.
+
 ### 0z224. Two-Thirds Jury Quorums Need Ceiling Math
 
 **The Bug**: Quarantine Jury aggregation used integer division for the two-thirds agreement threshold, so 2-of-3 jurors failed to reach a release/uphold recommendation and fell back to manual review.
