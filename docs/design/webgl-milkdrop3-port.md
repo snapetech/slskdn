@@ -90,6 +90,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first local image texture asset import path for native presets.
 - [x] Add first `.milk2` double-preset simultaneous render/composite path.
 - [x] Add first sprite/image primitive parse and render path.
+- [x] Scope imported texture/image assets to the presets that reference them.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -127,6 +128,7 @@ Current parser/VM scope:
 - The first shader translator accepts simple shader bodies that assign `ret = ...` using GLSL-like expressions, `tex2D(sampler_main, uv)` sampling, `saturate`, and `lerp`. Supported `warp_shader` bodies run in the feedback pass; supported `comp_shader` bodies run during the screen composite. Control flow, matrix types, general HLSL, and unknown texture/sampler forms remain explicitly unsupported.
 - The first procedural textured-shape path renders parsed `textured`, `texture`, `tex`, or `tex_name` shape references through a generated checker texture and texture-coordinate shader. This proves the texture pipeline without bundling external preset assets yet.
 - Native preset imports can include small local image files selected in the same file picker batch. Those images are stored with the imported preset by filename/basename/stem and passed into the renderer as named texture assets. Preset texture references are normalized across quotes, path separators, basename, and stem so common pack layouts like `textures/cover.png` still resolve when the user imports `cover.png`; missing texture names fall back to the procedural checker.
+- Multi-preset imports scope image assets per preset instead of attaching the whole selected image batch to every imported preset. The import path also indexes browser-provided relative paths (`webkitRelativePath`) when available, so directory-style pack paths can resolve while keeping unrelated images out of browser-local preset storage.
 - Oversized, unreadable, or unsupported files selected during native preset import are reported in the visualizer overlay instead of being ignored silently. Texture assets are capped at 1 MB while this browser-local path matures.
 - First-pass `spriteNN_` primitives parse base values plus init/frame equations, compatibility-check sprite equations, and render enabled sprites as textured quads. Sprites use imported texture assets by image/texture filename aliases and fall back to the procedural checker when an image is missing.
 - The first curated fixture pack covers a classic primitive/textured-shape/sprite preset, a supported shader subset preset, a simple `.milk2` double-preset file, and an unsupported shader-control-flow preset. Tests lock golden parser summaries and compatibility outcomes, and the browser smoke renders the textured classic fixture, shader fixture, and `.milk2` double fixture with per-fixture pixel statistics.

@@ -69,6 +69,9 @@ const getNativePresetFileId = (file) =>
 
 const isNativePresetFile = (file) => /\.(milk2?|txt)$/i.test(file.name);
 
+const getNativeImportFilePath = (file) =>
+  file.webkitRelativePath || file.name;
+
 const isNativeTextureAssetCandidateFile = (file) =>
   /^image\//i.test(file.type) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
 
@@ -90,10 +93,36 @@ const getNativeTextureAssetSkip = (file) => {
 };
 
 const getTextureAssetKeys = (fileName) => {
-  const normalized = fileName.trim().toLowerCase();
+  const normalized = fileName.trim().replace(/^['"]|['"]$/g, '').replace(/\\/g, '/').toLowerCase();
   const basename = normalized.replace(/^.*[\\/]/, '');
   const stem = basename.replace(/\.[^.]+$/, '');
   return Array.from(new Set([normalized, basename, stem].filter(Boolean)));
+};
+
+const textureReferencePattern =
+  /(?:shape|sprite)\d+_(?:texture|tex|tex_name|image|img|file|filename)\s*=\s*([^\r\n;]+)/gi;
+
+const collectNativePresetTextureReferences = (source) => {
+  const references = new Set();
+  let match = textureReferencePattern.exec(source || '');
+  while (match) {
+    getTextureAssetKeys(match[1]).forEach((key) => references.add(key));
+    match = textureReferencePattern.exec(source || '');
+  }
+  return references;
+};
+
+const selectNativePresetTextureAssets = (source, textureAssets) => {
+  const references = collectNativePresetTextureReferences(source);
+  if (references.size === 0) return {};
+  const selected = {};
+  Object.entries(textureAssets).forEach(([key, asset]) => {
+    if (!references.has(key)) return;
+    getTextureAssetKeys(asset.fileName).forEach((alias) => {
+      selected[alias] = asset;
+    });
+  });
+  return selected;
 };
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -126,10 +155,11 @@ const readNativeTextureAssets = async (files) => {
       });
       continue;
     }
-    getTextureAssetKeys(file.name).forEach((key) => {
+    const filePath = getNativeImportFilePath(file);
+    getTextureAssetKeys(filePath).forEach((key) => {
       textureAssets[key] = {
         dataUrl,
-        fileName: file.name,
+        fileName: filePath,
       };
     });
   }
@@ -369,6 +399,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     for (const file of files.filter(isNativePresetFile)) {
       try {
         const source = await file.text();
+        const presetTextureAssets = selectNativePresetTextureAssets(source, textureAssets);
         const importedPresetName = engineRef.current.inspectPresetText
           ? engineRef.current.inspectPresetText(source, file.name).title
           : engineRef.current.loadPresetText(source, file.name);
@@ -376,7 +407,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           fileName: file.name,
           id: getNativePresetFileId(file),
           source,
-          textureAssets,
+          textureAssets: presetTextureAssets,
           title: importedPresetName,
         });
       } catch (presetError) {

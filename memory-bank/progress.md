@@ -1,3 +1,11 @@
+## 2026-04-30 15:26Z - Scoped native MilkDrop pack image assets per preset
+
+- Native preset import now indexes selected image assets by browser-provided relative path when available, plus basename and stem aliases.
+- Each imported preset source is scanned for shape/sprite texture references before storage, and only referenced image assets are persisted with that preset.
+- Multi-preset imports no longer attach the whole selected image batch to every browser-local preset entry.
+- Added component coverage for a two-preset pack where each preset keeps only its own referenced image asset.
+- Validation: focused native/player tests passed with `63/63` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 15:21Z - Added first native MilkDrop sprite primitive path
 
 - Parser now recognizes `spriteNN_` indexed primitive entries with base values plus init/frame equations.

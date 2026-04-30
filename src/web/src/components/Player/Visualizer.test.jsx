@@ -237,6 +237,86 @@ describe('Visualizer', () => {
     );
   });
 
+  it('stores only referenced image assets with each imported native preset', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    nativeEngine.inspectPresetText.mockImplementation((_source, fileName) => ({
+      title: fileName.replace(/\.milk$/, ''),
+    }));
+    nativeEngine.loadPresetText.mockImplementation((_source, fileName) =>
+      fileName.replace(/\.milk$/, ''));
+    vi.stubGlobal('FileReader', class {
+      readAsDataURL(file) {
+        this.result = `data:${file.name}`;
+        this.onload();
+      }
+    });
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.resize).toHaveBeenCalled();
+    });
+
+    const input = document.querySelector('input[type="file"]');
+    const firstPreset = new File(
+      ['name=First\nshape00_enabled=1\nshape00_texture=art/first.png'],
+      'first.milk',
+      { type: 'text/plain' },
+    );
+    const secondPreset = new File(
+      ['name=Second\nsprite00_enabled=1\nsprite00_image=second.png'],
+      'second.milk',
+      { type: 'text/plain' },
+    );
+    const firstImage = new File(['first'], 'first.png', { type: 'image/png' });
+    const secondImage = new File(['second'], 'second.png', { type: 'image/png' });
+    Object.defineProperty(firstImage, 'webkitRelativePath', {
+      configurable: true,
+      value: 'pack/art/first.png',
+    });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: createFileList([firstPreset, secondPreset, firstImage, secondImage]),
+    });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
+        'second.milk',
+      );
+    });
+
+    const activePreset = JSON.parse(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropPreset'),
+    );
+    expect(Object.keys(activePreset.textureAssets).sort()).toEqual(['second', 'second.png']);
+
+    const library = JSON.parse(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary'),
+    );
+    const firstEntry = library.find((preset) => preset.fileName === 'first.milk');
+    expect(Object.keys(firstEntry.textureAssets).sort()).toEqual([
+      'first',
+      'first.png',
+      'pack/art/first.png',
+    ]);
+    expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+      'name=Second\nsprite00_enabled=1\nsprite00_image=second.png',
+      'second.milk',
+      {
+        textureAssets: expect.not.objectContaining({
+          first: expect.anything(),
+        }),
+      },
+    );
+  });
+
   it('reports skipped native texture assets during import', async () => {
     window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
 

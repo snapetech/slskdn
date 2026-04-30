@@ -1,3 +1,16 @@
+## Update 2026-04-30 15:26:43Z
+
+- Current task: Native MilkDrop pack imports scope image assets per preset.
+- Last activity:
+  - import now indexes selected image assets by browser-provided relative path when available, plus basename and stem aliases
+  - each preset source is scanned for shape/sprite texture references before it is stored
+  - browser-local preset entries now persist only the referenced image assets instead of the whole selected image batch
+  - added component coverage for a two-preset pack where each preset keeps only its own referenced image
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Commit and push the scoped preset-pack import phase.
+  2. Continue with the next larger native MilkDrop phase, likely preset pack ergonomics or richer transition controls.
+
 ## Update 2026-04-30 15:21:59Z
 
 - Current task: Native MilkDrop has first sprite/image primitive support.

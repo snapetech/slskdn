@@ -50,6 +50,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   primary preset body normally and blending compatible secondary bodies over it.
 - Added first native MilkDrop sprite/image primitive parsing and textured-quad
   rendering backed by imported image texture assets.
+- Scoped imported native MilkDrop image assets per preset so multi-preset packs
+  do not persist unrelated images with every imported preset.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 
