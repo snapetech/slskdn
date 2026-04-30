@@ -52,6 +52,56 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z191. Player Queue Previews Must Exclude The Current Track
+
+**The Bug**: The persistent Web UI player rendered `queue.slice(0, 3)` below the main now-playing display. Because the player queue stores the current item at index 0, the current song title appeared twice: once in the LCD display and again as a queue pill.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/LyricsPane.jsx`
+
+**Wrong**:
+```jsx
+{queue.slice(0, 3).map((item) => (
+  <button>{item.title}</button>
+))}
+```
+
+**Correct**:
+```jsx
+{queue.length > 1 ? queue.slice(1, 4).map((item) => (
+  <button>{item.title || item.fileName || item.contentId}</button>
+)) : null}
+```
+
+**Why This Keeps Happening**: Player state often keeps "current + upcoming" in one queue for simple next/previous behavior, but the UI queue preview should show only upcoming tracks. Any now-playing deck must treat queue index 0 as already represented by the main title display.
+
+### 0z190. Lyrics Lookup Needs Real Metadata, Not Placeholder Artists
+
+**The Bug**: The lyrics pane queried LRCLIB with `artist_name=slskdN` for local files that only had filename metadata. That made lyrics appear broken and returned misleading "No synced lyrics found" messages for tracks where the real artist/title could not be inferred.
+
+**Files Affected**:
+- `src/web/src/components/Player/LyricsPane.jsx`
+
+**Wrong**:
+```js
+new URLSearchParams({
+  artist_name: current.artist,
+  track_name: current.title,
+});
+```
+
+**Correct**:
+```js
+const lookup = getLyricsLookup(current);
+if (!lookup) {
+  setStatus('Lyrics need artist and title metadata');
+  return;
+}
+```
+
+**Why This Keeps Happening**: Local and generated player items often use placeholder artist values and filename titles. External metadata services need real artist/title pairs; when those are absent, infer only safe `Artist - Title.ext` filenames and otherwise explain the missing metadata instead of sending garbage queries.
+
 ### 0z190. Autosave Forms Need Saved-State Affordances
 
 **The Bug**: The player ListenBrainz token field saved on every keystroke, but the modal only showed a generic Close button. The behavior was technically correct, but the UI looked like an unsent form with no submit action.
