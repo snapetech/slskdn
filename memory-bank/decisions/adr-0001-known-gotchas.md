@@ -82,7 +82,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 }
 ```
 
-**Why This Keeps Happening**: The nav, player, and footer are fixed-position chrome, but their real heights change with responsive wrapping, safe-area insets, and player expansion state. Reserve space from measured CSS variables instead of constants so every route scrolls only inside the unobscured viewport.
+**Why This Keeps Happening**: The nav, player, and footer are fixed-position chrome, but their real heights change with responsive wrapping, safe-area insets, and player expansion state. The Semantic UI top sidebar may also have a non-zero top offset, so reserve the nav's measured bottom edge, not only its height. Reserve space from measured CSS variables instead of constants so every route scrolls only inside the unobscured viewport.
 
 ### 0z208. Test-Local Helper Types Still Need Real Framework Imports
 
