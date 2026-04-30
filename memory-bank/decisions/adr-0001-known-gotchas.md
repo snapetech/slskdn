@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z222. Tests Must Qualify Root Options When Microsoft Options Is Imported
+
+**The Bug**: A unit test imported `Microsoft.Extensions.Options` for `IOptionsMonitor<T>` and then used unqualified `Options`, which resolved to the framework static helper instead of the root `slskd.Options` configuration model.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/SourceFeeds/SourceFeedImportServiceTests.cs`
+
+**Wrong**:
+```csharp
+using Microsoft.Extensions.Options;
+
+var options = new Mock<IOptionsMonitor<Options>>();
+```
+
+**Correct**:
+```csharp
+using Microsoft.Extensions.Options;
+
+var options = new Mock<IOptionsMonitor<global::slskd.Options>>();
+```
+
+**Why This Keeps Happening**: The root config type has the same simple name as `Microsoft.Extensions.Options.Options`. Any test or controller that imports the Microsoft options namespace should fully qualify the root config type as `global::slskd.Options`.
+
 ### 0z221. Source Feed Evidence Keys Must Not Include Row Numbers
 
 **The Bug**: Source-feed duplicate suppression included `SourceId` in the evidence key, but local parsers use row numbers as source ids. Repeated identical rows therefore produced different keys and were not deduped.
