@@ -751,6 +751,83 @@ describe('Visualizer', () => {
     randomSpy.mockRestore();
   });
 
+  it('filters the native preset bank search and scopes native next navigation', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'first.milk',
+        id: 'first',
+        source: 'name=First\nwave_r=1',
+        title: 'First',
+      }),
+    );
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPresetLibrary',
+      JSON.stringify([
+        {
+          fileName: 'first.milk',
+          id: 'first',
+          source: 'name=First\nwave_r=1',
+          title: 'First',
+        },
+        {
+          fileName: 'second.milk',
+          id: 'second',
+          source: 'name=Second\nwave_r=0.5',
+          title: 'Second',
+        },
+        {
+          fileName: 'third-grid.milk',
+          id: 'third',
+          source: 'name=Third Grid\nwave_b=1',
+          title: 'Third Grid',
+        },
+      ]),
+    );
+    nativeEngine.loadPresetText.mockImplementation((_source, fileName) =>
+      fileName.replace(/\.milk$/, ''));
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=First\nwave_r=1',
+        'first.milk',
+        { textureAssets: undefined },
+      );
+    });
+
+    fireEvent.change(screen.getByTestId('visualizer-native-preset-search'), {
+      target: { value: 'grid' },
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetSearch')).toBe('grid');
+    expect(screen.getByRole('option', { name: 'Third Grid' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Second' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('visualizer-next-preset'));
+    await waitFor(() => {
+      expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('third');
+    });
+
+    fireEvent.change(screen.getByTestId('visualizer-native-preset-search'), {
+      target: { value: 'missing' },
+    });
+    expect(screen.getByText('No matches')).toBeInTheDocument();
+    expect(screen.getByTestId('visualizer-next-preset')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('visualizer-clear-native-preset-search'));
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetSearch')).toBeNull();
+    expect(screen.getByTestId('visualizer-native-preset-search')).toHaveValue('');
+    expect(screen.getByRole('option', { name: 'Second' })).toBeInTheDocument();
+  });
+
   it('surfaces native render errors and clears the persisted imported preset', async () => {
     window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
     window.localStorage.setItem(

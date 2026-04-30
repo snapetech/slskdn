@@ -1,3 +1,10 @@
+## 2026-04-30 17:19Z - Added native MilkDrop preset-bank search
+
+- Added a compact search input and clear affordance to the native visualizer overlay for filtering imported presets by title or file name.
+- Search persists in browser local storage, composes with favorites-only mode, and scopes native next/random navigation to the visible filtered preset bank.
+- Native next navigation is disabled when an active filter has no imported-preset matches.
+- Validation: focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 17:10Z - Added native MilkDrop preset-bank controls
 
 - Imported native presets now behave as a local preset bank for next-preset cycling when native mode has browser-local presets.

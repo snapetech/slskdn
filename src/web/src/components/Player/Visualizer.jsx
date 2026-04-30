@@ -11,6 +11,7 @@ const nativePresetLibraryStorageKey = 'slskdn.player.nativeMilkdropPresetLibrary
 const nativePresetAutomationStorageKey = 'slskdn.player.nativeMilkdropPresetAutomation';
 const nativePresetFavoritesStorageKey = 'slskdn.player.nativeMilkdropPresetFavorites';
 const nativePresetLibraryModeStorageKey = 'slskdn.player.nativeMilkdropPresetLibraryMode';
+const nativePresetSearchStorageKey = 'slskdn.player.nativeMilkdropPresetSearch';
 const nativePresetLibraryLimit = 20;
 const nativePresetHistoryLimit = 12;
 const nativeTextureAssetMaxBytes = 1024 * 1024;
@@ -95,6 +96,11 @@ const readStoredNativePresetLibraryMode = () => {
     : 'all';
 };
 
+const readStoredNativePresetSearch = () => {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(nativePresetSearchStorageKey) || '';
+};
+
 const writeStoredNativePresetLibrary = (library) => {
   window.localStorage.setItem(
     nativePresetLibraryStorageKey,
@@ -121,6 +127,19 @@ const upsertNativePresetLibraryEntry = (library, entry) => [
 const pruneNativePresetFavorites = (favoriteIds, library) => {
   const libraryIds = new Set(library.map((preset) => preset.id));
   return favoriteIds.filter((id) => libraryIds.has(id));
+};
+
+const getNativePresetSearchText = (preset) =>
+  [preset.title, preset.fileName].filter(Boolean).join(' ').toLowerCase();
+
+const filterNativePresetLibrary = (library, search) => {
+  const query = search.trim().toLowerCase();
+  if (!query) return library;
+  const terms = query.split(/\s+/).filter(Boolean);
+  return library.filter((preset) => {
+    const text = getNativePresetSearchText(preset);
+    return terms.every((term) => text.includes(term));
+  });
 };
 
 const getNativePresetFileId = (file) =>
@@ -305,13 +324,18 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   );
   const [nativePresetHistory, setNativePresetHistory] = useState([]);
   const [nativePresetLibrary, setNativePresetLibrary] = useState(readStoredNativePresetLibrary);
+  const [nativePresetSearch, setNativePresetSearch] = useState(readStoredNativePresetSearch);
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
 
-  const visibleNativePresetLibrary = nativeLibraryMode === 'favorites'
+  const modeFilteredNativePresetLibrary = nativeLibraryMode === 'favorites'
     ? nativePresetLibrary.filter((preset) => nativeFavoritePresetIds.includes(preset.id))
     : nativePresetLibrary;
-  const activeNativePresetIndex = nativePresetLibrary.findIndex(
+  const visibleNativePresetLibrary = filterNativePresetLibrary(
+    modeFilteredNativePresetLibrary,
+    nativePresetSearch,
+  );
+  const visibleNativePresetIndex = visibleNativePresetLibrary.findIndex(
     (preset) => preset.id === activeNativePresetId,
   );
   const activeNativePresetIsFavorite = nativeFavoritePresetIds.includes(activeNativePresetId);
@@ -320,6 +344,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   )
     ? activeNativePresetId
     : '';
+  const hasNativePresetSearch = nativePresetSearch.trim().length > 0;
+  const nativeBankNavigationDisabled = engineType === 'native'
+    && nativePresetLibrary.length > 0
+    && visibleNativePresetLibrary.length === 0;
 
   const renderLoop = useCallback(() => {
     if (!engineRef.current) return;
@@ -388,15 +416,15 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   }, [activeNativePresetId, sizeCanvas]);
 
   const loadNativePresetByOffset = useCallback((offset) => {
-    if (nativePresetLibrary.length === 0) return false;
-    const currentIndex = activeNativePresetIndex >= 0
-      ? activeNativePresetIndex
+    if (visibleNativePresetLibrary.length === 0) return false;
+    const currentIndex = visibleNativePresetIndex >= 0
+      ? visibleNativePresetIndex
       : (offset > 0 ? -1 : 0);
     const nextIndex = (
-      currentIndex + offset + nativePresetLibrary.length
-    ) % nativePresetLibrary.length;
-    return loadNativePresetEntry(nativePresetLibrary[nextIndex]);
-  }, [activeNativePresetIndex, loadNativePresetEntry, nativePresetLibrary]);
+      currentIndex + offset + visibleNativePresetLibrary.length
+    ) % visibleNativePresetLibrary.length;
+    return loadNativePresetEntry(visibleNativePresetLibrary[nextIndex]);
+  }, [loadNativePresetEntry, visibleNativePresetIndex, visibleNativePresetLibrary]);
 
   const cyclePreset = useCallback(() => {
     if (engineType === 'native' && nativePresetLibrary.length > 0) {
@@ -427,12 +455,14 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   ]);
 
   const randomNativeLibraryPreset = useCallback(() => {
-    if (nativePresetLibrary.length === 0) return;
-    const candidates = nativePresetLibrary.filter((preset) => preset.id !== activeNativePresetId);
-    const pool = candidates.length > 0 ? candidates : nativePresetLibrary;
+    if (visibleNativePresetLibrary.length === 0) return;
+    const candidates = visibleNativePresetLibrary.filter(
+      (preset) => preset.id !== activeNativePresetId,
+    );
+    const pool = candidates.length > 0 ? candidates : visibleNativePresetLibrary;
     const randomIndex = Math.floor(Math.random() * pool.length);
     loadNativePresetEntry(pool[randomIndex]);
-  }, [activeNativePresetId, loadNativePresetEntry, nativePresetLibrary]);
+  }, [activeNativePresetId, loadNativePresetEntry, visibleNativePresetLibrary]);
 
   const toggleNativePresetFavorite = useCallback(() => {
     if (!activeNativePresetId) return;
@@ -451,6 +481,21 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       window.localStorage.setItem(nativePresetLibraryModeStorageKey, nextMode);
       return nextMode;
     });
+  }, []);
+
+  const updateNativePresetSearch = useCallback((event) => {
+    const nextSearch = event.target.value;
+    setNativePresetSearch(nextSearch);
+    if (nextSearch.trim()) {
+      window.localStorage.setItem(nativePresetSearchStorageKey, nextSearch);
+    } else {
+      window.localStorage.removeItem(nativePresetSearchStorageKey);
+    }
+  }, []);
+
+  const clearNativePresetSearch = useCallback(() => {
+    setNativePresetSearch('');
+    window.localStorage.removeItem(nativePresetSearchStorageKey);
   }, []);
 
   useEffect(() => {
@@ -763,11 +808,13 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     window.localStorage.removeItem(nativePresetLibraryStorageKey);
     window.localStorage.removeItem(nativePresetFavoritesStorageKey);
     window.localStorage.removeItem(nativePresetLibraryModeStorageKey);
+    window.localStorage.removeItem(nativePresetSearchStorageKey);
     setActiveNativePresetId('');
     setNativeFavoritePresetIds([]);
     setNativeLibraryMode('all');
     setNativePresetHistory([]);
     setNativePresetLibrary([]);
+    setNativePresetSearch('');
     setError(null);
   }, []);
 
@@ -859,6 +906,39 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             <>
               {nativePresetLibrary.length > 0 ? (
                 <Popup
+                  content="Filter imported native presets by title or file name. The current filter also scopes next and random preset jumps."
+                  trigger={
+                    <input
+                      aria-label="Search native MilkDrop presets"
+                      className="player-visualizer-native-search"
+                      data-testid="visualizer-native-preset-search"
+                      onChange={updateNativePresetSearch}
+                      placeholder="Search presets"
+                      type="search"
+                      value={nativePresetSearch}
+                    />
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content="Clear the native preset search filter."
+                  trigger={
+                    <Button
+                      aria-label="Clear native preset search"
+                      data-testid="visualizer-clear-native-preset-search"
+                      disabled={!hasNativePresetSearch}
+                      icon
+                      onClick={clearNativePresetSearch}
+                      size="mini"
+                    >
+                      <Icon name="remove" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
                   content={
                     nativeLibraryMode === 'favorites'
                       ? 'Reload a favorite native preset from this browser.'
@@ -873,7 +953,9 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                       value={selectedNativePresetValue}
                     >
                       <option value="">
-                        {nativeLibraryMode === 'favorites' ? 'Favorites' : 'Presets'}
+                        {visibleNativePresetLibrary.length === 0 ? 'No matches' : (
+                          nativeLibraryMode === 'favorites' ? 'Favorites' : 'Presets'
+                        )}
                       </option>
                       {visibleNativePresetLibrary.map((preset) => (
                         <option key={preset.id} value={preset.id}>
@@ -944,6 +1026,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                     <Button
                       aria-label="Previous native preset"
                       data-testid="visualizer-previous-native-preset"
+                      disabled={visibleNativePresetLibrary.length === 0}
                       icon
                       onClick={previousNativeLibraryPreset}
                       size="mini"
@@ -960,6 +1043,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                     <Button
                       aria-label="Random imported native preset"
                       data-testid="visualizer-random-native-preset"
+                      disabled={visibleNativePresetLibrary.length === 0}
                       icon
                       onClick={randomNativeLibraryPreset}
                       size="mini"
@@ -1076,11 +1160,16 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             </>
           ) : null}
           <Popup
-            content="Load a different MilkDrop preset."
+            content={
+              nativeBankNavigationDisabled
+                ? 'No imported native presets match the current filter.'
+                : 'Load a different MilkDrop preset.'
+            }
             trigger={
               <Button
                 aria-label="Next visualizer preset"
                 data-testid="visualizer-next-preset"
+                disabled={nativeBankNavigationDisabled}
                 icon
                 onClick={cyclePreset}
                 size="mini"

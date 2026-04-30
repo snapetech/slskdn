@@ -1,3 +1,15 @@
+## Update 2026-04-30 17:19:40Z
+
+- Current task: Native MilkDrop preset-bank search is implemented locally.
+- Last activity:
+  - added a compact native preset-bank search input to the visualizer overlay
+  - search matches imported preset title/file name, persists in browser storage, and clears with an explicit affordance
+  - favorites-only mode and search compose into one visible bank
+  - native next/random navigation now uses the visible filtered bank and disables next when the filter has no matches
+  - validated focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue the next large MilkDrop phase, likely saved playlist sequencing or deeper shader/audio compatibility.
+
 ## Update 2026-04-30 17:10:31Z
 
 - Current task: Native MilkDrop has first browser-local preset-bank controls.

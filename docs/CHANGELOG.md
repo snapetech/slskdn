@@ -62,6 +62,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   browser-local mode persistence.
 - Added native MilkDrop local preset-bank controls for favorites, favorites-only
   filtering, previous-preset history, next-library cycling, and random jumps.
+- Added native MilkDrop preset-bank search that persists locally and scopes
+  imported-preset next/random navigation to the filtered result set.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 
