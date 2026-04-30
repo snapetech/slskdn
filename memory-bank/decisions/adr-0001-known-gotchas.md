@@ -54,7 +54,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ### 0z177. Fixed Pod IDs Must Still Match Pod Validation
 
-**The Bug**: `GoldStarClubService` used the human-readable fixed ID `pod:gold-star-club`, but `SqlitePodService` validates all pod IDs as `^pod:[a-f0-9]{32}$`. Startup crashed when the hosted service tried to ensure the Gold Star Club pod.
+**The Bug**: `GoldStarClubService` used the human-readable fixed ID `pod:gold-star-club`, but `SqlitePodService` validates all pod IDs as `^pod:[a-f0-9]{32}$`. Startup crashed when the hosted service tried to ensure the Gold Star Club pod. The same class also derived a channel id as `$"{GoldStarClubPodId}:general"`, but channel ids only allow alphanumeric, dash, and underscore characters.
 
 **Files Affected**:
 - `src/slskd/PodCore/GoldStarClubService.cs`
@@ -63,14 +63,16 @@ This is not optional. This is the highest priority action after fixing a bug.
 **Wrong**:
 ```csharp
 public const string GoldStarClubPodId = "pod:gold-star-club";
+ChannelId = $"{GoldStarClubPodId}:general";
 ```
 
 **Correct**:
 ```csharp
 public const string GoldStarClubPodId = "pod:901d57a2c1bb4e5d90d57a2c1bb4e5d0";
+ChannelId = "gold-star-club-general";
 ```
 
-**Why This Keeps Happening**: Product-visible names and protocol/storage identifiers have different constraints. Keep friendly names in `Name` or tags, and make any fixed pod IDs conform to `PodValidation.IsValidPodId`.
+**Why This Keeps Happening**: Product-visible names and protocol/storage identifiers have different constraints. Keep friendly names in `Name` or tags, make any fixed pod IDs conform to `PodValidation.IsValidPodId`, and never derive channel IDs from `pod:<hex>` strings because the `pod:` prefix is invalid for channels.
 
 ### 0z176. Vite Dev UI Should Use The Proxy By Default
 
