@@ -52,6 +52,40 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z183. Player Analyzer Grids Need Zero-Min Tracks
+
+**The Bug**: The Web UI player display used nested CSS grid tracks with fixed minimum widths for track metadata and analyzer canvases. At normal widths, the analyzer canvases overflowed out of the player display and visually collided with the transport controls. The same pass also added a fake top-right `PLAY` status label that duplicated the actual play button instead of providing useful state.
+
+**Files Affected**:
+- `src/web/src/components/Player/Player.css`
+- `src/web/src/components/Player/PlayerBar.jsx`
+
+**Wrong**:
+```css
+.player-display {
+  grid-template-columns: minmax(180px, 0.7fr) minmax(300px, 1.3fr);
+}
+
+.player-display-analyzers {
+  grid-template-columns: minmax(120px, 0.78fr) minmax(180px, 1.22fr);
+}
+```
+
+**Correct**:
+```css
+.player-display {
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  overflow: hidden;
+}
+
+.player-display-analyzers {
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  min-width: 0;
+}
+```
+
+**Why This Keeps Happening**: CSS grid items default to content-sized minimums, and nested canvas/layout elements can force a grid wider than its assigned column. Use `minmax(0, ...)`, set `min-width: 0`, and inspect the rendered player with a screenshot whenever changing fixed footer/player chrome.
+
 ### 0z182. Vite Builds Must Be Synced Into Backend Wwwroot Before Publish
 
 **The Bug**: `npm run build` produced a correct Web UI bundle under `src/web/build`, but `./bin/publish` served the stale bundle already checked into `src/slskd/wwwroot`. The deployed app therefore kept running old JavaScript even after the frontend build passed.
