@@ -1,3 +1,17 @@
+## Update 2026-04-30 20:23:47Z
+
+- Current task: T-939 Spotify account connection follow-up is implemented locally.
+- Last activity:
+  - added Spotify OAuth authorization/status/disconnect API endpoints
+  - store Spotify refresh tokens through ASP.NET DataProtection under the app directory
+  - refresh connected-account access tokens server-side for private source-feed imports
+  - wired Wishlist Import Feed to connect/disconnect Spotify and use the connected account automatically
+  - documented and committed the raw-string JavaScript brace gotcha as `5a4ed9907`
+  - validated backend build, focused source-feed tests, Wishlist tests, and frontend lint
+- Next steps:
+  1. Configure the Spotify app redirect URI to match `/api/v0/integrations/spotify/callback` on the deployed host or set `integrations.spotify.redirect_uri` explicitly.
+  2. Extend provider fetchers to Apple Music/YouTube/Bandcamp/ListenBrainz/Last.fm after each provider's auth/rate-limit policy is chosen.
+
 ## Update 2026-04-30 20:18:09Z
 
 - Current task: Epic 3 search-result deduplication is implemented locally.
@@ -18,6 +32,7 @@
   - added atomic JSON persistence for Quarantine Jury requests and signed verdicts
   - reload persisted jury state on service startup
   - added focused rehydration coverage for requests, verdicts, and aggregate recommendations
+  - validated focused jury tests, lint, whitespace, and full `dotnet test`
 - Next steps:
   1. Route minimal signed jury evidence through explicitly selected trust-scoped mesh channels.
   2. Add a manual review UI that keeps local quarantine authoritative until explicit user acceptance.

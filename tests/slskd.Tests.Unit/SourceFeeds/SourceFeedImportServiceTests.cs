@@ -102,7 +102,46 @@ public class SourceFeedImportServiceTests
         Assert.Contains("/v1/playlists/playlist-1/items", handler.Requests[1].RequestUri!.ToString());
     }
 
-    private static SourceFeedImportService CreateService(QueueHttpHandler handler, bool spotifyEnabled = false)
+    [Fact]
+    public async Task PreviewAsync_SpotifyLikedWithConnectedAccount_UsesStoredToken()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueJson(
+            """
+            {
+              "total": 1,
+              "items": [
+                {
+                  "track": {
+                    "id": "track-1",
+                    "name": "Song",
+                    "album": { "name": "Album" },
+                    "artists": [{ "id": "artist-1", "name": "Artist" }],
+                    "external_urls": { "spotify": "https://open.spotify.com/track/track-1" }
+                  }
+                }
+              ]
+            }
+            """);
+        var service = CreateService(handler, connectedSpotifyToken: "connected-token");
+
+        var result = await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "spotify:liked",
+            SourceKind = "spotify",
+        });
+
+        var suggestion = Assert.Single(result.Suggestions);
+        Assert.Equal("Artist Song Album", suggestion.SearchText);
+        Assert.False(result.RequiresAccessToken);
+        Assert.Equal("Bearer", handler.Requests[0].Headers.Authorization?.Scheme);
+        Assert.Equal("connected-token", handler.Requests[0].Headers.Authorization?.Parameter);
+    }
+
+    private static SourceFeedImportService CreateService(
+        QueueHttpHandler handler,
+        bool spotifyEnabled = false,
+        string connectedSpotifyToken = "")
     {
         var httpClient = new HttpClient(handler);
         var factory = new Mock<IHttpClientFactory>();
@@ -124,7 +163,7 @@ public class SourceFeedImportServiceTests
         var spotifyConnection = new Mock<ISpotifyConnectionService>();
         spotifyConnection
             .Setup(x => x.GetAccessTokenAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(string.Empty);
+            .ReturnsAsync(connectedSpotifyToken);
 
         return new SourceFeedImportService(factory.Object, options.Object, spotifyConnection.Object);
     }

@@ -145,7 +145,7 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Added backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and Spotify provider URLs. Spotify supports public playlist/album/track/artist/user playlist imports through configured app credentials, plus liked/saved tracks, saved albums, followed artists, and current-user playlists when a user bearer token with the required scopes is provided for that import. The Wishlist UI now has an Import Feed flow that previews results and adds selected provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads.
+- Notes: Added backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and Spotify provider URLs. Spotify supports public playlist/album/track/artist/user playlist imports through configured app credentials or a connected account, plus liked/saved tracks, saved albums, followed artists, and current-user playlists through either a connected Spotify account or a per-import bearer token with the required scopes. The Wishlist UI now has an Import Feed flow that previews results, connects/disconnects Spotify, and adds selected provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads.
 
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design

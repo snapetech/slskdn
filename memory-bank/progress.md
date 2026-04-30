@@ -1,3 +1,11 @@
+## 2026-04-30 20:23:47Z - Added Spotify account connection for source feeds
+
+- Added a backend Spotify connection service/API for OAuth authorization, PKCE state handling, encrypted refresh-token persistence, access-token refresh, status, and disconnect.
+- Wired source-feed preview to use a connected Spotify account for liked/saved tracks, saved albums, followed artists, and current-user playlists when no per-import token is provided.
+- Added Wishlist Import Feed controls to connect/disconnect Spotify and use the connected account without starting Soulseek searches, peer browses, or downloads.
+- Documented and committed the interpolated raw-string JavaScript brace gotcha as `5a4ed9907`.
+- Validation: backend `slskd.csproj` build passed, focused source-feed unit tests passed (`5/5`), Wishlist component tests passed (`2/2`), and frontend lint passed.
+
 ## 2026-04-30 20:18:09Z - Added search-result deduplication
 
 - Continued the beginning-lane feature-expansion burn-down with the remaining Epic 3 search-result deduplication story.
