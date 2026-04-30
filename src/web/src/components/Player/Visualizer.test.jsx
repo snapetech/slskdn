@@ -178,6 +178,60 @@ describe('Visualizer', () => {
     expect(screen.getByText(/Imported 2; skipped 1: shader.milk/)).toBeInTheDocument();
   });
 
+  it('removes only the selected native preset from the local library', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'first.milk',
+        id: 'first',
+        source: 'name=First\nwave_r=1',
+        title: 'First',
+      }),
+    );
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPresetLibrary',
+      JSON.stringify([
+        {
+          fileName: 'first.milk',
+          id: 'first',
+          source: 'name=First\nwave_r=1',
+          title: 'First',
+        },
+        {
+          fileName: 'second.milk',
+          id: 'second',
+          source: 'name=Second\nwave_r=0.5',
+          title: 'Second',
+        },
+      ]),
+    );
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=First\nwave_r=1',
+        'first.milk',
+      );
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-remove-native-preset'));
+
+    const library = JSON.parse(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary'),
+    );
+    expect(library.map((preset) => preset.id)).toEqual(['second']);
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toBeNull();
+    expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('');
+  });
+
   it('surfaces native render errors and clears the persisted imported preset', async () => {
     window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
     window.localStorage.setItem(

@@ -95,6 +95,9 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [engineType, setEngineType] = useState(readStoredEngine);
   const [engineName, setEngineName] = useState('');
+  const [activeNativePresetId, setActiveNativePresetId] = useState(
+    () => readStoredNativePreset()?.id || '',
+  );
   const [nativePresetLibrary, setNativePresetLibrary] = useState(readStoredNativePresetLibrary);
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
@@ -183,6 +186,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             storedNativePreset.source,
             storedNativePreset.fileName,
           );
+          setActiveNativePresetId(storedNativePreset.id || '');
           setPresetName(importedPresetName);
         }
         sizeCanvas();
@@ -307,6 +311,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       );
       activePreset.title = activePresetName;
       window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(activePreset));
+      setActiveNativePresetId(activePreset.id);
       setNativePresetLibrary((library) => {
         const nextLibrary = imported.reduce(
           (next, entry) => upsertNativePresetLibraryEntry(next, entry),
@@ -336,6 +341,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       setError(null);
       const loadedPresetName = engineRef.current.loadPresetText(preset.source, preset.fileName);
       window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(preset));
+      setActiveNativePresetId(preset.id);
       setPresetName(loadedPresetName);
       sizeCanvas();
     } catch (presetError) {
@@ -348,9 +354,29 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const clearNativePresetLibrary = useCallback(() => {
     window.localStorage.removeItem(nativePresetStorageKey);
     window.localStorage.removeItem(nativePresetLibraryStorageKey);
+    setActiveNativePresetId('');
     setNativePresetLibrary([]);
     setError(null);
   }, []);
+
+  const removeActiveNativePreset = useCallback(() => {
+    if (!activeNativePresetId) return;
+    setNativePresetLibrary((library) => {
+      const nextLibrary = library.filter((preset) => preset.id !== activeNativePresetId);
+      if (nextLibrary.length > 0) {
+        writeStoredNativePresetLibrary(nextLibrary);
+      } else {
+        window.localStorage.removeItem(nativePresetLibraryStorageKey);
+      }
+      return nextLibrary;
+    });
+    const storedNativePreset = readStoredNativePreset();
+    if (storedNativePreset?.id === activeNativePresetId) {
+      window.localStorage.removeItem(nativePresetStorageKey);
+    }
+    setActiveNativePresetId('');
+    setError(null);
+  }, [activeNativePresetId]);
 
   if (mode === 'off') return null;
 
@@ -414,7 +440,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                       className="player-visualizer-native-library"
                       data-testid="visualizer-native-preset-library"
                       onChange={loadNativeLibraryPreset}
-                      value=""
+                      value={activeNativePresetId}
                     >
                       <option value="">Presets</option>
                       {nativePresetLibrary.map((preset) => (
@@ -423,6 +449,23 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                         </option>
                       ))}
                     </select>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content="Remove the selected native preset from this browser."
+                  trigger={
+                    <Button
+                      aria-label="Remove selected native preset"
+                      data-testid="visualizer-remove-native-preset"
+                      disabled={!activeNativePresetId}
+                      icon
+                      onClick={removeActiveNativePreset}
+                      size="mini"
+                    >
+                      <Icon name="minus circle" />
+                    </Button>
                   }
                 />
               ) : null}

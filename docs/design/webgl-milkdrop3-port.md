@@ -82,7 +82,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add more common NSEEL math helpers for imported preset compatibility.
 - [x] Add first import-time native preset compatibility reporting.
 - [x] Add browser-local native preset library and multi-file preset import.
-- [x] Add first local native preset library management affordance.
+- [x] Add first local native preset library management affordances.
 - [x] Add first inline bitwise/shift/logical expression operator support.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
@@ -116,7 +116,7 @@ Current parser/VM scope:
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
 - Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections while shader translation is still pending.
 - Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
-- Native mode has a clear-library affordance for removing imported presets from this browser without requiring manual local-storage cleanup.
+- Native mode has clear-library and remove-selected affordances for pruning imported presets from this browser without requiring manual local-storage cleanup.
 
 ### Phase 2: MilkDrop3 Feature Deltas
 

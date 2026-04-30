@@ -37,7 +37,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   candidates exclude the daemon's own Soulseek username.
 - Added the browser-native MilkDrop visualizer implementation work, including
   preset parsing/expression tests, renderer smoke coverage, local preset import,
-  player integration controls, and browser-local preset library cleanup.
+  player integration controls, selected-preset removal, and browser-local preset
+  library cleanup.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 
