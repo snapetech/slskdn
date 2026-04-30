@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z214. Player File Pickers Need Path-Aware Browsing And Duplicate Collapse
+
+**The Bug**: The player file picker used a flat library search with a tiny result limit and rendered every returned file row directly, so large multi-folder libraries looked like repeated copies of the same track and could not be browsed like a real file tree.
+
+**Files Affected**:
+- `src/slskd/API/Native/LibraryItemsController.cs`
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/lib/collections.js`
+
+**Wrong**:
+```jsx
+collectionsAPI.searchLibraryItems(query, 'Audio', 12)
+```
+
+**Correct**:
+```jsx
+collectionsAPI.browseLibraryItems({
+  kinds: 'Audio',
+  limit: playerBrowserPageSize,
+  offset: browserOffset,
+  path: browserPath,
+  query,
+})
+```
+
+**Why This Keeps Happening**: Search result dropdowns feel adequate with fixture-sized libraries, but real music shares have thousands of files across artist/album folders and many duplicate filenames. Player file selection needs a path-aware browser API, breadcrumbs, paging, and duplicate grouping instead of a flat first-page search table.
+
 ### 0z213. Rejected Discovery Evidence Must Stay Suppressed
 
 **The Bug**: Discovery Inbox duplicate detection originally ignored existing `Rejected` candidates, allowing the same evidence key to be saved again immediately after rejection.
