@@ -52,6 +52,45 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z217. Popup-Triggered Toggles Need Real Form Controls
+
+**The Bug**: An Import Staging `Checkbox` rendered inside a Semantic UI `Popup` trigger looked like a usable toggle, but the test exercised the accessible checkbox path and the state did not reliably change before file selection.
+
+**Files Affected**:
+- `src/web/src/components/ImportStaging/ImportStaging.jsx`
+
+**Wrong**:
+```jsx
+<Popup
+  trigger={
+    <Checkbox
+      checked={enabled}
+      label="Fingerprint on add"
+      onChange={(_, data) => setEnabled(data.checked)}
+      toggle
+    />
+  }
+/>
+```
+
+**Correct**:
+```jsx
+<Popup
+  trigger={
+    <label className="import-staging-fingerprint-toggle">
+      <input
+        checked={enabled}
+        onChange={(event) => setEnabled(event.target.checked)}
+        type="checkbox"
+      />
+      <span>Fingerprint on add</span>
+    </label>
+  }
+/>
+```
+
+**Why This Keeps Happening**: Semantic UI checkbox wrappers can be fine visually, but popup trigger wrapping and hidden/read-only internal inputs make behavior harder to verify. For small binary controls in dense toolbars, use a real labelled form control when the value gates file/network work.
+
 ### 0z216. Filename Track Numbers Can Be Standalone Parts
 
 **The Bug**: The local metadata matcher only detected track numbers when the number was followed by a separator or whitespace, so filenames split into parts like `Artist - Album - 03 - Title.flac` produced no track number because `03` was a standalone part.
