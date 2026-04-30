@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z219. Acquisition Profile Logic Must Use Catalog IDs
+
+**The Bug**: A candidate-ranking helper checked obsolete profile ids like `quick-hit` and `archive-broad`, so the actual persisted profiles (`fast-good-enough`, `album-complete`, etc.) would silently fall through to the default lossless ranking path.
+
+**Files Affected**:
+- `src/web/src/lib/searchCandidateRanking.js`
+
+**Wrong**:
+```js
+if (acquisitionProfile === 'quick-hit') {
+  return { points, reason: 'high bitrate quick-hit candidate' };
+}
+```
+
+**Correct**:
+```js
+if (acquisitionProfile === 'fast-good-enough') {
+  return { points, reason: 'high bitrate fast-good-enough candidate' };
+}
+```
+
+**Why This Keeps Happening**: Early planning names drift from the public catalog labels. Any profile-aware logic should be keyed from `acquisitionProfiles.js` or explicitly tested with the persisted profile ids before wiring it into Search, Downloads, or planning.
+
 ### 0z218. Dark Theme Must Cover Nested Semantic UI Text And Duplicate Recovery Rails
 
 **The Bug**: Rooms rendered nested Semantic UI list headers/user cards with inherited black text on dark panels, and joined rooms were shown twice: once as recovery buttons and again as active tabs.
