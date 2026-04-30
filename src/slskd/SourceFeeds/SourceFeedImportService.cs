@@ -29,6 +29,14 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         @"spotify:(?<type>playlist|album|track|artist|user|liked|saved-tracks|saved-albums|followed-artists|playlists):?(?<id>[A-Za-z0-9._-]+)?",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly Regex ListenBrainzUserRegex = new(
+        @"listenbrainz\.org/user/(?<user>[^/?#]+)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex LastFmUserRegex = new(
+        @"last\.fm/user/(?<user>[^/?#]+)(?<path>/[^?#]*)?",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     public SourceFeedImportService(
         IHttpClientFactory httpClientFactory,
         IOptionsMonitor<global::slskd.Options> optionsMonitor,
@@ -63,6 +71,11 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
             return await PreviewSpotifyAsync(request, safeLimit, cancellationToken).ConfigureAwait(false);
         }
 
+        if (request.FetchProviderUrls && LooksLikeProviderUrl(sourceText, sourceKind))
+        {
+            return await PreviewProviderUrlAsync(sourceText, sourceKind, safeLimit, cancellationToken).ConfigureAwait(false);
+        }
+
         return PreviewLocalText(sourceText, sourceKind, request.IncludeAlbum, safeLimit);
     }
 
@@ -71,6 +84,28 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         return sourceKind == "spotify" ||
             sourceText.StartsWith("spotify:", StringComparison.OrdinalIgnoreCase) ||
             sourceText.Contains("open.spotify.com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikeProviderUrl(string sourceText, string sourceKind)
+    {
+        if (sourceKind is "apple" or "itunes" or "youtube" or "bandcamp" or "listenbrainz" or "lastfm" or "last.fm")
+        {
+            return true;
+        }
+
+        if (!Uri.TryCreate(sourceText, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        return host.Contains("music.apple.com", StringComparison.OrdinalIgnoreCase) ||
+            host.Contains("itunes.apple.com", StringComparison.OrdinalIgnoreCase) ||
+            host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase) ||
+            host.Contains("youtu.be", StringComparison.OrdinalIgnoreCase) ||
+            host.Contains("bandcamp.com", StringComparison.OrdinalIgnoreCase) ||
+            host.Contains("listenbrainz.org", StringComparison.OrdinalIgnoreCase) ||
+            host.Contains("last.fm", StringComparison.OrdinalIgnoreCase);
     }
 
     private SourceFeedImportResult PreviewLocalText(string sourceText, string sourceKind, bool includeAlbum, int limit)
@@ -87,6 +122,243 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         };
 
         return BuildResult("local", kind, string.Empty, rows.Take(limit));
+    }
+
+    private async Task<SourceFeedImportResult> PreviewProviderUrlAsync(
+        string sourceText,
+        string sourceKind,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var provider = DetectProvider(sourceText, sourceKind);
+        var rows = new List<SourceFeedRow>();
+        var requests = provider switch
+        {
+            "apple" => await FetchAppleMusicRowsAsync(sourceText, rows, limit, cancellationToken).ConfigureAwait(false),
+            "youtube" => await FetchYouTubeRowsAsync(sourceText, rows, limit, cancellationToken).ConfigureAwait(false),
+            "listenbrainz" => await FetchListenBrainzRowsAsync(sourceText, rows, limit, cancellationToken).ConfigureAwait(false),
+            "lastfm" => await FetchLastFmRowsAsync(sourceText, rows, limit, cancellationToken).ConfigureAwait(false),
+            _ => 0,
+        };
+
+        if (rows.Count == 0)
+        {
+            requests += await FetchProviderMetadataPageAsync(provider, sourceText, rows, cancellationToken).ConfigureAwait(false);
+        }
+
+        var result = BuildResult(provider, "url", sourceText, rows.Take(limit));
+        result.NetworkRequestCount = requests;
+        return result;
+    }
+
+    private static string DetectProvider(string sourceText, string sourceKind)
+    {
+        if (sourceKind is not "auto")
+        {
+            return sourceKind == "itunes" ? "apple" : sourceKind.Replace(".", string.Empty, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (!Uri.TryCreate(sourceText, UriKind.Absolute, out var uri))
+        {
+            return "url";
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        if (host.Contains("apple.com", StringComparison.OrdinalIgnoreCase) || host.Contains("itunes.apple.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return "apple";
+        }
+
+        if (host.Contains("youtube.com", StringComparison.OrdinalIgnoreCase) || host.Contains("youtu.be", StringComparison.OrdinalIgnoreCase))
+        {
+            return "youtube";
+        }
+
+        if (host.Contains("bandcamp.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return "bandcamp";
+        }
+
+        if (host.Contains("listenbrainz.org", StringComparison.OrdinalIgnoreCase))
+        {
+            return "listenbrainz";
+        }
+
+        return host.Contains("last.fm", StringComparison.OrdinalIgnoreCase) ? "lastfm" : "url";
+    }
+
+    private async Task<int> FetchAppleMusicRowsAsync(string sourceText, List<SourceFeedRow> rows, int limit, CancellationToken cancellationToken)
+    {
+        var ids = ExtractAppleNumericIds(sourceText).Distinct().Take(2).ToArray();
+        if (ids.Length == 0)
+        {
+            return 0;
+        }
+
+        var requests = 0;
+        foreach (var id in ids)
+        {
+            var lookup = await GetJsonAsync<AppleLookupResponse>(
+                $"https://itunes.apple.com/lookup?id={Uri.EscapeDataString(id)}&entity=song&limit={Math.Min(limit, 200).ToString(CultureInfo.InvariantCulture)}",
+                cancellationToken).ConfigureAwait(false);
+            requests++;
+            rows.AddRange((lookup?.Results ?? [])
+                .Where(item => !string.IsNullOrWhiteSpace(item.TrackName))
+                .Select(item => new SourceFeedRow(
+                    Title: item.TrackName,
+                    Artist: item.ArtistName,
+                    Album: item.CollectionName,
+                    Source: "apple",
+                    SourceId: item.TrackId.ToString(CultureInfo.InvariantCulture),
+                    ProviderUrl: string.IsNullOrWhiteSpace(item.TrackViewUrl) ? sourceText : item.TrackViewUrl,
+                    RawText: item.TrackName)));
+
+            if (rows.Count >= limit)
+            {
+                break;
+            }
+        }
+
+        return requests;
+    }
+
+    private async Task<int> FetchYouTubeRowsAsync(string sourceText, List<SourceFeedRow> rows, int limit, CancellationToken cancellationToken)
+    {
+        var options = OptionsMonitor.CurrentValue.Integration.YouTube;
+        var apiKey = options.ApiKey;
+        var playlistId = ExtractYouTubePlaylistId(sourceText);
+        if (!options.Enabled || string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(playlistId))
+        {
+            return 0;
+        }
+
+        var requests = 0;
+        string? pageToken = null;
+        while (rows.Count < limit)
+        {
+            var pageLimit = Math.Min(50, limit - rows.Count);
+            var uri = $"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults={pageLimit.ToString(CultureInfo.InvariantCulture)}&playlistId={Uri.EscapeDataString(playlistId)}&key={Uri.EscapeDataString(apiKey)}" +
+                (string.IsNullOrWhiteSpace(pageToken) ? string.Empty : $"&pageToken={Uri.EscapeDataString(pageToken)}");
+            var page = await GetJsonAsync<YouTubePlaylistItemsResponse>(uri, cancellationToken).ConfigureAwait(false);
+            requests++;
+
+            var items = page?.Items ?? [];
+            if (items.Count == 0)
+            {
+                break;
+            }
+
+            var startingRow = rows.Count;
+            rows.AddRange(items.Select((item, index) =>
+            {
+                var title = item.Snippet?.Title ?? string.Empty;
+                var videoId = item.Snippet?.ResourceId?.VideoId ?? string.Empty;
+                var row = ParseLooseLine(title, "youtube:playlist", startingRow + index + 1);
+                return row with
+                {
+                    SourceId = string.IsNullOrWhiteSpace(videoId) ? row.SourceId : videoId,
+                    ProviderUrl = string.IsNullOrWhiteSpace(videoId) ? sourceText : $"https://www.youtube.com/watch?v={Uri.EscapeDataString(videoId)}",
+                };
+            }));
+
+            pageToken = page?.NextPageToken;
+            if (string.IsNullOrWhiteSpace(pageToken))
+            {
+                break;
+            }
+        }
+
+        return requests;
+    }
+
+    private async Task<int> FetchListenBrainzRowsAsync(string sourceText, List<SourceFeedRow> rows, int limit, CancellationToken cancellationToken)
+    {
+        var match = ListenBrainzUserRegex.Match(sourceText);
+        if (!match.Success)
+        {
+            return 0;
+        }
+
+        var user = Uri.UnescapeDataString(match.Groups["user"].Value);
+        var pageLimit = Math.Min(limit, 100);
+        var listens = await GetJsonAsync<ListenBrainzListensResponse>(
+            $"https://api.listenbrainz.org/1/user/{Uri.EscapeDataString(user)}/listens?count={pageLimit.ToString(CultureInfo.InvariantCulture)}",
+            cancellationToken).ConfigureAwait(false);
+
+        rows.AddRange((listens?.Payload?.Listens ?? []).Select((listen, index) =>
+        {
+            var metadata = listen.TrackMetadata ?? new ListenBrainzTrackMetadata();
+            return new SourceFeedRow(
+                Title: metadata.TrackName,
+                Artist: metadata.ArtistName,
+                Album: metadata.ReleaseName,
+                Source: "listenbrainz:listens",
+                SourceId: metadata.AdditionalInfo?.RecordingMsid ?? (index + 1).ToString(CultureInfo.InvariantCulture),
+                ProviderUrl: sourceText,
+                RawText: metadata.TrackName);
+        }));
+        return 1;
+    }
+
+    private async Task<int> FetchLastFmRowsAsync(string sourceText, List<SourceFeedRow> rows, int limit, CancellationToken cancellationToken)
+    {
+        var options = OptionsMonitor.CurrentValue.Integration.LastFm;
+        var apiKey = options.ApiKey;
+        var target = ParseLastFmTarget(sourceText);
+        if (!options.Enabled || string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(target.User))
+        {
+            return 0;
+        }
+
+        var pageLimit = Math.Min(200, limit);
+        var uri = $"https://ws.audioscrobbler.com/2.0/?method={target.Method}&user={Uri.EscapeDataString(target.User)}&api_key={Uri.EscapeDataString(apiKey)}&format=json&limit={pageLimit.ToString(CultureInfo.InvariantCulture)}";
+        var page = await GetJsonAsync<LastFmTracksResponse>(uri, cancellationToken).ConfigureAwait(false);
+        var tracks = page?.RecentTracks?.Track ?? page?.LovedTracks?.Track ?? page?.TopTracks?.Track ?? [];
+        rows.AddRange(tracks.Take(limit).Select((track, index) => new SourceFeedRow(
+            Title: track.Name,
+            Artist: track.Artist?.Name ?? track.Artist?.Text ?? string.Empty,
+            Album: track.Album?.Text ?? string.Empty,
+            Source: target.Source,
+            SourceId: FirstNonEmpty(track.Mbid, (index + 1).ToString(CultureInfo.InvariantCulture)),
+            ProviderUrl: track.Url,
+            RawText: track.Name)));
+        return 1;
+    }
+
+    private async Task<int> FetchProviderMetadataPageAsync(
+        string provider,
+        string sourceText,
+        List<SourceFeedRow> rows,
+        CancellationToken cancellationToken)
+    {
+        if (!Uri.TryCreate(sourceText, UriKind.Absolute, out _))
+        {
+            return 0;
+        }
+
+        var html = await GetStringAsync(sourceText, cancellationToken).ConfigureAwait(false);
+        var title = FirstNonEmpty(
+            ExtractMeta(html, "music:song"),
+            ExtractMeta(html, "og:title"),
+            ExtractMeta(html, "twitter:title"),
+            ExtractTitle(html));
+        title = CleanProviderTitle(title, provider);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return 1;
+        }
+
+        var artist = FirstNonEmpty(
+            ExtractMeta(html, "music:musician:description"),
+            ExtractMeta(html, "byl"),
+            ExtractMeta(html, "article:author"));
+        var row = ParseLooseLine(title, provider, 1) with
+        {
+            Artist = string.IsNullOrWhiteSpace(artist) ? ParseLooseLine(title, provider, 1).Artist : artist,
+            ProviderUrl = sourceText,
+        };
+        rows.Add(row);
+        return 1;
     }
 
     private async Task<SourceFeedImportResult> PreviewSpotifyAsync(
@@ -438,6 +710,33 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         return response;
     }
 
+    private async Task<T?> GetJsonAsync<T>(string uri, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendProviderAsync(request, cancellationToken).ConfigureAwait(false);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string> GetStringAsync(string uri, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendProviderAsync(request, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<HttpResponseMessage> SendProviderAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var options = OptionsMonitor.CurrentValue.Integration.Spotify;
+        var client = HttpClientFactory.CreateClient(nameof(SourceFeedImportService));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        request.Headers.UserAgent.ParseAdd("slskdN-source-feed-import/1.0");
+        var response = await client.SendAsync(request, timeout.Token).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return response;
+    }
+
     private static SpotifyTarget ParseSpotifyTarget(string sourceText)
     {
         var uriMatch = SpotifyUriRegex.Match(sourceText);
@@ -680,6 +979,119 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         return new SourceFeedRow(title, artist, string.Empty, source, rowNumber.ToString(CultureInfo.InvariantCulture), string.Empty, text);
     }
 
+    private static IReadOnlyList<string> ExtractAppleNumericIds(string sourceText)
+    {
+        if (!Uri.TryCreate(sourceText, UriKind.Absolute, out var uri))
+        {
+            return [];
+        }
+
+        var ids = new List<string>();
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var trackId = query["i"];
+        if (!string.IsNullOrWhiteSpace(trackId))
+        {
+            return [trackId];
+        }
+
+        var pathId = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .LastOrDefault(segment => segment.All(char.IsDigit));
+        if (!string.IsNullOrWhiteSpace(pathId))
+        {
+            ids.Add(pathId);
+        }
+
+        return ids;
+    }
+
+    private static string ExtractYouTubePlaylistId(string sourceText)
+    {
+        if (!Uri.TryCreate(sourceText, UriKind.Absolute, out var uri))
+        {
+            return string.Empty;
+        }
+
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        return query["list"] ?? string.Empty;
+    }
+
+    private static LastFmTarget ParseLastFmTarget(string sourceText)
+    {
+        var match = LastFmUserRegex.Match(sourceText);
+        if (!match.Success)
+        {
+            return new LastFmTarget(string.Empty, string.Empty, string.Empty);
+        }
+
+        var user = Uri.UnescapeDataString(match.Groups["user"].Value);
+        var path = match.Groups["path"].Value.ToLowerInvariant();
+        if (path.Contains("loved", StringComparison.OrdinalIgnoreCase))
+        {
+            return new LastFmTarget(user, "user.getlovedtracks", "lastfm:loved");
+        }
+
+        if (path.Contains("toptracks", StringComparison.OrdinalIgnoreCase))
+        {
+            return new LastFmTarget(user, "user.gettoptracks", "lastfm:top-tracks");
+        }
+
+        return new LastFmTarget(user, "user.getrecenttracks", "lastfm:recent-tracks");
+    }
+
+    private static string ExtractMeta(string html, string property)
+    {
+        var escaped = Regex.Escape(property);
+        var match = Regex.Match(
+            html,
+            $"""<meta[^>]+(?:property|name)=["']{escaped}["'][^>]+content=["'](?<value>[^"']+)["'][^>]*>""",
+            RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            match = Regex.Match(
+                html,
+                $"""<meta[^>]+content=["'](?<value>[^"']+)["'][^>]+(?:property|name)=["']{escaped}["'][^>]*>""",
+                RegexOptions.IgnoreCase);
+        }
+
+        return DecodeHtml(match.Success ? match.Groups["value"].Value : string.Empty);
+    }
+
+    private static string ExtractTitle(string html)
+    {
+        var match = Regex.Match(html, @"<title[^>]*>(?<value>.*?)</title>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        return DecodeHtml(match.Success ? Regex.Replace(match.Groups["value"].Value, @"\s+", " ") : string.Empty);
+    }
+
+    private static string CleanProviderTitle(string title, string provider)
+    {
+        var cleaned = title.Trim();
+        var suffixes = provider switch
+        {
+            "youtube" => new[] { " - YouTube" },
+            "bandcamp" => new[] { " | Bandcamp" },
+            "lastfm" => new[] { " | Last.fm", " — Last.fm" },
+            "apple" => new[] { " by Apple Music", " on Apple Music" },
+            _ => [],
+        };
+
+        foreach (var suffix in suffixes)
+        {
+            if (cleaned.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned[..^suffix.Length].Trim();
+            }
+        }
+
+        return cleaned.Trim('"');
+    }
+
+    private static string FirstNonEmpty(params string[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+
+    private static string DecodeHtml(string value)
+        => System.Net.WebUtility.HtmlDecode(value).Trim();
+
     private static string BuildSearchText(string title, string artist, string album)
     {
         var parts = new[] { artist, title, album }
@@ -879,5 +1291,130 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
     private sealed record SpotifyExternalUrls
     {
         public string Spotify { get; init; } = string.Empty;
+    }
+
+    private sealed record AppleLookupResponse
+    {
+        public List<AppleLookupItem> Results { get; init; } = [];
+    }
+
+    private sealed record AppleLookupItem
+    {
+        public long TrackId { get; init; }
+
+        public string TrackName { get; init; } = string.Empty;
+
+        public string ArtistName { get; init; } = string.Empty;
+
+        public string CollectionName { get; init; } = string.Empty;
+
+        public string TrackViewUrl { get; init; } = string.Empty;
+    }
+
+    private sealed record ListenBrainzListensResponse
+    {
+        public ListenBrainzPayload? Payload { get; init; }
+    }
+
+    private sealed record ListenBrainzPayload
+    {
+        public List<ListenBrainzListen> Listens { get; init; } = [];
+    }
+
+    private sealed record ListenBrainzListen
+    {
+        [JsonPropertyName("track_metadata")]
+        public ListenBrainzTrackMetadata? TrackMetadata { get; init; }
+    }
+
+    private sealed record ListenBrainzTrackMetadata
+    {
+        [JsonPropertyName("artist_name")]
+        public string ArtistName { get; init; } = string.Empty;
+
+        [JsonPropertyName("track_name")]
+        public string TrackName { get; init; } = string.Empty;
+
+        [JsonPropertyName("release_name")]
+        public string ReleaseName { get; init; } = string.Empty;
+
+        [JsonPropertyName("additional_info")]
+        public ListenBrainzAdditionalInfo? AdditionalInfo { get; init; }
+    }
+
+    private sealed record ListenBrainzAdditionalInfo
+    {
+        [JsonPropertyName("recording_msid")]
+        public string RecordingMsid { get; init; } = string.Empty;
+    }
+
+    private sealed record YouTubePlaylistItemsResponse
+    {
+        public string NextPageToken { get; init; } = string.Empty;
+
+        public List<YouTubePlaylistItem> Items { get; init; } = [];
+    }
+
+    private sealed record YouTubePlaylistItem
+    {
+        public YouTubeSnippet? Snippet { get; init; }
+    }
+
+    private sealed record YouTubeSnippet
+    {
+        public string Title { get; init; } = string.Empty;
+
+        public YouTubeResourceId? ResourceId { get; init; }
+    }
+
+    private sealed record YouTubeResourceId
+    {
+        public string VideoId { get; init; } = string.Empty;
+    }
+
+    private sealed record LastFmTarget(string User, string Method, string Source);
+
+    private sealed record LastFmTracksResponse
+    {
+        [JsonPropertyName("recenttracks")]
+        public LastFmTrackContainer? RecentTracks { get; init; }
+
+        [JsonPropertyName("lovedtracks")]
+        public LastFmTrackContainer? LovedTracks { get; init; }
+
+        [JsonPropertyName("toptracks")]
+        public LastFmTrackContainer? TopTracks { get; init; }
+    }
+
+    private sealed record LastFmTrackContainer
+    {
+        public List<LastFmTrack> Track { get; init; } = [];
+    }
+
+    private sealed record LastFmTrack
+    {
+        public string Name { get; init; } = string.Empty;
+
+        public string Mbid { get; init; } = string.Empty;
+
+        public string Url { get; init; } = string.Empty;
+
+        public LastFmNamedValue? Artist { get; init; }
+
+        public LastFmTextValue? Album { get; init; }
+    }
+
+    private sealed record LastFmNamedValue
+    {
+        public string Name { get; init; } = string.Empty;
+
+        [JsonPropertyName("#text")]
+        public string Text { get; init; } = string.Empty;
+    }
+
+    private sealed record LastFmTextValue
+    {
+        [JsonPropertyName("#text")]
+        public string Text { get; init; } = string.Empty;
     }
 }

@@ -12,6 +12,7 @@ import {
   buildAlbumCandidates,
   getAlbumCandidateFilter,
 } from '../../../lib/albumCandidatePicker';
+import { saveAlbumDecisionRule } from '../../../lib/albumDecisionRules';
 import { buildDiscoveryGraph } from '../../../lib/discoveryGraph';
 import { rankSearchResponses } from '../../../lib/searchCandidateRanking';
 import { deduplicateSearchResponses } from '../../../lib/searchResultDeduplication';
@@ -450,6 +451,15 @@ const SearchDetail = ({
     setResultFilters(`${resultFilters} ${filter}`.trim());
   };
 
+  const saveAlbumCandidateRule = (candidate) => {
+    const { rule } = saveAlbumDecisionRule({
+      candidate,
+      searchText: search.searchText,
+    });
+
+    toast.success(`Saved local album rule for ${rule.albumTitle}`);
+  };
+
   const filteredCount = results?.length - sortedAndFilteredResults.length;
   const remainingCount = sortedAndFilteredResults.length - displayCount;
   const loaded = !removing && !creating && !loading && results;
@@ -654,6 +664,18 @@ const SearchDetail = ({
                 >
                   <List.Content floated="right">
                     <Popup
+                      content="Save this visible album review as a browser-local rule preview for similar future searches. This does not alter download behavior or contact peers."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Save album rule ${candidate.albumTitle}`}
+                          icon="bookmark outline"
+                          onClick={() => saveAlbumCandidateRule(candidate)}
+                          size="mini"
+                        />
+                      }
+                    />
+                    <Popup
                       content="Focus the current result filter on this album folder name without starting another search or download."
                       position="top center"
                       trigger={
@@ -682,6 +704,58 @@ const SearchDetail = ({
                       {candidate.sourceCount === 1 ? '' : 's'} ·{' '}
                       {Math.round(candidate.completenessRatio * 100)}%
                     </List.Description>
+                    <div className="search-album-candidate-review">
+                      <span>
+                        Formats:{' '}
+                        {candidate.formatMix
+                          .map((item) => `${item.format} ${item.count}`)
+                          .join(', ')}
+                      </span>
+                      {candidate.missingTrackNumbers.length > 0 && (
+                        <span>
+                          Missing:{' '}
+                          {candidate.missingTrackNumbers.slice(0, 8).join(', ')}
+                        </span>
+                      )}
+                      {candidate.durationVarianceSeconds > 0 && (
+                        <span>
+                          Duration spread:{' '}
+                          {Math.round(candidate.durationVarianceSeconds / 60)}m
+                        </span>
+                      )}
+                      {candidate.substitutionOptions.length > 0 && (
+                        <span>
+                          Substitutions:{' '}
+                          {candidate.substitutionOptions
+                            .map(
+                              (option) =>
+                                `track ${option.trackNumber} (${option.optionCount})`,
+                            )
+                            .join(', ')}
+                        </span>
+                      )}
+                    </div>
+                    {candidate.substitutionOptions.length > 0 && (
+                      <div className="search-album-candidate-substitutions">
+                        {candidate.substitutionOptions.slice(0, 4).map((option) => (
+                          <Popup
+                            content={`Manual review options from ${option.sources.join(', ')} in ${option.formats.join(', ')}. This only describes visible alternatives; it does not select or download them.`}
+                            key={option.trackNumber}
+                            position="top center"
+                            trigger={
+                              <Label
+                                color="teal"
+                                size="tiny"
+                              >
+                                <Icon name="exchange" />
+                                Track {option.trackNumber}: {option.optionCount}{' '}
+                                options
+                              </Label>
+                            }
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="search-album-candidate-labels">
                       {candidate.reasons.map((reason) => (
                         <Label
@@ -690,6 +764,22 @@ const SearchDetail = ({
                         >
                           {reason}
                         </Label>
+                      ))}
+                      {candidate.warnings.map((warning) => (
+                        <Popup
+                          content="This is a local confidence warning from visible search result metadata only; it does not reject the candidate or contact peers."
+                          key={warning}
+                          position="top center"
+                          trigger={
+                            <Label
+                              color="yellow"
+                              size="tiny"
+                            >
+                              <Icon name="warning sign" />
+                              {warning}
+                            </Label>
+                          }
+                        />
                       ))}
                     </div>
                     <div className="search-album-candidate-paths">

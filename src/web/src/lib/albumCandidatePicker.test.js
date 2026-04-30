@@ -19,6 +19,7 @@ describe('buildAlbumCandidates', () => {
         {
           candidateRank: { score: 71 },
           files: [
+            { filename: 'Music/Album Deluxe/03 Third.mp3', size: 7_500_000 },
             { filename: 'Music/Album Deluxe/04 Fourth.mp3', size: 8_000_000 },
             { filename: 'Music/Album Deluxe/cover.jpg', size: 500_000 },
           ],
@@ -31,11 +32,24 @@ describe('buildAlbumCandidates', () => {
     expect(candidates).toHaveLength(1);
     expect(candidates[0]).toMatchObject({
       albumTitle: 'Album Deluxe',
+      formatMix: [
+        { count: 3, format: 'FLAC' },
+        { count: 2, format: 'MP3' },
+      ],
       losslessCount: 3,
       sourceCount: 2,
       sources: ['peer-a', 'peer-b'],
-      trackCount: 4,
+      substitutionOptions: [
+        expect.objectContaining({
+          formats: ['FLAC', 'MP3'],
+          optionCount: 2,
+          sources: ['peer-a', 'peer-b'],
+          trackNumber: 3,
+        }),
+      ],
+      trackCount: 5,
       trackNumbers: [1, 2, 3, 4],
+      warnings: ['mixed audio formats', 'mixed lossless/lossy evidence'],
     });
     expect(candidates[0].score).toBeGreaterThan(75);
     expect(candidates[0].reasons).toEqual(
@@ -43,6 +57,31 @@ describe('buildAlbumCandidates', () => {
         '3 lossless files',
         '2 sources',
         'numbered track run',
+      ]),
+    );
+  });
+
+  it('surfaces local confidence warnings for incomplete album folders', () => {
+    const candidates = buildAlbumCandidates({
+      responses: [
+        {
+          files: [
+            { filename: 'Artist/Album/01 First.mp3', length: 180 },
+            { filename: 'Artist/Album/03 Third.mp3', length: 185 },
+            { filename: 'Artist/Album/04 Fourth.mp3', length: 1_300 },
+          ],
+          username: 'peer-a',
+        },
+      ],
+    });
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].missingTrackNumbers).toEqual([2]);
+    expect(candidates[0].warnings).toEqual(
+      expect.arrayContaining([
+        'large duration variance',
+        'missing tracks 2',
+        'single source only',
       ]),
     );
   });

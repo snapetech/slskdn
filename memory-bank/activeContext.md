@@ -1,3 +1,191 @@
+## Update 2026-04-30 20:47:21Z
+
+- Current task: Discovery Inbox impact review summary is implemented locally.
+- Last activity:
+  - added local impact classification for Discovery Inbox candidates
+  - surfaced batch-readiness counts and per-candidate impact labels
+  - kept the slice evidence-only with no provider lookup, peer browse, search, download, automation, or file mutation
+  - validated focused Discovery Inbox review helper/component tests and frontend lint
+- Next steps:
+  1. Continue beginning-lane burn-down with Watchlists/Release Radar only if it avoids active source-feed and MusicBrainz backend ownership.
+  2. Later replace text-derived impact classification with backend-provided provider capability metadata when acquisition jobs are wired.
+
+## Update 2026-04-30 20:50:41Z
+
+- Current task: E14 Listening Intelligence time-range stats and forgotten favorites are implemented locally.
+- Last activity:
+  - added time-range filtering to browser-local listening stats
+  - added forgotten-favorite derivation from older repeat local plays
+  - surfaced 7D/30D/90D/All range controls and Forgotten Favorites in the player stats modal
+  - validated focused listening history, player auto-queue, radio, shortcut, rating, and PlayerBar tests
+- Next steps:
+  1. Continue E14 with genre/label breakdowns only if derivable from local metadata.
+  2. Defer media-server import and external recommendation providers until explicit credentials, rate limits, and dedupe policy are scoped.
+
+## Update 2026-04-30 20:45:37Z
+
+- Current task: E14 Listening Intelligence first browser-local history/stats slice is implemented locally.
+- Last activity:
+  - added local play history storage with duplicate suppression
+  - recorded plays at the existing scrobble threshold in PlayerBar
+  - added player Listening Stats modal with total, recent, top artists, and top tracks
+  - validated focused listening history, player auto-queue, radio, shortcut, rating, and PlayerBar tests
+- Next steps:
+  1. Continue E14 with time-range stats or forgotten-favorites derivation if it can remain browser-local.
+  2. Later add media-server play import only behind explicit credentials and deduplication policy.
+
+## Update 2026-04-30 20:41:25Z
+
+- Current task: E15 Player Enhancements bounded similar-track auto-queue is implemented locally.
+- Last activity:
+  - added browser-local player auto-queue scoring from recent session history
+  - wired Queue Manager Auto-fill Similar to append non-queued recent tracks
+  - kept auto-queue bounded to already-known tracks with no network or file effects
+  - validated focused player auto-queue, radio, shortcut, rating, and PlayerBar tests
+- Next steps:
+  1. Continue tail-side burn-down with documentation polish for completed E15 player enhancements or move to the next earlier untouched epic.
+  2. Later connect similar-track queueing to real recommendation providers only behind explicit user action and rate limits.
+
+## Update 2026-04-30 20:40:26Z
+
+- Current task: Epic 4 album decision rule previews are implemented locally.
+- Last activity:
+  - added browser-local album decision rule preview storage
+  - captured album/search identity, expected track count, format policy, warnings, and substitution tracks
+  - added a Save Rule action on album candidates with tooltip-backed local-only behavior
+  - validated focused album decision rule, album candidate, Search component tests, and frontend lint
+- Next steps:
+  1. Continue beginning-lane burn-down with the next untouched Discovery Inbox/watchlist item only if it avoids current Wishlist/source-feed ownership.
+  2. Later wire album decision rules into a backend-backed album decision planner after the persistence and download handoff contract is explicit.
+
+## Update 2026-04-30 20:48:35Z
+
+- Current task: MusicBrainz overlay manual export review API is implemented locally.
+- Last activity:
+  - added overlay export review packages for stored signed MusicBrainz overlay edits
+  - added explicit local export approval records with safe approver validation
+  - kept the flow manual-only with no upstream MusicBrainz submitter and no cache mutation
+  - validated focused MusicBrainz overlay tests, whitespace, lint, and full `dotnet test`
+- Next steps:
+  1. Continue center-lane work with trust-scoped overlay gossip or frontend review surfaces once lane ownership is clear.
+  2. Leave concurrent options, source-feed, transfer-test, search, wishlist, and player edits untouched unless asked to integrate.
+
+## Update 2026-04-30 20:39:16Z
+
+- Current task: Quarantine Jury manual review/acceptance API is implemented locally.
+- Last activity:
+  - added a backend review projection for request evidence, signed verdicts, route attempts, aggregate recommendations, and acceptance status
+  - added persisted manual release-candidate acceptance decisions
+  - kept acceptance constrained to release-candidate supermajorities and local decision recording only
+  - split the browser Quarantine Jury review UI into a follow-up to avoid current frontend lane overlap
+  - validated focused Quarantine Jury tests, whitespace, lint, and full `dotnet test`
+- Next steps:
+  1. Continue center-lane work with MusicBrainz overlay export review or Quarantine Jury frontend UI once frontend lane ownership is clear.
+  2. Leave concurrent player, search, wishlist, source-feed, and transfer-test edits untouched unless asked to integrate.
+
+## Update 2026-04-30 20:38:05Z
+
+- Current task: E15 Player Enhancements queue manager is implemented locally.
+- Last activity:
+  - exposed player history and clear-upcoming queue action through `PlayerContext`
+  - added a Queue Manager modal with current, upcoming, and recent session sections
+  - added remove queued item, clear upcoming, previous, next, and close controls
+  - validated focused player radio, shortcut, rating, and PlayerBar tests
+- Next steps:
+  1. Continue tail-side burn-down with bounded similar-track auto-queue only from already-known local/session candidates.
+  2. Later revisit queue persistence only after deciding whether the queue should survive browser reloads.
+
+## Update 2026-04-30 20:34:08Z
+
+- Current task: Epic 4 album substitution option hints are implemented locally.
+- Last activity:
+  - preserved per-track visible source options inside album candidates
+  - surfaced substitution hints for tracks with multiple visible peer/provider options
+  - fixed and documented the expected-track-count gotcha for duplicate alternates
+  - kept the slice review-only with no alternate selection, rule save, peer browse, provider query, download, stream, metadata lookup, or file mutation
+  - validated focused album candidate and Search component tests plus frontend lint
+- Next steps:
+  1. Continue beginning-lane burn-down with local album decision rule previews only if they stay browser-local and do not alter downloads.
+  2. Later wire actual substitution selection into the download planner after an explicit album decision persistence contract exists.
+
+## Update 2026-04-30 20:34:06Z
+
+- Current task: T-939 non-Spotify provider URL expansion is implemented locally.
+- Last activity:
+  - added Apple Music/iTunes lookup for Apple URLs with numeric track or album ids
+  - added ListenBrainz public-listens import from user profile URLs
+  - added metadata-page fallback for YouTube, Bandcamp, Last.fm, and Apple URLs
+  - added the new providers to the Wishlist Import Feed source-type selector
+  - documented and committed the Apple Music track-id gotcha as `e08e73774`
+  - validated focused source-feed tests, backend build, Wishlist tests, and frontend lint
+- Next steps:
+  1. Add authenticated/API-key provider adapters only where needed for full playlist expansion, starting with YouTube Data API and Last.fm API if users configure keys.
+  2. Keep provider URL imports review-first and bounded by the existing import limit before any Discovery Inbox handoff.
+
+## Update 2026-04-30 20:34:39Z
+
+- Current task: E15 Player Enhancements smart-radio seed handoff is implemented locally.
+- Last activity:
+  - added a browser-local player radio plan helper
+  - surfaced Smart Radio Seed queries from current track, album, artist, and genre metadata
+  - wired explicit Search handoff buttons while keeping modal open non-networking
+  - documented and committed the empty metadata array fallback gotcha as `939914cc7`
+  - validated focused player radio, shortcut, rating, and PlayerBar tests
+- Next steps:
+  1. Continue tail-side burn-down with queue management or a bounded similar-track auto-queue from already-known local session items.
+  2. Later connect smart radio to a real recommendation source only behind explicit rate limits and user action.
+
+## Update 2026-04-30 20:29:12Z
+
+- Current task: E15 Player Enhancements keyboard-shortcut slice is implemented locally.
+- Last activity:
+  - added a tested browser-local player shortcut mapper
+  - wired PlayerBar keyboard handling for play/pause, seek, previous/next, mute, equalizer, lyrics, and visualizer controls
+  - ignored text inputs, textareas, selects, contenteditable controls, and modified browser/system chords
+  - validated focused player shortcut, player rating, and PlayerBar tests
+- Next steps:
+  1. Continue tail-side burn-down with smart-radio/similar-track shell only if it can stay review-only and avoid other active Search work.
+  2. Later connect keyboard shortcut help to existing tooltip surfaces without adding visible instructional clutter.
+
+## Update 2026-04-30 20:29:15Z
+
+- Current task: Quarantine Jury pod routing attempts are implemented locally.
+- Last activity:
+  - added selected-juror route attempts through PodCore
+  - persisted route attempt history with routed and failed juror lists
+  - exposed Quarantine Jury route dispatch and history endpoints
+  - kept invalid route targets and unsafe route metadata from contacting peers
+  - marked the T-936 trust-scoped routing follow-up complete in the feature plan
+  - validated focused jury tests, whitespace, lint, and full `dotnet test`
+- Next steps:
+  1. Continue the center-lane burn-down with manual Quarantine Jury review UI and accept flow if it does not overlap active frontend lanes.
+  2. Leave player, search-detail, source-feed, and changelog changes from other lanes untouched unless asked to integrate.
+
+## Update 2026-04-30 20:26:18Z
+
+- Current task: Epic 4 album candidate review details are implemented locally.
+- Last activity:
+  - added album candidate format mix, missing-track, duration-spread, and warning summaries
+  - surfaced the review details in Search album candidates with local-only confidence warning tooltips
+  - kept the slice non-networking with no peer browse, provider query, metadata lookup, download, stream, file mutation, or rule save
+  - validated focused album candidate, search deduplication, Search component tests, and frontend lint
+- Next steps:
+  1. Continue beginning-lane burn-down with manual track substitution scaffolding only if it can stay local and avoid transfer/download code overlap.
+  2. Later add backend-backed album decision rules after the review surface has an explicit persistence contract.
+
+## Update 2026-04-30 20:25:56Z
+
+- Current task: E15 Player Enhancements first tail-side slice is implemented locally.
+- Last activity:
+  - added browser-local player rating storage and summary labels
+  - preserved source provider, match-confidence, and verification metadata through `PlayerContext`
+  - surfaced compact source, match, verified, and star-rating controls in the now-playing display
+  - documented and committed the empty now-playing helper gotcha as `534c4d34c`
+  - validated focused player ratings and PlayerBar tests
+- Next steps:
+  1. Continue tail-side burn-down with the next untouched E15 slice, likely keyboard shortcuts or smart-radio shell if it does not overlap the other agent.
+  2. Later connect local ratings to Discovery Shelf ranking once that shelf has an explicit import/sync contract.
+
 ## Update 2026-04-30 20:23:47Z
 
 - Current task: T-939 Spotify account connection follow-up is implemented locally.
@@ -2980,3 +3168,25 @@ dotnet test
 - Next steps:
   1. Continue from the beginning into search result deduplication or richer album-picker warnings.
   2. Avoid Import Staging, Discovery Inbox, MusicBrainz radar, source-feed imports, diagnostic bundle, mesh policy, broad docs, and MilkDrop files while parallel agents have active edits there.
+
+## Update 2026-04-30 20:41:14Z
+
+- Current task: Source-feed import provider expansion is complete locally.
+- Last activity:
+  - added optional YouTube Data API playlist expansion for source-feed imports
+  - added optional Last.fm loved/recent/top track imports
+  - documented the new `integrations.youtube.api_key` and `integrations.lastfm.api_key` options
+- Next steps:
+  1. Review and merge the source-feed provider import changes.
+  2. Keep any further private-provider imports behind explicit account connection/OAuth flows.
+
+## Update 2026-04-30 20:53:19Z
+
+- Current task: Source-feed provider Web UI settings are implemented locally.
+- Last activity:
+  - added runtime overlay support for source-feed integration settings
+  - added YouTube and Last.fm enabled toggles alongside their API keys
+  - added System Integrations controls for Spotify, YouTube, and Last.fm settings with masked secrets, warnings, and tooltip-backed apply/reset actions
+- Next steps:
+  1. Validate focused backend/frontend tests, build, lint, and full test gates.
+  2. Keep private-library provider imports behind explicit OAuth/account connection work.

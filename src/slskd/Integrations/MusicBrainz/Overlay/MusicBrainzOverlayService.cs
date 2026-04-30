@@ -16,6 +16,7 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
     };
 
     private readonly ConcurrentDictionary<string, MusicBrainzOverlayEdit> _edits = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, MusicBrainzOverlayExportDecision> _exportDecisions = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<MusicBrainzOverlayService> _logger;
 
     public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger)
@@ -57,6 +58,82 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
             .ToList();
 
         return Task.FromResult<IReadOnlyList<MusicBrainzOverlayEdit>>(edits);
+    }
+
+    public Task<MusicBrainzOverlayExportReview?> GetExportReviewAsync(
+        string editId,
+        CancellationToken cancellationToken = default)
+    {
+        editId = editId.Trim();
+        if (!_edits.TryGetValue(editId, out var edit))
+        {
+            return Task.FromResult<MusicBrainzOverlayExportReview?>(null);
+        }
+
+        _exportDecisions.TryGetValue(editId, out var decision);
+        var review = BuildExportReview(edit, decision);
+        return Task.FromResult<MusicBrainzOverlayExportReview?>(review);
+    }
+
+    public Task<MusicBrainzOverlayExportApprovalResult> ApproveExportAsync(
+        string editId,
+        MusicBrainzOverlayExportApprovalRequest approvalRequest,
+        CancellationToken cancellationToken = default)
+    {
+        editId = editId.Trim();
+        approvalRequest ??= new MusicBrainzOverlayExportApprovalRequest();
+        approvalRequest.ApprovedBy = string.IsNullOrWhiteSpace(approvalRequest.ApprovedBy)
+            ? "local-user"
+            : approvalRequest.ApprovedBy.Trim();
+        approvalRequest.Note = approvalRequest.Note?.Trim() ?? string.Empty;
+
+        var result = new MusicBrainzOverlayExportApprovalResult();
+        if (!_edits.TryGetValue(editId, out var edit))
+        {
+            result.Errors.Add("Edit not found.");
+            return Task.FromResult(result);
+        }
+
+        if (_exportDecisions.TryGetValue(editId, out var existingDecision))
+        {
+            result.Decision = existingDecision;
+            return Task.FromResult(result);
+        }
+
+        if (!IsSafeOpaqueReference(approvalRequest.ApprovedBy))
+        {
+            result.Errors.Add("Approved-by identifier must be opaque and safe.");
+        }
+
+        if (approvalRequest.Note.Length > 512)
+        {
+            result.Errors.Add("Approval note must be 512 characters or fewer.");
+        }
+
+        var review = BuildExportReview(edit, decision: null);
+        if (!review.CanApproveExport)
+        {
+            result.Errors.Add(review.ReviewReason);
+        }
+
+        if (result.Errors.Count > 0)
+        {
+            return Task.FromResult(result);
+        }
+
+        var decision = new MusicBrainzOverlayExportDecision
+        {
+            Id = $"musicbrainz-overlay-export:{Guid.NewGuid():N}",
+            EditId = edit.Id,
+            ApprovedBy = approvalRequest.ApprovedBy,
+            Note = approvalRequest.Note,
+            UpstreamTarget = review.UpstreamTarget,
+            ProposedChange = review.ProposedChange,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        _exportDecisions[editId] = decision;
+        result.Decision = decision;
+        return Task.FromResult(result);
     }
 
     public Task<MusicBrainzOverlayApplication<ArtistReleaseGraph>> ApplyToArtistReleaseGraphAsync(
@@ -157,6 +234,71 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
         {
             result.Errors.Add("WorkRef evidence is missing or unsafe.");
         }
+    }
+
+    private static MusicBrainzOverlayExportReview BuildExportReview(
+        MusicBrainzOverlayEdit edit,
+        MusicBrainzOverlayExportDecision? decision)
+    {
+        return new MusicBrainzOverlayExportReview
+        {
+            Edit = edit,
+            UpstreamTarget = $"{edit.TargetType}:{edit.TargetId}",
+            ProposedChange = $"{edit.Field.Trim()} => {edit.Value.Trim()}",
+            Evidence = edit.Evidence,
+            CanApproveExport = decision == null && IsExportableEdit(edit),
+            ReviewReason = BuildExportReviewReason(edit, decision),
+            Decision = decision,
+        };
+    }
+
+    private static bool IsExportableEdit(MusicBrainzOverlayEdit edit)
+    {
+        return edit.Type is MusicBrainzOverlayEditType.TitleCorrection
+            or MusicBrainzOverlayEditType.ArtistCorrection
+            or MusicBrainzOverlayEditType.Alias
+            or MusicBrainzOverlayEditType.MissingAltTitle
+            or MusicBrainzOverlayEditType.DuplicateMarker
+            or MusicBrainzOverlayEditType.ReleaseGrouping
+            or MusicBrainzOverlayEditType.RecordingLinkage;
+    }
+
+    private static string BuildExportReviewReason(MusicBrainzOverlayEdit edit, MusicBrainzOverlayExportDecision? decision)
+    {
+        if (decision != null)
+        {
+            return "Upstream export has already been approved locally.";
+        }
+
+        return IsExportableEdit(edit)
+            ? "Overlay edit can be reviewed for manual upstream MusicBrainz submission."
+            : "Overlay edit type is not exportable.";
+    }
+
+    private static bool IsSafeOpaqueReference(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 200)
+        {
+            return false;
+        }
+
+        var lowered = value.ToLowerInvariant();
+        if (lowered.Contains('/') ||
+            lowered.Contains('\\') ||
+            lowered.Contains("localhost") ||
+            lowered.Contains("127.0.0.1") ||
+            lowered.Contains("192.168.") ||
+            lowered.Contains("10.") ||
+            lowered.Contains("172.16.") ||
+            lowered.Contains("path") ||
+            lowered.Contains("file") ||
+            lowered.Contains("private") ||
+            lowered.Contains("internal"))
+        {
+            return false;
+        }
+
+        return !System.Text.RegularExpressions.Regex.IsMatch(value, "^[a-fA-F0-9]{32,}$");
     }
 
     private static bool IsSupportedEdit(MusicBrainzOverlayEdit edit)

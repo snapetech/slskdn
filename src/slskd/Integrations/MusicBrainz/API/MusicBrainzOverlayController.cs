@@ -50,6 +50,43 @@ public sealed class MusicBrainzOverlayController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("edits/{editId}/export-review")]
+    [ProducesResponseType(typeof(MusicBrainzOverlayExportReview), 200)]
+    public async Task<IActionResult> GetExportReview(string editId, CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var review = await _overlayService.GetExportReviewAsync(editId, cancellationToken).ConfigureAwait(false);
+        return review == null ? NotFound() : Ok(review);
+    }
+
+    [HttpPost("edits/{editId}/approve-export")]
+    [ProducesResponseType(typeof(MusicBrainzOverlayExportApprovalResult), 200)]
+    public async Task<IActionResult> ApproveExport(
+        string editId,
+        [FromBody] MusicBrainzOverlayExportApprovalRequest approvalRequest,
+        CancellationToken cancellationToken)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var result = await _overlayService.ApproveExportAsync(
+            editId,
+            approvalRequest ?? new MusicBrainzOverlayExportApprovalRequest(),
+            cancellationToken).ConfigureAwait(false);
+        if (result.Errors.Contains("Edit not found."))
+        {
+            return NotFound(result);
+        }
+
+        return result.IsApproved ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("artist/{artistId}/release-graph")]
     [ProducesResponseType(typeof(MusicBrainzOverlayReleaseGraphResponse), 200)]
     public async Task<IActionResult> GetEffectiveReleaseGraph(

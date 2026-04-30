@@ -103,4 +103,78 @@ public sealed class QuarantineJuryController : ControllerBase
         var aggregate = await _juryService.GetAggregateAsync(requestId, cancellationToken).ConfigureAwait(false);
         return aggregate.Reason == "Request not found." ? NotFound(aggregate) : Ok(aggregate);
     }
+
+    [HttpGet("requests/{requestId}/review")]
+    [ProducesResponseType(typeof(QuarantineJuryReview), 200)]
+    public async Task<IActionResult> GetReview(string requestId, CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var review = await _juryService.GetReviewAsync(requestId, cancellationToken).ConfigureAwait(false);
+        return review == null ? NotFound() : Ok(review);
+    }
+
+    [HttpPost("requests/{requestId}/accept-release-candidate")]
+    [ProducesResponseType(typeof(QuarantineJuryAcceptanceResult), 200)]
+    public async Task<IActionResult> AcceptReleaseCandidate(
+        string requestId,
+        [FromBody] QuarantineJuryAcceptanceRequest acceptanceRequest,
+        CancellationToken cancellationToken)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var result = await _juryService.AcceptReleaseCandidateAsync(
+            requestId,
+            acceptanceRequest ?? new QuarantineJuryAcceptanceRequest(),
+            cancellationToken).ConfigureAwait(false);
+        if (result.Errors.Contains("Request not found."))
+        {
+            return NotFound(result);
+        }
+
+        return result.IsAccepted ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("requests/{requestId}/routes")]
+    [ProducesResponseType(typeof(QuarantineJuryRouteAttempt), 200)]
+    public async Task<IActionResult> RouteRequest(
+        string requestId,
+        [FromBody] QuarantineJuryRouteRequest routeRequest,
+        CancellationToken cancellationToken)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var attempt = await _juryService.RouteRequestAsync(
+            requestId,
+            routeRequest ?? new QuarantineJuryRouteRequest(),
+            cancellationToken).ConfigureAwait(false);
+        if (attempt.ErrorMessage == "Request not found.")
+        {
+            return NotFound(attempt);
+        }
+
+        return attempt.Success ? Ok(attempt) : BadRequest(attempt);
+    }
+
+    [HttpGet("requests/{requestId}/routes")]
+    [ProducesResponseType(typeof(IReadOnlyList<QuarantineJuryRouteAttempt>), 200)]
+    public async Task<IActionResult> GetRouteAttempts(string requestId, CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var attempts = await _juryService.GetRouteAttemptsAsync(requestId, cancellationToken).ConfigureAwait(false);
+        return Ok(attempts);
+    }
 }

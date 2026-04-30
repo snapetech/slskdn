@@ -11,6 +11,46 @@
 
 *No high priority tasks currently active
 
+- [x] **feature**: Add Quarantine Jury pod routing attempts.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Quarantine Jury requests can now route to selected safe jurors through PodCore, persist route attempt history, and expose dispatch/history endpoints. Invalid target jurors and unavailable routing backends return failed attempts without contacting peers.
+
+- [x] **feature**: Add browser-local listening history and stats.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added browser-local play history recording at the same playback threshold used for scrobbling, plus a player Listening Stats modal with total plays, recent plays, top artists, top tracks, and a local history clear action. No external scrobbling, media-server import, recommendation fetch, or file mutation is triggered by the stats view.
+
+- [x] **feature**: Add listening time ranges and forgotten favorites.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Listening Stats now supports 7-day, 30-day, 90-day, and all-time filters plus browser-local forgotten favorites derived from repeat plays outside the active range. This remains local-only and does not call external recommendation, scrobbling, or media-server APIs.
+
+- [x] **feature**: Add bounded player similar-track auto-queue.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added a local auto-fill action that scores recent session tracks by artist, album, genre/tag, and title overlap, then appends similar tracks that are not already queued. It only uses already-known browser session history and does not search, browse peers, stream, download, or call metadata services.
+
+- [x] **feature**: Add player queue manager.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added a playback queue modal with current track, full upcoming queue, recent session history, remove queued item, clear upcoming, previous, and next controls. Removing and clearing queue entries keep the current track intact and do not start searches, downloads, or recommendation work.
+
+- [x] **feature**: Add player smart-radio seed handoff.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added a player smart-radio modal that builds similar-track, album-neighborhood, artist/genre, and artist-radio Search handoff queries from the current now-playing metadata. Opening the modal does not search, queue, browse, download, or mutate playback; network search begins only if the user explicitly opens one generated query.
+
+- [x] **feature**: Add player keyboard shortcuts.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added browser-local player shortcuts for play/pause, seek backward/forward, previous/next with Shift+Arrow, mute, equalizer, lyrics, and visualizer toggles. Shortcut handling ignores editable controls and modified browser/system key chords.
+
+- [x] **feature**: Add player now-playing ratings and evidence badges.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added browser-local rating storage for now-playing tracks, preserved playback source/confidence/verification metadata through PlayerContext, and surfaced compact source, match, verified, and discovery-rating controls in PlayerBar. Ratings remain local browser context and do not sync, auto-download, delete, or publish discovery evidence yet.
+
 - [x] **feature**: Add visible acquisition profiles to Search.
  - Status: completed (2026-04-30)
  - Priority: P2
@@ -51,6 +91,21 @@
  - Priority: P2
  - Notes: Search detail now groups already-returned result files into album-shaped folder candidates, scores them by visible tracks, source count, lossless evidence, folder completeness, and existing candidate rank, and provides a tooltipped local filter action. The picker does not start searches, downloads, peer browsing, or metadata lookups.
 
+- [x] **feature**: Add album candidate review details and warnings.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Album candidates now show local review metadata for format mix, missing track numbers, duration spread, source count, and confidence warnings such as mixed formats, missing tracks, large duration variance, and single-source candidates. The review surface is based only on already-returned search metadata and does not contact peers or start downloads.
+
+- [x] **feature**: Add album candidate substitution option hints.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Album candidates now retain per-track visible source options and surface manual substitution hints when multiple peers/providers offer the same track number. These hints are local review metadata only; they do not select alternates, save rules, browse peers, or start downloads.
+
+- [x] **feature**: Add browser-local album decision rule previews.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Album candidates can now save a browser-local rule preview containing normalized album/search identity, expected track count, format policy, warnings, and substitution tracks. Rule previews are capped and deduped in local storage only; they do not affect ranking, planner, downloads, peer browsing, or future searches yet.
+
 - [x] **feature**: Add search download action previews.
  - Status: completed (2026-04-30)
  - Priority: P2
@@ -70,6 +125,11 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Added a persistent Web UI Discovery Inbox with Suggested/Approved/Snoozed/Rejected review states, bulk approve/reject, per-item review actions, acquisition-profile context, and explicit network-impact text. Search can now save the current phrase into the inbox without starting peer network activity.
+
+- [x] **feature**: Add Discovery Inbox impact review summary.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Discovery Inbox now classifies saved candidates as Local/manual, Provider review, Network risk, or Needs estimate, shows aggregate batch-readiness counts before approval, and labels each candidate with its inferred impact class. This is evidence-only review metadata and does not start provider lookups, peer browsing, searches, downloads, or automation.
 
 - [x] **feature**: Unify Wishlist rows with acquisition request states.
  - Status: completed (2026-04-30)
@@ -145,7 +205,7 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
-- Notes: Added backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and Spotify provider URLs. Spotify supports public playlist/album/track/artist/user playlist imports through configured app credentials or a connected account, plus liked/saved tracks, saved albums, followed artists, and current-user playlists through either a connected Spotify account or a per-import bearer token with the required scopes. The Wishlist UI now has an Import Feed flow that previews results, connects/disconnects Spotify, and adds selected provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads.
+- Notes: Added backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and provider URLs. Spotify supports public playlist/album/track/artist/user playlist imports through configured app credentials or a connected account, plus liked/saved tracks, saved albums, followed artists, and current-user playlists through either a connected Spotify account or a per-import bearer token with the required scopes. Non-Spotify URL support now includes Apple Music/iTunes lookup, ListenBrainz public-listens import, optional YouTube Data API playlist expansion, optional Last.fm loved/recent/top track imports, and metadata-page fallback for YouTube, Bandcamp, Last.fm, and Apple URLs. The Wishlist UI now has an Import Feed flow that previews results, connects/disconnects Spotify, and adds selected provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads. System Integrations now exposes source-feed provider settings for Spotify, YouTube, and Last.fm with on/off toggles, masked credential entry, validation warnings, and tooltip-backed runtime apply/reset controls.
 
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
@@ -288,10 +348,10 @@
  - Priority: P2
  - Notes: Follow up T-935 by routing signed overlay edits through mesh service fabric or realm channels according to user trust scope. Keep publication opt-in and preserve source provenance.
 
-- [ ] **feature**: Add manual upstream MusicBrainz export review for overlay edits.
- - Status: planned
+- [x] **feature**: Add manual upstream MusicBrainz export review for overlay edits.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Follow up T-935 with a manual export/review path for users who want to submit selected local corrections upstream. Do not auto-submit edits.
+ - Notes: Added a MusicBrainz overlay export review API that turns stored signed overlay edits into manual upstream submission packages with target, proposed change, and evidence. Added explicit local export approval records with safe approver validation and idempotent approvals. This does not auto-submit edits upstream or mutate cached MusicBrainz data.
 
 - [x] **T-936**: Quarantine Jury.
  - Status: completed (2026-04-30)
@@ -304,15 +364,20 @@
  - Priority: P2
  - Notes: Quarantine Jury requests and signed verdicts now persist to an atomic JSON state file under the app directory and reload on service startup. Focused tests cover rehydrating requests, verdicts, and aggregate recommendations from persisted state.
 
-- [ ] **feature**: Route Quarantine Jury requests through trust-scoped mesh channels.
- - Status: planned
+- [x] **feature**: Route Quarantine Jury requests through trust-scoped mesh channels.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Follow up T-936 by sending minimal signed evidence to explicitly selected trusted contacts, pod members, or realm jurors without attaching raw files or expanding the audience automatically.
+ - Notes: Quarantine Jury can now dispatch minimal request evidence through PodCore only to selected safe jurors, records route attempts with routed/failed juror lists, persists the dispatch history, and exposes route dispatch/history endpoints. It does not attach raw files, expand the audience automatically, or change local quarantine state.
 
-- [ ] **feature**: Add manual Quarantine Jury review UI and accept flow.
+- [x] **feature**: Add manual Quarantine Jury review API and accept flow.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a persisted manual review/acceptance contract that returns request evidence, signed verdicts, route attempts, aggregate recommendations, acceptance eligibility, and prior acceptance decisions. Accepting is allowed only for release-candidate supermajorities, is idempotent, validates safe operator identifiers, and records a local decision without mutating quarantine state.
+
+- [ ] **feature**: Add frontend Quarantine Jury review UI.
  - Status: planned
  - Priority: P2
- - Notes: Show request/verdict evidence, dissent, and recommendations, while keeping local quarantine authoritative until the user explicitly accepts a release-candidate recommendation.
+ - Notes: Build the browser review surface on top of the Quarantine Jury review/acceptance API, including verdict evidence, dissent, route attempts, acceptance status, and tooltip-backed manual accept controls. Keep local quarantine authoritative until the user explicitly accepts a release-candidate recommendation.
 
 - [x] **bug**: Keep mesh-overlay sources out of Soulseek sequential failover.
  - Status: completed (2026-04-30)

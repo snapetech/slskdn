@@ -2,6 +2,23 @@ import './Player.css';
 import * as collectionsAPI from '../../lib/collections';
 import * as externalVisualizer from '../../lib/externalVisualizer';
 import * as listenBrainz from '../../lib/listenBrainz';
+import {
+  clearListeningHistory,
+  getListeningStats,
+  recordLocalPlay,
+} from '../../lib/listeningHistory';
+import {
+  getPlayerRating,
+  getPlayerRatingSummary,
+  setPlayerRating,
+} from '../../lib/playerRatings';
+import {
+  buildPlayerRadioPlan,
+  buildPlayerRadioSearchPath,
+  getPlayerRadioCopyText,
+} from '../../lib/playerRadio';
+import { buildSimilarQueueCandidates } from '../../lib/playerAutoQueue';
+import { getPlayerShortcutAction } from '../../lib/playerShortcuts';
 import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import * as streaming from '../../lib/streaming';
 import Equalizer from './Equalizer';
@@ -17,6 +34,7 @@ import {
   Header,
   Icon,
   Input,
+  Label,
   Message,
   Modal,
   Popup,
@@ -108,6 +126,527 @@ const PlayerToolButton = ({
     }
   />
 );
+
+const formatPlayerProvider = (provider = '') => {
+  const normalized = String(provider).trim();
+  if (!normalized) return '';
+  if (normalized.toLowerCase() === 'soulseek') return 'Soulseek';
+  if (normalized.toLowerCase() === 'mesh') return 'Mesh';
+  if (normalized.toLowerCase() === 'pod') return 'Pod';
+  return normalized;
+};
+
+const getPlayerBadges = (current) => {
+  if (!current) return [];
+
+  const providers = (Array.isArray(current.sourceProviders)
+    ? current.sourceProviders
+    : [])
+    .map(formatPlayerProvider)
+    .filter(Boolean);
+  const badges = providers.slice(0, 2).map((provider) => ({
+    color: provider === 'Mesh' || provider === 'Pod' ? 'violet' : 'grey',
+    icon: provider === 'Mesh' ? 'share alternate' : 'music',
+    key: `source-${provider}`,
+    text: provider,
+    title: `Playback source: ${provider}`,
+  }));
+
+  const confidence = Number(current.confidence || 0);
+  if (confidence > 0) {
+    badges.push({
+      color: confidence >= 0.75 ? 'green' : 'yellow',
+      icon: 'crosshairs',
+      key: 'confidence',
+      text: `${Math.round(confidence * 100)}% match`,
+      title: 'Local match confidence for this now-playing item.',
+    });
+  }
+
+  if (current.verified) {
+    badges.push({
+      color: 'teal',
+      icon: 'check circle',
+      key: 'verified',
+      text: 'Verified',
+      title: 'This item has local verification evidence.',
+    });
+  }
+
+  return badges;
+};
+
+const PlayerRatingControls = ({ current, onChange, rating }) => {
+  if (!current) return null;
+
+  const summary = getPlayerRatingSummary(current);
+
+  return (
+    <div
+      aria-label="Now playing rating"
+      className={[
+        'player-rating-controls',
+        `player-rating-controls-${summary.tone}`,
+      ].join(' ')}
+      data-testid="player-rating-controls"
+      role="group"
+    >
+      {[1, 2, 3, 4, 5].map((value) => (
+        <Popup
+          content={
+            value === rating
+              ? 'Clear this local rating.'
+              : `Rate this track ${value} out of 5 for local discovery context.`
+          }
+          key={value}
+          trigger={
+            <button
+              aria-label={
+                value === rating
+                  ? `Clear ${value} star rating`
+                  : `Rate ${value} stars`
+              }
+              className={[
+                'player-rating-button',
+                value <= rating ? 'player-rating-button-active' : '',
+              ].filter(Boolean).join(' ')}
+              data-testid={`player-rating-${value}`}
+              onClick={() => onChange(value === rating ? 0 : value)}
+              title={
+                value === rating
+                  ? 'Clear this local rating.'
+                  : `Rate this track ${value} out of 5.`
+              }
+              type="button"
+            >
+              <Icon name={value <= rating ? 'star' : 'star outline'} />
+            </button>
+          }
+        />
+      ))}
+      <span className="player-rating-summary">{summary.label}</span>
+    </div>
+  );
+};
+
+const PlayerRadioModal = ({ current, onClose, onOpenSearch, open }) => {
+  const plan = buildPlayerRadioPlan(current);
+  const copyText = getPlayerRadioCopyText(plan);
+
+  const copyPlan = () => {
+    if (navigator.clipboard && copyText) {
+      navigator.clipboard.writeText(copyText).catch(() => {});
+    }
+  };
+
+  return (
+    <Modal
+      className="player-browser-modal player-radio-modal"
+      onClose={onClose}
+      open={open}
+      size="small"
+    >
+      <Modal.Header>Smart Radio Seed</Modal.Header>
+      <Modal.Content>
+        <p className="player-modal-copy">
+          Build review-first radio searches from the current track. Nothing is
+          searched or queued until you choose a query.
+        </p>
+        <div className="player-radio-seed" data-testid="player-radio-seed">
+          <Icon name="random" />
+          <div>
+            <strong>{plan.seedLabel}</strong>
+            <div>
+              {plan.basis.length > 0 ? plan.basis.join(' | ') : 'Pick a track first.'}
+            </div>
+          </div>
+        </div>
+        <div className="player-radio-query-list">
+          {plan.queries.map((item) => (
+            <div className="player-radio-query" key={item.id}>
+              <div>
+                <Label color="violet" size="mini">
+                  {item.reason}
+                </Label>
+                <code>{item.query}</code>
+              </div>
+              <Popup
+                content="Open this as a normal Search page query. This is the point where network search work can begin."
+                trigger={
+                  <Button
+                    data-testid={`player-radio-search-${item.id}`}
+                    onClick={() => onOpenSearch(item.query)}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="search" />
+                    Search
+                  </Button>
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Copy the generated radio search plan as plain text."
+          trigger={
+            <Button
+              data-testid="player-radio-copy"
+              disabled={!copyText}
+              onClick={copyPlan}
+              type="button"
+            >
+              <Icon name="copy outline" />
+              Copy Plan
+            </Button>
+          }
+        />
+        <Popup
+          content="Close smart radio without starting a search."
+          trigger={
+            <Button
+              data-testid="player-radio-close"
+              onClick={onClose}
+              primary
+              type="button"
+            >
+              <Icon name="check" />
+              Done
+            </Button>
+          }
+        />
+      </Modal.Actions>
+    </Modal>
+  );
+};
+
+const getTrackLabel = (item) =>
+  item?.title || item?.fileName || item?.contentId || 'Untitled track';
+
+const PlayerQueueModal = ({
+  current,
+  history,
+  onClearQueue,
+  onAutoQueueSimilar,
+  onClose,
+  onNext,
+  onPrevious,
+  onRemove,
+  open,
+  queue,
+}) => {
+  const upcoming = queue.slice(1);
+  const similarCandidates = buildSimilarQueueCandidates({
+    current,
+    history,
+    queue,
+  });
+
+  return (
+    <Modal
+      className="player-browser-modal player-queue-modal"
+      onClose={onClose}
+      open={open}
+      size="small"
+    >
+      <Modal.Header>Playback Queue</Modal.Header>
+      <Modal.Content>
+        <div className="player-queue-manager">
+          <section>
+            <div className="player-panel-title">Now Playing</div>
+            <div className="player-queue-manager-row player-queue-manager-current">
+              <Icon name="play circle outline" />
+              <div>
+                <strong>{getTrackLabel(current)}</strong>
+                <span>{current?.artist || 'No active playback'}</span>
+              </div>
+            </div>
+          </section>
+          <section>
+            <div className="player-queue-manager-heading">
+              <div className="player-panel-title">Upcoming</div>
+              <div className="player-queue-manager-actions">
+                <Popup
+                  content="Add similar recent session tracks to the upcoming queue. This only uses tracks already known to this browser session."
+                  trigger={
+                    <Button
+                      data-testid="player-auto-queue-similar"
+                      disabled={similarCandidates.length === 0}
+                      onClick={() =>
+                        onAutoQueueSimilar(
+                          similarCandidates.map((candidate) => candidate.item),
+                        )
+                      }
+                      size="mini"
+                      type="button"
+                    >
+                      <Icon name="magic" />
+                      Auto-fill Similar
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Remove every upcoming item while keeping the current track playing."
+                  trigger={
+                    <Button
+                      data-testid="player-clear-upcoming"
+                      disabled={upcoming.length === 0}
+                      onClick={onClearQueue}
+                      size="mini"
+                      type="button"
+                    >
+                      <Icon name="trash alternate outline" />
+                      Clear Upcoming
+                    </Button>
+                  }
+                />
+              </div>
+            </div>
+            {upcoming.length > 0 ? (
+              <div className="player-queue-manager-list">
+                {upcoming.map((item, index) => (
+                  <div
+                    className="player-queue-manager-row"
+                    data-testid={`player-queue-row-${item.contentId}`}
+                    key={`${item.contentId}-${index}`}
+                  >
+                    <span className="player-queue-manager-index">{index + 1}</span>
+                    <div>
+                      <strong>{getTrackLabel(item)}</strong>
+                      <span>{item.artist || item.album || item.contentId}</span>
+                    </div>
+                    <Popup
+                      content="Remove this upcoming item from the local playback queue."
+                      trigger={
+                        <Button
+                          aria-label={`Remove ${getTrackLabel(item)} from queue`}
+                          data-testid={`player-remove-queue-${item.contentId}`}
+                          icon
+                          onClick={() => onRemove(item.contentId)}
+                          size="mini"
+                          type="button"
+                        >
+                          <Icon name="close" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="player-queue-manager-empty">
+                No upcoming tracks.
+              </div>
+            )}
+          </section>
+          <section>
+            <div className="player-panel-title">Recent</div>
+            {history.length > 0 ? (
+              <div className="player-queue-manager-list">
+                {history.slice(0, 5).map((item, index) => (
+                  <div
+                    className="player-queue-manager-row"
+                    key={`${item.contentId}-${index}`}
+                  >
+                    <Icon name="history" />
+                    <div>
+                      <strong>{getTrackLabel(item)}</strong>
+                      <span>{item.artist || item.album || item.contentId}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="player-queue-manager-empty">
+                No recent tracks in this session.
+              </div>
+            )}
+          </section>
+        </div>
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Jump back to the previous session track, or restart the current track if there is no history."
+          trigger={
+            <Button
+              data-testid="player-queue-previous"
+              disabled={!current}
+              onClick={onPrevious}
+              type="button"
+            >
+              <Icon name="step backward" />
+              Previous
+            </Button>
+          }
+        />
+        <Popup
+          content="Advance to the next queued track."
+          trigger={
+            <Button
+              data-testid="player-queue-next"
+              disabled={queue.length < 2}
+              onClick={onNext}
+              type="button"
+            >
+              <Icon name="step forward" />
+              Next
+            </Button>
+          }
+        />
+        <Popup
+          content="Close the queue manager."
+          trigger={
+            <Button
+              data-testid="player-queue-close"
+              onClick={onClose}
+              primary
+              type="button"
+            >
+              <Icon name="check" />
+              Done
+            </Button>
+          }
+        />
+      </Modal.Actions>
+    </Modal>
+  );
+};
+
+const PlayerStatsModal = ({ onClose, open }) => {
+  const [rangeDays, setRangeDays] = useState(30);
+  const [stats, setStats] = useState(() =>
+    getListeningStats({ rangeDays: 30 }),
+  );
+
+  const refreshStats = useCallback((nextRangeDays = rangeDays) => {
+    setStats(getListeningStats({ rangeDays: nextRangeDays }));
+  }, [rangeDays]);
+
+  useEffect(() => {
+    if (open) refreshStats();
+  }, [open, refreshStats]);
+
+  const clearStats = () => {
+    clearListeningHistory();
+    refreshStats();
+  };
+
+  const updateRange = (nextRangeDays) => {
+    setRangeDays(nextRangeDays);
+    refreshStats(nextRangeDays);
+  };
+
+  const renderList = (items, emptyText) => (
+    items.length > 0 ? (
+      <div className="player-stats-list">
+        {items.map((item, index) => (
+          <div className="player-stats-row" key={`${item.label || item.title}-${index}`}>
+            <span>{index + 1}</span>
+            <strong>{item.label || item.title}</strong>
+            <em>{item.plays ? `${item.plays} plays` : item.artist || item.album || ''}</em>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="player-queue-manager-empty">{emptyText}</div>
+    )
+  );
+
+  return (
+    <Modal
+      className="player-browser-modal player-stats-modal"
+      onClose={onClose}
+      open={open}
+      size="small"
+    >
+      <Modal.Header>Listening Stats</Modal.Header>
+      <Modal.Content>
+        <div className="player-stats-summary" data-testid="player-stats-summary">
+          <Icon name="bar chart" />
+          <div>
+            <strong>{stats.totalPlays}</strong>
+            <span>
+              local plays recorded in this browser
+              {rangeDays ? ` over ${rangeDays} days` : ' overall'}
+            </span>
+          </div>
+        </div>
+        <div className="player-stats-ranges" role="group" aria-label="Listening stats range">
+          {[
+            { label: '7D', value: 7 },
+            { label: '30D', value: 30 },
+            { label: '90D', value: 90 },
+            { label: 'All', value: null },
+          ].map((range) => (
+            <Button
+              active={rangeDays === range.value}
+              data-testid={`player-stats-range-${range.label}`}
+              key={range.label}
+              onClick={() => updateRange(range.value)}
+              size="mini"
+              type="button"
+            >
+              {range.label}
+            </Button>
+          ))}
+        </div>
+        <div className="player-stats-grid">
+          <section>
+            <div className="player-panel-title">Top Artists</div>
+            {renderList(stats.topArtists, 'No artist plays recorded yet.')}
+          </section>
+          <section>
+            <div className="player-panel-title">Top Tracks</div>
+            {renderList(stats.topTracks, 'No track plays recorded yet.')}
+          </section>
+          <section>
+            <div className="player-panel-title">Recent</div>
+            {renderList(stats.recent, 'No recent plays recorded yet.')}
+          </section>
+          <section>
+            <div className="player-panel-title">Forgotten Favorites</div>
+            {renderList(
+              stats.forgottenFavorites,
+              'No older repeat plays outside this range yet.',
+            )}
+          </section>
+        </div>
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Clear only the browser-local listening history used for this stats view."
+          trigger={
+            <Button
+              data-testid="player-clear-listening-history"
+              disabled={stats.totalPlays === 0}
+              onClick={clearStats}
+              type="button"
+            >
+              <Icon name="trash alternate outline" />
+              Clear Local History
+            </Button>
+          }
+        />
+        <Popup
+          content="Close listening stats."
+          trigger={
+            <Button
+              data-testid="player-close-listening-stats"
+              onClick={onClose}
+              primary
+              type="button"
+            >
+              <Icon name="check" />
+              Done
+            </Button>
+          }
+        />
+      </Modal.Actions>
+    </Modal>
+  );
+};
 
 const PlayerLauncher = ({ compact = false, onPlayItem }) => {
   const navigate = useNavigate();
@@ -719,6 +1258,7 @@ const PlayerAnalyzerTile = ({ audioElement, mode, onModeChange }) => {
 };
 
 const PlayerBar = () => {
+  const navigate = useNavigate();
   const audioRef = useRef(null);
   const fadeAudioRef = useRef(null);
   const lastSourceRef = useRef('');
@@ -726,13 +1266,16 @@ const PlayerBar = () => {
   const scrobbledRef = useRef('');
   const pipRef = useRef({ raf: null, win: null });
   const {
+    clearQueue,
     clear,
     current,
     followingParty,
+    history,
     next,
     pause,
     queue,
     previous,
+    queueItems,
     removeFromQueue,
     seekRelative,
     setAudioElement,
@@ -766,11 +1309,15 @@ const PlayerBar = () => {
     listenBrainz.getListenBrainzToken(),
   );
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [radioOpen, setRadioOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [externalVisualizerStatus, setExternalVisualizerStatus] = useState(null);
   const [externalVisualizerLoading, setExternalVisualizerLoading] = useState(false);
   const [externalVisualizerLaunching, setExternalVisualizerLaunching] = useState(false);
   const [externalVisualizerMessage, setExternalVisualizerMessage] = useState('');
   const [playerAudioElement, setPlayerAudioElement] = useState(null);
+  const [playerRating, setPlayerRatingState] = useState(0);
   const [source, setSource] = useState('');
 
   const refreshExternalVisualizerStatus = useCallback(() => {
@@ -907,6 +1454,28 @@ const PlayerBar = () => {
   };
 
   useEffect(() => {
+    setPlayerRatingState(getPlayerRating(current));
+  }, [current]);
+
+  const updatePlayerRating = (rating) => {
+    setPlayerRatingState(setPlayerRating(current, rating));
+  };
+
+  const openRadioSearch = (query) => {
+    setRadioOpen(false);
+    navigate(buildPlayerRadioSearchPath(query));
+  };
+
+  const togglePlayback = useCallback(() => {
+    if (!audioRef.current || !current) return;
+    if (playing) {
+      pause();
+    } else {
+      playAudio().catch(() => {});
+    }
+  }, [current, pause, playAudio, playing]);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (!current) {
@@ -941,6 +1510,45 @@ const PlayerBar = () => {
       cancelled = true;
     };
   }, [current]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const action = getPlayerShortcutAction(event);
+      if (!action || !current) return;
+
+      event.preventDefault();
+
+      if (action === 'togglePlayback') {
+        togglePlayback();
+      } else if (action === 'seekBackward') {
+        seekRelative(-15);
+      } else if (action === 'seekForward') {
+        seekRelative(30);
+      } else if (action === 'previous') {
+        previous();
+      } else if (action === 'next') {
+        next();
+      } else if (action === 'toggleMute') {
+        setLocalMuted((muted) => !muted);
+      } else if (action === 'toggleEqualizer') {
+        setEqPanelOpen((open) => !open);
+      } else if (action === 'toggleLyrics') {
+        setLyricsOpen((open) => !open);
+      } else if (action === 'toggleVisualizer') {
+        toggleVisualizer();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    current,
+    next,
+    previous,
+    seekRelative,
+    togglePlayback,
+    toggleVisualizer,
+  ]);
 
   useEffect(() => {
     if (!audioRef.current || !source) return;
@@ -981,10 +1589,11 @@ const PlayerBar = () => {
         : 240;
       const scrobbleKey = `${current.contentId}:${current.title}`;
 
-      if (audioElement.currentTime >= threshold && scrobbledRef.current !== scrobbleKey) {
-        scrobbledRef.current = scrobbleKey;
-        listenBrainz.submitListen('single', current).catch(() => {});
-      }
+        if (audioElement.currentTime >= threshold && scrobbledRef.current !== scrobbleKey) {
+          scrobbledRef.current = scrobbleKey;
+          recordLocalPlay(current);
+          listenBrainz.submitListen('single', current).catch(() => {});
+        }
     };
 
     audioElement.addEventListener('timeupdate', handleTimeUpdate);
@@ -1101,6 +1710,7 @@ const PlayerBar = () => {
       <audio preload="metadata" ref={fadeAudioRef} />
     </>
   );
+  const playerBadges = getPlayerBadges(current);
 
   if (collapsed) {
     return (
@@ -1134,14 +1744,7 @@ const PlayerBar = () => {
             data-testid="player-collapsed-toggle-playback"
             disabled={!current}
             icon={playing ? 'pause' : 'play'}
-            onClick={() => {
-              if (!audioRef.current) return;
-              if (playing) {
-                pause();
-              } else {
-                playAudio().catch(() => {});
-              }
-            }}
+            onClick={togglePlayback}
           />
           <PlayerToolButton
             content={
@@ -1190,6 +1793,30 @@ const PlayerBar = () => {
                   {current?.album ? ` | ${current.album}` : ''}
                   {followingParty ? ` | Following ${followingParty.hostPeerId}` : ''}
                 </div>
+                {current ? (
+                  <div className="player-now-playing-meta">
+                    <div className="player-now-playing-badges">
+                      {playerBadges.map((badge) => (
+                        <Label
+                          className="player-now-playing-badge"
+                          color={badge.color}
+                          data-testid={`player-badge-${badge.key}`}
+                          key={badge.key}
+                          size="mini"
+                          title={badge.title}
+                        >
+                          <Icon name={badge.icon} />
+                          {badge.text}
+                        </Label>
+                      ))}
+                    </div>
+                    <PlayerRatingControls
+                      current={current}
+                      onChange={updatePlayerRating}
+                      rating={playerRating}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="player-display-analyzers">
@@ -1227,14 +1854,7 @@ const PlayerBar = () => {
               data-testid="player-toggle-playback"
               disabled={!current}
               icon={playing ? 'pause' : 'play'}
-              onClick={() => {
-                if (!audioRef.current) return;
-                if (playing) {
-                  pause();
-                } else {
-                  playAudio().catch(() => {});
-                }
-              }}
+              onClick={togglePlayback}
             />
             <PlayerToolButton
               content="Fast-forward local playback by 30 seconds."
@@ -1265,6 +1885,15 @@ const PlayerBar = () => {
             <PlayerLauncher
               compact
               onPlayItem={(item) => playItem(item, { replaceQueue: true })}
+            />
+            <PlayerToolButton
+              active={queueOpen}
+              content="Open the playback queue manager with current, upcoming, and recent session tracks."
+              aria-label="Open playback queue"
+              data-testid="player-open-queue"
+              disabled={!current}
+              icon="list ol"
+              onClick={() => setQueueOpen(true)}
             />
             <PlayerToolButton
               active={localMuted}
@@ -1319,6 +1948,21 @@ const PlayerBar = () => {
               disabled={!current}
               icon="align left"
               onClick={() => setLyricsOpen((open) => !open)}
+            />
+            <PlayerToolButton
+              content="Build smart-radio search seeds from the current track without starting network work yet."
+              aria-label="Open smart radio seeds"
+              data-testid="player-open-radio"
+              disabled={!current}
+              icon="random"
+              onClick={() => setRadioOpen(true)}
+            />
+            <PlayerToolButton
+              content="Show local listening stats recorded in this browser."
+              aria-label="Open listening stats"
+              data-testid="player-open-listening-stats"
+              icon="bar chart"
+              onClick={() => setStatsOpen(true)}
             />
           </div>
           <div className="player-control-row">
@@ -1530,6 +2174,28 @@ const PlayerBar = () => {
           />
         </Modal.Actions>
       </Modal>
+      <PlayerRadioModal
+        current={current}
+        onClose={() => setRadioOpen(false)}
+        onOpenSearch={openRadioSearch}
+        open={radioOpen}
+      />
+      <PlayerQueueModal
+        current={current}
+        history={history}
+        onAutoQueueSimilar={queueItems}
+        onClearQueue={clearQueue}
+        onClose={() => setQueueOpen(false)}
+        onNext={next}
+        onPrevious={previous}
+        onRemove={removeFromQueue}
+        open={queueOpen}
+        queue={queue}
+      />
+      <PlayerStatsModal
+        onClose={() => setStatsOpen(false)}
+        open={statsOpen}
+      />
       {current && queue.length > 1 ? (
         <div className="player-queue">
           {queue.slice(1, 4).map((item) => (

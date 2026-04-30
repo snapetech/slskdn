@@ -1,3 +1,126 @@
+## 2026-04-30 20:47:21Z - Added Discovery Inbox impact summary
+
+- Continued the beginning-lane burn-down with the next Discovery Inbox review slice.
+- Added a local impact classifier for saved candidates: Local/manual, Provider review, Network risk, and Needs estimate.
+- Surfaced aggregate batch-readiness counts and per-candidate impact labels before approval or plan creation.
+- Kept the slice evidence-only: no provider lookup, peer browse, search, download, automation, or file mutation is started.
+- Validation: focused Discovery Inbox review helper/component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:50:41Z - Added listening time ranges and forgotten favorites
+
+- Continued Epic E14 listening intelligence with browser-local stats refinements.
+- Added 7-day, 30-day, 90-day, and all-time filters to the player Listening Stats modal.
+- Added forgotten-favorite derivation from repeat local plays whose latest play falls outside the selected stats range.
+- Kept the slice local-only: no recommendation provider, scrobbling service, media-server API, search, download, or file mutation is triggered.
+- Validation: focused listening history, player auto-queue, radio, shortcut, rating, and PlayerBar tests passed.
+
+## 2026-04-30 20:45:37Z - Added browser-local listening history and stats
+
+- Moved one step earlier in the tail-side burn-down to Epic E14 listening intelligence.
+- Added browser-local play history recording at the existing scrobble threshold with short-window duplicate suppression.
+- Added a Listening Stats modal in the player showing total local plays, recent plays, top artists, and top tracks, plus a clear-local-history action.
+- Kept the slice local-only: stats do not scrobble, import media-server history, fetch recommendations, search, download, or mutate files.
+- Validation: focused listening history, player auto-queue, radio, shortcut, rating, and PlayerBar tests passed.
+
+## 2026-04-30 20:41:25Z - Added bounded player similar-track auto-queue
+
+- Continued the tail-side Epic E15 burn-down with a bounded similar-track auto-queue slice.
+- Added a browser-local auto-queue scorer that compares recent session tracks against the current item by artist, album, genre/tag, and title-token overlap.
+- Wired Queue Manager `Auto-fill Similar` to append matching recent tracks that are not already queued.
+- Kept the slice local-only: it uses only browser session history and does not search, browse peers, stream, download, call metadata services, or mutate files.
+- Validation: focused player auto-queue, radio, shortcut, rating, and PlayerBar tests passed.
+
+## 2026-04-30 20:40:26Z - Added album decision rule previews
+
+- Continued the beginning-lane Epic 4 interactive album picker burn-down with local decision-rule preview scaffolding.
+- Added a browser-local album decision rule store that records normalized album/search identity, expected track count, format policy, warnings, and substitution tracks.
+- Added a Search album candidate action to save a visible candidate as a local rule preview without affecting searches, ranking, downloads, peer browsing, or planner behavior.
+- Validation: focused album decision rule, album candidate, and Search component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:48:35Z - Added MusicBrainz overlay export review API
+
+- Continued the center-lane T-935 follow-up work while avoiding active frontend and source-feed lanes.
+- Added MusicBrainz overlay export review packages for stored signed overlay edits, including upstream target, proposed change, and evidence.
+- Added explicit local export approval records with safe approver validation and idempotent approvals.
+- Kept the path manual-only: approving export does not submit to MusicBrainz, mutate cached MusicBrainz payloads, or publish edits to peers.
+- Validation: focused `MusicBrainzOverlay` tests passed (`15/15`), `git diff --check` passed, `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3707` unit tests, `276` integration tests).
+
+## 2026-04-30 20:39:16Z - Added Quarantine Jury manual acceptance API
+
+- Continued the center-lane T-936 follow-up work while avoiding active frontend lanes.
+- Added a Quarantine Jury review projection that returns request evidence, signed verdicts, route attempts, aggregate recommendation, acceptance eligibility, and prior acceptance status.
+- Added a persisted manual release-candidate acceptance decision that is allowed only after a release-candidate supermajority, is idempotent, validates safe operator identifiers, and does not mutate local quarantine state.
+- Split the browser Quarantine Jury review UI into a follow-up task so the current backend contract can land without colliding with concurrent frontend work.
+- Validation: focused `QuarantineJury` tests passed (`29/29`), `git diff --check` passed, `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3698` unit tests, `276` integration tests).
+
+## 2026-04-30 20:38:05Z - Added player queue manager
+
+- Continued the tail-side Epic E15 burn-down with playback queue management.
+- Exposed recent player history and a clear-upcoming action from PlayerContext.
+- Added a Queue Manager modal showing current track, full upcoming queue, and recent session tracks with tooltip-backed remove, clear, previous, next, and close controls.
+- Kept the slice playback-local: queue management does not start searches, downloads, recommendation fetches, peer browses, or file mutations.
+- Validation: focused player radio, shortcut, rating, and PlayerBar tests passed.
+
+## 2026-04-30 20:34:08Z - Added album substitution option hints
+
+- Continued the beginning-lane Epic 4 interactive album picker burn-down with manual substitution scaffolding.
+- Album candidates now preserve per-track visible source options and expose substitution hints when multiple peers/providers offer the same parsed track number.
+- Fixed and documented the album candidate track-count gotcha where duplicate alternates must not inflate expected album length or extra-track warnings.
+- Kept the slice review-only: no alternate is selected, no rule is saved, and no peer browse, provider query, download, stream, metadata lookup, or file mutation is started.
+- Validation: focused album candidate and Search component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:34:06Z - Expanded non-Spotify source feed URL imports
+
+- Continued T-939 source-feed provider work beyond Spotify.
+- Added Apple Music/iTunes lookup for URLs with numeric Apple ids, preferring selected track ids from the `i` query parameter before album path ids.
+- Added ListenBrainz public-listens import from user profile URLs.
+- Added metadata-page fallback for YouTube, Bandcamp, Last.fm, and Apple provider URLs using Open Graph/title metadata when no structured provider fetcher is available.
+- Added provider choices to the Wishlist Import Feed source-type menu.
+- Documented and committed the Apple Music track-id gotcha as `e08e73774`.
+- Validation: focused source-feed tests passed (`8/8`), backend `slskd.csproj` build passed, Wishlist tests passed, and frontend lint passed.
+
+## 2026-04-30 20:34:39Z - Added player smart-radio seed handoff
+
+- Continued the tail-side feature-expansion burn-down with the next Epic E15 smart-radio/similar-track slice.
+- Added a browser-local radio planner that derives similar-track, album-neighborhood, artist/genre, and artist-radio Search handoff queries from now-playing metadata.
+- Added a Smart Radio Seed modal in PlayerBar with explicit per-query Search buttons and copyable plan text.
+- Kept the slice review-first: opening the modal does not search, auto-queue, browse peers, stream, download, or mutate playback.
+- Documented and committed the empty metadata array fallback gotcha as `939914cc7`.
+- Validation: focused player radio, shortcut, rating, and PlayerBar tests passed.
+
+## 2026-04-30 20:29:12Z - Added player keyboard shortcuts
+
+- Continued the tail-side feature-expansion burn-down with the next Epic E15 player enhancement.
+- Added a browser-local shortcut mapper for play/pause, seeking, previous/next, mute, equalizer, lyrics, and visualizer controls.
+- Wired PlayerBar to handle those shortcuts globally only when a track is active, while ignoring editable controls and modified browser/system key chords.
+- Kept the slice local-only: no queue generation, smart radio, network lookup, stream mutation, or Discovery Shelf sync is triggered.
+- Validation: focused player shortcut, player rating, and PlayerBar tests passed.
+
+## 2026-04-30 20:29:15Z - Added quarantine jury pod routing attempts
+
+- Continued the remaining feature burn-down with the next Quarantine Jury slice.
+- Added PodCore-backed route attempts for selected safe jurors, including failed-juror tracking and persisted dispatch history.
+- Exposed route dispatch and route history endpoints under the Quarantine Jury API.
+- Kept routing constrained to already-selected jurors and safe opaque references; invalid or unavailable routing attempts do not contact peers.
+- Validation: focused `QuarantineJury` tests passed (`19/19`), `git diff --check` passed, `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3683` unit tests, `276` integration tests).
+
+## 2026-04-30 20:26:18Z - Added album candidate review details
+
+- Continued the beginning-lane feature-expansion burn-down with the next Epic 4 interactive album picker slice.
+- Extended browser-local album candidate summaries with format mix, missing track numbers, duration spread, and confidence warnings from already-returned search metadata.
+- Surfaced those details in the Search album candidate panel with warning tooltips that clarify the checks are local review hints only.
+- Kept the slice non-networking: no peer browse, provider query, metadata lookup, download, stream, file mutation, or rule save is started.
+- Validation: focused album candidate, search deduplication, and Search component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:25:56Z - Added player ratings and now-playing evidence badges
+
+- Continued the tail-side feature-expansion burn-down with Epic E15 player enhancements.
+- Added browser-local ratings for now-playing tracks, keyed by content id when available and metadata otherwise.
+- Preserved source providers, match confidence, and verification evidence through the player context and rendered compact now-playing badges beside the track metadata.
+- Kept ratings local-only: no discovery sync, auto-download, deletion, mesh publication, or media-server rating sync is triggered by this slice.
+- Documented and committed the empty now-playing helper gotcha as `534c4d34c`.
+- Validation: focused player ratings and PlayerBar tests passed.
+
 ## 2026-04-30 20:23:47Z - Added Spotify account connection for source feeds
 
 - Added a backend Spotify connection service/API for OAuth authorization, PKCE state handling, encrypted refresh-token persistence, access-token refresh, status, and disconnect.
@@ -8241,3 +8364,18 @@ Code quality improvements were completed as part of Option A:
 - Added startup compatibility warnings for top-level `groups`, `transfers.limits`, and legacy `global` usage so operators get migration guidance without a breaking config change.
 - Updated README, config docs, and `config/slskd.example.yml` to present `transfers.upload.limits` and `transfers.groups` as the preferred shape.
 - Validation: `dotnet build src/slskd/slskd.csproj --no-restore`, focused YAML/config-warning unit tests, `bash bin/lint`, and `git diff --check` passed. Full `dotnet test` has one unrelated failure in `ContentVerificationServiceTests.VerifySourcesAsync_WhenDownloadThrows_ReturnsSanitizedFailureReason`.
+
+## 2026-04-30 20:41:14Z
+
+- Continued T-939 source-feed provider imports with optional API-key backed YouTube and Last.fm fetchers.
+- YouTube playlist URLs now expand through the YouTube Data API when `integrations.youtube.api_key` is configured, preserving video provenance links.
+- Last.fm user URLs now import loved, recent, or top tracks through the Last.fm API when `integrations.lastfm.api_key` is configured.
+- Updated the example config, changelog, federation plan, and task notes to reflect the new provider depth.
+- Validation: focused `SourceFeedImportServiceTests`, backend build, Wishlist tests, frontend lint, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` all passed.
+
+## 2026-04-30 20:53:19Z
+
+- Added Web UI controls for the source-feed provider settings added in T-939.
+- Extended the runtime options overlay to cover source-feed integration settings for Spotify, YouTube, and Last.fm.
+- Added explicit `enabled` toggles for YouTube and Last.fm provider fetchers so configured API keys can be kept off until an operator enables them.
+- System Integrations now shows masked credential state, editable replacement credential fields, validation warnings, and tooltip-backed apply/reset actions for Spotify, YouTube, and Last.fm.

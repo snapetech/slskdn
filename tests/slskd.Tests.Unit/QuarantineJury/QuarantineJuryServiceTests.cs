@@ -4,6 +4,8 @@
 namespace slskd.Tests.Unit.QuarantineJury;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using slskd.PodCore;
 using slskd.QuarantineJury;
 
 public sealed class QuarantineJuryServiceTests
@@ -138,6 +140,241 @@ public sealed class QuarantineJuryServiceTests
         Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, aggregate.Recommendation);
     }
 
+    [Fact]
+    public async Task RouteRequestAsync_RoutesOnlySelectedSafeJurors()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.RouteMessageToPeersAsync(
+                It.IsAny<PodMessage>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodMessageRoutingResult(
+                Success: true,
+                MessageId: "message-1",
+                PodId: "quarantine-jury",
+                TargetPeerCount: 1,
+                SuccessfullyRoutedCount: 1,
+                FailedRoutingCount: 0,
+                RoutingDuration: TimeSpan.FromMilliseconds(1)));
+        var service = CreateService(CreateStoragePath(), router.Object);
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+
+        var attempt = await service.RouteRequestAsync(
+            request.Id,
+            new QuarantineJuryRouteRequest
+            {
+                TargetJurors = new List<string> { " actor:bob ", "actor:bob" },
+            });
+
+        Assert.True(attempt.Success);
+        Assert.Equal(new[] { "actor:bob" }, attempt.TargetJurors);
+        Assert.Equal(new[] { "actor:bob" }, attempt.RoutedJurors);
+        router.Verify(service => service.RouteMessageToPeersAsync(
+            It.Is<PodMessage>(message =>
+                message.PodId == "quarantine-jury" &&
+                message.ChannelId == $"request:{request.Id}" &&
+                message.Body.Contains("request-1")),
+            It.Is<IEnumerable<string>>(targets => targets.SequenceEqual(new[] { "actor:bob" })),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RouteRequestAsync_RejectsUnselectedJurorWithoutRouting()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        var service = CreateService(CreateStoragePath(), router.Object);
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+
+        var attempt = await service.RouteRequestAsync(
+            request.Id,
+            new QuarantineJuryRouteRequest
+            {
+                TargetJurors = new List<string> { "actor:mallory" },
+            });
+
+        Assert.False(attempt.Success);
+        Assert.Equal("Route targets must be selected safe jurors.", attempt.ErrorMessage);
+        router.Verify(service => service.RouteMessageToPeersAsync(
+            It.IsAny<PodMessage>(),
+            It.IsAny<IEnumerable<string>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RouteRequestAsync_RejectsUnsafeRouteMetadataWithoutRouting()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        var service = CreateService(CreateStoragePath(), router.Object);
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+
+        var attempt = await service.RouteRequestAsync(
+            request.Id,
+            new QuarantineJuryRouteRequest
+            {
+                ChannelId = "/home/user/private-jury-channel",
+                TargetJurors = new List<string> { "actor:alice" },
+            });
+
+        Assert.False(attempt.Success);
+        Assert.Equal("Route metadata must be opaque and safe.", attempt.ErrorMessage);
+        router.Verify(service => service.RouteMessageToPeersAsync(
+            It.IsAny<PodMessage>(),
+            It.IsAny<IEnumerable<string>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RouteRequestAsync_PersistsRouteAttempts()
+    {
+        var storagePath = CreateStoragePath();
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.RouteMessageToPeersAsync(
+                It.IsAny<PodMessage>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodMessageRoutingResult(
+                Success: false,
+                MessageId: "message-1",
+                PodId: "quarantine-jury",
+                TargetPeerCount: 2,
+                SuccessfullyRoutedCount: 1,
+                FailedRoutingCount: 1,
+                RoutingDuration: TimeSpan.FromMilliseconds(1),
+                ErrorMessage: "partial route failure",
+                FailedPeerIds: new[] { "actor:bob" }));
+        var service = CreateService(storagePath, router.Object);
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+
+        await service.RouteRequestAsync(request.Id, new QuarantineJuryRouteRequest());
+
+        var reloaded = CreateService(storagePath);
+        var attempts = await reloaded.GetRouteAttemptsAsync(request.Id);
+        var attempt = Assert.Single(attempts);
+        Assert.False(attempt.Success);
+        Assert.Equal(new[] { "actor:bob" }, attempt.FailedJurors);
+        Assert.Equal(new[] { "actor:alice" }, attempt.RoutedJurors);
+    }
+
+    [Fact]
+    public async Task GetReviewAsync_ReturnsManualReviewSurface()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+
+        var review = await service.GetReviewAsync(request.Id);
+
+        Assert.NotNull(review);
+        Assert.Equal(request.Id, review.Request.Id);
+        Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, review.Aggregate.Recommendation);
+        Assert.Equal(2, review.Verdicts.Count);
+        Assert.True(review.CanAcceptReleaseCandidate);
+        Assert.Equal("Release-candidate recommendation can be accepted manually.", review.AcceptanceReason);
+    }
+
+    [Fact]
+    public async Task AcceptReleaseCandidateAsync_RejectsWhenRecommendationIsNotReleaseCandidate()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.UpholdQuarantine);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.UpholdQuarantine);
+
+        var result = await service.AcceptReleaseCandidateAsync(
+            request.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "actor:operator",
+            });
+
+        Assert.False(result.IsAccepted);
+        Assert.Contains("Only a release-candidate supermajority can be accepted.", result.Errors);
+    }
+
+    [Fact]
+    public async Task AcceptReleaseCandidateAsync_StoresManualAcceptanceWithoutChangingAggregate()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+
+        var result = await service.AcceptReleaseCandidateAsync(
+            request.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "actor:operator",
+                Note = "manual local acceptance",
+            });
+        var aggregate = await service.GetAggregateAsync(request.Id);
+        var review = await service.GetReviewAsync(request.Id);
+
+        Assert.True(result.IsAccepted);
+        Assert.NotNull(result.Decision);
+        Assert.Equal("actor:operator", result.Decision.AcceptedBy);
+        Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, result.Decision.AcceptedRecommendation);
+        Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, aggregate.Recommendation);
+        Assert.NotNull(review);
+        Assert.NotNull(review.Acceptance);
+        Assert.False(review.CanAcceptReleaseCandidate);
+        Assert.Equal("Release-candidate recommendation has already been accepted.", review.AcceptanceReason);
+    }
+
+    [Fact]
+    public async Task AcceptReleaseCandidateAsync_RejectsUnsafeAcceptedByIdentifier()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+
+        var result = await service.AcceptReleaseCandidateAsync(
+            request.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "/home/user/private-operator",
+            });
+
+        Assert.False(result.IsAccepted);
+        Assert.Contains("Accepted-by identifier must be opaque and safe.", result.Errors);
+    }
+
+    [Fact]
+    public async Task Constructor_LoadsPersistedReviewDecision()
+    {
+        var storagePath = CreateStoragePath();
+        var service = CreateService(storagePath);
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+        await service.AcceptReleaseCandidateAsync(
+            request.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "actor:operator",
+            });
+
+        var reloaded = CreateService(storagePath);
+        var review = await reloaded.GetReviewAsync(request.Id);
+
+        Assert.NotNull(review);
+        Assert.NotNull(review.Acceptance);
+        Assert.Equal("actor:operator", review.Acceptance.AcceptedBy);
+        Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, review.Acceptance.AggregateSnapshot.Recommendation);
+    }
+
     private static QuarantineJuryService CreateService()
     {
         return CreateService(CreateStoragePath());
@@ -148,6 +385,14 @@ public sealed class QuarantineJuryServiceTests
         return new QuarantineJuryService(
             NullLogger<QuarantineJuryService>.Instance,
             storagePath);
+    }
+
+    private static QuarantineJuryService CreateService(string storagePath, IPodMessageRouter messageRouter)
+    {
+        return new QuarantineJuryService(
+            NullLogger<QuarantineJuryService>.Instance,
+            storagePath,
+            messageRouter);
     }
 
     private static string CreateStoragePath()

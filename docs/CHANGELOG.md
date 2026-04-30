@@ -22,6 +22,26 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added Quarantine Jury route attempts over PodCore, including route attempt
+  persistence and API endpoints for dispatch history.
+- Added Quarantine Jury manual review and acceptance API endpoints that record
+  explicit local release-candidate acceptance without mutating quarantine state.
+- Added MusicBrainz overlay export review and approval API endpoints for manual
+  upstream submission workflows without auto-submitting edits.
+- Added browser-local listening history and player listening stats for recent
+  plays, top artists, and top tracks.
+- Added listening stats time-range filters and browser-local forgotten-favorite
+  derivation from older repeat plays.
+- Added bounded player similar-track auto-queue from already-known recent
+  session tracks.
+- Added a player queue manager modal with current, upcoming, recent-session,
+  remove, clear-upcoming, previous, and next controls.
+- Added a review-first smart-radio seed modal in the player that creates
+  explicit Search handoff queries from the current track metadata.
+- Added keyboard shortcuts for player playback, seeking, mute, equalizer,
+  lyrics, and visualizer controls while ignoring editable fields.
+- Added browser-local now-playing ratings plus source, match-confidence, and
+  verification badges in the player display.
 - Added a conservative per-artist release radar service that turns
   SongID-confirmed federated WorkRef observations into local notifications
   without polling MusicBrainz, browsing peers, searching Soulseek, or starting
@@ -36,6 +56,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
   authorization, encrypted refresh-token storage, token refresh, disconnect,
   and Wishlist Import Feed controls that use the connected account for private
   liked/saved/followed playlist feeds.
+- Expanded non-Spotify source-feed URL imports with Apple Music/iTunes lookup,
+  ListenBrainz public-listens import, and metadata-page fallback for YouTube,
+  Bandcamp, Last.fm, and Apple URLs.
+- Added optional API-key backed source-feed expansion for YouTube playlists and
+  Last.fm loved/recent/top track URLs.
+- Added System Integrations controls for source-feed provider settings,
+  including Spotify, YouTube, and Last.fm on/off toggles, masked credential
+  inputs, validation warnings, and tooltip-backed apply/reset actions.
 - Added a redacted browser diagnostic bundle in System Info that can be
   inspected and copied without exposing passwords, tokens, cookies, secrets, or
   API keys.

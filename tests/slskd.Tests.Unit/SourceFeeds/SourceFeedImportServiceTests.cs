@@ -138,10 +138,180 @@ public class SourceFeedImportServiceTests
         Assert.Equal("connected-token", handler.Requests[0].Headers.Authorization?.Parameter);
     }
 
+    [Fact]
+    public async Task PreviewAsync_AppleMusicUrl_FetchesItunesLookupRows()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueJson(
+            """
+            {
+              "resultCount": 1,
+              "results": [
+                {
+                  "trackId": 123,
+                  "trackName": "Song",
+                  "artistName": "Artist",
+                  "collectionName": "Album",
+                  "trackViewUrl": "https://music.apple.com/us/album/song/456?i=123"
+                }
+              ]
+            }
+            """);
+        var service = CreateService(handler);
+
+        var result = await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "https://music.apple.com/us/album/album/456?i=123",
+            SourceKind = "auto",
+            FetchProviderUrls = true,
+        });
+
+        var suggestion = Assert.Single(result.Suggestions);
+        Assert.Equal("Artist Song Album", suggestion.SearchText);
+        Assert.Equal("apple", suggestion.Source);
+        Assert.Equal(1, result.NetworkRequestCount);
+        Assert.Contains("itunes.apple.com/lookup?id=123", handler.Requests[0].RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task PreviewAsync_ListenBrainzUserUrl_FetchesPublicListens()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueJson(
+            """
+            {
+              "payload": {
+                "listens": [
+                  {
+                    "track_metadata": {
+                      "artist_name": "Artist",
+                      "track_name": "Song",
+                      "release_name": "Album",
+                      "additional_info": { "recording_msid": "msid-1" }
+                    }
+                  }
+                ]
+              }
+            }
+            """);
+        var service = CreateService(handler);
+
+        var result = await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "https://listenbrainz.org/user/demo/listens/",
+            SourceKind = "auto",
+            FetchProviderUrls = true,
+        });
+
+        var suggestion = Assert.Single(result.Suggestions);
+        Assert.Equal("Artist Song Album", suggestion.SearchText);
+        Assert.Equal("listenbrainz:listens", suggestion.Source);
+        Assert.Equal("msid-1", suggestion.SourceId);
+        Assert.Contains("/1/user/demo/listens", handler.Requests[0].RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task PreviewAsync_ProviderMetadataPage_FallsBackToOgTitle()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueHtml(
+            """
+            <html>
+              <head>
+                <meta property="og:title" content="Artist - Song | Bandcamp">
+              </head>
+            </html>
+            """);
+        var service = CreateService(handler);
+
+        var result = await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "https://artist.bandcamp.com/track/song",
+            SourceKind = "auto",
+            FetchProviderUrls = true,
+        });
+
+        var suggestion = Assert.Single(result.Suggestions);
+        Assert.Equal("Artist Song", suggestion.SearchText);
+        Assert.Equal("bandcamp", suggestion.Source);
+        Assert.Equal("https://artist.bandcamp.com/track/song", suggestion.ProviderUrl);
+    }
+
+    [Fact]
+    public async Task PreviewAsync_YouTubePlaylistWithApiKey_FetchesPlaylistItems()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueJson(
+            """
+            {
+              "items": [
+                {
+                  "snippet": {
+                    "title": "Artist - Song",
+                    "resourceId": { "videoId": "video-1" }
+                  }
+                }
+              ]
+            }
+            """);
+        var service = CreateService(handler, youtubeApiKey: "youtube-key");
+
+        var result = await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "https://www.youtube.com/playlist?list=playlist-1",
+            SourceKind = "auto",
+            FetchProviderUrls = true,
+        });
+
+        var suggestion = Assert.Single(result.Suggestions);
+        Assert.Equal("Artist Song", suggestion.SearchText);
+        Assert.Equal("youtube:playlist", suggestion.Source);
+        Assert.Equal("video-1", suggestion.SourceId);
+        Assert.Contains("playlistItems", handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains("playlistId=playlist-1", handler.Requests[0].RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task PreviewAsync_LastFmLovedWithApiKey_FetchesLovedTracks()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueJson(
+            """
+            {
+              "lovedtracks": {
+                "track": [
+                  {
+                    "name": "Song",
+                    "mbid": "recording-1",
+                    "url": "https://www.last.fm/music/Artist/_/Song",
+                    "artist": { "name": "Artist" }
+                  }
+                ]
+              }
+            }
+            """);
+        var service = CreateService(handler, lastFmApiKey: "lastfm-key");
+
+        var result = await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "https://www.last.fm/user/demo/loved",
+            SourceKind = "auto",
+            FetchProviderUrls = true,
+        });
+
+        var suggestion = Assert.Single(result.Suggestions);
+        Assert.Equal("Artist Song", suggestion.SearchText);
+        Assert.Equal("lastfm:loved", suggestion.Source);
+        Assert.Equal("recording-1", suggestion.SourceId);
+        Assert.Contains("method=user.getlovedtracks", handler.Requests[0].RequestUri!.ToString());
+    }
+
     private static SourceFeedImportService CreateService(
         QueueHttpHandler handler,
         bool spotifyEnabled = false,
-        string connectedSpotifyToken = "")
+        string connectedSpotifyToken = "",
+        string youtubeApiKey = "",
+        string lastFmApiKey = "")
     {
         var httpClient = new HttpClient(handler);
         var factory = new Mock<IHttpClientFactory>();
@@ -156,6 +326,16 @@ public class SourceFeedImportServiceTests
                     Enabled = spotifyEnabled,
                     ClientId = spotifyEnabled ? "client" : string.Empty,
                     ClientSecret = spotifyEnabled ? "secret" : string.Empty,
+                },
+                YouTube = new global::slskd.Options.IntegrationOptions.YouTubeOptions
+                {
+                    Enabled = !string.IsNullOrWhiteSpace(youtubeApiKey),
+                    ApiKey = youtubeApiKey,
+                },
+                LastFm = new global::slskd.Options.IntegrationOptions.LastFmOptions
+                {
+                    Enabled = !string.IsNullOrWhiteSpace(lastFmApiKey),
+                    ApiKey = lastFmApiKey,
                 },
             },
         });
@@ -179,6 +359,14 @@ public class SourceFeedImportServiceTests
             responses.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            });
+        }
+
+        public void EnqueueHtml(string html)
+        {
+            responses.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(html, Encoding.UTF8, "text/html"),
             });
         }
 

@@ -18,4 +18,20 @@ public interface IQuarantineJuryService
         CancellationToken cancellationToken = default);
 
     Task<QuarantineJuryAggregate> GetAggregateAsync(string requestId, CancellationToken cancellationToken = default);
+
+    Task<QuarantineJuryReview?> GetReviewAsync(string requestId, CancellationToken cancellationToken = default);
+
+    Task<QuarantineJuryAcceptanceResult> AcceptReleaseCandidateAsync(
+        string requestId,
+        QuarantineJuryAcceptanceRequest acceptanceRequest,
+        CancellationToken cancellationToken = default);
+
+    Task<QuarantineJuryRouteAttempt> RouteRequestAsync(
+        string requestId,
+        QuarantineJuryRouteRequest routeRequest,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<QuarantineJuryRouteAttempt>> GetRouteAttemptsAsync(
+        string requestId,
+        CancellationToken cancellationToken = default);
 }

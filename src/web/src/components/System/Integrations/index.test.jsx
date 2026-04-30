@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import * as lidarr from '../../../lib/lidarr';
+import * as optionsApi from '../../../lib/options';
 import Integrations from './index';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -10,6 +11,10 @@ vi.mock('../../../lib/lidarr', () => ({
   getWantedMissing: vi.fn(),
   importCompletedDirectory: vi.fn(),
   syncWanted: vi.fn(),
+}));
+
+vi.mock('../../../lib/options', () => ({
+  applyOverlay: vi.fn(),
 }));
 
 describe('Integrations', () => {
@@ -129,5 +134,79 @@ describe('Integrations', () => {
     expect(screen.getByText('Base URL configured')).toBeInTheDocument();
     expect(screen.getByText('Wanted pull enabled')).toBeInTheDocument();
     expect(screen.queryByText('fixture-key')).not.toBeInTheDocument();
+  });
+
+  it('applies source-feed integration toggles without exposing secrets', async () => {
+    optionsApi.applyOverlay.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            lastfm: {
+              apiKey: '*****',
+              enabled: false,
+            },
+            spotify: {
+              clientId: '*****',
+              clientSecret: '*****',
+              enabled: false,
+              maxItemsPerImport: 500,
+              market: 'US',
+              timeoutSeconds: 20,
+            },
+            youtube: {
+              apiKey: '*****',
+              enabled: false,
+            },
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Source Feed Imports')).toBeInTheDocument();
+    expect(screen.getByText('Spotify Client ID Configured')).toBeInTheDocument();
+    expect(screen.queryByText('*****')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Enable Spotify source-feed imports'));
+    fireEvent.click(screen.getByLabelText('Enable YouTube playlist source-feed imports'));
+    fireEvent.click(screen.getByLabelText('Enable Last.fm source-feed imports'));
+    fireEvent.change(screen.getByLabelText('Spotify client ID'), {
+      target: { value: 'spotify-client' },
+    });
+    fireEvent.change(screen.getByLabelText('YouTube Data API key'), {
+      target: { value: 'youtube-key' },
+    });
+    fireEvent.change(screen.getByLabelText('Last.fm API key'), {
+      target: { value: 'lastfm-key' },
+    });
+    fireEvent.click(screen.getByText('Apply Settings'));
+
+    await waitFor(() => {
+      expect(optionsApi.applyOverlay).toHaveBeenCalledWith({
+        integration: {
+          lastFm: {
+            apiKey: 'lastfm-key',
+            enabled: true,
+          },
+          spotify: {
+            clientId: 'spotify-client',
+            enabled: true,
+            market: 'US',
+            maxItemsPerImport: 500,
+            redirectUri: '',
+            timeoutSeconds: 20,
+          },
+          youTube: {
+            apiKey: 'youtube-key',
+            enabled: true,
+          },
+        },
+      });
+    });
+    expect(
+      screen.getByText('Source-feed integration settings applied for this running daemon.'),
+    ).toBeInTheDocument();
   });
 });

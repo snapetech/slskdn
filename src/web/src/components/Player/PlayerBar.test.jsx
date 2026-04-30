@@ -153,9 +153,14 @@ const TestHarness = () => {
       <button
         onClick={() =>
           playItem({
+            album: 'Fixture Album',
             contentId: 'sha256:test',
+            confidence: 0.91,
             fileName: 'Local stream.ogg',
+            genre: 'Fixture Genre',
+            sourceProviders: ['mesh', 'soulseek'],
             title: 'Local stream',
+            verified: true,
           })
         }
         type="button"
@@ -173,6 +178,18 @@ const TestHarness = () => {
         type="button"
       >
         Play second fixture
+      </button>
+      <button
+        onClick={() =>
+          playItem({
+            contentId: 'sha256:third',
+            fileName: 'Third stream.ogg',
+            title: 'Third stream',
+          })
+        }
+        type="button"
+      >
+        Play third fixture
       </button>
       <PlayerBar />
     </>
@@ -332,5 +349,158 @@ describe('PlayerBar', () => {
       expect(externalVisualizer.launchExternalVisualizer).toHaveBeenCalled();
     });
     expect(await screen.findByText('MilkDrop3 launched.')).toBeInTheDocument();
+  });
+
+  it('shows now-playing source badges and stores local discovery ratings', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+
+    expect(await screen.findByTestId('player-badge-source-Mesh')).toHaveTextContent(
+      'Mesh',
+    );
+    expect(screen.getByTestId('player-badge-source-Soulseek')).toHaveTextContent(
+      'Soulseek',
+    );
+    expect(screen.getByTestId('player-badge-confidence')).toHaveTextContent(
+      '91% match',
+    );
+    expect(screen.getByTestId('player-badge-verified')).toHaveTextContent(
+      'Verified',
+    );
+
+    fireEvent.click(screen.getByTestId('player-rating-5'));
+
+    expect(screen.getByTestId('player-rating-controls')).toHaveTextContent(
+      'Discovery boost',
+    );
+    expect(window.localStorage.getItem('slskdn.player.ratings')).toContain(
+      '"content:sha256:test":5',
+    );
+
+    fireEvent.click(screen.getByTestId('player-rating-5'));
+
+    expect(screen.getByTestId('player-rating-controls')).toHaveTextContent(
+      'Not rated',
+    );
+  });
+
+  it('handles player keyboard shortcuts without stealing input typing', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+    const audio = document.querySelector('audio');
+    await waitFor(() => {
+      expect(audio.getAttribute('src')).toContain('/api/v0/streams/sha256%3Atest');
+    });
+
+    fireEvent.keyDown(window, { key: 'm' });
+    expect(audio.muted).toBe(true);
+
+    fireEvent.keyDown(window, { key: 'e' });
+    expect(document.querySelector('.player-panel-eq')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'v' });
+    expect(document.querySelector('.player-visualizer-canvas')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(audio.currentTime).toBe(30);
+
+    fireEvent.click(screen.getByTestId('player-open-integrations'));
+    const tokenInput = screen.getByLabelText('ListenBrainz user token');
+    fireEvent.keyDown(tokenInput, { key: 'm' });
+
+    expect(audio.muted).toBe(true);
+  });
+
+  it('opens smart radio seeds without starting a search automatically', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+    fireEvent.click(screen.getByTestId('player-open-radio'));
+
+    expect(await screen.findByText('Smart Radio Seed')).toBeInTheDocument();
+    expect(screen.getByTestId('player-radio-seed')).toHaveTextContent(
+      'slskdN - Local stream',
+    );
+    expect(screen.getByText('Similar track seed')).toBeInTheDocument();
+    expect(screen.getByText('slskdN Local stream')).toBeInTheDocument();
+    expect(screen.getByText('Album neighborhood')).toBeInTheDocument();
+    expect(screen.getByText('slskdN Fixture Album')).toBeInTheDocument();
+    expect(screen.getByText('Artist and genre seed')).toBeInTheDocument();
+    expect(screen.getByText('slskdN Fixture Genre')).toBeInTheDocument();
+  });
+
+  it('manages the playback queue without removing the current track', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+    fireEvent.click(screen.getByText('Play second fixture'));
+    fireEvent.click(screen.getByText('Play third fixture'));
+    fireEvent.click(screen.getByTestId('player-open-queue'));
+
+    expect(await screen.findByText('Playback Queue')).toBeInTheDocument();
+    expect(screen.getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getAllByText('Third stream')).toHaveLength(2);
+    expect(screen.getByTestId('player-queue-row-sha256:second')).toHaveTextContent(
+      'Second stream',
+    );
+    expect(screen.getByTestId('player-queue-row-sha256:test')).toHaveTextContent(
+      'Local stream',
+    );
+    expect(screen.getByText('Recent')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-remove-queue-sha256:second'));
+
+    expect(screen.queryByTestId('player-queue-row-sha256:second')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Third stream')).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId('player-clear-upcoming'));
+
+    expect(screen.getByText('No upcoming tracks.')).toBeInTheDocument();
+    expect(screen.getAllByText('Third stream')).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId('player-auto-queue-similar'));
+
+    expect(screen.getByTestId('player-queue-row-sha256:second')).toHaveTextContent(
+      'Second stream',
+    );
+    expect(screen.getByTestId('player-queue-row-sha256:test')).toHaveTextContent(
+      'Local stream',
+    );
+  });
+
+  it('records local listening history and shows browser stats', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+    const audio = document.querySelector('audio');
+
+    Object.defineProperty(audio, 'duration', {
+      configurable: true,
+      value: 120,
+    });
+    Object.defineProperty(audio, 'currentTime', {
+      configurable: true,
+      value: 61,
+      writable: true,
+    });
+    fireEvent.timeUpdate(audio);
+
+    fireEvent.click(screen.getByTestId('player-open-listening-stats'));
+
+    expect(await screen.findByText('Listening Stats')).toBeInTheDocument();
+    expect(screen.getByTestId('player-stats-summary')).toHaveTextContent(
+      '1local plays recorded',
+    );
+    expect(screen.getByText('Top Artists')).toBeInTheDocument();
+    expect(screen.getAllByText('slskdN').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Local stream').length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(screen.getByTestId('player-clear-listening-history'));
+
+    expect(screen.getByTestId('player-stats-summary')).toHaveTextContent(
+      '0local plays recorded',
+    );
   });
 });

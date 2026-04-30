@@ -13,6 +13,7 @@ public class ContentVerificationServiceTests
     [Fact]
     public async Task VerifySourcesAsync_WhenDownloadThrows_ReturnsSanitizedFailureReason()
     {
+        var username = $"test-peer-{Guid.NewGuid():N}";
         var soulseekClient = new Mock<ISoulseekClient>();
         soulseekClient
             .Setup(client => client.DownloadAsync(
@@ -35,14 +36,14 @@ public class ContentVerificationServiceTests
                 FileSize = 1234,
                 CandidateSources = new Dictionary<string, string>
                 {
-                    ["alice"] = @"Music\song.flac",
+                    [username] = @"Music\song.flac",
                 },
                 TimeoutMs = 1000,
             },
             CancellationToken.None);
 
         var failed = Assert.Single(result.FailedSources);
-        Assert.Equal("alice", failed.Username);
+        Assert.Equal(username, failed.Username);
         Assert.Equal("File too small for verification", failed.Reason);
         Assert.DoesNotContain("sensitive", failed.Reason, StringComparison.OrdinalIgnoreCase);
     }

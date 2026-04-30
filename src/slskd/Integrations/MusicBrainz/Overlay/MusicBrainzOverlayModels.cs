@@ -146,3 +146,53 @@ public sealed class MusicBrainzOverlayReleaseGraphResponse
 
     public List<MusicBrainzOverlayProvenance> Provenance { get; set; } = new();
 }
+
+public sealed class MusicBrainzOverlayExportReview
+{
+    public MusicBrainzOverlayEdit Edit { get; set; } = new();
+
+    public string UpstreamTarget { get; set; } = string.Empty;
+
+    public string ProposedChange { get; set; } = string.Empty;
+
+    public List<MusicBrainzOverlayEvidence> Evidence { get; set; } = new();
+
+    public bool CanApproveExport { get; set; }
+
+    public string ReviewReason { get; set; } = string.Empty;
+
+    public MusicBrainzOverlayExportDecision? Decision { get; set; }
+}
+
+public sealed class MusicBrainzOverlayExportApprovalRequest
+{
+    public string ApprovedBy { get; set; } = "local-user";
+
+    public string Note { get; set; } = string.Empty;
+}
+
+public sealed class MusicBrainzOverlayExportDecision
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string EditId { get; set; } = string.Empty;
+
+    public string ApprovedBy { get; set; } = string.Empty;
+
+    public string Note { get; set; } = string.Empty;
+
+    public string UpstreamTarget { get; set; } = string.Empty;
+
+    public string ProposedChange { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class MusicBrainzOverlayExportApprovalResult
+{
+    public bool IsApproved => Errors.Count == 0 && Decision != null;
+
+    public List<string> Errors { get; set; } = new();
+
+    public MusicBrainzOverlayExportDecision? Decision { get; set; }
+}

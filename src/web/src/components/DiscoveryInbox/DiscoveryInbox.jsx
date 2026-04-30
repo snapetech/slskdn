@@ -9,6 +9,10 @@ import {
   getDiscoveryInboxItems,
   updateDiscoveryInboxItemState,
 } from '../../lib/discoveryInbox';
+import {
+  buildDiscoveryInboxReviewSummary,
+  classifyDiscoveryInboxImpact,
+} from '../../lib/discoveryInboxReview';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -66,6 +70,10 @@ const DiscoveryInbox = () => {
         }),
         {},
       ),
+    [items],
+  );
+  const reviewSummary = useMemo(
+    () => buildDiscoveryInboxReviewSummary(items),
     [items],
   );
 
@@ -174,6 +182,41 @@ const DiscoveryInbox = () => {
         </Label>
       </div>
 
+      <Segment className="discovery-inbox-impact-summary">
+        <Header as="h3">
+          <Icon name="dashboard" />
+          Review impact
+          <Header.Subheader>
+            Batch readiness from visible candidate evidence. This does not start
+            network activity.
+          </Header.Subheader>
+        </Header>
+        <div className="discovery-inbox-summary">
+          <Label color="green">
+            Local/manual
+            <Label.Detail>{reviewSummary['local-manual']}</Label.Detail>
+          </Label>
+          <Label color="orange">
+            Provider review
+            <Label.Detail>{reviewSummary['provider-review']}</Label.Detail>
+          </Label>
+          <Label color="red">
+            Network risk
+            <Label.Detail>{reviewSummary['network-risk']}</Label.Detail>
+          </Label>
+          <Label color="blue">
+            Needs estimate
+            <Label.Detail>{reviewSummary['needs-estimate']}</Label.Detail>
+          </Label>
+          <Label color={reviewSummary.canBulkApproveSafely ? 'green' : 'grey'}>
+            Batch approval
+            <Label.Detail>
+              {reviewSummary.canBulkApproveSafely ? 'clear' : 'review'}
+            </Label.Detail>
+          </Label>
+        </div>
+      </Segment>
+
       {plans.length > 0 && (
         <Segment className="discovery-inbox-plans">
           <Header as="h3">
@@ -231,6 +274,7 @@ const DiscoveryInbox = () => {
         <div className="discovery-inbox-grid">
           {items.map((item) => {
             const profile = getAcquisitionProfile(item.acquisitionProfile);
+            const impact = classifyDiscoveryInboxImpact(item);
 
             return (
               <Segment
@@ -260,6 +304,18 @@ const DiscoveryInbox = () => {
                 </div>
                 <div className="discovery-inbox-impact">
                   <strong>Network impact:</strong> {item.networkImpact}
+                </div>
+                <div className="discovery-inbox-impact-labels">
+                  <Popup
+                    content="Impact class is inferred from saved evidence text so reviewers can spot provider or network risk before approving."
+                    position="top center"
+                    trigger={
+                      <Label color={impact.color}>
+                        <Icon name={impact.icon} />
+                        {impact.label}
+                      </Label>
+                    }
+                  />
                 </div>
                 <div className="discovery-inbox-card-actions">
                   <Popup

@@ -50,6 +50,12 @@ namespace slskd
         public SoulseekOptionsPatch? Soulseek { get; init; }
 
         /// <summary>
+        ///     Gets options for external integrations.
+        /// </summary>
+        [Validate]
+        public IntegrationOptionsPatch? Integration { get; init; }
+
+        /// <summary>
         ///     Soulseek client options.
         /// </summary>
         public record SoulseekOptionsPatch
@@ -65,6 +71,72 @@ namespace slskd
             /// </summary>
             [Range(1024, 65535)]
             public int? ListenPort { get; init; } = null;
+        }
+
+        /// <summary>
+        ///     Integration options.
+        /// </summary>
+        public record IntegrationOptionsPatch
+        {
+            /// <summary>
+            ///     Gets Spotify source-feed import options.
+            /// </summary>
+            [Validate]
+            public SpotifyOptionsPatch? Spotify { get; init; }
+
+            /// <summary>
+            ///     Gets YouTube source-feed import options.
+            /// </summary>
+            [Validate]
+            public YouTubeOptionsPatch? YouTube { get; init; }
+
+            /// <summary>
+            ///     Gets Last.fm source-feed import options.
+            /// </summary>
+            [Validate]
+            public LastFmOptionsPatch? LastFm { get; init; }
+
+            /// <summary>
+            ///     Spotify source-feed import options.
+            /// </summary>
+            public record SpotifyOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                public string? ClientId { get; init; }
+
+                public string? ClientSecret { get; init; }
+
+                public string? RedirectUri { get; init; }
+
+                [Range(1, 120)]
+                public int? TimeoutSeconds { get; init; }
+
+                [Range(1, 5000)]
+                public int? MaxItemsPerImport { get; init; }
+
+                public string? Market { get; init; }
+            }
+
+            /// <summary>
+            ///     YouTube source-feed import options.
+            /// </summary>
+            public record YouTubeOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                public string? ApiKey { get; init; }
+            }
+
+            /// <summary>
+            ///     Last.fm source-feed import options.
+            /// </summary>
+            public record LastFmOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                public string? ApiKey { get; init; }
+            }
         }
     }
 }

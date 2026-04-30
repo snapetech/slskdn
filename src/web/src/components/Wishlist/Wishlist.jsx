@@ -399,6 +399,11 @@ const CsvImportModal = ({ onClose, onImport }) => {
 const sourceKindOptions = [
   { key: 'auto', text: 'Auto detect', value: 'auto' },
   { key: 'spotify', text: 'Spotify URL/token feed', value: 'spotify' },
+  { key: 'apple', text: 'Apple Music URL', value: 'apple' },
+  { key: 'youtube', text: 'YouTube URL', value: 'youtube' },
+  { key: 'bandcamp', text: 'Bandcamp URL', value: 'bandcamp' },
+  { key: 'listenbrainz', text: 'ListenBrainz profile', value: 'listenbrainz' },
+  { key: 'lastfm', text: 'Last.fm URL', value: 'lastfm' },
   { key: 'csv', text: 'CSV export', value: 'csv' },
   { key: 'text', text: 'Pasted tracklist', value: 'text' },
   { key: 'm3u', text: 'M3U/PLS playlist', value: 'm3u' },
@@ -574,7 +579,7 @@ const SourceFeedImportModal = ({ onClose, onImported }) => {
           <Form.TextArea
             label="Source URL or Text"
             onChange={(event) => setSourceText(event.target.value)}
-            placeholder="Paste a Spotify playlist/album/track/artist URL, spotify:liked, a CSV export, an M3U playlist, RSS/OPML, or one track per line."
+            placeholder="Paste a provider URL, spotify:liked, ListenBrainz profile, CSV export, M3U playlist, RSS/OPML, or one track per line."
             rows={7}
             value={sourceText}
           />

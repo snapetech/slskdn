@@ -82,4 +82,161 @@ public sealed class QuarantineJuryControllerTests
         var aggregate = Assert.IsType<QuarantineJuryAggregate>(ok.Value);
         Assert.Equal("request-1", aggregate.RequestId);
     }
+
+    [Fact]
+    public async Task GetReview_ReturnsServiceResult()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetReviewAsync("request-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryReview
+            {
+                Request = new QuarantineJuryRequest { Id = "request-1" },
+                CanAcceptReleaseCandidate = true,
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetReview("request-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var review = Assert.IsType<QuarantineJuryReview>(ok.Value);
+        Assert.Equal("request-1", review.Request.Id);
+    }
+
+    [Fact]
+    public async Task GetReview_ReturnsNotFoundForMissingRequest()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetReviewAsync("missing-request", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QuarantineJuryReview)null);
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetReview("missing-request", CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task AcceptReleaseCandidate_ReturnsBadRequestForRejectedAcceptance()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.AcceptReleaseCandidateAsync("request-1", It.IsAny<QuarantineJuryAcceptanceRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryAcceptanceResult
+            {
+                Errors = new List<string> { "Only a release-candidate supermajority can be accepted." },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.AcceptReleaseCandidate(
+            "request-1",
+            new QuarantineJuryAcceptanceRequest(),
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AcceptReleaseCandidate_ReturnsNotFoundForMissingRequest()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.AcceptReleaseCandidateAsync("missing-request", It.IsAny<QuarantineJuryAcceptanceRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryAcceptanceResult
+            {
+                Errors = new List<string> { "Request not found." },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.AcceptReleaseCandidate(
+            "missing-request",
+            new QuarantineJuryAcceptanceRequest(),
+            CancellationToken.None);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AcceptReleaseCandidate_ReturnsAcceptedDecision()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.AcceptReleaseCandidateAsync("request-1", It.IsAny<QuarantineJuryAcceptanceRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryAcceptanceResult
+            {
+                Decision = new QuarantineJuryReviewDecision
+                {
+                    RequestId = "request-1",
+                    AcceptedRecommendation = QuarantineJuryVerdict.ReleaseCandidate,
+                },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.AcceptReleaseCandidate(
+            "request-1",
+            new QuarantineJuryAcceptanceRequest(),
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var acceptance = Assert.IsType<QuarantineJuryAcceptanceResult>(ok.Value);
+        Assert.True(acceptance.IsAccepted);
+    }
+
+    [Fact]
+    public async Task RouteRequest_ReturnsBadRequestForFailedRouteAttempt()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.RouteRequestAsync("request-1", It.IsAny<QuarantineJuryRouteRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryRouteAttempt
+            {
+                RequestId = "request-1",
+                Success = false,
+                ErrorMessage = "Routing backend is not available.",
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.RouteRequest("request-1", new QuarantineJuryRouteRequest(), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task RouteRequest_ReturnsNotFoundForMissingRequest()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.RouteRequestAsync("missing-request", It.IsAny<QuarantineJuryRouteRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryRouteAttempt
+            {
+                RequestId = "missing-request",
+                Success = false,
+                ErrorMessage = "Request not found.",
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.RouteRequest("missing-request", new QuarantineJuryRouteRequest(), CancellationToken.None);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetRouteAttempts_ReturnsServiceResult()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetRouteAttemptsAsync("request-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<QuarantineJuryRouteAttempt>
+            {
+                new() { RequestId = "request-1", Success = true },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetRouteAttempts("request-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var attempts = Assert.IsAssignableFrom<IReadOnlyList<QuarantineJuryRouteAttempt>>(ok.Value);
+        Assert.Single(attempts);
+    }
 }

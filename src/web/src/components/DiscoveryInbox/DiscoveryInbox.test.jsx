@@ -28,6 +28,8 @@ describe('DiscoveryInbox', () => {
     expect(screen.getByText('rare track')).toBeInTheDocument();
     expect(screen.getAllByText(/Rare Hunt/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Manual review only/)).toBeInTheDocument();
+    expect(screen.getByText('Review impact')).toBeInTheDocument();
+    expect(screen.getAllByText('Local/manual').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve rare track' }));
 
@@ -36,6 +38,27 @@ describe('DiscoveryInbox', () => {
       'Approved',
     );
     expect(screen.getAllByText('Approved').length).toBeGreaterThan(0);
+  });
+
+  it('summarizes provider and network-risk review impact before approval', () => {
+    addDiscoveryInboxItem({
+      evidenceKey: 'provider:item',
+      networkImpact: 'Provider metadata lookup required before planning.',
+      searchText: 'provider item',
+      source: 'Release Radar',
+    });
+    addDiscoveryInboxItem({
+      evidenceKey: 'network:item',
+      networkImpact: 'Automatic download would contact peers.',
+      searchText: 'network item',
+      source: 'Automation',
+    });
+
+    render(<DiscoveryInbox />);
+
+    expect(screen.getAllByText('Provider review').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Network risk').length).toBeGreaterThan(0);
+    expect(screen.getByText('review')).toBeInTheDocument();
   });
 
   it('bulk rejects suggested candidates', () => {

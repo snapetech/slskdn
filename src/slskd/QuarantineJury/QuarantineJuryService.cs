@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using slskd.PodCore;
 
 public sealed class QuarantineJuryService : IQuarantineJuryService
 {
@@ -18,8 +19,11 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
 
     private readonly ConcurrentDictionary<string, QuarantineJuryRequest> _requests = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, QuarantineJuryVerdictRecord> _verdicts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, QuarantineJuryRouteAttempt> _routeAttempts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, QuarantineJuryReviewDecision> _reviewDecisions = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _storageSync = new();
     private readonly string _storagePath;
+    private readonly IPodMessageRouter? _messageRouter;
     private readonly ILogger<QuarantineJuryService> _logger;
 
     public QuarantineJuryService(ILogger<QuarantineJuryService> logger)
@@ -33,10 +37,28 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
     {
     }
 
+    public QuarantineJuryService(ILogger<QuarantineJuryService> logger, IPodMessageRouter messageRouter)
+        : this(
+            logger,
+            Path.Combine(
+                string.IsNullOrWhiteSpace(global::slskd.Program.AppDirectory)
+                    ? global::slskd.Program.DefaultAppDirectory
+                    : global::slskd.Program.AppDirectory,
+                "quarantine-jury.json"),
+            messageRouter)
+    {
+    }
+
     public QuarantineJuryService(ILogger<QuarantineJuryService> logger, string storagePath)
+        : this(logger, storagePath, null)
+    {
+    }
+
+    public QuarantineJuryService(ILogger<QuarantineJuryService> logger, string storagePath, IPodMessageRouter? messageRouter)
     {
         _logger = logger;
         _storagePath = storagePath;
+        _messageRouter = messageRouter;
         LoadState();
     }
 
@@ -114,19 +136,115 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
     public Task<QuarantineJuryAggregate> GetAggregateAsync(string requestId, CancellationToken cancellationToken = default)
     {
         requestId = requestId.Trim();
+        return Task.FromResult(BuildAggregate(requestId));
+    }
+
+    public Task<QuarantineJuryReview?> GetReviewAsync(string requestId, CancellationToken cancellationToken = default)
+    {
+        requestId = requestId.Trim();
         if (!_requests.TryGetValue(requestId, out var request))
         {
-            return Task.FromResult(new QuarantineJuryAggregate
+            return Task.FromResult<QuarantineJuryReview?>(null);
+        }
+
+        var aggregate = BuildAggregate(requestId);
+        var verdicts = GetVerdictsForRequest(requestId)
+            .OrderBy(verdict => verdict.Juror, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var routeAttempts = GetRouteAttemptsForRequest(requestId)
+            .OrderByDescending(attempt => attempt.CreatedAt)
+            .ThenBy(attempt => attempt.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _reviewDecisions.TryGetValue(requestId, out var acceptance);
+
+        return Task.FromResult<QuarantineJuryReview?>(new QuarantineJuryReview
+        {
+            Request = request,
+            Aggregate = aggregate,
+            Verdicts = verdicts,
+            RouteAttempts = routeAttempts,
+            Acceptance = acceptance,
+            CanAcceptReleaseCandidate = CanAcceptReleaseCandidate(aggregate, acceptance),
+            AcceptanceReason = BuildAcceptanceReason(aggregate, acceptance),
+        });
+    }
+
+    public Task<QuarantineJuryAcceptanceResult> AcceptReleaseCandidateAsync(
+        string requestId,
+        QuarantineJuryAcceptanceRequest acceptanceRequest,
+        CancellationToken cancellationToken = default)
+    {
+        requestId = requestId.Trim();
+        acceptanceRequest ??= new QuarantineJuryAcceptanceRequest();
+        acceptanceRequest.AcceptedBy = string.IsNullOrWhiteSpace(acceptanceRequest.AcceptedBy)
+            ? "local-user"
+            : acceptanceRequest.AcceptedBy.Trim();
+        acceptanceRequest.Note = acceptanceRequest.Note?.Trim() ?? string.Empty;
+
+        var result = new QuarantineJuryAcceptanceResult();
+        if (!_requests.ContainsKey(requestId))
+        {
+            result.Errors.Add("Request not found.");
+            return Task.FromResult(result);
+        }
+
+        if (_reviewDecisions.TryGetValue(requestId, out var existingDecision))
+        {
+            result.Decision = existingDecision;
+            return Task.FromResult(result);
+        }
+
+        if (!IsSafeOpaqueReference(acceptanceRequest.AcceptedBy))
+        {
+            result.Errors.Add("Accepted-by identifier must be opaque and safe.");
+        }
+
+        if (acceptanceRequest.Note.Length > 512)
+        {
+            result.Errors.Add("Acceptance note must be 512 characters or fewer.");
+        }
+
+        var aggregate = BuildAggregate(requestId);
+        if (!CanAcceptReleaseCandidate(aggregate, acceptance: null))
+        {
+            result.Errors.Add(BuildAcceptanceReason(aggregate, acceptance: null));
+        }
+
+        if (result.Errors.Count > 0)
+        {
+            return Task.FromResult(result);
+        }
+
+        var decision = new QuarantineJuryReviewDecision
+        {
+            Id = $"quarantine-jury-acceptance:{Guid.NewGuid():N}",
+            RequestId = requestId,
+            AcceptedBy = acceptanceRequest.AcceptedBy,
+            AcceptedRecommendation = QuarantineJuryVerdict.ReleaseCandidate,
+            Note = acceptanceRequest.Note,
+            AggregateSnapshot = aggregate,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        _reviewDecisions[requestId] = decision;
+        PersistState();
+
+        result.Decision = decision;
+        return Task.FromResult(result);
+    }
+
+    private QuarantineJuryAggregate BuildAggregate(string requestId)
+    {
+        if (!_requests.TryGetValue(requestId, out var request))
+        {
+            return new QuarantineJuryAggregate
             {
                 RequestId = requestId,
                 RequiredVotes = 1,
                 Reason = "Request not found.",
-            });
+            };
         }
 
-        var verdicts = _verdicts.Values
-            .Where(verdict => string.Equals(verdict.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var verdicts = GetVerdictsForRequest(requestId);
         var counts = verdicts
             .GroupBy(verdict => verdict.Verdict)
             .ToDictionary(group => group.Key, group => group.Count());
@@ -138,7 +256,7 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
             .OrderBy(juror => juror, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return Task.FromResult(new QuarantineJuryAggregate
+        return new QuarantineJuryAggregate
         {
             RequestId = requestId,
             Recommendation = recommendation,
@@ -148,7 +266,74 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
             DissentingJurors = dissentingJurors,
             QuorumReached = verdicts.Count >= requiredVotes,
             Reason = BuildAggregateReason(recommendation, verdicts.Count, requiredVotes),
-        });
+        };
+    }
+
+    public async Task<QuarantineJuryRouteAttempt> RouteRequestAsync(
+        string requestId,
+        QuarantineJuryRouteRequest routeRequest,
+        CancellationToken cancellationToken = default)
+    {
+        requestId = requestId.Trim();
+        routeRequest ??= new QuarantineJuryRouteRequest();
+        if (!_requests.TryGetValue(requestId, out var request))
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(requestId, routeRequest, Array.Empty<string>(), success: false, "Request not found."));
+        }
+
+        if (HasUnsafeRouteMetadata(routeRequest))
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(requestId, routeRequest, Array.Empty<string>(), success: false, "Route metadata must be opaque and safe."));
+        }
+
+        var targetJurors = NormalizeRouteTargets(routeRequest.TargetJurors.Count == 0 ? request.Jurors : routeRequest.TargetJurors);
+        var invalidTarget = targetJurors.FirstOrDefault(juror =>
+            !request.Jurors.Contains(juror, StringComparer.OrdinalIgnoreCase) ||
+            !IsSafeOpaqueReference(juror));
+        if (invalidTarget != null)
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(requestId, routeRequest, targetJurors, success: false, "Route targets must be selected safe jurors."));
+        }
+
+        if (_messageRouter == null)
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(requestId, routeRequest, targetJurors, success: false, "Routing backend is not available."));
+        }
+
+        var message = BuildRouteMessage(request, routeRequest, targetJurors);
+        var routingResult = await _messageRouter.RouteMessageToPeersAsync(message, targetJurors, cancellationToken).ConfigureAwait(false);
+        var failedJurors = routingResult.FailedPeerIds?.ToList() ?? new List<string>();
+        var routedJurors = targetJurors
+            .Where(juror => !failedJurors.Contains(juror, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        var attempt = new QuarantineJuryRouteAttempt
+        {
+            Id = $"quarantine-jury-route:{Guid.NewGuid():N}",
+            RequestId = request.Id,
+            MessageId = message.MessageId,
+            PodId = message.PodId,
+            ChannelId = message.ChannelId,
+            TargetJurors = targetJurors,
+            RoutedJurors = routedJurors,
+            FailedJurors = failedJurors,
+            Success = routingResult.Success,
+            ErrorMessage = routingResult.ErrorMessage,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+
+        return StoreRouteAttempt(attempt);
+    }
+
+    public Task<IReadOnlyList<QuarantineJuryRouteAttempt>> GetRouteAttemptsAsync(
+        string requestId,
+        CancellationToken cancellationToken = default)
+    {
+        requestId = requestId.Trim();
+        var attempts = GetRouteAttemptsForRequest(requestId)
+            .OrderByDescending(attempt => attempt.CreatedAt)
+            .ThenBy(attempt => attempt.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<QuarantineJuryRouteAttempt>>(attempts);
     }
 
     private QuarantineJuryValidationResult ValidateRequest(QuarantineJuryRequest request)
@@ -332,6 +517,16 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
                 {
                     _verdicts[BuildVerdictKey(verdict.RequestId, verdict.Juror)] = verdict;
                 }
+
+                foreach (var attempt in state.RouteAttempts)
+                {
+                    _routeAttempts[attempt.Id] = attempt;
+                }
+
+                foreach (var decision in state.ReviewDecisions)
+                {
+                    _reviewDecisions[decision.RequestId] = decision;
+                }
             }
             catch (IOException ex)
             {
@@ -363,6 +558,13 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
                     .OrderBy(verdict => verdict.RequestId, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(verdict => verdict.Juror, StringComparer.OrdinalIgnoreCase)
                     .ToList(),
+                RouteAttempts = _routeAttempts.Values
+                    .OrderBy(attempt => attempt.RequestId, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(attempt => attempt.CreatedAt)
+                    .ToList(),
+                ReviewDecisions = _reviewDecisions.Values
+                    .OrderBy(decision => decision.RequestId, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
             };
 
             var tempPath = $"{_storagePath}.tmp";
@@ -376,5 +578,143 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
         public List<QuarantineJuryRequest> Requests { get; set; } = new();
 
         public List<QuarantineJuryVerdictRecord> Verdicts { get; set; } = new();
+
+        public List<QuarantineJuryRouteAttempt> RouteAttempts { get; set; } = new();
+
+        public List<QuarantineJuryReviewDecision> ReviewDecisions { get; set; } = new();
+    }
+
+    private List<QuarantineJuryVerdictRecord> GetVerdictsForRequest(string requestId)
+    {
+        return _verdicts.Values
+            .Where(verdict => string.Equals(verdict.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private List<QuarantineJuryRouteAttempt> GetRouteAttemptsForRequest(string requestId)
+    {
+        return _routeAttempts.Values
+            .Where(attempt => string.Equals(attempt.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private static bool CanAcceptReleaseCandidate(QuarantineJuryAggregate aggregate, QuarantineJuryReviewDecision? acceptance)
+    {
+        return acceptance == null &&
+            aggregate.QuorumReached &&
+            aggregate.Recommendation == QuarantineJuryVerdict.ReleaseCandidate;
+    }
+
+    private static string BuildAcceptanceReason(QuarantineJuryAggregate aggregate, QuarantineJuryReviewDecision? acceptance)
+    {
+        if (acceptance != null)
+        {
+            return "Release-candidate recommendation has already been accepted.";
+        }
+
+        if (!aggregate.QuorumReached)
+        {
+            return "Waiting for trusted juror quorum.";
+        }
+
+        return aggregate.Recommendation == QuarantineJuryVerdict.ReleaseCandidate
+            ? "Release-candidate recommendation can be accepted manually."
+            : "Only a release-candidate supermajority can be accepted.";
+    }
+
+    private static List<string> NormalizeRouteTargets(IEnumerable<string> targets)
+    {
+        return targets
+            .Select(target => target.Trim())
+            .Where(target => !string.IsNullOrWhiteSpace(target))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(target => target, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool HasUnsafeRouteMetadata(QuarantineJuryRouteRequest routeRequest)
+    {
+        return (!string.IsNullOrWhiteSpace(routeRequest.SenderPeerId) && !IsSafeOpaqueReference(routeRequest.SenderPeerId)) ||
+            (!string.IsNullOrWhiteSpace(routeRequest.PodId) && !IsSafeOpaqueReference(routeRequest.PodId)) ||
+            (!string.IsNullOrWhiteSpace(routeRequest.ChannelId) && !IsSafeOpaqueReference(routeRequest.ChannelId));
+    }
+
+    private static PodMessage BuildRouteMessage(
+        QuarantineJuryRequest request,
+        QuarantineJuryRouteRequest routeRequest,
+        IReadOnlyList<string> targetJurors)
+    {
+        var podId = string.IsNullOrWhiteSpace(routeRequest.PodId) ? "quarantine-jury" : routeRequest.PodId.Trim();
+        var channelId = string.IsNullOrWhiteSpace(routeRequest.ChannelId)
+            ? $"request:{request.Id}"
+            : routeRequest.ChannelId.Trim();
+        var senderPeerId = string.IsNullOrWhiteSpace(routeRequest.SenderPeerId)
+            ? "local-quarantine-jury"
+            : routeRequest.SenderPeerId.Trim();
+        var envelope = new QuarantineJuryRouteEnvelope
+        {
+            RequestId = request.Id,
+            LocalReason = request.LocalReason,
+            Evidence = request.Evidence,
+            RequiredVotes = request.MinJurorVotes,
+            TargetJurors = targetJurors.ToList(),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+
+        return new PodMessage
+        {
+            MessageId = $"quarantine-jury-request:{Guid.NewGuid():N}",
+            PodId = podId,
+            ChannelId = channelId,
+            SenderPeerId = senderPeerId,
+            Body = JsonSerializer.Serialize(envelope, JsonOptions),
+            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            Signature = "local-quarantine-jury-route",
+        };
+    }
+
+    private static QuarantineJuryRouteAttempt BuildRouteAttempt(
+        string requestId,
+        QuarantineJuryRouteRequest routeRequest,
+        IReadOnlyList<string> targets,
+        bool success,
+        string? errorMessage)
+    {
+        return new QuarantineJuryRouteAttempt
+        {
+            Id = $"quarantine-jury-route:{Guid.NewGuid():N}",
+            RequestId = requestId,
+            MessageId = string.Empty,
+            PodId = string.IsNullOrWhiteSpace(routeRequest.PodId) ? "quarantine-jury" : routeRequest.PodId.Trim(),
+            ChannelId = string.IsNullOrWhiteSpace(routeRequest.ChannelId) ? $"request:{requestId}" : routeRequest.ChannelId.Trim(),
+            TargetJurors = targets.ToList(),
+            Success = success,
+            ErrorMessage = errorMessage,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+    }
+
+    private QuarantineJuryRouteAttempt StoreRouteAttempt(QuarantineJuryRouteAttempt attempt)
+    {
+        _routeAttempts[attempt.Id] = attempt;
+        PersistState();
+        return attempt;
+    }
+
+    private sealed class QuarantineJuryRouteEnvelope
+    {
+        public string Type { get; set; } = "slskdn.quarantine-jury.request.v1";
+
+        public string RequestId { get; set; } = string.Empty;
+
+        public string LocalReason { get; set; } = string.Empty;
+
+        public List<QuarantineJuryEvidence> Evidence { get; set; } = new();
+
+        public int RequiredVotes { get; set; }
+
+        public List<string> TargetJurors { get; set; } = new();
+
+        public DateTimeOffset CreatedAt { get; set; }
     }
 }

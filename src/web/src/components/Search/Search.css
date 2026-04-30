@@ -209,6 +209,22 @@
   margin-top: 0.45rem;
 }
 
+.search-album-candidate-review {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+  gap: 0.35rem 0.85rem;
+  margin-top: 0.35rem;
+}
+
+.search-album-candidate-substitutions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
 .search-album-candidate-paths {
   color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.55));
   font-size: 0.86rem;

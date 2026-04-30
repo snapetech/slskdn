@@ -409,6 +409,12 @@
 #     timeout_seconds: 20
 #     max_items_per_import: 500
 #     market: "US" # used for artist top-track imports
+#   youtube:
+#     enabled: false
+#     api_key: "" # YouTube Data API key for source-feed playlist expansion
+#   lastfm:
+#     enabled: false
+#     api_key: "" # Last.fm API key for loved/recent/top track source-feed imports
 #   webhooks:
 #     my_webhook:
 #       on:

@@ -4,6 +4,10 @@ export const getCurrent = async () => {
   return (await api.get('/options')).data;
 };
 
+export const applyOverlay = async (overlay) => {
+  return (await api.patch('/options', overlay)).data;
+};
+
 export const getCurrentDebugView = async () => {
   return (await api.get('/options/debug')).data;
 };

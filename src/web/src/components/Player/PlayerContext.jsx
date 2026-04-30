@@ -8,15 +8,18 @@ import React, {
 } from 'react';
 
 export const PlayerContext = createContext({
+  clearQueue: () => {},
   clear: () => {},
   current: null,
   followParty: () => {},
   followingParty: null,
+  history: [],
   next: () => {},
   pause: () => {},
   playItem: () => {},
   previous: () => {},
   queue: [],
+  queueItems: () => {},
   removeFromQueue: () => {},
   seekRelative: () => {},
   setAudioElement: () => {},
@@ -46,11 +49,21 @@ export const PlayerProvider = ({ children }) => {
         album: item.album || item.collectionTitle || '',
         artist: item.artist || item.username || 'slskdN',
         artworkUrl: item.artworkUrl || item.coverUrl || item.imageUrl || '',
+        confidence: item.confidence || item.matchConfidence || item.score || 0,
         contentId: item.contentId,
         fileName: item.fileName || item.title || item.contentId,
+        genre: item.genre || '',
         positionSeconds: options.positionSeconds || 0,
+        sourceProviders: item.sourceProviders || item.providers || [],
         streamUrl: item.streamUrl || options.streamUrl || '',
+        tags: item.tags || item.genres || [],
         title: item.title || item.fileName || item.contentId,
+        verified: Boolean(
+          item.verified ||
+          item.verifiedAt ||
+          item.fingerprint?.verifiedAt ||
+          item.verification?.verified,
+        ),
       };
 
       setHistory((existing) => (current ? [current, ...existing].slice(0, 25) : existing));
@@ -87,9 +100,26 @@ export const PlayerProvider = ({ children }) => {
     await nowPlaying.clearNowPlaying();
   }, [audioElement]);
 
+  const clearQueue = useCallback(() => {
+    setQueue((existing) => (current ? [current] : existing.slice(0, 1)));
+  }, [current]);
+
+  const queueItems = useCallback((items = []) => {
+    setQueue((existing) => {
+      const queuedIds = new Set(existing.map((item) => item.contentId));
+      const additions = items.filter((item) => {
+        if (!item?.contentId || queuedIds.has(item.contentId)) return false;
+        queuedIds.add(item.contentId);
+        return true;
+      });
+
+      return additions.length > 0 ? [...existing, ...additions] : existing;
+    });
+  }, []);
+
   const removeFromQueue = useCallback((contentId) => {
     setQueue((existing) =>
-      existing.filter((item) => item.contentId !== contentId),
+      existing.filter((item, index) => index === 0 || item.contentId !== contentId),
     );
   }, []);
 
@@ -140,15 +170,18 @@ export const PlayerProvider = ({ children }) => {
   return (
     <PlayerContext.Provider
       value={{
+        clearQueue,
         clear,
         current,
         followParty,
         followingParty,
+        history,
         next,
         pause,
         playItem,
         previous,
         queue,
+        queueItems,
         removeFromQueue,
         seekRelative,
         setAudioElement,

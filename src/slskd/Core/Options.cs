@@ -3114,6 +3114,18 @@ namespace slskd
             public SpotifyOptions Spotify { get; init; } = new SpotifyOptions();
 
             /// <summary>
+            ///     Gets YouTube source feed import options.
+            /// </summary>
+            [Validate]
+            public YouTubeOptions YouTube { get; init; } = new YouTubeOptions();
+
+            /// <summary>
+            ///     Gets Last.fm source feed import options.
+            /// </summary>
+            [Validate]
+            public LastFmOptions LastFm { get; init; } = new LastFmOptions();
+
+            /// <summary>
             ///     VPN options.
             /// </summary>
             public class VpnOptions : IValidatableObject
@@ -4034,6 +4046,68 @@ namespace slskd
                     if (string.IsNullOrWhiteSpace(Market) || Market.Length != 2)
                     {
                         yield return new ValidationResult("Spotify market must be a two-letter market code.", new[] { nameof(Market) });
+                    }
+                }
+            }
+
+            /// <summary>
+            ///     YouTube source feed import options.
+            /// </summary>
+            public class YouTubeOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether YouTube playlist source feed expansion is enabled.
+                /// </summary>
+                [Argument(default, "youtube")]
+                [EnvironmentVariable("YOUTUBE")]
+                [Description("enable YouTube source feed playlist expansion")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the YouTube Data API key used for playlist expansion.
+                /// </summary>
+                [Argument(default, "youtube-api-key")]
+                [EnvironmentVariable("YOUTUBE_API_KEY")]
+                [Description("YouTube Data API key for source feed playlist imports")]
+                [Secret]
+                public string ApiKey { get; init; } = string.Empty;
+
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (Enabled && string.IsNullOrWhiteSpace(ApiKey))
+                    {
+                        yield return new ValidationResult("YouTube source feed imports are enabled but integrations.youtube.api_key is empty.", new[] { nameof(ApiKey) });
+                    }
+                }
+            }
+
+            /// <summary>
+            ///     Last.fm source feed import options.
+            /// </summary>
+            public class LastFmOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether Last.fm source feed expansion is enabled.
+                /// </summary>
+                [Argument(default, "lastfm")]
+                [EnvironmentVariable("LASTFM")]
+                [Description("enable Last.fm source feed imports")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the Last.fm API key used for loved/recent/top track imports.
+                /// </summary>
+                [Argument(default, "lastfm-api-key")]
+                [EnvironmentVariable("LASTFM_API_KEY")]
+                [Description("Last.fm API key for source feed imports")]
+                [Secret]
+                public string ApiKey { get; init; } = string.Empty;
+
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (Enabled && string.IsNullOrWhiteSpace(ApiKey))
+                    {
+                        yield return new ValidationResult("Last.fm source feed imports are enabled but integrations.lastfm.api_key is empty.", new[] { nameof(ApiKey) });
                     }
                 }
             }

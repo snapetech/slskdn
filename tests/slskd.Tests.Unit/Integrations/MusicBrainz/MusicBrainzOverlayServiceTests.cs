@@ -72,6 +72,90 @@ public sealed class MusicBrainzOverlayServiceTests
             second => Assert.Equal("edit-b", second.EditId));
     }
 
+    [Fact]
+    public async Task GetExportReviewAsync_ReturnsManualSubmissionPackage()
+    {
+        var service = CreateService();
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        var review = await service.GetExportReviewAsync("edit-1");
+
+        Assert.NotNull(review);
+        Assert.Equal("ReleaseGroup:release-group-1", review.UpstreamTarget);
+        Assert.Equal("title => Corrected Group Title", review.ProposedChange);
+        Assert.True(review.CanApproveExport);
+        Assert.Equal("Overlay edit can be reviewed for manual upstream MusicBrainz submission.", review.ReviewReason);
+        Assert.Single(review.Evidence);
+    }
+
+    [Fact]
+    public async Task ApproveExportAsync_RecordsLocalApprovalWithoutChangingOverlay()
+    {
+        var service = CreateService();
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        var result = await service.ApproveExportAsync(
+            "edit-1",
+            new MusicBrainzOverlayExportApprovalRequest
+            {
+                ApprovedBy = "actor:operator",
+                Note = "ready for manual MB edit",
+            });
+        var review = await service.GetExportReviewAsync("edit-1");
+
+        Assert.True(result.IsApproved);
+        Assert.NotNull(result.Decision);
+        Assert.Equal("actor:operator", result.Decision.ApprovedBy);
+        Assert.Equal("ReleaseGroup:release-group-1", result.Decision.UpstreamTarget);
+        Assert.NotNull(review);
+        Assert.NotNull(review.Decision);
+        Assert.False(review.CanApproveExport);
+        Assert.Equal("Upstream export has already been approved locally.", review.ReviewReason);
+    }
+
+    [Fact]
+    public async Task ApproveExportAsync_IsIdempotentForExistingApproval()
+    {
+        var service = CreateService();
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+        var first = await service.ApproveExportAsync(
+            "edit-1",
+            new MusicBrainzOverlayExportApprovalRequest
+            {
+                ApprovedBy = "actor:operator",
+            });
+
+        var second = await service.ApproveExportAsync(
+            "edit-1",
+            new MusicBrainzOverlayExportApprovalRequest
+            {
+                ApprovedBy = "actor:other",
+            });
+
+        Assert.True(second.IsApproved);
+        Assert.NotNull(first.Decision);
+        Assert.NotNull(second.Decision);
+        Assert.Equal(first.Decision.Id, second.Decision.Id);
+        Assert.Equal("actor:operator", second.Decision.ApprovedBy);
+    }
+
+    [Fact]
+    public async Task ApproveExportAsync_RejectsUnsafeApproverIdentifier()
+    {
+        var service = CreateService();
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        var result = await service.ApproveExportAsync(
+            "edit-1",
+            new MusicBrainzOverlayExportApprovalRequest
+            {
+                ApprovedBy = "/home/user/private-operator",
+            });
+
+        Assert.False(result.IsApproved);
+        Assert.Contains("Approved-by identifier must be opaque and safe.", result.Errors);
+    }
+
     private static MusicBrainzOverlayService CreateService()
     {
         return new MusicBrainzOverlayService(NullLogger<MusicBrainzOverlayService>.Instance);

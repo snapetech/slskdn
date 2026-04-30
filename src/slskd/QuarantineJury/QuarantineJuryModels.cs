@@ -116,3 +116,89 @@ public sealed class QuarantineJuryAggregate
 
     public string Reason { get; set; } = string.Empty;
 }
+
+public sealed class QuarantineJuryReview
+{
+    public QuarantineJuryRequest Request { get; set; } = new();
+
+    public QuarantineJuryAggregate Aggregate { get; set; } = new();
+
+    public List<QuarantineJuryVerdictRecord> Verdicts { get; set; } = new();
+
+    public List<QuarantineJuryRouteAttempt> RouteAttempts { get; set; } = new();
+
+    public QuarantineJuryReviewDecision? Acceptance { get; set; }
+
+    public bool CanAcceptReleaseCandidate { get; set; }
+
+    public string AcceptanceReason { get; set; } = string.Empty;
+}
+
+public sealed class QuarantineJuryAcceptanceRequest
+{
+    public string AcceptedBy { get; set; } = "local-user";
+
+    public string Note { get; set; } = string.Empty;
+}
+
+public sealed class QuarantineJuryReviewDecision
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string RequestId { get; set; } = string.Empty;
+
+    public string AcceptedBy { get; set; } = string.Empty;
+
+    public QuarantineJuryVerdict AcceptedRecommendation { get; set; } = QuarantineJuryVerdict.NeedsManualReview;
+
+    public string Note { get; set; } = string.Empty;
+
+    public QuarantineJuryAggregate AggregateSnapshot { get; set; } = new();
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class QuarantineJuryAcceptanceResult
+{
+    public bool IsAccepted => Errors.Count == 0 && Decision != null;
+
+    public List<string> Errors { get; set; } = new();
+
+    public QuarantineJuryReviewDecision? Decision { get; set; }
+}
+
+public sealed class QuarantineJuryRouteRequest
+{
+    public string SenderPeerId { get; set; } = "local-quarantine-jury";
+
+    public string PodId { get; set; } = "quarantine-jury";
+
+    public string ChannelId { get; set; } = string.Empty;
+
+    public List<string> TargetJurors { get; set; } = new();
+}
+
+public sealed class QuarantineJuryRouteAttempt
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string RequestId { get; set; } = string.Empty;
+
+    public string MessageId { get; set; } = string.Empty;
+
+    public string PodId { get; set; } = string.Empty;
+
+    public string ChannelId { get; set; } = string.Empty;
+
+    public List<string> TargetJurors { get; set; } = new();
+
+    public List<string> RoutedJurors { get; set; } = new();
+
+    public List<string> FailedJurors { get; set; } = new();
+
+    public bool Success { get; set; }
+
+    public string? ErrorMessage { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}

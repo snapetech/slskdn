@@ -40,6 +40,11 @@
   margin-bottom: 1rem;
 }
 
+.discovery-inbox-impact-summary.ui.segment {
+  margin-bottom: 1rem;
+  margin-top: 0 !important;
+}
+
 .discovery-inbox-plan-grid {
   display: grid;
   gap: 0.5rem;
@@ -97,6 +102,13 @@
 .discovery-inbox-reason,
 .discovery-inbox-impact {
   margin-top: 0.65rem;
+}
+
+.discovery-inbox-impact-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
 }
 
 .discovery-inbox-card-actions {
