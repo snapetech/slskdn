@@ -31,7 +31,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   an existing release tag after credentials are configured. The stable Winget
   jobs now submit generated manifests directly so the first `snapetech.slskdn`
   PR can be opened before the package exists in `microsoft/winget-pkgs`, and
-  the stable locale description now emits valid YAML block indentation.
+  stage manifests in the repository-shaped path expected by WingetCreate. The
+  stable locale description now emits valid YAML block indentation.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 

@@ -147,7 +147,7 @@ This document maps out the complete dev build process for slskdn, including vers
   - `installer.yaml`: PackageVersion, InstallerUrl, InstallerSha256
   - `version.yaml`: PackageVersion
 - **Version Format**: `0.24.1-dev-9EPOCH` (hyphens kept)
-- **Stable submission**: Main releases regenerate the stable manifests from the published Windows asset and submit them to `microsoft/winget-pkgs` with `wingetcreate submit`; the job fails if `WINGETCREATE_GITHUB_TOKEN` is missing so skipped submissions cannot look successful
+- **Stable submission**: Main releases regenerate the stable manifests from the published Windows asset, stage them under `winget-submit/manifests/s/snapetech/slskdn/<version>/`, and submit them to `microsoft/winget-pkgs` with `wingetcreate submit`; the job fails if `WINGETCREATE_GITHUB_TOKEN` is missing so skipped submissions cannot look successful
 - **Stable retry**: Use the manual `Publish Winget` workflow with an existing stable release tag after fixing credentials or retrying a failed `wingetcreate` submission
 - **Dev note**: Dev releases still only update the local manifests and do not auto-submit to `winget-pkgs`
 

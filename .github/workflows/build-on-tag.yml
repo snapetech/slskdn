@@ -1890,6 +1890,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $ReleaseVersion = "${{ needs.parse.outputs.version }}"
+          $WingetVersion = $ReleaseVersion.Replace('-', '.')
           $InstallerUrl = "https://github.com/${{ github.repository }}/releases/download/$ReleaseVersion/slskdn-main-win-x64.zip"
           $InstallerSha = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
 
@@ -1900,8 +1901,10 @@ jobs:
             $InstallerSha `
             $ReleaseVersion
 
-          New-Item -ItemType Directory -Force winget-submit | Out-Null
-          Copy-Item packaging/winget/snapetech.slskdn*.yaml winget-submit/
+          $WingetSubmitPath = Join-Path "winget-submit" "manifests/s/snapetech/slskdn/$WingetVersion"
+          New-Item -ItemType Directory -Force $WingetSubmitPath | Out-Null
+          Copy-Item packaging/winget/snapetech.slskdn*.yaml $WingetSubmitPath/
+          "WINGET_SUBMIT_PATH=$WingetSubmitPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Submit manifests to winget-pkgs
         shell: pwsh
@@ -1916,7 +1919,7 @@ jobs:
           Write-Host "Winget version:  $WingetVersion"
           Write-Host "Installer URL:   $InstallerUrl"
 
-          .\wingetcreate.exe submit .\winget-submit `
+          .\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH `
             -t $env:WINGETCREATE_GITHUB_TOKEN
 
   metadata-main:

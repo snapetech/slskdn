@@ -8,8 +8,9 @@
   - confirmed `wingetcreate update` also fails for the first package submission because `snapetech.slskdn` is not yet present in `microsoft/winget-pkgs`
   - changed the stable Winget paths to submit generated manifests directly for the initial PR
   - fixed invalid stable Winget locale YAML caused by double-indented block-scalar text
+  - changed WingetCreate staging from a flat scratch directory to the repository-shaped manifest path expected by `wingetcreate submit`
 - Next steps:
-  1. Commit and push the Winget locale YAML generator fix.
+  1. Commit and push the Winget submit-layout fix.
   2. Re-run the manual `Publish Winget` workflow for `2026042900-slskdn.202`.
 
 ## Update 2026-04-30 00:33:57Z
