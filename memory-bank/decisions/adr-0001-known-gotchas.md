@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z198. WebGL Attribute Bindings Must Be Rebound Before Each Program Draw
+
+**The Bug**: The native MilkDrop renderer initialized vertex attribute pointers once per shader program, then switched between fullscreen, primitive, wave, and shape buffers. WebGL attribute bindings are context/VAO state, not safely isolated by program switches, so later primitive buffer setup could make the fullscreen feedback/blit program draw from the wrong buffer.
+
+**Files Affected**:
+- `src/web/src/components/Player/visualizers/milkdrop/milkdropRenderer.js`
+
+**Wrong**:
+```js
+createFullscreenTriangle(gl, program);
+createDynamicLineBuffer(gl, lineProgram);
+gl.useProgram(program);
+gl.drawArrays(gl.TRIANGLES, 0, 3);
+```
+
+**Correct**:
+```js
+gl.useProgram(program);
+bindFullscreenTriangle(gl, program, fullscreenBuffer);
+gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+gl.useProgram(lineProgram);
+bindLineBuffers(gl, lineBuffers);
+gl.drawArrays(gl.LINE_STRIP, 0, count);
+```
+
+**Why This Keeps Happening**: WebGL program switches do not restore vertex attribute pointer state. Either use VAOs per draw path or explicitly rebind the attributes and buffers immediately before each draw call.
+
 ### 0z197. MilkDrop Custom Wave And Shape Equations Are Indexed Equations, Not Base Values
 
 **The Bug**: The new MilkDrop preset parser treated `shape00_per_frame1` and `wavecode_0_per_point1` keys as static base values because it only recognized indexed equation keys starting with `frame` or `point`. That would silently drop custom wave/shape behavior before rendering.
