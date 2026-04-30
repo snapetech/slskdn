@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z171. Winget Zip Portable Fields Belong At Installer Manifest Root
+
+**The Bug**: The stable Winget manifest put `NestedInstallerType` and `NestedInstallerFiles` under the x64 installer entry for a single zip portable package. WingetCreate validation reported confusing multi-file consistency errors instead of pointing directly at the misplaced portable metadata.
+
+**Files Affected**:
+- `packaging/scripts/update-winget-manifests.sh`
+- `packaging/winget/snapetech.slskdn.installer.yaml`
+
+**Wrong**:
+```yaml
+InstallerType: zip
+Installers:
+  - Architecture: x64
+    InstallerUrl: ...
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: slskd.exe
+```
+
+**Correct**:
+```yaml
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+- RelativeFilePath: slskd.exe
+  PortableCommandAlias: slskdn
+Commands:
+- slskdn
+Installers:
+- Architecture: x64
+  InstallerUrl: ...
+```
+
+**Why This Keeps Happening**: Winget supports some installer properties both globally and per-installer, but accepted zip-portable manifests commonly place archive structure and command aliases at the installer manifest root. Follow known winget-pkgs examples for portable zip layouts instead of guessing from schema flexibility.
+
 ### 0z170. WingetCreate Submit Needs Repository-Shaped Manifest Paths
 
 **The Bug**: `wingetcreate submit` validated the three stable manifest files incorrectly when they were copied into a flat scratch directory, reporting duplicate manifest types and inconsistent package fields even though the files had matching `PackageIdentifier` and `PackageVersion` values.
