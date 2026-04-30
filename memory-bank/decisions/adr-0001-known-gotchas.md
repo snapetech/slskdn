@@ -126,6 +126,32 @@ if (!isValidSignature) return new PodMetadataResult(Found: false, PublishedPod: 
 
 **Why This Keeps Happening**: Mesh DHT storage is a byte payload boundary, not a general object database. Writers and readers must agree on an explicit wire format, and signed records must fail closed before discovery or UI layers trust their contents.
 
+### 0z187. Never Hash Whole Library Roots On Stream Misses
+
+**The Bug**: Stream resolution fell back to recursively scanning share/download roots and computing SHA-256 for files when a requested content id was not indexed. Random authenticated stream requests could force expensive disk reads, and the library picker returned absolute local paths to the browser.
+
+**Files Affected**:
+- `src/slskd/Streaming/ContentLocator.cs`
+- `src/slskd/API/Native/LibraryItemsController.cs`
+
+**Wrong**:
+```csharp
+foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+{
+    var contentId = $"sha256:{ComputeSha256(path)}";
+    if (requested == contentId) return path;
+}
+```
+
+**Correct**:
+```csharp
+var contentItem = repo.FindContentItem(contentId);
+if (contentItem != null) return ResolveIndexedContent(contentItem);
+// Fallbacks must be bounded and must not hash file contents on the request path.
+```
+
+**Why This Keeps Happening**: Content-addressed playback makes it tempting to derive IDs lazily during stream requests. Stream endpoints sit on a hot unaudited path; expensive discovery belongs in indexing/search code, and UI responses should expose display paths instead of host filesystem paths.
+
 ### 0z184. Canvas Overlays Can Block Their Own Controls
 
 **The Bug**: The MilkDrop visualizer canvas and hidden overlay occupied the same absolute area as the preset/control buttons. In headless and some pointer paths, the canvas/container intercepted clicks intended for the visible buttons.
