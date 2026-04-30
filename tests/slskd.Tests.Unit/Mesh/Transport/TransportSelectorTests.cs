@@ -257,16 +257,16 @@ public class TransportSelectorTests
 
         public Task<Stream> DialAsync(TransportEndpoint endpoint, string? isolationKey = null, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<Stream>(new MemoryStream());
         }
 
         public Task<Stream> DialWithPinsAsync(TransportEndpoint endpoint, IEnumerable<string> certificatePins, string? isolationKey = null, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<Stream>(new MemoryStream());
         }
 
         public Task<Stream> DialWithPeerValidationAsync(TransportEndpoint endpoint, string peerId, string? isolationKey = null, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+            => Task.FromResult<Stream>(new MemoryStream());
 
         public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(_isAvailable);

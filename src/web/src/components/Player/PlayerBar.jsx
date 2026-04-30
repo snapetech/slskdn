@@ -10,7 +10,7 @@ import SpectrumAnalyzer, { getFrequencyBars } from './SpectrumAnalyzer';
 import { fadeOutputGain, resumeAudioGraph, setKaraokeEnabled, setOutputGain } from './audioGraph';
 import { usePlayer } from './PlayerContext';
 import Visualizer from './Visualizer';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -46,6 +46,18 @@ const readStoredTileMode = () => {
 const readStoredAnalyzerMode = () => {
   const mode = getLocalStorageItem(analyzerModeStorageKey);
   return mode === 'scope' ? 'scope' : 'spectrum';
+};
+
+const setPlayerHeightVariable = (element) => {
+  if (!element || typeof document === 'undefined') return;
+
+  const height = Math.ceil(element.getBoundingClientRect().height);
+  if (height > 0) {
+    document.documentElement.style.setProperty(
+      '--slskdn-player-height',
+      `${height}px`,
+    );
+  }
 };
 
 const getExternalVisualizerStatusText = (status, loading) => {

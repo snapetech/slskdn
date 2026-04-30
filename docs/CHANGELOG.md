@@ -30,6 +30,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   through safe storage helpers for privacy-locked browser contexts.
 - Routed the Network DHT exposure acknowledgement through safe browser storage
   helpers.
+- Replaced several placeholder mesh/security tests with concrete helper-backed
+  assertions and shared test-project imports.
 - Prepared the `2026042900-slskdn.204` stable release metadata.
 - Made Winget release-version metadata validation opt-in so stable releases
   that intentionally skip Winget are not blocked by stale Winget URLs.

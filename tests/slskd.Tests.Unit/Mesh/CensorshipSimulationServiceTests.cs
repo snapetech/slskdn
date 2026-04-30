@@ -3,6 +3,7 @@
 // </copyright>
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Linq;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;

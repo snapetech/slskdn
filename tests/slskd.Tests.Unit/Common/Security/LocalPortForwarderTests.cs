@@ -31,7 +31,10 @@ internal sealed class RecordingMeshServiceClient : IMeshServiceClient
     }
 
     public Task<ServiceReply> CallAsync(string targetPeerId, ServiceCall call, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Tests use CallServiceAsync only.");
+    {
+        Invocations.Add((call.ServiceName, call.Method));
+        return Task.FromResult(Response);
+    }
 }
 
 public class LocalPortForwarderTests : IDisposable

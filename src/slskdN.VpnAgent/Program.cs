@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -20,6 +21,7 @@ try
         "cleanup-ingress" => await Commands.CleanupIngress(),
         "ingress" => await Commands.Ingress(),
         "split" => await Commands.Split(),
+        "platform-split" => await Commands.PlatformSplit(),
         "verify" => await Commands.Verify(args.Skip(1).Contains("--quiet")),
         "status" => await Commands.Verify(quiet: false),
         "watchdog" => await Commands.Watchdog(),
@@ -50,6 +52,8 @@ static void Usage()
                  Remove transparent VPN ingress network namespaces/routes
       ingress    Configure transparent VPN ingress forwards
       split      Configure UID policy routing through the VPN table
+      platform-split
+                 Configure platform-native fail-closed routing/firewall
       verify     Verify slskdN VPN health
       status     Human-readable status check
       watchdog   Run one watchdog check and recover ingress after repeated failures

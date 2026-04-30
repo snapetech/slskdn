@@ -316,14 +316,12 @@ body {
 .app {
     bottom: calc(
         var(--slskdn-footer-height, 43px) +
-        var(--slskdn-player-height, 248px) +
-        env(safe-area-inset-bottom, 0px)
+        var(--slskdn-player-height, 248px)
     ) !important;
     height: calc(
         100dvh -
         var(--slskdn-footer-height, 43px) -
-        var(--slskdn-player-height, 248px) -
-        env(safe-area-inset-bottom, 0px)
+        var(--slskdn-player-height, 248px)
     ) !important;
     left: 0;
     margin: auto;
@@ -343,8 +341,7 @@ body {
         100dvh -
         var(--slskdn-nav-height, 58px) -
         var(--slskdn-footer-height, 43px) -
-        var(--slskdn-player-height, 248px) -
-        env(safe-area-inset-bottom, 0px)
+        var(--slskdn-player-height, 248px)
     );
     min-height: 0 !important;
     overflow-x: hidden;

@@ -412,7 +412,7 @@ public class MeshServiceRouterSecurityTests
             MeshServiceContext context,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 
@@ -433,7 +433,7 @@ public class MeshServiceRouterSecurityTests
             MeshServiceContext context,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 
@@ -464,7 +464,7 @@ public class MeshServiceRouterSecurityTests
             MeshServiceContext context,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 
@@ -493,7 +493,7 @@ public class MeshServiceRouterSecurityTests
             MeshServiceContext context,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }

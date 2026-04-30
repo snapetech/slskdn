@@ -58,6 +58,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 **Files Affected**:
 - `tests/slskd.Tests.Unit/Mesh/DomainFrontedTransportTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/CensorshipSimulationServiceTests.cs`
 - `tests/slskd.Tests.Unit/Mesh/ImageSteganographyTests.cs`
 - `tests/slskd.Tests.Unit/Mesh/DecoyPodServiceTests.cs`
 
@@ -70,14 +71,14 @@ public Task<HttpRequestMessage> BuildRequestAsync(string path)
 
 **Correct**:
 ```csharp
-using System.Net.Http;
-using System.Linq;
-using Xunit;
+// tests/slskd.Tests.Unit/GlobalUsings.cs
+global using System.Linq;
+global using System.Net.Http;
 
 public Task<HttpRequestMessage> BuildRequestAsync(string path)
 ```
 
-**Why This Keeps Happening**: Test-local stubs and helpers feel informal, but they compile under the same project rules as production code. When adding concrete helper behavior in tests, run the focused test immediately and import every framework namespace explicitly instead of assuming implicit usings cover it.
+**Why This Keeps Happening**: Test-local stubs and helpers feel informal, but they compile under the same project rules as production code. When adding concrete helper behavior across test files, run the focused test immediately and add shared framework namespaces to the test project's global usings instead of assuming implicit usings cover them.
 
 ### 0z207. Browser Storage Access Can Throw In Privacy-Locked Contexts
 
