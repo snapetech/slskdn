@@ -303,6 +303,41 @@ class Pods extends Component {
     }
   };
 
+  handleSaveDiscoveredPod = async (pod) => {
+    const podId = pod.podId || pod.PodId;
+    const name = pod.name || pod.Name || podId;
+    const tags = pod.tags || pod.Tags || [];
+    const visibility = pod.visibility || pod.Visibility || 'Unlisted';
+    const focusContentId = pod.focusContentId || pod.FocusContentId || null;
+
+    if (!podId) return;
+
+    try {
+      const savedPod = await pods.create({
+        channels: [
+          {
+            channelId: 'general',
+            kind: 'General',
+            name: 'General',
+          },
+        ],
+        externalBindings: [],
+        focusContentId,
+        name,
+        podId,
+        tags,
+        visibility,
+      }, this.getLocalPeerId());
+
+      toast.success(`Saved pod ${name}`);
+      await this.fetchPods();
+      await this.selectPod(savedPod.podId);
+    } catch (error) {
+      console.error('Failed to save discovered pod:', error);
+      toast.error(`Failed to save pod: ${error.message}`);
+    }
+  };
+
   render() {
     const {
       activeChannelId,
@@ -490,6 +525,24 @@ class Pods extends Component {
                           {tags.length > 0 ? tags.join(', ') : podId}
                         </List.Description>
                       </List.Content>
+                      {!local && (
+                        <List.Content floated="right">
+                          <Popup
+                            content="Save this discovered pod locally so it appears in your pod list after restarts."
+                            trigger={
+                              <Button
+                                basic
+                                icon="save"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  this.handleSaveDiscoveredPod(pod);
+                                }}
+                                size="mini"
+                              />
+                            }
+                          />
+                        </List.Content>
+                      )}
                     </List.Item>
                   );
                 })}

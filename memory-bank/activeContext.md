@@ -1,3 +1,17 @@
+## Update 2026-04-30 01:45:00Z
+
+- Current task: None. Pod, room, chat, and contact social recovery surfaces are integrated.
+- Last activity:
+  - reviewed social workflows across Pods, Rooms, Chat, and Contacts
+  - added server-state rehydration affordances for saved chats and joined rooms
+  - made Pods support create, discover, and local-save flows from the main page
+  - added Contacts actions to jump directly into chat or shared-file browsing
+  - validated frontend lint and diff whitespace
+- Next steps:
+  1. Exercise pod discovery/save against a live mesh node to confirm remote metadata quality.
+  2. Add signed remote pod join-request UI once the membership service has a user-friendly key/signature flow.
+  3. Keep social discovery scans user-triggered and conservative.
+
 ## Update 2026-04-30 01:15:00Z
 
 - Current task: None. Mixed-source accelerated failover no longer dials mesh-overlay sources through Soulseek.

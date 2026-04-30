@@ -1,3 +1,10 @@
+## 2026-04-30 01:45Z - Integrated social recovery surfaces
+
+- Reviewed the pod, room, chat, and contact UX as one social workflow rather than separate pages.
+- Added daemon-backed recovery affordances: chats rehydrate saved conversations, rooms reopen joined daemon rooms, and Pods exposes create/discover/save actions from the primary Pods page.
+- Added contact actions for starting chat and browsing shares, plus explicit pod discovery save behavior so found pods can be retrieved after restarts.
+- Validation: `cd src/web && npm run lint -- --quiet`, `cd src/web && npm run build`, and `git diff --check` passed.
+
 ## 2026-04-30 01:15Z - Fixed mixed-source failover transport filtering
 
 - Fixed `MultiSourceDownloadService.DownloadSequentialFailoverAsync` so mixed source sets build a raw-Soulseek-only candidate list before calling `ISoulseekClient.DownloadAsync`.

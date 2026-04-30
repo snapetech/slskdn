@@ -37,6 +37,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   conversations and joined rooms rehydrate from server state, pods can be
   created or discovered from the main Pods page, and discovered pods can be
   saved locally for daemon-backed retrieval after restarts.
+- Added a direct save action for discovered pods so remote discovery results
+  can be promoted into the local daemon-backed pod list instead of remaining
+  view-only search results in the Pods sidebar.
 - Hardened security boundaries by requiring authentication for ActivityPub
   outbox publishing, adding SSRF and size guards to HTTP share backfill,
   fixing file-list path prefix authorization, removing query-string API-key
