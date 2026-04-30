@@ -375,9 +375,10 @@ public class PodsController : ControllerBase
                 return NotFound(new { error = "Pod or member not found" });
             }
 
-            if (string.Equals(podId, goldStarClubService?.GoldStarClubPodId, StringComparison.Ordinal))
+            var goldStarClub = goldStarClubService;
+            if (goldStarClub != null && string.Equals(podId, goldStarClub.GoldStarClubPodId, StringComparison.Ordinal))
             {
-                await goldStarClubService.RecordRevocationAsync(peerId, ct);
+                await goldStarClub.RecordRevocationAsync(peerId, ct);
             }
 
             return Ok(new { left = true });

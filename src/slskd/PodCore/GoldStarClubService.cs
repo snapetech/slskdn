@@ -83,11 +83,11 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
     }
 
     private static string RevocationFilePath =>
-        Path.Combine(
+        System.IO.Path.Combine(
             string.IsNullOrWhiteSpace(global::slskd.Program.AppDirectory) ? global::slskd.Program.DefaultAppDirectory : global::slskd.Program.AppDirectory,
             RevocationFileName);
 
-    private static bool IsRevokedLocally() => File.Exists(RevocationFilePath);
+    private static bool IsRevokedLocally() => System.IO.File.Exists(RevocationFilePath);
 
     public GoldStarClubService(
         IPodService podService,
@@ -273,8 +273,8 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
         }
 
         var path = RevocationFilePath;
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        return File.WriteAllTextAsync(
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+        return System.IO.File.WriteAllTextAsync(
             path,
             $"revoked_by={peerId.Trim()}{Environment.NewLine}revoked_at={DateTimeOffset.UtcNow:O}{Environment.NewLine}",
             ct);
