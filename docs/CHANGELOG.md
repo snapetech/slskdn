@@ -66,6 +66,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   imported-preset next/random navigation to the filtered result set.
 - Added browser-local native MilkDrop preset playlists, including save-from-filter,
   select, clear-active, delete, and playlist-scoped next/random navigation.
+- Added renderer-wide native MilkDrop q1-q64 initialization and q-register
+  propagation across global, custom wave, shape, and sprite evaluation stages.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

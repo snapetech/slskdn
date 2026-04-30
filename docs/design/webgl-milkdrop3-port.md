@@ -98,6 +98,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first favorites, history, next, and random controls for the browser-local native preset bank.
 - [x] Add first search/filter control for the browser-local native preset bank.
 - [x] Add first browser-local native preset playlists.
+- [x] Add renderer-wide q1-q64 initialization and q-register propagation across evaluated stages.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -105,7 +106,7 @@ Current parser/VM scope:
 
 - Parses classic `.milk` base values, global init/per-frame/per-pixel equations, warp/comp shader text, custom shapes, custom waves, and first-pass sprite/image primitives.
 - Detects simple `.milk2` double-preset files and preserves both preset bodies.
-- Preserves MilkDrop3 q1-q64 variables for later render/equation phases.
+- Preserves MilkDrop3 q1-q64 variables in parsed presets and initializes all q-registers in the renderer scope.
 - Evaluates deterministic arithmetic, assignment, compound assignment, comparison, and core helper functions.
 - Throws on unsupported syntax instead of silently mis-evaluating presets.
 - Creates a WebGL2 program and draws a placeholder full-screen triangle from evaluated MilkDrop color variables. This is not yet a MilkDrop feedback renderer; it proves the parser/VM/render boundary can drive GPU output.
@@ -117,6 +118,7 @@ Current parser/VM scope:
 - Draws custom shapes as triangle-fan fills plus optional border line strips, including alpha blending and the parsed `additive` flag.
 - Supports first-pass shape center-to-edge gradients through `r2/g2/b2/a2` and thick-outline line width hints. Textured shapes and full MilkDrop shape modes are still pending.
 - Evaluates custom wave init/frame/point equations into WebGL line-strip vertices using audio samples as point inputs, with per-wave q-register persistence, color/alpha, additive blending, and thick line hints.
+- Propagates q-register writes from global frame equations and evaluated custom wave, shape, and sprite stages back into the frame scope while still preventing non-q primitive-local frame/audio values from leaking into primitive base values.
 - Supports first-pass custom wave dot rendering and spectrum-source sampling from frame frequency data.
 - Supports analyzer-backed `get_fft(pos)` and `get_fft_hz(freq)` expression helpers against renderer-provided frequency data. Full MilkDrop wave modes and shader-side FFT access are still pending.
 - Rebinds WebGL vertex attributes before each fullscreen, warp-grid, wave, and shape draw so program switches cannot leave draw calls pointed at stale buffers.
@@ -149,7 +151,7 @@ Current parser/VM scope:
 
 ### Phase 2: MilkDrop3 Feature Deltas
 
-- Add q1-q64 support.
+- Add deeper q1-q64 compatibility coverage against real MilkDrop3 presets.
 - Add increased wave/shape counts.
 - Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
 - Add richer `.milk2` transition/composite controls beyond first secondary alpha support.

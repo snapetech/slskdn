@@ -1,3 +1,10 @@
+## 2026-04-30 17:31Z - Added native MilkDrop q-register propagation
+
+- Native renderer scope now initializes q1-q64 so MilkDrop3 q-register references have a stable default.
+- Custom wave, shape, and sprite evaluation stages propagate q-register writes back into the frame scope for later stages while still keeping non-q primitive-local values isolated.
+- Added renderer coverage for q-register initialization, extraction, and cross-stage propagation.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 17:24Z - Added native MilkDrop preset playlists
 
 - Added browser-local named playlists for imported native MilkDrop presets.

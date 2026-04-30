@@ -1,5 +1,6 @@
 import {
   createMilkdropRenderer,
+  createQRegisterScope,
   createShapeFillColors,
   createShapeFillVertices,
   createShapeTextureUvs,
@@ -14,6 +15,7 @@ import {
   evaluateShapeState,
   evaluateSpriteState,
   evaluateWaveState,
+  extractQRegisters,
   getMilkdropFrameColor,
   getMilkdropWarpState,
   getMotionVectorColor,
@@ -197,6 +199,49 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.disable).toHaveBeenCalledWith(gl.BLEND);
     expect(gl.lineWidth).toHaveBeenCalledWith(2);
     expect(gl.lineWidth).toHaveBeenCalledWith(1);
+  });
+
+  it('initializes and propagates q1-q64 registers across render stages', () => {
+    const gl = createFakeGl();
+    const canvas = createCanvas(gl);
+    const preset = parseMilkdropPreset(`
+      q64=0.64
+      wave_r=0.4
+      per_frame_1=q1=0.25;
+      wavecode_0_enabled=1
+      wavecode_0_samples=3
+      wavecode_0_per_frame1=q2=q1+0.25;
+      wavecode_0_per_point1=x=i;
+      wavecode_0_per_point2=y=0.5;
+      shape00_enabled=1
+      shape00_sides=4
+      shape00_rad=0.1
+      shape00_per_frame1=q3=q2+0.25;
+      sprite00_enabled=1
+      sprite00_w=0.1
+      sprite00_h=0.1
+      sprite00_per_frame1=q4=q3+0.25;
+    `).primary;
+
+    const renderer = createMilkdropRenderer({ canvas, preset });
+    const scope = renderer.render({
+      frame: 1,
+      samples: [0, 0, 0],
+      time: 1,
+    });
+
+    expect(createQRegisterScope({ q64: 0.64 })).toEqual(expect.objectContaining({
+      q1: 0,
+      q64: 0.64,
+    }));
+    expect(extractQRegisters({ q4: 1, time: 9 })).toEqual({ q4: 1 });
+    expect(scope.q1).toBeCloseTo(0.25);
+    expect(scope.q2).toBeCloseTo(0.5);
+    expect(scope.q3).toBeCloseTo(0.75);
+    expect(scope.q4).toBeCloseTo(1);
+    expect(scope.q64).toBeCloseTo(0.64);
+
+    renderer.dispose();
   });
 
   it('uses preset decay as feedback blend and releases GPU resources', () => {

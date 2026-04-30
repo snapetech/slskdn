@@ -1,3 +1,14 @@
+## Update 2026-04-30 17:31:18Z
+
+- Current task: Native MilkDrop renderer has q1-q64 frame-scope propagation.
+- Last activity:
+  - added explicit q1-q64 initialization to native renderer frame scope
+  - added q-register extraction/merge helpers so primitive-local q writes propagate back into the render frame
+  - custom waves, shapes, and sprites now pass q-register state forward while still not leaking non-q primitive-local frame/audio values into primitive base values
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue the next large MilkDrop phase, likely deeper shader/audio compatibility.
+
 ## Update 2026-04-30 17:24:08Z
 
 - Current task: Native MilkDrop has first browser-local preset playlists.

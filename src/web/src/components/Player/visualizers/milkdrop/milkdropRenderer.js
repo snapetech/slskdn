@@ -103,6 +103,29 @@ const defaultAudioState = {
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
 
+const qRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
+
+const isQVariable = (key) => /^q([1-9]|[1-5][0-9]|6[0-4])$/.test(key);
+
+export const createQRegisterScope = (source = {}) =>
+  qRegisterNames.reduce((registers, key) => ({
+    ...registers,
+    [key]: Number(source[key] ?? 0) || 0,
+  }), {});
+
+export const extractQRegisters = (source = {}) =>
+  qRegisterNames.reduce((registers, key) => {
+    if (source[key] !== undefined) {
+      registers[key] = Number(source[key]) || 0;
+    }
+    return registers;
+  }, {});
+
+const mergeQRegisters = (target = {}, source = {}) => ({
+  ...target,
+  ...extractQRegisters(source),
+});
+
 const createShader = (gl, type, source) => {
   const shader = gl.createShader(type);
   gl.shaderSource(shader, source);
@@ -399,6 +422,7 @@ const resizeFeedbackTarget = (gl, target, width, height) => {
 
 export const createMilkdropInitialScope = (preset, frame = {}) => ({
   ...defaultAudioState,
+  ...createQRegisterScope(preset.baseValues),
   ...preset.baseValues,
   frame: frame.frame || 0,
   fps: frame.fps || 60,
@@ -709,8 +733,6 @@ const waveValueKeys = new Set([
   'spectrum',
   'thick',
 ]);
-
-const isQVariable = (key) => /^q([1-9]|[1-5][0-9]|6[0-4])$/.test(key);
 
 const persistScopedValues = (baseValues, scope, allowedKeys) => {
   const nextBaseValues = { ...baseValues };
@@ -1077,6 +1099,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
 
       preset.waves.forEach((wave) => {
         const evaluatedWave = evaluateWaveState(wave, scope);
+        scope = mergeQRegisters(scope, evaluatedWave.baseValues);
         const waveSamples = Number(evaluatedWave.baseValues?.spectrum ?? 0) > 0
           ? frequencyData.length > 0 ? frequencyData : frame.waveform || frame.samples || []
           : frame.waveform || frame.samples || [];
@@ -1115,6 +1138,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
 
       preset.shapes.forEach((shape) => {
         const evaluatedShape = evaluateShapeState(shape, scope);
+        scope = mergeQRegisters(scope, evaluatedShape.baseValues);
         const shapeFillVertices = createShapeFillVertices(evaluatedShape);
         const shapeVertices = createShapeVertices(evaluatedShape);
         if (shapeFillVertices.length === 0 && shapeVertices.length === 0) return;
@@ -1178,6 +1202,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
 
       (preset.sprites || []).forEach((sprite) => {
         const evaluatedSprite = evaluateSpriteState(sprite, scope);
+        scope = mergeQRegisters(scope, evaluatedSprite.baseValues);
         const spriteVertices = createSpriteVertices(evaluatedSprite);
         if (spriteVertices.length === 0) return;
         const spriteUvs = createSpriteTextureUvs(evaluatedSprite);
