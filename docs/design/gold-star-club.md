@@ -27,7 +27,7 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 
 ### Pod Details
 
-- **Pod ID**: `pod:gold-star-club` (fixed, not random)
+- **Pod ID**: `pod:901d57a2c1bb4e5d90d57a2c1bb4e5d0` (fixed, not random)
 - **Name**: "Gold Star Club ⭐"
 - **Visibility**: Listed (discoverable)
 - **Tags**: `gold-star`, `first-250`, `realm-governance`, `testing`

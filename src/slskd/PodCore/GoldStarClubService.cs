@@ -58,7 +58,7 @@ public interface IGoldStarClubService
 /// </summary>
 public sealed class GoldStarClubService : BackgroundService, IGoldStarClubService
 {
-    public const string GoldStarClubPodId = "pod:gold-star-club";
+    public const string GoldStarClubPodId = "pod:901d57a2c1bb4e5d90d57a2c1bb4e5d0";
     public const int MaxMembership = 250;
 
     // Operators can set this env var to "false" before startup to opt out of Gold Star Club auto-join.
