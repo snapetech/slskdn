@@ -572,16 +572,60 @@ export const createWarpGridMesh = (scope = {}, equations = '', columns = 8, rows
   };
 };
 
-export const createWaveformVertices = (samples = [], scale = 1) => {
+const normalizeWaveformOptions = (scaleOrOptions = 1, maybeOptions = {}) =>
+  (typeof scaleOrOptions === 'object'
+    ? {
+      mode: Math.floor(toFiniteNumber(scaleOrOptions.mode ?? scaleOrOptions.wave_mode, 0)),
+      scale: toFiniteNumber(scaleOrOptions.scale ?? scaleOrOptions.wave_scale, 1) || 1,
+      smoothing: clamp01(scaleOrOptions.smoothing ?? scaleOrOptions.wave_smoothing ?? 0),
+      x: toFiniteNumber(scaleOrOptions.x ?? scaleOrOptions.wave_x, 0.5),
+      y: toFiniteNumber(scaleOrOptions.y ?? scaleOrOptions.wave_y, 0.5),
+    }
+    : {
+      mode: Math.floor(toFiniteNumber(maybeOptions.mode ?? maybeOptions.wave_mode, 0)),
+      scale: toFiniteNumber(scaleOrOptions, 1) || 1,
+      smoothing: clamp01(maybeOptions.smoothing ?? maybeOptions.wave_smoothing ?? 0),
+      x: toFiniteNumber(maybeOptions.x ?? maybeOptions.wave_x, 0.5),
+      y: toFiniteNumber(maybeOptions.y ?? maybeOptions.wave_y, 0.5),
+    });
+
+const getSmoothedSample = (samples, index, smoothing) => {
+  const sample = Number(samples[index]) || 0;
+  if (smoothing <= 0 || index <= 0) return sample;
+  const previous = Number(samples[index - 1]) || 0;
+  return previous * smoothing + sample * (1 - smoothing);
+};
+
+export const createWaveformVertices = (samples = [], scaleOrOptions = 1, maybeOptions = {}) => {
   const count = Math.max(0, samples.length);
   if (count < 2) return new Float32Array();
 
+  const options = normalizeWaveformOptions(scaleOrOptions, maybeOptions);
+  const centerX = (options.x * 2) - 1;
+  const centerY = (options.y * 2) - 1;
   const vertices = new Float32Array(count * 2);
   samples.forEach((sample, index) => {
-    const x = count === 1 ? 0 : (index / (count - 1)) * 2 - 1;
-    const y = clamp01(0.5 + (Number(sample) || 0) * scale * 0.5) * 2 - 1;
-    vertices[index * 2] = x;
-    vertices[index * 2 + 1] = y;
+    const progress = count === 1 ? 0 : index / (count - 1);
+    const value = getSmoothedSample(samples, index, options.smoothing) * options.scale;
+    if (options.mode === 2) {
+      vertices[index * 2] = Math.max(-1, Math.min(1, centerX + value));
+      vertices[index * 2 + 1] = (progress * 2) - 1;
+      return;
+    }
+    if (options.mode === 3) {
+      const angle = progress * Math.PI * 2;
+      const radius = Math.max(0, Math.min(1, 0.35 + value * 0.18));
+      vertices[index * 2] = Math.max(-1, Math.min(1, centerX + Math.cos(angle) * radius));
+      vertices[index * 2 + 1] = Math.max(-1, Math.min(1, centerY + Math.sin(angle) * radius));
+      return;
+    }
+    if (options.mode === 1) {
+      vertices[index * 2] = (progress * 2) - 1;
+      vertices[index * 2 + 1] = Math.max(-1, Math.min(1, centerY + value));
+      return;
+    }
+    vertices[index * 2] = (progress * 2) - 1;
+    vertices[index * 2 + 1] = clamp01(0.5 + value * 0.5) * 2 - 1;
   });
   return vertices;
 };
@@ -1201,10 +1245,24 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
 
       const waveformVertices = createWaveformVertices(
         frame.waveform || frame.samples || [],
-        Number(scope.wave_scale ?? 1) || 1,
+        {
+          mode: scope.wave_mode,
+          scale: scope.wave_scale,
+          smoothing: scope.wave_smoothing,
+          x: scope.wave_x,
+          y: scope.wave_y,
+        },
       );
       if (waveformVertices.length > 0) {
-        const waveformColors = createRepeatedColors(waveformVertices.length / 2, [r, g, b, 1]);
+        const waveformAlpha = clamp01(scope.wave_a ?? 1);
+        const waveformColors = createRepeatedColors(
+          waveformVertices.length / 2,
+          [r, g, b, waveformAlpha],
+        );
+        if (waveformAlpha < 1) {
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        }
         gl.useProgram(lineProgram);
         bindLineBuffers(gl, lineBuffers);
         gl.uniform1f(pointSizeUniform, 1);
@@ -1213,6 +1271,9 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.colorBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, waveformColors, gl.DYNAMIC_DRAW);
         gl.drawArrays(gl.LINE_STRIP, 0, waveformVertices.length / 2);
+        if (waveformAlpha < 1) {
+          gl.disable(gl.BLEND);
+        }
         gl.useProgram(program);
       }
 

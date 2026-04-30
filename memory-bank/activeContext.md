@@ -1,3 +1,16 @@
+## Update 2026-04-30 18:06:55Z
+
+- Current task: Native MilkDrop has first classic waveform mode support.
+- Last activity:
+  - expanded built-in waveform geometry beyond the default centered trace
+  - added first support for `wave_mode`, `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing`
+  - renderer now passes preset scope into waveform generation and blends semi-transparent waveform output
+  - added focused waveform geometry and render-call coverage
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke
+- Next steps:
+  1. Run whitespace checks, commit, and push.
+  2. Continue the next large MilkDrop phase, likely richer shader translation or real-preset compatibility expansion.
+
 ## Update 2026-04-30 18:01:27Z
 
 - Current task: Native MilkDrop has first classic screen-border rendering.

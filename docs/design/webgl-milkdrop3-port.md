@@ -103,6 +103,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first shader-side `get_fft()` and `get_fft_hz()` support for translated warp/comp shaders.
 - [x] Add first native primitive-field alias support for common custom wave, shape, and sprite names.
 - [x] Add first classic `ob_*` and `ib_*` screen-border rendering.
+- [x] Add first classic `wave_mode`, `wave_x/y`, `wave_a`, and `wave_smoothing` support.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -116,7 +117,7 @@ Current parser/VM scope:
 - Creates a WebGL2 program and draws a placeholder full-screen triangle from evaluated MilkDrop color variables. This is not yet a MilkDrop feedback renderer; it proves the parser/VM/render boundary can drive GPU output.
 - Allocates two WebGL texture/framebuffer targets, writes each frame into the feedback target, blits that target to screen, then swaps read/write targets. The current pass uses `decay` as the feedback blend; warp/comp shader logic is still pending.
 - Applies first-pass warp state from evaluated `zoom`, `rot`, `dx`, and `dy` variables while sampling the previous feedback texture. This is still a compatibility stepping stone, not translated preset warp shader execution.
-- Converts incoming waveform samples into clip-space vertices and draws them as a WebGL `LINE_STRIP` into the feedback target before the screen blit. Custom wave equations and MilkDrop waveform modes are still pending.
+- Converts incoming waveform samples into clip-space vertices and draws them as a WebGL `LINE_STRIP` into the feedback target before the screen blit. The first classic waveform pass supports horizontal, centered, vertical, and circular-ish modes plus `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing`; higher-fidelity MilkDrop wave modes are still pending.
 - Converts enabled parsed shape entries into closed polygon line strips using `x`, `y`, `rad`, `sides`, `ang`, and `r/g/b` values.
 - Renders classic MilkDrop outer and inner screen borders from `ob_size/ob_r/g/b/a` and `ib_size/ib_r/g/b/a` as alpha-blended filled rings.
 - Evaluates custom shape init/frame equations before drawing and persists shape-owned values plus q-registers without leaking global frame/audio variables into shape base values.

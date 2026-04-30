@@ -77,6 +77,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   `bUseDots`, `bDrawThick`, `bAdditive`, `bTextured`, and `texName`.
 - Added first native MilkDrop screen-border rendering for classic `ob_*` and
   `ib_*` preset values.
+- Added first classic native MilkDrop waveform modes with `wave_mode`,
+  `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing` support.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

@@ -61,6 +61,7 @@
  - Progress (2026-04-30): Added first shader-side `get_fft()` and `get_fft_hz()` support for translated native warp/comp shaders using a normalized 32-bin FFT uniform array.
  - Progress (2026-04-30): Added native primitive-field aliases for common MilkDrop custom wave, shape, and sprite names including `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, `bAdditive`, `bTextured`, `numSides`, and `texName`.
  - Progress (2026-04-30): Added first classic `ob_*` and `ib_*` native MilkDrop screen-border rendering as alpha-blended GPU rings.
+ - Progress (2026-04-30): Added first classic native waveform modes with placement, alpha, scaling, and smoothing support from `wave_mode`, `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing`.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

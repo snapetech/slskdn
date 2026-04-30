@@ -1,3 +1,10 @@
+## 2026-04-30 18:06Z - Added native MilkDrop waveform modes
+
+- Expanded built-in waveform rendering beyond the default centered trace.
+- Added first support for `wave_mode`, `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing`.
+- Semi-transparent waveforms now use alpha blending, and waveform geometry has focused mode/placement/smoothing coverage.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 18:01Z - Added native MilkDrop screen borders
 
 - Added filled rectangle-ring geometry for classic MilkDrop outer and inner screen borders.

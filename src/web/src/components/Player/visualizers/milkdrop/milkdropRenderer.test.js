@@ -267,6 +267,32 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.deleteProgram).toHaveBeenCalledTimes(4);
   });
 
+  it('renders classic waveform placement and alpha from preset scope', () => {
+    const gl = createFakeGl();
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        wave_a=0.5
+        wave_mode=2
+        wave_x=0.25
+        wave_scale=1
+      `).primary,
+    });
+
+    renderer.render({
+      samples: [-0.5, 0.5],
+    });
+
+    expect(gl.enable).toHaveBeenCalledWith(gl.BLEND);
+    expect(gl.blendFunc).toHaveBeenCalledWith(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    expect(gl.bufferData).toHaveBeenCalledWith(
+      gl.ARRAY_BUFFER,
+      expect.objectContaining({ length: 8 }),
+      gl.DYNAMIC_DRAW,
+    );
+    expect(gl.drawArrays).toHaveBeenCalledWith(gl.LINE_STRIP, 0, 2);
+  });
+
   it('draws configured inner and outer screen borders', () => {
     const gl = createFakeGl();
     const renderer = createMilkdropRenderer({
@@ -590,6 +616,42 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       1, -1,
     ]);
     expect(createWaveformVertices([0], 1)).toHaveLength(0);
+  });
+
+  it('maps classic waveform modes and placement into clip-space vertices', () => {
+    const centered = Array.from(createWaveformVertices([-0.5, 0, 0.5], {
+      mode: 1,
+      scale: 0.5,
+      wave_y: 0.25,
+    }));
+    const vertical = Array.from(createWaveformVertices([-0.5, 0.5], {
+      mode: 2,
+      wave_x: 0.25,
+    }));
+    const circular = Array.from(createWaveformVertices([0, 0], {
+      mode: 3,
+      wave_x: 0.5,
+      wave_y: 0.5,
+    }));
+    const smoothed = Array.from(createWaveformVertices([0, 1], {
+      mode: 1,
+      smoothing: 0.5,
+    }));
+
+    expect(centered[0]).toBeCloseTo(-1);
+    expect(centered[1]).toBeCloseTo(-0.75);
+    expect(centered[3]).toBeCloseTo(-0.5);
+    expect(centered[5]).toBeCloseTo(-0.25);
+    expect(vertical).toHaveLength(4);
+    expect(vertical[0]).toBeCloseTo(-1);
+    expect(vertical[1]).toBeCloseTo(-1);
+    expect(vertical[2]).toBeCloseTo(0);
+    expect(vertical[3]).toBeCloseTo(1);
+    expect(circular[0]).toBeCloseTo(0.35);
+    expect(circular[1]).toBeCloseTo(0);
+    expect(circular[2]).toBeCloseTo(0.35);
+    expect(circular[3]).toBeCloseTo(0);
+    expect(smoothed[3]).toBeCloseTo(0.5);
   });
 
   it('evaluates per-pixel warp equations into a textured grid mesh', () => {
