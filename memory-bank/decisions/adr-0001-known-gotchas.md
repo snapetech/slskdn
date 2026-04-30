@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z173. Initial Winget Submissions Should Use Singleton Manifests
+
+**The Bug**: WingetCreate's multi-file directory submission path repeatedly failed validation in CI with misleading duplicate manifest type and inconsistent package field errors, even after the files had matching identifiers, matching versions, a repository-shaped path, valid YAML, and accepted portable zip layout.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/publish-winget.yml`
+
+**Wrong**:
+```powershell
+.\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH -t $env:WINGETCREATE_GITHUB_TOKEN
+```
+
+where `$env:WINGET_SUBMIT_PATH` points to a directory containing version, installer, and locale manifests.
+
+**Correct**:
+```powershell
+.\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH -t $env:WINGETCREATE_GITHUB_TOKEN
+```
+
+where `$env:WINGET_SUBMIT_PATH` points to a generated singleton manifest file for the first package submission.
+
+**Why This Keeps Happening**: slskdN keeps multi-file manifests in-repo because that is the long-term winget-pkgs layout, but WingetCreate's submit command still has a singleton-first path and its multi-file validation errors can hide the real cause. For initial automation, generate a temporary singleton manifest from the same release metadata and submit that file.
+
 ### 0z172. Winget PackageVersion Should Stay Numeric
 
 **The Bug**: Stable Winget manifests used the public slskdN release label converted from `2026042900-slskdn.202` to `2026042900.slskdn.202`. WingetCreate/WinGetUtil validation reported confusing multi-file consistency errors instead of a direct version-format error.
