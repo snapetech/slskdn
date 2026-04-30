@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z167. Package Upgrades Must Refresh Already-Running Services
+
+**The Bug**: AUR upgrades installed the new payload and updated `/usr/bin/slskd --version`, but the live systemd service kept running the old release until an explicit manual restart.
+
+**Files Affected**:
+- `packaging/aur/slskd.install`
+
+**Wrong**:
+```sh
+post_upgrade() {
+    post_install
+}
+```
+
+**Correct**:
+```sh
+post_upgrade() {
+    post_install
+    systemctl try-restart slskd.service >/dev/null 2>&1 || true
+}
+```
+
+**Why This Keeps Happening**: Package-manager install hooks and release payload checks prove that files on disk changed, not that the daemon process re-execed the new binary. Upgrade hooks should restart only already-running services with `try-restart`, preserving disabled/stopped installs while ensuring active daemons actually move to the upgraded payload.
+
 ### 0z166. Weak SongID Candidates Must Not Unlock Catalog Context
 
 **The Bug**: Manual-review SongID runs with a plausible but weak track candidate expanded album, artist, and segment context, which polluted Discovery Graph neighborhoods with unrelated labels such as "TV Show".
