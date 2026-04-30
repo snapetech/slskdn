@@ -7194,3 +7194,10 @@ Code quality improvements were completed as part of Option A:
 ## 2026-04-30 00:01:05Z
 
 - Prepared stable release `2026042900-slskdn.200` by moving the current Unreleased header/footer chrome and transfer polish bullets into a versioned changelog section.
+
+## 2026-04-30 00:08:00Z
+
+- Release tag `build-main-2026042900-slskdn.200` failed in the Build release gate before packaging because stale unit tests no longer compiled.
+- Fixed the stale `MusicBrainz.Enabled` assertion in the YAML alias test and disambiguated `System.IO.File` / `System.IO.Directory` in `ProgramPathNormalizationTests` where `Soulseek.File` and `Soulseek.Directory` were also in scope.
+- Documented the release-gate compile gotcha in ADR-0001 and committed that entry immediately as `9fa274c77`.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~YamlConfigurationSourceTests|FullyQualifiedName~ProgramPathNormalizationTests"` passed (`38/38`) with existing analyzer warnings.

@@ -61,11 +61,9 @@ public class YamlConfigurationSourceTests
         var options = ReadOptions("""
             integrations:
               musicBrainz:
-                enabled: true
                 base_url: https://musicbrainz.example.invalid
             """);
 
-        Assert.True(options.Integration.MusicBrainz.Enabled);
         Assert.Equal("https://musicbrainz.example.invalid", options.Integration.MusicBrainz.BaseUrl);
     }
 

@@ -22,7 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
-## [2026042900-slskdn.200] — 2026-04-30
+## [2026042900-slskdn.201] — 2026-04-30
 
 - Reworked the fixed Web UI header and footer chrome so primary navigation,
   utility actions, brand, speeds, network counters, and transport icons align
@@ -36,6 +36,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed delete-on-remove for successful batch downloads so files stored under
   the batch completion folder are resolved correctly.
 - Documented the supported advanced search filter text syntax in the README.
+- Fixed stale unit-test compile blockers in the release gate by removing an
+  assertion against the retired `MusicBrainz.Enabled` option and disambiguating
+  `System.IO.File` / `System.IO.Directory` in tests that import `Soulseek`.
 
 ## [2026042900-slskdn.199] — 2026-04-29
 

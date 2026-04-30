@@ -5,6 +5,8 @@ namespace slskd.Tests.Unit;
 
 using System;
 using System.IO;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.ExceptionServices;

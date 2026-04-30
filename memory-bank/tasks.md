@@ -1390,6 +1390,6 @@
   - Status: completed (2026-04-29)
   - Notes: Added conservative queue-position refresh batching, transfer peer Browse links, batch-aware delete-on-remove path resolution, README search-filter syntax documentation, and changelog notes. Larger items such as browser playback and browse UI pagination remain design-sized work rather than safe same-turn changes.
 
-- [x] Prepare `2026042900-slskdn.200` stable release
+- [x] Prepare `2026042900-slskdn.201` stable release
   - Status: completed (2026-04-30)
-  - Notes: Promoted the current Unreleased UI chrome and transfer polish notes into the `.200` changelog section for the tag-only stable release workflow.
+  - Notes: Promoted the current Unreleased UI chrome and transfer polish notes into the `.201` changelog section for the tag-only stable release workflow after `.200` failed its release gate on stale unit-test compile blockers.

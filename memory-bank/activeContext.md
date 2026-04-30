@@ -1,3 +1,16 @@
+## Update 2026-04-30 00:08:00Z
+
+- Current task: Prepare replacement stable release `2026042900-slskdn.201`.
+- Last activity:
+  - monitored `.200` through failure in the Build release gate
+  - fixed stale unit-test compile blockers in YAML configuration and path-normalization tests
+  - documented and committed the release-gate compile gotcha separately
+  - validated the affected unit-test slice
+- Next steps:
+  1. Commit and push the test fix plus `.201` release-note update.
+  2. Push tag `build-main-2026042900-slskdn.201`.
+  3. Monitor the replacement release workflow.
+
 ## Update 2026-04-30 00:01:05Z
 
 - Current task: Prepare stable release `2026042900-slskdn.200`.
