@@ -92,6 +92,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first sprite/image primitive parse and render path.
 - [x] Scope imported texture/image assets to the presets that reference them.
 - [x] Add first folder import affordance for native preset packs.
+- [x] Add first native renderer-set crossfade scheduler and `.milk2` composite-alpha control.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -124,7 +125,8 @@ Current parser/VM scope:
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
 - Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections only when the shader body is outside the current safe translator subset.
-- `.milk2` imports compatibility-scan every preserved preset body before storing or rendering the file. Compatible double presets now instantiate one renderer per preset body, draw the primary body normally, and blend the secondary body over it at half opacity. This is the first simultaneous composite path; MilkDrop3 transition modes and richer double-preset controls remain pending.
+- `.milk2` imports compatibility-scan every preserved preset body before storing or rendering the file. Compatible double presets now instantiate one renderer per preset body, draw the primary body normally, and blend secondary bodies over it. Secondary presets default to half opacity and can opt into `blend_alpha` / `blendalpha` / `composite_alpha` values for first-pass composite control.
+- Native preset switches and imported preset loads now use a renderer-set crossfade scheduler. The outgoing renderer set remains alive while fading down, the incoming set fades up with an eased progress curve, and expired outgoing renderers are disposed after the transition.
 - Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
 - Native mode has clear-library and remove-selected affordances for pruning imported presets from this browser without requiring manual local-storage cleanup.
 - The first shader translator accepts simple shader bodies that assign `ret = ...` using GLSL-like expressions, `tex2D(sampler_main, uv)` sampling, `saturate`, and `lerp`. Supported `warp_shader` bodies run in the feedback pass; supported `comp_shader` bodies run during the screen composite. Control flow, matrix types, general HLSL, and unknown texture/sampler forms remain explicitly unsupported.
@@ -140,8 +142,8 @@ Current parser/VM scope:
 - Add q1-q64 support.
 - Add increased wave/shape counts.
 - Add `.shape` and `.wave` import/export.
-- Add richer `.milk2` transition/composite controls beyond the first fixed primary/secondary blend.
-- Add MilkDrop3 transition modes and smooth blending.
+- Add richer `.milk2` transition/composite controls beyond first secondary alpha support.
+- Add additional MilkDrop3 transition modes beyond the first smooth renderer-set crossfade.
 - Add beat-driven preset selection modes.
 - Add `get_fft(pos)` and `get_fft_hz(freq)` shader/audio access.
 

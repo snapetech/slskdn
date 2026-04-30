@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createNativeMilkdropEngine } from './nativeMilkdropEngine';
+import {
+  createNativeMilkdropEngine,
+  getNativeMilkdropTransitionProgress,
+} from './nativeMilkdropEngine';
 import { createMilkdropRenderer } from './milkdrop/milkdropRenderer';
 
 const renderer = {
@@ -24,6 +27,13 @@ const createAnalyser = () => ({
 });
 
 describe('createNativeMilkdropEngine', () => {
+  it('eases native transition progress between renderer sets', () => {
+    expect(getNativeMilkdropTransitionProgress(10, 2, 10)).toBe(0);
+    expect(getNativeMilkdropTransitionProgress(10, 2, 11)).toBe(0.5);
+    expect(getNativeMilkdropTransitionProgress(10, 2, 12)).toBe(1);
+    expect(getNativeMilkdropTransitionProgress(10, 0, 10)).toBe(1);
+  });
+
   it('feeds waveform and spectrum frames into the native renderer', async () => {
     const analyser = createAnalyser();
     const audioNode = {
@@ -168,8 +178,9 @@ describe('createNativeMilkdropEngine', () => {
       wave_r=1
       [preset01]
       name=Double secondary
+      blend_alpha=0.75
       wave_b=1
-    `, 'double.milk2');
+    `, 'double.milk2', { blendSeconds: 0 });
     engine.render();
     engine.resize(640, 360);
 
@@ -183,10 +194,56 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.render).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ sampleRate: 44100, time: 3 }),
-      { clearScreen: false, outputAlpha: 0.5 },
+      { clearScreen: false, outputAlpha: 0.75 },
     );
     expect(renderer.resize).toHaveBeenCalledTimes(2);
     expect(renderer.resize).toHaveBeenCalledWith(640, 360);
+  });
+
+  it('crossfades preset switches before disposing the outgoing renderer set', async () => {
+    const analyser = createAnalyser();
+    const audioContext = {
+      createAnalyser: () => analyser,
+      currentTime: 10,
+      sampleRate: 44100,
+    };
+    const engine = await createNativeMilkdropEngine({
+      audioContext,
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.render.mockClear();
+    renderer.dispose.mockClear();
+
+    engine.nextPreset({ blendSeconds: 2 });
+    audioContext.currentTime = 11;
+    engine.render();
+
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sampleRate: 44100, time: 11 }),
+      { clearScreen: true, outputAlpha: 0.5 },
+    );
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ sampleRate: 44100, time: 11 }),
+      { clearScreen: false, outputAlpha: 0.5 },
+    );
+    expect(renderer.dispose).not.toHaveBeenCalled();
+
+    renderer.render.mockClear();
+    audioContext.currentTime = 12.1;
+    engine.render();
+
+    expect(renderer.dispose).toHaveBeenCalled();
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    expect(renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({ sampleRate: 44100, time: 12.1 }),
+      { clearScreen: true, outputAlpha: 1 },
+    );
   });
 
   it('inspects imported preset compatibility without replacing the renderer', async () => {

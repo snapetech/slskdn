@@ -54,6 +54,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   do not persist unrelated images with every imported preset.
 - Added a native MilkDrop preset-folder import affordance for browsers that
   expose directory-relative file paths.
+- Added first native MilkDrop renderer-set crossfades for preset/import changes
+  and `.milk2` secondary composite-alpha controls.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

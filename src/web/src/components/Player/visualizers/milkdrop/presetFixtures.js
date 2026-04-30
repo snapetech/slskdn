@@ -77,6 +77,7 @@ export const nativeMilkdropFixturePack = [
       per_frame_1=q33=sin(time);
       [preset01]
       name=Fixture Double Right
+      blend_alpha=0.65
       zoom=0.9
       per_frame_1=q34=cos(time);
     `,

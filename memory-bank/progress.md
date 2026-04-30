@@ -7681,3 +7681,10 @@ Code quality improvements were completed as part of Option A:
 - Fixed the external visualizer launcher compile issue caused by the app `Options` type colliding with `Microsoft.Extensions.Options.Options`, documented the gotcha, and committed that documentation immediately as `8afea98a9`.
 - Promoted the current `Unreleased` changelog bullets into `2026042900-slskdn.204` so release note generation does not publish the rolling bucket.
 - Retired the failed `.203` tag attempt after its release gate treated optional Winget release-version metadata as mandatory for a non-Winget release.
+
+## 2026-04-30 15:58:21Z
+
+- Added the first native MilkDrop renderer-set transition scheduler. Preset switches and imported preset loads now keep outgoing renderer sets alive while fading them down, fade incoming renderer sets up with an eased progress curve, and dispose expired outgoing renderers after the transition.
+- Extended `.milk2` double-preset compositing so secondary presets can control their overlay opacity with `blend_alpha` / `blendalpha` / `composite_alpha` instead of always using the fixed half-alpha fallback.
+- Updated the curated `.milk2` fixture and WebGL MilkDrop3 port plan to reflect the new transition/composite phase.
+- Validation: focused native engine/parser/fixture/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.

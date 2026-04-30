@@ -161,19 +161,65 @@ const parseCompatiblePresetText = (source, fileName = '') => {
   return parsed;
 };
 
-const disposeRenderers = (renderers) => {
-  renderers.forEach((entry) => entry.renderer.dispose());
+const defaultTransitionSeconds = 1.5;
+
+export const getNativeMilkdropTransitionProgress = (startedAt, seconds, now) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 1;
+  const linear = Math.max(0, Math.min(1, (now - startedAt) / seconds));
+  return linear * linear * (3 - linear * 2);
 };
 
-const createRendererEntries = ({ canvas, parsed, textureAssets }) =>
-  parsed.presets.map((preset, index) => ({
-    blendAlpha: index === 0 ? 1 : 0.5,
+const disposeRendererSet = (rendererSet) => {
+  rendererSet.entries.forEach((entry) => entry.renderer.dispose());
+};
+
+const disposeRendererSets = (rendererSets) => {
+  rendererSets.forEach(disposeRendererSet);
+};
+
+const getCompositeAlpha = (preset, index) => {
+  if (index === 0) return 1;
+  const configuredAlpha = Number(
+    preset.baseValues?.blend_alpha
+    ?? preset.baseValues?.blendalpha
+    ?? preset.baseValues?.composite_alpha
+    ?? preset.baseValues?.alpha,
+  );
+  return Number.isFinite(configuredAlpha)
+    ? Math.max(0, Math.min(1, configuredAlpha))
+    : 0.5;
+};
+
+const createRendererSet = ({
+  canvas,
+  parsed,
+  textureAssets,
+  title,
+  transitionSeconds = defaultTransitionSeconds,
+  transitionStartedAt = 0,
+}) => ({
+  entries: parsed.presets.map((preset, index) => ({
+    blendAlpha: getCompositeAlpha(preset, index),
     renderer: createMilkdropRenderer({
       canvas,
       preset,
       textureAssets,
     }),
-  }));
+  })),
+  title,
+  transitionSeconds,
+  transitionStartedAt,
+});
+
+const renderRendererSet = (rendererSet, renderFrame, alpha, clearFirstEntry) => {
+  if (alpha <= 0) return;
+  rendererSet.entries.forEach((entry, index) => {
+    entry.renderer.render(renderFrame, {
+      clearScreen: clearFirstEntry && index === 0,
+      outputAlpha: entry.blendAlpha * alpha,
+    });
+  });
+};
 
 export const createNativeMilkdropEngine = async ({
   audioContext,
@@ -181,19 +227,60 @@ export const createNativeMilkdropEngine = async ({
   canvas,
 }) => {
   let presetIndex = 0;
-  let rendererEntries = createRendererEntries({
+  let activeRendererSet = createRendererSet({
     canvas,
     parsed: parseMilkdropPreset(nativePresets[presetIndex].source),
+    title: nativePresets[presetIndex].name,
+    transitionSeconds: 0,
   });
+  let retiringRendererSets = [];
   const frameReader = createFrameReader(audioContext, audioNode);
 
-  const loadPreset = (index) => {
+  const pruneRetiredRenderers = (now) => {
+    const retained = [];
+    retiringRendererSets.forEach((rendererSet) => {
+      const progress = getNativeMilkdropTransitionProgress(
+        rendererSet.transitionStartedAt,
+        rendererSet.transitionSeconds,
+        now,
+      );
+      if (progress >= 1) {
+        disposeRendererSet(rendererSet);
+      } else {
+        retained.push(rendererSet);
+      }
+    });
+    retiringRendererSets = retained;
+  };
+
+  const activateRendererSet = (nextRendererSet, transitionSeconds = defaultTransitionSeconds) => {
+    const startedAt = audioContext.currentTime || 0;
+    const effectiveTransitionSeconds = Math.max(0, Number(transitionSeconds) || 0);
+    if (effectiveTransitionSeconds > 0) {
+      retiringRendererSets.push({
+        ...activeRendererSet,
+        transitionSeconds: effectiveTransitionSeconds,
+        transitionStartedAt: startedAt,
+      });
+    } else {
+      disposeRendererSet(activeRendererSet);
+      disposeRendererSets(retiringRendererSets);
+      retiringRendererSets = [];
+    }
+    activeRendererSet = {
+      ...nextRendererSet,
+      transitionSeconds: effectiveTransitionSeconds,
+      transitionStartedAt: startedAt,
+    };
+  };
+
+  const loadPreset = (index, options = {}) => {
     presetIndex = index % nativePresets.length;
-    disposeRenderers(rendererEntries);
-    rendererEntries = createRendererEntries({
+    activateRendererSet(createRendererSet({
       canvas,
       parsed: parseMilkdropPreset(nativePresets[presetIndex].source),
-    });
+      title: nativePresets[presetIndex].name,
+    }), options.blendSeconds ?? defaultTransitionSeconds);
     return nativePresets[presetIndex].name;
   };
 
@@ -202,17 +289,20 @@ export const createNativeMilkdropEngine = async ({
     presetName: nativePresets[presetIndex].name,
     dispose: () => {
       frameReader.disconnect();
-      disposeRenderers(rendererEntries);
+      disposeRendererSet(activeRendererSet);
+      disposeRendererSets(retiringRendererSets);
+      retiringRendererSets = [];
     },
     loadPresetText: (source, fileName = '', options = {}) => {
       const importedPresetSet = parseCompatiblePresetText(source, fileName);
-      disposeRenderers(rendererEntries);
-      rendererEntries = createRendererEntries({
+      const title = getParsedPresetSetTitle(importedPresetSet, fileName);
+      activateRendererSet(createRendererSet({
         canvas,
         parsed: importedPresetSet,
         textureAssets: options.textureAssets,
-      });
-      return getParsedPresetSetTitle(importedPresetSet, fileName);
+        title,
+      }), options.blendSeconds ?? defaultTransitionSeconds);
+      return title;
     },
     inspectPresetText: (source, fileName = '') => {
       const importedPresetSet = parseCompatiblePresetText(source, fileName);
@@ -220,23 +310,41 @@ export const createNativeMilkdropEngine = async ({
         title: getParsedPresetSetTitle(importedPresetSet, fileName),
       };
     },
-    nextPreset: () => loadPreset(presetIndex + 1),
+    nextPreset: (options = {}) => loadPreset(presetIndex + 1, options),
     render: () => {
+      const now = audioContext.currentTime || 0;
+      pruneRetiredRenderers(now);
       const frame = frameReader.read();
       const renderFrame = {
         ...frame,
         sampleRate: audioContext.sampleRate,
-        time: audioContext.currentTime,
+        time: now,
       };
-      rendererEntries.forEach((entry, index) => {
-        entry.renderer.render(renderFrame, {
-          clearScreen: index === 0,
-          outputAlpha: entry.blendAlpha,
-        });
+
+      let clearNextSet = true;
+      retiringRendererSets.forEach((rendererSet) => {
+        const progress = getNativeMilkdropTransitionProgress(
+          rendererSet.transitionStartedAt,
+          rendererSet.transitionSeconds,
+          now,
+        );
+        renderRendererSet(rendererSet, renderFrame, 1 - progress, clearNextSet);
+        clearNextSet = false;
       });
+
+      const activeProgress = retiringRendererSets.length > 0
+        ? getNativeMilkdropTransitionProgress(
+          activeRendererSet.transitionStartedAt,
+          activeRendererSet.transitionSeconds,
+          now,
+        )
+        : 1;
+      renderRendererSet(activeRendererSet, renderFrame, activeProgress, clearNextSet);
     },
     resize: (width, height) => {
-      rendererEntries.forEach((entry) => entry.renderer.resize(width, height));
+      [activeRendererSet, ...retiringRendererSets].forEach((rendererSet) => {
+        rendererSet.entries.forEach((entry) => entry.renderer.resize(width, height));
+      });
     },
   };
 };

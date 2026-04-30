@@ -50,6 +50,7 @@
  - Progress (2026-04-30): Added first `spriteNN_` parse, compatibility, equation-evaluation, and textured-quad render path using imported image assets or procedural fallback.
  - Progress (2026-04-30): Scoped imported native texture assets per preset by scanning texture/sprite references and indexing browser-provided relative paths, so multi-preset packs do not persist unrelated images with every preset.
  - Progress (2026-04-30): Added a separate native preset-folder import affordance using browser directory file input attributes, with relative path coverage for pack assets.
+ - Progress (2026-04-30): Added the first native renderer-set crossfade scheduler for preset/import changes and first `.milk2` secondary composite-alpha controls via `blend_alpha` aliases.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

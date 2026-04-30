@@ -82,7 +82,7 @@ describe('native MilkDrop fixture pack', () => {
             waveCount: 0,
           },
           {
-            baseValueKeys: ['zoom'],
+            baseValueKeys: ['blend_alpha', 'zoom'],
             format: 'milk2',
             hasCompShader: false,
             hasPerFrame: true,

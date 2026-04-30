@@ -1,3 +1,15 @@
+## Update 2026-04-30 15:58:21Z
+
+- Current task: Native MilkDrop has first renderer-set transitions and `.milk2` composite-alpha control.
+- Last activity:
+  - native preset switches and imported preset loads now crossfade renderer sets instead of immediately disposing the outgoing renderer
+  - transition progress uses a bounded eased curve and disposes retired renderer sets after fade-out
+  - `.milk2` secondary presets can now use `blend_alpha`, `blendalpha`, or `composite_alpha` to control overlay opacity
+  - updated the curated `.milk2` fixture and WebGL MilkDrop3 port plan
+  - validated focused native engine/parser/fixture/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue Phase 2 MilkDrop3 deltas, likely `.shape`/`.wave` import/export or beat-driven preset changes.
+
 ## Update 2026-04-30 15:38:35Z
 
 - Current task: Native MilkDrop preset packs have a folder import affordance.
