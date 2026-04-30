@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z170. WingetCreate Submit Needs Repository-Shaped Manifest Paths
+
+**The Bug**: `wingetcreate submit` validated the three stable manifest files incorrectly when they were copied into a flat scratch directory, reporting duplicate manifest types and inconsistent package fields even though the files had matching `PackageIdentifier` and `PackageVersion` values.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/publish-winget.yml`
+
+**Wrong**:
+```powershell
+New-Item -ItemType Directory -Force winget-submit | Out-Null
+Copy-Item packaging/winget/snapetech.slskdn*.yaml winget-submit/
+.\wingetcreate.exe submit .\winget-submit -t $env:WINGETCREATE_GITHUB_TOKEN
+```
+
+**Correct**:
+```powershell
+$WingetSubmitPath = Join-Path "winget-submit" "manifests/s/snapetech/slskdn/$WingetVersion"
+New-Item -ItemType Directory -Force $WingetSubmitPath | Out-Null
+Copy-Item packaging/winget/snapetech.slskdn*.yaml $WingetSubmitPath/
+.\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH -t $env:WINGETCREATE_GITHUB_TOKEN
+```
+
+**Why This Keeps Happening**: The local `packaging/winget` templates are intentionally flat for repo maintenance, but WingetCreate submission behavior follows the `microsoft/winget-pkgs` manifest tree. Always stage generated manifests into the repository-shaped path before calling `wingetcreate submit`.
+
 ### 0z169. Winget Block Scalars Must Not Mix Generator Indentation
 
 **The Bug**: The stable Winget locale manifest generated an invalid `Description: |-` block because the description variable already contained leading spaces on its first lines, and the manifest generator added two more spaces to every line. YAML inferred a four-space block indentation from the first content line and then failed when later lines only had two spaces.
