@@ -1,3 +1,39 @@
+## Update 2026-04-30 19:01:00Z
+
+- Current task: Native MilkDrop Phase 2 `.milk2` composite controls plus dirty workspace checkpoint are validated locally.
+- Last activity:
+  - committed the Moq async-list test gotcha immediately as `55aab0634`
+  - fixed remaining Movie/TV nullable hash/filename normalization warnings in the dirty VirtualSoulfind provider work
+  - validated backend build, focused VirtualSoulfind provider tests, focused AdvancedDiscovery tests, frontend lint/build, focused MilkDrop tests, compatibility CLI, and native browser smoke
+- Next steps:
+  1. Run final whitespace/staged checks.
+  2. Verify GitHub target, commit the remaining dirty workspace, and push to `snapetech/slskdn`.
+
+## Update 2026-04-30 18:54:00Z
+
+- Current task: Native MilkDrop Phase 2 `.milk2` composite controls are implemented locally.
+- Last activity:
+  - added secondary `.milk2` blend mode aliases for alpha, additive, screen, and multiply final compositing
+  - added primary preset transition-duration aliases for imported renderer-set crossfades when the caller does not override the duration
+  - plumbed composite modes into the WebGL final blit blend function
+  - validated focused native/frontend tests, compatibility CLI, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Commit and push the `.milk2` composite-control phase with the dirty README change.
+  2. Continue the next Phase 2 MilkDrop pass, likely additional transition modes or shader-side audio/texture coverage.
+
+## Update 2026-04-30 18:56:00Z
+
+- Current task: None. Fixed chrome scroll-region audit is complete.
+- Last activity:
+  - measured nav, player, and footer chrome into CSS variables used by the app scroll container
+  - fixed player/footer safe-area double counting and nav bottom-edge under-reservation
+  - documented the fixed-chrome overlap gotcha and committed it as `4e7320841`, `52fb656fb`, and `73326e5a8`
+  - validated Search, Rooms, Chat, Browse, and System geometry at desktop and mobile sizes in expanded/collapsed player states
+  - validated frontend lint, production build, and whitespace checks
+- Next steps:
+  1. Commit the implementation and memory-bank updates with the current dirty workspace when requested.
+  2. Ignore unrelated dirty Mesh unit test files unless the task changes to backend mesh tests.
+
 ## Update 2026-04-30 18:45:00Z
 
 - Current task: None. Browser storage cleanup now covers older UI paths too.

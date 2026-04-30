@@ -19,10 +19,10 @@ using slskd.VirtualSoulfind.Core;
 public static class MovieDomainMapping
 {
     // Namespace UUID for Movie Works (IMDB ID-based)
-    private static readonly Guid MovieWorkNamespace = new Guid("e1f6c1a5-9f4d-8e3g-c6b0-1g5f9d4e8c3b");
+    private static readonly Guid MovieWorkNamespace = new Guid("e1f6c1a5-9f4d-8e3a-c6b0-1a5f9d4e8c3b");
 
     // Namespace UUID for Movie Items (hash-based)
-    private static readonly Guid MovieItemNamespace = new Guid("f2a7d2b6-0a5e-9f4h-d7c1-2h6a0e5f9d4c");
+    private static readonly Guid MovieItemNamespace = new Guid("f2a7d2b6-0a5e-9f4a-d7c1-2a6a0e5f9d4c");
 
     /// <summary>
     ///     Converts an IMDB ID to a <see cref="ContentWorkId"/>.

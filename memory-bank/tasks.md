@@ -69,6 +69,7 @@
  - Progress (2026-04-30): Added first simple ret-only translated shader conditional support for `if (...) ret = ...; else ret = ...;` bodies.
  - Progress (2026-04-30): Added safe declared-temp reassignment support in translated native shader bodies while rejecting undeclared assignment and post-`ret` statements.
  - Progress (2026-04-30): Added native MilkDrop compatibility matrix reporting for curated fixtures and local preset files/folders, including first high-count wave/shape metric coverage for real-pack pressure.
+ - Progress (2026-04-30): Added richer `.milk2` transition and composite controls with preset-defined transition durations plus alpha/additive/screen/multiply secondary blend modes.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -146,7 +147,7 @@
 - [x] **ux**: Fix Web UI header and footer chrome alignment.
  - Status: completed (2026-04-29)
  - Priority: P1
- - Notes: Split the top navigation into primary-route and utility-action rails, reordered the utility cluster as Connected, Theme, System, Log Out, removed the always-highlighted Theme trigger, and rebuilt the fixed footer as brand, speed, and network/transport rails. Live `kspls0` desktop and narrow viewport checks show no vertical overflow.
+ - Notes: Split the top navigation into primary-route and utility-action rails, reordered the utility cluster as Connected, Theme, System, Log Out, removed the always-highlighted Theme trigger, and rebuilt the fixed footer as brand, speed, and network/transport rails. Live `local test host` desktop and narrow viewport checks show no vertical overflow.
 
 - [x] **feature**: Add a downloads-section toggle for conservative accelerated downloads.
  - Status: completed (2026-04-29)
@@ -161,7 +162,7 @@
 - [x] **ux**: Make public DHT exposure notice dismissable and fix false no-peer diagnostics.
  - Status: completed (2026-04-29)
  - Priority: P1
- - Notes: `kspls0` showed healthy DHT status counters (`nodes=155`, `discovered=37`, `activeMesh=1`) while the Network dashboard could still warn from empty mesh/discovered list endpoints. The dashboard now treats DHT status counters as peer evidence and shows public-DHT exposure as a one-time dismissable info notice.
+ - Notes: `local test host` showed healthy DHT status counters (`nodes=155`, `discovered=37`, `activeMesh=1`) while the Network dashboard could still warn from empty mesh/discovered list endpoints. The dashboard now treats DHT status counters as peer evidence and shows public-DHT exposure as a one-time dismissable info notice.
 
 - [x] **test**: Stabilize two-node DHT rendezvous full-instance overlay connect coverage.
  - Status: completed (2026-04-29)
@@ -238,15 +239,15 @@
  - Priority: P1
  - Notes: Investigated the live `slskdn-bin 0.24.5.slskdn.175-1` Manjaro report about missing `Microsoft.AspNetCore.Diagnostics.Abstractions`. The published `0.24.5-slskdn.175` Linux x64 release zip was intact and self-contained, so the bug was isolated to the AUR binary packaging path. `PKGBUILD-bin` and `PKGBUILD-dev` now mark the zip source as `noextract`, unzip the downloaded archive explicitly during `package()`, and fail the build if `slskd`, `slskd.deps.json`, or `Microsoft.AspNetCore.Diagnostics.Abstractions.dll` are missing from the staged payload. Added the gotcha to ADR-0001, updated the AUR README/changelog, and tightened packaging metadata validation to lock the new staging path in place. Validation passed for packaging metadata, `git diff --check`, and a direct smoke of the real `0.24.5-slskdn.175` release zip; repo-wide `dotnet test` still has unrelated environment-sensitive DNS/wildcard failures in `SolidFetchPolicyTests` and `DestinationAllowlistTests`.
 
-- [x] **bug**: Triage issue `#209` on `kspls0` and quiet app-side live noise.
+- [x] **bug**: Triage issue `#209` on `local test host` and quiet app-side live noise.
  - Status: completed (2026-04-22)
  - Priority: P1
- - Notes: `kspls0` is now on manual diagnostic build `0.24.5-slskdn.174+manual.0214ccc8b`, active under systemd with `NRestarts=0`, Soulseek logged in, shares ready, DHT running, and overlay listening on `50305`. The mesh population is thin/unreliable rather than absent: DHT discovers peers, but overlay attempts mostly fail by timeout/no-route and the latest sample had `0` active mesh connections. Normal Soulseek search works after removing auto-replace budget contention: with `searchTimeout=10000`, user/API searches returned responses for `radiohead`, `pink floyd`, and `nirvana`, while `beatles` timed out with zero; after the timeout conversion fix, the documented `searchTimeout=10` also returned `radiohead` results. Fixed app-side defects found in the pass: common remote transfer rejections now classify as expected peer policy instead of fake fatal unobserved tasks, circuit maintenance no longer runs automatic placeholder circuit-building probes against live peers, background auto-replace uses an `auto-replace` safety source instead of the `user` bucket, search completion logs include source-specific response counts, and the API/discovery search timeout units are patched. Gotchas are documented in ADR-0001.
+ - Notes: `local test host` is now on manual diagnostic build `0.24.5-slskdn.174+manual.0214ccc8b`, active under systemd with `NRestarts=0`, Soulseek logged in, shares ready, DHT running, and overlay listening on `50305`. The mesh population is thin/unreliable rather than absent: DHT discovers peers, but overlay attempts mostly fail by timeout/no-route and the latest sample had `0` active mesh connections. Normal Soulseek search works after removing auto-replace budget contention: with `searchTimeout=10000`, user/API searches returned responses for `radiohead`, `pink floyd`, and `nirvana`, while `beatles` timed out with zero; after the timeout conversion fix, the documented `searchTimeout=10` also returned `radiohead` results. Fixed app-side defects found in the pass: common remote transfer rejections now classify as expected peer policy instead of fake fatal unobserved tasks, circuit maintenance no longer runs automatic placeholder circuit-building probes against live peers, background auto-replace uses an `auto-replace` safety source instead of the `user` bucket, search completion logs include source-specific response counts, and the API/discovery search timeout units are patched. Gotchas are documented in ADR-0001.
 
 - [x] **ux**: Reduce SongID results duplication and diagnostic scroll fatigue.
  - Status: completed (2026-04-21)
  - Priority: P2
- - Notes: Headless UX testing against `kspls0` with a YouTube URL showed repeated track/options/actions, duplicate graph/atlas controls, and low-value diagnostics dominating the result flow. The SongID panel now promotes the likely track and deduped best actions, collapses duplicate candidates with match counts, and moves raw diagnostic sections behind disclosure rows.
+ - Notes: Headless UX testing against `local test host` with a YouTube URL showed repeated track/options/actions, duplicate graph/atlas controls, and low-value diagnostics dominating the result flow. The SongID panel now promotes the likely track and deduped best actions, collapses duplicate candidates with match counts, and moves raw diagnostic sections behind disclosure rows.
 
 - [x] **test**: Isolate static event subscriber-count lifecycle tests from xUnit parallelism.
  - Status: completed (2026-04-21)
@@ -256,17 +257,17 @@
 - [x] **bug**: Match live Soulseek timer-reset stack signatures in false-fatal classifier.
  - Status: completed (2026-04-21)
  - Priority: P1
- - Notes: The `0.24.5-slskdn.169` `kspls0` route/tab sweep exposed a current-process fatal unobserved `NullReferenceException` from `Soulseek.Extensions.Reset(Timer timer)` inside `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The existing classifier matched the synthetic test string `Reset(Timer)`, missing the real runtime signature with parameter names. The classifier now matches the stable `Reset(` method prefix and focused tests use the live signature. The gotcha is documented in ADR-0001.
+ - Notes: The `0.24.5-slskdn.169` `local test host` route/tab sweep exposed a current-process fatal unobserved `NullReferenceException` from `Soulseek.Extensions.Reset(Timer timer)` inside `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The existing classifier matched the synthetic test string `Reset(Timer)`, missing the real runtime signature with parameter names. The classifier now matches the stable `Reset(` method prefix and focused tests use the live signature. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Quiet normal systemd shutdown telemetry from package restarts.
  - Status: completed (2026-04-21)
  - Priority: P2
- - Notes: The `0.24.5-slskdn.169` package replacement on `kspls0` shut down cleanly, but the old process still logged SIGTERM/host-stop warnings, duplicate expected `ProcessExit` stderr, and `app.Run() returned (this should not happen normally)`. Clean shutdown now logs at information/debug levels without duplicate fatal-looking stderr. The gotcha is documented in ADR-0001.
+ - Notes: The `0.24.5-slskdn.169` package replacement on `local test host` shut down cleanly, but the old process still logged SIGTERM/host-stop warnings, duplicate expected `ProcessExit` stderr, and `app.Run() returned (this should not happen normally)`. Clean shutdown now logs at information/debug levels without duplicate fatal-looking stderr. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Quiet optional user-info badge misses in route/tab sweeps.
  - Status: completed (2026-04-21)
  - Priority: P3
- - Notes: The post-release `kspls0` route/tab sweep showed the remaining browser-visible noise was optional user badge requests for offline historical download users. `UserCard` now asks `/api/v0/users/{username}/info?quietUnavailable=true`, and expected offline/unavailable peer data returns `204 No Content` only for that optional mode; default endpoint semantics remain unchanged. The gotcha is documented in ADR-0001.
+ - Notes: The post-release `local test host` route/tab sweep showed the remaining browser-visible noise was optional user badge requests for offline historical download users. `UserCard` now asks `/api/v0/users/{username}/info?quietUnavailable=true`, and expected offline/unavailable peer data returns `204 No Content` only for that optional mode; default endpoint semantics remain unchanged. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Discover app target framework in E2E and integration launchers.
  - Status: completed (2026-04-21)
@@ -276,12 +277,12 @@
 - [x] **bug**: Return controlled non-500 responses for unavailable Soulseek user info.
  - Status: completed (2026-04-21)
  - Priority: P2
- - Notes: Controlled Playwright crawling of live user/search links on `kspls0` showed `/api/v0/users/{username}/info` returning HTTP 500 for expected peer connection failures and timeouts. The info endpoint now keeps offline users as 404 but returns a generic 503 for unavailable peer info without stack-noise logging. The gotcha is documented in ADR-0001.
+ - Notes: Controlled Playwright crawling of live user/search links on `local test host` showed `/api/v0/users/{username}/info` returning HTTP 500 for expected peer connection failures and timeouts. The info endpoint now keeps offline users as 404 but returns a generic 503 for unavailable peer info without stack-noise logging. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Pace auto-replace searches instead of failing whole stuck-download batches on the Soulseek safety limiter.
  - Status: completed (2026-04-21)
  - Priority: P1
- - Notes: Live `kspls0` soak showed auto-replace issuing a large stuck-download batch until `Search rate limit exceeded`, then logging repeated stack traces and recording `128 failed`. Alternative searches are now paced by `Soulseek.Safety.MaxSearchesPerMinute`, search-budget exhaustion defers the current item and stops the cycle early, and focused unit coverage locks in the behavior. The gotcha is documented in ADR-0001.
+ - Notes: Live `local test host` soak showed auto-replace issuing a large stuck-download batch until `Search rate limit exceeded`, then logging repeated stack traces and recording `128 failed`. Alternative searches are now paced by `Soulseek.Safety.MaxSearchesPerMinute`, search-budget exhaustion defers the current item and stops the cycle early, and focused unit coverage locks in the behavior. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Exclude generated app publish output from future Web SDK publish artifacts.
  - Status: completed (2026-04-21)
@@ -291,12 +292,12 @@
 - [x] **bug**: Demote routine auto-replace large-batch no-result progress from information logs.
  - Status: completed (2026-04-21)
  - Priority: P2
- - Notes: The live paced cycle on `kspls0` fixed the rate-limit flood but still emitted per-track `Searching` / `Found 0` progress at `Information` across a 128-item stuck batch. Routine per-track search/no-result progress is now `Debug`, while successful candidate discovery and aggregate cycle summaries remain visible. The gotcha is documented in ADR-0001.
+ - Notes: The live paced cycle on `local test host` fixed the rate-limit flood but still emitted per-track `Searching` / `Found 0` progress at `Information` across a 128-item stuck batch. Routine per-track search/no-result progress is now `Debug`, while successful candidate discovery and aggregate cycle summaries remain visible. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Quiet expected remote-offline download failures during restart re-enqueue.
  - Status: completed (2026-04-21)
  - Priority: P2
- - Notes: Fresh `kspls0` restart validation re-enqueued downloads from offline user `icetre` and emitted repeated `UserOfflineException` / `TransferException` stack traces. These are expected remote peer outcomes, so download and observer paths now log warning summaries without stacks while still failing the transfer records. The gotcha is documented in ADR-0001.
+ - Notes: Fresh `local test host` restart validation re-enqueued downloads from offline user `icetre` and emitted repeated `UserOfflineException` / `TransferException` stack traces. These are expected remote peer outcomes, so download and observer paths now log warning summaries without stacks while still failing the transfer records. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Treat auto-replace shutdown cancellation as normal hosted-service stop flow.
  - Status: completed (2026-04-21)
@@ -306,7 +307,7 @@
 - [x] **bug**: Demote routine shared search progress during background auto-replace batches.
  - Status: completed (2026-04-21)
  - Priority: P2
- - Notes: The fixed `kspls0` build reached a 142-item auto-replace cycle without errors, but each background search still produced `Information` progress from shared search infrastructure (`MeshSearch` no-peer fallback, search completion counts, and passive HashDb discovery). Those routine per-search progress logs are now `Debug`; aggregate auto-replace cycle logs remain visible. The gotcha is documented in ADR-0001.
+ - Notes: The fixed `local test host` build reached a 142-item auto-replace cycle without errors, but each background search still produced `Information` progress from shared search infrastructure (`MeshSearch` no-peer fallback, search completion counts, and passive HashDb discovery). Those routine per-search progress logs are now `Debug`; aggregate auto-replace cycle logs remain visible. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Avoid stack traces for the handled Soulseek disconnect race during shutdown.
  - Status: completed (2026-04-21)
@@ -316,7 +317,7 @@
 - [x] **bug**: Classify Soulseek TCP double-disconnect read-loop races as expected network churn.
  - Status: completed (2026-04-21)
  - Priority: P1
- - Notes: Live `kspls0` monitoring caught a current-process fatal unobserved task from `Soulseek.Network.Tcp.Connection.Disconnect`: `An attempt was made to transition a task to a final state when it had already completed.` The global expected-network classifier now recognizes that Soulseek.NET read-loop teardown race and has focused unit coverage. The gotcha is documented in ADR-0001.
+ - Notes: Live `local test host` monitoring caught a current-process fatal unobserved task from `Soulseek.Network.Tcp.Connection.Disconnect`: `An attempt was made to transition a task to a final state when it had already completed.` The global expected-network classifier now recognizes that Soulseek.NET read-loop teardown race and has focused unit coverage. The gotcha is documented in ADR-0001.
 
 - [x] **bug**: Preserve spacing around inline code in the DHT exposure consent modal.
  - Status: completed (2026-04-21)
@@ -326,17 +327,17 @@
 - [x] **bug**: Treat remote Soulseek enqueue rejections as expected network churn in the unobserved-task handler.
  - Status: completed (2026-04-19)
  - Priority: P1
- - Notes: Manual `kspls0` validation still showed `[FATAL] Unobserved task exception ... Enqueue failed due to internal error` after the download service had already classified the transfer as `Completed, Rejected`. Added `Soulseek.TransferRejectedException` plus the exact enqueue-failure signature to the expected Soulseek network classifier, added focused coverage, and documented the gotcha in ADR-0001.
+ - Notes: Manual `local test host` validation still showed `[FATAL] Unobserved task exception ... Enqueue failed due to internal error` after the download service had already classified the transfer as `Completed, Rejected`. Added `Soulseek.TransferRejectedException` plus the exact enqueue-failure signature to the expected Soulseek network classifier, added focused coverage, and documented the gotcha in ADR-0001.
 
 - [x] **bug**: Make source-ranking download history updates atomic under concurrent transfer events.
  - Status: completed (2026-04-19)
  - Priority: P1
- - Notes: Live manual-build validation on `kspls0` exposed `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username` while concurrent transfer completion/failure handlers recorded source-ranking history. Replaced EF read-then-insert/update with a single SQLite `INSERT ... ON CONFLICT DO UPDATE` counter upsert, added concurrent regression coverage, and documented the gotcha in ADR-0001.
+ - Notes: Live manual-build validation on `local test host` exposed `SQLite Error 19: UNIQUE constraint failed: DownloadHistory.Username` while concurrent transfer completion/failure handlers recorded source-ranking history. Replaced EF read-then-insert/update with a single SQLite `INSERT ... ON CONFLICT DO UPDATE` counter upsert, added concurrent regression coverage, and documented the gotcha in ADR-0001.
 
 - [x] **bug**: Allow API-key access to DHT rendezvous diagnostics.
  - Status: completed (2026-04-19)
  - Priority: P1
- - Notes: Live `kspls0` validation showed configured API keys worked for `/api/v0/session` and `/api/v0/searches` but not `/api/v0/dht/status` or `/api/v0/overlay/stats`, because `DhtRendezvousController` used bare `[Authorize]` and fell through to bearer-only auth. Updated the controller to `AuthPolicy.Any`, added reflection coverage, and documented the gotcha in ADR-0001.
+ - Notes: Live `local test host` validation showed configured API keys worked for `/api/v0/session` and `/api/v0/searches` but not `/api/v0/dht/status` or `/api/v0/overlay/stats`, because `DhtRendezvousController` used bare `[Authorize]` and fell through to bearer-only auth. Updated the controller to `AuthPolicy.Any`, added reflection coverage, and documented the gotcha in ADR-0001.
 
 - [x] **security**: Resolve the remaining Dependabot alert without suppressions.
  - Status: completed (2026-04-19)
@@ -391,12 +392,12 @@
 - [x] **bug**: Retry failed DHT overlay candidates after backoff instead of only on first discovery.
  - Status: completed (2026-04-18)
  - Priority: P1
- - Notes: `DhtRendezvousService` no longer uses `_discoveredPeers.TryAdd(...)` as the once-ever trigger for outbound overlay connect attempts. Discovery cache, in-flight tracking, and retry timing are now separate, with a 5-minute backoff before re-attempting unverified peers. Validated with focused unit tests and on `kspls0`, where the same discovered-peer set advanced from `26` to `31` total connection attempts after a post-backoff forced discovery instead of remaining stuck at the first-attempt count.
+ - Notes: `DhtRendezvousService` no longer uses `_discoveredPeers.TryAdd(...)` as the once-ever trigger for outbound overlay connect attempts. Discovery cache, in-flight tracking, and retry timing are now separate, with a 5-minute backoff before re-attempting unverified peers. Validated with focused unit tests and on `local test host`, where the same discovered-peer set advanced from `26` to `31` total connection attempts after a post-backoff forced discovery instead of remaining stuck at the first-attempt count.
 
 - [ ] **bug**: Filter or deprioritize non-overlay DHT candidates before repeated overlay retries.
  - Status: pending
  - Priority: P1
- - Notes: Live `kspls0` validation on 2026-04-18 now exposes classified outbound overlay failures. The current post-fix state is mostly `connectTimeout` plus occasional `noRoute`, and the discovered candidate set is still heavy on likely-bad `:50306` endpoints. Follow up by deciding whether to suppress obviously non-overlay candidates, add longer-lived backoff, or enrich DHT metadata so the connector does not keep retrying junk endpoints.
+ - Notes: Live `local test host` validation on 2026-04-18 now exposes classified outbound overlay failures. The current post-fix state is mostly `connectTimeout` plus occasional `noRoute`, and the discovered candidate set is still heavy on likely-bad `:50306` endpoints. Follow up by deciding whether to suppress obviously non-overlay candidates, add longer-lived backoff, or enrich DHT metadata so the connector does not keep retrying junk endpoints.
 
 - [x] **security**: Add focused unit coverage for username lockout and share-token audience binding.
  - Status: completed (2026-04-18)
@@ -695,7 +696,7 @@
 
 - [x] **T-013 (2026-01-25):** Flatpak: .NET 8.0.11 (dotnetcli.azureedge.net), slskdn 0.24.1-slskdn.40 `slskdn-main-linux-x64.zip`, slskdn.svg; placeholders replaced; build.sh (no prepare_icons), FLATHUB_SUBMISSION checklist updated.
 
-- [x] **chore (2026-01-25):** gitignore `mesh-overlay.key`, untrack; activeContext WORK DIRECTORY `/home/keith/Documents/code/slskdn`; completion-plan Phase 0 + Discuss first marked **DONE** (CodeQuality, ActivityPubKeyStore, CircuitMaintenance); DomainFrontedTransportTests DONE.
+- [x] **chore (2026-01-25):** gitignore `mesh-overlay.key`, untrack; activeContext WORK DIRECTORY `<repo-root>`; completion-plan Phase 0 + Discuss first marked **DONE** (CodeQuality, ActivityPubKeyStore, CircuitMaintenance); DomainFrontedTransportTests DONE.
 
 - [x] **T-MC1**: MediaCore Chromaprint FFT + FuzzyMatcher perceptual (2026-01-25)
   - Chromaprint: MathNet.Numerics, FFT-based ComputeChromaPrint (24-bin chroma, 64-bit hash); DifferentContent_LowSimilarityScores un-skipped; PerceptualHasherTests 440vs880.
@@ -1254,7 +1255,7 @@
   - Notes: Merged the previously tag-only side lineage with merge commit `e74d4df1` instead of cherry-picking, resolved the runtime conflicts in `Program`, `RelayService`, and `SongIdService`, updated `docs/CHANGELOG.md`, and confirmed `git tag --no-merged main` is empty afterward.
 - [x] Fix SongID YouTube runs so missing `yt-dlp` degrades instead of failing
   - Status: done
-  - Notes: Reproduced the `kspls0` failure for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd`, confirmed the host was missing `yt-dlp`, hardened `SongIdService` to continue with metadata-only analysis when `yt-dlp` is absent, fixed the empty-clip scorecard aggregate crash exposed by that fallback path, added focused SongID unit coverage, and updated AUR / Proxmox packaging to install `yt-dlp`.
+  - Notes: Reproduced the `local test host` failure for `https://youtu.be/K3wtamktLGs?si=oJjRPxd_fV31TcLd`, confirmed the host was missing `yt-dlp`, hardened `SongIdService` to continue with metadata-only analysis when `yt-dlp` is absent, fixed the empty-clip scorecard aggregate crash exposed by that fallback path, added focused SongID unit coverage, and updated AUR / Proxmox packaging to install `yt-dlp`.
 - [x] Make Search page boxes collapsible and keep Search Results open by default
   - Status: done
   - Notes: Added page-level collapsible wrappers around the Search, SongID, MusicBrainz Lookup, Discovery Graph Atlas, Album Completion, and Search Results panels in `src/web/src/components/Search/Searches.jsx`; Search Results now starts expanded so newly-created searches remain immediately visible.
@@ -1314,13 +1315,13 @@
 
 - [x] Fix `DownloadService.EnqueueAsync(...)` semaphore lifetime so live enqueue cleanup cannot crash after `Queued, Remotely`
   - Status: done
-  - Notes: Stopped disposing the per-batch enqueue semaphore while background enqueue observer tasks still release it, added focused `DownloadServiceTests` regression coverage for the cancelled-transfer path, redeployed a self-contained build to `kspls0`, and verified the old `ObjectDisposedException` / `SemaphoreSlim` crash is gone.
-- [x] Investigate post-enqueue remote stream failures on `kspls0`
+  - Notes: Stopped disposing the per-batch enqueue semaphore while background enqueue observer tasks still release it, added focused `DownloadServiceTests` regression coverage for the cancelled-transfer path, redeployed a self-contained build to `local test host`, and verified the old `ObjectDisposedException` / `SemaphoreSlim` crash is gone.
+- [x] Investigate post-enqueue remote stream failures on `local test host`
   - Status: done
-  - Notes: Confirmed the remaining mixed remote stream outcomes are normal peer-side churn rather than another host-wide local transfer bug; fixed the lingering fake fatal `Transfer failed: Transfer complete` unobserved-task noise, opened the missing host firewall rules for `50305/tcp` and `50306/udp`, and proved DHT reaches `Ready` on `kspls0` once the host firewall is open.
+  - Notes: Confirmed the remaining mixed remote stream outcomes are normal peer-side churn rather than another host-wide local transfer bug; fixed the lingering fake fatal `Transfer failed: Transfer complete` unobserved-task noise, opened the missing host firewall rules for `50305/tcp` and `50306/udp`, and proved DHT reaches `Ready` on `local test host` once the host firewall is open.
 - [ ] Revisit the DHT bootstrap diagnostics after more live-runtime samples
   - Status: pending
-  - Notes: The startup grace period is now 120 seconds instead of 30, which matches the slow-but-healthy bootstrap observed on `kspls0`. Gather more host samples before deciding whether the warning should become adaptive instead of static.
+  - Notes: The startup grace period is now 120 seconds instead of 30, which matches the slow-but-healthy bootstrap observed on `local test host`. Gather more host samples before deciding whether the warning should become adaptive instead of static.
 
 - [x] Downgrade remote peer transfer rejections from fake fatal host telemetry
   - Status: done
@@ -1334,9 +1335,9 @@
 
 - [x] **fix (2026-04-18):** Add `patchelf` to Debian `Build-Depends` so Launchpad/PPA builds install the tool required by `debian/rules` during package assembly.
 
-- [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and fix duplicate startup descriptor publish noise
+- [x] Validate `local test host` yay package `0.24.5-slskdn.170` and fix duplicate startup descriptor publish noise
   - Status: completed (2026-04-21)
-  - Notes: Confirmed the installed package, CLI/API version, service state, Soulseek login, shares, DHT, and overlay listener are healthy on `kspls0`. Current-process logs have no fresh fatal/error/exception/502/coredump/search-rate noise after the auto-replace cycle. Fixed duplicate startup MeshDHT self-descriptor publication by letting `MeshBootstrapService` own the startup publish and starting `PeerDescriptorRefreshService` periodic scheduling from current time. Validation passed with focused and full unit tests, Release build, lint, and diff check.
+  - Notes: Confirmed the installed package, CLI/API version, service state, Soulseek login, shares, DHT, and overlay listener are healthy on `local test host`. Current-process logs have no fresh fatal/error/exception/502/coredump/search-rate noise after the auto-replace cycle. Fixed duplicate startup MeshDHT self-descriptor publication by letting `MeshBootstrapService` own the startup publish and starting `PeerDescriptorRefreshService` periodic scheduling from current time. Validation passed with focused and full unit tests, Release build, lint, and diff check.
 
 - [x] Remove Snap publishing from release workflows
   - Status: completed (2026-04-21)
@@ -1356,15 +1357,15 @@
 
 - [x] Fix issue `#209` stale antiforgery GET spam and DHT enabled-status drift
   - Status: done
-  - Notes: Reproduced the stale XSRF cookie spam directly on `kspls0`, moved safe-request antiforgery cleanup ahead of `GetAndStoreTokens()` so ASP.NET never deserializes stale cookies on token-minting GETs, and corrected `/api/v0/dht/status` so `isEnabled` reflects configured DHT enablement instead of current readiness. Validated on `kspls0`: the stale-cookie curl no longer emits decrypt stack traces, and the DHT status API now reports `isEnabled: true` during bootstrap instead of falsely claiming DHT is disabled.
+  - Notes: Reproduced the stale XSRF cookie spam directly on `local test host`, moved safe-request antiforgery cleanup ahead of `GetAndStoreTokens()` so ASP.NET never deserializes stale cookies on token-minting GETs, and corrected `/api/v0/dht/status` so `isEnabled` reflects configured DHT enablement instead of current readiness. Validated on `local test host`: the stale-cookie curl no longer emits decrypt stack traces, and the DHT status API now reports `isEnabled: true` during bootstrap instead of falsely claiming DHT is disabled.
 
 - [x] Fix issue `#209` overlay pin-mismatch recovery so stale TOFU pins do not partition the mesh
   - Status: done
-  - Notes: Reproduced the live failure on `kspls0` with a stale stored pin for `minimus7`, proved the old behavior hard-blocked the peer after a normal cert rotation, changed inbound and outbound overlay handshakes to rotate stored TOFU pins instead of auto-banning on mismatch, added focused `CertificatePinStoreTests`, and validated on `kspls0` that the stale-pin path now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same run.
+  - Notes: Reproduced the live failure on `local test host` with a stale stored pin for `minimus7`, proved the old behavior hard-blocked the peer after a normal cert rotation, changed inbound and outbound overlay handshakes to rotate stored TOFU pins instead of auto-banning on mismatch, added focused `CertificatePinStoreTests`, and validated on `local test host` that the stale-pin path now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same run.
 
 - [x] Fix issue `#209` peer stats so DHT candidates do not masquerade as verified onion-capable peers
   - Status: done
-  - Notes: Stopped marking DHT-discovered endpoints as `supportsOnionRouting=true` before any overlay handshake succeeds, updated DHT rendezvous tests so failed immediate connects stay tracked as `dht-discovered` candidates instead of circuit-capable peers, and validated on `kspls0` that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while raw DHT candidates are still visible separately.
+  - Notes: Stopped marking DHT-discovered endpoints as `supportsOnionRouting=true` before any overlay handshake succeeds, updated DHT rendezvous tests so failed immediate connects stay tracked as `dht-discovered` candidates instead of circuit-capable peers, and validated on `local test host` that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while raw DHT candidates are still visible separately.
 
 - [x] Add upload diagnostics for Bas's failed-upload report
   - Status: completed (2026-04-26)
@@ -1376,11 +1377,11 @@
 
 - [x] Fix mesh self-descriptor publication on QUIC-unsupported hosts
   - Status: done
-  - Notes: Reproduced on `kspls0` that `PeerDescriptorPublisher` was auto-advertising fake `2234/2235` endpoints and impossible `DirectQuic` transports while `QuicListener.IsSupported` was false. Updated descriptor publication to derive legacy endpoints from the real UDP overlay listen port and to suppress direct QUIC transport advertisement when the host cannot actually accept QUIC. Validated on `kspls0`: published self descriptor now logs `endpoints=4 transports=0` instead of poisoning DHT with impossible direct candidates.
+  - Notes: Reproduced on `local test host` that `PeerDescriptorPublisher` was auto-advertising fake `2234/2235` endpoints and impossible `DirectQuic` transports while `QuicListener.IsSupported` was false. Updated descriptor publication to derive legacy endpoints from the real UDP overlay listen port and to suppress direct QUIC transport advertisement when the host cannot actually accept QUIC. Validated on `local test host`: published self descriptor now logs `endpoints=4 transports=0` instead of poisoning DHT with impossible direct candidates.
 
 - [ ] Add a non-QUIC direct mesh transport path or runtime dependency gate
   - Status: pending
-  - Notes: The audit on `kspls0` showed a deeper architecture gap remains after the descriptor fix: `TransportSelector` still only has `DirectQuicDialer` for clearnet mesh transport, so QUIC-unsupported hosts cannot build direct circuits at all. Either wire the existing direct TLS transport into mesh dialing or add a startup/package gate that makes this unsupported state explicit before release.
+  - Notes: The audit on `local test host` showed a deeper architecture gap remains after the descriptor fix: `TransportSelector` still only has `DirectQuicDialer` for clearnet mesh transport, so QUIC-unsupported hosts cannot build direct circuits at all. Either wire the existing direct TLS transport into mesh dialing or add a startup/package gate that makes this unsupported state explicit before release.
 
 - [x] Verify DHT rendezvous overlay search and transfer between two full local slskdN instances
   - Status: done
@@ -1388,23 +1389,23 @@
 
 - [x] Fix startup directory browse noise when Soulseek is still logging in
   - Status: done
-  - Notes: Live `kspls0` build `0.24.5-slskdn.159` held the mesh framer fix past the keepalive window, but a frontend/API directory request during `Connected, LoggingIn` still produced a noisy 500. `UsersController.Directory` now returns 503 until the Soulseek client is connected and logged in, with focused unit coverage.
+  - Notes: Live `local test host` build `0.24.5-slskdn.159` held the mesh framer fix past the keepalive window, but a frontend/API directory request during `Connected, LoggingIn` still produced a noisy 500. `UsersController.Directory` now returns 503 until the Soulseek client is connected and logged in, with focused unit coverage.
 
-- [x] Fix auto-replace search finalization race seen on `kspls0`
+- [x] Fix auto-replace search finalization race seen on `local test host`
   - Status: done
   - Notes: Build `159` logged `No search responses found` for auto-replace searches that completed with responses seconds later. `AutoReplaceService` now waits for the persisted completed search state before treating responses as absent, with focused unit coverage for delayed finalization.
 
-- [x] Fix AudioSketch ffmpeg PATH resolution on `kspls0`
+- [x] Fix AudioSketch ffmpeg PATH resolution on `local test host`
   - Status: done
   - Notes: Live build `159` repeatedly logged `[AudioSketch] ffmpeg not configured or missing: ffmpeg` even though `/usr/bin/ffmpeg` was installed. `AudioSketchService` now resolves configured command names through `PATH` before declaring the tool missing, with focused unit coverage.
 
-- [x] Restore QUIC mesh runtime compatibility on `kspls0`
+- [x] Restore QUIC mesh runtime compatibility on `local test host`
   - Status: done
   - Notes: Replaced crashing AUR `msquic 2.4.11` with Microsoft MsQuic `v2.5.7`, removed the temporary systemd QUIC-disable override, and deployed `manual.90257b10d`. QUIC listeners `50401/50402`, overlay `50305`, DHT, and one mesh connection are healthy after restart. App code now gates QUIC service registration and direct-QUIC publication on `QuicRuntime.IsAvailable()`.
 
 - [x] Fix live overlay framer compatibility with unframed JSON control messages
   - Status: done
-  - Notes: Live `kspls0` build `159` disconnected `m***7` at the two-minute keepalive with `Invalid message length: 2065855609` (`{"ty`). `SecureMessageFramer` now accepts capped unframed JSON objects at frame boundaries, with focused unit coverage and live validation past the keepalive threshold.
+  - Notes: Live `local test host` build `159` disconnected `m***7` at the two-minute keepalive with `Invalid message length: 2065855609` (`{"ty`). `SecureMessageFramer` now accepts capped unframed JSON objects at frame boundaries, with focused unit coverage and live validation past the keepalive threshold.
 
 - [x] Fix DHT rendezvous connector-capacity accounting
   - Status: done
@@ -1412,43 +1413,43 @@
 
 - [x] Fix user directory browse connection-failure API noise
   - Status: done
-  - Notes: Live `kspls0` logs showed remote peer directory connection failures escaping as repeated middleware stack traces. `UsersController.Directory` now returns a controlled 503 for `SoulseekClientException` wrapping `ConnectionException`, with focused unit coverage.
+  - Notes: Live `local test host` logs showed remote peer directory connection failures escaping as repeated middleware stack traces. `UsersController.Directory` now returns a controlled 503 for `SoulseekClientException` wrapping `ConnectionException`, with focused unit coverage.
 
 - [x] Fix systemd restart SIGTERM handling
   - Status: done
-  - Notes: Manual deployments showed normal `systemctl restart slskd` stops recorded as `status=1/FAILURE`. POSIX signal handlers now request generic-host shutdown instead of `Environment.Exit(1)`, and `ProcessExit` logs expected shutdown as informational. Validated on `kspls0` with a deliberate restart of `manual.0a542e1c9`.
+  - Notes: Manual deployments showed normal `systemctl restart slskd` stops recorded as `status=1/FAILURE`. POSIX signal handlers now request generic-host shutdown instead of `Environment.Exit(1)`, and `ProcessExit` logs expected shutdown as informational. Validated on `local test host` with a deliberate restart of `manual.0a542e1c9`.
 
 - [x] Fix transfer cleanup ordering during service shutdown
   - Status: completed (2026-04-19)
-  - Notes: `DownloadService` now drains in-flight download/enqueue tasks before `Application.StopAsync` disposes the shared Soulseek client, which removed the restart-time global semaphore warnings and disposed-object cleanup noise on live `kspls0` restarts. A second live shutdown race in `SoulseekClient.Disconnect()` (`Sequence contains no elements`) is now caught and downgraded during expected shutdown so clean restarts do not emit false fatal termination logs.
+  - Notes: `DownloadService` now drains in-flight download/enqueue tasks before `Application.StopAsync` disposes the shared Soulseek client, which removed the restart-time global semaphore warnings and disposed-object cleanup noise on live `local test host` restarts. A second live shutdown race in `SoulseekClient.Disconnect()` (`Sequence contains no elements`) is now caught and downgraded during expected shutdown so clean restarts do not emit false fatal termination logs.
 
-- [x] Fix kspls0 QUIC/native crash mitigation and Soulseek listener fake-fatal noise
+- [x] Fix local test host QUIC/native crash mitigation and Soulseek listener fake-fatal noise
   - Status: completed (2026-04-21)
   - Notes: Live manual-build soak found a native `SIGSEGV` restart while QUIC listeners were active and a recovered-process fake fatal from Soulseek.NET listener socket disposal. QUIC control/data now require explicit operator opt-in, UDP overlay remains enabled by default, listener socket disposal is classified as expected Soulseek network teardown, and verbose startup/SPA fallback/CSRF request logs were demoted to debug. Post-deploy passes also exposed controlled offline user-info `404`s still logging `UserOfflineException` stacks and shutdown-cancelled background searches logging false errors; both now log as expected operational outcomes. Final deployed manual build `0.24.5-slskdn.165+manual.15ba2a423` passed a full bounded Playwright route/tab sweep with `307` visits, `0` issues, and no HTTP 5xx/502s.
 
-- [x] Validate `kspls0` yay package `0.24.5-slskdn.168` and fix actionable noise
+- [x] Validate `local test host` yay package `0.24.5-slskdn.168` and fix actionable noise
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package, CLI, release symlink, and authenticated API all report `0.24.5-slskdn.168`; service is active after a clean restart with Soulseek logged in, shares ready, DHT running, and expected listeners present. Fixed the transient overlay `50305` bind race by retrying startup binds, demoted remaining startup method-trace logs to debug, and made release Discord/Matrix announcement webhooks retry/non-fatal after the `168` run went red only on a Matrix HTTP 504 after artifacts were already published. Validation passed with YAML parse, focused DHT tests, full unit tests, Release build, lint, and diff check.
 
-- [x] Validate `kspls0` yay package `0.24.5-slskdn.170` and quiet remaining overlay log noise
+- [x] Validate `local test host` yay package `0.24.5-slskdn.170` and quiet remaining overlay log noise
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package/API still report `0.24.5-slskdn.170`, systemd is active with zero restarts, Soulseek is logged in, shares are ready, DHT is running, overlay TCP is listening, and current-process logs/coredumps show no actionable fatal/error/exception/502/bind/protocol issues. The only fixable noise was per-endpoint overlay cooldown streak detail at information level; that detail is now debug-level while aggregate DHT/overlay summaries remain visible.
 
-- [x] Validate `kspls0` yay package `0.24.5-slskdn.171` and fix Soulseek timeout fake-fatal classifier
+- [x] Validate `local test host` yay package `0.24.5-slskdn.171` and fix Soulseek timeout fake-fatal classifier
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package and binary are `171`; restarted the service because systemd was still running the previous `170` PID after package installation. The real `171` process reports the correct version/path, Soulseek is logged in, shares are ready, API is responsive, and the duplicate MeshDHT descriptor publish is gone. A pre-restart fake fatal from Soulseek.NET read-loop timeout churn exposed a classifier gap; `Connection timed out` and `Unable to read data from the transport connection` inner exception messages are now treated as expected Soulseek network churn with focused coverage.
 
-- [x] Validate `kspls0` yay package `0.24.5-slskdn.172` and clean startup polish
+- [x] Validate `local test host` yay package `0.24.5-slskdn.172` and clean startup polish
   - Status: completed (2026-04-21)
   - Notes: Confirmed the installed package/API are `172`, service is active with zero restarts, Soulseek is logged in, DHT is ready, overlay TCP is listening, mesh counters are clean, and fresh logs/coredumps show no fatal/error/exception/502/bind/protocol issues. Fixed remaining startup polish by demoting temporary raw config probes to debug and normalizing blank identity display names before profile persistence and LAN discovery advertisement.
 
-- [x] Sweep `kspls0` 172 logs/Web UI and quiet remaining false warnings
+- [x] Sweep `local test host` 172 logs/Web UI and quiet remaining false warnings
   - Status: completed (2026-04-21)
   - Notes: Authenticated Web UI route/tab validation found no real 5xx/502/page regressions; earlier tab and SongID hub findings were crawler/navigation abort artifacts. Live logs showed no fatal/error/exception noise, but did show repeated finite-sample entropy warnings and expected auto-replace no-result searches at warning level. Entropy sampling now uses a stable 4096-byte sample, auto-replace no-result telemetry logs at debug, and the full unit-suite pass also fixed a flaky hosted-service test wait exposed during validation.
 
-- [x] Continue issue `#209` live mesh/search diagnosis on `kspls0`
+- [x] Continue issue `#209` live mesh/search diagnosis on `local test host`
   - Status: completed (2026-04-22)
-  - Notes: Fixed public self-descriptor advertisement so only public-routable auto-detected interfaces are published and configured endpoints are not supplemented with private/container/VPN addresses. Added mesh-search peer outcome logging. Deployed `0.24.5-slskdn.174+manual.6fce6575c` to `kspls0` and proved the current search path works: core Soulseek returned `252` responses / `16686` files for `radiohead`, while mesh fanout reached one active peer and got an empty response (`peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0`).
+  - Notes: Fixed public self-descriptor advertisement so only public-routable auto-detected interfaces are published and configured endpoints are not supplemented with private/container/VPN addresses. Added mesh-search peer outcome logging. Deployed `0.24.5-slskdn.174+manual.6fce6575c` to `local test host` and proved the current search path works: core Soulseek returned `252` responses / `16686` files for `radiohead`, while mesh fanout reached one active peer and got an empty response (`peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0`).
 
 - [x] Add optional live-account mesh search/transfer smoke
   - Status: completed (2026-04-22)
@@ -1510,15 +1511,15 @@
 
 - [x] Redesign the Web UI footer status dock
   - Status: completed (2026-04-29)
-  - Notes: Reorganized the footer into brand/support, speed, network/index, transport-health, and fork-note groups while keeping the same telemetry and attribution data. Rechecked against live `kspls0` rendering and changed the layout from a rigid grid to a flexible dock with wrapping status pills.
+  - Notes: Reorganized the footer into brand/support, speed, network/index, transport-health, and fork-note groups while keeping the same telemetry and attribution data. Rechecked against live `local test host` rendering and changed the layout from a rigid grid to a flexible dock with wrapping status pills.
 
 - [x] Fix README showcase dark-mode screenshots
   - Status: completed (2026-04-29)
-  - Notes: Pulled the remote README changes, inspected all README showcase PNGs, identified the SongID result, Discovery Graph atlas, and Network dashboard captures as carrying light-theme Semantic UI surfaces, fixed the affected dark-mode selectors, deployed the refreshed web bundle to `kspls0` for verification, and recaptured the three affected README images.
+  - Notes: Pulled the remote README changes, inspected all README showcase PNGs, identified the SongID result, Discovery Graph atlas, and Network dashboard captures as carrying light-theme Semantic UI surfaces, fixed the affected dark-mode selectors, deployed the refreshed web bundle to `local test host` for verification, and recaptured the three affected README images.
 
 - [x] Principal UI pass over README showcase surfaces
   - Status: completed (2026-04-29)
-  - Notes: Re-reviewed every README screenshot for layout, spacing, chrome, and contrast issues. Compacted the desktop nav, reduced fixed footer height, made the mobile footer a one-row scroll rail, tightened search result cards and file lists, made Discovery Graph controls deliberate, added sparse graph messaging, defaulted secondary Search page panels closed with persisted state, deployed to `kspls0`, and recaptured the README gallery.
+  - Notes: Re-reviewed every README screenshot for layout, spacing, chrome, and contrast issues. Compacted the desktop nav, reduced fixed footer height, made the mobile footer a one-row scroll rail, tightened search result cards and file lists, made Discovery Graph controls deliberate, added sparse graph messaging, defaulted secondary Search page panels closed with persisted state, deployed to `local test host`, and recaptured the README gallery.
 
 - [x] Persist Search page collapsible section state
   - Status: completed (2026-04-29)
@@ -1599,3 +1600,7 @@
 - [x] Harden remaining browser-local UI storage
   - Status: completed (2026-04-30)
   - Notes: Converted remaining production direct local/session storage access to the shared safe storage helpers across App, Search, Discovery Graph, Browse, Chat, Rooms, Users, System Network, Footer, blocked-user storage, and user-context chat routing. Production direct storage API calls are now isolated to `src/web/src/lib/storage.js`.
+
+- [x] Audit and fix fixed-chrome scroll regions
+  - Status: completed (2026-04-30)
+  - Notes: Measured nav/player/footer chrome into CSS variables used by the app scroll container; fixed safe-area double counting and nav bottom-edge under-reservation. Headless geometry audit passed Search, Rooms, Chat, Browse, and System at desktop/mobile sizes with the player expanded and collapsed.

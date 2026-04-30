@@ -1,7 +1,7 @@
 [Unit]
 Description=Transparent VPN ingress forwards for slskdN listener ports
-After=network-online.target slskd.service
-Wants=network-online.target slskd.service
+After=network-online.target slskdN.service
+Wants=network-online.target slskdN.service
 
 [Service]
 Type=oneshot

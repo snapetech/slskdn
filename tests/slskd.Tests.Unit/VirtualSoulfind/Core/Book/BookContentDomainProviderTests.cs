@@ -29,7 +29,7 @@ public class BookContentDomainProviderTests
     }
 
     [Fact]
-    public async Task TryGetWorkByIsbnAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetWorkByIsbnAsync_Should_Return_Work()
     {
         // Arrange
         var isbn = "9780132350884";
@@ -38,11 +38,12 @@ public class BookContentDomainProviderTests
         var result = await _provider.TryGetWorkByIsbnAsync(isbn, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(isbn, result.Isbn);
     }
 
     [Fact]
-    public async Task TryGetWorkByTitleAuthorAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetWorkByTitleAuthorAsync_Should_Return_Work()
     {
         // Arrange
         var title = "Test Book";
@@ -52,11 +53,13 @@ public class BookContentDomainProviderTests
         var result = await _provider.TryGetWorkByTitleAuthorAsync(title, author, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(title, result.Title);
+        Assert.Equal(author, result.Creator);
     }
 
     [Fact]
-    public async Task TryGetItemByHashAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByHashAsync_Should_Return_Item()
     {
         // Arrange
         var hash = "abc123def456";
@@ -67,16 +70,18 @@ public class BookContentDomainProviderTests
         var result = await _provider.TryGetItemByHashAsync(hash, filename, sizeBytes, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(filename, result.Filename);
+        Assert.Equal(BookFormat.Pdf, result.Format);
     }
 
     [Fact]
-    public async Task TryGetItemByLocalMetadataAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByLocalMetadataAsync_Should_Return_Item()
     {
         // Arrange
         var metadata = new LocalFileMetadata
         {
-            Id = "test-id",
+            Id = "test.pdf",
             SizeBytes = 5 * 1024 * 1024L,
             PrimaryHash = "abc123",
             MediaInfo = "Book: PDF",
@@ -86,7 +91,8 @@ public class BookContentDomainProviderTests
         var result = await _provider.TryGetItemByLocalMetadataAsync(metadata, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("test.pdf", result.Filename);
     }
 
     [Theory]

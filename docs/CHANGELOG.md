@@ -36,6 +36,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   and documented the platform support boundary.
 - Made footer/player reserved height CSS variables update from measured element
   sizes so the main scroll area tracks the real chrome height.
+- Added richer native `.milk2` composite controls with preset-defined transition
+  durations and alpha/additive/screen/multiply secondary blend modes.
 - Prepared the `2026042900-slskdn.204` stable release metadata.
 - Made Winget release-version metadata validation opt-in so stable releases
   that intentionally skip Winget are not blocked by stale Winget URLs.

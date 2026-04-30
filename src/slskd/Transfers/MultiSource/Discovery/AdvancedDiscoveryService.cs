@@ -179,26 +179,69 @@ public class AdvancedDiscoveryService : IAdvancedDiscoveryService
         string? recordingId = null,
         CancellationToken cancellationToken = default)
     {
-        _ = fileSize;
-        _ = cancellationToken;
+        return FindSimilarVariantsCoreAsync(filename, fileSize, recordingId, cancellationToken);
+    }
 
+    private async Task<List<ContentVariant>> FindSimilarVariantsCoreAsync(
+        string filename,
+        long fileSize,
+        string? recordingId,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            // Use fuzzy matching to find similar content
-            // In production, this would query mesh DHT, hash database, etc.
-            var variants = new List<ContentVariant>();
-
-            // Placeholder implementation - would integrate with actual discovery
             _logger.LogDebug(
                 "[AdvancedDiscovery] Finding variants for {Filename} (recording: {RecordingId})",
                 filename, recordingId ?? "none");
 
-            return Task.FromResult(variants);
+            var verificationResult = await _contentVerification.VerifySourcesAsync(
+                new ContentVerificationRequest
+                {
+                    Filename = filename,
+                    FileSize = fileSize,
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            var sources = verificationResult.SourcesBySemanticKey.Count > 0
+                ? verificationResult.SourcesBySemanticKey.Values.SelectMany(group => group)
+                : verificationResult.SourcesByHash.Values.SelectMany(group => group);
+
+            var variants = sources
+                .Where(source => !string.IsNullOrWhiteSpace(source.FullPath))
+                .GroupBy(source => new
+                {
+                    Filename = System.IO.Path.GetFileName(source.FullPath),
+                    RecordingId = source.MusicBrainzRecordingId ?? recordingId,
+                })
+                .Select(group =>
+                {
+                    var representative = group.First();
+                    var variantRecordingId = representative.MusicBrainzRecordingId ?? recordingId;
+                    var similarity = !string.IsNullOrWhiteSpace(recordingId) &&
+                        string.Equals(variantRecordingId, recordingId, StringComparison.OrdinalIgnoreCase)
+                        ? 1.0
+                        : CalculateFilenameSimilarity(filename, group.Key.Filename);
+
+                    return new ContentVariant
+                    {
+                        Filename = group.Key.Filename,
+                        FileSize = fileSize,
+                        RecordingId = variantRecordingId,
+                        SimilarityScore = similarity,
+                        PeerCount = group.Select(source => source.Username).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    };
+                })
+                .Where(variant => variant.SimilarityScore > 0)
+                .OrderByDescending(variant => variant.SimilarityScore)
+                .ThenByDescending(variant => variant.PeerCount)
+                .ToList();
+
+            return variants;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[AdvancedDiscovery] Error finding variants for {Filename}", filename);
-            return Task.FromResult(new List<ContentVariant>());
+            return new List<ContentVariant>();
         }
     }
 

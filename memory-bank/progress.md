@@ -1,3 +1,18 @@
+## 2026-04-30 18:54Z - Added native MilkDrop `.milk2` composite controls
+
+- Added secondary `.milk2` blend mode aliases for alpha, additive, screen, and multiply final compositing.
+- Added primary preset transition-duration aliases so imported `.milk` / `.milk2` presets can drive renderer-set crossfade duration when no caller override is supplied.
+- Plumbed composite modes into the WebGL final blit blend function and added focused native engine / renderer coverage.
+- Validation: focused native/frontend tests, compatibility CLI, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
+## 2026-04-30 18:56Z - Fixed fixed-chrome scroll-region sizing
+
+- Reworked the app shell so the main scrollable area reserves measured nav, player, and footer chrome instead of hard-coded heights.
+- Player collapse/expand now updates `--slskdn-player-reserved-height`; footer wrapping updates `--slskdn-footer-height`; nav uses its measured bottom edge for `--slskdn-nav-height`.
+- Removed the extra safe-area subtraction from the app/player layout because measured footer/player heights already include their safe-area padding.
+- Headless geometry audit passed on Search, Rooms, Chat, Browse, and System at 1280x900 and 390x844 in expanded and collapsed player states: content bottom matched player top, player bottom matched footer top, and body did not scroll.
+- Validation: `npm run lint`, `npm run build`, and `git diff --check` passed.
+
 ## 2026-04-30 18:45Z - Completed browser storage hardening across older UI paths
 
 - Converted the remaining production direct `localStorage` / `sessionStorage` access outside the safe storage helper to shared storage wrappers.
@@ -6816,7 +6831,7 @@ Code quality improvements were completed as part of Option A:
   - `cd src/web && ls -l build/service-worker.js build/manifest.json`
   - `git diff --check`
   - `bash ./bin/lint`
-  - `dotnet test` hit an unrelated environment conflict in `CsrfPortScopedTokenIntegrationTests`: another running slskd instance already owns `/home/keith/.local/share/slskd`, so the full integration suite could not complete cleanly in this shell.
+  - `dotnet test` hit an unrelated environment conflict in `CsrfPortScopedTokenIntegrationTests`: another running slskd instance already owns `<app-data-dir>`, so the full integration suite could not complete cleanly in this shell.
 
 ## 2026-04-13 21:25:00Z
 
@@ -7790,6 +7805,13 @@ Code quality improvements were completed as part of Option A:
 - Local library/stream fallback no longer hashes arbitrary allowed-root files to satisfy `sha256:` misses; it uses bounded path IDs and displays relative/file-only paths.
 - ListenBrainz token clearing now removes storage and submission reports HTTP failure instead of always returning success.
 - Validation: `dotnet build --no-incremental --nologo --configuration Release`, focused backend test slice (`424/424`), `npm run lint`, `npm run build`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and `bash ./bin/lint` passed. The web production build still reports the existing large chunk warning, and .NET still reports existing analyzer warnings.
+
+## 2026-04-30 19:01:00Z
+
+- Added richer native `.milk2` transition and composite controls: preset-defined transition durations, secondary preset blend-mode aliases, and alpha/additive/screen/multiply final compositing in the WebGL blit path.
+- Cleaned up the dirty VirtualSoulfind provider batch so book/movie/TV hash-based item resolution normalizes non-empty hash and filename inputs before IDs, logs, and item construction.
+- Fixed a compile-blocking Music provider unit-test setup caused by returning arrays from a mocked `Task<List<AudioVariant>>` API; documented the gotcha and committed it immediately as `55aab0634`.
+- Validation: `dotnet build src/slskd/slskd.csproj --no-restore`, focused VirtualSoulfind provider tests (`31/31`), focused AdvancedDiscovery tests (`10/10`), `npm run lint -- --quiet`, `npm run build`, focused native MilkDrop/player tests (`70/70`), `npm run test:native-milkdrop-compatibility`, and `npm run test:native-milkdrop-smoke` passed.
 
 ## 2026-04-30 03:23:00Z
 

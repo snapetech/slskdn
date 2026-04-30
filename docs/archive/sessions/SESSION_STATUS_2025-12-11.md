@@ -95,7 +95,7 @@ Failing: 1 test (quarantine edge case in sliding window)
    - Added timestamp: December 11, 2025 00:15 UTC
 
 3. **Path Cleanup**
-   - Removed all `/home/keith/` paths from documentation
+   - Removed all `<home>/` paths from documentation
    - Replaced with relative paths or `~/Documents` format
    - Updated 3 files: `START_HERE_CODEX.md`, `READY_FOR_CODEX.md`, `TASK_STATUS_DASHBOARD.md`
 

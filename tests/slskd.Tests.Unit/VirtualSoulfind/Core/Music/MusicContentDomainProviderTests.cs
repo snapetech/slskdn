@@ -120,7 +120,7 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
             _hashDbMock.Setup(h => h.LookupHashesByRecordingIdAsync(recordingId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { new HashDbEntry { MusicBrainzId = recordingId } });
             _hashDbMock.Setup(h => h.GetVariantsByRecordingAsync(recordingId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<slskd.Audio.AudioVariant>());
+                .Returns(Task.FromResult(new List<slskd.Audio.AudioVariant>()));
             _hashDbMock.Setup(h => h.GetAlbumTargetsAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { new AlbumTargetEntry { ReleaseId = releaseId, Title = "Album", Artist = "Artist" } });
             _hashDbMock.Setup(h => h.GetAlbumTracksAsync(releaseId, It.IsAny<CancellationToken>()))
@@ -180,10 +180,10 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
             _hashDbMock.Setup(h => h.LookupHashesByRecordingIdAsync(recordingId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { new HashDbEntry { MusicBrainzId = recordingId } });
             _hashDbMock.Setup(h => h.GetVariantsByRecordingAsync(recordingId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<slskd.Audio.AudioVariant>
+                .Returns(Task.FromResult(new List<slskd.Audio.AudioVariant>
                 {
                     new() { MusicBrainzRecordingId = recordingId, VariantId = "Fingerprint Track", DurationMs = 200_000, QualityScore = 1.0 }
-                });
+                }));
             _hashDbMock.Setup(h => h.GetAlbumTargetsAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<AlbumTargetEntry>());
             var provider = new MusicContentDomainProvider(_loggerMock.Object, _hashDbMock.Object);

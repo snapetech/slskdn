@@ -52,7 +52,9 @@ const createFakeGl = () => ({
   RGBA: 0x1908,
   STATIC_DRAW: 0x88e4,
   DYNAMIC_DRAW: 0x88e8,
+  DST_COLOR: 0x0306,
   ONE: 1,
+  ONE_MINUS_SRC_COLOR: 0x0301,
   ONE_MINUS_SRC_ALPHA: 0x0303,
   POINTS: 0x0000,
   SRC_ALPHA: 0x0302,
@@ -67,6 +69,7 @@ const createFakeGl = () => ({
   TRIANGLES: 0x0004,
   UNSIGNED_BYTE: 0x1401,
   VERTEX_SHADER: 0x8b31,
+  ZERO: 0,
   activeTexture: vi.fn(),
   attachShader: vi.fn(),
   bindBuffer: vi.fn(),
@@ -1116,5 +1119,33 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       rot: 0,
       zoom: 1,
     });
+  });
+
+  it('uses requested final composite blend modes', () => {
+    const gl = createFakeGl();
+    const canvas = createCanvas(gl);
+    const preset = parseMilkdropPreset(`
+      wave_r=0.2
+      wave_g=0.4
+      wave_b=0.6
+    `).primary;
+
+    const renderer = createMilkdropRenderer({ canvas, preset });
+    renderer.render({}, {
+      clearScreen: false,
+      compositeMode: 'screen',
+      outputAlpha: 0.5,
+    });
+
+    expect(gl.blendFunc).toHaveBeenCalledWith(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
+
+    gl.blendFunc.mockClear();
+    renderer.render({}, {
+      clearScreen: false,
+      compositeMode: 'multiply',
+      outputAlpha: 0.5,
+    });
+
+    expect(gl.blendFunc).toHaveBeenCalledWith(gl.DST_COLOR, gl.ZERO);
   });
 });

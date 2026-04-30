@@ -351,20 +351,56 @@ public class AdvancedDiscoveryServiceTests
     }
 
     [Fact]
-    public async Task FindSimilarVariantsAsync_Should_Return_Empty_List_For_Placeholder()
+    public async Task FindSimilarVariantsAsync_Should_Return_Grouped_Semantic_Variants()
     {
         // Arrange
         var filename = "test.mp3";
         var fileSize = 1024 * 1024L;
         var recordingId = "mbid-123";
+        var sources = new List<VerifiedSource>
+        {
+            new()
+            {
+                Username = "peer1",
+                FullPath = "/music/Test Artist/test.flac",
+                MusicBrainzRecordingId = recordingId,
+            },
+            new()
+            {
+                Username = "peer2",
+                FullPath = "/shares/Test Artist/test.flac",
+                MusicBrainzRecordingId = recordingId,
+            },
+            new()
+            {
+                Username = "peer3",
+                FullPath = "/shares/other-track.mp3",
+                MusicBrainzRecordingId = "other-recording",
+            },
+        };
+
+        _contentVerificationMock
+            .Setup(x => x.VerifySourcesAsync(
+                It.Is<ContentVerificationRequest>(request => request.Filename == filename && request.FileSize == fileSize),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ContentVerificationResult
+            {
+                SourcesBySemanticKey = new Dictionary<string, List<VerifiedSource>>
+                {
+                    ["mbid-123:flac"] = sources,
+                },
+            });
 
         // Act
         var result = await _service.FindSimilarVariantsAsync(filename, fileSize, recordingId, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        // Current implementation returns empty list (placeholder)
-        Assert.Empty(result);
+        var variant = Assert.Single(result, item => item.Filename == "test.flac");
+        Assert.Equal(fileSize, variant.FileSize);
+        Assert.Equal(recordingId, variant.RecordingId);
+        Assert.Equal(2, variant.PeerCount);
+        Assert.Equal(1.0, variant.SimilarityScore);
     }
 
     [Fact]

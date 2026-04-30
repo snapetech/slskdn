@@ -1,6 +1,6 @@
 [Unit]
 Description=Check slskdN VPN health and recover ingress mapping
-After=slskd.service slskdN-vpn-ingress.service slskdN-vpn-gluetun-compat.service
+After=slskdN.service slskdN-vpn-ingress.service slskdN-vpn-gluetun-compat.service
 
 [Service]
 Type=oneshot

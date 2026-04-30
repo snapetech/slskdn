@@ -110,6 +110,13 @@ const toFiniteNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
+const getCompositeBlendFactors = (gl, mode = 'alpha') => {
+  if (mode === 'additive') return [gl.SRC_ALPHA, gl.ONE];
+  if (mode === 'screen') return [gl.ONE, gl.ONE_MINUS_SRC_COLOR];
+  if (mode === 'multiply') return [gl.DST_COLOR, gl.ZERO];
+  return [gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA];
+};
+
 const getEntryValue = (entry = {}, keys = [], fallback = undefined) => {
   const baseValues = entry.baseValues || {};
   const key = keys.find((candidate) => baseValues[candidate] !== undefined);
@@ -1202,6 +1209,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
     },
     render: (frame = {}, options = {}) => {
       const clearScreen = options.clearScreen !== false;
+      const compositeMode = options.compositeMode || 'alpha';
       const outputAlpha = clamp01(options.outputAlpha ?? 1);
       const frequencyData = frame.spectrum || frame.frequencies || frame.frequency || frame.fft || [];
       scope = {
@@ -1506,8 +1514,9 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         gl.clear(gl.COLOR_BUFFER_BIT);
       }
       if (!clearScreen || outputAlpha < 1) {
+        const [sourceFactor, destinationFactor] = getCompositeBlendFactors(gl, compositeMode);
         gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.blendFunc(sourceFactor, destinationFactor);
       }
       if (translatedCompProgram) {
         bindTranslatedShaderProgram(

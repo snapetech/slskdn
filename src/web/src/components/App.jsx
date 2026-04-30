@@ -151,6 +151,18 @@ const getMessageTimestamp = (message) => {
 const isIncomingRoomMessage = (message) =>
   message?.self !== true && message?.direction !== 'Out';
 
+const setNavigationHeightVariable = (element) => {
+  if (!element || typeof document === 'undefined') return;
+
+  const bottom = Math.ceil(element.getBoundingClientRect().bottom);
+  if (bottom > 0) {
+    document.documentElement.style.setProperty(
+      '--slskdn-nav-height',
+      `${bottom}px`,
+    );
+  }
+};
+
 const NavigationIcon = ({ alert, alertTestId, name }) => (
   <span className="navigation-alert-icon">
     <Icon name={name} />
@@ -376,18 +388,21 @@ class App extends Component {
     this.state = initialState;
     this.applicationHub = undefined;
     this.navigationActivityInterval = undefined;
+    this.navigationResizeObserver = undefined;
     this.roomActivityBaselined = false;
   }
 
   componentDidMount() {
     this.init();
     this.startNavigationActivityPolling();
+    this.startChromeMeasurement();
   }
 
   componentDidUpdate(previousProps) {
     if (previousProps.location?.pathname !== this.props.location?.pathname) {
       this.refreshNavigationActivity();
     }
+    this.updateNavigationHeight();
   }
 
   componentWillUnmount() {
@@ -399,7 +414,33 @@ class App extends Component {
     if (this.navigationActivityInterval) {
       window.clearInterval(this.navigationActivityInterval);
     }
+
+    if (this.navigationResizeObserver) {
+      this.navigationResizeObserver.disconnect();
+      this.navigationResizeObserver = undefined;
+    }
   }
+
+  startChromeMeasurement = () => {
+    this.updateNavigationHeight();
+    if (typeof window.ResizeObserver !== 'function') {
+      return;
+    }
+
+    const navigation = document.querySelector('.navigation');
+    if (!navigation) {
+      return;
+    }
+
+    this.navigationResizeObserver = new window.ResizeObserver(
+      this.updateNavigationHeight,
+    );
+    this.navigationResizeObserver.observe(navigation);
+  };
+
+  updateNavigationHeight = () => {
+    setNavigationHeightVariable(document.querySelector('.navigation'));
+  };
 
   startNavigationActivityPolling = () => {
     this.refreshNavigationActivity();

@@ -29,7 +29,7 @@ public class MovieContentDomainProviderTests
     }
 
     [Fact]
-    public async Task TryGetWorkByImdbIdAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetWorkByImdbIdAsync_Should_Return_Work()
     {
         // Arrange
         var imdbId = "tt1234567";
@@ -38,12 +38,12 @@ public class MovieContentDomainProviderTests
         var result = await _provider.TryGetWorkByImdbIdAsync(imdbId, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
-        // Placeholder implementation returns null
+        Assert.NotNull(result);
+        Assert.Equal(imdbId, result.ImdbId);
     }
 
     [Fact]
-    public async Task TryGetWorkByTitleYearAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetWorkByTitleYearAsync_Should_Return_Work()
     {
         // Arrange
         var title = "Test Movie";
@@ -53,33 +53,35 @@ public class MovieContentDomainProviderTests
         var result = await _provider.TryGetWorkByTitleYearAsync(title, year, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
-        // Placeholder implementation returns null
+        Assert.NotNull(result);
+        Assert.Equal(title, result.Title);
+        Assert.Equal(year, result.Year);
     }
 
     [Fact]
-    public async Task TryGetItemByHashAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByHashAsync_Should_Return_Item()
     {
         // Arrange
         var hash = "abc123def456";
-        var filename = "test.mkv";
+        var filename = "Test.Movie.2020.mkv";
         var sizeBytes = 1024 * 1024 * 1024L; // 1 GB
 
         // Act
         var result = await _provider.TryGetItemByHashAsync(hash, filename, sizeBytes, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
-        // Placeholder implementation returns null
+        Assert.NotNull(result);
+        Assert.Equal(filename, result.Filename);
+        Assert.Equal(hash, result.Hash);
     }
 
     [Fact]
-    public async Task TryGetItemByLocalMetadataAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByLocalMetadataAsync_Should_Return_Item()
     {
         // Arrange
         var metadata = new LocalFileMetadata
         {
-            Id = "test-id",
+            Id = "Test.Movie.2020.mkv",
             SizeBytes = 1024 * 1024 * 1024L,
             PrimaryHash = "abc123",
         };
@@ -88,8 +90,8 @@ public class MovieContentDomainProviderTests
         var result = await _provider.TryGetItemByLocalMetadataAsync(metadata, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
-        // Placeholder implementation returns null
+        Assert.NotNull(result);
+        Assert.Equal("Test.Movie.2020.mkv", result.Filename);
     }
 
     [Fact]

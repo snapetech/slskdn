@@ -68,7 +68,7 @@ mock.Setup(h => h.GetVariantsByRecordingAsync(id, It.IsAny<CancellationToken>())
 **Correct**:
 ```csharp
 mock.Setup(h => h.GetVariantsByRecordingAsync(id, It.IsAny<CancellationToken>()))
-    .ReturnsAsync(new List<AudioVariant> { new AudioVariant() });
+    .Returns(Task.FromResult(new List<AudioVariant> { new AudioVariant() }));
 ```
 
 **Why This Keeps Happening**: Test setup often uses arrays because most repository methods return `IEnumerable<T>` or arrays, but Moq overload resolution follows the exact mocked return type. When a service contract returns `Task<List<T>>`, return a `List<T>` from the setup or the compiler may bind to a sequence-setup overload instead of the async-result overload.

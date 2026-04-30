@@ -5,6 +5,8 @@
 /src/slskd/bin/
 /src/slskd/dist/
 /src/slskd/obj/
+/src/slskdN.VpnAgent/bin/
+/src/slskdN.VpnAgent/obj/
 /src/slskd/wwwroot/
 /src/slskd/slskd.csproj.user
 /TestResults/
@@ -21,6 +23,7 @@ coverage.json
 
 # Local E2E artifacts (Playwright)
 /src/web/test-results/
+/src/web/tmp/
 /src/web/contacts-debug.png
 /tests/e2e/test-results/
 /tests/e2e/playwright-report/

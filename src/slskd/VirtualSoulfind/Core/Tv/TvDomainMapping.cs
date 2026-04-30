@@ -23,7 +23,7 @@ public static class TvDomainMapping
     private static readonly Guid TvWorkNamespace = new Guid("a3b8c2d7-1b6e-0a5f-e9d4-3c8b2f7e1a6d");
 
     // Namespace UUID for TV Items (hash-based)
-    private static readonly Guid TvItemNamespace = new Guid("b4c9d3e8-2c7f-1b6g-f0e5-4d9c3g8f2b7e");
+    private static readonly Guid TvItemNamespace = new Guid("b4c9d3e8-2c7f-1b6a-f0e5-4d9c3a8f2b7e");
 
     /// <summary>
     ///     Converts a TVDB ID to a <see cref="ContentWorkId"/>.

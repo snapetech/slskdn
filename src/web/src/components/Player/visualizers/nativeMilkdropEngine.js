@@ -279,6 +279,39 @@ const getCompositeAlpha = (preset, index) => {
     : 0.5;
 };
 
+const normalizeCompositeMode = (value) => {
+  const mode = String(value || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+  if (['add', 'additive', 'plus'].includes(mode)) return 'additive';
+  if (['screen'].includes(mode)) return 'screen';
+  if (['multiply', 'mult'].includes(mode)) return 'multiply';
+  return 'alpha';
+};
+
+const getCompositeMode = (preset, index) => {
+  if (index === 0) return 'alpha';
+  return normalizeCompositeMode(
+    preset.baseValues?.blend_mode
+    ?? preset.baseValues?.blendmode
+    ?? preset.baseValues?.composite_mode
+    ?? preset.baseValues?.compositemode
+    ?? preset.baseValues?.mode,
+  );
+};
+
+const getPresetSetTransitionSeconds = (parsed, fallback = defaultTransitionSeconds) => {
+  const configuredSeconds = Number(
+    parsed.primary?.baseValues?.transition_seconds
+    ?? parsed.primary?.baseValues?.transition_time
+    ?? parsed.primary?.baseValues?.transitiontime
+    ?? parsed.primary?.baseValues?.blend_seconds
+    ?? parsed.primary?.baseValues?.blend_time
+    ?? parsed.primary?.baseValues?.blendtime,
+  );
+  return Number.isFinite(configuredSeconds) && configuredSeconds >= 0
+    ? configuredSeconds
+    : fallback;
+};
+
 const createRendererSet = ({
   canvas,
   parsed,
@@ -289,6 +322,7 @@ const createRendererSet = ({
 }) => ({
   entries: parsed.presets.map((preset, index) => ({
     blendAlpha: getCompositeAlpha(preset, index),
+    compositeMode: getCompositeMode(preset, index),
     renderer: createMilkdropRenderer({
       canvas,
       preset,
@@ -305,6 +339,7 @@ const renderRendererSet = (rendererSet, renderFrame, alpha, clearFirstEntry) => 
   rendererSet.entries.forEach((entry, index) => {
     entry.renderer.render(renderFrame, {
       clearScreen: clearFirstEntry && index === 0,
+      compositeMode: entry.compositeMode,
       outputAlpha: entry.blendAlpha * alpha,
     });
   });
@@ -376,7 +411,7 @@ export const createNativeMilkdropEngine = async ({
       canvas,
       parsed: activeParsedPresetSet,
       title: activePresetTitle,
-    }), options.blendSeconds ?? defaultTransitionSeconds);
+    }), options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet));
     return activePresetTitle;
   };
 
@@ -429,7 +464,7 @@ export const createNativeMilkdropEngine = async ({
         parsed: activeParsedPresetSet,
         textureAssets: options.textureAssets,
         title,
-      }), options.blendSeconds ?? defaultTransitionSeconds);
+      }), options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet));
       return title;
     },
     loadPresetFragmentText: (source, fileName = '', options = {}) => {
@@ -448,7 +483,7 @@ export const createNativeMilkdropEngine = async ({
         parsed: activeParsedPresetSet,
         textureAssets: options.textureAssets,
         title,
-      }), options.blendSeconds ?? defaultTransitionSeconds);
+      }), options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet));
       return {
         source: mergedSource,
         title,

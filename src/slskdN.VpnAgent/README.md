@@ -440,10 +440,29 @@ sudo SLSKDN_VPN_TUNNEL_TYPE=openvpn \
   ./install.sh
 ```
 
-Then restart slskd once:
+Then restart slskdN once:
 
 ```bash
-sudo systemctl restart slskd
+sudo systemctl restart slskdN
+```
+
+For Windows fail-closed enforcement, run an elevated shell and point the agent
+at the installed slskdN executable and the VPN interface alias shown by
+`Get-NetAdapter`:
+
+```powershell
+$env:SLSKDN_APP_PATH = "C:\Program Files\slskdN\slskd.exe"
+$env:SLSKDN_VPN_IFACE = "ProtonVPN"
+slskdN-vpn-agent platform-split
+```
+
+For macOS fail-closed enforcement, run as root and use the active VPN `utun`
+interface from `ifconfig`:
+
+```bash
+sudo SLSKDN_SERVICE_USER=slskdN \
+  SLSKDN_VPN_IFACE=utun4 \
+  slskdN-vpn-agent platform-split
 ```
 
 The timer renews NAT-PMP mappings every 30 seconds by default. Keep the timer shorter than the provider lease lifetime.
@@ -456,9 +475,9 @@ The agent resolves the UID from the configured service user at runtime.
 Defaults:
 
 ```bash
-SLSKDN_SERVICE_USER=slskd
-SLSKDN_PROCESS_NAME=slskd
-SLSKDN_SERVICE_NAME=slskd
+SLSKDN_SERVICE_USER=slskdN
+SLSKDN_PROCESS_NAME=slskdN
+SLSKDN_SERVICE_NAME=slskdN
 ```
 
 Use explicit overrides when the app is packaged differently:
@@ -664,7 +683,7 @@ sudo systemctl daemon-reload
 
 ### 5. Configure slskdN
 
-Edit `/etc/slskd/slskd.yml` and add:
+Edit `/etc/slskdN/slskd.yml` and add:
 
 ```yaml
 integrations:
@@ -697,10 +716,10 @@ sudo systemctl enable --now slskdN-vpn-ingress-renew.timer
 sudo systemctl enable --now slskdN-vpn-watchdog.timer
 ```
 
-Restart slskd and force one immediate ingress reconciliation:
+Restart slskdN and force one immediate ingress reconciliation:
 
 ```bash
-sudo systemctl restart slskd
+sudo systemctl restart slskdN
 sleep 10
 sudo systemctl restart slskdN-vpn-ingress.service
 ```
@@ -843,7 +862,7 @@ and records consecutive failures in
 `/var/lib/slskdN-vpn/watchdog.failures`.
 
 After three consecutive failures it restarts
-`slskdN-vpn-ingress.service`. It does not restart slskd by default.
+`slskdN-vpn-ingress.service`. It does not restart slskdN by default.
 That keeps recovery focused on the most common failure: stale or missing port
 forwarding state.
 

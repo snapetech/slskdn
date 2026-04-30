@@ -29,7 +29,7 @@ public class TvContentDomainProviderTests
     }
 
     [Fact]
-    public async Task TryGetWorkByTvdbIdAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetWorkByTvdbIdAsync_Should_Return_Work()
     {
         // Arrange
         var tvdbId = "123456";
@@ -38,11 +38,12 @@ public class TvContentDomainProviderTests
         var result = await _provider.TryGetWorkByTvdbIdAsync(tvdbId, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(tvdbId, result.TvdbId);
     }
 
     [Fact]
-    public async Task TryGetWorkByTitleAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetWorkByTitleAsync_Should_Return_Work()
     {
         // Arrange
         var title = "Test Series";
@@ -51,11 +52,12 @@ public class TvContentDomainProviderTests
         var result = await _provider.TryGetWorkByTitleAsync(title, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(title, result.Title);
     }
 
     [Fact]
-    public async Task TryGetItemByEpisodeAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByEpisodeAsync_Should_Return_Item()
     {
         // Arrange
         var seriesId = "series-123";
@@ -66,31 +68,34 @@ public class TvContentDomainProviderTests
         var result = await _provider.TryGetItemByEpisodeAsync(seriesId, season, episode, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(season, result.Season);
+        Assert.Equal(episode, result.Episode);
     }
 
     [Fact]
-    public async Task TryGetItemByHashAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByHashAsync_Should_Return_Item()
     {
         // Arrange
         var hash = "abc123def456";
-        var filename = "test.mkv";
+        var filename = "Test.Series.S01E01.mkv";
         var sizeBytes = 1024 * 1024 * 1024L;
 
         // Act
         var result = await _provider.TryGetItemByHashAsync(hash, filename, sizeBytes, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal("Test Series", result.SeriesTitle);
     }
 
     [Fact]
-    public async Task TryGetItemByLocalMetadataAsync_Should_Return_Null_For_Placeholder()
+    public async Task TryGetItemByLocalMetadataAsync_Should_Return_Item()
     {
         // Arrange
         var metadata = new LocalFileMetadata
         {
-            Id = "test-id",
+            Id = "Test.Series.S01E01.mkv",
             SizeBytes = 1024 * 1024 * 1024L,
             PrimaryHash = "abc123",
         };
@@ -99,6 +104,7 @@ public class TvContentDomainProviderTests
         var result = await _provider.TryGetItemByLocalMetadataAsync(metadata, CancellationToken.None);
 
         // Assert
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Season);
     }
 }

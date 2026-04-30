@@ -80,7 +80,7 @@ describe('createNativeMilkdropEngine', () => {
         sampleRate: 48000,
         time: 12,
       }),
-      { clearScreen: true, outputAlpha: 1 },
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
     );
     expect(renderer.render.mock.calls[0][0].samples.slice(0, 4)).toEqual([
       -1,
@@ -195,10 +195,12 @@ describe('createNativeMilkdropEngine', () => {
     const presetName = engine.loadPresetText(`
       [preset00]
       name=Double primary
+      transition_seconds=2.5
       wave_r=1
       [preset01]
       name=Double secondary
       blend_alpha=0.75
+      blend_mode=additive
       wave_b=1
     `, 'double.milk2', { blendSeconds: 0 });
     engine.render();
@@ -209,15 +211,61 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.render).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ sampleRate: 44100, time: 3 }),
-      { clearScreen: true, outputAlpha: 1 },
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
     );
     expect(renderer.render).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ sampleRate: 44100, time: 3 }),
-      { clearScreen: false, outputAlpha: 0.75 },
+      { clearScreen: false, compositeMode: 'additive', outputAlpha: 0.75 },
     );
     expect(renderer.resize).toHaveBeenCalledTimes(2);
     expect(renderer.resize).toHaveBeenCalledWith(640, 360);
+  });
+
+  it('uses preset-defined .milk2 transition duration and composite aliases', async () => {
+    const analyser = createAnalyser();
+    const audioContext = {
+      createAnalyser: () => analyser,
+      currentTime: 10,
+      sampleRate: 44100,
+    };
+    const engine = await createNativeMilkdropEngine({
+      audioContext,
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.render.mockClear();
+
+    engine.loadPresetText(`
+      [preset00]
+      name=Slow primary
+      blend_time=4
+      [preset01]
+      name=Screen secondary
+      composite_mode=screen
+      composite_alpha=0.4
+    `, 'slow-double.milk2');
+    audioContext.currentTime = 12;
+    engine.render();
+
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sampleRate: 44100, time: 12 }),
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 0.5 },
+    );
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ sampleRate: 44100, time: 12 }),
+      { clearScreen: false, compositeMode: 'alpha', outputAlpha: 0.5 },
+    );
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ sampleRate: 44100, time: 12 }),
+      { clearScreen: false, compositeMode: 'screen', outputAlpha: 0.2 },
+    );
   });
 
   it('crossfades preset switches before disposing the outgoing renderer set', async () => {
@@ -245,12 +293,12 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.render).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ sampleRate: 44100, time: 11 }),
-      { clearScreen: true, outputAlpha: 0.5 },
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 0.5 },
     );
     expect(renderer.render).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ sampleRate: 44100, time: 11 }),
-      { clearScreen: false, outputAlpha: 0.5 },
+      { clearScreen: false, compositeMode: 'alpha', outputAlpha: 0.5 },
     );
     expect(renderer.dispose).not.toHaveBeenCalled();
 
@@ -262,7 +310,7 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.render).toHaveBeenCalledTimes(1);
     expect(renderer.render).toHaveBeenCalledWith(
       expect.objectContaining({ sampleRate: 44100, time: 12.1 }),
-      { clearScreen: true, outputAlpha: 1 },
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
     );
   });
 
