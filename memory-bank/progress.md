@@ -7300,3 +7300,9 @@ Code quality improvements were completed as part of Option A:
 - Fixed Gold Star Club startup blockers uncovered during the smoke test: the reserved pod id and default channel id now both satisfy PodCore validation, with gotchas documented in ADR-0001.
 - Browser-verified playback from two separate Vite dev servers (`localhost:3001` and `localhost:3002`): both loaded the same integrated stream endpoint, reached `readyState: 4`, and played the 53.88-second audio without media errors.
 - Added `docs/assets/readme-showcase/player-commons-smoke.png` to the README screenshot gallery.
+
+## 2026-04-30 01:47:00Z
+
+- Added a local browser mute control to the persistent Web UI player. Muting now toggles the device's `<audio>` element only, persists in local storage, and does not clear the stream URL or stop listen-along playback.
+- Improved mobile/PWA behavior for the player dock with `playsInline`, metadata preloading, larger touch targets, narrow-screen wrapping, and safe-area padding shared with the footer.
+- Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`, and a 390px Playwright mobile check against `localhost:3001` passed. The production build still reports the existing large bundle warning.

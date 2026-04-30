@@ -1471,9 +1471,17 @@
   - Status: completed (2026-04-30)
   - Notes: Used Wikimedia Commons `Sample2.ogg` in an isolated local slskdN instance, verified ranged `/api/v0/streams/{contentId}` playback through Vite dev servers on ports 3001 and 3002, and added the resulting player screenshot to the README showcase.
 
+- [x] Add local mute and mobile/PWA player support
+  - Status: completed (2026-04-30)
+  - Notes: Added a persisted browser-local mute toggle, inline/preloaded audio attributes, safe-area-aware player/footer spacing, mobile wrapping, and larger touch targets. Verified with focused player tests, lint, build, and a 390px Playwright mobile smoke against the dev UI.
+
 - [ ] Auto-register streamable local library content ids
   - Status: follow-up
   - Notes: `library/items` can compute `sha256:` ids for local files before those ids exist in `content_items`; the stream endpoint correctly refuses ids that are not marked advertisable. Decide whether local library indexing should upsert an advertisable mapping after moderation, or whether the UI should surface non-streamable library results differently.
+
+- [ ] Add browser Media Session metadata for player/PWA
+  - Status: follow-up
+  - Notes: Once collection item metadata resolves filenames/titles/artists reliably, publish `navigator.mediaSession.metadata` and action handlers so installed PWAs and mobile lock screens show useful track information and transport controls.
 
 - [ ] Improve collection item display metadata
   - Status: follow-up

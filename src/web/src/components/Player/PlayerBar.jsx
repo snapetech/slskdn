@@ -7,6 +7,13 @@ import { Button, Icon, Popup } from 'semantic-ui-react';
 const streamUrl = (contentId) =>
   `${urlBase}/api/v0/streams/${encodeURIComponent(contentId)}`;
 
+const localMuteStorageKey = 'slskdn.player.localMuted';
+
+const readStoredLocalMute = () => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(localMuteStorageKey) === 'true';
+};
+
 const PlayerBar = () => {
   const audioRef = useRef(null);
   const {
@@ -18,11 +25,18 @@ const PlayerBar = () => {
     removeFromQueue,
     setAudioElement,
   } = usePlayer();
+  const [localMuted, setLocalMuted] = useState(readStoredLocalMute);
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     setAudioElement(audioRef.current);
   }, [setAudioElement]);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.muted = localMuted;
+    window.localStorage.setItem(localMuteStorageKey, localMuted ? 'true' : 'false');
+  }, [localMuted]);
 
   const source = useMemo(
     () =>
@@ -47,6 +61,8 @@ const PlayerBar = () => {
         }}
         onPause={() => setPlaying(false)}
         onPlay={() => setPlaying(true)}
+        playsInline
+        preload="metadata"
         ref={audioRef}
       >
         {source ? <source src={source} /> : null}
@@ -69,6 +85,8 @@ const PlayerBar = () => {
           trigger={
             <Button
               disabled={!current}
+              aria-label={playing ? 'Pause local playback' : 'Resume local playback'}
+              data-testid="player-toggle-playback"
               icon
               onClick={() => {
                 if (!audioRef.current) return;
@@ -84,9 +102,29 @@ const PlayerBar = () => {
           }
         />
         <Popup
+          content={
+            localMuted
+              ? 'Unmute playback on this device without changing the stream.'
+              : 'Mute playback on this device without changing the stream.'
+          }
+          trigger={
+            <Button
+              aria-label={localMuted ? 'Unmute local playback' : 'Mute local playback'}
+              data-testid="player-toggle-mute"
+              disabled={!current}
+              icon
+              onClick={() => setLocalMuted((muted) => !muted)}
+            >
+              <Icon name={localMuted ? 'volume off' : 'volume up'} />
+            </Button>
+          }
+        />
+        <Popup
           content="Stop playback and clear your now-playing profile status."
           trigger={
             <Button
+              aria-label="Stop local playback"
+              data-testid="player-stop"
               disabled={!current}
               icon
               onClick={clear}

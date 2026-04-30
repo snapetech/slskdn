@@ -2,14 +2,14 @@
   align-items: center;
   background: var(--slskdn-nav-background, #1b1c1d);
   border-top: 1px solid var(--slskdn-nav-border, rgba(255, 255, 255, 0.12));
-  bottom: 43px;
+  bottom: calc(43px + env(safe-area-inset-bottom, 0px));
   color: var(--slskd-color, #fff);
   display: grid;
   gap: 0.75rem;
   grid-template-columns: minmax(0, 1fr) auto minmax(140px, 320px);
   left: 0;
   min-height: 64px;
-  padding: 0.6rem 1rem;
+  padding: 0.6rem 1rem max(0.6rem, env(safe-area-inset-bottom, 0px));
   position: fixed;
   right: 0;
   z-index: 1100;
@@ -43,6 +43,12 @@
   gap: 0.35rem;
 }
 
+.player-controls .button {
+  min-height: 38px;
+  min-width: 38px;
+  touch-action: manipulation;
+}
+
 .player-queue {
   display: flex;
   gap: 0.35rem;
@@ -65,11 +71,31 @@
 
 @media (max-width: 720px) {
   .player-bar {
+    gap: 0.5rem;
     grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 72px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
   .player-queue {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .player-bar {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .player-controls {
+    justify-content: flex-start;
+  }
+
+  .player-controls .button {
+    flex: 0 0 44px;
+    min-height: 44px;
   }
 }
 

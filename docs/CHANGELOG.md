@@ -36,6 +36,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   `ContentId` values through the existing range endpoint, updates Now Playing
   from browser playback, and publishes pod-scoped listen-along metadata over
   stored/routed pod messages plus SignalR fan-out without relaying audio bytes.
+- Added local browser mute and mobile/PWA safe-area handling to the Web UI
+  player so listen-along streams can keep playing while muted on one device.
 - Added an opt-in slskdN radio directory for listed listening parties, with a
   mesh/DHT-backed announcement index and an integrated host radio stream
   endpoint gated by a separate mesh-streaming toggle.

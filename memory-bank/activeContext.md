@@ -1431,3 +1431,15 @@ dotnet test
 - Next steps:
   1. Decide whether to make `library/items` automatically register local `sha256:` ids as advertisable stream mappings instead of needing a content-items seed.
   2. If desired, improve collection item display metadata so playlist rows show filenames/titles instead of raw content ids.
+
+## Update 2026-04-30 01:47:00Z
+
+- Current task: Browser-local player mute and mobile/PWA player support are implemented locally.
+- Last activity:
+  - added a persisted local mute toggle to the Web UI player that mutes only the current browser/PWA audio element
+  - kept stream playback browser-owned via the existing integrated `/api/v0/streams/{contentId}` endpoint
+  - added mobile/PWA player safe-area handling, inline audio playback, metadata preload, and larger touch targets
+  - validated the player in a 390px mobile browser viewport against the live dev instance
+- Next steps:
+  1. Consider adding richer lock-screen media-session metadata once collection items resolve titles/artists reliably.
+  2. Keep the content-id stream registration follow-up open so local library rows are consistently playable without manual seeding.
