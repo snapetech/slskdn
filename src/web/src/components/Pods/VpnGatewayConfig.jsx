@@ -17,6 +17,7 @@ import {
 } from 'semantic-ui-react';
 
 const VpnGatewayConfig = ({ podDetail, podId }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -609,7 +610,11 @@ const VpnGatewayConfig = ({ podDetail, podId }) => {
       )}
 
       <Tab
+        activeIndex={activeIndex}
         menu={{ pointing: true }}
+        onTabChange={(_event, { activeIndex: nextIndex }) =>
+          setActiveIndex(nextIndex)
+        }
         panes={panes}
         renderActiveOnly={false}
       />

@@ -88,6 +88,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   warp/comp shader blocks are translated instead of rejected.
 - Added first translated native MilkDrop shader named-texture sampler support,
   binding up to four preset texture samplers with procedural fallback.
+- Added first safe translated native MilkDrop shader conditional support for
+  simple `if (...) ret = ...; else ret = ...;` bodies.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

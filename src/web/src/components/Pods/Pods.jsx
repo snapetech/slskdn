@@ -28,6 +28,7 @@ import {
 
 const initialState = {
   activeChannelId: null,
+  activeDetailTab: 0,
   activePodId: null,
   intervals: {
     messages: undefined,
@@ -48,6 +49,8 @@ const initialState = {
   discoveryQuery: '',
   discoveryResults: [],
 };
+
+const GOLD_STAR_CLUB_POD_ID = 'pod:901d57a2c1bb4e5d90d57a2c1bb4e5d0';
 
 const withRouter = (WrappedComponent) => {
   const RoutedComponent = (props) => {
@@ -95,8 +98,10 @@ class Pods extends Component {
         if (podId) {
           await this.selectPod(podId, channelId);
         } else if (this.state.pods.length > 0) {
-          // Auto-select first pod
-          await this.selectPod(this.state.pods[0].podId, null);
+          const preferredPod =
+            this.state.pods.find((pod) => pod.podId === GOLD_STAR_CLUB_POD_ID) ||
+            this.state.pods[0];
+          await this.selectPod(preferredPod.podId, null);
         }
       },
     );
@@ -390,7 +395,7 @@ class Pods extends Component {
         : [];
     const localPeerId = this.getLocalPeerId();
     const isMember = members.some((member) => member.peerId === localPeerId);
-    const isGoldStarClub = podDetail?.podId === 'pod:gold-star-club';
+    const isGoldStarClub = podDetail?.podId === GOLD_STAR_CLUB_POD_ID;
 
     const panes =
       podDetail?.channels?.map((channel) => ({
@@ -680,7 +685,11 @@ class Pods extends Component {
 
               {podDetail.channels?.length > 0 ? (
                 <Tab
+                  activeIndex={this.state.activeDetailTab}
                   menu={{ pointing: true }}
+                  onTabChange={(_event, { activeIndex }) =>
+                    this.setState({ activeDetailTab: activeIndex })
+                  }
                   panes={[
                     ...panes,
                     {

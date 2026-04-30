@@ -885,6 +885,12 @@ class App extends Component {
                       Contacts
                     </Menu.Item>
                   </NavLink>
+                  <NavLink to="/pods">
+                    <Menu.Item data-testid="nav-pods">
+                      <Icon name="star outline" />
+                      Pods
+                    </Menu.Item>
+                  </NavLink>
                   <NavLink to="/solid">
                     <Menu.Item data-testid="nav-solid">
                       <Icon name="key" />

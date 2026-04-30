@@ -1,3 +1,10 @@
+## 2026-04-30 18:29Z - Added native MilkDrop simple shader conditionals
+
+- Shader translation now rewrites safe ret-only `if (...) ret = ...; else ret = ...;` bodies into GLSL ternary expressions.
+- Conditional branches can use translated named texture samplers and generated coordinate helpers.
+- Complex control flow, temp declarations inside branches, loops, and missing-else if statements remain rejected.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 18:26Z - Added native MilkDrop shader named texture samplers
 
 - Shader translation now detects up to four non-main `tex`/`tex2D` sampler references and maps them to `shaderTexture0..3`.

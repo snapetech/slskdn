@@ -701,7 +701,7 @@ Detailed documentation for configuration options can be found in [docs/config.md
 | [How It Works](docs/HOW-IT-WORKS.md) | Technical architecture and design |
 | [Multi-Source Downloads](docs/multipart-downloads.md) | Network impact analysis |
 | [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) | Peer discovery architecture |
-| [Lidarr Integration](docs/lidarr-integration.md) | Plugin-free Lidarr wanted sync and safe post-download import |
+| [Lidarr Integration](docs/lidarr-integration.md) | First-class plugin-free Lidarr wanted sync, download handoff, and safe post-download import |
 | [VPN Agent](src/slskdN.VpnAgent/README.md) | Fail-closed VPN routing, port forwarding, WireGuard/OpenVPN/Tailscale modes |
 | [Security Specs](docs/SECURITY_IMPLEMENTATION_SPECS.md) | Security feature details |
 | [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Development status |

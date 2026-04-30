@@ -66,6 +66,7 @@
  - Progress (2026-04-30): Added translated shader viewport context with `resolution`, `pixelSize`, `aspect`, `texsize`, and generated `x/y/rad/ang` coordinate helpers.
  - Progress (2026-04-30): Added safe `shader_body { ... }` wrapper unwrapping for translated native warp/comp shaders and fixture smoke coverage.
  - Progress (2026-04-30): Added first translated shader named-texture sampler support for up to four `tex`/`tex2D` preset samplers, reusing imported texture aliases with procedural fallback.
+ - Progress (2026-04-30): Added first simple ret-only translated shader conditional support for `if (...) ret = ...; else ret = ...;` bodies.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -1584,3 +1585,7 @@
 - [x] Preserve all Semantic UI tab panes across tab switches
   - Status: completed (2026-04-30)
   - Notes: Applied `renderActiveOnly={false}` to every Semantic UI `Tab` under `src/web/src/components`, covering Browse, Contacts, port forwarding, pods, System, Files, Security, Adversarial Settings, and Library Health in addition to the existing Chat and Rooms fix.
+
+- [x] Complete Semantic UI cleanup pass
+  - Status: completed (2026-04-30)
+  - Notes: Added a shared `TooltipButton` wrapper for accessible button labels and popups, gave the Media Core player its own Semantic button tooltip wrapper, switched the header to active-aware `NavLink` items, added responsive table overflow handling, and made remaining tab panes controlled so active state is stable while panes stay mounted.

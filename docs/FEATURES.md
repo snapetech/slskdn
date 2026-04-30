@@ -84,6 +84,16 @@
 - Missing tracks can be promoted to Wishlist searches manually
 - Does not browse Soulseek peers, start immediate searches, auto-download, mirror files, or manage backups
 
+### Built-in Lidarr Integration
+- First-class Lidarr workflow without installing a Lidarr plugin
+- Uses Lidarr's supported HTTP API for status, Wanted/Missing reads, manual-import decisions, and import commands
+- Syncs Lidarr Wanted/Missing albums into slskdN Wishlist searches
+- Optional auto-download for Lidarr-created Wishlist items through the normal slskdN queue
+- Safe post-download import: slskdN only asks Lidarr to import candidates with clean artist, album, release, track, and quality matches
+- Leaves rejected or ambiguous candidates for Lidarr's Manual Import screen
+- Supports Docker, host, and split-volume deployments through `import_path_from` / `import_path_to` path mapping
+- Operator API under `/api/v0/integrations/lidarr/*` for status checks, wanted preview, one-time sync, and manual import
+
 ### Cancel Transfers on Blacklist
 - Users added to `groups.blacklisted.members` at runtime have all active uploads and downloads immediately cancelled
 - Detected automatically via options monitor — no restart required

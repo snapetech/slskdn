@@ -1,17 +1,20 @@
 # Lidarr Integration
 
-slskdN can integrate with Lidarr without installing a Lidarr plugin. The
-integration uses Lidarr's existing HTTP API and keeps the Soulseek-specific
-workflow inside slskdN.
+Lidarr support is built into slskdN as a first-class music acquisition workflow.
+No Lidarr plugin is required. slskdN talks to Lidarr's supported HTTP API, pulls
+Wanted/Missing albums into Wishlist, downloads through the normal Soulseek queue,
+and can submit completed albums back to Lidarr for safe import.
 
-## What Works Without a Lidarr Plugin
+## What It Does
 
 - Read Lidarr's wanted/missing album list from `/api/v1/wanted/missing`.
 - Create slskdN Wishlist searches for those missing albums.
-- Let slskdN perform Soulseek searches/downloads through its normal queue.
+- Optionally start those Wishlist searches in the normal slskdN download flow.
 - Save completed files into a folder that Lidarr can also read.
 - Use Lidarr's existing manual import and command APIs for safe post-download
   import automation.
+- Expose operator endpoints under `/api/v0/integrations/lidarr/*` for status,
+  wanted sync, wanted preview, and manual import.
 
 This does not make slskdN appear as a native Lidarr download client in the
 Lidarr UI. That would require either a Lidarr plugin or a compatibility layer
@@ -28,7 +31,8 @@ Lidarr internals.
    this normally means mounting the same host path into both containers.
 4. Enable `sync_wanted_to_wishlist` if Lidarr wanted albums should become
    slskdN Wishlist searches automatically.
-5. Enable `auto_import_completed` only after Lidarr can see the same completed
+5. Leave `auto_download` off until wanted sync produces the searches you expect.
+6. Enable `auto_import_completed` only after Lidarr can see the same completed
    directory path, or after `import_path_from` / `import_path_to` is configured.
 
 ## Configuration
@@ -57,8 +61,30 @@ For Docker installs, use a shared volume layout so both apps see completed
 downloads at the same path or configure Lidarr remote path mappings.
 
 The conservative default is `auto_download: false` and
-`auto_import_completed: false`. Turn them on separately. Wanted sync is safe to
-test first because it only creates Wishlist entries.
+`auto_import_completed: false`. Turn them on separately. Wanted sync is the best
+first test because it only creates Wishlist entries. After the synced searches
+look right, enable `auto_download`; after Lidarr can see completed files, enable
+`auto_import_completed`.
+
+## Docker Volume Pattern
+
+The simplest setup is to mount the same host directory into both containers at
+the same path:
+
+```yaml
+services:
+  slskdn:
+    volumes:
+      - /srv/media/downloads:/downloads
+
+  lidarr:
+    volumes:
+      - /srv/media/downloads:/downloads
+      - /srv/media/music:/music
+```
+
+With that layout, slskdN can complete downloads under `/downloads/music` and
+Lidarr can import the same path without rewriting.
 
 If slskdN and Lidarr see the completed directory under different paths, configure
 the prefix rewrite in slskdN:
@@ -115,6 +141,18 @@ This is intentionally stricter than blindly accepting every manual-import
 decision. A file is not auto-imported if Lidarr reports rejection reasons, cannot
 match the artist/album/release/tracks, cannot parse quality, or marks the file
 as an additional/non-track file.
+
+## Recommended Rollout
+
+1. Enable Lidarr with `sync_wanted_to_wishlist: false` and call `/status`.
+2. Call `/wanted/missing` and confirm Lidarr returns the expected missing albums.
+3. Run `/wanted/sync` with a low `max_items_per_sync`, such as `10`.
+4. Review the created Wishlist searches.
+5. Enable `sync_wanted_to_wishlist` for scheduled sync.
+6. Enable `auto_download` if you want Lidarr-seeded Wishlist items to start
+   downloading automatically.
+7. Enable `auto_import_completed` after the completed-download path is visible
+   to Lidarr and path mapping has been tested.
 
 ## Manual Operation
 

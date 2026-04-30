@@ -1098,6 +1098,64 @@ integrations:
 
 System-defined integrations are part of the application logic.  Users can configure settings, but don't have any control over behavior.
 
+### Lidarr
+
+Lidarr is a first-class slskdN integration for music acquisition. slskdN uses
+Lidarr's supported HTTP API to read Wanted/Missing albums, create Wishlist
+searches, optionally auto-download those searches, and safely submit completed
+directories back to Lidarr for import. No Lidarr plugin is required.
+
+The safest rollout is to enable Lidarr, verify `/status`, preview
+`/wanted/missing`, run a small one-time `/wanted/sync`, then enable scheduled
+sync and auto-download/import after the paths are confirmed.
+
+| Command-Line                         | Environment Variable                  | Description                                                        |
+| ------------------------------------ | ------------------------------------- | ------------------------------------------------------------------ |
+| `--lidarr`                           | `LIDARR`                              | Determines whether Lidarr integration is enabled                   |
+| `--lidarr-url`                       | `LIDARR_URL`                          | Lidarr base URL, such as `http://lidarr:8686`                      |
+| `--lidarr-api-key`                   | `LIDARR_API_KEY`                      | Lidarr API key from Settings, General, Security                    |
+| `--lidarr-timeout`                   | `LIDARR_TIMEOUT`                      | HTTP timeout for Lidarr requests, in seconds                       |
+| `--lidarr-sync-wanted`               | `LIDARR_SYNC_WANTED`                  | Sync Lidarr Wanted/Missing albums into slskdN Wishlist             |
+| `--lidarr-sync-interval`             | `LIDARR_SYNC_INTERVAL`                | Interval between wanted syncs, in seconds                          |
+| `--lidarr-sync-max-items`            | `LIDARR_SYNC_MAX_ITEMS`               | Maximum wanted albums to sync per run                              |
+| `--lidarr-auto-download`             | `LIDARR_AUTO_DOWNLOAD`                | Auto-download Wishlist items created from Lidarr wanted albums     |
+| `--lidarr-wishlist-filter`           | `LIDARR_WISHLIST_FILTER`              | Optional Wishlist filter for Lidarr-created searches               |
+| `--lidarr-wishlist-max-results`      | `LIDARR_WISHLIST_MAX_RESULTS`         | Maximum search results retained by Lidarr-created Wishlist items   |
+| `--lidarr-auto-import-completed`     | `LIDARR_AUTO_IMPORT_COMPLETED`        | Submit completed slskdN download directories to Lidarr for import  |
+| `--lidarr-import-path-from`          | `LIDARR_IMPORT_PATH_FROM`             | Local slskdN completed path prefix to rewrite before calling Lidarr |
+| `--lidarr-import-path-to`            | `LIDARR_IMPORT_PATH_TO`               | Lidarr-visible completed path prefix                               |
+| `--lidarr-import-mode`               | `LIDARR_IMPORT_MODE`                  | Lidarr import mode: `move` or `copy`                               |
+| `--lidarr-import-replace-existing`   | `LIDARR_IMPORT_REPLACE_EXISTING`      | Allow Lidarr import to replace existing files                      |
+
+#### **YAML**
+```yaml
+integrations:
+  lidarr:
+    enabled: false
+    url: "http://127.0.0.1:8686"
+    api_key: ""
+    timeout_seconds: 20
+    sync_wanted_to_wishlist: false
+    sync_interval_seconds: 3600
+    max_items_per_sync: 100
+    auto_download: false
+    wishlist_filter: ""
+    wishlist_max_results: 100
+    auto_import_completed: false
+    import_path_from: ""
+    import_path_to: ""
+    import_mode: "move"
+    import_replace_existing_files: false
+```
+
+If slskdN and Lidarr see completed downloads at different paths, set both
+`import_path_from` and `import_path_to`. For example, `/downloads/music` in
+slskdN can be rewritten to `/data/soulseek/music` before Lidarr is asked to
+import.
+
+See [Lidarr Integration](lidarr-integration.md) for setup, Docker volume
+examples, operator API calls, and import safety rules.
+
 ### FTP
 
 Files can be uploaded to a remote FTP server upon completion. Files are uploaded to the server and remote path specified using the directory and filename with which they were downloaded; the FTP will match the layout of the local disk.

@@ -10,6 +10,18 @@
   1. Run whitespace checks, commit, and push.
   2. Continue the next large MilkDrop phase, likely shader texture access or real-preset compatibility coverage.
 
+## Update 2026-04-30 18:29:01Z
+
+- Current task: Native MilkDrop translated shaders have first simple conditional support.
+- Last activity:
+  - shader translation now rewrites safe ret-only `if (...) ret = ...; else ret = ...;` bodies into ternary expressions
+  - conditional branches can still use translated texture samplers and generated coordinate helpers
+  - complex control flow, temp declarations inside branches, loops, and missing-else if statements remain rejected
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Commit and push the shader conditional phase.
+  2. Continue the next large MilkDrop phase, likely real-preset compatibility coverage.
+
 ## Update 2026-04-30 18:26:01Z
 
 - Current task: Native MilkDrop translated shaders have first named-texture sampler binding.

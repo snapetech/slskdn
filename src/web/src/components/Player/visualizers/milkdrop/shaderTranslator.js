@@ -21,6 +21,21 @@ const stripShaderComments = (source) =>
     .replace(/\/\/.*$/gm, '')
     .trim();
 
+const unwrapShaderBody = (source) =>
+  stripShaderComments(source)
+    .replace(/\bshader_body\s*\{/gi, '')
+    .replace(/^\s*\{/, '')
+    .replace(/\}\s*$/g, '')
+    .trim();
+
+const normalizeSimpleConditionalReturn = (source) => {
+  const unwrapped = unwrapShaderBody(source);
+  const match = /^if\s*\(([^{};]+)\)\s*\{?\s*ret\s*=\s*([^;{}]+);\s*\}?\s*else\s*\{?\s*ret\s*=\s*([^;{}]+);\s*\}?\s*$/i
+    .exec(unwrapped);
+  if (!match) return source;
+  return `ret = (${match[1].trim()}) ? (${match[2].trim()}) : (${match[3].trim()});`;
+};
+
 const isMainSampler = (name) =>
   ['previousframe', 'sampler_main', 'sampler_fc_main', 'sampler_sampler_main'].includes(
     String(name || '').toLowerCase(),
@@ -45,10 +60,7 @@ const getShaderTextureUniformName = (samplers, sampler) => {
 };
 
 const normalizeShaderSource = (source, textureSamplers = []) =>
-  stripShaderComments(source)
-    .replace(/\bshader_body\s*\{/gi, '')
-    .replace(/^\s*\{/, '')
-    .replace(/\}\s*$/g, '')
+  unwrapShaderBody(normalizeSimpleConditionalReturn(source))
     .replace(shaderTextureCallPattern, (_match, sampler) => {
       if (isMainSampler(sampler)) return 'texture(previousFrame,';
       const textureUniform = getShaderTextureUniformName(textureSamplers, sampler);
@@ -81,9 +93,10 @@ const isSafeShaderExpression = (expression) => {
 };
 
 const parseShaderProgram = (source) => {
-  if (unsupportedPatterns.some((pattern) => pattern.test(source))) return null;
-  const textureSamplers = getMilkdropShaderTextureSamplers(source);
-  const cleaned = normalizeShaderSource(source, textureSamplers);
+  const normalizedSource = normalizeSimpleConditionalReturn(source);
+  if (unsupportedPatterns.some((pattern) => pattern.test(normalizedSource))) return null;
+  const textureSamplers = getMilkdropShaderTextureSamplers(normalizedSource);
+  const cleaned = normalizeShaderSource(normalizedSource, textureSamplers);
   const statements = cleaned
     .split(';')
     .map((statement) => statement.trim())

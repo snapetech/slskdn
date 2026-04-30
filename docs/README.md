@@ -31,7 +31,7 @@ Complete guide to all slskdn documentation.
 
 - [How It Works](HOW-IT-WORKS.md) - Technical architecture overview
 - [Features Overview](FEATURES.md) - Complete feature list and details
-- [Lidarr Integration](lidarr-integration.md) - Built-in plugin-free Lidarr wanted sync and safe post-download import
+- [Lidarr Integration](lidarr-integration.md) - First-class plugin-free Lidarr wanted sync, download handoff, and safe post-download import
 - [VPN Agent](../src/slskdN.VpnAgent/README.md) - Host-side fail-closed VPN routing and forwarded-port integration
 - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - Development status and planned features
 
@@ -51,6 +51,7 @@ Complete guide to all slskdn documentation.
 
 ## 📘 User Guides
 
+- [Lidarr Integration](lidarr-integration.md) - Configure Lidarr wanted sync, auto-download, path mapping, and import behavior
 - [Virtual Soulfind User Guide](VIRTUAL_SOULFIND_USER_GUIDE.md) - Using Virtual Soulfind and Shadow Index
 - [Solid Integration User Guide](SOLID_USER_GUIDE.md) - Using Solid WebID and Solid-OIDC integration
 
