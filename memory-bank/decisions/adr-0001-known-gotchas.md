@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z188. Player Ticket Failures Need A Stream URL Fallback
+
+**The Bug**: The Web UI player switched to short-lived stream tickets for browser media playback, but if ticket creation failed or returned an empty ticket, the player set the audio source to an empty string. The UI looked playable, but the browser had no media URL to load.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/lib/streaming.js`
+
+**Wrong**:
+```js
+setSource(ticket
+  ? buildTicketedStreamUrl(contentId, ticket)
+  : current.streamUrl || '');
+```
+
+**Correct**:
+```js
+setSource(ticket
+  ? buildTicketedStreamUrl(contentId, ticket)
+  : buildDirectStreamUrl(contentId));
+```
+
+**Why This Keeps Happening**: Browser media playback has two separate auth paths: preferred short-lived tickets and direct stream URLs for passthrough/legacy recovery. Ticket acquisition is async and can fail independently of the stream endpoint, so the player must never leave a selected local content item with an empty media source.
+
 ### 0z187. Player Tests Must Query Async Stream Sources Inside Waits
 
 **The Bug**: The Web UI player test captured `audio.querySelector('source')` before the async stream-ticket request completed. The DOM later inserted the `<source>`, but the assertion kept reading the stale `null` reference and failed even though the rendered DOM was correct.
