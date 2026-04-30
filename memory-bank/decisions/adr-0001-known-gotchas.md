@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z176. Vite Dev UI Should Use The Proxy By Default
+
+**The Bug**: The Vite Web UI served `index.html`, but the React app failed at runtime because API calls used an absolute `http://localhost:{port}` backend URL. That bypassed Vite's `/api` proxy and hit browser CORS, showing "Lost connection to slskd" even though both servers were running.
+
+**Files Affected**:
+- `src/web/src/config.js`
+- `src/web/vite.config.js`
+
+**Wrong**:
+```js
+const rootUrl = import.meta.env.PROD
+  ? urlBase
+  : `http://localhost:${developmentPort}${urlBase}`;
+```
+
+**Correct**:
+```js
+const rootUrl = import.meta.env.PROD
+  ? urlBase
+  : import.meta.env.VITE_USE_ABSOLUTE_API_URL === 'true'
+    ? `http://localhost:${developmentPort}${urlBase}`
+    : urlBase;
+```
+
+**Why This Keeps Happening**: A 200 from Vite only proves the page shell is served. In development, browser API and SignalR calls should normally stay same-origin so Vite can proxy `/api` and `/hub` to the daemon without CORS. Only use absolute backend URLs when the backend is explicitly configured to allow that origin.
+
 ### 0z175. Hosted Policy Services Must Be Registered
 
 **The Bug**: `GoldStarClubService` existed as a `BackgroundService`, but it was not registered in DI, so startup policy around creating and joining the Gold Star Club pod never ran.
