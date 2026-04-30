@@ -178,11 +178,13 @@ $WingetSubmitPath = Join-Path "winget-submit" "snapetech.slskdn.yaml"
 ```powershell
 $WingetSubmitPath = Join-Path "winget-submit" "manifests/s/snapetech/slskdn/$WingetVersion"
 New-Item -ItemType Directory -Force $WingetSubmitPath | Out-Null
-Copy-Item packaging/winget/snapetech.slskdn*.yaml $WingetSubmitPath/
+Copy-Item packaging/winget/snapetech.slskdn.yaml $WingetSubmitPath/
+Copy-Item packaging/winget/snapetech.slskdn.installer.yaml $WingetSubmitPath/
+Copy-Item packaging/winget/snapetech.slskdn.locale.en-US.yaml $WingetSubmitPath/
 .\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH -t $env:WINGETCREATE_GITHUB_TOKEN
 ```
 
-**Why This Keeps Happening**: WingetCreate's local CLI can accept singleton manifests that the `microsoft/winget-pkgs` service rejects for repository PR validation. Keep the generated manifests in the repository-shaped multi-file layout and fix any local directory-validation issue directly instead of bypassing it with singleton output.
+**Why This Keeps Happening**: WingetCreate's local CLI can accept singleton manifests that the `microsoft/winget-pkgs` service rejects for repository PR validation. Keep the generated manifests in the repository-shaped multi-file layout and fix any local directory-validation issue directly instead of bypassing it with singleton output. When staging stable manifests, copy the three exact stable filenames; `snapetech.slskdn*.yaml` also matches `snapetech.slskdn-dev*.yaml`.
 
 ### 0z172. Winget PackageVersion Should Stay Numeric
 
