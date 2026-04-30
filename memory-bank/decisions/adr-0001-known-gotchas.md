@@ -52,6 +52,56 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z168. Security Boundaries Need Boundary-Specific Tests
+
+**The Bug**: Several security checks looked reasonable in isolation but trusted the wrong boundary: ActivityPub outbox publishing was anonymous, share backfill trusted remote stream URLs, file listing used a raw path prefix, and CSRF skipped query-string API keys that authentication does not actually honor.
+
+**Files Affected**:
+- `src/slskd/SocialFederation/API/ActivityPubController.cs`
+- `src/slskd/Sharing/API/SharesController.cs`
+- `src/slskd/Files/FileService.cs`
+- `src/slskd/Core/Security/ValidateCsrfForCookiesOnlyAttribute.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+[AllowAnonymous]
+public async Task<IActionResult> PostToOutbox(...)
+```
+
+```csharp
+if (!AllowedDirectories.Any(allowed => directory.StartsWith(allowed)))
+{
+    throw new UnauthorizedException(...);
+}
+```
+
+```csharp
+if (request.Query.ContainsKey("api_key"))
+{
+    return;
+}
+```
+
+**Correct**:
+```csharp
+public async Task<IActionResult> PostToOutbox(...)
+```
+
+```csharp
+return fullPath.Equals(fullAllowed, StringComparison.OrdinalIgnoreCase)
+    || fullPath.StartsWith(fullAllowed + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+```
+
+```csharp
+if (request.Headers.ContainsKey("X-API-Key"))
+{
+    return;
+}
+```
+
+**Why This Keeps Happening**: Protocol endpoints, path checks, and auth shortcuts tend to be reviewed for happy-path behavior rather than the trust boundary they cross. Every anonymous protocol action needs an allow-list test, every filesystem root check needs a sibling-prefix regression, and every outbound URL derived from remote data needs SSRF and size guards before any socket is opened.
+
 ### 0z167. Package Upgrades Must Refresh Already-Running Services
 
 **The Bug**: AUR upgrades installed the new payload and updated `/usr/bin/slskd --version`, but the live systemd service kept running the old release until an explicit manual restart.
