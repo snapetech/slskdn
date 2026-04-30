@@ -10,6 +10,19 @@
   1. Run the full repo `dotnet test` and `./bin/lint` when the surrounding dirty workspace is ready for broad validation.
   2. Consider adding backend folder-level counts from the share repository directly if very large libraries need faster root-folder summary generation.
 
+## Update 2026-04-30 19:41:00Z
+
+- Current task: Local import metadata matcher is implemented locally.
+- Last activity:
+  - added browser-side filename metadata matching for Import Staging
+  - surfaced confidence, parsed identity, evidence status, and warnings in staged rows
+  - added row-level and bulk match controls that do not contact metadata services or mutate files
+  - fixed and documented standalone filename track-number parsing as `8e24cd666`
+  - validated focused metadata matcher and import staging tests
+- Next steps:
+  1. Add optional fingerprint verification controls as the next P3 Safe Acquisition Pipeline story.
+  2. Later connect strong metadata matches to backend MusicBrainz/fingerprint services behind explicit user action and rate limits.
+
 ## Update 2026-04-30 19:35:00Z
 
 - Current task: Import Staging first slice is implemented locally.
@@ -2631,3 +2644,14 @@ dotnet test
 - Next steps:
   1. Continue down the beginning of the expansion list into provider ordering/profile policy.
   2. Avoid Discovery Inbox, Taste Recommendations, and MilkDrop files while parallel agents are actively editing them.
+
+## Update 2026-04-30 19:41:54Z
+
+- Current task: Feature-expansion burn-down is continuing from the top of the list.
+- Last activity:
+  - added per-profile provider priority policies to the source-provider catalog
+  - surfaced those routing policies in System -> Source Providers
+  - kept every profile policy manual-only with auto-download disabled
+- Next steps:
+  1. Continue into candidate ranking/explanation surfaces from the start of the feature-expansion list.
+  2. Keep backend execution changes explicit, rate-limited, and review-first.
