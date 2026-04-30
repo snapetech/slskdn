@@ -59,6 +59,17 @@
   - fallback metadata seeds from search and MusicBrainz context
 - Semantic zoom stack (mini-map, drawer modal, atlas) lets SongID/MusicBrainz/search seeds share state while provenance/score-component overlays keep closeness explainable and actionable
 
+### Discography Concierge
+- Search-page coverage map for a MusicBrainz artist MBID
+- Uses the existing MusicBrainz release graph and cached release targets to build release/track rows
+- Marks each track as:
+  - available through verified HashDb evidence
+  - already seeded in Wishlist
+  - ambiguous because catalog identity is incomplete
+  - missing
+- Missing tracks can be promoted to Wishlist searches manually
+- Does not browse Soulseek peers, start immediate searches, auto-download, mirror files, or manage backups
+
 ### Cancel Transfers on Blacklist
 - Users added to `groups.blacklisted.members` at runtime have all active uploads and downloads immediately cancelled
 - Detected automatically via options monitor — no restart required
@@ -559,6 +570,15 @@ When downloading Pod results that aren't available locally:
   - **Job Details**: Each job includes `created_at` timestamp and `progress` object with completion statistics
 - **Job Types**: Discography jobs (artist releases) and label crate jobs (label releases)
 - **Use Case**: Efficient job management in UIs with large numbers of jobs, supporting pagination and sorting by status or creation date
+
+### Discography Coverage API
+- **Coverage endpoint**: `GET /api/v0/musicbrainz/artist/{artistId}/discography-coverage`
+  - Query parameters: `profile=CoreDiscography|ExtendedDiscography|AllReleases`, `forceRefresh=false`
+  - Returns artist totals plus release/track cells with coverage status and evidence
+- **Wishlist promotion endpoint**: `POST /api/v0/musicbrainz/artist/{artistId}/discography-coverage/wishlist`
+  - Body: `profile`, `filter`, `maxResults`
+  - Creates Wishlist searches only for currently missing tracks
+- **Network behavior**: MusicBrainz refreshes may contact the configured MusicBrainz endpoint; coverage mapping does not browse Soulseek peers or trigger downloads
 
 ---
 

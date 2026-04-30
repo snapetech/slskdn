@@ -24,6 +24,16 @@
   2. Add signed remote pod join-request UI once the membership service has a user-friendly key/signature flow.
   3. Keep social discovery scans user-triggered and conservative.
 
+## Update 2026-04-30 02:05:00Z
+
+- Current task: None. Discography Concierge README/docs are updated.
+- Last activity:
+  - documented the feature in README, `docs/FEATURES.md`, and `docs/advanced-features.md`
+  - clarified the changelog entry for MusicBrainz artist coverage and manual Wishlist promotion
+- Next steps:
+  1. Start T-931 Bloom-filter library diff.
+  2. Keep unrelated pod/listening-party dirty work separate from the Discography Concierge slice.
+
 ## Update 2026-04-30 01:55:00Z
 
 - Current task: None. T-930 Discography Concierge first slice is implemented locally.

@@ -23,8 +23,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 ## [Unreleased]
 
 - Added Discography Concierge planning and first implementation pieces,
-  including MusicBrainz coverage services/API/UI, pod Gold Star Club polish,
-  and supporting docs/tasks for mesh/social music discovery work.
+  including MusicBrainz artist coverage services/API/UI, manual missing-track
+  Wishlist promotion, and supporting docs/tasks for mesh/social music
+  discovery work.
 - Fixed Gold Star Club revocation handling to avoid nullable service access
   and ambiguous filesystem type resolution.
 - Fixed mixed-source accelerated downloads so the Soulseek sequential-failover

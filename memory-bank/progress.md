@@ -11,6 +11,13 @@
 - Added contact actions for starting chat and browsing shares, plus explicit pod discovery save behavior so found pods can be retrieved after restarts.
 - Validation: `cd src/web && npm run lint -- --quiet` and `git diff --check` passed.
 
+## 2026-04-30 02:05Z - Updated Discography Concierge README/docs
+
+- Updated README feature bullets and status table for Discography Concierge coverage mapping and manual Wishlist seeding.
+- Added Discography Concierge usage guidance to `docs/advanced-features.md`.
+- Added feature/API documentation to `docs/FEATURES.md`.
+- Tightened the Unreleased changelog bullet so it describes MusicBrainz artist coverage, manual Wishlist promotion, and mesh/social discovery docs without unrelated pod wording.
+
 ## 2026-04-30 01:55Z - Implemented Discography Concierge first slice
 
 - Added `DiscographyCoverageService` and API endpoints for per-artist release/track coverage over MusicBrainz release graphs, cached release targets, HashDb evidence, and existing Wishlist seeds.

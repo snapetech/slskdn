@@ -127,6 +127,7 @@ Save searches that run automatically in the background. Never miss rare content 
 - Add searches with custom filters and max results
 - Toggle auto-download, configurable interval, track matches and run history
 - Manual "Run Now" button for each search
+- **Discography Concierge handoff** — missing tracks from an artist coverage map can be promoted into conservative Wishlist searches without starting immediate searches or downloads
 ```bash
 --wishlist-enabled  --wishlist-interval 60  --wishlist-auto-download  --wishlist-max-results 100
 ```
@@ -302,6 +303,7 @@ Zero-trust security framework with defense-in-depth:
 Automated metadata enrichment and quality assurance.
 - **MusicBrainz Client** — Query recordings, releases, artists
 - **Album Targets** — MBID-based album tracking and completion monitoring
+- **Discography Concierge** — Map an artist MBID into release/track coverage, mark tracks as verified, Wishlist-seeded, ambiguous, or missing, and seed missing tracks into Wishlist on demand
 - **Chromaprint Integration** — Audio fingerprinting for identification
 - **AcoustID API** — Fingerprint-to-MBID lookups
 - **Auto-Tagging Pipeline** — Automatic metadata tagging from MusicBrainz
@@ -314,7 +316,7 @@ Automated metadata enrichment and quality assurance.
 > - Or disable the auto-tagging / library-health features that trigger the lookups.
 
 
-📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md)
+📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md) • [Music discovery federation plan](docs/design/music-discovery-federation-plan.md)
 
 ### 📦 Pod System (Decentralized Communities)
 Topic-based micro-communities over the mesh overlay.
@@ -667,6 +669,7 @@ Features in the `master` branch:
 | **DHT Peer Discovery** | ✅ Stable | Fully functional mesh overlay |
 | **Security Hardening** | ✅ Stable | Comprehensive framework, tested |
 | **MusicBrainz Integration** | ✅ Stable | Fingerprinting, auto-tagging |
+| **Discography Concierge** | 🟡 Experimental | Artist MBID coverage map and manual Wishlist seeding |
 | **Library Health Scanner** | ✅ Stable | Quality detection and remediation |
 | **SongID** | 🟡 Experimental | Native source identification, ranked song/album/discography handoff |
 | **Discovery Graph / Constellation** | 🟡 Experimental | Navigable similarity topology across SongID, MusicBrainz, and search |

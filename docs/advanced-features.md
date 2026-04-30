@@ -9,6 +9,7 @@ This guide covers advanced features and how to use them effectively.
 - [Collections & Sharing](#collections--sharing)
 - [Streaming](#streaming)
 - [Wishlist & Background Search](#wishlist--background-search)
+- [Discography Concierge](#discography-concierge)
 - [Auto-Replace Stuck Downloads](#auto-replace-stuck-downloads)
 - [Smart Search Ranking](#smart-search-ranking)
 - [Multiple Download Destinations](#multiple-download-destinations)
@@ -197,6 +198,29 @@ Automatically search for content in the background.
 - **Reasonable Intervals**: Don't run too frequently (60s minimum recommended)
 - **Max Results**: Set limits to avoid overwhelming downloads
 - **Use Filters**: Narrow results to what you actually want
+
+## Discography Concierge
+
+Map artist coverage from MusicBrainz into local action.
+
+### Using Coverage Maps
+
+1. **Navigate to Search**: Sidebar -> Search
+2. **Open Discography Concierge**
+3. **Enter Artist MBID**: Use the MusicBrainz artist identifier
+4. **Choose Profile**: Core, Extended, or All Releases
+5. **Map Coverage**: Build a release/track coverage view
+
+### Track Statuses
+
+- **Available**: HashDb has verified content evidence for the recording
+- **Wishlist**: A matching Wishlist seed already exists
+- **Ambiguous**: The release track is missing a reliable recording identity
+- **Missing**: No local verified evidence or Wishlist seed is known
+
+### Wishlist Promotion
+
+Use **Add missing to Wishlist** to create conservative Wishlist searches for missing tracks. This does not run immediate searches, auto-download files, browse peers, mirror content, or treat slskdN as a backup tool.
 
 ## Auto-Replace Stuck Downloads
 
