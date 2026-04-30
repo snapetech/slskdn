@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z200. Visualizer Render Loops Must Catch Preset Runtime Errors
+
+**The Bug**: The native MilkDrop visualizer could import a preset successfully, then throw later from `engine.render()` when an unsupported function or expression path executed. Because the animation-frame render loop did not catch render errors, the exception escaped the React boundary and the bad imported preset stayed persisted for the next session.
+
+**Files Affected**:
+- `src/web/src/components/Player/Visualizer.jsx`
+
+**Wrong**:
+```js
+const renderLoop = () => {
+  engineRef.current.render();
+  requestAnimationFrame(renderLoop);
+};
+```
+
+**Correct**:
+```js
+const renderLoop = () => {
+  try {
+    engineRef.current.render();
+  } catch (error) {
+    localStorage.removeItem(nativePresetStorageKey);
+    setError(getVisualizerErrorMessage(engineType, error));
+    return;
+  }
+  requestAnimationFrame(renderLoop);
+};
+```
+
+**Why This Keeps Happening**: MilkDrop presets can parse before all runtime equation paths are exercised. Any visualizer engine that runs user/imported preset code per frame must treat render as a failure boundary, not just initialization/import.
+
 ### 0z199. Reject Soulseek Upload Requests From Our Own Username
 
 **The Bug**: The incoming upload enqueue path accepted requests where the requesting Soulseek username matched the daemon's own logged-in username, so the Uploads page could show a file being uploaded to yourself.
