@@ -7,8 +7,9 @@
   - added a manual `Publish Winget` workflow for retrying an existing stable release tag after credentials are configured
   - confirmed `wingetcreate update` also fails for the first package submission because `snapetech.slskdn` is not yet present in `microsoft/winget-pkgs`
   - changed the stable Winget paths to submit generated manifests directly for the initial PR
+  - fixed invalid stable Winget locale YAML caused by double-indented block-scalar text
 - Next steps:
-  1. Validate, commit, and push the first-submission Winget workflow fix.
+  1. Commit and push the Winget locale YAML generator fix.
   2. Re-run the manual `Publish Winget` workflow for `2026042900-slskdn.202`.
 
 ## Update 2026-04-30 00:33:57Z

@@ -7226,5 +7226,6 @@ Code quality improvements were completed as part of Option A:
 ## 2026-04-30 00:58:00Z
 
 - Configured the repository `WINGETCREATE_GITHUB_TOKEN` secret with the authenticated `gh` token so WingetCreate has credentials for `microsoft/winget-pkgs` submission.
+- Retried the manual workflow and found a third blocker: the stable locale description generated invalid YAML because the first two block-scalar lines were double-indented. Removed that source indentation, regenerated the checked-in stable manifests, and documented the gotcha in ADR-0001 as `0cd259344`.
 - Retried the manual `Publish Winget` workflow for `2026042900-slskdn.202` and confirmed the second blocker: `wingetcreate update snapetech.slskdn` fails because the package does not exist in `microsoft/winget-pkgs` yet.
 - Changed both stable Winget submission paths to download the published Windows artifact, compute the SHA-256, regenerate the stable manifests, and submit those local manifests directly so the initial Winget PR can be opened.
