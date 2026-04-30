@@ -11,6 +11,54 @@
 
 *No high priority tasks currently active
 
+- [x] **T-930**: Discography Concierge coverage map.
+ - Status: completed (2026-04-30)
+ - Priority: P1
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Added a conservative coverage API, MusicBrainz release-detail caching, HashDb/Wishlist evidence cells, manual missing-track Wishlist promotion, focused backend coverage tests, and a Search-page Discography Concierge panel with tooltipped actions. No Soulseek peer browsing, immediate searches, downloads, backup, mirroring, or file duplication.
+
+- [ ] **T-937**: Discography Concierge graph-density prioritization.
+ - Status: planned
+ - Priority: P2
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Follow up T-930 by feeding Discovery Graph neighborhood density and stronger local-vs-mesh evidence into artist prioritization. Keep this separate from the first coverage/Wishlist implementation.
+
+- [ ] **T-931**: Bloom-filter library diff.
+ - Status: planned
+ - Priority: P1
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Add versioned MBID bloom snapshots for trusted contacts/pods/realms, compare inbound filters locally, and promote likely missing items to Wishlist. Do not publish filenames, paths, file hashes, exact holdings, or library exports.
+
+- [ ] **T-932**: Per-artist release radar.
+ - Status: planned
+ - Priority: P1
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Persist artist MBID subscriptions and notify when trusted mesh/federation evidence first sees a SongID-confirmed WorkRef for that artist. This is network-presence radar, not MusicBrainz release-calendar polling.
+
+- [ ] **T-933**: Federated taste recommendations.
+ - Status: planned
+ - Priority: P2
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Build a local recommender over inbound LibraryActor/NowPlaying WorkRefs, weighted by trust tier and Discovery Graph proximity. Enforce k-anonymity/reveal thresholds in the service layer before surfacing recommendations.
+
+- [ ] **T-934**: Realm-curated subject indexes.
+ - Status: planned
+ - Priority: P2
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Define signed realm subject-index artifacts for niche scenes and let ShadowIndex/VirtualSoulfind cite them as provenance-preserving authorities. Realm indexes stay local/realm-scoped and must not overwrite MusicBrainz truth.
+
+- [ ] **T-935**: Decentralized MusicBrainz edit overlay.
+ - Status: planned
+ - Priority: P2
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Capture signed corrections as mesh/realm overlay artifacts and apply them at MusicBrainz read time with provenance. Optional upstream MusicBrainz submission remains manual.
+
+- [ ] **T-936**: Quarantine Jury.
+ - Status: planned
+ - Priority: P2
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Add user-initiated trusted jury requests for ContentSafety/SongID quarantine decisions, aggregating signed peer verdicts with ByzantineConsensus-style thresholds. Do not auto-send files, auto-release quarantined content, or involve untrusted peers.
+
 - [x] **bug**: Keep mesh-overlay sources out of Soulseek sequential failover.
  - Status: completed (2026-04-30)
  - Priority: P1

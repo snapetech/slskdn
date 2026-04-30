@@ -21,11 +21,12 @@ public class MusicBrainzControllerTests
     private readonly Mock<IMusicBrainzClient> client = new();
     private readonly Mock<IHashDbService> hashDb = new();
     private readonly Mock<IArtistReleaseGraphService> releaseGraph = new();
+    private readonly Mock<IDiscographyCoverageService> coverage = new();
     private readonly MusicBrainzController controller;
 
     public MusicBrainzControllerTests()
     {
-        controller = new MusicBrainzController(client.Object, hashDb.Object, releaseGraph.Object);
+        controller = new MusicBrainzController(client.Object, hashDb.Object, releaseGraph.Object, coverage.Object);
     }
 
     [Fact]
@@ -132,5 +133,33 @@ public class MusicBrainzControllerTests
         Assert.True(track.Complete);
         var match = Assert.Single(track.Matches);
         Assert.Equal("flackey", match.FlacKey);
+    }
+
+    [Fact]
+    public async Task GetDiscographyCoverage_TrimsArtistIdBeforeDispatch()
+    {
+        coverage.Setup(x => x.GetCoverageAsync(
+                It.IsAny<DiscographyCoverageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DiscographyCoverageResult { ArtistId = "artist-1" });
+
+        var result = await controller.GetDiscographyCoverage(" artist-1 ", cancellationToken: CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        coverage.Verify(x => x.GetCoverageAsync(
+            It.Is<DiscographyCoverageRequest>(request => request.ArtistId == "artist-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PromoteDiscographyCoverageToWishlist_WithInvalidMaxResults_ReturnsBadRequest()
+    {
+        var result = await controller.PromoteDiscographyCoverageToWishlist(
+            "artist-1",
+            new DiscographyWishlistPromotionRequest { MaxResults = 0 },
+            CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal("MaxResults must be greater than 0", bad.Value);
     }
 }

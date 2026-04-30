@@ -20,7 +20,7 @@ using Xunit;
 [Collection("GoldStarClubEnv")]
 public class GoldStarClubServiceTests
 {
-    // HARDENING-2026-04-20 H6: auto-join is opt-in via env var. Tests that exercise the join flow
+    // HARDENING-2026-04-20 H6: auto-join is default-on but can be disabled via env var. Tests that exercise the disabled path
     // must set it; we wrap in IDisposable to guarantee cleanup even on assertion failure, and
     // serialize via an xUnit [Collection] since env vars are process-global.
     private const string AutoJoinEnvVar = "SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN";
@@ -79,8 +79,9 @@ public class GoldStarClubServiceTests
                 p.Name == "Gold Star Club ⭐" &&
                 p.Visibility == PodVisibility.Listed &&
                 p.Tags.Contains("gold-star") &&
-                p.Tags.Contains("first-1000") &&
-                p.Tags.Contains("exclusive")),
+                p.Tags.Contains("first-250") &&
+                p.Tags.Contains("realm-governance") &&
+                p.Tags.Contains("testing")),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -132,7 +133,7 @@ public class GoldStarClubServiceTests
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
 
-        var members = Enumerable.Range(1, 500)
+        var members = Enumerable.Range(1, 100)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
         mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -153,7 +154,7 @@ public class GoldStarClubServiceTests
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
 
-        var members = Enumerable.Range(1, 1000)
+        var members = Enumerable.Range(1, 250)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
         mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -174,7 +175,7 @@ public class GoldStarClubServiceTests
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
 
-        var members = Enumerable.Range(1, 1001)
+        var members = Enumerable.Range(1, 251)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
         mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -197,7 +198,7 @@ public class GoldStarClubServiceTests
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
 
-        var members = Enumerable.Range(1, 500)
+        var members = Enumerable.Range(1, 100)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
         mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -231,7 +232,7 @@ public class GoldStarClubServiceTests
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
 
-        var members = Enumerable.Range(1, 1000)
+        var members = Enumerable.Range(1, 250)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
         mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
@@ -283,25 +284,25 @@ public class GoldStarClubServiceTests
     {
         using var _ = new EnvScope("true");
 
-        // Arrange: GetMembers returns 999 (under limit), then Join succeeds.
-        // GetMembershipCountAsync after join returns 1000 (we just filled the last slot).
+        // Arrange: GetMembers returns 249 (under limit), then Join succeeds.
+        // GetMembershipCountAsync after join returns 250 (we just filled the last slot).
         var pod = new Pod { PodId = GoldStarClubService.GoldStarClubPodId };
         mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pod);
 
-        var members999 = Enumerable.Range(1, 999)
+        var members249 = Enumerable.Range(1, 249)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
-        var members1000 = Enumerable.Range(1, 1000)
+        var members250 = Enumerable.Range(1, 250)
             .Select(i => new PodMember { PeerId = $"user{i}" })
             .ToList();
 
         // TryAutoJoin: GetMembers (already-member check + currentCount) -> IsAcceptingMembers -> GetMembershipCount -> GetMembers
         // then if accepting: GetMembers (we use same), Join, GetMembershipCount -> GetMembers
         mockPodService.SetupSequence(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(members999)   // 1) already-member check: 999, under limit
-            .ReturnsAsync(members999)   // 2) IsAcceptingMembers/GetMembershipCount: 999
-            .ReturnsAsync(members1000); // 3) after Join, GetMembershipCount: 1000 (we are the 1000th)
+            .ReturnsAsync(members249)   // 1) already-member check: 249, under limit
+            .ReturnsAsync(members249)   // 2) IsAcceptingMembers/GetMembershipCount: 249
+            .ReturnsAsync(members250); // 3) after Join, GetMembershipCount: 250 (we are the 250th)
 
         mockPodService.Setup(s => s.JoinAsync(
             GoldStarClubService.GoldStarClubPodId,
@@ -319,7 +320,7 @@ public class GoldStarClubServiceTests
     [Fact]
     public async Task TryAutoJoinAsync_ShouldReturnFalseWhenAutoJoinDisabled()
     {
-        using var _ = new EnvScope(string.Empty);
+        using var _ = new EnvScope("false");
 
         var joined = await goldStarClubService.TryAutoJoinAsync("new-user");
 

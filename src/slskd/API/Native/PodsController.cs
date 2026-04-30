@@ -32,6 +32,7 @@ public class PodsController : ControllerBase
     private readonly ILogger<PodsController> logger;
     private readonly IConversationService? conversationService;
     private readonly IOptionsMonitor<MeshOptions>? meshOptions;
+    private readonly IGoldStarClubService? goldStarClubService;
 
     public PodsController(
         IPodService podService,
@@ -39,7 +40,8 @@ public class PodsController : ControllerBase
         ISoulseekChatBridge chatBridge,
         ILogger<PodsController> logger,
         IConversationService? conversationService = null,
-        IOptionsMonitor<MeshOptions>? meshOptions = null)
+        IOptionsMonitor<MeshOptions>? meshOptions = null,
+        IGoldStarClubService? goldStarClubService = null)
     {
         this.podService = podService;
         this.podMessaging = podMessaging;
@@ -47,6 +49,7 @@ public class PodsController : ControllerBase
         this.logger = logger;
         this.conversationService = conversationService;
         this.meshOptions = meshOptions;
+        this.goldStarClubService = goldStarClubService;
     }
 
     /// <summary>
@@ -370,6 +373,11 @@ public class PodsController : ControllerBase
             if (!left)
             {
                 return NotFound(new { error = "Pod or member not found" });
+            }
+
+            if (string.Equals(podId, goldStarClubService?.GoldStarClubPodId, StringComparison.Ordinal))
+            {
+                await goldStarClubService.RecordRevocationAsync(peerId, ct);
             }
 
             return Ok(new { left = true });

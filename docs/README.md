@@ -19,6 +19,7 @@ Complete guide to all slskdn documentation.
 ### Core Features
 - [Multi-Source Downloads](multipart-downloads.md) - Network impact analysis and architecture
 - [DHT Rendezvous Design](DHT_RENDEZVOUS_DESIGN.md) - Peer discovery and mesh overlay architecture
+- [Music Discovery Federation Plan](design/music-discovery-federation-plan.md) - Planned mesh/social discovery features without backup or mirroring scope
 
 ### Security
 - [Security Implementation Specs](SECURITY_IMPLEMENTATION_SPECS.md) - Detailed security feature specifications

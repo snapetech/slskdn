@@ -31,15 +31,21 @@ namespace slskd.Integrations.MusicBrainz.API
         private readonly IMusicBrainzClient client;
         private readonly IHashDbService hashDbService;
         private readonly IArtistReleaseGraphService releaseGraphService;
+        private readonly IDiscographyCoverageService discographyCoverageService;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MusicBrainzController"/> class.
         /// </summary>
-        public MusicBrainzController(IMusicBrainzClient client, IHashDbService hashDbService, IArtistReleaseGraphService releaseGraphService)
+        public MusicBrainzController(
+            IMusicBrainzClient client,
+            IHashDbService hashDbService,
+            IArtistReleaseGraphService releaseGraphService,
+            IDiscographyCoverageService discographyCoverageService)
         {
             this.client = client;
             this.hashDbService = hashDbService;
             this.releaseGraphService = releaseGraphService;
+            this.discographyCoverageService = discographyCoverageService;
         }
 
         /// <summary>
@@ -203,6 +209,69 @@ namespace slskd.Integrations.MusicBrainz.API
             }
 
             return Ok(graph);
+        }
+
+        /// <summary>
+        ///     Returns a per-release and per-track coverage map for an artist.
+        /// </summary>
+        [HttpGet("artist/{artistId}/discography-coverage")]
+        public async Task<ActionResult<DiscographyCoverageResult>> GetDiscographyCoverage(
+            string artistId,
+            [FromQuery] DiscographyProfile profile = DiscographyProfile.CoreDiscography,
+            [FromQuery] bool forceRefresh = false,
+            CancellationToken cancellationToken = default)
+        {
+            artistId = artistId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(artistId))
+            {
+                return BadRequest("artistId is required");
+            }
+
+            var coverage = await discographyCoverageService.GetCoverageAsync(
+                new DiscographyCoverageRequest
+                {
+                    ArtistId = artistId,
+                    Profile = profile,
+                    ForceRefresh = forceRefresh,
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            if (coverage == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(coverage);
+        }
+
+        /// <summary>
+        ///     Seeds missing artist coverage tracks into the Wishlist without running searches.
+        /// </summary>
+        [HttpPost("artist/{artistId}/discography-coverage/wishlist")]
+        public async Task<ActionResult<DiscographyWishlistPromotionResult>> PromoteDiscographyCoverageToWishlist(
+            string artistId,
+            [FromBody] DiscographyWishlistPromotionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            artistId = artistId?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(artistId))
+            {
+                return BadRequest("artistId is required");
+            }
+
+            request ??= new DiscographyWishlistPromotionRequest();
+            request.ArtistId = artistId;
+            request.Filter = string.IsNullOrWhiteSpace(request.Filter) ? "flac" : request.Filter.Trim();
+            if (request.MaxResults <= 0)
+            {
+                return BadRequest("MaxResults must be greater than 0");
+            }
+
+            var result = await discographyCoverageService.PromoteMissingToWishlistAsync(
+                request,
+                cancellationToken).ConfigureAwait(false);
+
+            return Ok(result);
         }
     }
 }

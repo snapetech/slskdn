@@ -12,6 +12,33 @@
   2. Add signed remote pod join-request UI once the membership service has a user-friendly key/signature flow.
   3. Keep social discovery scans user-triggered and conservative.
 
+## Update 2026-04-30 01:55:00Z
+
+- Current task: None. T-930 Discography Concierge first slice is implemented locally.
+- Last activity:
+  - added backend coverage models, service, DI, and MusicBrainz API endpoints
+  - added manual missing-track Wishlist promotion without immediate searches/downloads
+  - added a Search-page Discography Concierge panel with button tooltips
+  - added focused backend tests for coverage and promotion
+  - validated backend build, focused tests, frontend lint, frontend build, full `dotnet test`, repo lint, and diff whitespace
+- Next steps:
+  1. Start T-931 Bloom-filter library diff.
+  2. Follow up T-937 later for Discovery Graph density prioritization and richer local-vs-mesh evidence.
+  3. Keep the unrelated listening-party dirty file separate.
+
+## Update 2026-04-30 01:30:00Z
+
+- Current task: None. Mesh/social music discovery feature plan is documented.
+- Last activity:
+  - added `docs/design/music-discovery-federation-plan.md`
+  - planned Discography Concierge, Bloom Diff, Release Radar, Taste Recommendations, Realm Indexes, MB edit overlays, and Quarantine Jury
+  - explicitly excluded backup, file duplication, mirroring, and replica-management scope
+  - added T-930 through T-936 to `memory-bank/tasks.md`
+- Next steps:
+  1. Start with T-930 Discography Concierge coverage API.
+  2. Keep Bloom Diff (T-931) privacy boundaries tight before using it as recommendation input.
+  3. Defer Quarantine Jury implementation until signed evidence and trust-scoped routing are well tested.
+
 ## Update 2026-04-30 01:15:00Z
 
 - Current task: None. Mixed-source accelerated failover no longer dials mesh-overlay sources through Soulseek.
@@ -24,7 +51,7 @@
   1. Keep the broader listening-party/UI dirty work separate from this transfer fix.
   2. Commit the transfer fix with its test and changelog update.
 
-## Update 2026-04-30 01:02:06Z
+## Update 2026-04-30 01:12:43Z
 
 - Current task: None. Layer 1 listening parties are implemented locally.
 - Last activity:

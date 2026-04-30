@@ -145,6 +145,37 @@
   margin-top: 10px;
 }
 
+.discography-coverage-segment {
+  margin-top: 10px;
+}
+
+.discography-coverage-results {
+  margin-top: 1rem;
+}
+
+.discography-coverage-summary,
+.discography-release-head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.discography-coverage-summary .ui.header,
+.discography-release-head .ui.header {
+  margin: 0;
+}
+
+.discography-release-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.discography-release-card.ui.segment {
+  margin: 0;
+}
+
 .album-completion-list {
   margin-top: 0.5rem;
 }

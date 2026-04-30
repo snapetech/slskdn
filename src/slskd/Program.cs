@@ -1384,6 +1384,7 @@ namespace slskd
             // (IHashDbService, IMediaVariantStore, ICanonicalStatsService, IDedupeService, IAnalyzerMigrationService in AddAudioCore)
             services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
+            services.AddSingleton<IDiscographyCoverageService, DiscographyCoverageService>();
             services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
             services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
             services.AddSingleton<slskd.API.Native.IJobServiceWithList, slskd.Jobs.HashDbJobServiceListAdapter>();
@@ -1798,6 +1799,10 @@ namespace slskd
                 Log.Debug("[DI] SqlitePodService constructed");
                 return service;
             });
+
+            services.AddSingleton<PodCore.GoldStarClubService>();
+            services.AddSingleton<PodCore.IGoldStarClubService>(sp => sp.GetRequiredService<PodCore.GoldStarClubService>());
+            services.AddHostedService(sp => sp.GetRequiredService<PodCore.GoldStarClubService>());
 
             // Pod messaging service (SQLite-backed)
             services.AddScoped<PodCore.IPodMessaging>(sp =>

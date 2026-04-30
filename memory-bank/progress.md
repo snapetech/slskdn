@@ -3,7 +3,22 @@
 - Reviewed the pod, room, chat, and contact UX as one social workflow rather than separate pages.
 - Added daemon-backed recovery affordances: chats rehydrate saved conversations, rooms reopen joined daemon rooms, and Pods exposes create/discover/save actions from the primary Pods page.
 - Added contact actions for starting chat and browsing shares, plus explicit pod discovery save behavior so found pods can be retrieved after restarts.
-- Validation: `cd src/web && npm run lint -- --quiet`, `cd src/web && npm run build`, and `git diff --check` passed.
+- Validation: `cd src/web && npm run lint -- --quiet` and `git diff --check` passed.
+
+## 2026-04-30 01:55Z - Implemented Discography Concierge first slice
+
+- Added `DiscographyCoverageService` and API endpoints for per-artist release/track coverage over MusicBrainz release graphs, cached release targets, HashDb evidence, and existing Wishlist seeds.
+- Added manual missing-track promotion to Wishlist; it creates conservative search seeds only and does not run immediate searches, start downloads, browse peers, mirror files, or manage backup replicas.
+- Added a Search-page Discography Concierge panel with artist MBID/profile controls, coverage progress, per-track status labels, and tooltipped actions for mapping coverage, refreshing catalog data, and adding missing tracks to Wishlist.
+- Added focused unit coverage for release-detail caching, HashDb availability status, Wishlist promotion dedupe, and controller validation.
+- Validation: `dotnet build src/slskd/slskd.csproj --no-restore`; `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-build --filter "DiscographyCoverageServiceTests|MusicBrainzControllerTests"`; `npm run lint -- --max-warnings=0`; `npm run build`; full `dotnet test`; `bash ./bin/lint`; `git diff --check`.
+
+## 2026-04-30 01:30Z - Planned mesh/social music discovery features
+
+- Added `docs/design/music-discovery-federation-plan.md` covering Discography Concierge, Bloom-Filter Library Diff, Per-Artist Release Radar, Federated Taste Recommendations, Realm-Curated Subject Indexes, Decentralized MusicBrainz Edit Overlay, and Quarantine Jury.
+- Explicitly excluded friend backup, file duplication, cooperative mirroring, and storage-replica management from the plan.
+- Added tasks T-930 through T-936 to the memory-bank task list and linked the new design doc from the docs index.
+- Validation: docs-only change; no test suite run.
 
 ## 2026-04-30 01:15Z - Fixed mixed-source failover transport filtering
 
@@ -12,7 +27,7 @@
 - Documented the transport-filtering gotcha in ADR-0001 and committed that entry as `fa77dafe8`.
 - Validation: `dotnet build src/slskd/slskd.csproj` passed with existing warning classes; focused `MultiSourceDownloadServiceSanitizationTests` passed (`2/2`); `git diff --check` passed for touched implementation/test files.
 
-## 2026-04-30 01:02Z - Added Layer 1 listening parties
+## 2026-04-30 01:12Z - Added Layer 1 listening parties and radio registry
 
 - Documented `docs/listening-party.md` with the metadata-only protocol, trust boundary, and deferred live mic/WebRTC layer.
 - Added a persistent Web UI player with collection item play controls, local stream playback through `/api/v0/streams/{contentId}`, queue display, and Now Playing updates from browser playback.

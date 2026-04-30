@@ -6,6 +6,7 @@ import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import AlbumCompletionPanel from './AlbumCompletionPanel';
+import DiscographyCoveragePanel from './DiscographyCoveragePanel';
 import DiscoveryGraphAtlasPanel from './DiscoveryGraphAtlasPanel';
 import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
@@ -506,6 +507,13 @@ const Searches = ({ server } = {}) => {
         title="MusicBrainz Lookup"
       >
         <MusicBrainzLookup disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.discographyCoverage"
+        title="Discography Concierge"
+      >
+        <DiscographyCoveragePanel disabled={!normalizedServer.isConnected} />
       </CollapsibleSection>
       <CollapsibleSection
         defaultOpen={false}

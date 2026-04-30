@@ -338,6 +338,23 @@ class Pods extends Component {
     }
   };
 
+  handleLeaveActivePod = async () => {
+    const { activePodId, podDetail } = this.state;
+    const peerId = this.getLocalPeerId();
+    const podName = podDetail?.name || activePodId;
+
+    if (!activePodId || !peerId) return;
+
+    try {
+      await pods.leave(activePodId, peerId);
+      toast.success(`Left ${podName}`);
+      await this.fetchPodDetail(activePodId);
+    } catch (error) {
+      console.error('Failed to leave pod:', error);
+      toast.error(`Failed to leave pod: ${error.message}`);
+    }
+  };
+
   render() {
     const {
       activeChannelId,
@@ -362,6 +379,9 @@ class Pods extends Component {
       activePodId && activeChannelId
         ? messages[`${activePodId}:${activeChannelId}`] || []
         : [];
+    const localPeerId = this.getLocalPeerId();
+    const isMember = members.some((member) => member.peerId === localPeerId);
+    const isGoldStarClub = podDetail?.podId === 'pod:gold-star-club';
 
     const panes =
       podDetail?.channels?.map((channel) => ({
@@ -601,6 +621,12 @@ class Pods extends Component {
                   </span>
                 </div>
                 {podDetail.description && <p>{podDetail.description}</p>}
+                {isGoldStarClub && (
+                  <Message info>
+                    <Icon name="star" />
+                    Gold Star Club membership is limited to the first 250 nodes. Leaving this pod revokes your local Gold Star status and prevents automatic rejoin on restart.
+                  </Message>
+                )}
                 {podDetail.tags?.length > 0 && (
                   <div className="pod-tag-list">
                     {podDetail.tags.map((tag) => (
@@ -612,6 +638,27 @@ class Pods extends Component {
                       </Label>
                     ))}
                   </div>
+                )}
+                {isMember && (
+                  <Popup
+                    content={
+                      isGoldStarClub
+                        ? 'Leave Gold Star Club and record a local revocation so this node is not auto-joined again.'
+                        : 'Leave this pod with the current user.'
+                    }
+                    trigger={
+                      <Button
+                        icon
+                        labelPosition="left"
+                        negative={isGoldStarClub}
+                        onClick={this.handleLeaveActivePod}
+                        size="small"
+                      >
+                        <Icon name="sign-out" />
+                        {isGoldStarClub ? 'Revoke Gold Star' : 'Leave Pod'}
+                      </Button>
+                    }
+                  />
                 )}
               </div>
               {activeChannelId && (

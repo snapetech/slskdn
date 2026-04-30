@@ -2,14 +2,15 @@
 
 ## Overview
 
-The **Gold Star Club** is a special pod that automatically joins the first 1000 users of the slskdn network. Once the membership reaches 1000, no new members can be added, even if existing members leave.
+The **Gold Star Club** is a special pod that automatically joins the first 250 users of the slskdN network. Once membership reaches 250, no new members can be added, even if existing members leave. The cohort is used for realm governance bootstrap, early network testing, and high-signal feedback.
 
 ## Requirements
 
-1. **Auto-join**: All network members automatically join on first connection
-2. **Limit**: Maximum 1000 members
+1. **Auto-join**: Network members automatically join on first connection unless they opt out
+2. **Limit**: Maximum 250 members
 3. **One-time**: Once full, no new members can be added (even if people leave)
-4. **Exclusive**: Only the first 1000 users get this privilege
+4. **Revocable**: A user can leave later to revoke local Gold Star status
+5. **Exclusive**: Only the first 250 users get this privilege
 
 ## Implementation
 
@@ -20,7 +21,8 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 **Key Features**:
 - Creates the pod on first startup (if it doesn't exist)
 - Auto-joins users when they first connect
-- Enforces 1000-member limit
+- Enforces 250-member limit
+- Records a local revocation marker when the user leaves, so default-on auto-join does not rejoin them on restart
 - Caches membership status to avoid repeated checks
 
 ### Pod Details
@@ -28,7 +30,7 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 - **Pod ID**: `pod:gold-star-club` (fixed, not random)
 - **Name**: "Gold Star Club ⭐"
 - **Visibility**: Listed (discoverable)
-- **Tags**: `gold-star`, `first-1000`, `exclusive`
+- **Tags**: `gold-star`, `first-250`, `realm-governance`, `testing`
 - **Default Channel**: `general`
 
 ### Auto-Join Logic
@@ -38,7 +40,9 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 3. **Ensure Pod Exists**: Creates the pod if it doesn't exist
 4. **Check Eligibility**: 
    - Checks if user is already a member
-   - Checks if membership count < 1000
+   - Checks if local auto-join is disabled with `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=false`
+   - Checks if local membership was revoked by a previous leave action
+   - Checks if membership count < 250
    - Checks current count again before joining (race condition protection)
 5. **Join**: Adds user as a regular "member" with signed membership record
 
@@ -48,6 +52,12 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 - **Race Condition Protection**: Re-fetches members list right before joining
 - **Caching**: Caches `isAcceptingMembers` status to avoid repeated DHT queries
 - **One-Time**: Once limit is reached, `isAcceptingMembers` is permanently set to `false`
+
+### Opt-Out and Revocation
+
+- **Before startup**: set `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=false`.
+- **After joining**: leave the Gold Star Club pod from the Pods page. The server writes a local `gold-star-club.revoked` marker in the app directory so the next restart does not auto-join again.
+- **Rejoin after revocation**: remove the local revocation marker and restart while membership is still below 250.
 
 ### Edge Cases Handled
 
@@ -75,13 +85,14 @@ public interface IGoldStarClubService
     Task<bool> IsAcceptingMembersAsync(CancellationToken ct = default);
     Task<int> GetMembershipCountAsync(CancellationToken ct = default);
     Task<bool> TryAutoJoinAsync(string peerId, CancellationToken ct = default);
+    Task RecordRevocationAsync(string peerId, CancellationToken ct = default);
     Task EnsurePodExistsAsync(CancellationToken ct = default);
 }
 ```
 
 ## Configuration
 
-No configuration needed - the service is always enabled and runs automatically.
+The service is enabled by default and runs automatically. Set `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=false` in the daemon environment to opt out before startup.
 
 ## Testing
 
@@ -108,4 +119,3 @@ Potential future features:
 ---
 
 **Status**: ✅ Implemented and tested
-
