@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z234. Post-Action Success Messages Must Survive Follow-Up Refreshes
+
+**The Bug**: A Quarantine Jury UI action set a success message and then reloaded the selected review. The shared review-load helper cleared the message at the end of the action path, so users never saw confirmation that route or accept actions completed.
+
+**Files Affected**:
+- `src/web/src/components/System/QuarantineJury/index.jsx`
+
+**Wrong**:
+```javascript
+setMessage('Route attempt recorded.');
+await loadReview(selectedId); // loadReview clears message
+```
+
+**Correct**:
+```javascript
+await loadReview(selectedId);
+setMessage('Route attempt recorded.');
+```
+
+or keep refresh helpers from clearing action-scoped status messages.
+
+**Why This Keeps Happening**: Reusable load helpers often reset transient UI state for initial page loads. When an action refreshes data after a successful mutation, that reset can erase the action result before the user or test can observe it.
+
 ### 0z233. Do Not Persist While Holding A Domain Lock If Persistence Takes Another Lock
 
 **The Bug**: Artist release radar persistence was called while holding the observation-domain lock. A concurrent subscription save could hold the storage lock and then wait for the domain lock while the observation path waited for the storage lock, creating a potential deadlock.
