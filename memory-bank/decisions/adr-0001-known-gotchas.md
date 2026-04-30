@@ -87,6 +87,32 @@ Installers:
 
 **Why This Keeps Happening**: Winget supports some installer properties both globally and per-installer, but accepted zip-portable manifests commonly place archive structure and command aliases at the installer manifest root. Follow known winget-pkgs examples for portable zip layouts instead of guessing from schema flexibility.
 
+### 0z171. Social UI State Must Rehydrate From Server State
+
+**The Bug**: Pods, rooms, and chat had backend persistence, but parts of the Web UI treated local browser tabs and ad hoc create payloads as the source of truth. After a reload, browser reset, or restart, users could lose the visible path back to conversations/rooms/pods even when the data still existed.
+
+**Files Affected**:
+- `src/web/src/lib/pods.js`
+- `src/web/src/components/Pods/Pods.jsx`
+- `src/web/src/components/Chat/Chat.jsx`
+- `src/web/src/components/Rooms/Rooms.jsx`
+- `src/web/src/components/Contacts/Contacts.jsx`
+
+**Wrong**:
+```js
+await pods.create(pod);
+setTabs(loadTabsFromStorage());
+```
+
+**Correct**:
+```js
+await pods.create({ pod, requestingPeerId });
+const conversations = await chat.getAll();
+const joinedRooms = await rooms.getJoined();
+```
+
+**Why This Keeps Happening**: Social features are easy to scaffold as standalone pages with local UI state, but users experience them as durable relationships. Every social surface needs to hydrate from persisted server state first, then layer browser convenience state on top.
+
 ### 0z170. WingetCreate Submit Needs Repository-Shaped Manifest Paths
 
 **The Bug**: `wingetcreate submit` validated the three stable manifest files incorrectly when they were copied into a flat scratch directory, reporting duplicate manifest types and inconsistent package fields even though the files had matching `PackageIdentifier` and `PackageVersion` values.
