@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z212. Icon-Only Controls Need Visible And Programmatic Affordances
+
+**The Bug**: Compact player launcher buttons and tab/action icon controls were visible as clickable icons but lacked accessible names, titles, or consistent focus/hover affordances. Headless DOM audit flagged icon-only buttons and links with no text, `aria-label`, `title`, or tooltip text.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Rooms/Rooms.jsx`
+- `src/web/src/components/Chat/Chat.jsx`
+- `src/web/src/components/Browse/Browse.jsx`
+- `src/web/src/components/Users/Users.jsx`
+
+**Wrong**:
+```jsx
+<Button icon="refresh" onClick={refresh} />
+<Menu.Item onClick={handleAddTab}>
+  <Icon name="plus" />
+</Menu.Item>
+```
+
+**Correct**:
+```jsx
+<Button
+  aria-label="Reload saved conversations"
+  icon="refresh"
+  onClick={refresh}
+  title="Reload saved conversations"
+/>
+```
+
+**Why This Keeps Happening**: Semantic UI makes it easy to create compact icon controls, but the visible icon is not enough for keyboard users, screen readers, or users trying to understand a dense tool surface. Icon-only controls need a title/tooltip and an accessible name, and shared CSS must make hover, focus, disabled, and selectable states obvious.
+
 ### 0z211. Dark Theme Contrast Must Cover Semantic Color Variants
 
 **The Bug**: The dark theme improved neutral Semantic UI surfaces but still let stock colored controls and hard-coded grey text leak through, leaving bright green/orange buttons, inline `#666`/`grey` copy, and low-depth panels that either failed contrast or blended into the page.
