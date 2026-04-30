@@ -1,4 +1,5 @@
 import { activeChatKey } from '../../config';
+import { setSessionStorageItem } from '../../lib/storage';
 import UserNoteModal from '../Users/UserNoteModal';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +13,7 @@ const UserContextMenu = ({ children, trigger, username }) => {
   };
 
   const handleChat = () => {
-    sessionStorage.setItem(activeChatKey, username);
+    setSessionStorageItem(activeChatKey, username);
     navigate('/chat');
   };
 

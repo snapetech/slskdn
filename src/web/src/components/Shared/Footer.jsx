@@ -2,6 +2,7 @@ import './Footer.css';
 import * as mesh from '../../lib/mesh';
 import * as session from '../../lib/session';
 import * as slskdnAPI from '../../lib/slskdn';
+import { getLocalStorageItem } from '../../lib/storage';
 import * as transfers from '../../lib/transfers';
 import { urlBase } from '../../config';
 import React, { Component } from 'react';
@@ -125,7 +126,7 @@ class Footer extends Component {
     const isSyncing = Boolean(meshStats.isSyncing);
     const backfillActive = Boolean(slskdnStats?.backfill?.isActive);
     const activeSwarms = swarmJobs.length;
-    const karma = Number.parseInt(localStorage.getItem('slskdn-karma') || '0', 10);
+    const karma = Number.parseInt(getLocalStorageItem('slskdn-karma', '0'), 10);
     const totalSpeed = isLoggedIn && speeds ? formatSpeed(speeds.total) : null;
     const soulseekSpeed =
       isLoggedIn && speeds ? formatSpeed(speeds.soulseek) : null;

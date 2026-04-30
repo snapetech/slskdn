@@ -9,6 +9,11 @@ import {
   unblockUser,
 } from '../../../lib/searches';
 import { buildDiscoveryGraph } from '../../../lib/discoveryGraph';
+import {
+  getLocalStorageItem,
+  removeLocalStorageItem,
+  setLocalStorageItem,
+} from '../../../lib/storage';
 import { getAllNotes } from '../../../lib/userNotes';
 import { sleep } from '../../../lib/util';
 import ErrorSegment from '../../Shared/ErrorSegment';
@@ -109,10 +114,10 @@ const SearchDetail = ({
   const [hideNoFreeSlots, setHideNoFreeSlots] = useState(false);
   const [foldResults, setFoldResults] = useState(false);
   const [resultFilters, setResultFilters] = useState(
-    localStorage.getItem('slskd-default-search-filter') || '',
+    getLocalStorageItem('slskd-default-search-filter', ''),
   );
   const [pageSize, setPageSize] = useState(
-    Number.parseInt(localStorage.getItem('slskd-search-page-size') || '25', 10),
+    Number.parseInt(getLocalStorageItem('slskd-search-page-size', '25'), 10),
   );
   const [displayCount, setDisplayCount] = useState(pageSize);
   const [userStats, setUserStats] = useState({});
@@ -140,7 +145,7 @@ const SearchDetail = ({
   }, [fetchUserNotes]);
 
   const [hasSavedDefault, setHasSavedDefault] = useState(
-    Boolean(localStorage.getItem('slskd-default-search-filter')),
+    Boolean(getLocalStorageItem('slskd-default-search-filter')),
   );
 
   // Sync hasSavedDefault across tabs/searches when localStorage changes
@@ -286,7 +291,7 @@ const SearchDetail = ({
 
   const handlePageSizeChange = (newSize) => {
     setPageSize(newSize);
-    localStorage.setItem('slskd-search-page-size', newSize);
+    setLocalStorageItem('slskd-search-page-size', newSize);
     // If we're showing less than the new page size, expand to fill it
     if (displayCount < newSize) {
       setDisplayCount(newSize);
@@ -395,13 +400,13 @@ const SearchDetail = ({
   };
 
   const saveAsDefault = () => {
-    localStorage.setItem('slskd-default-search-filter', resultFilters);
+    setLocalStorageItem('slskd-default-search-filter', resultFilters);
     setHasSavedDefault(true);
     toast.success('Search filters saved as default');
   };
 
   const clearSavedDefault = () => {
-    localStorage.removeItem('slskd-default-search-filter');
+    removeLocalStorageItem('slskd-default-search-filter');
     setHasSavedDefault(false);
     toast.info('Saved default filter cleared');
   };

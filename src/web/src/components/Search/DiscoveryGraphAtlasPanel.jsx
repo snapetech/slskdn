@@ -1,5 +1,6 @@
 import * as discoveryGraph from '../../lib/discoveryGraph';
 import * as searches from '../../lib/searches';
+import { getLocalStorageItem } from '../../lib/storage';
 import './Search.css';
 import DiscoveryGraphAtlas from './DiscoveryGraphAtlas';
 import React, { useEffect, useState } from 'react';
@@ -42,7 +43,7 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
 
   const loadSavedBranches = () => {
     try {
-      const raw = window.localStorage.getItem('slskdn.discoveryGraph.savedBranches');
+      const raw = getLocalStorageItem('slskdn.discoveryGraph.savedBranches');
       const parsed = raw ? JSON.parse(raw) : [];
       setSavedBranches(Array.isArray(parsed) ? parsed : []);
     } catch (error) {
