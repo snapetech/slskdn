@@ -52,6 +52,43 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z193. Fixed Player Layout Needs One Scroll Owner
+
+**The Bug**: The Web UI used fixed footer/player elements but left the document body scrollable. Scrolling moved page content behind the fixed player/footer stack, so the player appeared detached from the footer and page content could be hidden underneath it.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Player/Player.css`
+- `src/web/src/components/Player/PlayerBar.jsx`
+
+**Wrong**:
+```css
+body {
+  overflow: auto;
+}
+
+.app-content {
+  padding-bottom: 128px;
+}
+```
+
+**Correct**:
+```css
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-content {
+  height: calc(100dvh - var(--slskdn-nav-height) - var(--slskdn-player-height) - var(--slskdn-footer-height));
+  overflow-y: auto;
+}
+```
+
+**Why This Keeps Happening**: Fixed UI chrome needs a single explicit scroll owner. Padding the document for fixed controls is fragile once the player can resize, collapse, or sit above another fixed footer.
+
 ### 0z192. Player Audio Graphs Must Resume Before Playback
 
 **The Bug**: The Web UI player created a `MediaElementSource` for EQ/analyzer output, then called `audio.play()` while the Web Audio `AudioContext` could still be suspended. Browser playback looked active or the source loaded, but audio output could be silent.
