@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z189. Ref-Only Audio Elements Do Not Wake Player Visualizers
+
+**The Bug**: The Web UI player passed `audioRef.current` directly into MilkDrop and analyzer components during render. The first render often saw `null`, and attaching the `<audio>` ref later did not trigger a React render, so MilkDrop mounted without a usable audio element and appeared completely dead.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/Visualizer.jsx`
+- `src/web/src/components/Player/SpectrumAnalyzer.jsx`
+
+**Wrong**:
+```js
+<audio ref={audioRef} />
+<Visualizer audioElement={audioRef.current} />
+```
+
+**Correct**:
+```js
+const [playerAudioElement, setPlayerAudioElement] = useState(null);
+const bindAudioElement = useCallback((element) => {
+  audioRef.current = element;
+  setPlayerAudioElement(element);
+  setAudioElement(element);
+}, [setAudioElement]);
+
+<audio ref={bindAudioElement} />
+<Visualizer audioElement={playerAudioElement} />
+```
+
+**Why This Keeps Happening**: React refs are mutable containers, not reactive state. Components that initialize Web Audio, canvas render loops, lyrics sync, or analyzer effects from an audio element need a state-backed element so they rerun when the DOM node is attached.
+
 ### 0z188. Player Ticket Failures Need A Stream URL Fallback
 
 **The Bug**: The Web UI player switched to short-lived stream tickets for browser media playback, but if ticket creation failed or returned an empty ticket, the player set the audio source to an empty string. The UI looked playable, but the browser had no media URL to load.
