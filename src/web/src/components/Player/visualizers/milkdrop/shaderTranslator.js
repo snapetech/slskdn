@@ -8,6 +8,9 @@ const unsupportedPatterns = [
 ];
 
 const allowedExpressionPattern = /^[A-Za-z0-9_.,+\-*/%<>=!&|^~?:()\s]+$/;
+const shaderQRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
+const shaderAudioVariableNames = ['bass', 'bass_att', 'mid', 'mid_att', 'treb', 'treb_att'];
+const shaderVariableNames = [...shaderAudioVariableNames, ...shaderQRegisterNames];
 
 const stripShaderComments = (source) =>
   String(source || '')
@@ -43,6 +46,9 @@ export const translateMilkdropShaderExpression = (source) => {
 export const createTranslatedMilkdropFragmentShader = (source) => {
   const expression = translateMilkdropShaderExpression(source);
   if (!expression) return '';
+  const uniformDeclarations = shaderVariableNames
+    .map((name) => `uniform float ${name};`)
+    .join('\n');
   return `#version 300 es
 precision highp float;
 uniform vec3 color;
@@ -50,6 +56,7 @@ uniform sampler2D previousFrame;
 uniform float feedback;
 uniform float outputAlpha;
 uniform float time;
+${uniformDeclarations}
 in vec2 uv;
 out vec4 outColor;
 float clamp01(float value) {

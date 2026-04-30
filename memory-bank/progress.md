@@ -1,3 +1,10 @@
+## 2026-04-30 17:35Z - Added native MilkDrop shader q/audio uniforms
+
+- Translated native warp/comp shaders now declare q1-q64 and bass/mid/treble audio uniforms.
+- The renderer binds those uniforms from the current frame scope before each translated shader pass, so accepted shader expressions can use q-register and audio values instead of compiling to undefined symbols.
+- Added shader translator, renderer, and compatibility coverage for q/audio shader variables.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 17:31Z - Added native MilkDrop q-register propagation
 
 - Native renderer scope now initializes q1-q64 so MilkDrop3 q-register references have a stable default.

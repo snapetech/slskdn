@@ -291,19 +291,31 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       canvas: createCanvas(gl),
       preset: parseMilkdropPreset(`
         wave_r=0.5
-        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(0.8, 0.9, 1.0);
-        comp_shader=ret = vec3(uv.x, uv.y, sin(time));
+        q64=0.64
+        per_frame_1=q1=0.25;
+        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, bass_att, 1.0);
+        comp_shader=ret = vec3(uv.x, q64, treb);
       `).primary,
     });
 
-    renderer.render({ time: 2 });
+    renderer.render({
+      audio: {
+        bass_att: 0.9,
+        treb: 0.3,
+      },
+      time: 2,
+    });
 
     const shaderSources = gl.shaderSource.mock.calls.map(([, source]) => source);
     expect(shaderSources.some((source) =>
-      source.includes('texture(previousFrame, uv).rgb * vec3(0.8, 0.9, 1.0)'))).toBe(true);
+      source.includes('texture(previousFrame, uv).rgb * vec3(q1, bass_att, 1.0)'))).toBe(true);
     expect(shaderSources.some((source) =>
-      source.includes('vec3 ret = vec3(vec3(uv.x, uv.y, sin(time)))'))).toBe(true);
+      source.includes('vec3 ret = vec3(vec3(uv.x, q64, treb))'))).toBe(true);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.25);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.64);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.9);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.3);
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
   });
 

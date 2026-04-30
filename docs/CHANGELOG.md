@@ -68,6 +68,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   select, clear-active, delete, and playlist-scoped next/random navigation.
 - Added renderer-wide native MilkDrop q1-q64 initialization and q-register
   propagation across global, custom wave, shape, and sprite evaluation stages.
+- Added first native MilkDrop shader uniform support for q1-q64 and
+  bass/mid/treble audio variables in supported warp/comp shader expressions.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

@@ -104,6 +104,15 @@ const defaultAudioState = {
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
 
 const qRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
+const shaderScopeUniformNames = [
+  'bass',
+  'bass_att',
+  'mid',
+  'mid_att',
+  'treb',
+  'treb_att',
+  ...qRegisterNames,
+];
 
 const isQVariable = (key) => /^q([1-9]|[1-5][0-9]|6[0-4])$/.test(key);
 
@@ -183,6 +192,10 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
     outputAlphaUniform: gl.getUniformLocation(program, 'outputAlpha'),
     previousFrameUniform: gl.getUniformLocation(program, 'previousFrame'),
     program,
+    scopeUniforms: shaderScopeUniformNames.map((name) => ({
+      location: gl.getUniformLocation(program, name),
+      name,
+    })),
     timeUniform: gl.getUniformLocation(program, 'time'),
   };
   gl.uniform1i(state.previousFrameUniform, 0);
@@ -195,6 +208,7 @@ const bindTranslatedShaderProgram = (
   color,
   feedback,
   time,
+  scope,
   outputAlpha = 1,
 ) => {
   gl.useProgram(shaderProgram.program);
@@ -202,6 +216,9 @@ const bindTranslatedShaderProgram = (
   gl.uniform1f(shaderProgram.feedbackUniform, feedback);
   gl.uniform1f(shaderProgram.outputAlphaUniform, outputAlpha);
   gl.uniform1f(shaderProgram.timeUniform, time);
+  shaderProgram.scopeUniforms.forEach((uniform) => {
+    gl.uniform1f(uniform.location, Number(scope?.[uniform.name] ?? 0) || 0);
+  });
 };
 
 const createDynamicLineBuffer = (gl, program) => {
@@ -1042,6 +1059,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           [r, g, b],
           feedback,
           scope.time,
+          scope,
           1,
         );
         bindFullscreenTriangle(gl, translatedWarpProgram.program, fullscreenBuffer);
@@ -1245,6 +1263,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           [r, g, b],
           0,
           scope.time,
+          scope,
           outputAlpha,
         );
         bindFullscreenTriangle(gl, translatedCompProgram.program, fullscreenBuffer);

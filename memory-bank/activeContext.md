@@ -1,3 +1,14 @@
+## Update 2026-04-30 17:35:22Z
+
+- Current task: Native MilkDrop translated shaders have first q/audio uniform binding.
+- Last activity:
+  - translated warp/comp fragment shaders now declare q1-q64 plus bass/mid/treble audio uniforms
+  - native renderer binds those uniforms from the current frame scope before translated shader passes
+  - compatibility tests now accept supported shader expressions that reference q-register and audio variables
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue the next large MilkDrop phase, likely shader-side FFT texture/audio access or richer shader translation.
+
 ## Update 2026-04-30 17:31:18Z
 
 - Current task: Native MilkDrop renderer has q1-q64 frame-scope propagation.
