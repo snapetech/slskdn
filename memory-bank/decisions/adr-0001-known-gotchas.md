@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z218. Dark Theme Must Cover Nested Semantic UI Text And Duplicate Recovery Rails
+
+**The Bug**: Rooms rendered nested Semantic UI list headers/user cards with inherited black text on dark panels, and joined rooms were shown twice: once as recovery buttons and again as active tabs.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Rooms/Rooms.jsx`
+- `src/web/src/components/Rooms/Rooms.css`
+- `src/web/src/components/Shared/UserCard.css`
+
+**Wrong**:
+```jsx
+{joinedRooms.map((roomName) => (
+  <Button onClick={() => openRoomTab(roomName)}>{roomName}</Button>
+))}
+```
+
+**Correct**:
+```jsx
+<Tab panes={panes} renderActiveOnly={false} />
+```
+
+**Why This Keeps Happening**: Semantic UI nested list/card text and reusable user chips do not always inherit the page-level dark color. Recovery rails are useful for private chats, but rooms already hydrate joined rooms into tabs, so a second room rail duplicates the same navigation. Dark-theme audits need to include nested `.ui.list .header`, `.ui.list .description`, reusable username chips, and page-specific duplicate navigation surfaces.
+
 ### 0z217. Popup-Triggered Toggles Need Real Form Controls
 
 **The Bug**: An Import Staging `Checkbox` rendered inside a Semantic UI `Popup` trigger looked like a usable toggle, but the test exercised the accessible checkbox path and the state did not reliably change before file selection.
