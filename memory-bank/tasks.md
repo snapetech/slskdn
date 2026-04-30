@@ -11,10 +11,11 @@
 
 *No high priority tasks currently active
 
-- [ ] **T-938**: Native/Linux-friendly visualizer path.
- - Status: planned
- - Priority: P2
- - Notes: Future project to compare MilkDrop3, projectM, Butterchurn, and Wine/wrapper paths for an in-app or Linux-friendly visualizer without blocking the configured external launcher.
+- [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
+ - Status: active design
+ - Priority: P1
+ - Design: `docs/design/webgl-milkdrop3-port.md`
+ - Notes: Build a portable WebGL2-first visualizer engine inside slskdN with MilkDrop/MilkDrop3 preset compatibility, shared Web Audio input, `.milk2` double-preset support, q1-q64, FFT shader access, beat-driven preset changes, transitions, playlists/favorites, and an extensible renderer boundary. Keep the external MilkDrop3 launcher only as an interim bridge.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -1518,6 +1519,6 @@
   - Status: completed (2026-04-30)
   - Notes: Replaced browser audio JWT query strings with short-lived stream tickets, required tickets for listed-party radio, changed listening-party DHT records to explicit JSON bytes, failed closed on invalid pod DHT signatures, published only locally stored pod metadata to DHT, bounded stream root lookup to path IDs under allowed roots, reduced local library path exposure, and tightened ListenBrainz token clearing/error reporting.
 
-- [x] Prepare `2026042900-slskdn.203` stable release
+- [x] Prepare `2026042900-slskdn.204` stable release
   - Status: completed (2026-04-30)
-  - Notes: Promoted the current integrated player, visualizer, streaming, pod, security, docs, and external visualizer launcher release notes into the `.203` changelog section for the tag-only stable release workflow.
+  - Notes: Promoted the current integrated player, visualizer, streaming, pod, security, docs, and external visualizer launcher release notes into the `.204` changelog section for the tag-only stable release workflow. `.203` was a failed tag attempt blocked by optional Winget release-version metadata validation.

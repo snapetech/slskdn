@@ -1,3 +1,18 @@
+## Update 2026-04-30 04:08:24Z
+
+- Current task: Browser-native MilkDrop3-compatible visualizer engine design is started.
+- Last activity:
+  - inspected upstream MilkDrop3 source layout and license
+  - confirmed the source is BSD-3-Clause but tied to C++/Win32/Direct3D rather than directly portable to browsers
+  - added `docs/design/webgl-milkdrop3-port.md`
+  - promoted T-938 to a P1 active design task for a WebGL2-first in-app engine
+  - kept the external visualizer launcher positioned as an interim bridge only
+  - moved Butterchurn behind a visualizer engine adapter as the first Phase 0 implementation slice
+  - validated focused player tests, frontend lint, and diff whitespace
+- Next steps:
+  1. Start the parser/VM compatibility slice with `.milk` fixtures before adding MilkDrop3 `.milk2` features.
+  2. Add a headless screenshot/pixel-stat smoke test around the engine boundary.
+
 ## Update 2026-04-30 03:40:00Z
 
 - Current task: None. MilkDrop playback visualization is fixed and browser-verified locally.
@@ -1580,11 +1595,12 @@ dotnet test
 
 ## Update 2026-04-30 04:10:00Z
 
-- Current task: `2026042900-slskdn.203` release handoff is ready.
+- Current task: `2026042900-slskdn.204` release handoff is ready.
 - Last activity:
   - verified GitHub writes target `snapetech/slskdn`
   - promoted the release notes out of `Unreleased`
   - added release prep notes for the external visualizer launcher and player/streaming work
+  - made Winget release-version metadata validation opt-in because Winget is not part of this release
 - Next steps:
-  1. Monitor the `build-main-2026042900-slskdn.203` tag workflow after push.
+  1. Monitor the `build-main-2026042900-slskdn.204` tag workflow after push.
   2. Triage any release workflow failure before cutting another tag.

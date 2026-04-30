@@ -7318,6 +7318,15 @@ Code quality improvements were completed as part of Option A:
 - Browser-verified playback from two separate Vite dev servers (`localhost:3001` and `localhost:3002`): both loaded the same integrated stream endpoint, reached `readyState: 4`, and played the 53.88-second audio without media errors.
 - Added `docs/assets/readme-showcase/player-commons-smoke.png` to the README screenshot gallery.
 
+## 2026-04-30 04:08:24Z
+
+- Pivoted the visualizer direction from "external MilkDrop3 launcher as the destination" to a browser-native MilkDrop3-compatible engine inside slskdN.
+- Inspected upstream `milkdrop2077/MilkDrop3`: source is BSD-3-Clause under `code/LICENSE.txt`, but the app is C++/Win32/Direct3D, so a direct browser drop-in is not viable.
+- Added `docs/design/webgl-milkdrop3-port.md` covering the WebGL2-first architecture, engine boundary, parser/VM/shader/audio/render modules, phases for `.milk` and `.milk2`, and validation strategy.
+- Updated the active task list and player docs so the external launcher is explicitly an interim bridge while the portable in-app engine becomes the real target.
+- Added the first Phase 0 code slice by moving the current Butterchurn integration behind a player visualizer engine adapter. The future MilkDrop3-compatible engine can now plug into the player without rewriting the player chrome.
+- Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `npm run lint -- --quiet`, and `git diff --check` passed.
+
 ## 2026-04-30 01:47:00Z
 
 - Added a local browser mute control to the persistent Web UI player. Muting now toggles the device's `<audio>` element only, persists in local storage, and does not clear the stream URL or stop listen-along playback.
@@ -7393,4 +7402,5 @@ Code quality improvements were completed as part of Option A:
 - Prepared the dirty player/visualizer workspace for the next stable tag-only release.
 - Added the opt-in external visualizer launcher configuration/API to the release notes and example config, with command execution constrained to server-configured binaries and arguments.
 - Fixed the external visualizer launcher compile issue caused by the app `Options` type colliding with `Microsoft.Extensions.Options.Options`, documented the gotcha, and committed that documentation immediately as `8afea98a9`.
-- Promoted the current `Unreleased` changelog bullets into `2026042900-slskdn.203` so release note generation does not publish the rolling bucket.
+- Promoted the current `Unreleased` changelog bullets into `2026042900-slskdn.204` so release note generation does not publish the rolling bucket.
+- Retired the failed `.203` tag attempt after its release gate treated optional Winget release-version metadata as mandatory for a non-Winget release.
