@@ -1,7 +1,8 @@
 import {
   createMilkdropRenderer,
-  createShapeFillVertices,
   createShapeFillColors,
+  createShapeFillVertices,
+  createShapeTextureUvs,
   createRepeatedColors,
   createShapeVertices,
   createCustomWaveVertices,
@@ -20,6 +21,7 @@ import {
   getWaveColor,
   getWaveDrawMode,
   getWavePointSize,
+  isShapeTextured,
 } from './milkdropRenderer';
 import { parseMilkdropPreset } from './presetParser';
 
@@ -45,6 +47,7 @@ const createFakeGl = () => ({
   POINTS: 0x0000,
   SRC_ALPHA: 0x0302,
   TEXTURE0: 0x84c0,
+  TEXTURE1: 0x84c1,
   TEXTURE_2D: 0x0de1,
   TEXTURE_MAG_FILTER: 0x2800,
   TEXTURE_MIN_FILTER: 0x2801,
@@ -175,7 +178,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       expect.anything(),
     );
     expect(gl.bindFramebuffer).toHaveBeenCalledWith(gl.FRAMEBUFFER, null);
-    expect(gl.createTexture).toHaveBeenCalledTimes(2);
+    expect(gl.createTexture).toHaveBeenCalledTimes(3);
     expect(gl.createFramebuffer).toHaveBeenCalledTimes(2);
     expect(gl.drawArrays).toHaveBeenCalledTimes(7);
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.LINE_STRIP, 0, 3);
@@ -206,8 +209,8 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
 
     expect(gl.uniform1f).toHaveBeenNthCalledWith(1, expect.anything(), 0.25);
     expect(gl.deleteFramebuffer).toHaveBeenCalledTimes(2);
-    expect(gl.deleteTexture).toHaveBeenCalledTimes(2);
-    expect(gl.deleteProgram).toHaveBeenCalledTimes(3);
+    expect(gl.deleteTexture).toHaveBeenCalledTimes(3);
+    expect(gl.deleteProgram).toHaveBeenCalledTimes(4);
   });
 
   it('draws a per-pixel warp grid when preset warp equations are present', () => {
@@ -252,6 +255,71 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       source.includes('vec3 ret = vec3(vec3(uv.x, uv.y, sin(time)))'))).toBe(true);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
+  });
+
+  it('renders textured shapes through the procedural texture path', () => {
+    const gl = createFakeGl();
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        shape00_enabled=1
+        shape00_textured=1
+        shape00_sides=4
+        shape00_rad=0.2
+        shape00_r=0.5
+        shape00_g=0.75
+        shape00_b=1
+        shape00_a=0.6
+        shape00_tex_zoom=1.25
+        shape00_tex_ang=0.2
+      `).primary,
+    });
+
+    renderer.render();
+
+    expect(gl.activeTexture).toHaveBeenCalledWith(gl.TEXTURE1);
+    expect(gl.uniform3f).toHaveBeenCalledWith(expect.anything(), 0.5, 0.75, 1);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.6);
+    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLE_FAN, 0, 6);
+  });
+
+  it('uses named texture assets for textured shapes when available', () => {
+    const gl = createFakeGl();
+    const textureData = new Uint8Array([
+      255, 0, 0, 255,
+      0, 255, 0, 255,
+    ]);
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        shape00_enabled=1
+        shape00_texture=cover.png
+        shape00_sides=3
+        shape00_rad=0.2
+      `).primary,
+      textureAssets: {
+        'cover.png': {
+          data: textureData,
+          height: 1,
+          width: 2,
+        },
+      },
+    });
+
+    renderer.render();
+
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      2,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      textureData,
+    );
+    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLE_FAN, 0, 5);
   });
 
   it('uses additive blending for additive custom shapes', () => {
@@ -415,6 +483,31 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(vertices[2]).toBeCloseTo(vertices[10]);
     expect(vertices[3]).toBeCloseTo(vertices[11]);
     expect(createShapeFillVertices({ baseValues: { enabled: 0 } })).toHaveLength(0);
+  });
+
+  it('maps textured shape fill vertices into texture coordinates', () => {
+    const shape = {
+      baseValues: {
+        enabled: 1,
+        rad: 0.5,
+        sides: 4,
+        tex_ang: 0,
+        tex_zoom: 1,
+        textured: 1,
+        x: 0.5,
+        y: 0.5,
+      },
+    };
+    const uvs = Array.from(createShapeTextureUvs(shape));
+
+    expect(isShapeTextured(shape)).toBe(true);
+    expect(isShapeTextured({ baseValues: { texture: 'fixture' } })).toBe(true);
+    expect(isShapeTextured({ baseValues: {} })).toBe(false);
+    expect(uvs).toHaveLength(12);
+    expect(uvs[0]).toBe(0.5);
+    expect(uvs[1]).toBe(0.5);
+    expect(uvs[2]).toBeCloseTo(1);
+    expect(uvs[3]).toBeCloseTo(0.5);
   });
 
   it('evaluates shape init and frame equations without leaking global scope', () => {

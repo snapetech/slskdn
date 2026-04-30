@@ -41,6 +41,9 @@
  - Progress (2026-04-30): Added inline bitwise, shift, unary, and logical expression operator support for `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` in native MilkDrop equations.
  - Progress (2026-04-30): Added the first safe shader translation/execution subset for simple `warp_shader` and `comp_shader` `ret = ...` bodies, with unsupported HLSL/control-flow shaders still rejected during compatibility scanning.
  - Progress (2026-04-30): Added the first curated native preset fixture pack with golden parser summaries, compatibility expectations, and shader-backed browser smoke coverage.
+ - Progress (2026-04-30): Added the first procedural textured-shape render path for parsed `textured`, `texture`, `tex`, and `tex_name` shape references.
+ - Progress (2026-04-30): Added native import/library plumbing for small local image texture assets selected alongside `.milk`/`.milk2` presets, with named texture lookup and procedural fallback.
+ - Progress (2026-04-30): Added skipped texture-asset reporting for oversized, unreadable, or unsupported files selected during native preset import.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

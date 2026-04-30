@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createNativeMilkdropEngine } from './nativeMilkdropEngine';
+import { createMilkdropRenderer } from './milkdrop/milkdropRenderer';
 
 const renderer = {
   dispose: vi.fn(),
@@ -106,6 +107,38 @@ describe('createNativeMilkdropEngine', () => {
 
     expect(presetName).toBe('Imported fixture');
     expect(renderer.dispose).toHaveBeenCalled();
+  });
+
+  it('passes imported texture assets into the native renderer', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    createMilkdropRenderer.mockClear();
+
+    const textureAssets = {
+      'cover.png': {
+        dataUrl: 'data:image/png;base64,fixture',
+      },
+    };
+    engine.loadPresetText(`
+      name=Textured fixture
+      shape00_enabled=1
+      shape00_texture=cover.png
+    `, 'textured.milk', { textureAssets });
+
+    expect(createMilkdropRenderer).toHaveBeenCalledWith(expect.objectContaining({
+      textureAssets,
+    }));
   });
 
   it('inspects imported preset compatibility without replacing the renderer', async () => {

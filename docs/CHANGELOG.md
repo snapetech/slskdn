@@ -41,6 +41,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   library cleanup.
 - Added native MilkDrop shader-subset translation coverage for supported
   `warp_shader` and `comp_shader` return expressions.
+- Added native MilkDrop textured-shape rendering, multi-fixture browser smoke
+  coverage, and browser-local image texture asset imports with skipped-asset
+  reporting.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

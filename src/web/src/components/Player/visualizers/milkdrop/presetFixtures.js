@@ -1,6 +1,6 @@
 export const nativeMilkdropFixturePack = [
   {
-    description: 'Classic feedback, warp grid, vectors, shape, and spectrum dots.',
+    description: 'Classic feedback, warp grid, vectors, textured shape, and spectrum dots.',
     id: 'classic-primitives',
     supported: true,
     source: `
@@ -20,6 +20,7 @@ export const nativeMilkdropFixturePack = [
       mv_l=0.2
       mv_a=0.45
       shape00_enabled=1
+      shape00_textured=1
       shape00_sides=5
       shape00_rad=0.22
       shape00_x=0.5

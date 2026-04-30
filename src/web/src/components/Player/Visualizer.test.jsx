@@ -47,6 +47,7 @@ const createFileList = (fileOrFiles) => {
 
 describe('Visualizer', () => {
   beforeEach(() => {
+    vi.unstubAllGlobals();
     window.localStorage.clear();
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ({}));
     window.requestAnimationFrame = vi.fn(() => 1);
@@ -95,6 +96,7 @@ describe('Visualizer', () => {
     expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
       'name=Imported native preset\nwave_r=1',
       'imported.milk',
+      { textureAssets: {} },
     );
     expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
       'Imported native preset',
@@ -111,6 +113,7 @@ describe('Visualizer', () => {
       expect(nativeEngine.loadPresetText).toHaveBeenLastCalledWith(
         'name=Imported native preset\nwave_r=1',
         'imported.milk',
+        { textureAssets: {} },
       );
     });
 
@@ -174,8 +177,104 @@ describe('Visualizer', () => {
     expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
       'name=Second\nwave_r=0.5',
       'second.milk',
+      { textureAssets: {} },
     );
     expect(screen.getByText(/Imported 2; skipped 1: shader.milk/)).toBeInTheDocument();
+  });
+
+  it('stores selected image assets with imported native presets', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    vi.stubGlobal('FileReader', class {
+      readAsDataURL() {
+        this.result = 'data:image/png;base64,fixture';
+        this.onload();
+      }
+    });
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.resize).toHaveBeenCalled();
+    });
+
+    const input = document.querySelector('input[type="file"]');
+    const presetFile = new File(
+      ['name=Textured\nshape00_enabled=1\nshape00_texture=cover.png'],
+      'textured.milk',
+      { type: 'text/plain' },
+    );
+    const textureFile = new File(['fixture'], 'cover.png', { type: 'image/png' });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: createFileList([presetFile, textureFile]),
+    });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=Textured\nshape00_enabled=1\nshape00_texture=cover.png',
+        'textured.milk',
+        {
+          textureAssets: expect.objectContaining({
+            'cover.png': expect.objectContaining({
+              dataUrl: 'data:image/png;base64,fixture',
+            }),
+            cover: expect.objectContaining({
+              dataUrl: 'data:image/png;base64,fixture',
+            }),
+          }),
+        },
+      );
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
+      'cover.png',
+    );
+  });
+
+  it('reports skipped native texture assets during import', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.resize).toHaveBeenCalled();
+    });
+
+    const input = document.querySelector('input[type="file"]');
+    const presetFile = new File(['name=Textured\nshape00_texture=huge.png'], 'textured.milk', {
+      type: 'text/plain',
+    });
+    const textureFile = new File(['fixture'], 'huge.png', { type: 'image/png' });
+    Object.defineProperty(textureFile, 'size', {
+      configurable: true,
+      value: 1024 * 1024 + 1,
+    });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: createFileList([presetFile, textureFile]),
+    });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=Textured\nshape00_texture=huge.png',
+        'textured.milk',
+        { textureAssets: {} },
+      );
+    });
+    expect(screen.getByText(/Skipped 1 texture asset: huge.png/)).toBeInTheDocument();
   });
 
   it('removes only the selected native preset from the local library', async () => {
@@ -219,6 +318,7 @@ describe('Visualizer', () => {
       expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
         'name=First\nwave_r=1',
         'first.milk',
+        { textureAssets: undefined },
       );
     });
 

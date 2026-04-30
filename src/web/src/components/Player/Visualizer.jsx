@@ -9,6 +9,7 @@ const visualizerEngineStorageKey = 'slskdn.player.visualizerEngine';
 const nativePresetStorageKey = 'slskdn.player.nativeMilkdropPreset';
 const nativePresetLibraryStorageKey = 'slskdn.player.nativeMilkdropPresetLibrary';
 const nativePresetLibraryLimit = 20;
+const nativeTextureAssetMaxBytes = 1024 * 1024;
 
 const readStoredEngine = () => {
   if (typeof window === 'undefined') return 'butterchurn';
@@ -66,14 +67,96 @@ const upsertNativePresetLibraryEntry = (library, entry) => [
 const getNativePresetFileId = (file) =>
   [file.name, file.size, file.lastModified].filter((part) => part !== undefined).join(':');
 
-const getNativePresetImportMessage = ({ importedCount, skipped }) => {
-  if (skipped.length === 0) return null;
-  const skippedNames = skipped.slice(0, 3).map((preset) => preset.fileName).join(', ');
+const isNativePresetFile = (file) => /\.(milk2?|txt)$/i.test(file.name);
+
+const isNativeTextureAssetCandidateFile = (file) =>
+  /^image\//i.test(file.type) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+
+const getNativeTextureAssetSkip = (file) => {
+  if (isNativePresetFile(file)) return null;
+  if (!isNativeTextureAssetCandidateFile(file)) {
+    return {
+      fileName: file.name,
+      message: 'Unsupported file type.',
+    };
+  }
+  if (file.size > nativeTextureAssetMaxBytes) {
+    return {
+      fileName: file.name,
+      message: 'Texture asset is larger than 1 MB.',
+    };
+  }
+  return null;
+};
+
+const getTextureAssetKeys = (fileName) => {
+  const normalized = fileName.trim().toLowerCase();
+  const basename = normalized.replace(/^.*[\\/]/, '');
+  const stem = basename.replace(/\.[^.]+$/, '');
+  return Array.from(new Set([normalized, basename, stem].filter(Boolean)));
+};
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  if (typeof FileReader !== 'function') {
+    reject(new Error('Texture asset imports require FileReader support.'));
+    return;
+  }
+  const reader = new FileReader();
+  reader.onerror = () => reject(reader.error || new Error(`Failed to read ${file.name}.`));
+  reader.onload = () => resolve(reader.result);
+  reader.readAsDataURL(file);
+});
+
+const readNativeTextureAssets = async (files) => {
+  const textureAssets = {};
+  const skippedTextureAssets = [];
+  for (const file of files.filter((entry) => !isNativePresetFile(entry))) {
+    const skip = getNativeTextureAssetSkip(file);
+    if (skip) {
+      skippedTextureAssets.push(skip);
+      continue;
+    }
+    let dataUrl = null;
+    try {
+      dataUrl = await readFileAsDataUrl(file);
+    } catch (textureError) {
+      skippedTextureAssets.push({
+        fileName: file.name,
+        message: textureError?.message || 'Texture asset could not be read.',
+      });
+      continue;
+    }
+    getTextureAssetKeys(file.name).forEach((key) => {
+      textureAssets[key] = {
+        dataUrl,
+        fileName: file.name,
+      };
+    });
+  }
+  return { skippedTextureAssets, textureAssets };
+};
+
+const formatSkippedFileNames = (skipped) => {
+  const skippedNames = skipped.slice(0, 3).map((entry) => entry.fileName).join(', ');
   const remaining = skipped.length > 3 ? `, +${skipped.length - 3} more` : '';
-  const prefix = importedCount > 0
-    ? `Imported ${importedCount}; skipped ${skipped.length}`
-    : `Native preset import failed for ${skipped.length}`;
-  return `${prefix}: ${skippedNames}${remaining}.`;
+  return `${skippedNames}${remaining}`;
+};
+
+const getNativePresetImportMessage = ({ importedCount, skipped, skippedTextureAssets }) => {
+  const messages = [];
+  if (skipped.length > 0) {
+    const prefix = importedCount > 0
+      ? `Imported ${importedCount}; skipped ${skipped.length}`
+      : `Native preset import failed for ${skipped.length}`;
+    messages.push(`${prefix}: ${formatSkippedFileNames(skipped)}.`);
+  }
+  if (skippedTextureAssets.length > 0) {
+    const noun = skippedTextureAssets.length === 1 ? 'texture asset' : 'texture assets';
+    messages.push(
+      `Skipped ${skippedTextureAssets.length} ${noun}: ${formatSkippedFileNames(skippedTextureAssets)}.`,
+    );
+  }
+  return messages.length > 0 ? messages.join(' ') : null;
 };
 
 const supportsWebGl2 = () => {
@@ -185,6 +268,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           const importedPresetName = engine.loadPresetText(
             storedNativePreset.source,
             storedNativePreset.fileName,
+            { textureAssets: storedNativePreset.textureAssets },
           );
           setActiveNativePresetId(storedNativePreset.id || '');
           setPresetName(importedPresetName);
@@ -280,8 +364,9 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     setError(null);
     const imported = [];
     const skipped = [];
+    const { skippedTextureAssets, textureAssets } = await readNativeTextureAssets(files);
 
-    for (const file of files) {
+    for (const file of files.filter(isNativePresetFile)) {
       try {
         const source = await file.text();
         const importedPresetName = engineRef.current.inspectPresetText
@@ -291,6 +376,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           fileName: file.name,
           id: getNativePresetFileId(file),
           source,
+          textureAssets,
           title: importedPresetName,
         });
       } catch (presetError) {
@@ -308,6 +394,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       const activePresetName = engineRef.current.loadPresetText(
         activePreset.source,
         activePreset.fileName,
+        { textureAssets: activePreset.textureAssets },
       );
       activePreset.title = activePresetName;
       window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(activePreset));
@@ -327,6 +414,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     const importMessage = getNativePresetImportMessage({
       importedCount: imported.length,
       skipped,
+      skippedTextureAssets,
     });
     if (importMessage) {
       setError(importMessage);
@@ -339,7 +427,11 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
     try {
       setError(null);
-      const loadedPresetName = engineRef.current.loadPresetText(preset.source, preset.fileName);
+      const loadedPresetName = engineRef.current.loadPresetText(
+        preset.source,
+        preset.fileName,
+        { textureAssets: preset.textureAssets },
+      );
       window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(preset));
       setActiveNativePresetId(preset.id);
       setPresetName(loadedPresetName);
@@ -408,7 +500,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           onClick={(event) => event.stopPropagation()}
         >
           <input
-            accept=".milk,.milk2,text/plain"
+            accept=".milk,.milk2,text/plain,image/png,image/jpeg,image/webp,image/gif"
             hidden
             multiple
             onChange={importNativePreset}

@@ -168,11 +168,15 @@ export const createNativeMilkdropEngine = async ({
       frameReader.disconnect();
       renderer.dispose();
     },
-    loadPresetText: (source, fileName = '') => {
+    loadPresetText: (source, fileName = '', options = {}) => {
       const importedPreset = parseCompatiblePresetText(source, fileName);
       renderer.dispose();
       parsedPreset = importedPreset;
-      renderer = createMilkdropRenderer({ canvas, preset: parsedPreset });
+      renderer = createMilkdropRenderer({
+        canvas,
+        preset: parsedPreset,
+        textureAssets: options.textureAssets,
+      });
       return getImportedPresetTitle(parsedPreset, fileName);
     },
     inspectPresetText: (source, fileName = '') => {

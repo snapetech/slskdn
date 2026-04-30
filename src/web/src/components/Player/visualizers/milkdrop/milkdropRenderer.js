@@ -69,6 +69,27 @@ void main() {
   outColor = color;
 }`;
 
+const texturedShapeVertexShaderSource = `#version 300 es
+in vec2 position;
+in vec2 sourceUv;
+out vec2 uv;
+void main() {
+  uv = sourceUv;
+  gl_Position = vec4(position, 0.0, 1.0);
+}`;
+
+const texturedShapeFragmentShaderSource = `#version 300 es
+precision highp float;
+uniform vec3 tint;
+uniform float alpha;
+uniform sampler2D shapeTexture;
+in vec2 uv;
+out vec4 outColor;
+void main() {
+  vec4 texel = texture(shapeTexture, fract(uv));
+  outColor = vec4(texel.rgb * tint, texel.a * alpha);
+}`;
+
 const defaultAudioState = {
   bass: 1,
   bass_att: 1,
@@ -175,6 +196,8 @@ const createDynamicWarpGridBuffer = (gl, program) => {
   };
 };
 
+const createDynamicTexturedShapeBuffer = (gl, program) => createDynamicWarpGridBuffer(gl, program);
+
 const bindFullscreenTriangle = (gl, program, buffer) => {
   const position = gl.getAttribLocation(program, 'position');
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -198,6 +221,95 @@ const bindWarpGridBuffers = (gl, warpGridBuffers) => {
   gl.bindBuffer(gl.ARRAY_BUFFER, warpGridBuffers.sourceUvBuffer);
   gl.enableVertexAttribArray(warpGridBuffers.sourceUvLocation);
   gl.vertexAttribPointer(warpGridBuffers.sourceUvLocation, 2, gl.FLOAT, false, 0, 0);
+};
+
+const bindTexturedShapeBuffers = (gl, texturedShapeBuffers) =>
+  bindWarpGridBuffers(gl, texturedShapeBuffers);
+
+const createProceduralShapeTexture = (gl) => {
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    2,
+    2,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([
+      255, 255, 255, 255,
+      96, 199, 217, 255,
+      139, 212, 80, 255,
+      242, 184, 75, 255,
+    ]),
+  );
+  return texture;
+};
+
+const normalizeTextureName = (value) => String(value || '').trim().toLowerCase();
+
+const getTextureAssetCandidates = (shape = {}) => [
+  shape.baseValues?.texture,
+  shape.baseValues?.tex,
+  shape.baseValues?.tex_name,
+].map(normalizeTextureName).filter(Boolean);
+
+const createTextureFromRawAsset = (gl, asset) => {
+  const width = Math.max(1, Number(asset.width) || 1);
+  const height = Math.max(1, Number(asset.height) || 1);
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    width,
+    height,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    asset.data,
+  );
+  return texture;
+};
+
+const createTextureFromDataUrlAsset = (gl, asset) => {
+  const texture = createProceduralShapeTexture(gl);
+  if (typeof Image === 'undefined' || !asset.dataUrl) return texture;
+  const image = new Image();
+  image.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  };
+  image.src = asset.dataUrl;
+  return texture;
+};
+
+const createNamedShapeTextures = (gl, textureAssets = {}) => {
+  const textures = {};
+  Object.entries(textureAssets).forEach(([rawName, asset]) => {
+    const name = normalizeTextureName(rawName);
+    if (!name || !asset) return;
+    textures[name] = asset.data
+      ? createTextureFromRawAsset(gl, asset)
+      : createTextureFromDataUrlAsset(gl, asset);
+  });
+  return textures;
+};
+
+const getShapeTexture = (shape, namedTextures, fallbackTexture) => {
+  const name = getTextureAssetCandidates(shape).find((candidate) => namedTextures[candidate]);
+  return name ? namedTextures[name] : fallbackTexture;
 };
 
 const normalizeSpectrumSample = (value) => {
@@ -428,6 +540,34 @@ export const createShapeFillVertices = (shape = {}) => {
   return vertices;
 };
 
+export const isShapeTextured = (shape = {}) =>
+  Number(shape.baseValues?.textured ?? 0) > 0
+  || Boolean(shape.baseValues?.texture || shape.baseValues?.tex_name || shape.baseValues?.tex);
+
+export const createShapeTextureUvs = (shape = {}) => {
+  const vertexCount = createShapeFillVertices(shape).length / 2;
+  if (!vertexCount) return new Float32Array();
+  const zoom = Math.max(0.001, Number(shape.baseValues?.tex_zoom ?? 1) || 1);
+  const angle = Number(shape.baseValues?.tex_ang ?? 0);
+  const sine = Math.sin(angle);
+  const cosine = Math.cos(angle);
+  const uvs = new Float32Array(vertexCount * 2);
+  uvs[0] = 0.5;
+  uvs[1] = 0.5;
+
+  for (let index = 1; index < vertexCount; index += 1) {
+    const progress = (index - 1) / Math.max(1, vertexCount - 2);
+    const theta = progress * Math.PI * 2;
+    const radius = 0.5 / zoom;
+    const x = Math.cos(theta) * radius;
+    const y = Math.sin(theta) * radius;
+    uvs[index * 2] = 0.5 + (cosine * x) - (sine * y);
+    uvs[index * 2 + 1] = 0.5 + (sine * x) + (cosine * y);
+  }
+
+  return uvs;
+};
+
 export const getShapeColor = (shape = {}, fallbackColor = [0.7, 0.7, 0.7]) => [
   clamp01(shape.baseValues?.r ?? fallbackColor[0]),
   clamp01(shape.baseValues?.g ?? fallbackColor[1]),
@@ -492,8 +632,11 @@ const shapeValueKeys = new Set([
   'rad',
   'radius',
   'sides',
+  'tex',
   'tex_ang',
+  'tex_name',
   'tex_zoom',
+  'texture',
   'textured',
   'thickoutline',
   'x',
@@ -615,7 +758,7 @@ export const getWavePointSize = (wave = {}) => {
   return Number(wave.baseValues?.thick ?? 0) > 0 ? 4 : 2;
 };
 
-export const createMilkdropRenderer = ({ canvas, preset }) => {
+export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) => {
   const gl = canvas.getContext('webgl2', {
     alpha: false,
     antialias: false,
@@ -642,6 +785,19 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
   gl.useProgram(lineProgram);
   const lineBuffers = createDynamicLineBuffer(gl, lineProgram);
   const pointSizeUniform = gl.getUniformLocation(lineProgram, 'pointSize');
+  const texturedShapeProgram = createProgram(
+    gl,
+    texturedShapeVertexShaderSource,
+    texturedShapeFragmentShaderSource,
+  );
+  gl.useProgram(texturedShapeProgram);
+  const texturedShapeBuffers = createDynamicTexturedShapeBuffer(gl, texturedShapeProgram);
+  const texturedShapeAlphaUniform = gl.getUniformLocation(texturedShapeProgram, 'alpha');
+  const texturedShapeSamplerUniform = gl.getUniformLocation(texturedShapeProgram, 'shapeTexture');
+  const texturedShapeTintUniform = gl.getUniformLocation(texturedShapeProgram, 'tint');
+  const proceduralShapeTexture = createProceduralShapeTexture(gl);
+  const namedShapeTextures = createNamedShapeTextures(gl, textureAssets);
+  gl.uniform1i(texturedShapeSamplerUniform, 1);
   gl.useProgram(program);
   const colorUniform = gl.getUniformLocation(program, 'color');
   const feedbackUniform = gl.getUniformLocation(program, 'feedback');
@@ -680,6 +836,9 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
       if (translatedCompProgram) gl.deleteProgram(translatedCompProgram.program);
       gl.deleteProgram(warpGridProgram);
       gl.deleteProgram(lineProgram);
+      gl.deleteProgram(texturedShapeProgram);
+      gl.deleteTexture(proceduralShapeTexture);
+      Object.values(namedShapeTextures).forEach((texture) => gl.deleteTexture(texture));
     },
     render: (frame = {}) => {
       const frequencyData = frame.spectrum || frame.frequencies || frame.frequency || frame.fft || [];
@@ -837,12 +996,34 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
         bindLineBuffers(gl, lineBuffers);
         gl.uniform1f(pointSizeUniform, 1);
         if (shapeFillVertices.length > 0) {
-          const shapeFillColors = createShapeFillColors(evaluatedShape, [r, g, b]);
-          gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.positionBuffer);
-          gl.bufferData(gl.ARRAY_BUFFER, shapeFillVertices, gl.DYNAMIC_DRAW);
-          gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.colorBuffer);
-          gl.bufferData(gl.ARRAY_BUFFER, shapeFillColors, gl.DYNAMIC_DRAW);
-          gl.drawArrays(gl.TRIANGLE_FAN, 0, shapeFillVertices.length / 2);
+          if (isShapeTextured(evaluatedShape)) {
+            const fillColor = getShapeFillColor(evaluatedShape, [r, g, b]);
+            const textureUvs = createShapeTextureUvs(evaluatedShape);
+            gl.activeTexture(gl.TEXTURE1 ?? gl.TEXTURE0);
+            gl.bindTexture(
+              gl.TEXTURE_2D,
+              getShapeTexture(evaluatedShape, namedShapeTextures, proceduralShapeTexture),
+            );
+            gl.useProgram(texturedShapeProgram);
+            bindTexturedShapeBuffers(gl, texturedShapeBuffers);
+            gl.uniform3f(texturedShapeTintUniform, fillColor[0], fillColor[1], fillColor[2]);
+            gl.uniform1f(texturedShapeAlphaUniform, fillColor[3]);
+            gl.bindBuffer(gl.ARRAY_BUFFER, texturedShapeBuffers.positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, shapeFillVertices, gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, texturedShapeBuffers.sourceUvBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, textureUvs, gl.DYNAMIC_DRAW);
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, shapeFillVertices.length / 2);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.useProgram(lineProgram);
+            bindLineBuffers(gl, lineBuffers);
+          } else {
+            const shapeFillColors = createShapeFillColors(evaluatedShape, [r, g, b]);
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, shapeFillVertices, gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, shapeFillColors, gl.DYNAMIC_DRAW);
+            gl.drawArrays(gl.TRIANGLE_FAN, 0, shapeFillVertices.length / 2);
+          }
         }
         if (shapeVertices.length > 0) {
           const borderColor = getShapeBorderColor(evaluatedShape, [r, g, b]);

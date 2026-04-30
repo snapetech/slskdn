@@ -1,3 +1,33 @@
+## 2026-04-30 14:38Z - Report skipped native MilkDrop texture assets
+
+- Native preset import now reports oversized, unreadable, or unsupported texture/image files selected alongside `.milk` / `.milk2` presets.
+- The browser-local texture asset path remains capped at 1 MB per file while preserving the named texture lookup and procedural checker fallback.
+- Added Visualizer coverage for skipped texture-asset reporting during import.
+- Validation: focused native/player tests passed with `56/56` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 14:31Z - Added native MilkDrop local texture asset imports
+
+- Native preset import now separates `.milk` / `.milk2` preset files from image files selected in the same batch.
+- Small image files are stored with imported preset library entries as data-URL texture assets keyed by filename, basename, and stem.
+- The native engine passes imported texture assets into the renderer, and the renderer resolves parsed shape texture names against those named assets before falling back to the procedural checker.
+- Added component, native engine, and renderer coverage for texture asset import, persistence, and renderer plumbing.
+- Validation: focused native/player tests passed with `55/55` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 14:12Z - Expanded native MilkDrop browser smoke fixtures
+
+- Browser smoke now renders both the textured `classic-primitives` fixture and the translated-shader `shader-subset` fixture.
+- Smoke reports lit-pixel and channel-total statistics per fixture and fails if either fixture renders blank.
+- This gives Chromium-level pixel coverage to both the procedural textured-shape path and the translated shader path.
+- Validation: multi-fixture native browser smoke passed; focused native/player tests passed with `52/52` tests; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 14:08Z - Added native MilkDrop procedural textured shapes
+
+- Added the first WebGL2 textured-shape shader and dynamic texture-coordinate buffer path.
+- Parsed shape references through `textured`, `texture`, `tex`, or `tex_name` now render with a generated checker texture, proving the texture pipeline without bundling external preset assets.
+- Added renderer coverage for textured shape detection, UV mapping, texture unit binding, tint, alpha, and triangle-fan draw calls.
+- Updated the curated classic fixture to include a textured shape.
+- Validation: focused native/player tests passed with `52/52` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 05:45Z - Added native MilkDrop fixture pack coverage
 
 - Added a curated `nativeMilkdropFixturePack` covering classic primitives, supported shader subset rendering, a simple `.milk2` double-preset parse case, and an unsupported shader-control-flow case.

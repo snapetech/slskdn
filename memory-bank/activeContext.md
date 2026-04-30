@@ -1,3 +1,55 @@
+## Update 2026-04-30 14:38:26Z
+
+- Current task: Native MilkDrop imports now report skipped texture assets.
+- Last activity:
+  - native preset import now reports oversized, unreadable, or unsupported selected texture files in the visualizer overlay
+  - texture assets remain capped at 1 MB and still persist only with imported browser-local preset entries
+  - added component coverage for skipped texture-asset reporting
+  - validated focused native/player tests, multi-fixture native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Continue expanding real-world preset fixture coverage for imported texture packs.
+  2. Add richer texture lookup rules if real preset packs expose naming/layout gaps.
+
+## Update 2026-04-30 14:31:46Z
+
+- Current task: Native MilkDrop imports can carry local texture assets.
+- Last activity:
+  - native preset import now separates `.milk` / `.milk2` preset files from image files selected in the same batch
+  - small image files are stored as data-URL texture assets keyed by filename, basename, and stem
+  - imported preset library entries persist their texture asset maps and pass them back into the native engine on reload
+  - renderer resolves parsed shape texture names against named texture assets before falling back to the procedural checker
+  - added component, native engine, and renderer coverage for texture asset import and renderer plumbing
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Add user-facing feedback for skipped oversized/unsupported image assets if needed.
+  2. Continue expanding real-world preset fixture coverage for imported texture packs.
+
+## Update 2026-04-30 14:12:13Z
+
+- Current task: Native MilkDrop browser smoke now covers multiple curated fixtures.
+- Last activity:
+  - native browser smoke renders both `classic-primitives` and `shader-subset`
+  - smoke reports per-fixture lit-pixel and channel-total stats
+  - smoke fails if either fixture renders blank, covering textured-shape and shader paths in Chromium
+  - validated focused native/player tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue replacing the procedural texture placeholder with explicit user/preset asset loading once asset lookup rules are defined.
+  2. Add more real-world fixture cases as shader and texture support expands.
+
+## Update 2026-04-30 14:08:41Z
+
+- Current task: Native MilkDrop has first procedural textured-shape rendering.
+- Last activity:
+  - added a WebGL2 textured-shape shader and dynamic UV buffer path
+  - generated a small procedural checker texture for parsed shape texture references instead of loading external assets
+  - textured shapes now render when `textured`, `texture`, `tex`, or `tex_name` shape fields are present
+  - added renderer tests for textured shape detection, UV mapping, texture binding, tint, alpha, and draw calls
+  - updated the curated classic fixture to include a textured shape
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Replace the procedural texture placeholder with explicit user/preset asset loading once asset lookup rules are defined.
+  2. Expand smoke coverage to include the textured-shape fixture once browser pixel thresholds are stable for that pass.
+
 ## Update 2026-04-30 05:45:24Z
 
 - Current task: Native MilkDrop has a first curated preset fixture pack.
