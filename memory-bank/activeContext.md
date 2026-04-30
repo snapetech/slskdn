@@ -1,3 +1,16 @@
+## Update 2026-04-30 18:36:00Z
+
+- Current task: None. Semantic UI cleanup pass is implemented locally.
+- Last activity:
+  - added shared and player-local TooltipButton behavior for consistent Semantic UI button tooltips and labels
+  - switched header links to active-aware navigation styling
+  - added responsive table overflow handling for Semantic UI tables
+  - made every Semantic UI tab non-remounting and controlled, including nested Pods/VPN tabs
+  - validated `npm run lint`, `npm run build`, and `git diff --check`
+- Next steps:
+  1. Browser-check representative tabs and action buttons against a live dark-mode instance.
+  2. Commit the code/test/memory-bank changes with the surrounding dirty workspace when ready.
+
 ## Update 2026-04-30 18:18:59Z
 
 - Current task: Native MilkDrop shader translator unwraps safe shader_body blocks.

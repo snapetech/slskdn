@@ -90,6 +90,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   binding up to four preset texture samplers with procedural fallback.
 - Added first safe translated native MilkDrop shader conditional support for
   simple `if (...) ret = ...; else ret = ...;` bodies.
+- Added safe translated native MilkDrop shader temp reassignment support for
+  declared local variables.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

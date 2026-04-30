@@ -9,6 +9,7 @@ const unsupportedPatterns = [
 
 const allowedExpressionPattern = /^[A-Za-z0-9_.,+\-*/%<>=!&|^~?:()\s]+$/;
 const declarationPattern = /^(float|float2|float3|float4|vec2|vec3|vec4)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/i;
+const assignmentPattern = /^([A-Za-z_][A-Za-z0-9_]*)\s*(=|\+=|-=|\*=|\/=)\s*(.+)$/i;
 const shaderTextureLimit = 4;
 const shaderTextureCallPattern = /\b(?:tex2D|tex)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,/gi;
 const shaderQRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
@@ -102,22 +103,35 @@ const parseShaderProgram = (source) => {
     .map((statement) => statement.trim())
     .filter(Boolean);
   const declarations = [];
+  const mutableVariables = new Set();
   let expression = '';
 
   for (const statement of statements) {
     const retMatch = /^ret\s*=\s*(.+)$/i.exec(statement);
     if (retMatch) {
+      if (expression) return null;
       expression = normalizeShaderExpression(retMatch[1].trim());
       continue;
     }
+
+    if (expression) return null;
 
     const declarationMatch = declarationPattern.exec(statement);
     if (declarationMatch) {
       const declarationExpression = normalizeShaderExpression(declarationMatch[3].trim());
       if (!isSafeShaderExpression(declarationExpression)) return null;
+      mutableVariables.add(declarationMatch[2]);
       declarations.push(
         `${normalizeShaderType(declarationMatch[1])} ${declarationMatch[2]} = ${declarationExpression};`,
       );
+      continue;
+    }
+
+    const assignmentMatch = assignmentPattern.exec(statement);
+    if (assignmentMatch && mutableVariables.has(assignmentMatch[1])) {
+      const assignmentExpression = normalizeShaderExpression(assignmentMatch[3].trim());
+      if (!isSafeShaderExpression(assignmentExpression)) return null;
+      declarations.push(`${assignmentMatch[1]} ${assignmentMatch[2]} ${assignmentExpression};`);
       continue;
     }
 

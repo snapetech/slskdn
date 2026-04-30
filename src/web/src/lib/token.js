@@ -1,11 +1,18 @@
 import { tokenKey, tokenPassthroughValue } from '../config';
+import {
+  getLocalStorageItem,
+  getSessionStorageItem,
+  removeLocalStorageItem,
+  removeSessionStorageItem,
+  setStorageItem,
+} from './storage';
 
 export const getToken = () =>
-  sessionStorage.getItem(tokenKey) || localStorage.getItem(tokenKey);
-export const setToken = (storage, token) => storage.setItem(tokenKey, token);
+  getSessionStorageItem(tokenKey) || getLocalStorageItem(tokenKey);
+export const setToken = (storage, token) => setStorageItem(storage, tokenKey, token);
 export const clearToken = () => {
-  localStorage.removeItem(tokenKey);
-  sessionStorage.removeItem(tokenKey);
+  removeLocalStorageItem(tokenKey);
+  removeSessionStorageItem(tokenKey);
 };
 
 export const isPassthroughEnabled = () => getToken() === tokenPassthroughValue;

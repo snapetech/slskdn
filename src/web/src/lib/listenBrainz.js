@@ -1,20 +1,18 @@
+import { getLocalStorageItem, removeLocalStorageItem, setLocalStorageItem } from './storage';
+
 const tokenStorageKey = 'slskdn.listenbrainz.token';
 
-export const getListenBrainzToken = () => {
-  if (typeof window === 'undefined') return '';
-  return window.localStorage.getItem(tokenStorageKey) || '';
-};
+export const getListenBrainzToken = () =>
+  getLocalStorageItem(tokenStorageKey, '');
 
 export const setListenBrainzToken = (token) => {
-  if (typeof window === 'undefined') return;
-
   const normalized = token.trim();
   if (!normalized) {
-    window.localStorage.removeItem(tokenStorageKey);
+    removeLocalStorageItem(tokenStorageKey);
     return;
   }
 
-  window.localStorage.setItem(tokenStorageKey, normalized);
+  setLocalStorageItem(tokenStorageKey, normalized);
 };
 
 export const submitListen = async (listenType, track) => {

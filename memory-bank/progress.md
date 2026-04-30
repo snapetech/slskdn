@@ -1,3 +1,12 @@
+## 2026-04-30 18:36Z - Completed Semantic UI cleanup pass
+
+- Added a shared `TooltipButton` wrapper and applied it to high-use Semantic UI action surfaces so icon/text buttons have consistent tooltip and accessible-label behavior.
+- Added a local Media Core button wrapper to preserve existing player JSX while giving its many transport/config buttons inferred tooltips and ARIA labels.
+- Changed header routing links to active-aware `NavLink` items and added active navigation styling, so the current section is visible without relying on page reload cues.
+- Added app-wide responsive overflow handling for Semantic UI tables inside segments, modals, and tab panes.
+- Made every Semantic UI `Tab` under `src/web/src/components` both non-remounting and controlled, including nested Pods/VPN configuration tabs.
+- Validation: `npm run lint`, `npm run build`, and `git diff --check` passed.
+
 ## 2026-04-30 18:29Z - Added native MilkDrop simple shader conditionals
 
 - Shader translation now rewrites safe ret-only `if (...) ret = ...; else ret = ...;` bodies into GLSL ternary expressions.

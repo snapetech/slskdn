@@ -141,8 +141,31 @@ describe('MilkDrop shader translator', () => {
     expect(translateMilkdropShaderExpression('for (;;) { ret = vec3(1.0); }')).toBe('');
     expect(translateMilkdropShaderExpression('ret = unknown[index];')).toBe('');
     expect(translateMilkdropShaderExpression('float3 tint; ret = tint;')).toBe('');
-    expect(translateMilkdropShaderExpression('float3 tint = vec3(1.0); tint = tint * 0.5; ret = tint;')).toBe('');
     expect(translateMilkdropShaderExpression('if (x > y) { float3 tint = vec3(1.0); ret = tint; } else { ret = color; }')).toBe('');
     expect(analyzeMilkdropShaderSupport('if (uv.x > 0.5) ret = vec3(1.0);').supported).toBe(false);
+  });
+
+  it('accepts safe reassignment of declared shader temps before ret', () => {
+    const shader = createTranslatedMilkdropFragmentShader(`
+      float3 tint = vec3(1.0);
+      tint *= tex2D(sampler_noise, uv).rgb;
+      tint += vec3(get_fft(0.25));
+      ret = tint;
+    `);
+
+    expect(shader).toContain('vec3 tint = vec3(1.0);');
+    expect(shader).toContain('tint *= texture(shaderTexture0, uv).rgb;');
+    expect(shader).toContain('tint += vec3(get_fft(0.25));');
+    expect(shader).toContain('vec3 ret = vec3(tint);');
+    expect(analyzeMilkdropShaderSupport(
+      'float v = x; v += y; ret = vec3(v);',
+    ).supported).toBe(true);
+  });
+
+  it('rejects shader assignment to undeclared temps and statements after ret', () => {
+    expect(translateMilkdropShaderExpression('tint = vec3(1.0); ret = tint;')).toBe('');
+    expect(translateMilkdropShaderExpression('float3 tint = vec3(1.0); ret = tint; tint *= 0.5;'))
+      .toBe('');
+    expect(translateMilkdropShaderExpression('ret = vec3(1.0); ret = vec3(0.0);')).toBe('');
   });
 });
