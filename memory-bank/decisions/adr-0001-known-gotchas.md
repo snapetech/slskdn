@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z179. Analyzer Bars Should Use Log Frequency Buckets
+
+**The Bug**: The Web UI player analyzer sampled FFT bins linearly and drew the oscilloscope directly from byte values. Bars overrepresented high frequencies while low/mid content looked compressed, and quiet scope signals appeared squashed around the center line.
+
+**Files Affected**:
+- `src/web/src/components/Player/SpectrumAnalyzer.jsx`
+- `src/web/src/components/Player/PlayerBar.jsx`
+
+**Wrong**:
+```js
+const value = data[Math.floor((index / 64) * data.length)];
+const y = (value / 255) * height;
+```
+
+**Correct**:
+```js
+const bars = getFrequencyBars(data, barCount);
+const points = getScopePoints(data, width, height);
+```
+
+**Why This Keeps Happening**: FFT bin arrays are linear in frequency, but music analyzer displays need perceptual/log-style buckets so low and mid frequencies remain visible. Time-domain scope bytes also need centering around `128` and bounded gain before mapping to canvas coordinates.
+
 ### 0z178. Versioned Controllers Must Bind The URL Version Segment
 
 **The Bug**: PodCore controllers used literal routes like `api/v0/podcore/dht`. ASP.NET API versioning still inspected those actions and returned `ApiVersionUnspecified` or `UnsupportedApiVersion` for live `/api/v0/podcore/...` requests, even after adding `[ApiVersion("0")]`.
