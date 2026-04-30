@@ -58,6 +58,8 @@ Your config at `/etc/slskd/slskd.yml` and data at `/var/lib/slskd/` are preserve
 
 AUR packages keep the drop-in launcher path at `/usr/lib/slskd/slskd`, but the bundled release payload now lives under `/usr/lib/slskd/current/` (backed by a versioned `releases/` directory). That keeps the compatibility path stable while avoiding pacman upgrade collisions with stale root-level payload files from older/manual installs.
 
+Package upgrades restart `slskd.service` only when it is already running. Fresh installs still leave the service stopped until you review the config and run `systemctl enable --now slskd`.
+
 ## Fresh Installation
 
 ```bash

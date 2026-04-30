@@ -1,3 +1,10 @@
+## 2026-04-30 00:33Z - Fixed AUR upgrade service refresh
+
+- Confirmed AUR only ran `systemd-sysusers` and `systemctl daemon-reload` on install/upgrade, while RPM already has a systemd restart macro and Debian likely gets debhelper-generated service handling.
+- Changed AUR `post_upgrade()` to call `systemctl try-restart slskd.service` after the existing setup work, so running daemons move to the upgraded payload without starting stopped services.
+- Updated the AUR README, changelog, and task log to document the install-vs-upgrade behavior.
+- Documented the service-refresh gotcha in ADR-0001 and committed that documentation immediately as `f614a08a4`.
+
 ## 2026-04-29 23:58Z - Fixed Web UI chrome alignment
 
 - Split the header into explicit primary navigation and right-side utility rails so route actions and utility actions no longer read as one unsorted stream.

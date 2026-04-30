@@ -1,3 +1,15 @@
+## Update 2026-04-30 00:33:57Z
+
+- Current task: None. AUR upgrade service refresh is implemented locally.
+- Last activity:
+  - confirmed AUR did not restart `slskd.service` on package upgrade
+  - confirmed RPM already restarts active services through its systemd macro
+  - changed AUR `post_upgrade()` to `try-restart` the service only when already running
+  - documented the behavior in the AUR README, changelog, task log, progress log, and gotchas ADR
+  - validated the AUR install hook syntax, diff whitespace, and repository lint
+- Next steps:
+  1. Commit and push the package-hook fix if requested.
+
 ## Update 2026-04-30 00:21:00Z
 
 - Current task: Prepare replacement stable release `2026042900-slskdn.202`.

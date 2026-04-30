@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Restart already-running `slskd.service` after AUR upgrades.
+ - Status: completed (2026-04-30)
+ - Priority: P1
+ - Notes: AUR `post_upgrade()` now runs `systemctl try-restart slskd.service` after user/systemd reload setup, so active daemons move to the upgraded payload without auto-starting fresh or stopped installs. AUR README documents the install-vs-upgrade behavior.
+
 - [x] **ux**: Fix Web UI header and footer chrome alignment.
  - Status: completed (2026-04-29)
  - Priority: P1

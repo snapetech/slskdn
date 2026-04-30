@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed AUR upgrade hooks so an already-running `slskd.service` is restarted
+  after package upgrades, while fresh installs and stopped services remain
+  untouched until the operator starts them.
+
 ## [2026042900-slskdn.202] — 2026-04-30
 
 - Reworked the fixed Web UI header and footer chrome so primary navigation,
