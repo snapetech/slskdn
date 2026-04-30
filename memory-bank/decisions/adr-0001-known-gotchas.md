@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z187. Player Tests Must Query Async Stream Sources Inside Waits
+
+**The Bug**: The Web UI player test captured `audio.querySelector('source')` before the async stream-ticket request completed. The DOM later inserted the `<source>`, but the assertion kept reading the stale `null` reference and failed even though the rendered DOM was correct.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.test.jsx`
+
+**Wrong**:
+```js
+const source = audio.querySelector('source');
+await waitFor(() =>
+  expect(source.getAttribute('src')).toContain('/api/v0/streams/...'),
+);
+```
+
+**Correct**:
+```js
+await waitFor(() =>
+  expect(audio.querySelector('source')?.getAttribute('src')).toContain('/api/v0/streams/...'),
+);
+```
+
+**Why This Keeps Happening**: The player source is no longer synchronous; ticketed playback resolves through an async API call before rendering the media source. Tests must re-query DOM nodes inside `waitFor` when the node itself is created asynchronously.
+
 ### 0z185. Do Not Put Full App JWTs In Browser Media URLs
 
 **The Bug**: Browser `<audio>` playback was fixed by appending the normal session JWT as `?access_token=` on `/api/v0/streams/{contentId}`. That made media playback work, but exposed the full app bearer token through URL history, logs, screenshots, browser extensions, and diagnostics.
