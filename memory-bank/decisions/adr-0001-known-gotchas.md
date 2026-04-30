@@ -58,17 +58,20 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 **Files Affected**:
 - `src/web/src/lib/discoveryShelf.js`
+- `src/web/src/components/Player/PlayerBar.jsx`
 
 **Wrong**:
 ```javascript
 if (rating === 3) return 'keep-reviewing';
 return 'unrated-expiry-watch';
+summary['unrated-expiry-watch'];
 ```
 
 **Correct**:
 ```javascript
 if (rating === 3) return 'keep-reviewing';
 return 'expiry-watch';
+summary['expiry-watch'];
 ```
 
 **Why This Keeps Happening**: Browser-local helpers often use string unions without a central enum. When adding reducers or summaries, write a focused test that stores each action through the public writer and verifies the summary bucket that the UI will read.

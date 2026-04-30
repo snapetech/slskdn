@@ -1,5 +1,13 @@
 import './Player.css';
 import * as collectionsAPI from '../../lib/collections';
+import {
+  clearDiscoveryShelf,
+  getDiscoveryShelf,
+  getDiscoveryShelfActionLabel,
+  getDiscoveryShelfSummary,
+  removeDiscoveryShelfItem,
+  upsertDiscoveryShelfItem,
+} from '../../lib/discoveryShelf';
 import * as externalVisualizer from '../../lib/externalVisualizer';
 import * as listenBrainz from '../../lib/listenBrainz';
 import {
@@ -505,6 +513,158 @@ const PlayerQueueModal = ({
           trigger={
             <Button
               data-testid="player-queue-close"
+              onClick={onClose}
+              primary
+              type="button"
+            >
+              <Icon name="check" />
+              Done
+            </Button>
+          }
+        />
+      </Modal.Actions>
+    </Modal>
+  );
+};
+
+const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
+  const [items, setItems] = useState(() => getDiscoveryShelf());
+  const [message, setMessage] = useState('');
+  const summary = getDiscoveryShelfSummary();
+
+  const refreshShelf = () => {
+    setItems(getDiscoveryShelf());
+  };
+
+  useEffect(() => {
+    if (open) {
+      refreshShelf();
+      setMessage('');
+    }
+  }, [open]);
+
+  const previewAction = (item) => {
+    setMessage(
+      `${getDiscoveryShelfActionLabel(item.action)} prepared for ${item.title}. No files were moved or deleted.`,
+    );
+  };
+
+  const removeItem = (key) => {
+    removeDiscoveryShelfItem(key);
+    refreshShelf();
+  };
+
+  const clearShelf = () => {
+    clearDiscoveryShelf();
+    refreshShelf();
+    setMessage('Discovery shelf cleared from this browser.');
+  };
+
+  return (
+    <Modal
+      className="player-browser-modal player-discovery-shelf-modal"
+      onClose={onClose}
+      open={open}
+      size="small"
+    >
+      <Modal.Header>Discovery Shelf</Modal.Header>
+      <Modal.Content>
+        <div className="player-shelf-summary" data-testid="player-shelf-summary">
+          <div>
+            <strong>{summary.total}</strong>
+            <span>local review items</span>
+          </div>
+          <div>
+            <strong>{summary['promote-preview']}</strong>
+            <span>promote previews</span>
+          </div>
+          <div>
+            <strong>{summary['archive-preview']}</strong>
+            <span>archive previews</span>
+          </div>
+          <div>
+            <strong>{summary['expiry-watch']}</strong>
+            <span>expiry watch</span>
+          </div>
+        </div>
+        {message ? (
+          <Message compact size="mini">
+            {message}
+          </Message>
+        ) : null}
+        <div className="player-shelf-list">
+          {items.length > 0 ? items.map((item) => (
+            <div
+              className="player-shelf-row"
+              data-testid={`player-shelf-row-${item.key}`}
+              key={item.key}
+            >
+              <div className="player-shelf-rating">{item.rating || '-'}</div>
+              <div className="player-shelf-track">
+                <strong>{item.title}</strong>
+                <span>
+                  {[item.artist, item.album].filter(Boolean).join(' - ') || 'Local discovery item'}
+                </span>
+              </div>
+              <Label size="mini">
+                {getDiscoveryShelfActionLabel(item.action)}
+              </Label>
+              <Popup
+                content="Preview the shelf action. This does not move, delete, share, download, or publish anything."
+                trigger={
+                  <Button
+                    data-testid={`player-shelf-preview-${item.key}`}
+                    icon
+                    onClick={() => previewAction(item)}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="eye" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Remove this local review item from the browser-only shelf."
+                trigger={
+                  <Button
+                    data-testid={`player-shelf-remove-${item.key}`}
+                    icon
+                    onClick={() => removeItem(item.key)}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="trash alternate outline" />
+                  </Button>
+                }
+              />
+            </div>
+          )) : (
+            <div className="player-queue-manager-empty">
+              Rate tracks in the player to build a local discovery review shelf.
+            </div>
+          )}
+        </div>
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Clear browser-local discovery shelf review items. This does not affect files or ratings."
+          trigger={
+            <Button
+              data-testid="player-clear-discovery-shelf"
+              disabled={items.length === 0}
+              onClick={clearShelf}
+              type="button"
+            >
+              <Icon name="trash" />
+              Clear Shelf
+            </Button>
+          }
+        />
+        <Popup
+          content="Close the local discovery shelf."
+          trigger={
+            <Button
+              data-testid="player-close-discovery-shelf"
               onClick={onClose}
               primary
               type="button"
@@ -1479,6 +1639,7 @@ const PlayerBar = () => {
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const [radioOpen, setRadioOpen] = useState(false);
+  const [shelfOpen, setShelfOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [externalVisualizerStatus, setExternalVisualizerStatus] = useState(null);
   const [externalVisualizerLoading, setExternalVisualizerLoading] = useState(false);
@@ -1626,7 +1787,9 @@ const PlayerBar = () => {
   }, [current]);
 
   const updatePlayerRating = (rating) => {
-    setPlayerRatingState(setPlayerRating(current, rating));
+    const nextRating = setPlayerRating(current, rating);
+    setPlayerRatingState(nextRating);
+    upsertDiscoveryShelfItem(current, nextRating);
   };
 
   const openRadioSearch = (query) => {
@@ -2132,6 +2295,14 @@ const PlayerBar = () => {
               icon="bar chart"
               onClick={() => setStatsOpen(true)}
             />
+            <PlayerToolButton
+              active={shelfOpen}
+              content="Open the browser-local discovery shelf built from player ratings."
+              aria-label="Open discovery shelf"
+              data-testid="player-open-discovery-shelf"
+              icon="bookmark"
+              onClick={() => setShelfOpen(true)}
+            />
           </div>
           <div className="player-control-row">
             <PlayerToolButton
@@ -2359,6 +2530,10 @@ const PlayerBar = () => {
         onRemove={removeFromQueue}
         open={queueOpen}
         queue={queue}
+      />
+      <PlayerDiscoveryShelfModal
+        onClose={() => setShelfOpen(false)}
+        open={shelfOpen}
       />
       <PlayerStatsModal
         onClose={() => setStatsOpen(false)}
