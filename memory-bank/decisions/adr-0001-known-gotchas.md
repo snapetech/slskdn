@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z182. Vite Builds Must Be Synced Into Backend Wwwroot Before Publish
+
+**The Bug**: `npm run build` produced a correct Web UI bundle under `src/web/build`, but `./bin/publish` served the stale bundle already checked into `src/slskd/wwwroot`. The deployed app therefore kept running old JavaScript even after the frontend build passed.
+
+**Files Affected**:
+- `src/web/build/`
+- `src/slskd/wwwroot/`
+- `src/slskd/slskd.csproj`
+
+**Wrong**:
+```bash
+cd src/web && npm run build
+./bin/publish --no-prebuild ...
+```
+
+**Correct**:
+```bash
+cd src/web && npm run build
+cd ../..
+rsync -a --delete src/web/build/ src/slskd/wwwroot/
+./bin/publish --no-prebuild ...
+```
+
+**Why This Keeps Happening**: The backend project publishes `src/slskd/wwwroot`, not the transient Vite output directory. A green Vite build only proves the UI can compile; it does not prove the backend-served static assets were updated.
+
 ### 0z181. Browser Audio Elements Cannot Send Authorization Headers
 
 **The Bug**: The Web UI player assigned `/api/v0/streams/{contentId}` directly to an `<audio>` source. API probes with `Authorization: Bearer ...` passed, but real browser playback failed with `401 Unauthorized` because media element requests do not use the app's Axios header interceptor.
