@@ -2,11 +2,16 @@ import './Wishlist.css';
 import { urlBase } from '../../config';
 import {
   addWishlistItemToDiscoveryInbox,
+  buildWishlistRequestSummary,
   getWishlistRequestState,
 } from '../../lib/acquisitionRequests';
-import { getDiscoveryInboxItems } from '../../lib/discoveryInbox';
+import {
+  addDiscoveryInboxItem,
+  getDiscoveryInboxItems,
+} from '../../lib/discoveryInbox';
+import * as sourceFeedImportsAPI from '../../lib/sourceFeedImports';
 import * as wishlistAPI from '../../lib/wishlist';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -390,13 +395,255 @@ const CsvImportModal = ({ onClose, onImport }) => {
   );
 };
 
+const sourceKindOptions = [
+  { key: 'auto', text: 'Auto detect', value: 'auto' },
+  { key: 'spotify', text: 'Spotify URL/token feed', value: 'spotify' },
+  { key: 'csv', text: 'CSV export', value: 'csv' },
+  { key: 'text', text: 'Pasted tracklist', value: 'text' },
+  { key: 'm3u', text: 'M3U/PLS playlist', value: 'm3u' },
+  { key: 'rss', text: 'RSS/OPML feed', value: 'rss' },
+];
+
+const buildInboxItemFromSourceSuggestion = (suggestion) => ({
+  evidenceKey: suggestion.evidenceKey,
+  networkImpact:
+    'Review only; importing this source feed item does not start Soulseek search, peer browse, or download work.',
+  reason: suggestion.reason,
+  searchText: suggestion.searchText,
+  source: suggestion.source || 'Source Feed',
+  sourceId: suggestion.sourceId || suggestion.providerUrl || '',
+  title: suggestion.searchText || suggestion.title,
+});
+
+const SourceFeedImportModal = ({ onClose, onImported }) => {
+  const [sourceText, setSourceText] = useState('');
+  const [sourceKind, setSourceKind] = useState('auto');
+  const [providerAccessToken, setProviderAccessToken] = useState('');
+  const [includeAlbum, setIncludeAlbum] = useState(false);
+  const [fetchProviderUrls, setFetchProviderUrls] = useState(true);
+  const [limit, setLimit] = useState(500);
+  const [preview, setPreview] = useState(null);
+  const [previewing, setPreviewing] = useState(false);
+
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setSourceText(await file.text());
+  };
+
+  const handlePreview = async () => {
+    if (!sourceText.trim()) {
+      toast.error('Source text or URL is required');
+      return;
+    }
+
+    setPreviewing(true);
+    try {
+      const result = await sourceFeedImportsAPI.previewSourceFeedImport({
+        fetchProviderUrls,
+        includeAlbum,
+        limit,
+        providerAccessToken,
+        sourceKind,
+        sourceText,
+      });
+      setPreview(result);
+      if (result.requiresAccessToken) {
+        toast.warn(`Provider token required: ${result.requiredScopeHint}`);
+      } else {
+        toast.success(`Previewed ${result.suggestionCount} source items`);
+      }
+    } catch (error) {
+      toast.error(`Source import preview failed: ${error.message}`);
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const handleAddToInbox = () => {
+    if (!preview?.suggestions?.length) {
+      toast.error('Preview has no suggestions to import');
+      return;
+    }
+
+    let added = 0;
+    preview.suggestions.forEach((suggestion) => {
+      const item = addDiscoveryInboxItem(
+        buildInboxItemFromSourceSuggestion(suggestion),
+      );
+      if (item.evidenceKey === suggestion.evidenceKey) {
+        added += 1;
+      }
+    });
+    onImported();
+    toast.success(`Added ${added} source suggestions to Discovery Inbox`);
+    onClose();
+  };
+
+  return (
+    <Modal
+      onClose={onClose}
+      open
+      size="large"
+    >
+      <Modal.Header>
+        <Icon name="rss" />
+        Import Source Feed
+      </Modal.Header>
+      <Modal.Content scrolling>
+        <Form>
+          <Form.Select
+            label="Source Type"
+            onChange={(_, data) => setSourceKind(data.value)}
+            options={sourceKindOptions}
+            value={sourceKind}
+          />
+          <Form.Input
+            accept=".csv,.m3u,.m3u8,.pls,.opml,.xml,.rss,text/*"
+            label="Source File"
+            onChange={handleFile}
+            type="file"
+          />
+          <Form.TextArea
+            label="Source URL or Text"
+            onChange={(event) => setSourceText(event.target.value)}
+            placeholder="Paste a Spotify playlist/album/track/artist URL, spotify:liked, a CSV export, an M3U playlist, RSS/OPML, or one track per line."
+            rows={7}
+            value={sourceText}
+          />
+          <Form.Input
+            label="Provider Bearer Token (optional)"
+            onChange={(event) => setProviderAccessToken(event.target.value)}
+            placeholder="Required for Spotify liked songs, saved albums, followed artists, and private playlists"
+            type="password"
+            value={providerAccessToken}
+          />
+          <Form.Group widths="equal">
+            <Form.Input
+              label="Limit"
+              max={5_000}
+              min={1}
+              onChange={(event) =>
+                setLimit(Number.parseInt(event.target.value, 10) || 500)
+              }
+              type="number"
+              value={limit}
+            />
+            <Form.Field>
+              <Checkbox
+                checked={includeAlbum}
+                label="Include album in searches"
+                onChange={(_, data) => setIncludeAlbum(data.checked)}
+                toggle
+              />
+            </Form.Field>
+            <Form.Field>
+              <Checkbox
+                checked={fetchProviderUrls}
+                label="Fetch provider URLs"
+                onChange={(_, data) => setFetchProviderUrls(data.checked)}
+                toggle
+              />
+            </Form.Field>
+          </Form.Group>
+        </Form>
+
+        {preview && (
+          <Segment>
+            <Header as="h4">
+              <Icon name="list" />
+              <Header.Content>
+                Preview
+                <Header.Subheader>
+                  {preview.suggestionCount} suggestions,{' '}
+                  {preview.duplicateCount} duplicates, {preview.skippedCount}{' '}
+                  skipped, {preview.networkRequestCount} provider requests
+                </Header.Subheader>
+              </Header.Content>
+            </Header>
+            {preview.requiresAccessToken && (
+              <Label color="yellow">
+                Token required: {preview.requiredScopeHint}
+              </Label>
+            )}
+            {preview.suggestions?.length > 0 && (
+              <Table
+                celled
+                compact
+              >
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell>Search</Table.HeaderCell>
+                    <Table.HeaderCell>Source</Table.HeaderCell>
+                    <Table.HeaderCell>Album</Table.HeaderCell>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {preview.suggestions.slice(0, 25).map((suggestion) => (
+                    <Table.Row key={suggestion.evidenceKey}>
+                      <Table.Cell>{suggestion.searchText}</Table.Cell>
+                      <Table.Cell>{suggestion.source}</Table.Cell>
+                      <Table.Cell>{suggestion.album || '-'}</Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table>
+            )}
+          </Segment>
+        )}
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Close the source importer without adding anything to Discovery Inbox."
+          trigger={<Button onClick={onClose}>Cancel</Button>}
+        />
+        <Popup
+          content="Fetch and parse the source feed into a local preview. This does not start Soulseek searches or downloads."
+          trigger={
+            <Button
+              loading={previewing}
+              onClick={handlePreview}
+              primary
+            >
+              Preview
+            </Button>
+          }
+        />
+        <Popup
+          content="Add the previewed items to Discovery Inbox for approval before any acquisition work can start."
+          trigger={
+            <Button
+              disabled={!preview?.suggestions?.length}
+              icon
+              labelPosition="left"
+              onClick={handleAddToInbox}
+            >
+              <Icon name="inbox" />
+              Add to Inbox
+            </Button>
+          }
+        />
+      </Modal.Actions>
+    </Modal>
+  );
+};
+
 const Wishlist = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalItem, setModalItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showSourceImportModal, setShowSourceImportModal] = useState(false);
   const [inboxItems, setInboxItems] = useState(() => getDiscoveryInboxItems());
+  const requestSummary = useMemo(
+    () =>
+      buildWishlistRequestSummary({
+        inboxItems,
+        items,
+      }),
+    [inboxItems, items],
+  );
 
   const loadItems = useCallback(async () => {
     try {
@@ -420,6 +667,10 @@ const Wishlist = () => {
 
   const handleImportClick = () => {
     setShowImportModal(true);
+  };
+
+  const handleSourceImportClick = () => {
+    setShowSourceImportModal(true);
   };
 
   const handleEdit = (item) => {
@@ -516,7 +767,55 @@ const Wishlist = () => {
             </Button>
           }
         />
+        <Popup
+          content="Preview Spotify URLs, liked/saved/followed feeds with a provider token, CSV/text playlists, M3U, and RSS/OPML sources into Discovery Inbox review without starting searches or downloads."
+          trigger={
+            <Button
+              floated="right"
+              icon
+              labelPosition="left"
+              onClick={handleSourceImportClick}
+            >
+              <Icon name="rss" />
+              Import Feed
+            </Button>
+          }
+        />
       </Segment>
+
+      {!loading && (
+        <Segment className="wishlist-request-summary">
+          <Header as="h3">
+            <Icon name="clipboard check" />
+            Request Portal Summary
+            <Header.Subheader>
+              Operator view of wanted music before acquisition jobs are wired.
+            </Header.Subheader>
+          </Header>
+          <div className="wishlist-request-summary-grid">
+            <Label color="purple">
+              Requests
+              <Label.Detail>{requestSummary.total}</Label.Detail>
+            </Label>
+            <Label color="green">
+              Enabled
+              <Label.Detail>{requestSummary.enabled}</Label.Detail>
+            </Label>
+            <Label color="blue">
+              Automatic
+              <Label.Detail>{requestSummary.automatic}</Label.Detail>
+            </Label>
+            <Label color={requestSummary.reviewCount > 0 ? 'yellow' : 'grey'}>
+              Needs Review
+              <Label.Detail>{requestSummary.reviewCount}</Label.Detail>
+            </Label>
+            <Label color={requestSummary.quotaStatus === 'Within quota' ? 'green' : 'orange'}>
+              {requestSummary.quotaStatus}
+              <Label.Detail>{requestSummary.quotaRemaining} left</Label.Detail>
+            </Label>
+          </div>
+        </Segment>
+      )}
 
       {loading ? (
         <Segment
@@ -605,6 +904,12 @@ const Wishlist = () => {
         <CsvImportModal
           onClose={() => setShowImportModal(false)}
           onImport={handleImport}
+        />
+      )}
+      {showSourceImportModal && (
+        <SourceFeedImportModal
+          onClose={() => setShowSourceImportModal(false)}
+          onImported={() => setInboxItems(getDiscoveryInboxItems())}
         />
       )}
     </div>

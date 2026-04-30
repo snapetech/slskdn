@@ -214,6 +214,38 @@ Acceptance:
 - The aggregate result shows individual signed verdict counts and dissenting evidence categories.
 - Local quarantine enforcement remains active until explicit user action.
 
+## Phase 8: Source Feed Imports
+
+Goal: let users import music wants from external playlist/feed sources into slskdN review surfaces without starting immediate network searches or downloads.
+
+Existing anchors:
+- `Wishlist/WishlistService`
+- `Wishlist/WishlistCsvImport`
+- `DiscoveryInbox`
+- `SongID/SongIdService`
+- `API/Native/SourceProvidersController`
+- `src/web/src/lib/acquisitionRequests.js`
+
+Plan:
+1. Add a `SourceFeedImportService` that normalizes imported rows into track/release wants with source provenance, confidence, and duplicate keys.
+2. Support the lowest-risk inputs first: pasted text tracklists, TuneMyMusic/Spotify-style CSV exports, and manually supplied playlist/feed URLs recorded as provenance.
+3. Route imported wants to Discovery Inbox review by default, with an explicit option to create disabled Wishlist searches.
+4. Add provider-specific fetchers only behind explicit configuration and rate limits: Spotify playlists/albums/tracks, YouTube playlists, Bandcamp collections, Apple Music exports, ListenBrainz/Last.fm feeds, RSS/OPML, and local M3U/PLS files.
+5. Use SongID and MusicBrainz as optional enrichment steps after import review, not as hidden background work.
+6. Surface source/provider, row count, duplicate count, skipped rows, and network impact before committing imported wants.
+
+Do not:
+- Start Soulseek searches, peer browses, downloads, or remote provider fetches just because a feed URL was pasted.
+- Require Spotify or another commercial provider account for CSV/text import.
+- Store provider tokens outside existing safe credential patterns.
+- Treat playlist order or provider metadata as authoritative identity without MusicBrainz/SongID confirmation.
+
+Acceptance:
+- A user can paste or upload a playlist export and get deduplicated Discovery Inbox suggestions with source provenance.
+- URL-based providers remain disabled until configured and explicitly fetched.
+- Imports are idempotent across repeated exports from the same source.
+- Tests cover Spotify/TuneMyMusic CSV columns, headerless text rows, duplicate suppression, skipped-row reporting, and no network activity during dry-run review.
+
 ## Implementation Order
 
 1. Discography Concierge: highest visible payoff and mostly local composition.
@@ -223,6 +255,7 @@ Acceptance:
 5. Realm-Curated Subject Indexes: unlocks scene-specific catalog authority.
 6. MusicBrainz Edit Overlay: uses realm/index/evidence provenance once those artifacts exist.
 7. Quarantine Jury: highest safety sensitivity; implement after signed evidence and trust-scoped routing are well tested.
+8. Source Feed Imports: user-facing acquisition intake that should feed Discovery Inbox/Wishlist before provider execution.
 
 ## Task Breakdown
 
@@ -235,13 +268,18 @@ Acceptance:
 | T-934 | Realm-Curated Subject Indexes | Signed realm index artifact and ShadowIndex resolution hook |
 | T-935 | MusicBrainz Edit Overlay | Signed overlay edit model and read-time MusicBrainz response overlay |
 | T-936 | Quarantine Jury | User-initiated trusted jury request and signed verdict aggregation |
+| T-939 | Source Feed Imports | Review-first playlist/feed import service and Discovery Inbox intake |
 
 ## Implementation Progress
 
 - 2026-04-30: T-930 first slice implemented. It includes the backend coverage service/API, cached release-target resolution, HashDb/Wishlist evidence cells, manual missing-track Wishlist promotion, and the Search-page Discography Concierge panel. Discovery Graph density prioritization is split to T-937.
+- 2026-04-30: T-932 first slice implemented. It adds a local artist-radar service/API with artist MBID subscriptions, muted release-group suppression, SongID-confirmed WorkRef observation validation, deterministic notification dedupe, DI registration, and focused service/controller tests. The first slice is network-presence radar only; it does not poll MusicBrainz, browse peers, search Soulseek, or start downloads.
 - 2026-04-30: T-933 first slice implemented. It includes a local taste recommendation service/API over accepted inbound music WorkRefs, followed-actor trust filtering, MusicBrainz-or-normalized-work grouping, service-layer k-anonymity with a default threshold of two trusted sources, and opt-in source actor reveal for future policy-gated UI surfaces.
 - 2026-04-30: T-934 first slice implemented. It defines signed realm subject-index artifacts with WorkRefs, external ids, aliases, evidence links, and signature metadata; validates local realm scope, trusted governance roots, payload hashes, safe WorkRefs, and safe evidence links; and adds a recording-MBID resolver that returns realm/index/revision provenance for ShadowIndex and VirtualSoulfind integration.
 - 2026-04-30: T-935 first slice implemented. It defines signed MusicBrainz overlay-edit artifacts with SongID, WorkRef, realm-index, or user-note evidence; validates signatures and supported edit/target/field combinations; stores edits deterministically; and applies them at release-graph read time through a dedicated overlay API returning original/effective graphs plus provenance without mutating cached MusicBrainz data.
+- 2026-04-30: T-936 first slice implemented. It adds a local Quarantine Jury service/API for user-initiated trusted jury requests, safe opaque evidence validation, signed juror verdict intake, duplicate juror replacement, and two-thirds recommendation aggregation. It does not send files, route mesh messages, release quarantined content, or involve unselected peers.
+- 2026-04-30: T-936 persistence follow-up implemented. Quarantine Jury requests and signed juror verdicts now persist to an atomic JSON state file under the app directory and reload on service startup, preserving aggregate recommendations across daemon restarts.
+- 2026-04-30: T-939 implemented after source-feed audit. It adds backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and Spotify provider URLs. Spotify imports cover public playlist/album/track/artist/user playlist URLs through configured app credentials, plus liked/saved tracks, saved albums, followed artists, and current-user playlists when a per-import bearer token has the required user scopes. Wishlist now has an Import Feed flow that previews suggestions and adds them to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads.
 
 ## Validation Strategy
 

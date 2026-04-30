@@ -41,6 +41,31 @@
  - Priority: P2
  - Notes: Extended the source-provider catalog with read-only provider priority chains for every acquisition profile. All profile policies currently report manual acquisition with auto-download disabled, making fallback order visible before provider execution is wired.
 
+- [x] **feature**: Add explained search candidate ranking.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Replaced the Search detail peer-only smart score with a reusable browser-side candidate scorer that ranks visible results by acquisition profile intent, filename match, audio format evidence, file-size sanity, free slot/queue/speed availability, provider hints, and past download history. Result cards now expose a score and concise reasons without starting new network activity.
+
+- [x] **feature**: Add local album candidate picker to Search results.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Search detail now groups already-returned result files into album-shaped folder candidates, scores them by visible tracks, source count, lossless evidence, folder completeness, and existing candidate rank, and provides a tooltipped local filter action. The picker does not start searches, downloads, peer browsing, or metadata lookups.
+
+- [x] **feature**: Add search download action previews.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Search result cards now provide a selected-file action preview before downloading. The preview summarizes source, providers, file count, size, candidate score, selected paths, and local warnings, with copy/export text support. Previewing does not call the API, browse peers, stream, or start transfers.
+
+- [x] **feature**: Add preferred search ranking conditions.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Advanced Search filters now support ranking-only preferences for extensions, lossless files, and minimum bitrate. Preferred conditions influence candidate scores and reasons without hiding fallback results or starting any network work.
+
+- [x] **feature**: Add local search-result deduplication.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Search results now have a visible Fold Duplicates toggle that folds duplicate media candidates after filtering, ranking, and sorting. The best-ranked candidate remains visible with folded-source metadata and provider/peer context, and users can disable the fold to inspect every source separately. This is browser-local and does not start searches, peer browses, or downloads.
+
 - [x] **feature**: Add browser-local Discovery Inbox review surface.
  - Status: completed (2026-04-30)
  - Priority: P2
@@ -66,10 +91,56 @@
  - Priority: P2
  - Notes: Import Staging now has an explicit Fingerprint on add toggle. When enabled, newly selected files are read locally in the browser and hashed with SHA-256, storing only verification metadata in the staging queue without uploading, importing, tagging, or moving files.
 
+- [x] **feature**: Add failed-import denylist to Import Staging.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Rejected staged files now create a browser-local failed-import denylist entry keyed by SHA-256 when available or file metadata signature otherwise. Matching re-adds are marked Failed with a blocked reason instead of silently returning as normal staged work, and denylist entries can be removed from the UI.
+
+- [x] **feature**: Add mobile review layouts for Discovery Inbox and Import Staging.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Discovery Inbox and Import Staging now have narrow-screen touch layouts with full-width primary actions, card-like mobile review rows, table cell labels for staged import metadata, and 44px-class touch targets without changing acquisition or import behavior.
+
+- [x] **feature**: Add local community quality signals to Search review.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added browser-local peer quality signal storage, local caution reporting from Search result cards, Search ranking context for local quality signals, and visible local-only quality badges. Signals remain private browser-side context and do not publish global peer reputation or block candidates.
+
+- [x] **feature**: Add browser-local Mesh Evidence Policy controls.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added a Mesh tab policy panel for inbound trust tier selection, provenance-required status, and explicit outbound publication toggles for signed hash verification, release completeness, fake-lossless warnings, metadata corrections, and realm subject indexes. Defaults are private/off and no backend publication is wired in this slice.
+
+- [x] **feature**: Add redacted diagnostic bundle in System Info.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added a browser-side diagnostic bundle builder and System Info modal that shows/copies a YAML support snapshot with browser, route, state, and option shape while redacting sensitive keys and query-style secrets. The bundle is local-only and does not contact the server.
+
+- [x] **feature**: Add media-server integration readiness and path diagnostics.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added Plex, Jellyfin/Emby, and Navidrome readiness cards to System Integrations plus a local path diagnostic for slskdN completed paths, media-server report paths, and optional remote path mappings. This does not connect to media servers or trigger scans yet.
+
+- [x] **feature**: Add local Servarr setup readiness checklist.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added a System Integrations checklist for Servarr base URL, scoped API key presence, wanted pull, completed import, and remote path-map sanity. It is diagnostic only and does not register indexers, create download clients, pull wanted items, or trigger imports.
+
+- [x] **feature**: Add Wishlist request portal summary.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added derived Wishlist request summary counts for total requests, enabled requests, automatic requests, Discovery Inbox review load, and quota-style remaining capacity. This is read-only/operator-facing and does not change request submission, approval, scheduling, or download behavior.
+
 - [ ] **feature**: Wire approved Discovery Inbox candidates into acquisition jobs.
  - Status: planned
  - Priority: P2
  - Notes: Follow up the local review surface by connecting Approved candidates to backend-backed acquisition planning/downloading with explicit opt-in automation, rate limits, and visible network impact before any peer contact.
+
+- [x] **T-939**: Source feed imports.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Design: `docs/design/music-discovery-federation-plan.md`
+ - Notes: Added backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and Spotify provider URLs. Spotify supports public playlist/album/track/artist/user playlist imports through configured app credentials, plus liked/saved tracks, saved albums, followed artists, and current-user playlists when a user bearer token with the required scopes is provided for that import. The Wishlist UI now has an Import Feed flow that previews results and adds selected provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads.
 
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
@@ -153,11 +224,26 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Add versioned MBID bloom snapshots for trusted contacts/pods/realms, compare inbound filters locally, and promote likely missing items to Wishlist. Do not publish filenames, paths, file hashes, exact holdings, or library exports.
 
-- [ ] **T-932**: Per-artist release radar.
- - Status: planned
+- [x] **T-932**: Per-artist release radar.
+ - Status: completed (2026-04-30)
  - Priority: P1
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Persist artist MBID subscriptions and notify when trusted mesh/federation evidence first sees a SongID-confirmed WorkRef for that artist. This is network-presence radar, not MusicBrainz release-calendar polling.
+ - Notes: Added a conservative local artist-radar service/API with artist MBID subscriptions, muted release-group suppression, SongID-confirmed WorkRef observation validation, deterministic notification dedupe, DI registration, and focused tests. This is network-presence radar only; it does not poll MusicBrainz, browse peers, search Soulseek, or download files.
+
+- [ ] **feature**: Persist artist release radar subscriptions and notifications.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-932 by storing artist-radar subscriptions, muted release groups, seen-observation keys, and notifications across daemon restarts.
+
+- [ ] **feature**: Route signed artist radar observations through trusted federation/realm channels.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-932 by emitting and accepting signed SongID-confirmed WorkRef observations through LibraryActor outboxes or realm-scoped mesh messages, preserving user-controlled trust scope and rate limits.
+
+- [ ] **feature**: Add Web UI controls for artist release radar.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-932 with artist watch/mute controls, unread notification review, and explicit actions to promote radar hits to Wishlist or Discovery Graph.
 
 - [x] **T-933**: Federated taste recommendations.
  - Status: completed (2026-04-30)
@@ -202,11 +288,26 @@
  - Priority: P2
  - Notes: Follow up T-935 with a manual export/review path for users who want to submit selected local corrections upstream. Do not auto-submit edits.
 
-- [ ] **T-936**: Quarantine Jury.
- - Status: planned
+- [x] **T-936**: Quarantine Jury.
+ - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Add user-initiated trusted jury requests for ContentSafety/SongID quarantine decisions, aggregating signed peer verdicts with ByzantineConsensus-style thresholds. Do not auto-send files, auto-release quarantined content, or involve untrusted peers.
+ - Notes: Added a local Quarantine Jury service/API for user-initiated trusted jury requests, safe opaque evidence validation, signed juror verdict intake, duplicate juror replacement, and two-thirds recommendation aggregation. This first slice does not send files, route mesh messages, release quarantined content, or involve unselected peers.
+
+- [x] **feature**: Persist Quarantine Jury requests and verdicts.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Quarantine Jury requests and signed verdicts now persist to an atomic JSON state file under the app directory and reload on service startup. Focused tests cover rehydrating requests, verdicts, and aggregate recommendations from persisted state.
+
+- [ ] **feature**: Route Quarantine Jury requests through trust-scoped mesh channels.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-936 by sending minimal signed evidence to explicitly selected trusted contacts, pod members, or realm jurors without attaching raw files or expanding the audience automatically.
+
+- [ ] **feature**: Add manual Quarantine Jury review UI and accept flow.
+ - Status: planned
+ - Priority: P2
+ - Notes: Show request/verdict evidence, dissent, and recommendations, while keeping local quarantine authoritative until the user explicitly accepts a release-candidate recommendation.
 
 - [x] **bug**: Keep mesh-overlay sources out of Soulseek sequential failover.
  - Status: completed (2026-04-30)
@@ -1705,3 +1806,15 @@
 - [x] Redesign player local-audio file picker as an explorer
   - Status: completed (2026-04-30)
   - Notes: Replaced the flat player file picker with a path-aware local audio explorer backed by a paged `/library/items/browser` API. The new picker has folder navigation, breadcrumbs, recursive search, duplicate collapse for search results, paging, file locations, copy counts, and row-level play actions.
+
+- [x] Clean up Rooms dark text and duplicate joined-room navigation
+  - Status: completed (2026-04-30)
+  - Notes: Removed the redundant joined-room recovery rail from Rooms because joined rooms already hydrate as tabs. Added shared and page-specific dark-mode text overrides for Semantic UI nested list headers/descriptions and user chips, plus distinct room/chat history, input, and user-panel tones.
+
+- [x] Audit and soften overstated documentation claims
+  - Status: completed (2026-04-30)
+  - Notes: Updated README, feature/status/test/security docs, and the documentation audit so public-facing copy no longer claims blanket production readiness, universal SSRF coverage, live January test status, or hard guarantees where the current codebase only provides scoped guardrails.
+
+- [x] Add slskdN-native config compatibility for upstream-style layout
+  - Status: completed (2026-04-30)
+  - Notes: Rebuilt the useful config-map behavior within slskdN's existing YAML provider instead of porting upstream code past the license boundary. `transfers.upload.limits` and `transfers.groups` now bind correctly, older shapes remain accepted, docs/examples prefer the new layout, and startup warnings guide migration.

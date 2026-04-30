@@ -53,7 +53,9 @@ describe('Wishlist', () => {
 
     expect(await screen.findByText('rare album')).toBeInTheDocument();
     expect(screen.getByText('Wanted')).toBeInTheDocument();
-    expect(screen.getByText('Automatic')).toBeInTheDocument();
+    expect(screen.getAllByText('Automatic').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Request Portal Summary')).toBeInTheDocument();
+    expect(screen.getByText('23 left')).toBeInTheDocument();
   });
 
   it('promotes a wishlist row to Discovery Inbox review', async () => {

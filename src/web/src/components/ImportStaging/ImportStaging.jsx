@@ -2,8 +2,11 @@ import './ImportStaging.css';
 import { fingerprintFile } from '../../lib/fileFingerprint';
 import {
   addImportStagingFiles,
+  addImportStagingItemToDenylist,
+  getImportStagingDenylist,
   getImportStagingItems,
   matchAllImportStagingItems,
+  removeImportStagingDenylistEntry,
   updateImportStagingItemMetadataMatch,
   updateImportStagingItemState,
 } from '../../lib/importStaging';
@@ -111,6 +114,7 @@ const renderFingerprintVerification = (fingerprint) => {
 const ImportStaging = () => {
   const fileInputRef = useRef(null);
   const [fingerprintOnAdd, setFingerprintOnAdd] = useState(false);
+  const [denylist, setDenylist] = useState(() => getImportStagingDenylist());
   const [items, setItems] = useState(() => getImportStagingItems());
 
   const counts = useMemo(
@@ -149,6 +153,20 @@ const ImportStaging = () => {
 
   const setItemState = (item, state) => {
     setItems(updateImportStagingItemState(item.id, state));
+  };
+
+  const denyItem = (item) => {
+    setItemState(item, 'Rejected');
+    setDenylist(
+      addImportStagingItemToDenylist(
+        item.id,
+        'Rejected from import staging review.',
+      ),
+    );
+  };
+
+  const removeDeniedEntry = (entry) => {
+    setDenylist(removeImportStagingDenylistEntry(entry.key));
   };
 
   const matchItem = (item) => {
@@ -240,7 +258,48 @@ const ImportStaging = () => {
             <Label.Detail>{counts[state] || 0}</Label.Detail>
           </Label>
         ))}
+        <Label color="red">
+          Denylist
+          <Label.Detail>{denylist.length}</Label.Detail>
+        </Label>
       </div>
+
+      {denylist.length > 0 && (
+        <Segment className="import-staging-denylist">
+          <Header as="h3">
+            <Icon name="ban" />
+            Failed Import Denylist
+          </Header>
+          <div className="import-staging-denylist-grid">
+            {denylist.map((entry) => (
+              <div
+                className="import-staging-denylist-entry"
+                key={entry.key}
+              >
+                <div>
+                  <strong>{entry.fileName}</strong>
+                  <div className="import-staging-meta">
+                    {entry.reason}
+                  </div>
+                </div>
+                <Popup
+                  content="Remove this denylist entry so matching staged files can be reviewed normally again."
+                  position="top center"
+                  trigger={
+                    <Button
+                      aria-label={`Remove ${entry.fileName} from failed import denylist`}
+                      compact
+                      icon="trash"
+                      onClick={() => removeDeniedEntry(entry)}
+                      size="tiny"
+                    />
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </Segment>
+      )}
 
       {items.length === 0 ? (
         <Segment
@@ -257,6 +316,7 @@ const ImportStaging = () => {
         </Segment>
       ) : (
         <Table
+          className="import-staging-table"
           celled
           striped
         >
@@ -273,21 +333,23 @@ const ImportStaging = () => {
           <Table.Body>
             {items.map((item) => (
               <Table.Row key={item.id}>
-                <Table.Cell>
+                <Table.Cell data-label="File">
                   <div className="import-staging-file">{item.fileName}</div>
                   <div className="import-staging-meta">
                     {item.type || 'Unknown type'} · Modified {formatDate(item.lastModified)}
                   </div>
                 </Table.Cell>
-                <Table.Cell>{formatBytes(item.size)}</Table.Cell>
-                <Table.Cell>{renderMetadataMatch(item.metadataMatch)}</Table.Cell>
-                <Table.Cell>
+                <Table.Cell data-label="Size">{formatBytes(item.size)}</Table.Cell>
+                <Table.Cell data-label="Metadata Match">
+                  {renderMetadataMatch(item.metadataMatch)}
+                </Table.Cell>
+                <Table.Cell data-label="Fingerprint">
                   {renderFingerprintVerification(item.fingerprintVerification)}
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell data-label="State">
                   <Label color={stateColors[item.state]}>{item.state}</Label>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell data-label="Actions">
                   <div className="import-staging-row-actions">
                     <Popup
                       content="Parse this filename into a local metadata confidence result. This does not contact MusicBrainz or fingerprint the file."
@@ -346,7 +408,7 @@ const ImportStaging = () => {
                           compact
                           disabled={item.state === 'Rejected'}
                           negative
-                          onClick={() => setItemState(item, 'Rejected')}
+                          onClick={() => denyItem(item)}
                           size="tiny"
                         >
                           <Icon name="ban" />

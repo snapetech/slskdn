@@ -353,19 +353,24 @@ Note that while it's possible to set the `failures` option for `queued`, it has 
 #### **YAML**
 ```yaml
 transfers:
-  limits:
-    queued:
-      files: 500
-      megabytes: 5000
-    daily:
-      files: 1000
-      megabytes: 10000
-      failures: 200
-    weekly:
-      files: 5000
-      megabytes: 50000
-      failures: 1000
+  upload:
+    limits:
+      queued:
+        files: 500
+        megabytes: 5000
+      daily:
+        files: 1000
+        megabytes: 10000
+        failures: 200
+      weekly:
+        files: 5000
+        megabytes: 50000
+        failures: 1000
 ```
+
+The older `transfers.limits` and `global.limits` layouts are still accepted for
+existing deployments. New configuration should keep upload limits under
+`transfers.upload.limits`.
 
 ## Groups
 
@@ -414,47 +419,51 @@ The `privileged` built-in is used to prioritize users who have purchased privile
 
 It is impossible to explicitly assign users to these built-in groups, but the priority, number of slots, speed, and queue strategy can be adjusted (excluding `privileged`).
 
+Group configuration is accepted either at top level as `groups` or under
+`transfers.groups`. New configuration should use `transfers.groups`.
+
 #### **YAML**
 ```yaml
-groups:
-  default:
-    upload:
-      priority: 1
-      strategy: roundrobin
-      slots: 10
-      speed_limit: 50000 # kibibytes
-      limits:
-        queued:
-          files: 150
-          megabytes: 1500
-        daily:
-          files: 2147483647 # effectively unlimited, weekly still applies
-          megabytes: 2147483647
-        weekly:
-          files: 1500
-          megabytes: 15000
-          failures: 150
-  leechers:
-    thresholds:
-      files: 1
-      directories: 1
-    upload:
-      priority: 99
-      strategy: roundrobin
-      slots: 1
-      speed_limit: 100
-      limits:
-        queued:
-          files: 15
-          megabytes: 150
-        daily:
-          files: 30
-          megabytes: 300
-          failures: 10
-        weekly:
-          files: 150
-          megabytes: 1500
-          failures: 30
+transfers:
+  groups:
+    default:
+      upload:
+        priority: 1
+        strategy: roundrobin
+        slots: 10
+        speed_limit: 50000 # kibibytes
+        limits:
+          queued:
+            files: 150
+            megabytes: 1500
+          daily:
+            files: 2147483647 # effectively unlimited, weekly still applies
+            megabytes: 2147483647
+          weekly:
+            files: 1500
+            megabytes: 15000
+            failures: 150
+    leechers:
+      thresholds:
+        files: 1
+        directories: 1
+      upload:
+        priority: 99
+        strategy: roundrobin
+        slots: 1
+        speed_limit: 100
+        limits:
+          queued:
+            files: 15
+            megabytes: 150
+          daily:
+            files: 30
+            megabytes: 300
+            failures: 10
+          weekly:
+            files: 150
+            megabytes: 1500
+            failures: 30
 ```
 
 ## User Blacklist
@@ -477,14 +486,15 @@ A managed blacklist file may also be used to achieve the same effects.  Read mor
 
 **YAML**
 ```yaml
-groups:
-  blacklisted:
-    members:
-      - <username to blacklist>
-    cidrs:
-      - <CIDR to blacklist, e.g. 255.255.255.255/32>
-    patterns:
-      - ^spammer_[0-9]+$
+transfers:
+  groups:
+    blacklisted:
+      members:
+        - <username to blacklist>
+      cidrs:
+        - <CIDR to blacklist, e.g. 255.255.255.255/32>
+      patterns:
+        - ^spammer_[0-9]+$
 ```
 
 ## User Defined Groups
@@ -497,20 +507,21 @@ Users can be assigned to multiple groups, with their effective group being the h
 
 #### **YAML**
 ```yaml
-groups:
-  user_defined:
-    my_custom_group_name:
-      upload:
-        priority: 500
-        strategy: roundrobin
-        slots: 10
-        speed_limit: 100
-        limits:
-          queued:
-            files: 1000 # override global default
-      members:
-        - bob
-        - alice
+transfers:
+  groups:
+    user_defined:
+      my_custom_group_name:
+        upload:
+          priority: 500
+          strategy: roundrobin
+          slots: 10
+          speed_limit: 100
+          limits:
+            queued:
+              files: 1000 # override global default
+        members:
+          - bob
+          - alice
 ```
 
 ## Example
@@ -529,27 +540,27 @@ transfers:
   download:
     slots: 500
     speed_limit: 1000
-groups:
-  default:
-    upload:
-      priority: 500
-      strategy: roundrobin
-      slots: 10
-  leechers:
-    upload:
-      priority: 999
-      strategy: roundrobin
-      slots: 1
-      speed_limit: 100
-  user_defined:
-    my_buddies:
+  groups:
+    default:
       upload:
-        priority: 250
-        queue_strategy: firstinfirstout
-        slots: 20
-      members:
-        - alice
-        - bob
+        priority: 500
+        strategy: roundrobin
+        slots: 10
+    leechers:
+      upload:
+        priority: 999
+        strategy: roundrobin
+        slots: 1
+        speed_limit: 100
+    user_defined:
+      my_buddies:
+        upload:
+          priority: 250
+          queue_strategy: firstinfirstout
+          slots: 20
+        members:
+          - alice
+          - bob
 ```
 
 ## Managed Blacklist

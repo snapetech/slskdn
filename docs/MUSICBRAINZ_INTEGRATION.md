@@ -1184,7 +1184,8 @@ With 3 cache nodes:
 - Maintain 30-second lead buffer.
 - If buffer drops below 10 seconds: raise priority of next chunks.
 
-**Result**: "Progressive streaming from Soulseek + mesh" with playback guarantees.
+**Result**: "Progressive streaming from Soulseek + mesh" designed to improve
+playback continuity when enough verified sources are available.
 
 **Implementation**:
 - Extend `MultiSourceDownloadJob` with `playback_mode: true` flag.
@@ -1206,4 +1207,3 @@ With 3 cache nodes:
 ---
 
 *Last updated: 2025-12-09*
-

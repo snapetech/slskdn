@@ -282,7 +282,17 @@ namespace slskd.Configuration
         {
             foreach (var item in Data.ToArray())
             {
-                if (!item.Key.StartsWith($"{Namespace}:groups:", StringComparison.Ordinal))
+                AddCompatibilityKey(item.Key, $":{Namespace}:transfers:upload:limits:", $":{Namespace}:global:limits:");
+                AddCompatibilityKey(item.Key, $":{Namespace}:transfers:groups:", $":{Namespace}:groups:");
+                AddCompatibilityKey(item.Key, $":{Namespace}:groups:", $":{Namespace}:transfers:groups:");
+                AddCompatibilityKey(item.Key, $":{Namespace}:global:upload:limits:", $":{Namespace}:global:limits:");
+                AddCompatibilityKey(item.Key, $":{Namespace}:global:groups:", $":{Namespace}:groups:");
+            }
+
+            foreach (var item in Data.ToArray())
+            {
+                if (!item.Key.StartsWith($"{Namespace}:groups:", StringComparison.Ordinal) &&
+                    !item.Key.StartsWith($"{Namespace}:transfers:groups:", StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -300,6 +310,22 @@ namespace slskd.Configuration
                 {
                     Data[groupLimitKey] = item.Value;
                 }
+            }
+        }
+
+        private void AddCompatibilityKey(string sourceKey, string sourcePattern, string targetPattern)
+        {
+            var prefixedSourceKey = $":{sourceKey}";
+            var index = prefixedSourceKey.IndexOf(sourcePattern, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                return;
+            }
+
+            var targetKey = prefixedSourceKey.Remove(index, sourcePattern.Length).Insert(index, targetPattern).TrimStart(':');
+            if (!Data.ContainsKey(targetKey))
+            {
+                Data[targetKey] = Data[sourceKey];
             }
         }
 

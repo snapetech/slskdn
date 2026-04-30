@@ -139,6 +139,23 @@
   margin-top: 14px !important;
 }
 
+.media-server-adapter-card .integration-status-row {
+  margin-top: 10px;
+}
+
+.media-server-path-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  margin-bottom: 12px;
+}
+
+@media only screen and (max-width: 760px) {
+  .media-server-path-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .system .menu.tabular {
     overflow: auto hidden;
 }
@@ -198,6 +215,12 @@
   text-align: right;
 }
 
+.diagnostic-bundle-text {
+  font-family: monospace;
+  min-height: 360px;
+  width: 100%;
+}
+
 .header-buttons {
   margin-bottom: 14px;
   text-align: right;
@@ -248,4 +271,48 @@
 :root.dark .network-dashboard .ui.card .description,
 :root.dark .network-dashboard .ui.segment .description {
   color: var(--slskd-color-subtle) !important;
+}
+
+.mesh-evidence-policy-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.mesh-evidence-policy-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  margin-top: 1rem;
+}
+
+.mesh-evidence-policy-help {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+  line-height: 1.4;
+  margin-top: 0.75rem;
+}
+
+:root.dark .mesh-evidence-policy.ui.segment,
+:root.dark .mesh-evidence-policy .ui.segment {
+  background: var(--slskd-card-background) !important;
+  border-color: var(--slskd-border-color) !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24) !important;
+}
+
+@media only screen and (max-width: 760px) {
+  .mesh-evidence-policy-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mesh-evidence-policy-header .ui.button {
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .mesh-evidence-policy-grid {
+    grid-template-columns: 1fr;
+  }
 }

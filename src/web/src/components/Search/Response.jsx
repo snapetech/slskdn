@@ -2,6 +2,15 @@ import * as discoveryGraph from '../../lib/discoveryGraph';
 import api from '../../lib/api';
 import * as searches from '../../lib/searches';
 import * as transfers from '../../lib/transfers';
+import {
+  buildSearchActionPreview,
+  formatSearchActionPreview,
+} from '../../lib/searchActionPreview';
+import {
+  getCommunityQualityLabel,
+  getCommunityQualitySummary,
+  recordCommunityQualitySignal,
+} from '../../lib/communityQualitySignals';
 import { getDirectoryContents, getGroup } from '../../lib/users';
 import { formatBytes, getDirectoryName, getFileName } from '../../lib/util';
 import DiscoveryGraphModal from './DiscoveryGraphModal';
@@ -11,7 +20,7 @@ import UserNoteModal from '../Users/UserNoteModal';
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Button, Card, Icon, Label, Popup } from 'semantic-ui-react';
+import { Button, Card, Icon, Label, List, Modal, Popup } from 'semantic-ui-react';
 
 const buildTree = (response) => {
   let { files = [] } = response;
@@ -81,6 +90,8 @@ class Response extends Component {
       graphOpen: false,
       graphRequest: null,
       isFolded: this.props.isInitiallyFolded,
+      previewOpen: false,
+      qualitySummary: getCommunityQualitySummary(this.props.response.username),
       tree: buildTree(this.props.response),
       userGroup: null,
       userGroupLoading: false,
@@ -105,6 +116,9 @@ class Response extends Component {
 
     if (this.props.response.username !== previousProps.response.username) {
       this.fetchUserGroup();
+      this.setState({
+        qualitySummary: getCommunityQualitySummary(this.props.response.username),
+      });
     }
   }
 
@@ -238,6 +252,28 @@ class Response extends Component {
     this.setState((previousState) => ({ isFolded: !previousState.isFolded }));
   };
 
+  reportSuspiciousCandidate = () => {
+    const { onQualitySignalUpdate, response } = this.props;
+
+    recordCommunityQualitySignal({
+      reason: 'Reported suspicious candidate from Search review.',
+      type: 'suspicious-candidate',
+      username: response.username,
+    });
+
+    this.setState({
+      qualitySummary: getCommunityQualitySummary(response.username),
+    });
+
+    if (onQualitySignalUpdate) {
+      onQualitySignalUpdate();
+    }
+
+    toast.success(
+      `Added a local caution signal for ${response.username}. Nothing was published.`,
+    );
+  };
+
   buildFallbackGraphRequest = () => {
     const { response } = this.props;
     const firstFile = response.files?.[0] || response.lockedFiles?.[0];
@@ -337,6 +373,82 @@ class Response extends Component {
     }
   };
 
+  copyPreview = async (preview) => {
+    try {
+      await navigator.clipboard.writeText(formatSearchActionPreview(preview));
+      toast.success('Copied action preview');
+    } catch (error) {
+      console.error(error);
+      toast.error('Unable to copy action preview');
+    }
+  };
+
+  renderActionPreview = (preview, selectedSize) => (
+    <Modal
+      closeIcon
+      onClose={() => this.setState({ previewOpen: false })}
+      open={this.state.previewOpen}
+      size="small"
+    >
+      <Modal.Header>Download action preview</Modal.Header>
+      <Modal.Content>
+        <List relaxed>
+          <List.Item>
+            <List.Header>Source</List.Header>
+            <List.Description>{preview.username || 'unknown'}</List.Description>
+          </List.Item>
+          <List.Item>
+            <List.Header>Providers</List.Header>
+            <List.Description>{preview.providerLabels.join(', ')}</List.Description>
+          </List.Item>
+          <List.Item>
+            <List.Header>Selected files</List.Header>
+            <List.Description>
+              {preview.fileCount} file{preview.fileCount === 1 ? '' : 's'}, {selectedSize}
+            </List.Description>
+          </List.Item>
+          {preview.candidateScore !== null && (
+            <List.Item>
+              <List.Header>Candidate score</List.Header>
+              <List.Description>{preview.candidateScore}/100</List.Description>
+            </List.Item>
+          )}
+        </List>
+        {preview.warnings.length > 0 && (
+          <div className="search-action-preview-warnings">
+            {preview.warnings.map((warning) => (
+              <Label
+                color="orange"
+                key={warning}
+                size="small"
+              >
+                {warning}
+              </Label>
+            ))}
+          </div>
+        )}
+        <pre className="search-action-preview-text">
+          {formatSearchActionPreview(preview)}
+        </pre>
+      </Modal.Content>
+      <Modal.Actions>
+        <Popup
+          content="Copy this planned action summary so you can review or export it before downloading."
+          position="top center"
+          trigger={
+            <Button
+              icon="copy"
+              onClick={() => this.copyPreview(preview)}
+            />
+          }
+        />
+        <Button onClick={() => this.setState({ previewOpen: false })}>
+          Close
+        </Button>
+      </Modal.Actions>
+    </Modal>
+  );
+
   renderDownloadAction = (
     selectedFiles,
     selectedSize,
@@ -344,13 +456,21 @@ class Response extends Component {
     downloadError,
   ) => {
     const noSelection = selectedFiles.length === 0;
-    const { response } = this.props;
+    const { candidateRank, response } = this.props;
+    const { qualitySummary } = this.state;
     const hasPodSource = response.sourceProviders?.includes('pod');
     const primarySource = response.primarySource || 'scene';
+    const preview = buildSearchActionPreview({
+      candidateRank,
+      communityQualitySummary: response.communityQualitySummary || qualitySummary,
+      files: selectedFiles,
+      response,
+    });
 
     return (
       <Card.Content extra>
         <span>
+          {!noSelection && this.renderActionPreview(preview, selectedSize)}
           <Button
             basic={noSelection}
             color={noSelection ? 'grey' : 'green'}
@@ -375,6 +495,19 @@ class Response extends Component {
             labelPosition={noSelection ? undefined : 'right'}
             onClick={() =>
               this.download(this.props.response.username, selectedFiles)
+            }
+          />
+          <Popup
+            content="Preview the selected download action, route, files, size, and warnings without starting a transfer."
+            position="top center"
+            trigger={
+              <Button
+                basic
+                content="Preview"
+                disabled={noSelection || downloadRequest === 'inProgress'}
+                icon="clipboard list"
+                onClick={() => this.setState({ previewOpen: true })}
+              />
             }
           />
           {hasPodSource && selectedFiles.length > 0 && (
@@ -473,7 +606,7 @@ class Response extends Component {
       onNoteUpdate,
       onUnblock,
       response,
-      smartScore,
+      candidateRank,
       userNote,
     } = this.props;
     const free = response.hasFreeUploadSlot;
@@ -489,11 +622,14 @@ class Response extends Component {
       graphData,
       graphLoading,
       graphOpen,
+      qualitySummary,
     } = this.state;
 
     const selectedFiles = getSelectedFiles(tree);
     const selectedSize = getSelectedSize(selectedFiles);
     const badgeColor = getBadgeColor(downloadStats);
+    const activeQualitySummary = response.communityQualitySummary || qualitySummary;
+    const qualityLabel = getCommunityQualityLabel(activeQualitySummary);
 
     return (
       <>
@@ -560,9 +696,13 @@ class Response extends Component {
                     }
                   />
                 )}
-                {smartScore !== undefined && (
+                {candidateRank?.score !== undefined && (
                   <Popup
-                    content={`Smart ranking score: ${smartScore.toFixed(1)} points`}
+                    content={
+                      candidateRank.reasons?.length > 0
+                        ? `Candidate score ${candidateRank.score}/100: ${candidateRank.reasons.join(', ')}`
+                        : `Candidate score ${candidateRank.score}/100`
+                    }
                     position="top center"
                     trigger={
                       <Label
@@ -570,7 +710,37 @@ class Response extends Component {
                         size="tiny"
                       >
                         <Icon name="star" />
-                        {smartScore.toFixed(0)}
+                        {candidateRank.score}
+                      </Label>
+                    }
+                  />
+                )}
+                {response.duplicateGroup?.foldedCount > 0 && (
+                  <Popup
+                    content={`Folded ${response.duplicateGroup.foldedCount} duplicate candidate${response.duplicateGroup.foldedCount === 1 ? '' : 's'} from ${response.duplicateGroup.providers.join(', ')}. Toggle Fold Duplicates in Search options to inspect every source separately.`}
+                    position="top center"
+                    trigger={
+                      <Label
+                        color="teal"
+                        size="tiny"
+                      >
+                        <Icon name="clone" />
+                        +{response.duplicateGroup.foldedCount}
+                      </Label>
+                    }
+                  />
+                )}
+                {qualityLabel && (
+                  <Popup
+                    content={`Local-only peer quality: ${qualityLabel.text}. ${activeQualitySummary.positive} positive, ${activeQualitySummary.negative} caution signal${activeQualitySummary.negative === 1 ? '' : 's'}.`}
+                    position="top center"
+                    trigger={
+                      <Label
+                        color={qualityLabel.color}
+                        size="tiny"
+                      >
+                        <Icon name={qualityLabel.icon} />
+                        {qualityLabel.text}
                       </Label>
                     }
                   />
@@ -674,6 +844,18 @@ class Response extends Component {
                     link
                     name="crosshairs"
                     onClick={() => this.openDiscoveryGraph(this.buildFallbackGraphRequest())}
+                  />
+                }
+              />
+              <Popup
+                content="Add a local caution signal for this peer/result. This only affects your browser-side review context and does not publish a global reputation report."
+                position="top center"
+                trigger={
+                  <Icon
+                    color="orange"
+                    link
+                    name="exclamation triangle"
+                    onClick={this.reportSuspiciousCandidate}
                   />
                 }
               />

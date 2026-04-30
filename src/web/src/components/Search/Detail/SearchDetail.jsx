@@ -8,7 +8,13 @@ import {
   parseFiltersFromString,
   unblockUser,
 } from '../../../lib/searches';
+import {
+  buildAlbumCandidates,
+  getAlbumCandidateFilter,
+} from '../../../lib/albumCandidatePicker';
 import { buildDiscoveryGraph } from '../../../lib/discoveryGraph';
+import { rankSearchResponses } from '../../../lib/searchCandidateRanking';
+import { deduplicateSearchResponses } from '../../../lib/searchResultDeduplication';
 import {
   getLocalStorageItem,
   removeLocalStorageItem,
@@ -29,8 +35,12 @@ import {
   Button,
   Checkbox,
   Dropdown,
+  Header,
   Icon,
   Input,
+  Label,
+  List,
+  Popup,
   Segment,
 } from 'semantic-ui-react';
 
@@ -57,35 +67,6 @@ const sortDropdownOptions = [
   },
 ];
 
-// Smart ranking algorithm - combines multiple factors
-const calculateSmartScore = (response, userStats) => {
-  let score = 0;
-
-  // Upload speed score (0-40 points) - normalized to max 10MB/s
-  const speedScore = Math.min((response.uploadSpeed / 10_485_760) * 40, 40);
-  score += speedScore;
-
-  // Queue length score (0-30 points) - lower is better
-  const queueScore = Math.max(30 - response.queueLength * 3, 0);
-  score += queueScore;
-
-  // Free slot bonus (15 points)
-  if (response.hasFreeUploadSlot) {
-    score += 15;
-  }
-
-  // Past download history bonus (0-15 points)
-  const stats = userStats?.[response.username];
-  if (stats) {
-    // Successful downloads give positive score
-    score += Math.min(stats.successfulDownloads * 3, 10);
-    // Failed downloads subtract
-    score -= Math.min(stats.failedDownloads * 2, 5);
-  }
-
-  return score;
-};
-
 // eslint-disable-next-line complexity
 const SearchDetail = ({
   creating,
@@ -99,6 +80,7 @@ const SearchDetail = ({
 }) => {
   const { fileCount, id, isComplete, lockedFileCount, responseCount, state } =
     search;
+  const acquisitionProfile = search.acquisitionProfile || 'lossless-exact';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(undefined);
@@ -113,6 +95,10 @@ const SearchDetail = ({
   const [hideLocked, setHideLocked] = useState(true);
   const [hideNoFreeSlots, setHideNoFreeSlots] = useState(false);
   const [foldResults, setFoldResults] = useState(false);
+  const [foldDuplicateResults, setFoldDuplicateResults] = useState(
+    getLocalStorageItem('slskd-search-fold-duplicate-results', 'true') !==
+      'false',
+  );
   const [resultFilters, setResultFilters] = useState(
     getLocalStorageItem('slskd-default-search-filter', ''),
   );
@@ -122,6 +108,7 @@ const SearchDetail = ({
   const [displayCount, setDisplayCount] = useState(pageSize);
   const [userStats, setUserStats] = useState({});
   const [userNotes, setUserNotes] = useState({});
+  const [qualitySignalVersion, setQualitySignalVersion] = useState(0);
   const [graphData, setGraphData] = useState(null);
   const [graphLoading, setGraphLoading] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
@@ -230,7 +217,7 @@ const SearchDetail = ({
 
   // apply sorting and filters.  this can take a while for larger result
   // sets, so memoize it.
-  const sortedAndFilteredResults = useMemo(() => {
+  const rankedAndFilteredResults = useMemo(() => {
     const sortOptions = {
       fileCount: { field: 'fileCount', order: 'desc' },
       queueLength: { field: 'queueLength', order: 'asc' },
@@ -255,19 +242,27 @@ const SearchDetail = ({
       .map((response) => filterResponse({ filters, response }))
       .filter((r) => r.fileCount + r.lockedFileCount > 0)
       .filter((r) => !(hideNoFreeSlots && !r.hasFreeUploadSlot))
-      .map((r) => ({
-        ...r,
-        downloadStats: userStats[r.username],
-        smartScore: calculateSmartScore(r, userStats),
-      }))
+      .map((r) =>
+        rankSearchResponses({
+          acquisitionProfile,
+          preferredConditions: filters,
+          responses: [r],
+          searchText: search.searchText,
+          userStats,
+        })[0],
+      )
       .sort((a, b) => {
+        const left = a[field] ?? 0;
+        const right = b[field] ?? 0;
+
         if (order === 'asc') {
-          return a[field] - b[field];
+          return left - right;
         }
 
-        return b[field] - a[field];
+        return right - left;
       });
   }, [
+    acquisitionProfile,
     blockedUsers,
     hiddenResults,
     hideBlockedUsers,
@@ -276,8 +271,30 @@ const SearchDetail = ({
     resultFilters,
     resultSort,
     results,
+    search.searchText,
     userStats,
+    qualitySignalVersion,
   ]);
+
+  const deduplicatedResults = useMemo(
+    () =>
+      deduplicateSearchResponses({
+        enabled: foldDuplicateResults,
+        responses: rankedAndFilteredResults,
+      }),
+    [foldDuplicateResults, rankedAndFilteredResults],
+  );
+
+  const sortedAndFilteredResults = deduplicatedResults.responses;
+
+  const albumCandidates = useMemo(
+    () =>
+      buildAlbumCandidates({
+        responses: sortedAndFilteredResults,
+        searchText: search.searchText,
+      }),
+    [search.searchText, sortedAndFilteredResults],
+  );
 
   // when a user uses the action buttons, we will *probably* re-use this component,
   // but with a new search ID.  clear everything to prepare for the transition
@@ -296,6 +313,15 @@ const SearchDetail = ({
     if (displayCount < newSize) {
       setDisplayCount(newSize);
     }
+  };
+
+  const handleFoldDuplicateResultsChange = () => {
+    const nextValue = !foldDuplicateResults;
+    setFoldDuplicateResults(nextValue);
+    setLocalStorageItem(
+      'slskd-search-fold-duplicate-results',
+      String(nextValue),
+    );
   };
 
   const create = async ({ navigate, search: searchForCreate }) => {
@@ -411,6 +437,19 @@ const SearchDetail = ({
     toast.info('Saved default filter cleared');
   };
 
+  const focusAlbumCandidate = (candidate) => {
+    const filter = getAlbumCandidateFilter(candidate);
+    if (!filter) {
+      return;
+    }
+
+    if (resultFilters.toLowerCase().includes(filter)) {
+      return;
+    }
+
+    setResultFilters(`${resultFilters} ${filter}`.trim());
+  };
+
   const filteredCount = results?.length - sortedAndFilteredResults.length;
   const remainingCount = sortedAndFilteredResults.length - displayCount;
   const loaded = !removing && !creating && !loading && results;
@@ -521,6 +560,23 @@ const SearchDetail = ({
                 onChange={() => setFoldResults(!foldResults)}
                 toggle
               />
+              <Popup
+                content="Fold duplicate file candidates that appear from multiple providers or peers, keeping the highest-ranked visible result and showing the folded sources as metadata."
+                position="top center"
+                trigger={
+                  <Checkbox
+                    checked={foldDuplicateResults}
+                    className="search-options-fold-duplicates"
+                    label={`Fold Duplicates${
+                      deduplicatedResults.foldedCount > 0
+                        ? ` (${deduplicatedResults.foldedCount})`
+                        : ''
+                    }`}
+                    onChange={handleFoldDuplicateResultsChange}
+                    toggle
+                  />
+                }
+              />
             </div>
             <Input
               action={
@@ -572,6 +628,79 @@ const SearchDetail = ({
             />
           </Segment>
         )}
+        {loaded && albumCandidates.length > 0 && (
+          <Segment
+            className="search-album-picker-segment"
+            raised
+          >
+            <Header as="h4">
+              Album candidates
+              <Label
+                color="blue"
+                size="mini"
+              >
+                {albumCandidates.length}
+              </Label>
+            </Header>
+            <List
+              className="search-album-candidate-list"
+              divided
+              relaxed
+            >
+              {albumCandidates.map((candidate) => (
+                <List.Item
+                  className="search-album-candidate"
+                  key={candidate.key}
+                >
+                  <List.Content floated="right">
+                    <Popup
+                      content="Focus the current result filter on this album folder name without starting another search or download."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Focus album candidate ${candidate.albumTitle}`}
+                          icon="filter"
+                          onClick={() => focusAlbumCandidate(candidate)}
+                          size="mini"
+                        />
+                      }
+                    />
+                  </List.Content>
+                  <List.Content>
+                    <List.Header>
+                      {candidate.albumTitle}
+                      <Label
+                        color="purple"
+                        size="tiny"
+                      >
+                        {candidate.score}/100
+                      </Label>
+                    </List.Header>
+                    <List.Description>
+                      {candidate.trackCount}/{candidate.expectedTrackCount}{' '}
+                      visible tracks · {candidate.sourceCount} source
+                      {candidate.sourceCount === 1 ? '' : 's'} ·{' '}
+                      {Math.round(candidate.completenessRatio * 100)}%
+                    </List.Description>
+                    <div className="search-album-candidate-labels">
+                      {candidate.reasons.map((reason) => (
+                        <Label
+                          key={reason}
+                          size="tiny"
+                        >
+                          {reason}
+                        </Label>
+                      ))}
+                    </div>
+                    <div className="search-album-candidate-paths">
+                      {candidate.directories.join(' | ')}
+                    </div>
+                  </List.Content>
+                </List.Item>
+              ))}
+            </List>
+          </Segment>
+        )}
         {loaded &&
           sortedAndFilteredResults.slice(0, displayCount).map((r, index) => (
             <Response
@@ -583,11 +712,14 @@ const SearchDetail = ({
               onBlock={() => handleBlockUser(r.username)}
               onHide={() => setHiddenResults([...hiddenResults, r.username])}
               onNoteUpdate={fetchUserNotes}
+              onQualitySignalUpdate={() =>
+                setQualitySignalVersion((version) => version + 1)
+              }
               onUnblock={() => handleUnblockUser(r.username)}
               response={r}
               responseIndex={index}
               searchId={id}
-              smartScore={r.smartScore}
+              candidateRank={r.candidateRank}
               userNote={userNotes[r.username]}
             />
           ))}

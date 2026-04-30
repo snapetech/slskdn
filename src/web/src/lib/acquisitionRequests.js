@@ -119,3 +119,36 @@ export const buildWishlistDiscoveryInboxItem = (item) => ({
 
 export const addWishlistItemToDiscoveryInbox = (item) =>
   addDiscoveryInboxItem(buildWishlistDiscoveryInboxItem(item));
+
+export const buildWishlistRequestSummary = ({
+  inboxItems = getDiscoveryInboxItems(),
+  items = [],
+  quota = 25,
+} = {}) => {
+  const counts = items.reduce(
+    (summary, item) => {
+      const state = getWishlistRequestState(item, inboxItems).label;
+      summary.byState[state] = (summary.byState[state] || 0) + 1;
+      if (item.enabled) summary.enabled += 1;
+      if (item.autoDownload) summary.automatic += 1;
+      return summary;
+    },
+    {
+      automatic: 0,
+      byState: {},
+      enabled: 0,
+      total: items.length,
+    },
+  );
+
+  return {
+    ...counts,
+    quota,
+    quotaRemaining: Math.max(quota - items.length, 0),
+    quotaStatus: items.length > quota ? 'Over quota' : 'Within quota',
+    reviewCount:
+      (counts.byState.Review || 0) +
+      (counts.byState.Approved || 0) +
+      (counts.byState.Snoozed || 0),
+  };
+};

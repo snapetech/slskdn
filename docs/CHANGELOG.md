@@ -22,8 +22,42 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a conservative per-artist release radar service that turns
+  SongID-confirmed federated WorkRef observations into local notifications
+  without polling MusicBrainz, browsing peers, searching Soulseek, or starting
+  downloads.
+- Added a local source-feed import preview parser that turns artist/title rows
+  into deduped suggestions with skipped-row reporting.
+- Expanded source-feed imports with Spotify provider fetching for public
+  playlist/album/track/artist/user playlist URLs, per-import bearer-token
+  support for liked/saved/followed/current-user feeds, local CSV/text/M3U/RSS
+  parsing, and a Wishlist Import Feed flow into Discovery Inbox review.
+- Added a redacted browser diagnostic bundle in System Info that can be
+  inspected and copied without exposing passwords, tokens, cookies, secrets, or
+  API keys.
+- Added optional media-server integration readiness cards and local path
+  diagnostics for Plex, Jellyfin/Emby, and Navidrome in System Integrations.
+- Added a local Servarr setup readiness checklist in System Integrations for
+  base URL, API key, wanted pull, completed import, and path-map sanity.
+- Added a Wishlist request portal summary with enabled, automatic, review, and
+  quota-style counts derived from current requests and Discovery Inbox state.
 - Added a signed local MusicBrainz overlay-edit API that applies corrections at
   release-graph read time with original/effective graph provenance.
+- Added browser-local Mesh Evidence Policy controls in the Mesh tab with
+  inbound trust gates, provenance-required status, and outbound publication
+  toggles that default to private/off.
+- Added browser-local community quality signals for Search results, including a
+  local caution report affordance and ranking context that never publishes
+  global peer reputation.
+- Added review-only Discovery Inbox acquisition plans for approved candidates,
+  including visible provider order and manual-execution policy without starting
+  searches or downloads.
+- Added explained Search candidate ranking keyed to acquisition profiles, file
+  evidence, availability, provider hints, and prior download history.
+- Added mobile-specific Discovery Inbox and Import Staging review layouts with
+  full-width touch actions and card-style staged import rows on narrow screens.
+- Added browser-local failed-import denylist handling for Import Staging so
+  rejected files are tracked and matching re-adds return as failed review rows.
 - Added opt-in browser-local SHA-256 fingerprint verification for newly staged
   import files, storing only verification metadata in the staging queue.
 - Added a local import metadata matcher with confidence, parsed identity,

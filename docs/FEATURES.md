@@ -291,20 +291,21 @@ Application-specific fetch and relay capabilities without becoming a generic pro
 - **Default Deny**: Features disabled or scoped by default
 - **Least Privilege**: Minimal permissions and visibility per service
 - **No Generic Proxy**: Everything application-aware (domains, content IDs, service names)
-- **Work Budget**: Universal work unit system prevents amplification
-- **Input Validation**: All external inputs validated (length, type, format)
+- **Work Budget**: Work units and rate limits reduce amplification risk
+- **Input Validation**: External-facing paths should validate length, type, and format before use
 
 ### Logging & Metrics
-- **No PII**: Logs/metrics never contain Soulseek usernames, IPs, secrets
+- **PII minimization**: Security-sensitive logs and metrics should avoid Soulseek usernames, IPs, and secrets unless a specific operational path requires them
 - **Logs Page Filtering**: Filter logs by level (All, Info, Warn, Error, Debug) with count display
 - **Reduced Noise**: CSRF validation logs for safe methods moved to Verbose level (not shown in default views)
 - **Low Cardinality**: Metrics use low-cardinality labels only
 - **Audit Trail**: All mutating operations logged with origin
 
 ### SSRF Protection
-- **Safe HTTP Client**: All outbound HTTP goes through SSRF-safe client
-- **IP Blocking**: Loopback and private IP ranges blocked
-- **Domain Allowlists**: Only whitelisted domains accessible
+- **Path-specific policies**: Solid WebID resolution and ActivityPub key fetching use SSRF-aware policies
+- **IP Blocking**: Those guarded fetch paths block loopback and private IP ranges
+- **Domain Allowlists**: Solid remote fetches require explicit allowed hosts
+- **Open audit items**: Webhook delivery and ActivityPub inbox delivery are tracked separately in the April 2026 security audit and should not be described as globally SSRF-safe until fixed
 
 ### Rate Limiting
 - **Per-Peer Limits**: Calls per minute per peer (configurable)
@@ -319,6 +320,10 @@ Application-specific fetch and relay capabilities without becoming a generic pro
 ---
 
 ## Configuration
+
+The snippets below are design examples for advanced mesh and gateway features.
+Use `config/slskd.example.yml` and `docs/config.md` as the source of truth for
+current user-facing option names, casing, and defaults.
 
 ### Service Fabric
 ```yaml
@@ -482,10 +487,10 @@ solid:
 
 #### Security by Default
 
-- Feature is **enabled by default** but **non-functional** until `AllowedHosts` is explicitly configured
+- Feature is **enabled by default** but **non-functional for remote WebID fetches** until `AllowedHosts` is explicitly configured
 - This provides SSRF protection: even with the feature on, no remote fetches occur until explicitly allowed
-- HTTPS-only enforcement prevents accidental insecure connections
-- Private IP blocking prevents SSRF attacks against internal services
+- HTTPS-only enforcement blocks accidental insecure WebID fetches on the Solid path
+- Private IP blocking blocks common SSRF targets on the Solid path
 
 #### Use Cases
 
@@ -597,7 +602,7 @@ When downloading Pod results that aren't available locally:
 - Music apps access VirtualSoulfind via HTTP gateway
 - Query missing tracks, library stats, catalogue gaps
 - Execute intents remotely (if enabled)
-- Work budget prevents abuse
+- Work budgets and rate limits reduce abuse risk
 
 ### Jobs API (Multi-Swarm Integration)
 - **Job Management**: Create and track discography and label crate download jobs
@@ -642,7 +647,7 @@ When downloading Pod results that aren't available locally:
 
 ## Roadmap
 
-### Phase 1: Service Fabric ✅ COMPLETE
+### Phase 1: Service Fabric ✅ IMPLEMENTED / EXPERIMENTAL
 - [x] Service descriptors and directory (T-SF01)
 - [x] Service routing and RPC (T-SF02)
 - [x] Service wrappers for existing features (T-SF03)
@@ -679,7 +684,7 @@ When downloading Pod results that aren't available locally:
 ### Phase 6: Testing & Hardening
 - [x] Comprehensive testing (T-TEST-01 through T-TEST-07)
 - [x] Remaining hardening tasks (H-03 through H-07, H-09, H-10)
-- [x] Security audit and penetration testing
+- [x] Security audit pass with follow-up items tracked separately
 - [x] Performance optimization
 
 ---

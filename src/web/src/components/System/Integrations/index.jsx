@@ -1,4 +1,12 @@
 import * as lidarr from '../../../lib/lidarr';
+import {
+  buildMediaServerPathDiagnostic,
+  mediaServerAdapters,
+} from '../../../lib/mediaServerIntegrations';
+import {
+  buildServarrReadiness,
+  summarizeServarrReadiness,
+} from '../../../lib/servarrReadiness';
 import React, { useMemo, useState } from 'react';
 import {
   Button,
@@ -401,6 +409,191 @@ const LidarrPanel = ({ options }) => {
   );
 };
 
+const MediaServerPanel = () => {
+  const [localPath, setLocalPath] = useState('');
+  const [serverPath, setServerPath] = useState('');
+  const [remotePathFrom, setRemotePathFrom] = useState('');
+  const [remotePathTo, setRemotePathTo] = useState('');
+  const diagnostic = buildMediaServerPathDiagnostic({
+    localPath,
+    remotePathFrom,
+    remotePathTo,
+    serverPath,
+  });
+
+  return (
+    <Card fluid>
+      <Card.Content>
+        <Card.Header>
+          <Icon name="server" />
+          Media Servers
+        </Card.Header>
+        <Card.Meta>
+          Optional Plex, Jellyfin/Emby, and Navidrome integration planning and path diagnostics.
+        </Card.Meta>
+      </Card.Content>
+      <Card.Content>
+        <Card.Group
+          itemsPerRow={3}
+          stackable
+        >
+          {mediaServerAdapters.map((adapter) => (
+            <Card
+              className="media-server-adapter-card"
+              key={adapter.id}
+            >
+              <Card.Content>
+                <Card.Header>{adapter.label}</Card.Header>
+                <Card.Meta>
+                  {adapter.requiresToken ? 'Token required' : 'No token required'}
+                </Card.Meta>
+                <div className="integration-status-row">
+                  {adapter.capabilities.map((capability) => (
+                    <Label
+                      basic
+                      key={capability}
+                      size="tiny"
+                    >
+                      {capability}
+                    </Label>
+                  ))}
+                </div>
+              </Card.Content>
+            </Card>
+          ))}
+        </Card.Group>
+
+        <Segment className="integration-manual-import">
+          <Header as="h4">Path Diagnostics</Header>
+          <p>
+            Check whether a completed file path reported by slskdN maps to the
+            path a media server can scan.
+          </p>
+          <div className="media-server-path-grid">
+            <Input
+              aria-label="slskdN local file path"
+              fluid
+              label="slskdN path"
+              onChange={(_, { value }) => setLocalPath(value)}
+              placeholder="/downloads/complete/Artist/Album/track.flac"
+              value={localPath}
+            />
+            <Input
+              aria-label="Media server file path"
+              fluid
+              label="Server path"
+              onChange={(_, { value }) => setServerPath(value)}
+              placeholder="/library/music/Artist/Album/track.flac"
+              value={serverPath}
+            />
+            <Input
+              aria-label="Remote path map from"
+              fluid
+              label="Map from"
+              onChange={(_, { value }) => setRemotePathFrom(value)}
+              placeholder="/downloads/complete"
+              value={remotePathFrom}
+            />
+            <Input
+              aria-label="Remote path map to"
+              fluid
+              label="Map to"
+              onChange={(_, { value }) => setRemotePathTo(value)}
+              placeholder="/library/music"
+              value={remotePathTo}
+            />
+          </div>
+          <Message
+            color={diagnostic.color}
+            size="small"
+          >
+            <Message.Header>{diagnostic.status}</Message.Header>
+            <p>{diagnostic.message}</p>
+            {diagnostic.mappedPath && <p>Mapped path: {diagnostic.mappedPath}</p>}
+          </Message>
+        </Segment>
+      </Card.Content>
+    </Card>
+  );
+};
+
+const ServarrReadinessPanel = ({ options }) => {
+  const lidarrOptions = getLidarrOptions(options);
+  const checks = buildServarrReadiness({
+    apiKey: getOption(lidarrOptions, 'apiKey', 'ApiKey'),
+    autoImportCompleted: getOption(
+      lidarrOptions,
+      'autoImportCompleted',
+      'AutoImportCompleted',
+    ),
+    enabled: getOption(lidarrOptions, 'enabled', 'Enabled'),
+    importPathFrom: getOption(lidarrOptions, 'importPathFrom', 'ImportPathFrom'),
+    importPathTo: getOption(lidarrOptions, 'importPathTo', 'ImportPathTo'),
+    syncWantedToWishlist: getOption(
+      lidarrOptions,
+      'syncWantedToWishlist',
+      'SyncWantedToWishlist',
+    ),
+    url: getOption(lidarrOptions, 'url', 'Url'),
+  });
+  const summary = summarizeServarrReadiness(checks);
+
+  return (
+    <Card fluid>
+      <Card.Content>
+        <Card.Header>
+          <Icon name="settings" />
+          Servarr Setup
+        </Card.Header>
+        <Card.Meta>
+          Local readiness checklist for indexer/download-client style integration.
+        </Card.Meta>
+      </Card.Content>
+      <Card.Content>
+        <div className="integration-status-row">
+          <Label color={summary.status === 'Ready' ? 'green' : 'orange'}>
+            <Icon name={summary.status === 'Ready' ? 'check circle' : 'warning sign'} />
+            {summary.status}
+          </Label>
+          <Label>
+            {summary.ready}/{summary.total} checks ready
+          </Label>
+        </div>
+        <Table
+          celled
+          compact
+        >
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell>Check</Table.HeaderCell>
+              <Table.HeaderCell>Status</Table.HeaderCell>
+              <Table.HeaderCell>Why it matters</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {checks.map((check) => (
+              <Table.Row key={check.id}>
+                <Table.Cell>{check.title}</Table.Cell>
+                <Table.Cell>
+                  {boolLabel(check.ready, 'Ready', 'Needs Setup')}
+                </Table.Cell>
+                <Table.Cell>{check.description}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+        <Message
+          info
+          size="small"
+        >
+          This checklist is diagnostic only. It does not register indexers,
+          create download clients, pull wanted items, or trigger imports.
+        </Message>
+      </Card.Content>
+    </Card>
+  );
+};
+
 const Integrations = ({ options = {}, state = {} }) => (
   <div className="integrations-admin">
     <Segment>
@@ -418,6 +611,8 @@ const Integrations = ({ options = {}, state = {} }) => (
       state={state}
     />
     <LidarrPanel options={options} />
+    <ServarrReadinessPanel options={options} />
+    <MediaServerPanel />
   </div>
 );
 

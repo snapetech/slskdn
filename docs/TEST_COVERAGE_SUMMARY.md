@@ -1,7 +1,9 @@
 # Test Coverage Summary
 
 > **Last Updated**: 2026-01-27  
-> **Status**: Comprehensive coverage - all tests passing ✅
+> **Status**: Historical snapshot from 2026-01-27. Do not use the counts below
+> as current CI status; check GitHub Actions or run the suite locally for live
+> results.
 
 ---
 
@@ -197,9 +199,9 @@
    - Tests work correctly with `SoulfindRunner` when available
    - Graceful skipping is intentional for CI environments
 
-2. ✅ **Soulbeet Compatibility**: All passing (23 tests verified)
-   - Compatibility APIs fully implemented and tested
-   - All compatibility tests verified passing
+2. ✅ **Soulbeet Compatibility**: Reported passing in this snapshot (23 tests verified)
+   - Compatibility APIs had targeted implementation and tests
+   - Compatibility tests were verified passing at snapshot time
 
 3. **E2E Edge Cases**: Some tests intentionally skipped (documented)
    - Timing-sensitive tests (expired tokens)
@@ -260,9 +262,11 @@
 - Critical user journeys have E2E coverage
 - Security features thoroughly tested
 
-**Known Issues**: ✅ **None**
-- All integration tests passing (23 protocol/Soulbeet tests verified)
-- All frontend component tests passing (69 tests)
-- All protocol validation tests passing (13+ tests)
+**Known Issues at Snapshot Time**:
+- Integration tests were reported passing (23 protocol/Soulbeet tests verified)
+- Frontend component tests were reported passing (69 tests)
+- Protocol validation tests were reported passing (13+ tests)
 
-The codebase has **comprehensive test coverage** across all test types. The failing tests are non-critical and relate to external dependencies (Soulseek server simulator) or compatibility APIs that are implemented but may need test fixes.
+At the time of this snapshot, the codebase had broad coverage across test
+types. Treat any absolute pass/fail counts here as dated; current readiness
+comes from the latest CI run or local validation.

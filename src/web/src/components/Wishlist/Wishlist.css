@@ -8,6 +8,22 @@
   margin-bottom: 1em !important;
 }
 
+.wishlist-request-summary {
+  margin-bottom: 1em !important;
+}
+
+.wishlist-request-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.wishlist-request-summary-grid .ui.label {
+  align-items: center;
+  display: inline-flex;
+  min-height: 34px;
+}
+
 .wishlist-filter {
   font-size: 0.85em;
   color: #888;
@@ -40,4 +56,3 @@
 .wishlist-container .ui.placeholder.segment .icon {
   color: #888 !important;
 }
-

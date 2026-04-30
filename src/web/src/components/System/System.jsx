@@ -50,6 +50,7 @@ const System = ({ options = {}, state = {}, theme }) => {
       render: () => (
         <Tab.Pane>
           <Info
+            options={options}
             state={state}
             theme={theme}
           />

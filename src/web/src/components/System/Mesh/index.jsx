@@ -1,4 +1,5 @@
 import * as mesh from '../../../lib/mesh';
+import MeshEvidencePolicy from './MeshEvidencePolicy';
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -301,6 +302,10 @@ const Mesh = () => {
               </Grid.Column>
             </Grid>
           </Segment>
+        </Grid.Column>
+
+        <Grid.Column width={16}>
+          <MeshEvidencePolicy />
         </Grid.Column>
       </Grid>
     </div>

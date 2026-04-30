@@ -3108,6 +3108,12 @@ namespace slskd
             public LidarrOptions Lidarr { get; init; } = new LidarrOptions();
 
             /// <summary>
+            ///     Gets Spotify source feed import options.
+            /// </summary>
+            [Validate]
+            public SpotifyOptions Spotify { get; init; } = new SpotifyOptions();
+
+            /// <summary>
             ///     VPN options.
             /// </summary>
             public class VpnOptions : IValidatableObject
@@ -3944,6 +3950,90 @@ namespace slskd
                     if (ImportMode is not ("move" or "copy" or "Move" or "Copy"))
                     {
                         yield return new ValidationResult("Lidarr import_mode must be 'move' or 'copy'.", new[] { nameof(ImportMode) });
+                    }
+                }
+            }
+
+            /// <summary>
+            ///     Spotify source feed import options.
+            /// </summary>
+            public class SpotifyOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether Spotify provider imports and account connection are enabled.
+                /// </summary>
+                [Argument(default, "spotify")]
+                [EnvironmentVariable("SPOTIFY")]
+                [Description("enable Spotify source feed imports and account connection")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the Spotify application client ID.
+                /// </summary>
+                [Argument(default, "spotify-client-id")]
+                [EnvironmentVariable("SPOTIFY_CLIENT_ID")]
+                [Description("Spotify application client ID")]
+                [Secret]
+                public string ClientId { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the Spotify application client secret.
+                /// </summary>
+                [Argument(default, "spotify-client-secret")]
+                [EnvironmentVariable("SPOTIFY_CLIENT_SECRET")]
+                [Description("Spotify application client secret")]
+                [Secret]
+                public string ClientSecret { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the Spotify OAuth redirect URI. Leave empty to infer from the current request host.
+                /// </summary>
+                [Argument(default, "spotify-redirect-uri")]
+                [EnvironmentVariable("SPOTIFY_REDIRECT_URI")]
+                [Description("Spotify OAuth redirect URI")]
+                public string RedirectUri { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the timeout for Spotify HTTP requests, in seconds.
+                /// </summary>
+                [Argument(default, "spotify-timeout")]
+                [EnvironmentVariable("SPOTIFY_TIMEOUT")]
+                [Description("timeout for Spotify HTTP requests")]
+                [Range(1, 120)]
+                public int TimeoutSeconds { get; init; } = 20;
+
+                /// <summary>
+                ///     Gets the maximum imported source feed items per request.
+                /// </summary>
+                [Argument(default, "spotify-max-items-per-import")]
+                [EnvironmentVariable("SPOTIFY_MAX_ITEMS_PER_IMPORT")]
+                [Description("maximum Spotify source feed items per import")]
+                [Range(1, 5000)]
+                public int MaxItemsPerImport { get; init; } = 500;
+
+                /// <summary>
+                ///     Gets the market used for artist top-track lookups.
+                /// </summary>
+                [Argument(default, "spotify-market")]
+                [EnvironmentVariable("SPOTIFY_MARKET")]
+                [Description("Spotify market code for artist top-track lookups")]
+                public string Market { get; init; } = "US";
+
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (!Enabled)
+                    {
+                        yield break;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(ClientId))
+                    {
+                        yield return new ValidationResult("Spotify is enabled but integrations.spotify.client_id is empty.", new[] { nameof(ClientId) });
+                    }
+
+                    if (string.IsNullOrWhiteSpace(Market) || Market.Length != 2)
+                    {
+                        yield return new ValidationResult("Spotify market must be a two-letter market code.", new[] { nameof(Market) });
                     }
                 }
             }

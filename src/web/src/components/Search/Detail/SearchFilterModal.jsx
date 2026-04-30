@@ -273,6 +273,46 @@ const SearchFilterModal = ({ filterString, onChange, trigger }) => {
               </Form.Field>
             </Form.Group>
           </Segment>
+
+          <Segment>
+            <Header size="tiny">Ranking Preferences</Header>
+            <Form.Group widths="equal">
+              <Form.Input
+                label="Prefer Extensions"
+                onChange={(event) =>
+                  handleChange(
+                    'preferExtensions',
+                    event.target.value
+                      .split(' ')
+                      .filter((t) => t.trim())
+                      .map((t) => t.toLowerCase().replace(/^\./, '')),
+                  )
+                }
+                placeholder="flac wav"
+                value={(filters.preferExtensions || []).join(' ')}
+              />
+              <Form.Input
+                label="Prefer Min Bitrate (kbps)"
+                min={0}
+                onChange={(event) =>
+                  handleChange(
+                    'preferMinBitRate',
+                    Number.parseInt(event.target.value, 10) || 0,
+                  )
+                }
+                placeholder="e.g. 320"
+                type="number"
+                value={filters.preferMinBitRate || ''}
+              />
+            </Form.Group>
+            <Form.Checkbox
+              checked={filters.preferLossless || false}
+              label="Prefer lossless without hiding lossy fallback candidates"
+              onChange={(_, { checked }) =>
+                handleChange('preferLossless', checked)
+              }
+            />
+          </Segment>
         </Form>
       </Modal.Content>
       <Modal.Actions>

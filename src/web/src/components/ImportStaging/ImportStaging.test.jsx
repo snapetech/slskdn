@@ -78,6 +78,62 @@ describe('ImportStaging', () => {
     expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
   });
 
+  it('marks table cells with mobile review labels', () => {
+    localStorage.setItem(
+      importStagingStorageKey,
+      JSON.stringify([
+        {
+          fileName: 'mobile-track.flac',
+          id: 'stage-1',
+          lastModified: 123,
+          size: 3,
+          state: 'Staged',
+          type: 'audio/flac',
+        },
+      ]),
+    );
+
+    const { container } = render(<ImportStaging />);
+
+    expect(container.querySelector('.import-staging-table')).toBeInTheDocument();
+    expect(container.querySelector('td[data-label="File"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('td[data-label="Metadata Match"]'),
+    ).toBeInTheDocument();
+    expect(container.querySelector('td[data-label="Actions"]')).toBeInTheDocument();
+  });
+
+  it('adds rejected files to the failed-import denylist', () => {
+    localStorage.setItem(
+      importStagingStorageKey,
+      JSON.stringify([
+        {
+          fileName: 'bad.flac',
+          id: 'stage-1',
+          lastModified: 123,
+          size: 3,
+          state: 'Staged',
+          type: 'audio/flac',
+        },
+      ]),
+    );
+
+    render(<ImportStaging />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reject bad.flac' }));
+
+    expect(screen.getByText('Failed Import Denylist')).toBeInTheDocument();
+    expect(screen.getAllByText('bad.flac').length).toBeGreaterThan(0);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove bad.flac from failed import denylist',
+      }),
+    );
+
+    expect(screen.queryByText('Failed Import Denylist')).not.toBeInTheDocument();
+  });
+
   it('shows local metadata match confidence', () => {
     localStorage.setItem(
       importStagingStorageKey,

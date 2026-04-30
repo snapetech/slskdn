@@ -56,6 +56,50 @@ public class YamlConfigurationSourceTests
     }
 
     [Fact]
+    public void AddYamlFile_BindsUpstreamStyleTransferUploadLimitsToGlobalLimits()
+    {
+        var options = ReadOptions("""
+            transfers:
+              upload:
+                limits:
+                  queued:
+                    files: 12
+                  weekly:
+                    megabytes: 4096
+            """);
+
+        Assert.Equal(12, options.Global.Limits.Queued.Files);
+        Assert.Equal(4096, options.Global.Limits.Weekly.Megabytes);
+    }
+
+    [Fact]
+    public void AddYamlFile_BindsTransfersGroupsToCurrentGroupOptions()
+    {
+        var options = ReadOptions("""
+            transfers:
+              groups:
+                default:
+                  upload:
+                    slots: 7
+                    limits:
+                      daily:
+                        files: 25
+                user_defined:
+                  friends:
+                    members:
+                      - alice
+                    upload:
+                      allowed_file_types:
+                        - .flac
+            """);
+
+        Assert.Equal(7, options.Groups.Default.Upload.Slots);
+        Assert.Equal(25, options.Groups.Default.Limits.Daily.Files);
+        Assert.Equal(new[] { "alice" }, options.Groups.UserDefined["friends"].Members);
+        Assert.Equal(new[] { ".flac" }, options.Groups.UserDefined["friends"].Upload.AllowedFileTypes);
+    }
+
+    [Fact]
     public void AddYamlFile_BindsIntegrationsAliasToIntegrationOptions()
     {
         var options = ReadOptions("""

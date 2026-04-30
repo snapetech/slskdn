@@ -187,6 +187,48 @@
   margin-top: 10px;
 }
 
+.search-album-picker-segment {
+  margin-top: 10px !important;
+}
+
+.search-album-candidate-list {
+  margin-top: 0.75rem !important;
+}
+
+.search-album-candidate .header {
+  align-items: center;
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.search-album-candidate-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.search-album-candidate-paths {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.55));
+  font-size: 0.86rem;
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+}
+
+.search-action-preview-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+
+.search-action-preview-text {
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 .discography-coverage-segment {
   margin-top: 10px;
 }

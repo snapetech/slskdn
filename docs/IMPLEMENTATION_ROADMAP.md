@@ -291,7 +291,8 @@ CREATE TABLE MeshPeerState (
 - `src/slskd/Backfill/BackfillSchedulerService.cs` ✅
 - `src/slskd/Backfill/API/BackfillController.cs` ✅
 
-**Note:** Actual Soulseek download integration pending - logic and rate limiting fully implemented.
+**Note:** Actual Soulseek download integration is pending; planning logic and
+rate-limiting pieces were implemented for the scoped workstream.
 
 ---
 
@@ -1234,4 +1235,3 @@ For a node with 100k hot entries + 1M warm entries:
 | **Total Disk** | **~10 MB** |
 
 This is extremely manageable even on low-end devices.
-

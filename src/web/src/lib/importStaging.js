@@ -3,6 +3,7 @@ import { buildMetadataMatch } from './metadataMatcher';
 import { v4 as uuidv4 } from 'uuid';
 
 export const importStagingStorageKey = 'slskdn.importStaging.items';
+export const importStagingDenylistStorageKey = 'slskdn.importStaging.denylist';
 
 export const importStagingStates = [
   'Staged',
@@ -42,6 +43,20 @@ const getFingerprint = (item) =>
     item.lastModified || '',
   ].join(':');
 
+const getDenylistKey = (item) =>
+  item.fingerprintVerification?.status === 'Verified' &&
+  item.fingerprintVerification?.value
+    ? `sha256:${item.fingerprintVerification.value}`
+    : `file:${getFingerprint(item)}`;
+
+const normalizeDenylistEntry = (entry) => ({
+  createdAt: entry.createdAt || now(),
+  fileName: entry.fileName || 'Unknown file',
+  key: entry.key || '',
+  reason: entry.reason || 'Rejected from import staging.',
+  sourceState: entry.sourceState || 'Rejected',
+});
+
 export const getImportStagingItems = (getItem = getLocalStorageItem) => {
   try {
     const parsed = JSON.parse(getItem(importStagingStorageKey, '[]'));
@@ -60,6 +75,28 @@ export const saveImportStagingItems = (
   return normalized;
 };
 
+export const getImportStagingDenylist = (getItem = getLocalStorageItem) => {
+  try {
+    const parsed = JSON.parse(getItem(importStagingDenylistStorageKey, '[]'));
+    return Array.isArray(parsed)
+      ? parsed.map(normalizeDenylistEntry).filter((entry) => entry.key)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveImportStagingDenylist = (
+  entries,
+  setItem = setLocalStorageItem,
+) => {
+  const normalized = entries
+    .map(normalizeDenylistEntry)
+    .filter((entry) => entry.key);
+  setItem(importStagingDenylistStorageKey, JSON.stringify(normalized));
+  return normalized;
+};
+
 export const addImportStagingFiles = (
   files,
   {
@@ -69,6 +106,8 @@ export const addImportStagingFiles = (
 ) => {
   const items = getImportStagingItems(getItem);
   const fingerprints = new Set(items.map(getFingerprint));
+  const denylist = getImportStagingDenylist(getItem);
+  const denylistKeys = new Set(denylist.map((entry) => entry.key));
   const added = Array.from(files)
     .map((file) =>
       normalizeItem({
@@ -87,6 +126,18 @@ export const addImportStagingFiles = (
 
       fingerprints.add(fingerprint);
       return true;
+    })
+    .map((item) => {
+      const denylistKey = getDenylistKey(item);
+      const denied = denylistKeys.has(denylistKey);
+
+      return denied
+        ? {
+            ...item,
+            reason: 'Blocked by failed-import denylist.',
+            state: 'Failed',
+          }
+        : item;
     });
 
   return saveImportStagingItems([...added, ...items], setItem);
@@ -108,6 +159,43 @@ export const updateImportStagingItemState = (
   );
 
   return saveImportStagingItems(updated, setItem);
+};
+
+export const addImportStagingItemToDenylist = (
+  id,
+  reason = 'Rejected from import staging.',
+  {
+    getItem = getLocalStorageItem,
+    setItem = setLocalStorageItem,
+  } = {},
+) => {
+  const item = getImportStagingItems(getItem).find((candidate) => candidate.id === id);
+  if (!item) {
+    return getImportStagingDenylist(getItem);
+  }
+
+  const entry = normalizeDenylistEntry({
+    fileName: item.fileName,
+    key: getDenylistKey(item),
+    reason,
+    sourceState: item.state,
+  });
+  const entries = getImportStagingDenylist(getItem);
+  const existing = entries.filter((candidate) => candidate.key !== entry.key);
+  return saveImportStagingDenylist([entry, ...existing], setItem);
+};
+
+export const removeImportStagingDenylistEntry = (
+  key,
+  {
+    getItem = getLocalStorageItem,
+    setItem = setLocalStorageItem,
+  } = {},
+) => {
+  const entries = getImportStagingDenylist(getItem).filter(
+    (entry) => entry.key !== key,
+  );
+  return saveImportStagingDenylist(entries, setItem);
 };
 
 export const updateImportStagingItemMetadataMatch = (

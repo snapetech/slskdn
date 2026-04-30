@@ -20,6 +20,10 @@
   color: black;
 }
 
+:root.dark .transfer-button {
+  color: var(--slskdn-accent-primary-hover, #eadfff) !important;
+}
+
 .transfer-card {
   width: 100% !important;
   margin-left: auto !important;

@@ -24,6 +24,150 @@ The docs should be cleaned in this order:
 4. Add first-class user docs for Lidarr, Gold Star/Rooms/Pods, and the compact
    VPN port modes to the docs index and getting-started flow.
 5. Move stale phase/audit docs into archive or mark them clearly as historical.
+6. Soften or qualify public-readiness/security claims that overstate the
+   current codebase.
+
+## Overstatement Findings
+
+The current public docs do over-state some areas. These should be fixed before
+using the README/docs as release copy.
+
+### 1. README Claims Advanced Features Are Production-Ready
+
+`README.md` says:
+
+```text
+The following advanced features are fully implemented and production-ready
+```
+
+This is too broad. The same README later labels some of those systems
+experimental, and the April 2026 security audit still lists verified high- and
+medium-severity findings. It is especially risky because the section includes
+mesh, security hardening, Pods, VirtualSoulfind, and Service Fabric.
+
+Recommended replacement:
+
+```text
+The following advanced features are available in this fork. Maturity varies by
+feature; see the status table below and current security notes before exposing
+experimental mesh, gateway, or federation features.
+```
+
+Also change the status table entries:
+
+- `DHT Peer Discovery`: `Experimental` or `Beta`, not `Stable`.
+- `Security Hardening`: `Active hardening`, not `Stable`.
+- `Multi-Source Downloads`: `Beta` unless release testing is current.
+- `MusicBrainz Integration`: `Beta/Stable per subfeature`; fingerprinting and
+  auto-tagging should not be advertised as blanket stable if optional native
+  tooling and third-party services are required.
+
+### 2. Security Docs Claim Universal SSRF Protection
+
+`docs/FEATURES.md` says:
+
+```text
+Safe HTTP Client: All outbound HTTP goes through SSRF-safe client
+```
+
+This conflicts with `docs/security/full-app-audit-2026-04.md`, which verifies
+that webhook delivery and ActivityPub inbox delivery lack an IP-range SSRF
+guard. Solid WebID fetches and ActivityPub key fetching have good guards, but
+the protection is not universal.
+
+Recommended replacement:
+
+```text
+Selected outbound fetch paths use SSRF-safe policies, including Solid WebID
+resolution and ActivityPub key fetching. Webhook and federation delivery paths
+are tracked separately in the security audit and should not be described as
+globally SSRF-safe until fixed.
+```
+
+### 3. Current Status Reads Like A Live Health Report
+
+`docs/CURRENT_STATUS.md` is dated `2026-01-27` but uses present-tense claims:
+
+- `All builds passing`
+- `All unit tests passing (2430)`
+- `All integration tests passing (190)`
+- `All critical features complete`
+- `Codebase is in excellent shape`
+
+This is stale and too absolute for a manually maintained document. It should be
+either archived as a January snapshot or rewritten as a dated status note that
+points to CI for current test health.
+
+Recommended replacement banner:
+
+```text
+Historical snapshot from 2026-01-27. Do not use as current release, CI, or
+security status. Check GitHub Actions and the latest changelog/security audits
+for current state.
+```
+
+### 4. Service Fabric And Mesh Completion Language Is Too Absolute
+
+`docs/FEATURES.md`, `docs/HOW-IT-WORKS.md`, and `README.md` describe Service
+Fabric and mesh layers as complete platform features. The code has real
+implementations, but the docs also mention in-progress hardening and the
+security audit still lists open risks. Service Fabric should be described as
+available/experimental infrastructure, not a fully hardened platform.
+
+Recommended language:
+
+- Use `implemented experimental infrastructure` instead of `complete`.
+- Use `local/opt-in gateway` instead of language that implies a broadly safe
+  remote application platform.
+- Keep "disabled by default" claims only where the config default is verified.
+
+### 5. "Prevents" And "Guaranteed" Claims Should Become Guardrail Claims
+
+Several docs use prevention/guarantee wording, for example:
+
+- `prevents SSRF attacks`
+- `prevents amplification`
+- `playback guarantees`
+- `Soulseek abuse ... is prevented by multiple enforcement layers`
+
+These should be softened. Security and network-health controls reduce risk;
+they do not guarantee prevention against all future code paths or configuration
+states.
+
+Recommended replacements:
+
+- `blocks common SSRF targets on this path`
+- `reduces amplification risk with work budgets and rate limits`
+- `designed to preserve playback continuity when enough verified sources exist`
+- `adds multiple guardrails against non-music Soulseek use`
+
+### 6. Config Snippets May Present Planned Options As User-Ready
+
+`docs/FEATURES.md` includes several top-level YAML snippets such as
+`ServiceFabric`, `CatalogFetch`, `ContentRelay`, and `TrustedRelay`. Some
+current code/config uses different naming or has implementation-specific option
+classes. These snippets should be checked against `config/slskd.example.yml`
+before being treated as user-facing configuration.
+
+Recommended fix:
+
+- Move speculative/planning config to design docs.
+- In user docs, only show options present in `config/slskd.example.yml` or
+  `docs/config.md`.
+- Use the repo's actual casing and nesting.
+
+### 7. Archive Docs Contain Strong Historical Claims
+
+Many files under `docs/archive/` intentionally contain completion and release
+claims such as "production-ready" and "feature-complete." That is acceptable if
+the archive is treated as historical, but public docs should not link to those
+files as current status without a warning.
+
+Recommended fix:
+
+- Add or keep a visible archive disclaimer.
+- Prefer linking current user guides from `README.md` and `docs/README.md`.
+- Move stale phase-completion docs out of the current-docs index.
 
 ## High-Priority Gaps
 

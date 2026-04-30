@@ -180,6 +180,10 @@ public class ProgramPathNormalizationTests
                       max_delay: 1000
                 integration:
                   webhooks: {}
+                transfers:
+                  limits:
+                    queued:
+                      files: 10
                 groups:
                   default:
                     limits:
@@ -205,6 +209,8 @@ public class ProgramPathNormalizationTests
 
             Assert.Contains(warnings, warning => warning.Contains("'global'", StringComparison.Ordinal));
             Assert.Contains(warnings, warning => warning.Contains("'integration'", StringComparison.Ordinal));
+            Assert.Contains(warnings, warning => warning.Contains("'groups'", StringComparison.Ordinal));
+            Assert.Contains(warnings, warning => warning.Contains("'transfers.limits'", StringComparison.Ordinal));
             Assert.Contains(warnings, warning => warning.Contains("Group-level 'limits'", StringComparison.Ordinal));
             Assert.Contains(warnings, warning => warning.Contains("30000ms", StringComparison.Ordinal));
         }

@@ -18,7 +18,7 @@
 
 ### T-1401: Full Library Health Scanning ✅ **COMPLETE**
 - **Status**: ✅ **DONE**
-- **Evidence**: `LibraryHealthService.ScanFileAsync` fully implemented with:
+- **Evidence**: `LibraryHealthService.ScanFileAsync` implemented for the audited scope with:
   - MusicBrainz ID resolution via metadata facade
   - AudioVariant creation and quality scoring
   - Transcode detection using TranscodeDetector
@@ -36,7 +36,7 @@
 
 ### T-1403: Rescue Service ✅ **COMPLETE**
 - **Status**: ✅ **DONE**
-- **Evidence**: `RescueService` fully implemented with:
+- **Evidence**: `RescueService` implemented for the audited scope with:
   - `GetOutputPathForTransfer` - output path resolution
   - `TryResolveRecordingIdAsync` - HashDb lookup with file hash computation
   - `ComputeFileHashAsync` - file hash computation
@@ -45,7 +45,7 @@
 
 ### T-1404: Swarm Download Orchestration ✅ **COMPLETE**
 - **Status**: ✅ **DONE**
-- **Evidence**: `SwarmDownloadOrchestrator` fully implemented with:
+- **Evidence**: `SwarmDownloadOrchestrator` implemented for the audited scope with:
   - Chunk calculation and scheduling
   - Uses `IChunkScheduler` for peer assignment
   - Downloads chunks from assigned peers

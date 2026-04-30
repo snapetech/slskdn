@@ -447,7 +447,7 @@ This document outlines the phased implementation of a **generic service fabric**
   - Notes:
     - Threat model
     - Security constraints
-    - Privacy guarantees
+    - Privacy guardrails
     - Recommended configurations
 
 ---

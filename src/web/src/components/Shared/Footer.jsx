@@ -200,7 +200,7 @@ class Footer extends Component {
                 target="_blank"
                 title="Support development - because Cursor isn't cheap!"
               >
-                <Icon name="heart" /> Sponsor
+                <Icon name="heart" /> Donate
               </a>
 
               <span className="slskdn-footer-copyright">

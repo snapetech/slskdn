@@ -1,3 +1,205 @@
+## Update 2026-04-30 20:18:09Z
+
+- Current task: Epic 3 search-result deduplication is implemented locally.
+- Last activity:
+  - added browser-local duplicate media candidate folding after filtering, ranking, and sorting
+  - kept the highest-ranked candidate visible and attached folded provider/peer metadata
+  - added a visible Search option to disable duplicate folding when users want to inspect every source separately
+  - kept the slice non-networking with no provider query, peer browse, download, stream, or metadata lookup changes
+  - validated focused search deduplication/ranking/filter/Search tests and frontend lint
+- Next steps:
+  1. Continue beginning-lane burn-down with the next untouched Epic 4 interactive album picker surface, avoiding Discovery Inbox/Import Staging overlap.
+  2. Later connect deduplication to backend provider identity once multi-provider execution returns canonical content hashes.
+
+## Update 2026-04-30 20:18:22Z
+
+- Current task: Quarantine Jury persistence follow-up is implemented locally.
+- Last activity:
+  - added atomic JSON persistence for Quarantine Jury requests and signed verdicts
+  - reload persisted jury state on service startup
+  - added focused rehydration coverage for requests, verdicts, and aggregate recommendations
+- Next steps:
+  1. Route minimal signed jury evidence through explicitly selected trust-scoped mesh channels.
+  2. Add a manual review UI that keeps local quarantine authoritative until explicit user acceptance.
+
+## Update 2026-04-30 20:13:04Z
+
+- Current task: T-936 Quarantine Jury first slice is implemented locally.
+- Last activity:
+  - added local Quarantine Jury request, evidence, verdict, signature, and aggregate models
+  - added safe opaque evidence validation and selected-juror enforcement
+  - added signed verdict payload-hash validation and duplicate juror replacement
+  - added two-thirds recommendation aggregation without changing quarantine state
+  - documented and committed the jury quorum rounding gotcha as `ac77d55c9`
+  - validated focused jury tests, lint, whitespace, and full `dotnet test`
+- Next steps:
+  1. Persist Quarantine Jury requests/verdicts across daemon restarts.
+  2. Route minimal signed jury evidence through explicitly selected trust-scoped mesh channels.
+
+## Update 2026-04-30 20:42:00Z
+
+- Current task: T-939 Source Feed Imports is implemented locally.
+- Last activity:
+  - added backend source-feed parsing for CSV, pasted text, M3U/PLS, and RSS/OPML
+  - added Spotify provider fetching for public playlist/album/track/artist/user playlist URLs with app credentials
+  - added per-import Spotify bearer token support for liked/saved tracks, saved albums, followed artists, and current-user playlists
+  - added the Wishlist Import Feed preview flow and Discovery Inbox handoff
+  - documented and committed the `HttpClient.Timeout` reuse gotcha
+- Next steps:
+  1. Add first-class OAuth token acquisition/storage if we want users to connect Spotify without pasting a temporary bearer token.
+  2. Extend provider fetchers to Apple Music/YouTube/Bandcamp/ListenBrainz/Last.fm after each provider's auth/rate-limit policy is chosen.
+
+## Update 2026-04-30 20:13:21Z
+
+- Current task: None. slskdN-native config compatibility map is implemented locally.
+- Last activity:
+  - evaluated upstream config layout changes as reference-only because this fork is license-limited to 0.24.5
+  - extended the existing YAML provider compatibility pass so `transfers.upload.limits` hydrates current global upload limits
+  - added `transfers.groups` compatibility while retaining top-level `groups` and group upload-limit compatibility
+  - added startup warnings for accepted legacy config shapes and updated README/config examples to prefer the new layout
+  - validated project build, focused YAML/config-warning tests, `bash bin/lint`, and whitespace checks
+  - full `dotnet test` still has one unrelated failure in `ContentVerificationServiceTests.VerifySourcesAsync_WhenDownloadThrows_ReturnsSanitizedFailureReason`
+- Next steps:
+  1. Resolve the unrelated content-verification probe-budget test failure before using full-suite status as a release gate.
+  2. Keep future config-shape work in the local compatibility provider unless a breaking options-model migration is deliberately planned.
+
+## Update 2026-04-30 20:24:00Z
+
+- Current task: T-939 Source Feed Imports is planned.
+- Last activity:
+  - audited Spotify/source-feed coverage
+  - confirmed existing support is limited to SongID single Spotify track URLs and Wishlist CSV playlist import
+  - added Source Feed Imports as Phase 8 in `docs/design/music-discovery-federation-plan.md`
+  - added T-939 to `memory-bank/tasks.md`
+- Next steps:
+  1. Implement the first slice as dry-run/review import into Discovery Inbox from CSV, pasted tracklists, and local playlist files.
+  2. Keep Spotify/provider URL fetching disabled until explicit configuration, credentials, and rate limits are added.
+
+## Update 2026-04-30 20:28:00Z
+
+- Current task: T-939 Source Feed Imports first slice is implemented locally.
+- Last activity:
+  - added backend source-feed preview parsing for local artist/title/album rows
+  - dedupe suggestions by normalized evidence key and report skipped rows
+  - expose provider-token requirements while keeping provider fetch count at zero
+- Next steps:
+  1. Wire preview suggestions into Discovery Inbox review.
+  2. Add explicit provider fetchers only behind configuration, credentials, and rate limits.
+
+## Update 2026-04-30 20:17:39Z
+
+- Current task: E17 Wishlist and Requests first slice is implemented locally.
+- Last activity:
+  - added derived Wishlist request summary logic
+  - surfaced total, enabled, automatic, review-load, and quota-style remaining counts on Wishlist
+  - kept request behavior read-only with no backend request portal, scheduling, approval, or download changes
+  - validated focused acquisition request and Wishlist tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E16 Automation if it does not overlap existing Automation Center work.
+  2. Later add real requester identity, approval roles, and enforceable per-user quotas when backend auth/request portal work is scoped.
+
+## Update 2026-04-30 20:14:27Z
+
+- Current task: E18 Servarr Integration first slice is implemented locally.
+- Last activity:
+  - added a local Servarr readiness helper
+  - added a System Integrations setup checklist for base URL, API key, wanted pull, completed import, and path-map sanity
+  - kept the panel diagnostic-only with no indexer/download-client registration, wanted pull, or import action
+  - validated focused Servarr helper and System Integrations tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E17 Wishlist and Requests if it does not overlap current Discovery Inbox/Wishlist edits.
+  2. Later wire real Servarr indexer/download-client compatibility behind explicit API endpoints and setup wizard checks.
+
+## Update 2026-04-30 20:11:54Z
+
+- Current task: E19 Media Server Integration first slice is implemented locally.
+- Last activity:
+  - added Plex, Jellyfin/Emby, and Navidrome readiness cards to System Integrations
+  - added local path diagnostics for slskdN path, media-server path, and optional remote path mappings
+  - kept the slice non-networking and optional; no scan, playlist sync, play-history import, or rating sync executes
+  - validated focused media-server helper and System Integrations tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E18 Servarr Integration only if it does not overlap the backend source-feed/Lidarr work.
+  2. Later wire media-server adapters behind explicit configured URLs/tokens and setup checks.
+
+## Update 2026-04-30 20:08:47Z
+
+- Current task: E20 Diagnostics first slice is implemented locally.
+- Last activity:
+  - added a browser-side diagnostic bundle builder with secret redaction
+  - added a System Info modal to inspect/copy the redacted YAML bundle
+  - wired the bundle to current app state/options without contacting the daemon
+  - kept diagnostic tests on synthetic fixture usernames/hosts only
+  - validated focused diagnostic bundle helper and modal tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E19 Media Server Integration or E18 Servarr Integration only if it does not overlap backend source-feed work.
+  2. Later add daemon-side diagnostic bundle APIs for logs/checks with server-side redaction.
+
+## Update 2026-04-30 20:04:02Z
+
+- Current task: E21 Mesh Metadata Federation first slice is implemented locally.
+- Last activity:
+  - added browser-local Mesh Evidence Policy storage with private defaults
+  - added inbound trust-tier controls and outbound publication toggles to the Mesh tab
+  - kept provenance required as a non-negotiable safety invariant
+  - documented the provenance sanitizer gotcha and committed it immediately as `76bc580b1`
+  - validated focused mesh evidence policy and component tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E20 Diagnostics if it does not overlap the other agent.
+  2. Later connect this policy to signed mesh evidence ingestion/publication APIs once backend federation is ready.
+
+## Update 2026-04-30 19:58:08Z
+
+- Current task: E22 Community Quality Signals first slice is implemented locally.
+- Last activity:
+  - added browser-local peer quality signal storage and summaries
+  - wired local quality signal context into Search candidate ranking
+  - added a Search result-card affordance for local suspicious-candidate reports
+  - surfaced local-only quality badges for peers with stored signals
+  - validated focused community quality and candidate ranking tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E21 Mesh Metadata Federation if it does not overlap the other agent.
+  2. Later add a dedicated review/clear surface for accumulated local quality signals.
+
+## Update 2026-04-30 19:53:39Z
+
+- Current task: E23 Mobile Workflows first slice is implemented locally.
+- Last activity:
+  - converted Import Staging into labeled card-style review rows on narrow screens
+  - made Discovery Inbox and Import Staging actions use full-width mobile touch targets
+  - added mobile cell labels to staged import table cells for responsive CSS and test coverage
+  - validated focused Discovery Inbox and Import Staging component tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E22 Community Quality Signals or E21 Mesh Metadata Federation if the opposite-side agent stays on provider/search work.
+  2. Run a browser screenshot sweep for the mobile review pages when the local daemon session is stable.
+
+## Update 2026-04-30 20:08:00Z
+
+- Current task: T-932 Per-artist release radar first slice is implemented locally.
+- Last activity:
+  - added a local artist-radar service/API with artist MBID subscriptions
+  - require SongID-confirmed safe music WorkRefs before accepting observations
+  - dedupe notifications deterministically and honor muted release groups
+  - registered the service in DI without adding polling, peer browsing, searches, or downloads
+  - added focused service/controller tests and follow-up tasks for persistence, trusted observation routing, and UI controls
+  - validated focused radar tests, lint, and full `dotnet test`
+- Next steps:
+  1. Continue the center-lane burn-down with the next unclaimed middle feature once neighboring agents' latest work is visible.
+  2. Wire accepted radar notifications into Discovery Inbox or Wishlist review actions when the UI agent is ready for the next middle-adjacent slice.
+
+## Update 2026-04-30 19:48:36Z
+
+- Current task: None. Rooms dark-text cleanup and duplicate room navigation fix are implemented locally.
+- Last activity:
+  - removed the redundant joined-room recovery rail so Rooms uses hydrated tabs as the single navigation surface
+  - added shared dark-mode overrides for nested Semantic UI list text and reusable `UserCard` usernames
+  - gave Rooms and Chat history/input/user regions distinct dark panel tones instead of matching wireframe boxes
+  - documented the gotcha and committed it immediately as `747f999b6`
+  - validated frontend lint, production build, static hardcoded dark-text scan, and whitespace checks
+- Next steps:
+  1. Run a browser screenshot sweep against the live authenticated app when a stable local daemon session is available.
+  2. Keep future dark-theme fixes in shared CSS first unless a page has a specific local surface leak.
+
 ## Update 2026-04-30 19:46:09Z
 
 - Current task: T-935 Decentralized MusicBrainz Edit Overlay first slice is implemented locally.
@@ -21,6 +223,19 @@
 - Next steps:
   1. Run the full repo `dotnet test` and `./bin/lint` when the surrounding dirty workspace is ready for broad validation.
   2. Consider adding backend folder-level counts from the share repository directly if very large libraries need faster root-folder summary generation.
+
+## Update 2026-04-30 19:48:45Z
+
+- Current task: Import Staging failed-import denylist is implemented locally.
+- Last activity:
+  - added browser-local failed-import denylist storage
+  - key denylist entries by staged SHA-256 when available and file signature otherwise
+  - rejecting staged rows now records denylist entries
+  - matching re-adds are marked Failed instead of looping as fresh staged rows
+  - validated focused import staging, fingerprint, and metadata matcher tests
+- Next steps:
+  1. Move back toward Plan P2 Decision-Ready Search if the opposite-side agent has not already covered candidate grouping/ranking.
+  2. Later connect denylisted import evidence to backend import jobs once explicit library mutation exists.
 
 ## Update 2026-04-30 19:44:02Z
 
@@ -2680,3 +2895,60 @@ dotnet test
 - Next steps:
   1. Continue into candidate ranking/explanation surfaces from the start of the feature-expansion list.
   2. Keep backend execution changes explicit, rate-limited, and review-first.
+
+## Update 2026-04-30 19:50:33Z
+
+- Current task: Feature-expansion burn-down is continuing from the top of the list.
+- Last activity:
+  - added reusable browser-side ranking for returned search candidates
+  - wired Search detail smart ranking to acquisition-profile-aware candidate scores
+  - surfaced score reasons in result-card tooltips without adding new network activity
+- Next steps:
+  1. Continue from the beginning into richer candidate actions, such as shortlist/review flows or album-picker integration.
+  2. Avoid Import Staging, Discovery Inbox, Transfers, and MilkDrop files while parallel agents have active edits there.
+
+## Update 2026-04-30 19:58:42Z
+
+- Current task: Feature-expansion burn-down is continuing from the top of the list.
+- Last activity:
+  - added local album candidate grouping for already-returned search results
+  - surfaced Album candidates in Search detail with score, completeness, source count, evidence labels, and representative paths
+  - kept the only action as a local result-filter focus with no peer or metadata activity
+- Next steps:
+  1. Continue from the beginning into search-result shortlist/review actions or the next album-picker refinement.
+  2. Avoid Import Staging, Discovery Inbox, MusicBrainz radar, Transfers, Footer, and MilkDrop files while parallel agents have active edits there.
+
+## Update 2026-04-30 20:08:00Z
+
+- Current task: Documentation overstatement cleanup is complete locally.
+- Last activity:
+  - replaced blanket production-ready language in the README with per-feature maturity guidance
+  - downgraded DHT, security hardening, multi-source, MusicBrainz, and Service Fabric status wording where appropriate
+  - marked stale January status/test reports as historical snapshots
+  - changed universal SSRF, guarantee, and prevention wording to scoped guardrail wording
+  - recorded the findings in `docs/dev/documentation-audit-2026-04-30.md`
+- Next steps:
+  1. Review the documentation diff for release-copy tone.
+  2. Continue feature-expansion work only after deciding whether these documentation changes should be committed separately.
+
+## Update 2026-04-30 20:02:58Z
+
+- Current task: Feature-expansion burn-down is continuing from the top of the list.
+- Last activity:
+  - added selected-file download action previews to Search results
+  - exposed source, providers, file count, total size, candidate score, warnings, selected paths, and copyable text export
+  - kept previews local and non-mutating with no network or transfer calls
+- Next steps:
+  1. Continue from the beginning into stricter/preferred file condition controls or result deduplication.
+  2. Avoid Import Staging, Discovery Inbox, MusicBrainz radar, Transfers, Footer, broad docs, and MilkDrop files while parallel agents have active edits there.
+
+## Update 2026-04-30 20:09:42Z
+
+- Current task: Feature-expansion burn-down is continuing from the top of the list.
+- Last activity:
+  - added ranking-only preferred conditions for extensions, lossless files, and minimum bitrate
+  - wired those preferences into Search candidate scores and reasons
+  - surfaced preference controls in Advanced Search Filters without turning them into hard filters
+- Next steps:
+  1. Continue from the beginning into search result deduplication or richer album-picker warnings.
+  2. Avoid Import Staging, Discovery Inbox, MusicBrainz radar, source-feed imports, diagnostic bundle, mesh policy, broad docs, and MilkDrop files while parallel agents have active edits there.

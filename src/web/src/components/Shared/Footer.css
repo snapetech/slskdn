@@ -79,7 +79,9 @@
 .slskdn-footer-sponsor {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    line-height: 1;
     color: rgba(238, 233, 227, 0.78);
     text-decoration: none;
 }
@@ -91,8 +93,13 @@
 }
 
 .slskdn-footer-sponsor .icon {
+    align-items: center;
     color: #ff79a8;
+    display: inline-flex;
+    height: 1em;
+    justify-content: center;
     margin: 0 !important;
+    width: 1em;
 }
 
 .slskdn-footer-copyright {

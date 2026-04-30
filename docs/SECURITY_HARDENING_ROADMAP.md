@@ -453,7 +453,7 @@ public class PeerReputationService
 **Effort**: Medium  
 **Status**: 🔴 Not Implemented
 
-*"Transfer Integrity: cryptographic guarantees that files haven't been swapped mid-transfer."*
+*"Transfer Integrity: cryptographic guardrails to detect files swapped mid-transfer."*
 
 #### Requirements
 
@@ -998,4 +998,3 @@ When implementing security features:
 
 *Last updated: 2025-01-08*
 *Branch: experimental/security*
-

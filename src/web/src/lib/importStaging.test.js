@@ -1,7 +1,11 @@
 import {
   addImportStagingFiles,
+  addImportStagingItemToDenylist,
+  getImportStagingDenylist,
   getImportStagingItems,
+  importStagingDenylistStorageKey,
   importStagingStorageKey,
+  removeImportStagingDenylistEntry,
   matchAllImportStagingItems,
   updateImportStagingItemMetadataMatch,
   updateImportStagingItemState,
@@ -73,5 +77,42 @@ describe('importStaging', () => {
 
     items = matchAllImportStagingItems();
     expect(items.every((item) => item.metadataMatch)).toBe(true);
+  });
+
+  it('blocks re-added files from the failed-import denylist', () => {
+    addImportStagingFiles([
+      new File(['abc'], 'bad.flac', {
+        lastModified: 123,
+        type: 'audio/flac',
+      }),
+    ]);
+    const [item] = getImportStagingItems();
+
+    let denylist = addImportStagingItemToDenylist(
+      item.id,
+      'Bad import candidate.',
+    );
+    expect(denylist).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem(importStagingDenylistStorageKey))).toHaveLength(1);
+
+    localStorage.setItem(importStagingStorageKey, '[]');
+    const items = addImportStagingFiles([
+      new File(['abc'], 'bad.flac', {
+        lastModified: 123,
+        type: 'audio/flac',
+      }),
+    ]);
+
+    expect(items[0]).toEqual(
+      expect.objectContaining({
+        fileName: 'bad.flac',
+        reason: 'Blocked by failed-import denylist.',
+        state: 'Failed',
+      }),
+    );
+
+    denylist = removeImportStagingDenylistEntry(denylist[0].key);
+    expect(denylist).toHaveLength(0);
+    expect(getImportStagingDenylist()).toHaveLength(0);
   });
 });

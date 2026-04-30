@@ -1,0 +1,48 @@
+// <copyright file="SourceFeedImportsController.cs" company="slskdN Team">
+//     Copyright (c) slskdN Team. All rights reserved.
+// </copyright>
+
+namespace slskd.SourceFeeds.API;
+
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using slskd.Core.Security;
+
+[ApiController]
+[Route("api/source-feed-imports")]
+[Route("api/v{version:apiVersion}/source-feed-imports")]
+[ApiVersion("0")]
+[Produces("application/json")]
+[ValidateCsrfForCookiesOnly]
+public sealed class SourceFeedImportsController : ControllerBase
+{
+    public SourceFeedImportsController(ISourceFeedImportService sourceFeedImportService)
+    {
+        SourceFeedImportService = sourceFeedImportService;
+    }
+
+    private ISourceFeedImportService SourceFeedImportService { get; }
+
+    [HttpPost("preview")]
+    [Authorize(Policy = AuthPolicy.Any)]
+    [ProducesResponseType(typeof(SourceFeedImportResult), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> Preview(
+        [FromBody] SourceFeedImportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.SourceText))
+        {
+            return BadRequest("SourceText is required");
+        }
+
+        if (request.Limit <= 0)
+        {
+            return BadRequest("Limit must be greater than 0");
+        }
+
+        var result = await SourceFeedImportService.PreviewAsync(request, cancellationToken).ConfigureAwait(false);
+        return Ok(result);
+    }
+}

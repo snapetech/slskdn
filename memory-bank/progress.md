@@ -1,3 +1,111 @@
+## 2026-04-30 20:18:09Z - Added search-result deduplication
+
+- Continued the beginning-lane feature-expansion burn-down with the remaining Epic 3 search-result deduplication story.
+- Added a browser-local search result deduplication helper that folds duplicate media candidates after filtering, ranking, and sorting while preserving the highest-ranked visible candidate.
+- Added a visible Search option to toggle duplicate folding and a result badge that shows folded source/provider context.
+- Kept the slice local-only: no new provider query, peer browse, download, stream, or metadata lookup is started by deduplication.
+- Validation: focused search deduplication/ranking/filter/Search tests passed, and frontend lint passed.
+
+## 2026-04-30 20:18:22Z - Persisted Quarantine Jury state
+
+- Continued the center-lane T-936 follow-up work.
+- Quarantine Jury requests and signed verdicts now persist to an atomic JSON state file under the app directory and reload on service startup.
+- Added focused coverage proving persisted requests, verdicts, and aggregate recommendations survive service rehydration.
+- Validation: focused `QuarantineJury` tests passed (`12/12`); lint and broader tests to run before final handoff.
+
+## 2026-04-30 20:13:04Z - Added Quarantine Jury first slice
+
+- Continued the center-lane music-discovery federation burn-down by completing T-936.
+- Added a local Quarantine Jury service/API for user-initiated trusted jury requests, safe opaque evidence validation, signed juror verdict intake, duplicate juror replacement, and two-thirds recommendation aggregation.
+- Kept local quarantine authoritative: this slice does not send files, route mesh messages, release quarantined content, or involve unselected peers.
+- Documented and committed the two-thirds quorum rounding gotcha as `ac77d55c9`.
+- Validation: focused `QuarantineJury` tests passed (`11/11`), `git diff --check` passed, `bash ./bin/lint` passed, and full `dotnet test` passed.
+
+## 2026-04-30 20:42:00Z - Expanded source feed imports to provider fetching
+
+- Expanded T-939 beyond local preview parsing with Spotify provider URL fetching for playlists, albums, tracks, artist top tracks, user playlists, current-user playlists, liked/saved tracks, saved albums, and followed artists.
+- Added Spotify app-credential configuration for public provider fetches and per-import bearer token support for private library/follow endpoints requiring user scopes.
+- Added the Wishlist Import Feed flow that previews CSV/text/M3U/RSS/OPML/Spotify sources and adds provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads.
+- Documented and committed the `HttpClient.Timeout` reuse gotcha after focused tests exposed it.
+- Validation: focused source-feed unit tests passed (`4/4`), frontend lint passed, Wishlist component tests passed (`2/2`), frontend production build passed, and backend `slskd.csproj` build passed with existing warning noise.
+
+## 2026-04-30 20:24:00Z - Planned source feed imports
+
+- Audited Spotify/source-feed coverage and found adjacent pieces only: single Spotify track intake in SongID, TuneMyMusic-style CSV import into Wishlist, and read-only Source Providers visibility.
+- Added T-939 Source Feed Imports to the music-discovery federation plan and task list.
+- Scoped the first slice as review-first intake into Discovery Inbox from CSV/text/local playlist exports, with provider URL fetching disabled until explicit configuration, credentials, and rate limits exist.
+
+## 2026-04-30 20:28:00Z - Added source feed import preview service
+
+- Completed the first T-939 slice with a backend `SourceFeedImportService`.
+- The service parses local artist/title/album rows, creates stable source ids, dedupes normalized evidence keys, reports skipped rows, and flags provider-token requirements.
+- The preview path performs zero provider fetches and does not search Soulseek, browse peers, or start downloads.
+- Validation: focused source-feed tests to run before the final commit.
+
+## 2026-04-30 20:08:00Z - Added per-artist release radar first slice
+
+- Continued the music-discovery federation burn-down by completing T-932.
+- Added a local artist-radar service/API with artist MBID subscriptions, muted release-group suppression, SongID-confirmed WorkRef observation validation, deterministic notification dedupe, and DI registration.
+- Kept the slice network-passive: it records already-observed trusted WorkRefs and does not poll MusicBrainz, browse peers, search Soulseek, or start downloads.
+- Added follow-up tasks for persistence, signed federation/realm observation routing, and Web UI controls.
+- Validation: focused `ArtistReleaseRadar` tests passed (`12/12`), `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3657` unit tests, `276` integration tests).
+
+## 2026-04-30 20:17:39Z - Added Wishlist request portal summary
+
+- Continued feature-expansion burn-down from the tail with the E17 Wishlist and Requests story.
+- Added derived Wishlist request summaries for total, enabled, automatic, review-load, and quota-style remaining capacity.
+- Surfaced the summary on the Wishlist page as an operator-facing request portal snapshot.
+- Kept the slice read-only: no request submission, approval, scheduling, or download behavior changed.
+- Validation: focused acquisition request helper and Wishlist tests passed.
+
+## 2026-04-30 20:14:27Z - Added local Servarr setup readiness
+
+- Continued feature-expansion burn-down from the tail with the E18 Servarr Integration story.
+- Added a local Servarr readiness helper for base URL, API key, wanted pull, completed import, and remote path-map sanity.
+- Added a System Integrations readiness panel that summarizes checks without exposing API keys.
+- Kept the slice diagnostic only: it does not register indexers, create download clients, pull wanted items, or trigger imports.
+- Validation: focused Servarr readiness helper and System Integrations tests passed.
+
+## 2026-04-30 20:11:54Z - Added media-server readiness and path diagnostics
+
+- Continued feature-expansion burn-down from the tail with the E19 Media Server Integration story.
+- Added optional Plex, Jellyfin/Emby, and Navidrome readiness cards in System Integrations with capability labels.
+- Added a local path diagnostic helper and UI for comparing slskdN completed paths, media-server report paths, and remote path mappings.
+- Kept the slice non-networking: no media-server connection, scan trigger, playlist sync, play-history import, or rating sync runs yet.
+- Validation: focused media-server integration helper and System Integrations tests passed.
+
+## 2026-04-30 20:08:47Z - Added redacted diagnostic bundle
+
+- Continued feature-expansion burn-down from the tail with the E20 Diagnostics story.
+- Added a browser-side diagnostic bundle builder that includes browser, route, state, and option shape while redacting sensitive keys and query-style secrets.
+- Added a System Info diagnostic bundle modal with inspect and copy controls; it is local-only and does not contact the daemon.
+- Kept tests synthetic-only after removing real-looking username fixtures.
+- Validation: focused diagnostic bundle helper and modal tests passed.
+
+## 2026-04-30 20:04:02Z - Added Mesh Evidence Policy controls
+
+- Continued feature-expansion burn-down from the tail with the E21 Mesh Metadata Federation story.
+- Added browser-local Mesh Evidence Policy storage with private/off defaults, inbound trust-tier selection, outbound evidence publication toggles, and forced provenance requirements.
+- Added a Mesh tab policy panel showing inbound status, outbound opt-in count, provenance status, and explicit controls for hash verification, release completeness, fake-lossless warnings, metadata corrections, and realm subject indexes.
+- Fixed and documented the non-negotiable provenance sanitizer gotcha as `76bc580b1`.
+- Validation: focused mesh evidence policy and component tests passed.
+
+## 2026-04-30 19:58:08Z - Added local community quality signals
+
+- Continued feature-expansion burn-down from the tail with the E22 Community Quality Signals story.
+- Added browser-local peer quality signal storage with positive/caution summaries and local-only labels.
+- Search ranking can now include local quality signal context without blocking candidates or changing server-side peer treatment.
+- Search result cards now expose a local suspicious-candidate report affordance and show local quality badges when signals exist.
+- Validation: focused community quality and search candidate ranking tests passed.
+
+## 2026-04-30 19:53:39Z - Added mobile review layouts
+
+- Continued feature-expansion burn-down from the tail with the E23 Mobile Workflows story.
+- Import Staging now collapses the desktop table into labeled, card-style review rows on narrow screens.
+- Discovery Inbox and Import Staging actions use full-width mobile touch targets and denser card shadows to make review controls easier to hit and scan.
+- Added a focused Import Staging test that verifies staged rows carry mobile cell labels for the responsive layout.
+- Validation: focused Discovery Inbox and Import Staging component tests passed.
+
 ## 2026-04-30 19:46:09Z - Added decentralized MusicBrainz edit overlay
 
 - Continued center-lane feature-expansion work with T-935 Decentralized MusicBrainz Edit Overlay.
@@ -6,6 +114,14 @@
 - Added deterministic in-memory overlay storage and read-time application to copied artist release graphs so cached upstream MusicBrainz payloads are not mutated.
 - Added `/api/v0/musicbrainz/overlays` endpoints for storing edits and reading original/effective release graphs with overlay provenance.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter MusicBrainzOverlay` passed (`6/6`).
+
+## 2026-04-30 19:48:45Z - Added Import Staging failed-import denylist
+
+- Continued P3 Safe Acquisition Pipeline burn-down with the failed-import denylist story.
+- Added browser-local failed-import denylist storage keyed by SHA-256 when a staged fingerprint exists, otherwise by file metadata signature.
+- Rejecting a staged row now records a denylist entry, and matching re-adds return as Failed rows with a blocked reason instead of looping as normal Staged items.
+- Import Staging now surfaces denylist count, entries, and a remove action for reviewed denylist cleanup.
+- Validation: focused import staging, fingerprint, and metadata matcher tests passed.
 
 ## 2026-04-30 19:44:02Z - Added opt-in import fingerprint verification
 
@@ -8053,3 +8169,59 @@ Code quality improvements were completed as part of Option A:
 - Updated the player modal with a folder rail, breadcrumb navigation, full-library search, duplicate/copy counts, paged results, file locations, and double-click or row play actions.
 - Documented the flat-picker gotcha and committed it immediately as `8ed962b59`.
 - Validation: focused PlayerBar tests, focused LibraryItemsController tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 19:48:36Z
+
+- Cleaned up Rooms dark-theme text leaks and duplicate navigation.
+- Removed the joined-room recovery rail from Rooms so joined rooms appear only as active tabs.
+- Added shared dark-mode coverage for nested Semantic UI list headers/descriptions/content, reusable `UserCard` usernames, inline black/grey text, and the remaining transfer-button dark text leak found by static scan.
+- Gave Rooms and Chat separate dark panel tones for history, input, and user/sidebar regions instead of identical wireframe-like segments.
+- Documented the nested dark text/duplicate room rail gotcha and committed it immediately as `747f999b6`.
+- Validation: frontend lint, production build, static hardcoded dark-text scan, and whitespace checks passed.
+
+## 2026-04-30 19:50:33Z
+
+- Continued the feature-expansion burn-down into Advanced Search and Candidate Ranking.
+- Added a reusable browser-side search candidate scorer that accounts for acquisition profile intent, query/file match, lossless or high-bitrate format evidence, file-size sanity, availability, provider hints, and user download history.
+- Search detail smart ranking now uses the explained candidate score, and result cards show the score with concise reasons in the existing star badge tooltip.
+- Kept the slice local to already-returned search results: no new searches, downloads, peer probes, or provider lookups are triggered by ranking.
+- Validation: focused Search ranking/Search page tests and `npm run lint` passed.
+
+## 2026-04-30 19:58:42Z
+
+- Continued the top-lane burn-down into the first Interactive Album Picker slice.
+- Added a browser-side album candidate grouper that finds album-shaped folders from already-returned search results, merges matching folders across sources, and scores them by visible tracks, source count, lossless evidence, completeness, and candidate rank.
+- Search detail now shows an Album candidates panel with score, source/track completeness, evidence labels, representative paths, and a tooltipped local filter action.
+- Kept the picker review-only and local to loaded results: no new peer search, browse, download, metadata lookup, or import action is triggered.
+- Validation: focused album candidate, search ranking, and Search page tests plus `npm run lint` passed.
+
+## 2026-04-30 20:08:00Z
+
+- Audited current public documentation for overstated readiness, security, and test-status claims.
+- Softened README advanced-feature and status-table language for mesh, security hardening, multi-source downloads, MusicBrainz, and Service Fabric.
+- Marked stale status/test docs as historical snapshots, changed universal SSRF and guarantee wording to path-specific guardrail language, and recorded the audit findings in `docs/dev/documentation-audit-2026-04-30.md`.
+- Validation: focused overclaim text scan and `git diff --check` on the edited docs passed.
+
+## 2026-04-30 20:02:58Z
+
+- Continued the top-lane burn-down in Advanced Search with local planned-action previews.
+- Added a reusable search action preview builder/export formatter for selected files, provider route, total size, candidate score, and warnings.
+- Search result cards now show a tooltipped Preview action next to Download; the modal can copy a stable text plan for review/export.
+- Kept the preview offline and non-mutating: it does not call search, browse, stream, transfer, metadata, or provider APIs.
+- Validation: focused preview, album candidate, candidate ranking, community quality, and Search page tests plus `npm run lint` passed.
+
+## 2026-04-30 20:09:42Z
+
+- Continued the top-lane Advanced Search burn-down with preferred file conditions.
+- Added ranking-only filter terms for preferred extensions, preferred lossless files, and preferred minimum bitrate.
+- Advanced Search Filters now exposes those preferences separately from hard filters, so users can bias ranking without hiding rare fallback candidates.
+- Candidate ranking now adds preferred-condition score reasons while keeping result filtering, peer contact, and download behavior unchanged.
+- Validation: focused `searches`, candidate ranking, and Search page tests plus `npm run lint` passed.
+
+## 2026-04-30 20:13:21Z
+
+- Evaluated upstream's post-0.24.5 config layout changes as reference-only and implemented a slskdN-native compatibility map instead of porting upstream code.
+- Added YAML compatibility for `transfers.upload.limits` to bind to current global upload limits and `transfers.groups` to bind to current group options while retaining existing `global`, `transfers.limits`, and top-level `groups` support.
+- Added startup compatibility warnings for top-level `groups`, `transfers.limits`, and legacy `global` usage so operators get migration guidance without a breaking config change.
+- Updated README, config docs, and `config/slskd.example.yml` to present `transfers.upload.limits` and `transfers.groups` as the preferred shape.
+- Validation: `dotnet build src/slskd/slskd.csproj --no-restore`, focused YAML/config-warning unit tests, `bash bin/lint`, and `git diff --check` passed. Full `dotnet test` has one unrelated failure in `ContentVerificationServiceTests.VerifySourcesAsync_WhenDownloadThrows_ReturnsSanitizedFailureReason`.

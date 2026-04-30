@@ -1,6 +1,10 @@
 import './DiscoveryInbox.css';
 import { getAcquisitionProfile } from '../../lib/acquisitionProfiles';
 import {
+  createAcquisitionPlansFromDiscoveryInbox,
+  getAcquisitionPlans,
+} from '../../lib/acquisitionPlans';
+import {
   bulkUpdateDiscoveryInboxItems,
   getDiscoveryInboxItems,
   updateDiscoveryInboxItemState,
@@ -33,9 +37,11 @@ const formatTimestamp = (timestamp) => {
 
 const DiscoveryInbox = () => {
   const [items, setItems] = useState([]);
+  const [plans, setPlans] = useState([]);
 
   const refreshItems = () => {
     setItems(getDiscoveryInboxItems());
+    setPlans(getAcquisitionPlans());
   };
 
   useEffect(() => {
@@ -44,6 +50,10 @@ const DiscoveryInbox = () => {
 
   const suggestedIds = useMemo(
     () => items.filter((item) => item.state === 'Suggested').map((item) => item.id),
+    [items],
+  );
+  const approvedItems = useMemo(
+    () => items.filter((item) => item.state === 'Approved'),
     [items],
   );
 
@@ -65,6 +75,23 @@ const DiscoveryInbox = () => {
 
   const bulkSetSuggested = (state) => {
     setItems(bulkUpdateDiscoveryInboxItems(suggestedIds, state));
+  };
+
+  const createPlansForApproved = () => {
+    const result = createAcquisitionPlansFromDiscoveryInbox(approvedItems);
+    const createdIds = new Set(result.createdPlans.map((plan) => plan.sourceId));
+    setPlans(result.plans);
+
+    if (createdIds.size > 0) {
+      setItems(
+        bulkUpdateDiscoveryInboxItems(
+          approvedItems
+            .filter((item) => createdIds.has(item.id))
+            .map((item) => item.id),
+          'Staged',
+        ),
+      );
+    }
   };
 
   return (
@@ -113,11 +140,26 @@ const DiscoveryInbox = () => {
               </Button>
             }
           />
+          <Popup
+            content="Create review-only acquisition plans for approved items. Plans show provider order and manual execution policy, but do not start searches or downloads."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Create acquisition plans for approved discovery items"
+                disabled={approvedItems.length === 0}
+                onClick={createPlansForApproved}
+                primary
+              >
+                <Icon name="tasks" />
+                Plan Approved
+              </Button>
+            }
+          />
         </div>
       </div>
 
       <div className="discovery-inbox-summary">
-        {['Suggested', 'Approved', 'Snoozed', 'Rejected'].map((state) => (
+        {['Suggested', 'Approved', 'Staged', 'Snoozed', 'Rejected'].map((state) => (
           <Label
             color={stateColors[state]}
             key={state}
@@ -126,7 +168,50 @@ const DiscoveryInbox = () => {
             <Label.Detail>{stateCounts[state] || 0}</Label.Detail>
           </Label>
         ))}
+        <Label color="blue">
+          Plans
+          <Label.Detail>{plans.length}</Label.Detail>
+        </Label>
       </div>
+
+      {plans.length > 0 && (
+        <Segment className="discovery-inbox-plans">
+          <Header as="h3">
+            <Icon name="tasks" />
+            Acquisition Plans
+            <Header.Subheader>
+              Review-only plan queue. Execution remains manual and disabled here.
+            </Header.Subheader>
+          </Header>
+          <div className="discovery-inbox-plan-grid">
+            {plans.map((plan) => {
+              const profile = getAcquisitionProfile(plan.acquisitionProfile);
+
+              return (
+                <div
+                  className="discovery-inbox-plan"
+                  key={plan.id}
+                >
+                  <div>
+                    <strong>{plan.title}</strong>
+                    <div className="discovery-inbox-meta">
+                      <Icon name={profile.icon} />
+                      {profile.label}
+                      <span> · </span>
+                      <Icon name="lock" />
+                      {plan.manualOnly ? 'Manual execution' : 'Automation allowed'}
+                    </div>
+                    <div className="discovery-inbox-plan-providers">
+                      {plan.providerPriority.join(' → ')}
+                    </div>
+                  </div>
+                  <Label color="blue">{plan.state}</Label>
+                </div>
+              );
+            })}
+          </div>
+        </Segment>
+      )}
 
       {items.length === 0 ? (
         <Segment

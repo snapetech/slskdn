@@ -77,4 +77,57 @@ describe('Integrations', () => {
     });
     expect(screen.getByText(/Wanted sync: 1 created/)).toBeInTheDocument();
   });
+
+  it('shows media-server adapter cards and path diagnostics', () => {
+    render(<Integrations />);
+
+    expect(screen.getByText('Media Servers')).toBeInTheDocument();
+    expect(screen.getByText('Plex')).toBeInTheDocument();
+    expect(screen.getByText('Jellyfin / Emby')).toBeInTheDocument();
+    expect(screen.getByText('Navidrome')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('slskdN local file path'), {
+      target: { value: '/downloads/complete/Artist/Album/track.flac' },
+    });
+    fireEvent.change(screen.getByLabelText('Media server file path'), {
+      target: { value: '/library/music/Artist/Album/track.flac' },
+    });
+    fireEvent.change(screen.getByLabelText('Remote path map from'), {
+      target: { value: '/downloads/complete' },
+    });
+    fireEvent.change(screen.getByLabelText('Remote path map to'), {
+      target: { value: '/library/music' },
+    });
+
+    expect(screen.getByText('Mapped')).toBeInTheDocument();
+    expect(
+      screen.getByText('Mapped path: /library/music/Artist/Album/track.flac'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Servarr setup readiness without running actions', () => {
+    render(
+      <Integrations
+        options={{
+          integration: {
+            lidarr: {
+              apiKey: 'fixture-key',
+              autoImportCompleted: true,
+              enabled: true,
+              importPathFrom: '/downloads',
+              importPathTo: '/library',
+              syncWantedToWishlist: true,
+              url: 'http://example.invalid:8686',
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Servarr Setup')).toBeInTheDocument();
+    expect(screen.getByText('5/5 checks ready')).toBeInTheDocument();
+    expect(screen.getByText('Base URL configured')).toBeInTheDocument();
+    expect(screen.getByText('Wanted pull enabled')).toBeInTheDocument();
+    expect(screen.queryByText('fixture-key')).not.toBeInTheDocument();
+  });
 });

@@ -1,4 +1,5 @@
 import { getVersion, restart, shutdown } from '../../../lib/application';
+import DiagnosticBundleModal from './DiagnosticBundleModal';
 import {
   CodeEditor,
   LoaderSegment,
@@ -9,7 +10,7 @@ import React, { useEffect, useState } from 'react';
 import { Divider, Header, Modal } from 'semantic-ui-react';
 import YAML from 'yaml';
 
-const Info = ({ state, theme }) => {
+const Info = ({ options, state, theme }) => {
   const [contents, setContents] = useState();
 
   useEffect(() => {
@@ -49,6 +50,10 @@ const Info = ({ state, theme }) => {
           >
             Get Privileges
           </ShrinkableButton>
+          <DiagnosticBundleModal
+            options={options}
+            state={state}
+          />
         </div>
         <Modal
           actions={[

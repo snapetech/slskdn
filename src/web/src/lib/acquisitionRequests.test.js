@@ -1,5 +1,6 @@
 import {
   addWishlistItemToDiscoveryInbox,
+  buildWishlistRequestSummary,
   buildWishlistDiscoveryInboxItem,
   getWishlistEvidenceKey,
   getWishlistRequestState,
@@ -92,6 +93,43 @@ describe('acquisitionRequests', () => {
         evidenceKey: 'wishlist:wish-1:rare album:flac',
         source: 'Wishlist',
         sourceId: 'wish-1',
+      }),
+    );
+  });
+
+  it('builds request summaries with quota-style status', () => {
+    const items = [
+      {
+        autoDownload: false,
+        enabled: true,
+        id: 'wish-1',
+        searchText: 'manual request',
+      },
+      {
+        autoDownload: true,
+        enabled: true,
+        id: 'wish-2',
+        searchText: 'automatic request',
+      },
+      {
+        autoDownload: false,
+        enabled: false,
+        id: 'wish-3',
+        searchText: 'disabled request',
+      },
+    ];
+
+    addWishlistItemToDiscoveryInbox(items[0]);
+
+    expect(buildWishlistRequestSummary({ items, quota: 2 })).toEqual(
+      expect.objectContaining({
+        automatic: 1,
+        enabled: 2,
+        quota: 2,
+        quotaRemaining: 0,
+        quotaStatus: 'Over quota',
+        reviewCount: 1,
+        total: 3,
       }),
     );
   });

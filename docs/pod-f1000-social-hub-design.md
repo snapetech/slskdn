@@ -425,7 +425,7 @@ Additional specific requirements:
 **This design gives us:**
 - ✅ A concrete, testable First Pod experience for early humans
 - ✅ A clean modular framework for pods that follow
-- ✅ Strong security and sovereignty guarantees for every pod in the network
+- ✅ Strong security and sovereignty guardrails for pods in the network
 
 ---
 
@@ -437,4 +437,3 @@ Additional specific requirements:
 - `docs/moderation-v1-design.md` - MCP design and hardening
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-SOCIAL-01 through T-SOCIAL-06 tasks
-

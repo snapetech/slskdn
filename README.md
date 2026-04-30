@@ -253,11 +253,12 @@ When you add a user to the blacklist, their active downloads and uploads are can
 ### 📁 File Type Restrictions per Group
 Control which file types each upload group can request.
 ```yaml
-groups:
-  user_defined:
-    FriendsOnly:
-      upload:
-        allowed_file_types: [".flac", ".mp3", ".opus"]
+transfers:
+  groups:
+    user_defined:
+      FriendsOnly:
+        upload:
+          allowed_file_types: [".flac", ".mp3", ".opus"]
 ```
 
 ### 📊 Prometheus Metrics Dashboard
@@ -278,7 +279,9 @@ Install slskdN as an app on your phone.
 
 ## 🚀 Advanced Features
 
-The following advanced features are **fully implemented and production-ready**:
+The following advanced features are available in this fork. Maturity varies by
+feature; check the status table below and the current security notes before
+exposing experimental mesh, gateway, federation, or remote-access features.
 
 ### 🚀 Multi-Source Swarm Downloads
 Resilient acquisition built **on top of** the regular Soulseek path — not in place of it.
@@ -315,7 +318,7 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 📖 **Design docs**: [MeshCore research](docs/phase8-meshcore-research.md) • [Mesh architecture](docs/virtual-soulfind-mesh-architecture.md)
 
 ### 🔒 Security Hardening
-Zero-trust security framework with defense-in-depth:
+Active zero-trust hardening work with defense-in-depth controls:
 - **NetworkGuard** — Rate limiting, connection caps per IP
 - **ViolationTracker** — Auto-escalating bans for bad actors
 - **PathGuard** — Directory traversal prevention (always enabled)
@@ -330,7 +333,7 @@ Zero-trust security framework with defense-in-depth:
 📖 **Design docs**: [Security implementation](docs/SECURITY_IMPLEMENTATION_SPECS.md) • [Guidelines](docs/SECURITY-GUIDELINES.md) • [Database poisoning](docs/security/database-poisoning-analysis.md) • [Adversarial resilience](docs/phase12-adversarial-resilience-design.md)
 
 ### 🎵 MusicBrainz Integration & Library Health
-Automated metadata enrichment and quality assurance.
+Optional metadata enrichment and library quality checks.
 - **MusicBrainz Client** — Query recordings, releases, artists
 - **Album Targets** — MBID-based album tracking and completion monitoring
 - **Discography Concierge** — Map an artist MBID into release/track coverage, mark tracks as verified, Wishlist-seeded, ambiguous, or missing, and seed missing tracks into Wishlist on demand
@@ -437,7 +440,7 @@ Visibility into performance and network behavior.
 - **Component activity sources** — transfers, mesh, HashDb, and search tracing
 
 ### 🔧 Service Fabric
-Generic service layer for mesh-based applications.
+Experimental service layer for opt-in mesh-based applications.
 - **Service descriptors** — Signed Ed25519 descriptors for service discovery
 - **Service directory** — DHT-based service registry
 - **Service router** — Routes requests to service providers
@@ -647,7 +650,7 @@ web:
     password: change_me
 
 # slskdN-specific features
-global:
+transfers:
   download:
     auto_replace_stuck: true
     auto_replace_threshold: 5.0
@@ -719,20 +722,20 @@ Features in the `master` branch:
 
 | Feature Category | Status | Notes |
 |------------------|--------|-------|
-| **Auto-Replace** | ✅ Stable | Production-ready |
-| **Wishlist** | ✅ Stable | Production-ready |
-| **Smart Ranking** | ✅ Stable | Production-ready |
-| **User Notes** | ✅ Stable | Production-ready |
+| **Auto-Replace** | ✅ Stable | Mature fork feature |
+| **Wishlist** | ✅ Stable | Mature fork feature |
+| **Smart Ranking** | ✅ Stable | Mature fork feature |
+| **User Notes** | ✅ Stable | Mature fork feature |
 | **UI Enhancements** | ✅ Stable | Status bars, network monitoring |
 | **Now Playing / Scrobble** | ✅ Stable | Plex, Jellyfin, generic JSON |
 | **Cancel on Ban** | ✅ Stable | Runtime blacklist enforcement |
 | **File Type Restrictions** | ✅ Stable | Per-group upload filtering |
 | **Prometheus Metrics UI** | ✅ Stable | Built-in KPI dashboard |
 | **User Score Badges** | ✅ Stable | Chat, rooms, transfers |
-| **Multi-Source Downloads** | ✅ Stable | Concurrency limits, network-friendly |
-| **DHT Peer Discovery** | ✅ Stable | Fully functional mesh overlay |
-| **Security Hardening** | ✅ Stable | Comprehensive framework, tested |
-| **MusicBrainz Integration** | ✅ Stable | Fingerprinting, auto-tagging |
+| **Multi-Source Downloads** | 🟡 Beta | Conservative guardrails; verify current release behavior before broad use |
+| **DHT Peer Discovery** | 🟡 Experimental | Functional mesh overlay; operator exposure and network behavior require care |
+| **Security Hardening** | 🟡 Active hardening | Controls exist, with open audit follow-ups tracked in security docs |
+| **MusicBrainz Integration** | 🟡 Beta | Core lookup is available; fingerprinting/auto-tagging depend on optional tooling and third-party services |
 | **Discography Concierge** | 🟡 Experimental | Artist MBID coverage map and manual Wishlist seeding |
 | **Library Health Scanner** | ✅ Stable | Quality detection and remediation |
 | **SongID** | 🟡 Experimental | Native source identification, ranked song/album/discography handoff |

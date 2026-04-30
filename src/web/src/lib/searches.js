@@ -206,6 +206,9 @@ export const parseFiltersFromString = (string) => {
     minFileSize: 0,
     minLength: 0,
     minSampleRate: 0,
+    preferExtensions: [],
+    preferLossless: false,
+    preferMinBitRate: 0,
   };
 
   filters.minBitRate =
@@ -235,11 +238,23 @@ export const parseFiltersFromString = (string) => {
   filters.isCBR = Boolean(/iscbr/iu.test(string));
   filters.isLossless = Boolean(/islossless/iu.test(string));
   filters.isLossy = Boolean(/islossy/iu.test(string));
+  filters.preferLossless = Boolean(/preferlossless/iu.test(string));
+  filters.preferMinBitRate =
+    getNthMatch(string, /(prefbr|preferbr|preferbitrate):(\d+)/iu, 2) ||
+    filters.preferMinBitRate;
 
   // Parse extensions: ext:flac,mp3 or ext:flac mp3
   const extensionMatch = string.match(/ext:(\S+)/iu);
   if (extensionMatch) {
     filters.extensions = extensionMatch[1]
+      .split(/[ ,]/)
+      .map((e) => e.toLowerCase().trim())
+      .filter((e) => e.length > 0);
+  }
+
+  const preferredExtensionMatch = string.match(/prefext:(\S+)/iu);
+  if (preferredExtensionMatch) {
+    filters.preferExtensions = preferredExtensionMatch[1]
       .split(/[ ,]/)
       .map((e) => e.toLowerCase().trim())
       .filter((e) => e.length > 0);
@@ -255,7 +270,9 @@ export const parseFiltersFromString = (string) => {
         term !== 'iscbr' &&
         term !== 'islossless' &&
         term !== 'islossy' &&
-        !term.startsWith('ext:'),
+        term !== 'preferlossless' &&
+        !term.startsWith('ext:') &&
+        !term.startsWith('prefext:'),
     );
 
   filters.include = terms.filter((term) => !term.startsWith('-'));
@@ -342,6 +359,9 @@ export const filterResponse = ({
     minFileSize: 0,
     minLength: 0,
     minSampleRate: 0,
+    preferExtensions: [],
+    preferLossless: false,
+    preferMinBitRate: 0,
   },
   response = {
     files: [],
@@ -394,9 +414,15 @@ export const serializeFiltersToString = (filters) => {
   if (filters.isCBR) parts.push('iscbr');
   if (filters.isLossless) parts.push('islossless');
   if (filters.isLossy) parts.push('islossy');
+  if (filters.preferLossless) parts.push('preferlossless');
+  if (filters.preferMinBitRate) parts.push(`prefbr:${filters.preferMinBitRate}`);
 
   if (filters.extensions && filters.extensions.length > 0) {
     parts.push(`ext:${filters.extensions.join(',')}`);
+  }
+
+  if (filters.preferExtensions && filters.preferExtensions.length > 0) {
+    parts.push(`prefext:${filters.preferExtensions.join(',')}`);
   }
 
   return parts.join(' ');

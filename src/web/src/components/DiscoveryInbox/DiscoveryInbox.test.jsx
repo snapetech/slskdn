@@ -1,4 +1,5 @@
 import DiscoveryInbox from './DiscoveryInbox';
+import { acquisitionPlanStorageKey } from '../../lib/acquisitionPlans';
 import {
   addDiscoveryInboxItem,
   discoveryInboxStorageKey,
@@ -58,6 +59,44 @@ describe('DiscoveryInbox', () => {
     const persisted = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
     expect(persisted.every((candidate) => candidate.state === 'Rejected')).toBe(
       true,
+    );
+  });
+
+  it('creates review-only acquisition plans from approved candidates', () => {
+    const item = addDiscoveryInboxItem({
+      acquisitionProfile: 'mesh-preferred',
+      evidenceKey: 'manual-search:rare-track',
+      networkImpact: 'Manual review only.',
+      reason: 'Saved from Search while using Mesh Preferred.',
+      searchText: 'rare track',
+      source: 'Search',
+      title: 'rare track',
+    });
+
+    render(<DiscoveryInbox />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve rare track' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Create acquisition plans for approved discovery items',
+      }),
+    );
+
+    const persistedPlans = JSON.parse(localStorage.getItem(acquisitionPlanStorageKey));
+    expect(persistedPlans).toHaveLength(1);
+    expect(persistedPlans[0]).toEqual(
+      expect.objectContaining({
+        manualOnly: true,
+        providerPriority: ['LocalLibrary', 'NativeMesh', 'MeshDht', 'Soulseek'],
+        sourceId: item.id,
+        state: 'Planned',
+      }),
+    );
+    expect(screen.getByText(/LocalLibrary/)).toBeInTheDocument();
+
+    const persistedInbox = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
+    expect(persistedInbox.find((candidate) => candidate.id === item.id).state).toBe(
+      'Staged',
     );
   });
 });

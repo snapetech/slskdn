@@ -309,4 +309,17 @@ describe('parseFiltersFromString', () => {
       minBitRate: 42,
     });
   });
+
+  it('returns preferred ranking conditions without treating them as search terms', () => {
+    expect(
+      search.parseFiltersFromString(
+        'album preferlossless prefbr:320 prefext:flac,wav live',
+      ),
+    ).toMatchObject({
+      include: ['album', 'live'],
+      preferExtensions: ['flac', 'wav'],
+      preferLossless: true,
+      preferMinBitRate: 320,
+    });
+  });
 });
