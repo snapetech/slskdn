@@ -30,6 +30,7 @@ public class StreamsController : ControllerBase
     private readonly IShareTokenService _tokens;
     private readonly ISharingService _sharing;
     private readonly IStreamSessionLimiter _limiter;
+    private readonly IStreamTicketService _tickets;
     private readonly IOptionsMonitor<slskd.Options> _options;
 
     public StreamsController(
@@ -37,19 +38,44 @@ public class StreamsController : ControllerBase
         IShareTokenService tokens,
         ISharingService sharing,
         IStreamSessionLimiter limiter,
+        IStreamTicketService tickets,
         IOptionsMonitor<slskd.Options> options)
     {
         _locator = locator ?? throw new ArgumentNullException(nameof(locator));
         _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
         _sharing = sharing ?? throw new ArgumentNullException(nameof(sharing));
         _limiter = limiter ?? throw new ArgumentNullException(nameof(limiter));
+        _tickets = tickets ?? throw new ArgumentNullException(nameof(tickets));
         _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     private bool StreamingEnabled => _options.CurrentValue.Feature.Streaming;
     private string CurrentUserId => _options.CurrentValue.Soulseek.Username ?? string.Empty;
 
-    /// <summary>Stream content by ID. Auth: ?token= or Authorization: Bearer (share:token) or normal [Authorize]. Single byte-range only; multi-range returns 400.</summary>
+    /// <summary>Creates a short-lived stream ticket for browser media element playback.</summary>
+    [HttpPost("{contentId}/ticket")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    public IActionResult CreateTicket([FromRoute] string contentId)
+    {
+        if (!StreamingEnabled) return NotFound();
+
+        contentId = contentId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(contentId))
+        {
+            return BadRequest("ContentId is required.");
+        }
+
+        var resolved = _locator.Resolve(contentId, HttpContext.RequestAborted);
+        if (resolved == null) return NotFound();
+
+        var ownerKey = "user:" + CurrentUserId;
+        var ticket = _tickets.Create(contentId, ownerKey, TimeSpan.FromMinutes(2));
+        return Ok(new { ticket, expiresInSeconds = 120 });
+    }
+
+    /// <summary>Stream content by ID. Auth: ?ticket=, ?token=, Authorization: Bearer (share:token), or normal [Authorize]. Single byte-range only; multi-range returns 400.</summary>
     [HttpGet("{contentId}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(FileStreamResult), 200)]
@@ -57,7 +83,7 @@ public class StreamsController : ControllerBase
     [ProducesResponseType(401)]
     [ProducesResponseType(404)]
     [ProducesResponseType(429)]
-    public async Task<IActionResult> Get([FromRoute] string contentId, [FromQuery] string? token, CancellationToken ct)
+    public async Task<IActionResult> Get([FromRoute] string contentId, [FromQuery] string? token, [FromQuery] string? ticket, CancellationToken ct)
     {
         if (!StreamingEnabled) return NotFound();
 
@@ -73,15 +99,27 @@ public class StreamsController : ControllerBase
             return BadRequest("Multiple byte ranges are not supported.");
 
         ShareTokenClaims? claims = null;
+        StreamTicketClaims? ticketClaims = null;
         var tokenRaw = token?.Trim();
-        if (string.IsNullOrEmpty(tokenRaw))
+        var authenticatedNormally = User?.Identity?.IsAuthenticated == true;
+        var ticketRaw = ticket?.Trim();
+        if (!string.IsNullOrEmpty(ticketRaw))
+        {
+            ticketClaims = _tickets.Validate(ticketRaw, contentId);
+            if (ticketClaims == null) return Unauthorized();
+        }
+        else if (string.IsNullOrEmpty(tokenRaw) && !authenticatedNormally)
         {
             var auth = Request.Headers.Authorization.FirstOrDefault();
             if (auth != null && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 tokenRaw = auth.Substring("Bearer ".Length).Trim();
         }
 
-        if (!string.IsNullOrEmpty(tokenRaw))
+        if (ticketClaims != null)
+        {
+            // Opaque stream tickets are already bound to this content id.
+        }
+        else if (!string.IsNullOrEmpty(tokenRaw))
         {
             var toValidate = tokenRaw.StartsWith("share:", StringComparison.OrdinalIgnoreCase)
                 ? tokenRaw.Substring("share:".Length)
@@ -95,7 +133,7 @@ public class StreamsController : ControllerBase
         }
         else
         {
-            if (User?.Identity?.IsAuthenticated != true) return Unauthorized();
+            if (!authenticatedNormally) return Unauthorized();
         }
 
         var resolved = _locator.Resolve(contentId, ct);
@@ -103,7 +141,12 @@ public class StreamsController : ControllerBase
 
         string limiterKey;
         int maxConcurrent;
-        if (claims != null)
+        if (ticketClaims != null)
+        {
+            limiterKey = ticketClaims.OwnerKey;
+            maxConcurrent = NormalUserMaxConcurrentStreams;
+        }
+        else if (claims != null)
         {
             limiterKey = claims.ShareId;
             maxConcurrent = claims.MaxConcurrentStreams <= 0 ? 1 : claims.MaxConcurrentStreams;

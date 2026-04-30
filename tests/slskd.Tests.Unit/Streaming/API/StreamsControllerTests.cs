@@ -26,6 +26,7 @@ public class StreamsControllerTests
     private readonly Mock<IShareTokenService> _tokensMock = new();
     private readonly Mock<ISharingService> _sharingMock = new();
     private readonly Mock<IStreamSessionLimiter> _limiterMock = new();
+    private readonly Mock<IStreamTicketService> _ticketsServiceMock = new();
     private IOptionsMonitor<slskd.Options> _options = new TestOptionsMonitor(new slskd.Options
     {
         Feature = new slskd.Options.FeatureOptions { Streaming = true },
@@ -39,6 +40,7 @@ public class StreamsControllerTests
             _tokensMock.Object,
             _sharingMock.Object,
             _limiterMock.Object,
+            _ticketsServiceMock.Object,
             _options);
     }
 
@@ -63,7 +65,7 @@ public class StreamsControllerTests
         var c = CreateController();
         SetContext(c, authenticated: true);
 
-        var r = await c.Get("c1", null, CancellationToken.None);
+        var r = await c.Get("c1", null, null, CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(r);
         _locatorMock.Verify(x => x.Resolve(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -75,7 +77,7 @@ public class StreamsControllerTests
         var controller = CreateController();
         SetContext(controller, authenticated: true);
 
-        var r = await controller.Get("   ", null, CancellationToken.None);
+        var r = await controller.Get("   ", null, null, CancellationToken.None);
 
         var bad = Assert.IsType<BadRequestObjectResult>(r);
         Assert.Equal("ContentId is required.", bad.Value);
@@ -88,7 +90,7 @@ public class StreamsControllerTests
         var controller = CreateController();
         SetContext(controller, range: "bytes=0-499,500-999", authenticated: true);
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         var bad = Assert.IsType<BadRequestObjectResult>(r);
         Assert.Equal("Multiple byte ranges are not supported.", bad.Value);
@@ -101,7 +103,7 @@ public class StreamsControllerTests
         var controller = CreateController();
         SetContext(controller);
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(r);
     }
@@ -113,7 +115,7 @@ public class StreamsControllerTests
         SetContext(controller, authBearer: "share:bad-token");
         _tokensMock.Setup(x => x.ValidateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((ShareTokenClaims?)null);
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(r);
     }
@@ -126,7 +128,7 @@ public class StreamsControllerTests
         _tokensMock.Setup(x => x.ValidateAsync("tok", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ShareTokenClaims("s1", "c1", null, false, true, 1, DateTimeOffset.UtcNow.AddHours(1)));
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(r);
     }
@@ -141,7 +143,7 @@ public class StreamsControllerTests
         _sharingMock.Setup(x => x.GetCollectionItemsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<CollectionItem> { new() { ContentId = "other" } });
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(r);
     }
@@ -153,7 +155,7 @@ public class StreamsControllerTests
         SetContext(controller, authenticated: true);
         _locatorMock.Setup(x => x.Resolve("c1", It.IsAny<CancellationToken>())).Returns((ResolvedContent?)null);
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(r);
     }
@@ -167,7 +169,7 @@ public class StreamsControllerTests
             .Returns(new ResolvedContent("/tmp/x", 100, "audio/mpeg"));
         _limiterMock.Setup(x => x.TryAcquire(It.IsAny<string>(), It.IsAny<int>())).Returns(false);
 
-        var r = await controller.Get("c1", null, CancellationToken.None);
+        var r = await controller.Get("c1", null, null, CancellationToken.None);
 
         var sc = Assert.IsType<ObjectResult>(r);
         Assert.Equal(429, sc.StatusCode);
@@ -187,7 +189,7 @@ public class StreamsControllerTests
                 .Returns(new ResolvedContent(path, 3, "application/octet-stream"));
             _limiterMock.Setup(x => x.TryAcquire("user:alice", 5)).Returns(true);
 
-            var r = await controller.Get("c1", null, CancellationToken.None);
+            var r = await controller.Get("c1", null, null, CancellationToken.None);
 
             var file = Assert.IsType<FileStreamResult>(r);
             Assert.Equal("application/octet-stream", file.ContentType);
@@ -224,7 +226,7 @@ public class StreamsControllerTests
                 .Returns(new ResolvedContent(path, 2, "audio/flac"));
             _limiterMock.Setup(x => x.TryAcquire("s1", 2)).Returns(true);
 
-            var r = await controller.Get("c1", null, CancellationToken.None);
+            var r = await controller.Get("c1", null, null, CancellationToken.None);
 
             var file = Assert.IsType<FileStreamResult>(r);
             Assert.Equal("audio/flac", file.ContentType);
@@ -245,9 +247,54 @@ public class StreamsControllerTests
         _tokensMock.Setup(x => x.ValidateAsync("tok", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ShareTokenClaims?)null);
 
-        var r = await controller.Get("c1", " tok ", CancellationToken.None);
+        var r = await controller.Get("c1", " tok ", null, CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(r);
         _tokensMock.Verify(x => x.ValidateAsync("tok", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void CreateTicket_ResolvesContentAndReturnsShortLivedTicket()
+    {
+        var controller = CreateController();
+        SetContext(controller, authenticated: true);
+        _locatorMock.Setup(x => x.Resolve("c1", It.IsAny<CancellationToken>()))
+            .Returns(new ResolvedContent("/tmp/x", 100, "audio/mpeg"));
+        _ticketsServiceMock.Setup(x => x.Create("c1", "user:alice", TimeSpan.FromMinutes(2)))
+            .Returns("ticket-1");
+
+        var r = controller.CreateTicket(" c1 ");
+
+        var ok = Assert.IsType<OkObjectResult>(r);
+        Assert.Equal("ticket-1", ok.Value?.GetType().GetProperty("ticket")?.GetValue(ok.Value));
+        Assert.Equal(120, ok.Value?.GetType().GetProperty("expiresInSeconds")?.GetValue(ok.Value));
+    }
+
+    [Fact]
+    public async Task Get_WithValidTicket_SucceedsWithoutShareTokenOrNormalAuth()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "StreamsCtrl_" + Guid.NewGuid().ToString("N")[..8] + ".bin");
+        try
+        {
+            await File.WriteAllBytesAsync(path, new byte[] { 6, 7 });
+            var controller = CreateController();
+            SetContext(controller);
+            _ticketsServiceMock.Setup(x => x.Validate("ticket-1", "c1"))
+                .Returns(new StreamTicketClaims("c1", "user:alice", DateTimeOffset.UtcNow.AddMinutes(1)));
+            _locatorMock.Setup(x => x.Resolve("c1", It.IsAny<CancellationToken>()))
+                .Returns(new ResolvedContent(path, 2, "audio/mpeg"));
+            _limiterMock.Setup(x => x.TryAcquire("user:alice", 5)).Returns(true);
+
+            var r = await controller.Get("c1", null, " ticket-1 ", CancellationToken.None);
+
+            var file = Assert.IsType<FileStreamResult>(r);
+            Assert.Equal("audio/mpeg", file.ContentType);
+            _tokensMock.Verify(x => x.ValidateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            file.FileStream.Dispose();
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
     }
 }

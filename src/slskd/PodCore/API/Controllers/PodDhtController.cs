@@ -12,12 +12,14 @@ using System.Threading.Tasks;
 
 namespace slskd.PodCore.API.Controllers;
 
+using Asp.Versioning;
 using slskd.Core.Security;
 
 /// <summary>
 /// Pod DHT publishing API controller.
 /// </summary>
-[Route("api/v0/podcore/dht")]
+[Route("api/v{version:apiVersion}/podcore/dht")]
+[ApiVersion("0")]
 [ApiController]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)
@@ -25,13 +27,16 @@ public class PodDhtController : ControllerBase
 {
     private readonly ILogger<PodDhtController> _logger;
     private readonly IPodDhtPublisher _podPublisher;
+    private readonly IPodService _podService;
 
     public PodDhtController(
         ILogger<PodDhtController> logger,
-        IPodDhtPublisher podPublisher)
+        IPodDhtPublisher podPublisher,
+        IPodService podService)
     {
         _logger = logger;
         _podPublisher = podPublisher;
+        _podService = podService;
     }
 
     /// <summary>
@@ -56,7 +61,13 @@ public class PodDhtController : ControllerBase
 
         try
         {
-            var result = await _podPublisher.PublishAsync(normalizedRequest.Pod, cancellationToken);
+            var localPod = await _podService.GetPodAsync(normalizedRequest.Pod.PodId, cancellationToken);
+            if (localPod == null)
+            {
+                return NotFound(new { error = "Pod not found" });
+            }
+
+            var result = await _podPublisher.PublishAsync(localPod, cancellationToken);
 
             if (result.Success)
             {
@@ -98,7 +109,13 @@ public class PodDhtController : ControllerBase
 
         try
         {
-            var result = await _podPublisher.UpdateAsync(normalizedRequest.Pod, cancellationToken);
+            var localPod = await _podService.GetPodAsync(normalizedRequest.Pod.PodId, cancellationToken);
+            if (localPod == null)
+            {
+                return NotFound(new { error = "Pod not found" });
+            }
+
+            var result = await _podPublisher.UpdateAsync(localPod, cancellationToken);
 
             if (result.Success)
             {

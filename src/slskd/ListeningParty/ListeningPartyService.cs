@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using slskd.Mesh.Dht;
 using slskd.NowPlaying;
 using slskd.PodCore;
+using slskd.Streaming;
 
 /// <summary>
 ///     Stores and publishes metadata-only listen-along state for pods.
@@ -28,6 +29,7 @@ public sealed class ListeningPartyService : IListeningPartyService
     private readonly IPodMessageRouter _messageRouter;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly NowPlayingService _nowPlaying;
+    private readonly IStreamTicketService _streamTickets;
     private readonly ILogger<ListeningPartyService> _logger;
     private readonly ConcurrentDictionary<string, ListeningPartyEvent> _states = new();
     private readonly ConcurrentDictionary<string, ListeningPartyAnnouncement> _directory = new();
@@ -39,6 +41,7 @@ public sealed class ListeningPartyService : IListeningPartyService
         IPodMessageRouter messageRouter,
         IServiceScopeFactory scopeFactory,
         NowPlayingService nowPlaying,
+        IStreamTicketService streamTickets,
         ILogger<ListeningPartyService> logger)
     {
         _hub = hub;
@@ -46,6 +49,7 @@ public sealed class ListeningPartyService : IListeningPartyService
         _messageRouter = messageRouter;
         _scopeFactory = scopeFactory;
         _nowPlaying = nowPlaying;
+        _streamTickets = streamTickets;
         _logger = logger;
     }
 
@@ -132,6 +136,13 @@ public sealed class ListeningPartyService : IListeningPartyService
     private async Task PublishAnnouncementAsync(ListeningPartyEvent partyEvent, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
+        var streamTicket = partyEvent.AllowMeshStreaming
+            ? _streamTickets.Create(
+                partyEvent.ContentId,
+                $"listening-party:{partyEvent.PartyId}",
+                TimeSpan.FromSeconds(AnnouncementTtlSeconds))
+            : string.Empty;
+
         var announcement = new ListeningPartyAnnouncement
         {
             PartyId = partyEvent.PartyId,
@@ -146,7 +157,7 @@ public sealed class ListeningPartyService : IListeningPartyService
             Tags = partyEvent.Tags.ToList(),
             AllowMeshStreaming = partyEvent.AllowMeshStreaming,
             StreamPath = partyEvent.AllowMeshStreaming
-                ? $"/api/v0/listening-party/radio/{Uri.EscapeDataString(partyEvent.PartyId)}/{Uri.EscapeDataString(partyEvent.ContentId)}"
+                ? $"/api/v0/listening-party/radio/{Uri.EscapeDataString(partyEvent.PartyId)}/{Uri.EscapeDataString(partyEvent.ContentId)}?ticket={Uri.EscapeDataString(streamTicket)}"
                 : string.Empty,
             StartedAtUnixMs = partyEvent.ServerTimeUnixMs,
             LastSeenUnixMs = now.ToUnixTimeMilliseconds(),
@@ -154,13 +165,13 @@ public sealed class ListeningPartyService : IListeningPartyService
         };
 
         _directory[announcement.PartyId] = announcement;
-        await _dht.PutAsync(AnnouncementKey(announcement.PartyId), announcement, AnnouncementTtlSeconds, cancellationToken);
+        await _dht.PutAsync(AnnouncementKey(announcement.PartyId), Serialize(announcement), AnnouncementTtlSeconds, cancellationToken);
         await UpdateDirectoryIndexAsync(announcement.PartyId, add: true, cancellationToken);
     }
 
     private async Task RefreshDirectoryFromDhtAsync(CancellationToken cancellationToken)
     {
-        var index = await _dht.GetAsync<ListeningPartyIndex>(DirectoryIndexKey, cancellationToken);
+        var index = await GetAsync<ListeningPartyIndex>(DirectoryIndexKey, cancellationToken);
         if (index == null)
         {
             return;
@@ -168,7 +179,7 @@ public sealed class ListeningPartyService : IListeningPartyService
 
         foreach (var partyId in index.PartyIds)
         {
-            var announcement = await _dht.GetAsync<ListeningPartyAnnouncement>(AnnouncementKey(partyId), cancellationToken);
+            var announcement = await GetAsync<ListeningPartyAnnouncement>(AnnouncementKey(partyId), cancellationToken);
             if (announcement != null)
             {
                 _directory[announcement.PartyId] = announcement;
@@ -179,7 +190,7 @@ public sealed class ListeningPartyService : IListeningPartyService
     private async Task UpdateDirectoryIndexAsync(string partyId, bool add, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        var index = await _dht.GetAsync<ListeningPartyIndex>(DirectoryIndexKey, cancellationToken) ?? new ListeningPartyIndex();
+        var index = await GetAsync<ListeningPartyIndex>(DirectoryIndexKey, cancellationToken) ?? new ListeningPartyIndex();
         var partyIds = index.PartyIds
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.Ordinal)
@@ -196,11 +207,11 @@ public sealed class ListeningPartyService : IListeningPartyService
 
         await _dht.PutAsync(
             DirectoryIndexKey,
-            new ListeningPartyIndex
+            Serialize(new ListeningPartyIndex
             {
                 PartyIds = partyIds,
                 UpdatedAtUnixMs = now,
-            },
+            }),
             AnnouncementTtlSeconds,
             cancellationToken);
     }
@@ -254,5 +265,16 @@ public sealed class ListeningPartyService : IListeningPartyService
     private static string AnnouncementKey(string partyId)
     {
         return $"slskdn:listening-party:party:{partyId}";
+    }
+
+    private async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken)
+    {
+        var raw = await _dht.GetRawAsync(key, cancellationToken).ConfigureAwait(false);
+        return raw == null ? default : JsonSerializer.Deserialize<T>(raw, JsonOptions);
+    }
+
+    private static byte[] Serialize<T>(T value)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions);
     }
 }

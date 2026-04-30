@@ -5,6 +5,7 @@ namespace slskd.PodCore;
 
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -102,7 +103,7 @@ public class PodPublisher : IPodPublisher
             };
 
             // Publish to DHT with TTL
-            await dht.PutAsync(dhtKey, metadata, DefaultTTLSeconds, ct);
+            await dht.PutAsync(dhtKey, Serialize(metadata), DefaultTTLSeconds, ct);
 
             // Update pod index (list of all listed pod IDs)
             await UpdatePodIndexAsync(pod.PodId, add: true, ct);
@@ -173,7 +174,7 @@ public class PodPublisher : IPodPublisher
         try
         {
             // Get current index
-            var index = await dht.GetAsync<PodIndex>(indexKey, ct) ?? new PodIndex { PodIds = new List<string>() };
+            var index = await GetPodIndexAsync(indexKey, ct);
 
             if (add)
             {
@@ -181,7 +182,7 @@ public class PodPublisher : IPodPublisher
                 {
                     index.PodIds.Add(podId);
                     index.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                    await dht.PutAsync(indexKey, index, DefaultTTLSeconds, ct);
+                    await dht.PutAsync(indexKey, Serialize(index), DefaultTTLSeconds, ct);
                     logger.LogDebug("[PodPublisher] Added pod {PodId} to index", podId);
                 }
             }
@@ -190,7 +191,7 @@ public class PodPublisher : IPodPublisher
                 if (index.PodIds.Remove(podId))
                 {
                     index.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                    await dht.PutAsync(indexKey, index, DefaultTTLSeconds, ct);
+                    await dht.PutAsync(indexKey, Serialize(index), DefaultTTLSeconds, ct);
                     logger.LogDebug("[PodPublisher] Removed pod {PodId} from index", podId);
                 }
             }
@@ -204,6 +205,19 @@ public class PodPublisher : IPodPublisher
     private static string DeriveDhtKey(string podId)
     {
         return $"{PodKeyPrefix}{podId}";
+    }
+
+    private async Task<PodIndex> GetPodIndexAsync(string indexKey, CancellationToken ct)
+    {
+        var raw = await dht.GetRawAsync(indexKey, ct).ConfigureAwait(false);
+        return raw == null
+            ? new PodIndex { PodIds = new List<string>() }
+            : JsonSerializer.Deserialize<PodIndex>(raw) ?? new PodIndex { PodIds = new List<string>() };
+    }
+
+    private static byte[] Serialize<T>(T value)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(value);
     }
 }
 

@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,6 +18,8 @@ using slskd.Shares;
 /// </summary>
 public sealed class ContentLocator : IContentLocator
 {
+    private const int MaxFallbackFilesToScan = 5000;
+
     private readonly IShareService _shareService;
     private readonly ILogger<ContentLocator> _log;
     private readonly IOptionsMonitor<slskd.Options>? _options;
@@ -48,6 +49,15 @@ public sealed class ContentLocator : IContentLocator
         }
 
         var finfo = repo.FindFileInfo(ci.Value.MaskedFilename);
+        if (string.IsNullOrEmpty(finfo.Filename) &&
+            Path.IsPathFullyQualified(ci.Value.MaskedFilename) &&
+            IsAllowedLocalPath(ci.Value.MaskedFilename) &&
+            File.Exists(ci.Value.MaskedFilename))
+        {
+            var info = new FileInfo(ci.Value.MaskedFilename);
+            finfo = (ci.Value.MaskedFilename, info.Length);
+        }
+
         if (string.IsNullOrEmpty(finfo.Filename) || finfo.Size <= 0)
         {
             _log.LogDebug("[ContentLocator] FindFileInfo returned no path for {Masked}", ci.Value.MaskedFilename);
@@ -91,25 +101,8 @@ public sealed class ContentLocator : IContentLocator
                 continue;
             }
 
-            string sha256ContentId;
-            try
-            {
-                sha256ContentId = $"sha256:{ComputeSha256(path)}";
-            }
-            catch (IOException ex)
-            {
-                _log.LogDebug(ex, "[ContentLocator] Could not hash local file {Path}", path);
-                continue;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _log.LogDebug(ex, "[ContentLocator] Could not hash local file {Path}", path);
-                continue;
-            }
-
             var pathContentId = $"path:{slskd.Compute.Sha256Hash($"{path}|{info.Length}")}";
-            if (!string.Equals(contentId, sha256ContentId, StringComparison.Ordinal) &&
-                !string.Equals(contentId, pathContentId, StringComparison.Ordinal))
+            if (!string.Equals(contentId, pathContentId, StringComparison.Ordinal))
             {
                 continue;
             }
@@ -153,7 +146,7 @@ public sealed class ContentLocator : IContentLocator
                 continue;
             }
 
-            foreach (var file in files)
+            foreach (var file in files.Take(MaxFallbackFilesToScan))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 yield return file;
@@ -161,12 +154,17 @@ public sealed class ContentLocator : IContentLocator
         }
     }
 
-    private static string ComputeSha256(string path)
+    private bool IsAllowedLocalPath(string path)
     {
-        using var sha256 = SHA256.Create();
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var hashBytes = sha256.ComputeHash(stream);
-        return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+        if (_options == null)
+        {
+            return false;
+        }
+
+        var fullPath = Path.GetFullPath(path);
+        return GetAllowedLocalRoots().Any(root =>
+            fullPath.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || string.Equals(fullPath, root, StringComparison.Ordinal));
     }
 
     private static string GetContentType(string path)

@@ -27,21 +27,25 @@ using slskd.Streaming;
 public sealed class ListeningPartyController : ControllerBase
 {
     private const int ListedPartyMaxConcurrentStreams = 50;
+    private const int ListedPartyMaxConcurrentStreamsPerIp = 3;
 
     private readonly IContentLocator _locator;
     private readonly IListeningPartyService _listeningParty;
     private readonly IStreamSessionLimiter _limiter;
+    private readonly IStreamTicketService _tickets;
     private readonly IOptionsMonitor<global::slskd.Options> _options;
 
     public ListeningPartyController(
         IContentLocator locator,
         IListeningPartyService listeningParty,
         IStreamSessionLimiter limiter,
+        IStreamTicketService tickets,
         IOptionsMonitor<global::slskd.Options> options)
     {
         _locator = locator;
         _listeningParty = listeningParty;
         _limiter = limiter;
+        _tickets = tickets;
         _options = options;
     }
 
@@ -103,6 +107,7 @@ public sealed class ListeningPartyController : ControllerBase
     public async Task<IActionResult> StreamListedParty(
         [FromRoute] string partyId,
         [FromRoute] string contentId,
+        [FromQuery] string? ticket,
         CancellationToken cancellationToken)
     {
         partyId = partyId?.Trim() ?? string.Empty;
@@ -130,6 +135,13 @@ public sealed class ListeningPartyController : ControllerBase
             return NotFound();
         }
 
+        var ticketClaims = _tickets.Validate(ticket?.Trim() ?? string.Empty, contentId);
+        if (ticketClaims == null ||
+            !string.Equals(ticketClaims.OwnerKey, $"listening-party:{partyId}", StringComparison.Ordinal))
+        {
+            return Unauthorized();
+        }
+
         var resolved = _locator.Resolve(contentId, cancellationToken);
         if (resolved == null)
         {
@@ -142,13 +154,25 @@ public sealed class ListeningPartyController : ControllerBase
             return StatusCode(429, "Too many concurrent radio streams.");
         }
 
+        var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ipLimiterKey = $"listening-party:{partyId}:ip:{remoteIp}";
+        if (!_limiter.TryAcquire(ipLimiterKey, ListedPartyMaxConcurrentStreamsPerIp))
+        {
+            _limiter.Release(limiterKey);
+            return StatusCode(429, "Too many concurrent radio streams from this address.");
+        }
+
         Stream? stream = null;
         try
         {
 #pragma warning disable CA2000 // Ownership is transferred to ReleaseOnDisposeStream/FileResult on success and disposed in finally on failure.
             stream = new FileStream(resolved.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             Stream? ownedStream = stream;
-            var wrapped = new ReleaseOnDisposeStream(ownedStream, () => _limiter.Release(limiterKey));
+            var wrapped = new ReleaseOnDisposeStream(ownedStream, () =>
+            {
+                _limiter.Release(ipLimiterKey);
+                _limiter.Release(limiterKey);
+            });
 #pragma warning restore CA2000
             ownedStream = null;
             stream = null;
@@ -156,6 +180,7 @@ public sealed class ListeningPartyController : ControllerBase
         }
         catch (IOException)
         {
+            _limiter.Release(ipLimiterKey);
             _limiter.Release(limiterKey);
             return NotFound();
         }

@@ -45,6 +45,7 @@ export const PlayerProvider = ({ children }) => {
       const playable = {
         album: item.album || item.collectionTitle || '',
         artist: item.artist || item.username || 'slskdN',
+        artworkUrl: item.artworkUrl || item.coverUrl || item.imageUrl || '',
         contentId: item.contentId,
         fileName: item.fileName || item.title || item.contentId,
         positionSeconds: options.positionSeconds || 0,

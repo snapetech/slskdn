@@ -11,6 +11,18 @@ vi.mock('../../lib/nowPlaying', () => ({
 }));
 
 vi.mock('../../lib/collections', () => ({
+  getCollectionItems: vi.fn(() =>
+    Promise.resolve({
+      data: [
+        {
+          contentId: 'sha256:collection',
+          fileName: 'Collection stream.ogg',
+          id: 'collection-item-1',
+          mediaKind: 'Audio',
+        },
+      ],
+    }),
+  ),
   getCollections: vi.fn(() =>
     Promise.resolve({ data: [{ id: 'collection-1', title: 'Favorites' }] }),
   ),
@@ -30,6 +42,16 @@ vi.mock('../../lib/collections', () => ({
   ),
 }));
 
+vi.mock('../../lib/streaming', () => ({
+  buildDirectStreamUrl: vi.fn((contentId) =>
+    `/api/v0/streams/${encodeURIComponent(contentId)}`,
+  ),
+  buildTicketedStreamUrl: vi.fn((contentId, ticket) =>
+    `/api/v0/streams/${encodeURIComponent(contentId)}?ticket=${ticket}`,
+  ),
+  createStreamTicket: vi.fn(() => Promise.resolve('ticket-1')),
+}));
+
 const TestHarness = () => {
   const { playItem } = usePlayer();
 
@@ -46,6 +68,18 @@ const TestHarness = () => {
         type="button"
       >
         Play fixture
+      </button>
+      <button
+        onClick={() =>
+          playItem({
+            contentId: 'sha256:second',
+            fileName: 'Second stream.ogg',
+            title: 'Second stream',
+          })
+        }
+        type="button"
+      >
+        Play second fixture
       </button>
       <PlayerBar />
     </>
@@ -79,17 +113,17 @@ describe('PlayerBar', () => {
     fireEvent.click(screen.getByText('Play fixture'));
 
     const audio = document.querySelector('audio');
-    const source = audio.querySelector('source');
-    await waitFor(() =>
-      expect(source.getAttribute('src')).toContain(
+    await waitFor(() => {
+      const src = audio.getAttribute('src') || '';
+      expect(src).toContain(
         '/api/v0/streams/sha256%3Atest',
-      ),
-    );
+      );
+    });
 
     fireEvent.click(screen.getByTestId('player-toggle-mute'));
 
     expect(audio.muted).toBe(true);
-    expect(source.getAttribute('src')).toContain(
+    expect(audio.getAttribute('src')).toContain(
       '/api/v0/streams/sha256%3Atest',
     );
     expect(window.localStorage.getItem('slskdn.player.localMuted')).toBe('true');
@@ -104,12 +138,73 @@ describe('PlayerBar', () => {
     expect(document.querySelector('audio').muted).toBe(true);
   });
 
-  it('shows collection and local file launchers before playback starts', async () => {
+  it('opens collection and local file browser modals before playback starts', async () => {
     renderPlayer();
 
-    expect(screen.getByTestId('player-open-collections')).toBeInTheDocument();
-    expect(screen.getByTestId('player-collection-picker')).toBeInTheDocument();
-    expect(screen.getByTestId('player-file-picker')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('player-open-collections-browser'),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('player-open-file-browser')).toBeInTheDocument();
     await screen.findByText('Pick a collection or local audio file');
+
+    fireEvent.click(screen.getByTestId('player-open-collections-browser'));
+    expect(
+      screen.getByTestId('player-collection-browser-modal'),
+    ).toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId('player-collection-row-collection-1'));
+    expect(await screen.findByText('Collection stream.ogg')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByText('Close')[0]);
+    fireEvent.click(screen.getByTestId('player-open-file-browser'));
+    expect(screen.getByTestId('player-file-browser-modal')).toBeInTheDocument();
+    expect(await screen.findByText('Library stream.ogg')).toBeInTheDocument();
+  });
+
+  it('switches the visual tile from album art to the MilkDrop canvas', () => {
+    renderPlayer();
+
+    expect(screen.getByTestId('player-album-art')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-visual-tile'));
+
+    expect(document.querySelector('.player-visualizer-canvas')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-album-art')).not.toBeInTheDocument();
+  });
+
+  it('does not repeat the currently playing track in the queue preview', () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+
+    expect(screen.getByText('Local stream')).toBeInTheDocument();
+    expect(document.querySelector('.player-queue')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Play second fixture'));
+
+    expect(screen.getByText('Second stream')).toBeInTheDocument();
+    expect(screen.getByText('Local stream')).toBeInTheDocument();
+    expect(document.querySelector('.player-queue')?.textContent).not.toContain(
+      'Second stream',
+    );
+  });
+
+  it('makes ListenBrainz autosave explicit and clearable', () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByTestId('player-open-integrations'));
+    const tokenInput = screen.getByLabelText('ListenBrainz user token');
+
+    fireEvent.change(tokenInput, { target: { value: ' token-1 ' } });
+
+    expect(screen.getByTestId('player-listenbrainz-save-state')).toHaveTextContent(
+      'saved automatically',
+    );
+    expect(window.localStorage.getItem('slskdn.listenbrainz.token')).toBe('token-1');
+    expect(screen.getByTestId('player-close-integrations')).toHaveTextContent('Done');
+
+    fireEvent.click(screen.getByTestId('player-clear-listenbrainz-token'));
+
+    expect(tokenInput).toHaveValue('');
+    expect(window.localStorage.getItem('slskdn.listenbrainz.token')).toBeNull();
   });
 });

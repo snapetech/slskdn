@@ -7353,3 +7353,37 @@ Code quality improvements were completed as part of Option A:
 - Expanded `docs/listening-party.md` with a Web Player section covering playback sources, `/api/v0/streams/{contentId}`, configured local root resolution, controls, local mute, Media Session, and browser-owned audio output.
 - Updated `docs/advanced-features.md` and `docs/FEATURES.md` so streaming documentation matches the current integrated player behavior instead of the older Pod-only streaming description.
 - Validation: docs-only diff reviewed with `git diff --check`.
+
+## 2026-04-30 03:18:00Z
+
+- Hardened the new streaming/player/DHT pod/listening-party surfaces after security review.
+- Browser media playback now uses short-lived opaque stream tickets instead of placing the app JWT in audio URLs; listed-party radio also requires a party-bound ticket and has a per-IP limiter.
+- Listening-party DHT records now publish explicit JSON bytes and read via `GetRawAsync`, avoiding implicit MessagePack shape drift.
+- Pod DHT metadata retrieval fails closed on invalid signatures, and publish/update endpoints sign only locally stored pod metadata rather than caller-supplied bodies.
+- Local library/stream fallback no longer hashes arbitrary allowed-root files to satisfy `sha256:` misses; it uses bounded path IDs and displays relative/file-only paths.
+- ListenBrainz token clearing now removes storage and submission reports HTTP failure instead of always returning success.
+- Validation: `dotnet build --no-incremental --nologo --configuration Release`, focused backend test slice (`424/424`), `npm run lint`, `npm run build`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and `bash ./bin/lint` passed. The web production build still reports the existing large chunk warning, and .NET still reports existing analyzer warnings.
+
+## 2026-04-30 03:23:00Z
+
+- Fixed the player footer queue preview so it no longer repeats the current track title below the now-playing display.
+- Improved lyrics lookup for local files: placeholder artists such as `slskdN` no longer get sent to LRCLIB, `Artist - Title.ext` filenames are inferred when possible, exact lookup falls back to LRCLIB search, and plain lyrics can display when synced lyrics are unavailable.
+- Documented the gotcha and committed it immediately as `cea5eede6`.
+- Validation: focused player tests (`9/9`), `npm run lint`, `npm run build`, and `git diff --check` passed. The web production build still reports the existing large chunk warning.
+
+## 2026-04-30 03:28:00Z
+
+- Fixed the modern player deck so the LCD display, spectrum/signal tile, and control rack use the full available player width instead of leaving a dead right-side gap.
+- Changed playback to resume the shared Web Audio graph before calling `audio.play()`, and changed the media element to use a direct `src` attribute for less fragile source updates.
+- Stopped the analyzer from creating/resuming an AudioContext before a real current track exists, and replaced an invalid Semantic UI icon name in the signal toggle affordance.
+- Headless layout check on `localhost:3002` measured the bar at `1245px`, display at `1219.8px`, signal tile at `1077.5px`, and control rack at `1219.8px`; no invalid icon or early AudioContext warnings were reported.
+- Validation: focused player tests (`9/9`), `npm run lint`, `npm run build`, headless Playwright layout/console check, and `git diff --check` passed.
+
+## 2026-04-30 03:40:00Z
+
+- Fixed MilkDrop initialization under Vite by resolving the actual Butterchurn API export before calling `createVisualizer`.
+- Routed MilkDrop through a stable shared Web Audio visualizer tap instead of the `MediaElementSource`, and kept that tap on a live silent branch so Chromium continues processing analyzer data while playback uses the normal output chain.
+- Added Butterchurn audio disconnect cleanup on visualizer unmount to avoid stale graph connections after toggling modes.
+- Documented the gotcha and committed it immediately as `1cd281afe`.
+- Headless browser smoke test played `Sample2-public-domain-bansuri.ogg`, opened MilkDrop, cycled presets, captured the canvas, and confirmed `colors=5032`, nonzero mean/stdev, no MilkDrop console errors, and active audio playback at `readyState: 4`.
+- Validation: focused player tests (`8/8`), `npm run lint`, `npm run build`, `bash bin/lint`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and Playwright screenshot smoke passed. The repo-level `./bin/lint` path itself is not executable in this checkout, so it was run via `bash bin/lint`.

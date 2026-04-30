@@ -1508,3 +1508,7 @@
 - [x] Document integrated Web UI player and listening-party features
   - Status: completed (2026-04-30)
   - Notes: Updated README, `docs/listening-party.md`, `docs/advanced-features.md`, and `docs/FEATURES.md` to cover the integrated player, modal pickers, local-root stream resolution, footer-safe drawer controls, player extras, PWA/mobile behavior, and listening-party/radio boundaries.
+
+- [x] Harden new streaming, player, DHT pod, and mesh-adjacent surfaces
+  - Status: completed (2026-04-30)
+  - Notes: Replaced browser audio JWT query strings with short-lived stream tickets, required tickets for listed-party radio, changed listening-party DHT records to explicit JSON bytes, failed closed on invalid pod DHT signatures, published only locally stored pod metadata to DHT, bounded stream root lookup to path IDs under allowed roots, reduced local library path exposure, and tightened ListenBrainz token clearing/error reporting.

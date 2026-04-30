@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -61,7 +62,7 @@ public class PodDhtPublisher : IPodDhtPublisher
             var signedPod = CreateSignedPod(pod);
 
             // Publish to DHT with 24 hour TTL
-            await _dhtClient.PutAsync(dhtKey, signedPod, ttlSeconds: 24 * 60 * 60, cancellationToken);
+            await _dhtClient.PutAsync(dhtKey, SerializeSignedPod(signedPod), ttlSeconds: 24 * 60 * 60, cancellationToken);
 
             // Assume success for now - in a real implementation, we'd check the result
             // For now, PutAsync doesn't return detailed error info
@@ -177,7 +178,7 @@ public class PodDhtPublisher : IPodDhtPublisher
         {
             _logger.LogDebug("[PodDhtPublisher] Retrieving published metadata for pod {PodId}", podId);
 
-            var signedPod = await _dhtClient.GetAsync<SignedPod>(dhtKey, cancellationToken);
+            var signedPod = await GetSignedPodAsync(dhtKey, cancellationToken);
 
             if (signedPod == null)
             {
@@ -195,6 +196,17 @@ public class PodDhtPublisher : IPodDhtPublisher
 
             // Verify signature
             var isValidSignature = VerifyPodSignature(signedPod);
+            if (!isValidSignature)
+            {
+                return new PodMetadataResult(
+                    Found: false,
+                    PodId: podId,
+                    PublishedPod: null,
+                    RetrievedAt: retrievedAt,
+                    ExpiresAt: DateTimeOffset.MinValue,
+                    IsValidSignature: false,
+                    ErrorMessage: "Pod metadata signature is invalid");
+            }
 
             // Calculate expiration (assuming 24 hour TTL)
             var expiresAt = signedPod.SignedAt.AddHours(24);
@@ -267,7 +279,7 @@ public class PodDhtPublisher : IPodDhtPublisher
 
             var dhtKey = GetDhtKey(podId);
             var refreshedPod = CreateSignedPod(pod);
-            await _dhtClient.PutAsync(dhtKey, refreshedPod, ttlSeconds: 24 * 60 * 60, cancellationToken).ConfigureAwait(false);
+            await _dhtClient.PutAsync(dhtKey, SerializeSignedPod(refreshedPod), ttlSeconds: 24 * 60 * 60, cancellationToken).ConfigureAwait(false);
 
             var refreshedAt = DateTimeOffset.UtcNow;
             var expiresAt = refreshedAt.AddHours(24);
@@ -352,6 +364,17 @@ public class PodDhtPublisher : IPodDhtPublisher
             Signature = signedEnvelope.Signature,
             PublicKey = signedEnvelope.PublicKey
         };
+    }
+
+    private async Task<SignedPod?> GetSignedPodAsync(string dhtKey, CancellationToken cancellationToken)
+    {
+        var raw = await _dhtClient.GetRawAsync(dhtKey, cancellationToken).ConfigureAwait(false);
+        return raw == null ? null : JsonSerializer.Deserialize<SignedPod>(raw);
+    }
+
+    private static byte[] SerializeSignedPod(SignedPod signedPod)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(signedPod);
     }
 
     private bool VerifyPodSignature(SignedPod signedPod)

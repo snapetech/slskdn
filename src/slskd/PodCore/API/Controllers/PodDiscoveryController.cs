@@ -9,12 +9,14 @@ using System.Threading.Tasks;
 
 namespace slskd.PodCore.API.Controllers;
 
+using Asp.Versioning;
 using slskd.Core.Security;
 
 /// <summary>
 /// Pod discovery API controller.
 /// </summary>
-[Route("api/v0/podcore/discovery")]
+[Route("api/v{version:apiVersion}/podcore/discovery")]
+[ApiVersion("0")]
 [ApiController]
 [Authorize(Policy = AuthPolicy.Any)]
 [ValidateCsrfForCookiesOnly] // CSRF protection for cookie-based auth (exempts JWT/API key)

@@ -1,23 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Icon, Popup } from 'semantic-ui-react';
-
-const audioGraphCache = new WeakMap();
-
-const getOrCreateAudioGraph = (audioElement) => {
-  if (!audioElement) return null;
-  const cached = audioGraphCache.get(audioElement);
-  if (cached) return cached;
-
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return null;
-
-  const ctx = new AudioCtx();
-  const source = ctx.createMediaElementSource(audioElement);
-  source.connect(ctx.destination);
-  const graph = { ctx, source };
-  audioGraphCache.set(audioElement, graph);
-  return graph;
-};
+import { resumeAudioGraph } from './audioGraph';
+import SpectrumAnalyzer from './SpectrumAnalyzer';
 
 const pickRandomPreset = (presets) => {
   const names = Object.keys(presets);
@@ -26,12 +10,32 @@ const pickRandomPreset = (presets) => {
   return { data: presets[name], name };
 };
 
+const resolveButterchurnApi = (butterchurnModule) => {
+  const candidates = [
+    butterchurnModule,
+    butterchurnModule.default,
+    butterchurnModule.default?.default,
+  ];
+  return candidates.find((candidate) => candidate?.createVisualizer);
+};
+
+const supportsWebGl2 = () => {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2'));
+  } catch {
+    return false;
+  }
+};
+
 const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const visualizerRef = useRef(null);
+  const connectedAudioNodeRef = useRef(null);
   const rafRef = useRef(null);
   const presetsRef = useRef(null);
+  const [fallbackMode, setFallbackMode] = useState(false);
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
 
@@ -70,13 +74,19 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
     (async () => {
       try {
-        const graph = getOrCreateAudioGraph(audioElement);
+        setError(null);
+        setFallbackMode(false);
+        const graph = await resumeAudioGraph(audioElement);
         if (!graph) {
           setError('Web Audio is not available in this browser.');
+          setFallbackMode(true);
           return;
         }
-        if (graph.ctx.state === 'suspended') {
-          await graph.ctx.resume();
+
+        if (!supportsWebGl2()) {
+          setError('MilkDrop needs WebGL2. Showing analyzer fallback.');
+          setFallbackMode(true);
+          return;
         }
 
         const [butterchurnModule, presetsModule] = await Promise.all([
@@ -85,7 +95,11 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         ]);
         if (cancelled) return;
 
-        const butterchurn = butterchurnModule.default || butterchurnModule;
+        const butterchurn = resolveButterchurnApi(butterchurnModule);
+        if (!butterchurn) {
+          throw new Error('Butterchurn visualizer API was not found.');
+        }
+
         const presetsApi = presetsModule.default || presetsModule;
         const presets = presetsApi.getPresets();
         presetsRef.current = presets;
@@ -100,7 +114,8 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             width: 800,
           },
         );
-        visualizer.connectAudio(graph.source);
+        visualizer.connectAudio(graph.visualizerInput);
+        connectedAudioNodeRef.current = graph.visualizerInput;
 
         const picked = pickRandomPreset(presets);
         if (picked) {
@@ -120,7 +135,8 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       } catch (importError) {
         // eslint-disable-next-line no-console
         console.error('Failed to load Milkdrop visualizer', importError);
-        setError('Failed to load visualizer.');
+        setError('MilkDrop failed. Showing analyzer fallback.');
+        setFallbackMode(true);
       }
     })();
 
@@ -133,7 +149,15 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
+      if (visualizerRef.current && connectedAudioNodeRef.current) {
+        try {
+          visualizerRef.current.disconnectAudio(connectedAudioNodeRef.current);
+        } catch {
+          // Butterchurn may already have disconnected during canvas teardown.
+        }
+      }
       visualizerRef.current = null;
+      connectedAudioNodeRef.current = null;
       presetsRef.current = null;
     };
   }, [mode, audioElement, renderLoop, sizeCanvas]);
@@ -173,7 +197,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       try {
         await document.exitFullscreen();
       } catch {
-        // ignore — fullscreenchange handler will reset mode
+        // ignore; fullscreenchange handler will reset mode
       }
     }
     onModeChange('inline');
@@ -185,7 +209,18 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
   return (
     <div className={className} ref={containerRef}>
-      <canvas className="player-visualizer-canvas" ref={canvasRef} />
+      <canvas
+        className="player-visualizer-canvas"
+        hidden={fallbackMode}
+        ref={canvasRef}
+      />
+      {fallbackMode ? (
+        <SpectrumAnalyzer
+          audioElement={audioElement}
+          className="player-visualizer-fallback"
+          mode="spectrum"
+        />
+      ) : null}
       {error ? <div className="player-visualizer-error">{error}</div> : null}
       <div className="player-visualizer-overlay">
         {mode !== 'inline' && presetName ? (
@@ -193,7 +228,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             {presetName}
           </div>
         ) : null}
-        <div className="player-visualizer-overlay-controls">
+        <div
+          className="player-visualizer-overlay-controls"
+          onClick={(event) => event.stopPropagation()}
+        >
           <Popup
             content="Load a different MilkDrop preset."
             trigger={

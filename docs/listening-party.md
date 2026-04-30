@@ -35,6 +35,38 @@ The protocol payload is JSON in the pod message body:
 
 `serverTimeUnixMs` and `positionSeconds` let listeners compensate for elapsed time when joining a currently playing party. Clients should treat host state as advisory and keep user control local: following a party can be toggled off without leaving the pod.
 
+## Web Player
+
+The Web UI player is part of slskdN itself. It is not a separate streaming server, and it does not require an external media service.
+
+### Playback Sources
+
+The player can start playback from:
+
+- Collection rows and collection-item play buttons.
+- The player empty-state **Collections** browser, which opens a two-pane modal with collection list and playable items.
+- The player empty-state **Files** browser, which opens a searchable modal over shared and downloaded local audio.
+- Pod/listening-party follow actions that resolve the announced `ContentId`.
+
+All normal playback uses `GET /api/v0/streams/{contentId}`. That endpoint supports byte ranges, seeking, content-type detection, authenticated access, share-token access where applicable, and per-user stream limiting.
+
+For local browser picking, slskdN can resolve streamable IDs from configured non-excluded share directories and the configured downloads directory. This keeps downloaded/shared audio playable even before a row has been persisted into `content_items`, while still keeping file access scoped to configured local roots.
+
+### Player Controls
+
+The persistent player is docked above the fixed footer and can collapse into a small drawer bar. It should never cover the footer.
+
+Controls include:
+
+- Play/pause and stop.
+- Previous/next queue navigation.
+- Rewind and fast-forward.
+- Browser-local mute. This mutes only the current browser or installed PWA; it does not stop the stream or mute other listeners.
+- Browser Media Session metadata and transport handlers for supported mobile/PWA lock-screen controls.
+- Optional MilkDrop visualizer, lightweight analyzer, equalizer, synced lyrics, crossfade, karaoke-style center-channel reduction, and ListenBrainz now-playing/scrobble submission when the relevant player controls are enabled.
+
+The browser owns audio output. A listener can keep following a party while locally muted, and the host can keep playing locally while publishing metadata.
+
 ## Network And Rights Boundary
 
 Layer 1 is deliberately conservative. It broadcasts only metadata and relies on the existing stream endpoint and authorization boundary for bytes:

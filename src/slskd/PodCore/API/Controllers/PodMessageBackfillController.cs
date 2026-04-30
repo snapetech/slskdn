@@ -3,6 +3,7 @@
 // </copyright>
 namespace slskd.PodCore.API.Controllers;
 
+using Asp.Versioning;
 using slskd.Identity;
 using slskd.Core.Security;
 
@@ -17,7 +18,8 @@ using Microsoft.Extensions.Logging;
 /// <summary>
 ///     Pod message backfill management.
 /// </summary>
-[Route("api/v0/podcore/backfill")]
+[Route("api/v{version:apiVersion}/podcore/backfill")]
+[ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
 [Consumes("application/json")]

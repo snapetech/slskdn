@@ -44,6 +44,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Made the stream locator resolve `sha256:` and path-based local audio IDs from
   configured share/download roots when the file is allowed locally but has not
   yet been persisted into the indexed `content_items` table.
+- Added stream ticket plumbing for browser playback flows and tightened related
+  pod/listening-party controller behavior so the expanded player, local file
+  browser, and radio/listen-along paths share the same integrated slskdN
+  streaming boundary.
 - Added Discography Concierge planning and first implementation pieces,
   including MusicBrainz artist coverage services/API/UI, manual missing-track
   Wishlist promotion, and supporting docs/tasks for mesh/social music

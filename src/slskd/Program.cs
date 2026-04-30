@@ -1260,6 +1260,7 @@ namespace slskd
 
             services.AddSingleton<IContentLocator, ContentLocator>();
             services.AddSingleton<IStreamSessionLimiter, StreamSessionLimiter>();
+            services.AddSingleton<IStreamTicketService, StreamTicketService>();
             services.AddSingleton<IShareTokenService, ShareTokenService>();
 
             // Register search providers for Scene ↔ Pod Bridging

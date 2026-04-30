@@ -5,7 +5,6 @@ namespace slskd.Tests.Unit.Streaming;
 
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -142,8 +141,7 @@ public class ContentLocatorTests
         {
             Directory.CreateDirectory(root);
             File.WriteAllBytes(path, new byte[] { 1, 2, 3, 4 });
-            var hashBytes = SHA256.HashData(new byte[] { 1, 2, 3, 4 });
-            var contentId = $"sha256:{BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant()}";
+            var contentId = $"path:{slskd.Compute.Sha256Hash($"{path}|4")}";
             var locator = CreateLocator(new slskd.Options
             {
                 Directories = new slskd.Options.DirectoriesOptions

@@ -227,6 +227,24 @@ Show what you're listening to in your Soulseek profile — automatically updated
 - Auto-updates your Soulseek user description: `🎵 Listening to: Artist – Title`
 - REST API (`GET/PUT/DELETE /api/v0/nowplaying`) for manual or scripted control
 
+### 🎛️ Integrated Web Player & Listening Parties
+Play local shared/downloaded audio, collections, and pod listen-along sessions directly in the Web UI. No separate streaming server is required.
+- Footer-safe player drawer with collapse/expand, previous/next, rewind, fast-forward, stop, browser-local mute, and browser Media Session controls
+- **Collections browser** modal for picking tracks from playlists/share lists, plus **Files browser** modal for searchable shared/downloaded local audio
+- Integrated `GET /api/v0/streams/{contentId}` range playback for local audio content IDs with normal auth/share-token and stream-limit boundaries
+- Local audio can resolve from configured share and download roots, keeping browser playback inside slskdN instead of a separate media server
+- MilkDrop visualizer with inline, full-window, and fullscreen modes
+- 10-band browser-local equalizer with persisted presets
+- Lightweight spectrum analyzer and oscilloscope for lower-GPU visual feedback
+- Synced lyrics pane using LRCLIB lookups from the current artist/title
+- Optional ListenBrainz now-playing and scrobble submission with a token stored in browser localStorage
+- Optional five-second crossfade between queue items
+- Document Picture-in-Picture spectrum window on browsers that support it
+- Karaoke-style center-channel vocal reduction toggle
+- Pod listening parties publish metadata-only play/pause/seek/stop messages, while the opt-in global radio registry can list parties across the mesh
+
+📖 **Docs**: [Listening Party and Player](docs/listening-party.md)
+
 ### 🚫 Cancel Transfers on Ban
 When you add a user to the blacklist, their active downloads and uploads are cancelled immediately — no restart required.
 
@@ -252,6 +270,7 @@ Reputation and stats badges (upload speed, queue length, free slot) appear next 
 ### 📱 PWA & Mobile Support
 Install slskdN as an app on your phone.
 - Add to Home Screen on iOS/Android, standalone mode
+- The integrated player uses inline browser audio, safe-area-aware footer spacing, and Media Session controls where supported.
 
 ---
 

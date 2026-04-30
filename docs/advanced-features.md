@@ -8,6 +8,7 @@ This guide covers advanced features and how to use them effectively.
 - [Scene ↔ Pod Bridging](#scene--pod-bridging)
 - [Collections & Sharing](#collections--sharing)
 - [Streaming](#streaming)
+- [Integrated Web Player](#integrated-web-player)
 - [Wishlist & Background Search](#wishlist--background-search)
 - [Discography Concierge](#discography-concierge)
 - [Auto-Replace Stuck Downloads](#auto-replace-stuck-downloads)
@@ -144,14 +145,25 @@ Create and share collections of content with other users.
 
 ## Streaming
 
-Stream content while it's downloading.
+Stream shared, downloaded, and collection-backed audio through slskdN's integrated HTTP range endpoint.
 
 ### How Streaming Works
 
-1. **Start Download**: Begin downloading content
-2. **Stream Available**: Stream button appears for Pod/Mesh content
-3. **Progressive Playback**: Content streams as chunks complete
-4. **Background Download**: Download continues in background
+1. **Resolve Content**: slskdN resolves a `ContentId` from indexed content, a share grant, or configured local share/download roots.
+2. **Serve Ranges**: The browser requests `GET /api/v0/streams/{contentId}` with standard HTTP range headers for playback and seeking.
+3. **Enforce Boundaries**: Normal authentication, share tokens, stream caps, and path restrictions still apply.
+4. **Play Locally**: The Web UI player owns browser audio output, so local mute and PWA controls stay device-local.
+
+### Web Player
+
+The persistent player sits above the footer and can collapse into a small drawer bar. It supports:
+
+- Collection playback and a two-pane collection picker modal.
+- Shared/downloaded local audio playback and a searchable file browser modal.
+- Play/pause, stop, previous/next, rewind, fast-forward, browser-local mute, and Media Session controls.
+- Optional MilkDrop visualizer, lightweight analyzer, equalizer, synced lyrics, crossfade, karaoke-style center-channel reduction, and ListenBrainz now-playing/scrobble submission.
+
+See [Listening Party and Player](listening-party.md) for the full protocol and UI behavior.
 
 ### Enabling Streaming
 
@@ -164,9 +176,46 @@ features:
 
 ### Streaming Limitations
 
-- **Source Requirements**: Only Pod/Mesh content supports streaming
-- **Chunk Availability**: Requires at least first chunk downloaded
-- **Network Conditions**: Streaming quality depends on download speed
+- **Configured Roots Only**: Local fallback resolution is limited to configured non-excluded shares and the configured downloads directory.
+- **No New Rights**: Pod/listening-party metadata does not grant access to bytes.
+- **Network Conditions**: Remote playback quality depends on the serving node and stream limits.
+
+## Integrated Web Player
+
+The Web UI includes a persistent player drawer for local shared/downloaded audio and collection items. Playback uses slskdN's integrated stream endpoint rather than an external media server.
+
+### Starting Playback
+
+1. Open **Collections** and play an item, or use the player empty state to browse collections and shared/downloaded local audio.
+2. The player streams the selected `ContentId` through `/api/v0/streams/{contentId}` with HTTP range support.
+3. Browser Media Session controls are populated with title, artist, and album when metadata is available.
+
+### Player Controls
+
+- **Transport**: play/pause, stop, previous, next, rewind 15 seconds, fast-forward 30 seconds
+- **Drawer**: collapse/expand above the fixed footer
+- **Local mute**: mutes only this browser's audio element without clearing now-playing state
+- **Crossfade**: optional five-second fade between queue items
+
+### Audio Tools
+
+- **Equalizer**: 10-band Web Audio EQ with Flat, Classical, Dance, Metal, Rock, and Vocal presets. Settings persist in browser localStorage.
+- **Spectrum / Oscilloscope**: lightweight canvas analyzer modes for visual feedback without loading MilkDrop.
+- **MilkDrop**: butterchurn visualizer with inline, full-window, and native fullscreen modes.
+- **Document Picture-in-Picture**: opens a tiny always-on-top spectrum window on browsers that support `documentPictureInPicture` (currently Chromium-family browsers).
+- **Karaoke**: center-channel reduction using channel split/invert/merge. Results vary by mix and are intentionally a local playback effect only.
+
+### Lyrics and Scrobbling
+
+- **Synced lyrics**: the lyrics pane queries LRCLIB with the current artist/title and scrolls LRC lines from the audio clock.
+- **ListenBrainz**: paste a ListenBrainz user token in the player to submit `playing_now` updates and completed listens. The token stays in browser localStorage and is not added to daemon configuration.
+
+### Privacy and Network Impact
+
+- EQ, analyzer, MilkDrop, crossfade, karaoke, local mute, and Picture-in-Picture are browser-local.
+- Lyrics contact LRCLIB only when the lyrics pane is opened for a track with artist/title metadata.
+- ListenBrainz is opt-in and only submits when a token is present.
+- These player features do not browse remote Soulseek peers or add background network scanning.
 
 ## Wishlist & Background Search
 

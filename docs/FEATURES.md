@@ -20,6 +20,20 @@
 - **User description update** — when playing, appends `🎵 Listening to: Artist – Title` to the Soulseek peer description
 - Supported sources: Plex Media Server (multipart), Jellyfin/Emby (NotificationType JSON), Tautulli / generic JSON
 
+### Integrated Web Player
+- Persistent footer-safe player drawer for Collections and shared/downloaded local audio
+- Streams local audio through the integrated `/api/v0/streams/{contentId}` range endpoint
+- Transport controls: previous, next, rewind, fast-forward, play/pause, stop, local mute, collapse/expand
+- Browser Media Session metadata/actions for PWA/mobile lock-screen controls where supported
+- MilkDrop visualizer with inline, full-window, and native fullscreen modes
+- 10-band Web Audio equalizer with localStorage-backed presets
+- Lightweight spectrum analyzer and oscilloscope canvas
+- Synced LRCLIB lyrics pane keyed by current artist/title
+- Optional ListenBrainz `playing_now` and scrobble submission with browser-local token storage
+- Optional five-second crossfade between queue items
+- Document Picture-in-Picture spectrum window on supported Chromium browsers
+- Karaoke-style center-channel vocal reduction toggle
+
 ### SongID
 - Native source-identification workflow beside MusicBrainz in Search
 - Accepts YouTube URLs, Spotify URLs, direct text queries, and server-side local file paths
@@ -231,6 +245,20 @@ Application-specific fetch and relay capabilities without becoming a generic pro
 **Use Case**: Peer has slow Soulseek source, you have verified copy → serve chunks via fast mesh connection.
 
 **Default**: Enabled with conservative stream caps
+
+#### Integrated Web Player
+**Purpose**: Play streamable audio directly in the slskdN Web UI without an external media server.
+
+- **Persistent Player Dock**: Footer-safe player with collapse/expand drawer behavior.
+- **Transport Controls**: Play/pause, stop, previous/next, rewind, fast-forward, and browser-local mute.
+- **Collection Browser**: Modal collection picker with collection list, item list, and explicit play actions.
+- **Local File Browser**: Searchable modal over configured shared/downloaded local audio.
+- **Browser/PWA Support**: Inline browser audio plus Media Session metadata and action handlers where supported.
+- **Player Extras**: Optional MilkDrop visualizer, spectrum/oscilloscope analyzer, equalizer, synced lyrics, crossfade, karaoke-style center-channel reduction, and ListenBrainz now-playing/scrobble submission.
+
+**Use Case**: Queue a collection, audition downloaded audio, or follow a pod/listening-party stream from the browser while keeping playback local to the current device.
+
+**Docs**: [Listening Party and Player](listening-party.md)
 
 #### Trusted Relay Service
 **Purpose**: NAT traversal for your own nodes/friends via logical service names.
@@ -466,14 +494,15 @@ solid:
 
 ### Streaming (New)
 
-HTTP range request support for content streaming with session limiting and authentication.
+HTTP range request support for content streaming with session limiting and authentication. This endpoint powers the integrated Web UI player and listening-party playback.
 
 #### Features
 
 - **Range Request Support**: Standard HTTP `Range` header support for seeking
 - **Session Limiting**: Configurable concurrent stream limits per content
 - **Token Authentication**: Share token-based authentication for recipients
-- **Content Resolution**: Automatic MIME type detection and file path resolution
+- **Content Resolution**: Automatic MIME type detection and file path resolution from indexed content, share grants, and allowed local share/download roots
+- **Player Integration**: Browser playback through the persistent player, collection browser, and local file browser
 
 #### Configuration
 ```yaml

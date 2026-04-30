@@ -78,10 +78,34 @@ export default defineConfig({
   build: {
     outDir: 'build',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 700,
     // Vite 8 defaults to lightningcss for CSS minification, which rejects some
     // valid-but-unusual CSS emitted by semantic-ui-less (e.g. 0.0px dimensions).
     // Use esbuild CSS minifier instead, which is tolerant of this output.
     cssMinify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+
+          if (id.includes('butterchurn-presets')) return 'milkdrop-presets';
+          if (id.includes('butterchurn')) return 'milkdrop';
+          if (id.includes('semantic-ui')) return 'semantic-ui';
+          if (
+            id.includes('/react/') ||
+            id.includes('/react-dom/') ||
+            id.includes('/react-router') ||
+            id.includes('/scheduler/')
+          ) {
+            return 'react-vendor';
+          }
+          if (id.includes('@microsoft/signalr')) return 'signalr';
+          if (id.includes('axios')) return 'api-vendor';
+
+          return 'vendor';
+        },
+      },
+    },
   },
 
   define: {

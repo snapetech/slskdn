@@ -68,6 +68,7 @@ public class LibraryItemsController : ControllerBase
     {
         query = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
         kinds = string.IsNullOrWhiteSpace(kinds) ? null : kinds.Trim();
+        limit = Math.Clamp(limit, 1, 100);
         logger?.LogInformation("Library items search: query={Query}, kinds={Kinds}, limit={Limit}", query, kinds, limit);
 
         try
@@ -155,14 +156,7 @@ public class LibraryItemsController : ControllerBase
             return new List<LibraryItemResponse>();
         }
 
-        var localDirs = options.Value.Shares.Directories
-            .Select(raw => new Share(raw))
-            .Where(share => !share.IsExcluded)
-            .Select(share => share.LocalPath)
-            .Concat(new[] { options.Value.Directories.Downloads })
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Distinct()
-            .ToArray();
+        var localDirs = GetAllowedLocalDirectories();
 
         if (!localDirs.Any())
         {
@@ -216,7 +210,7 @@ public class LibraryItemsController : ControllerBase
         var items = new List<LibraryItemResponse>();
         foreach (var file in files.Take(limit))
         {
-            var item = await ConvertToLibraryItemFromPathAsync(file, cancellationToken);
+            var item = await ConvertToLibraryItemFromPathAsync(file, localDirs, cancellationToken);
             if (item != null)
             {
                 items.Add(item);
@@ -226,8 +220,27 @@ public class LibraryItemsController : ControllerBase
         return items;
     }
 
+    private IReadOnlyList<string> GetAllowedLocalDirectories()
+    {
+        if (options == null)
+        {
+            return Array.Empty<string>();
+        }
+
+        return options.Value.Shares.Directories
+            .Select(raw => new Share(raw))
+            .Where(share => !share.IsExcluded)
+            .Select(share => share.LocalPath)
+            .Concat(new[] { options.Value.Directories.Downloads })
+            .Where(path => !string.IsNullOrWhiteSpace(path) && System.IO.Directory.Exists(path))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
     private async Task<LibraryItemResponse?> ConvertToLibraryItemFromPathAsync(
         string filename,
+        IReadOnlyList<string> localDirs,
         CancellationToken cancellationToken)
     {
         try
@@ -274,6 +287,22 @@ public class LibraryItemsController : ControllerBase
                 ? $"sha256:{sha256}"
                 : $"path:{slskd.Compute.Sha256Hash($"{filename}|{size}")}";
 
+            try
+            {
+                shareService.GetLocalRepository().UpsertContentItem(
+                    contentId,
+                    ContentDomain.GenericFile.ToString(),
+                    string.Empty,
+                    filename,
+                    true,
+                    string.Empty,
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "Failed to upsert local file content item for {Filename}", filename);
+            }
+
             var ext = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
             var mediaKind = GetMediaKind(ext);
             var fileName = Path.GetFileName(filename);
@@ -281,7 +310,7 @@ public class LibraryItemsController : ControllerBase
             return new LibraryItemResponse
             {
                 ContentId = contentId,
-                Path = filename,
+                Path = ToDisplayPath(filename, localDirs),
                 FileName = fileName,
                 Bytes = size,
                 MediaKind = mediaKind,
@@ -454,7 +483,7 @@ public class LibraryItemsController : ControllerBase
             return new LibraryItemResponse
             {
                 ContentId = contentId,
-                Path = filename,
+                Path = Path.GetFileName(filename),
                 FileName = fileName,
                 Bytes = size,
                 MediaKind = mediaKind,
@@ -495,6 +524,18 @@ public class LibraryItemsController : ControllerBase
 
         var hashBytes = sha256.Hash ?? throw new InvalidOperationException("SHA256 hash computation failed");
         return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+    }
+
+    private static string ToDisplayPath(string filename, IReadOnlyList<string> roots)
+    {
+        var fullPath = Path.GetFullPath(filename);
+        var root = roots.FirstOrDefault(candidate =>
+            fullPath.StartsWith(candidate.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || string.Equals(fullPath, candidate, StringComparison.Ordinal));
+
+        return root == null
+            ? Path.GetFileName(filename)
+            : Path.GetRelativePath(root, fullPath);
     }
 
     private class LibraryItemResponse

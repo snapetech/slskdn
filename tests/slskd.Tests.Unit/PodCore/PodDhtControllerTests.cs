@@ -15,87 +15,50 @@ using Xunit;
 public class PodDhtControllerTests
 {
     [Fact]
-    public async Task PublishPod_TrimsPodFieldsBeforeDispatch()
+    public async Task PublishPod_UsesStoredLocalPodInsteadOfCallerSuppliedBody()
     {
         var publisher = new Mock<IPodDhtPublisher>();
+        var podService = new Mock<IPodService>();
+        var localPod = new Pod
+        {
+            PodId = "pod-1",
+            Name = "Trusted Local Pod",
+            Description = "Stored local metadata",
+            Tags = new List<string> { "trusted" },
+            Members = new List<PodMember>
+            {
+                new() { PeerId = "local-peer", Role = "owner", PublicKey = "local-key" }
+            },
+        };
+
+        podService
+            .Setup(service => service.GetPodAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(localPod);
         publisher
             .Setup(service => service.PublishAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PodPublishResult(true, "pod-1", "key", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1)));
 
         var controller = new PodDhtController(
             NullLogger<PodDhtController>.Instance,
-            publisher.Object);
+            publisher.Object,
+            podService.Object);
 
         var result = await controller.PublishPod(
             new PublishPodRequest(
                 new Pod
                 {
                     PodId = " pod-1 ",
-                    Name = " Ambient ",
-                    Description = "  late night room  ",
-                    FocusContentId = " content:mb:recording:abc ",
+                    Name = "Caller Supplied Forgery",
+                    Description = "This body must not be signed",
+                    FocusContentId = "forged-content",
                     Tags = new List<string> { " electronic ", "electronic", " ambient " },
-                    Members = new List<PodMember>
-                    {
-                        new() { PeerId = " peer-1 ", Role = " owner ", PublicKey = " key-1 " }
-                    },
-                    ExternalBindings = new List<ExternalBinding>
-                    {
-                        new() { Kind = " soulseek-room ", Mode = " readonly ", Identifier = " ambient-room " }
-                    },
-                    PrivateServicePolicy = new PodPrivateServicePolicy
-                    {
-                        GatewayPeerId = " peer-1 ",
-                        RegisteredServices = new List<RegisteredService>
-                        {
-                            new() { Name = " web ui ", Description = " home server ", Host = " example.local ", Protocol = " tcp " }
-                        },
-                        AllowedDestinations = new List<AllowedDestination>
-                        {
-                            new() { HostPattern = " 192.168.1.10 ", Protocol = " tcp " }
-                        }
-                    },
-                    Channels = new List<PodChannel>
-                    {
-                        new() { ChannelId = " general ", Name = " Main ", BindingInfo = " soulseek-room:ambient ", Description = "  room  " },
-                    },
                 }),
             CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
+        podService.Verify(service => service.GetPodAsync("pod-1", It.IsAny<CancellationToken>()), Times.Once);
         publisher.Verify(
-            service => service.PublishAsync(
-                It.Is<Pod>(pod =>
-                    pod.PodId == "pod-1" &&
-                    pod.Name == "Ambient" &&
-                    pod.Description == "late night room" &&
-                    pod.FocusContentId == "content:mb:recording:abc" &&
-                    pod.Tags.SequenceEqual(new[] { "electronic", "ambient" }) &&
-                    pod.Channels.Count == 1 &&
-                    pod.Channels[0].ChannelId == "general" &&
-                    pod.Channels[0].Name == "Main" &&
-                    pod.Channels[0].BindingInfo == "soulseek-room:ambient" &&
-                    pod.Channels[0].Description == "room" &&
-                    pod.Members != null &&
-                    pod.Members.Count == 1 &&
-                    pod.Members[0].PeerId == "peer-1" &&
-                    pod.Members[0].Role == "owner" &&
-                    pod.Members[0].PublicKey == "key-1" &&
-                    pod.ExternalBindings.Count == 1 &&
-                    pod.ExternalBindings[0].Kind == "soulseek-room" &&
-                    pod.ExternalBindings[0].Mode == "readonly" &&
-                    pod.ExternalBindings[0].Identifier == "ambient-room" &&
-                    pod.PrivateServicePolicy != null &&
-                    pod.PrivateServicePolicy.GatewayPeerId == "peer-1" &&
-                    pod.PrivateServicePolicy.RegisteredServices.Count == 1 &&
-                    pod.PrivateServicePolicy.RegisteredServices[0].Name == "web ui" &&
-                    pod.PrivateServicePolicy.RegisteredServices[0].Description == "home server" &&
-                    pod.PrivateServicePolicy.RegisteredServices[0].Host == "example.local" &&
-                    pod.PrivateServicePolicy.RegisteredServices[0].Protocol == "tcp" &&
-                    pod.PrivateServicePolicy.AllowedDestinations.Count == 1 &&
-                    pod.PrivateServicePolicy.AllowedDestinations[0].HostPattern == "192.168.1.10" &&
-                    pod.PrivateServicePolicy.AllowedDestinations[0].Protocol == "tcp"),
-                It.IsAny<CancellationToken>()),
+            service => service.PublishAsync(localPod, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -103,9 +66,11 @@ public class PodDhtControllerTests
     public async Task RefreshPod_WithWhitespaceOnlyPodId_ReturnsBadRequest()
     {
         var publisher = new Mock<IPodDhtPublisher>();
+        var podService = new Mock<IPodService>();
         var controller = new PodDhtController(
             NullLogger<PodDhtController>.Instance,
-            publisher.Object);
+            publisher.Object,
+            podService.Object);
 
         var result = await controller.RefreshPod("   ", CancellationToken.None);
 
@@ -117,13 +82,18 @@ public class PodDhtControllerTests
     public async Task PublishPod_WhenPublisherReturnsFailure_DoesNotLeakErrorMessage()
     {
         var publisher = new Mock<IPodDhtPublisher>();
+        var podService = new Mock<IPodService>();
+        podService
+            .Setup(service => service.GetPodAsync("pod-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Pod { PodId = "pod-1" });
         publisher
             .Setup(service => service.PublishAsync(It.IsAny<Pod>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PodPublishResult(false, "pod-1", string.Empty, DateTimeOffset.MinValue, DateTimeOffset.MinValue, "sensitive detail"));
 
         var controller = new PodDhtController(
             NullLogger<PodDhtController>.Instance,
-            publisher.Object);
+            publisher.Object,
+            podService.Object);
 
         var result = await controller.PublishPod(
             new PublishPodRequest(new Pod { PodId = "pod-1" }),
@@ -139,13 +109,15 @@ public class PodDhtControllerTests
     public async Task GetPodMetadata_WhenPublisherReturnsNotFound_DoesNotLeakErrorMessage()
     {
         var publisher = new Mock<IPodDhtPublisher>();
+        var podService = new Mock<IPodService>();
         publisher
             .Setup(service => service.GetPublishedMetadataAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PodMetadataResult(false, "pod-1", null, DateTimeOffset.MinValue, DateTimeOffset.MinValue, false, "sensitive detail"));
 
         var controller = new PodDhtController(
             NullLogger<PodDhtController>.Instance,
-            publisher.Object);
+            publisher.Object,
+            podService.Object);
 
         var result = await controller.GetPodMetadata("pod-1", CancellationToken.None);
 

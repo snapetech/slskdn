@@ -3,6 +3,7 @@
 // </copyright>
 namespace slskd.PodCore.API.Controllers;
 
+using Asp.Versioning;
 using slskd.Core.Security;
 
 using System;
@@ -16,7 +17,8 @@ using Microsoft.Extensions.Logging;
 /// <summary>
 ///     Pod channel management.
 /// </summary>
-[Route("api/v0/podcore/{podId}/channels")]
+[Route("api/v{version:apiVersion}/podcore/{podId}/channels")]
+[ApiVersion("0")]
 [ApiController]
 [Produces("application/json")]
 [Consumes("application/json")]

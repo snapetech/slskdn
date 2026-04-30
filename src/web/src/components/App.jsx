@@ -6,27 +6,12 @@ import { connect, disconnect } from '../lib/server';
 import * as session from '../lib/session';
 import { isPassthroughEnabled } from '../lib/token';
 import AppContext from './AppContext';
-import Browse from './Browse/Browse';
-import Chat from './Chat/Chat';
-import Collections from './Collections/Collections';
-import Contacts from './Contacts/Contacts';
-import DiscoveryGraphAtlasPage from './Search/DiscoveryGraphAtlasPage';
 import LoginForm from './LoginForm';
 import PlayerBar from './Player/PlayerBar';
 import { PlayerProvider } from './Player/PlayerContext';
-import Pods from './Pods/Pods';
-import Rooms from './Rooms/Rooms';
-import Searches from './Search/Searches';
 import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
-import ShareGroups from './ShareGroups/ShareGroups';
-import SharedWithMe from './Shares/SharedWithMe';
-import SolidSettings from './Solid/SolidSettings';
-import System from './System/System';
-import Transfers from './Transfers/Transfers';
-import Users from './Users/Users';
-import Wishlist from './Wishlist/Wishlist';
-import React, { Component } from 'react';
+import React, { Component, lazy, Suspense } from 'react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import {
@@ -42,6 +27,23 @@ import {
 } from 'semantic-ui-react';
 
 const SLSKDN_RELEASES_URL = 'https://github.com/snapetech/slskdn/releases';
+
+const Browse = lazy(() => import('./Browse/Browse'));
+const Chat = lazy(() => import('./Chat/Chat'));
+const Collections = lazy(() => import('./Collections/Collections'));
+const Contacts = lazy(() => import('./Contacts/Contacts'));
+const DiscoveryGraphAtlasPage = lazy(() =>
+  import('./Search/DiscoveryGraphAtlasPage'));
+const Pods = lazy(() => import('./Pods/Pods'));
+const Rooms = lazy(() => import('./Rooms/Rooms'));
+const Searches = lazy(() => import('./Search/Searches'));
+const ShareGroups = lazy(() => import('./ShareGroups/ShareGroups'));
+const SharedWithMe = lazy(() => import('./Shares/SharedWithMe'));
+const SolidSettings = lazy(() => import('./Solid/SolidSettings'));
+const System = lazy(() => import('./System/System'));
+const Transfers = lazy(() => import('./Transfers/Transfers'));
+const Users = lazy(() => import('./Users/Users'));
+const Wishlist = lazy(() => import('./Wishlist/Wishlist'));
 
 const THEME_OPTIONS = [
   { key: 'slskdn', text: 'slskdN', value: 'slskdn' },
@@ -509,31 +511,32 @@ class App extends Component {
             Lost connection to slskd. {retriesExhausted ? 'Refresh to reconnect.' : 'Retrying...'}
           </Segment>
         )}
-        <Sidebar.Pushable
-          as={Segment}
-          className="app"
-        >
-          <Sidebar
-            animation="overlay"
-            as={Menu}
-            className="navigation"
-            direction="top"
-            horizontal="true"
-            icon="labeled"
-            inverted
-            visible
-            width="thin"
+        <PlayerProvider>
+          <Sidebar.Pushable
+            as={Segment}
+            className="app"
           >
-            <div className="navigation-primary">
-              {version.isCanary && (
-                <Menu.Item>
-                  <Icon
-                    color="yellow"
-                    name="flask"
-                  />
-                  Canary
-                </Menu.Item>
-              )}
+            <Sidebar
+              animation="overlay"
+              as={Menu}
+              className="navigation"
+              direction="top"
+              horizontal="true"
+              icon="labeled"
+              inverted
+              visible
+              width="thin"
+            >
+              <div className="navigation-primary">
+                {version.isCanary && (
+                  <Menu.Item>
+                    <Icon
+                      color="yellow"
+                      name="flask"
+                    />
+                    Canary
+                  </Menu.Item>
+                )}
               {isAgent ? (
                 <Menu.Item>
                   <Icon name="detective" />
@@ -762,8 +765,7 @@ class App extends Component {
                 />
               )}
             </Menu>
-          </Sidebar>
-          <PlayerProvider>
+            </Sidebar>
             <Sidebar.Pusher className="app-content">
               <AppContext.Provider
                 // Note: Context value object recreated on each render (class component limitation)
@@ -772,8 +774,18 @@ class App extends Component {
                 // eslint-disable-next-line react/jsx-no-constructed-context-values
                 value={{ options: applicationOptions, state: applicationState }}
               >
-                {isAgent ? (
-                <Routes>
+                <Suspense
+                  fallback={
+                    <Segment
+                      basic
+                      className="view"
+                    >
+                      <Loader active />
+                    </Segment>
+                  }
+                >
+                  {isAgent ? (
+                  <Routes>
                   <Route
                     path="/system"
                     element={
@@ -800,9 +812,9 @@ class App extends Component {
                     path="*"
                     element={<Navigate replace to="/system" />}
                   />
-                </Routes>
-                ) : (
-                <Routes>
+                  </Routes>
+                  ) : (
+                  <Routes>
                   <Route
                     path="/"
                     element={<Navigate replace to="/searches" />}
@@ -1006,13 +1018,14 @@ class App extends Component {
                     path="*"
                     element={<RouteMissRedirect />}
                   />
-                </Routes>
-                )}
+                  </Routes>
+                  )}
+                </Suspense>
               </AppContext.Provider>
             </Sidebar.Pusher>
-            <PlayerBar />
-          </PlayerProvider>
-        </Sidebar.Pushable>
+          </Sidebar.Pushable>
+          <PlayerBar />
+        </PlayerProvider>
         <ToastContainer
           autoClose={5_000}
           closeOnClick

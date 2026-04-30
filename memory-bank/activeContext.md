@@ -1,3 +1,59 @@
+## Update 2026-04-30 03:40:00Z
+
+- Current task: None. MilkDrop playback visualization is fixed and browser-verified locally.
+- Last activity:
+  - fixed Butterchurn module resolution under Vite dynamic imports
+  - connected MilkDrop to the shared Web Audio graph through a stable visualizer tap
+  - kept the tap on a live silent branch so Chromium processes analyzer data while normal playback stays on the main output path
+  - added cleanup for Butterchurn audio connections when the visualizer unmounts
+  - documented and committed the MilkDrop gotcha as `1cd281afe`
+  - validated focused player tests, frontend lint/build, repo lint, full `dotnet test`, and a Playwright canvas screenshot smoke test
+- Next steps:
+  1. Keep future player graph rebuilds from disconnecting `graph.visualizerInput`.
+  2. Use screenshot/image statistics for MilkDrop smoke checks instead of direct default-framebuffer `gl.readPixels`.
+
+## Update 2026-04-30 03:28:00Z
+
+- Current task: None. Player full-width layout and Web Audio playback resume fixes are implemented locally.
+- Last activity:
+  - made the player display, signal/spectrum tile, and controls stretch to the full fixed bar width
+  - changed playback to resume the shared Web Audio graph before `audio.play()`
+  - switched the media element to direct `src` updates
+  - prevented analyzer AudioContext creation before a current track exists
+  - replaced an invalid Semantic UI icon name in the signal/spectrum affordance
+  - validated focused tests, frontend lint/build, headless Playwright layout/console checks, and diff whitespace
+- Next steps:
+  1. Re-test with a real streamed track in Chrome/Edge to confirm audible output with EQ/analyzer enabled.
+  2. Keep future analyzer/MilkDrop changes from initializing Web Audio before user playback starts.
+
+## Update 2026-04-30 03:23:00Z
+
+- Current task: None. Player duplicate-title and lyrics lookup fixes are implemented locally.
+- Last activity:
+  - changed the queue preview to show only upcoming tracks, not the current track
+  - made lyrics lookup infer `Artist - Title.ext` filenames and avoid LRCLIB requests with placeholder artists
+  - added LRCLIB search fallback and plain-lyrics rendering
+  - added focused player/lyrics regression tests
+  - documented and committed the player queue/lyrics gotcha as `cea5eede6`
+- Next steps:
+  1. Add richer persisted metadata for local library items so lyrics and now-playing services do not depend on filename inference.
+  2. Do a live browser check with a real tagged song that exists in LRCLIB.
+
+## Update 2026-04-30 03:18:00Z
+
+- Current task: None. New streaming/player/DHT pod/listening-party security hardening is implemented and validated locally.
+- Last activity:
+  - replaced browser audio JWT query-string playback with short-lived stream tickets
+  - required party-bound tickets and per-IP limits for listed-party radio streams
+  - switched listening-party DHT records to explicit JSON byte payloads
+  - failed closed on invalid pod DHT signatures and stopped signing caller-supplied pod publish/update bodies
+  - bounded local stream lookup to path IDs under configured roots and reduced local library path exposure
+  - tightened ListenBrainz token clearing and submit-result reporting
+  - validated Release build, focused backend tests, frontend lint/build, full `dotnet test`, and repo lint via `bash ./bin/lint`
+- Next steps:
+  1. Browser-smoke listed-party radio ticket playback across two authenticated nodes.
+  2. Keep stream tickets short-lived and content-bound for any future media-element playback URLs.
+
 ## Update 2026-04-30 02:33:09Z
 
 - Current task: None. Stable Winget publishing is now opt-in.
