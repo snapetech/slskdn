@@ -156,9 +156,9 @@ var messageStorage = scope.ServiceProvider.GetRequiredService<IPodMessageStorage
 
 **Why This Keeps Happening**: Live coordination services often need singleton lifetime for in-memory state, while PodCore persistence services are scoped because they own disposable EF/SQLite contexts. Keep singleton state in the singleton, but resolve scoped persistence dependencies per operation through an explicit scope.
 
-### 0z173. Initial Winget Submissions Should Use Singleton Manifests
+### 0z173. Initial Winget Submissions Must Not Use Singleton Manifests
 
-**The Bug**: WingetCreate's multi-file directory submission path repeatedly failed validation in CI with misleading duplicate manifest type and inconsistent package field errors, even after the files had matching identifiers, matching versions, a repository-shaped path, valid YAML, and accepted portable zip layout.
+**The Bug**: The stable Winget workflow switched first submissions to a temporary singleton manifest to bypass local WingetCreate directory-validation errors, but Microsoft server-side validation rejected the PR with `Manifest type not supported. ManifestType: singleton`.
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml`
@@ -166,19 +166,23 @@ var messageStorage = scope.ServiceProvider.GetRequiredService<IPodMessageStorage
 
 **Wrong**:
 ```powershell
+$WingetSubmitPath = Join-Path "winget-submit" "snapetech.slskdn.yaml"
+@(
+  'ManifestType: singleton'
+) | Set-Content -Path $WingetSubmitPath -Encoding utf8
+
 .\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH -t $env:WINGETCREATE_GITHUB_TOKEN
 ```
-
-where `$env:WINGET_SUBMIT_PATH` points to a directory containing version, installer, and locale manifests.
 
 **Correct**:
 ```powershell
+$WingetSubmitPath = Join-Path "winget-submit" "manifests/s/snapetech/slskdn/$WingetVersion"
+New-Item -ItemType Directory -Force $WingetSubmitPath | Out-Null
+Copy-Item packaging/winget/snapetech.slskdn*.yaml $WingetSubmitPath/
 .\wingetcreate.exe submit $env:WINGET_SUBMIT_PATH -t $env:WINGETCREATE_GITHUB_TOKEN
 ```
 
-where `$env:WINGET_SUBMIT_PATH` points to a generated singleton manifest file for the first package submission.
-
-**Why This Keeps Happening**: slskdN keeps multi-file manifests in-repo because that is the long-term winget-pkgs layout, but WingetCreate's submit command still has a singleton-first path and its multi-file validation errors can hide the real cause. For initial automation, generate a temporary singleton manifest from the same release metadata and submit that file.
+**Why This Keeps Happening**: WingetCreate's local CLI can accept singleton manifests that the `microsoft/winget-pkgs` service rejects for repository PR validation. Keep the generated manifests in the repository-shaped multi-file layout and fix any local directory-validation issue directly instead of bypassing it with singleton output.
 
 ### 0z172. Winget PackageVersion Should Stay Numeric
 
