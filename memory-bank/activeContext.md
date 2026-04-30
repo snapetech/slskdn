@@ -1,3 +1,16 @@
+## Update 2026-04-30 14:43:28Z
+
+- Current task: Native `.milk2` imports now compatibility-check every preset body.
+- Last activity:
+  - fixed native import/inspection to analyze all parsed `.milk2` preset bodies before accepting the file
+  - unsupported secondary preset bodies now reject import with a preset-indexed compatibility message
+  - renderer still uses the primary body until simultaneous double-preset compositing lands
+  - documented the gotcha in ADR-0001 and committed it as `124f398ef`
+  - validated focused native/player tests, multi-fixture native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Commit and push the `.milk2` safety slice.
+  2. Start the next renderer gap after `.milk2` import safety, likely real double-preset compositing or broader sprite/image handling.
+
 ## Update 2026-04-30 14:40:57Z
 
 - Current task: Native MilkDrop texture lookup handles common preset-pack names.

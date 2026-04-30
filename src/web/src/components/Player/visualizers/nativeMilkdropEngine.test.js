@@ -190,4 +190,33 @@ describe('createNativeMilkdropEngine', () => {
     );
     expect(renderer.dispose).not.toHaveBeenCalled();
   });
+
+  it('rejects .milk2 imports when the secondary preset is unsupported', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.dispose.mockClear();
+
+    expect(() => engine.inspectPresetText(`
+      [preset00]
+      name=Compatible primary
+      wave_r=1
+      [preset01]
+      name=Unsupported secondary
+      comp_shader=while (true) { ret = vec3(1); }
+    `, 'double.milk2')).toThrow(
+      'preset 2: Native MilkDrop preset has shader translation pending: comp_shader.',
+    );
+    expect(renderer.dispose).not.toHaveBeenCalled();
+  });
 });

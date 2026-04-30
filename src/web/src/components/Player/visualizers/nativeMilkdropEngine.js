@@ -130,17 +130,30 @@ const createFrameReader = (audioContext, audioNode) => {
 const getImportedPresetTitle = (preset, fileName) =>
   preset.metadata?.title || fileName || 'Imported preset';
 
+const getCompatibilityErrors = (parsed) =>
+  parsed.presets
+    .map((preset, index) => ({
+      index,
+      message: getMilkdropCompatibilityError(analyzeMilkdropPresetCompatibility(preset)),
+    }))
+    .filter((entry) => entry.message);
+
+const formatCompatibilityError = (parsed, errors) => {
+  if (parsed.presets.length === 1 && errors.length === 1) return errors[0].message;
+  return errors
+    .map((entry) => `preset ${entry.index + 1}: ${entry.message}`)
+    .join('; ');
+};
+
 const parseCompatiblePresetText = (source, fileName = '') => {
-  const importedPreset = parseMilkdropPreset(source, {
+  const parsed = parseMilkdropPreset(source, {
     format: fileName.toLowerCase().endsWith('.milk2') ? 'milk2' : undefined,
-  }).primary;
-  const compatibilityError = getMilkdropCompatibilityError(
-    analyzeMilkdropPresetCompatibility(importedPreset),
-  );
-  if (compatibilityError) {
-    throw new Error(compatibilityError);
+  });
+  const compatibilityErrors = getCompatibilityErrors(parsed);
+  if (compatibilityErrors.length > 0) {
+    throw new Error(formatCompatibilityError(parsed, compatibilityErrors));
   }
-  return importedPreset;
+  return parsed.primary;
 };
 
 export const createNativeMilkdropEngine = async ({

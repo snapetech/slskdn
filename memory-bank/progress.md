@@ -1,3 +1,10 @@
+## 2026-04-30 14:43Z - Compatibility-check all MilkDrop3 double-preset bodies
+
+- Native `.milk2` import and inspection now analyze every parsed preset body before accepting the file.
+- Unsupported secondary preset bodies reject import with a preset-indexed compatibility message instead of being silently stored while only the primary body is rendered.
+- Documented the gotcha in ADR-0001 and committed it immediately as `124f398ef`.
+- Validation: focused native/player tests passed with `58/58` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 14:40Z - Improved native MilkDrop texture-name matching
 
 - Renderer texture lookup now strips quote wrappers, normalizes Windows path separators, and expands both preset references and imported asset keys to path, basename, and stem aliases.
