@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z213. Rejected Discovery Evidence Must Stay Suppressed
+
+**The Bug**: Discovery Inbox duplicate detection originally ignored existing `Rejected` candidates, allowing the same evidence key to be saved again immediately after rejection.
+
+**Files Affected**:
+- `src/web/src/lib/discoveryInbox.js`
+
+**Wrong**:
+```js
+const duplicate = items.find(
+  (existing) =>
+    existing.evidenceKey === nextItem.evidenceKey &&
+    existing.source === nextItem.source &&
+    existing.state !== 'Rejected',
+);
+```
+
+**Correct**:
+```js
+const duplicate = items.find(
+  (existing) =>
+    existing.evidenceKey === nextItem.evidenceKey &&
+    existing.source === nextItem.source,
+);
+```
+
+**Why This Keeps Happening**: It is tempting to treat `Rejected` as inactive when building review queues, but rejection is a persisted suppression decision. Filtering rejected items belongs in the visible queue view, not in evidence identity or deduplication logic.
+
 ### 0z212. Icon-Only Controls Need Visible And Programmatic Affordances
 
 **The Bug**: Compact player launcher buttons and tab/action icon controls were visible as clickable icons but lacked accessible names, titles, or consistent focus/hover affordances. Headless DOM audit flagged icon-only buttons and links with no text, `aria-label`, `title`, or tooltip text.
