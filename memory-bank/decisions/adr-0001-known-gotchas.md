@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z230. Empty Arrays Should Not Suppress Scalar Metadata Fallbacks
+
+**The Bug**: Player smart-radio planning treated an empty `tags` array as authoritative and returned it immediately, so a valid scalar `genre` on the now-playing item was ignored and the genre seed disappeared from the radio plan.
+
+**Files Affected**:
+- `src/web/src/lib/playerRadio.js`
+- `src/web/src/components/Player/PlayerContext.jsx`
+
+**Wrong**:
+```javascript
+const getTagValues = (track = {}) => {
+  if (Array.isArray(track.tags)) return track.tags.map(normalizeText);
+  if (track.genre) return [normalizeText(track.genre)];
+  return [];
+};
+```
+
+**Correct**:
+```javascript
+const getTagValues = (track = {}) => {
+  const tags = Array.isArray(track.tags) ? track.tags.map(normalizeText) : [];
+  if (tags.filter(Boolean).length > 0) return tags;
+  if (track.genre) return [normalizeText(track.genre)];
+  return [];
+};
+```
+
+**Why This Keeps Happening**: Normalized playable objects often include default empty arrays for optional multi-value fields. Treat empty arrays as “no values,” not as proof that lower-priority scalar metadata is absent.
+
 ### 0z229. Apple Music Track URLs Should Prefer The `i` Query Track Id
 
 **The Bug**: Apple Music URL import extracted both the album id from the path and the track id from the `?i=` query. Track URLs therefore issued two iTunes lookup requests for one pasted URL, and focused tests failed when the handler queue only expected the track lookup.
