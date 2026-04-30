@@ -11976,3 +11976,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The path decision used `request.Sources.All(s => s.IsMeshOverlay())`, but the failover loop did not create a transport-specific candidate list. "Not all mesh" was treated as "all entries are valid Soulseek candidates," which is false for mixed sets.
 
 **How to prevent it:** Any transport-specific transfer loop must filter candidates by transport before dialing. The Soulseek sequential-failover loop should only use `VerifiedSourceExtensions.IsSoulseekPeer()`, and mesh-overlay sources should only enter the mesh-aware path.
+
+### 0z68. Built Web UI Assets Must Stay Subpath-Safe For `web.url_base`
+
+**What went wrong:** A Vite build emitted root-relative `/assets/...` references while non-root `web.url_base` deployments such as `/slskd` expect the app to load under a mounted path. Direct visits to deep links could then fetch assets from the domain root instead of the configured Web UI base, producing blank or partially loaded pages behind reverse proxies and subpath installs.
+
+**Why it happened:** The frontend build and backend HTML rewrite rules were solving different eras of the same problem. Legacy backend rewrites handled old root-relative assets, but the modern Vite build needed relative bundle references plus an injected mounted `<base>` tag for deep-link resolution. The build-output check only asserted that some proxy-safe paths existed, not that root-relative asset regressions were forbidden.
+
+**How to prevent it:** Keep `src/web/vite.config.js` on relative build assets for packaged output, inject a mounted base href for non-root `web.url_base`, and run both `npm run test:build-output` and `node src/web/scripts/smoke-subpath-build.mjs` before release-tag work that touches frontend tooling, routing, or HTML rewriting.
