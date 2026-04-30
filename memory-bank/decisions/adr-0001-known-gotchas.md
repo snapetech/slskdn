@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z184. Canvas Overlays Can Block Their Own Controls
+
+**The Bug**: The MilkDrop visualizer canvas and hidden overlay occupied the same absolute area as the preset/control buttons. In headless and some pointer paths, the canvas/container intercepted clicks intended for the visible buttons.
+
+**Files Affected**:
+- `src/web/src/components/Player/Player.css`
+- `src/web/src/components/Player/Visualizer.jsx`
+
+**Wrong**:
+```css
+.player-visualizer-overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+```
+
+**Correct**:
+```css
+.player-visualizer-canvas {
+  pointer-events: none;
+}
+
+.player-visualizer-overlay {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 2;
+}
+```
+
+**Why This Keeps Happening**: Canvas previews are often positioned as full-surface layers. Any overlay controls inside the same stacking context need an explicit z-index and pointer-event policy, otherwise the decorative/preview layer can steal the interaction.
+
 ### 0z183. Player Analyzer Grids Need Zero-Min Tracks
 
 **The Bug**: The Web UI player display used nested CSS grid tracks with fixed minimum widths for track metadata and analyzer canvases. At normal widths, the analyzer canvases overflowed out of the player display and visually collided with the transport controls. The same pass also added a fake top-right `PLAY` status label that duplicated the actual play button instead of providing useful state.
