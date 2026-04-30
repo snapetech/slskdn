@@ -52,6 +52,26 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z172. Winget PackageVersion Should Stay Numeric
+
+**The Bug**: Stable Winget manifests used the public slskdN release label converted from `2026042900-slskdn.202` to `2026042900.slskdn.202`. WingetCreate/WinGetUtil validation reported confusing multi-file consistency errors instead of a direct version-format error.
+
+**Files Affected**:
+- `packaging/scripts/update-winget-manifests.sh`
+- `packaging/winget/snapetech.slskdn*.yaml`
+
+**Wrong**:
+```yaml
+PackageVersion: 2026042900.slskdn.202
+```
+
+**Correct**:
+```yaml
+PackageVersion: "2026042900.202"
+```
+
+**Why This Keeps Happening**: slskdN public release tags include the fork label for GitHub and distro-package clarity, but Winget's package version should be a simple comparable package-manager version. Keep the full public tag in URLs/release notes and write a clean numeric dotted `PackageVersion` into Winget manifests.
+
 ### 0z171. Winget Zip Portable Fields Belong At Installer Manifest Root
 
 **The Bug**: The stable Winget manifest put `NestedInstallerType` and `NestedInstallerFiles` under the x64 installer entry for a single zip portable package. WingetCreate validation reported confusing multi-file consistency errors instead of pointing directly at the misplaced portable metadata.
