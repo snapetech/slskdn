@@ -1,9 +1,22 @@
+## 2026-04-30 18:38Z - Hardened browser storage access
+
+- Routed remaining Visualizer browser-local storage reads and writes through safe helper functions so privacy-locked storage degrades to defaults instead of crashing player initialization.
+- Documented the storage-access gotcha in ADR-0001 and kept the helper path as the required pattern for future UI preference persistence.
+- Validation: focused Visualizer/native tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 18:40Z - Hardened browser storage access for player preferences
+
+- Added `src/web/src/lib/storage.js` safe local/session storage helpers so blocked browser storage falls back cleanly instead of throwing during render or effect setup.
+- Switched ListenBrainz token storage, auth token helpers, player persisted toggles, equalizer state, and native MilkDrop preset/library preferences to safe storage access.
+- Documented the storage gotcha and committed it immediately as `fdeb67d0d`.
+- Validation: focused player tests (`22/22`), `npm run lint`, `npm run build`, and `git diff --check` passed.
+
 ## 2026-04-30 18:37Z - Added native MilkDrop shader temp reassignment
 
 - Translated native shader bodies now accept safe reassignment operators for declared local temp variables before the final `ret = ...`.
 - Assignment to undeclared names, duplicate `ret`, and any statement after `ret` are still rejected to keep translated shader support deterministic and bounded.
 - Added focused shader translator coverage plus changelog, design, and T-938 progress updates.
-- Validation: pending.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
 
 ## 2026-04-30 18:36Z - Completed Semantic UI cleanup pass
 

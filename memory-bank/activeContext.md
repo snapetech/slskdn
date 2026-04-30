@@ -1,3 +1,26 @@
+## Update 2026-04-30 18:38:00Z
+
+- Current task: Browser storage hardening is implemented locally and documented.
+- Last activity:
+  - routed remaining Visualizer localStorage reads/writes through safe storage helpers
+  - documented browser storage access throwing in privacy-locked contexts in ADR-0001
+  - validated Visualizer/native focused tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Commit and push the complete dirty workspace per the current user instruction.
+  2. Continue the next large MilkDrop phase, likely real-preset compatibility expansion.
+
+## Update 2026-04-30 18:40:00Z
+
+- Current task: None. Browser storage cleanup is implemented locally.
+- Last activity:
+  - added safe local/session storage helpers
+  - moved ListenBrainz, token, player toggle, equalizer, and native MilkDrop preference persistence away from direct storage API calls
+  - documented the storage gotcha and committed it as `fdeb67d0d`
+  - validated focused player tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Consider converting remaining direct localStorage reads in older App/Search/Browse/Rooms paths to the shared helper.
+  2. Browser-check with storage disabled/private mode if a target browser still misbehaves.
+
 ## Update 2026-04-30 18:37:00Z
 
 - Current task: Native MilkDrop translated shaders accept declared temp reassignment.
@@ -5,10 +28,10 @@
   - added safe `=`, `+=`, `-=`, `*=`, and `/=` handling for declared local shader temps before final `ret`
   - kept assignment to undeclared names, duplicate `ret`, and statements after `ret` rejected by the translator
   - updated shader translator coverage, changelog, design notes, and T-938 progress notes
-  - validation is pending
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
 - Next steps:
-  1. Run focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks.
-  2. Commit and push the complete dirty workspace per the current user instruction.
+  1. Commit and push the complete dirty workspace per the current user instruction.
+  2. Continue the next large MilkDrop phase, likely real-preset compatibility expansion.
 
 ## Update 2026-04-30 18:36:00Z
 

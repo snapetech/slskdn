@@ -24,6 +24,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 - Refined browser player controls and equalizer storage behavior during the
   native MilkDrop player integration work.
+- Hardened browser player visualizer storage access so blocked localStorage
+  contexts fall back cleanly instead of crashing player initialization.
 - Prepared the `2026042900-slskdn.204` stable release metadata.
 - Made Winget release-version metadata validation opt-in so stable releases
   that intentionally skip Winget are not blocked by stale Winget URLs.

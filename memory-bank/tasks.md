@@ -1590,3 +1590,7 @@
 - [x] Complete Semantic UI cleanup pass
   - Status: completed (2026-04-30)
   - Notes: Added a shared `TooltipButton` wrapper for accessible button labels and popups, gave the Media Core player its own Semantic button tooltip wrapper, switched the header to active-aware `NavLink` items, added responsive table overflow handling, and made remaining tab panes controlled so active state is stable while panes stay mounted.
+
+- [x] Harden browser-local player preference storage
+  - Status: completed (2026-04-30)
+  - Notes: Added shared safe local/session storage helpers and moved ListenBrainz token storage, auth token helpers, player toggles, equalizer state, and native MilkDrop preference/library persistence away from direct storage API calls so privacy-locked browsers fall back to defaults instead of throwing.
