@@ -52,6 +52,48 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z206. Semantic UI Dark Mode Needs Central Surface Overrides
+
+**The Bug**: Chat, rooms, System panels, modals, tables, dropdowns, and other nested Semantic UI components showed light inner boxes in dark mode because the app themed the page shell but left many Semantic UI default surfaces and inline `#f8f9fa` styles intact.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Rooms/Rooms.css`
+- `src/web/src/components/Rooms/RoomCreateModal.jsx`
+- `src/web/src/components/PortForwarding/PortForwarding.jsx`
+- `src/web/src/components/Pods/PortForwarding.jsx`
+- `src/web/src/components/TrafficTicker/TrafficTicker.css`
+
+**Wrong**:
+```jsx
+<Segment>
+  <Table celled />
+</Segment>
+
+<div style={{ background: '#f8f9fa', color: '#666' }} />
+```
+
+**Correct**:
+```css
+:root.dark .ui.segment,
+:root.dark .ui.table,
+:root.dark .ui.modal > .content {
+  background: var(--slskd-secondary-background) !important;
+  color: var(--slskd-color) !important;
+}
+```
+
+```jsx
+<div
+  style={{
+    backgroundColor: 'var(--slskd-color-inset, #f8f9fa)',
+    color: 'var(--slskd-color-subtle, #666)',
+  }}
+/>
+```
+
+**Why This Keeps Happening**: Semantic UI components render their own nested surfaces, and inline light colors override app-level dark theme variables. Any new component using `Segment`, `Card`, `Table`, `Modal`, `Dropdown`, `Input`, or inline panel colors must either rely on the central dark overrides or use CSS variables instead of literal light colors.
+
 ### 0z205. Semantic UI Tabs Remount Inactive Chat/Room Sessions By Default
 
 **The Bug**: Switching chat or room tabs looked like a full page refresh because Semantic UI React's `Tab` unmounted inactive panes, rebuilding the active session and refetching state on every tab change.
