@@ -7259,6 +7259,23 @@ Code quality improvements were completed as part of Option A:
 - Documented the batch-download removal path gotcha in ADR-0001 and committed that gotcha entry immediately as `ea0d2142f`.
 - Validation: `npm --prefix src/web test -- src/components/Transfers/Transfers.test.jsx`, focused `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~Transfers"`, `npm --prefix src/web run lint`, `npm --prefix src/web run build`, and `git diff --check` passed. The first focused .NET run exited nonzero due output/noise truncation, then passed when rerun with quieter output.
 
+## 2026-04-30 02:33:09Z
+
+- Changed stable Winget publication from automatic tag-release behavior to an opt-in high-value release step.
+- Removed the `winget-main` job from `build-on-tag.yml`, so `build-main-*` releases no longer open public `microsoft/winget-pkgs` PRs automatically.
+- Kept the manual `Publish Winget` workflow as the explicit promotion path for stable releases that should enter the public Winget catalog.
+- Updated `docs/DEV_BUILD_PROCESS.md`, `docs/CHANGELOG.md`, `memory-bank/tasks.md`, and `memory-bank/activeContext.md` to document the new policy.
+
+## 2026-04-30 02:20:25Z
+
+- Reviewed `microsoft/winget-pkgs` PR #366812 after CLA agreement: `Needs-CLA` and `Needs-Author-Feedback` were removed, `Needs-Attention` was added, and the remaining blocker was service-side `ManifestType: singleton` validation failure.
+- Fixed both stable Winget submission workflows so they no longer generate a temporary singleton manifest. They now submit the generated multi-file Winget manifests from `winget-submit/manifests/s/snapetech/slskdn/<winget-version>/`.
+- Tightened stable manifest staging to copy only `snapetech.slskdn.yaml`, `snapetech.slskdn.installer.yaml`, and `snapetech.slskdn.locale.en-US.yaml`; the previous wildcard also matched `snapetech.slskdn-dev*.yaml`.
+- Corrected ADR-0001 Winget gotchas and committed the documentation fixes immediately as `0b8cb8f51` and `9ad8754b2`.
+- Updated the existing `microsoft/winget-pkgs` PR branch in place with commit `25ce9d0f1cdabdb03e42bded02a49317f785cf30`, changing the PR diff from one singleton file to the expected three-file manifest set without opening a duplicate PR.
+- Pushed the slskdN workflow fix to `snapetech/slskdn` as `64cb9247a`.
+- Validation: parsed `.github/workflows/build-on-tag.yml` and `.github/workflows/publish-winget.yml` as YAML; generated `.202` stable Winget manifests; staged them locally; parsed the staged YAML; confirmed the staged files are exactly `version`, `installer`, and `defaultLocale` for `snapetech.slskdn` version `2026042900.202` with no singleton or dev manifests.
+
 ## 2026-04-30 00:01:05Z
 
 - Prepared stable release `2026042900-slskdn.200` by moving the current Unreleased header/footer chrome and transfer polish bullets into a versioned changelog section.
@@ -7314,3 +7331,25 @@ Code quality improvements were completed as part of Option A:
 - Added ContentLocator fallback resolution for allowed local share/download roots so local picker results can stream by `sha256:` or stable path IDs without a separate streaming service.
 - Verified the Commons OGG smoke file still returns `206 Partial Content` through Vite, and measured desktop/mobile browser geometry: the expanded and collapsed player stay above the fixed footer with no horizontal overflow.
 - Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter ContentLocatorTests`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`, live stream/file-picker curl checks, and Playwright footer/player geometry checks passed. The production build still reports the existing large chunk warning.
+
+## 2026-04-30 02:05:00Z
+
+- Added Winamp-style browser-player enhancements on top of the existing persistent player: shared Web Audio graph ownership, persisted 10-band EQ presets, spectrum/oscilloscope analyzer, LRCLIB synced lyrics, ListenBrainz now-playing/scrobble submission, crossfade, Document Picture-in-Picture spectrum, and karaoke-style center-channel reduction.
+- Kept the features browser-local where possible: EQ/analyzer/crossfade/karaoke preferences and the ListenBrainz token are stored in localStorage, with no daemon config or Soulseek network impact.
+- Documented the new player controls in README, `docs/FEATURES.md`, `docs/advanced-features.md`, and `docs/CHANGELOG.md`.
+- Headlessly inspected the first pass and rebuilt the player presentation into a modern Winamp-style deck: LCD track/status display, grouped transport, separate library/file modal launchers, icon tool rack, segmented analyzer modes, compact panels, and modal ListenBrainz settings instead of a permanent token input.
+- Validation: `npm test -- PlayerBar.test.jsx`, `npm run lint`, and `npm run build` passed. The production build still reports the existing large chunk warning.
+
+## 2026-04-30 02:06:00Z
+
+- Replaced the player empty-state collection and file dropdowns with proper modal browsers.
+- Collections now open a two-pane modal that lists collections, loads the selected collection's items, and exposes explicit play actions while preserving a Manage Collections button.
+- Shared/downloaded audio now opens a searchable local-audio browser table with file path context and explicit per-row play actions.
+- Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`, and a 390px Playwright modal geometry check passed. The production build still reports the existing large chunk warning.
+
+## 2026-04-30 02:07:00Z
+
+- Updated README player coverage to describe the integrated Web Player & Listening Parties feature set, including modal pickers, local-root streaming, transport controls, visualizer/EQ/analyzer/lyrics/ListenBrainz extras, and PWA/mobile behavior.
+- Expanded `docs/listening-party.md` with a Web Player section covering playback sources, `/api/v0/streams/{contentId}`, configured local root resolution, controls, local mute, Media Session, and browser-owned audio output.
+- Updated `docs/advanced-features.md` and `docs/FEATURES.md` so streaming documentation matches the current integrated player behavior instead of the older Pod-only streaming description.
+- Validation: docs-only diff reviewed with `git diff --check`.

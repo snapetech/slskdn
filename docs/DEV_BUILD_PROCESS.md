@@ -147,8 +147,8 @@ This document maps out the complete dev build process for slskdn, including vers
   - `installer.yaml`: PackageVersion, InstallerUrl, InstallerSha256
   - `version.yaml`: PackageVersion
 - **Version Format**: `0.24.1-dev-9EPOCH` (hyphens kept)
-- **Stable submission**: Main releases regenerate the stable manifests from the published Windows asset, stage them under `winget-submit/manifests/s/snapetech/slskdn/<version>/`, and submit them to `microsoft/winget-pkgs` with `wingetcreate submit`; the job fails if `WINGETCREATE_GITHUB_TOKEN` is missing so skipped submissions cannot look successful
-- **Stable retry**: Use the manual `Publish Winget` workflow with an existing stable release tag after fixing credentials or retrying a failed `wingetcreate` submission
+- **Stable submission**: Main releases regenerate the checked-in stable manifests from the published Windows asset, but do **not** automatically submit to `microsoft/winget-pkgs`. Use the manual `Publish Winget` workflow only for high-value stable releases that should go to the public Winget catalog.
+- **Stable retry**: Re-run the manual `Publish Winget` workflow with an existing stable release tag after fixing credentials or retrying a failed `wingetcreate` submission. Prefer updating the existing Winget PR branch over opening duplicates.
 - **Dev note**: Dev releases still only update the local manifests and do not auto-submit to `winget-pkgs`
 
 ### 8. macOS Package Managers
@@ -180,7 +180,7 @@ This document maps out the complete dev build process for slskdn, including vers
 12. **winget-dev** → Updates Winget manifests
 13. **homebrew-dev** → Updates Homebrew tap
 14. **announce-main** → Posts the new stable release to Discord
-15. **winget-main** → Auto-submits stable Winget update PR when token is configured
+15. **Publish Winget** → Optional manual workflow for high-value stable releases
 
 ### `dev-release.yml` Jobs (for `dev-*` tags)
 
@@ -205,7 +205,7 @@ This document maps out the complete dev build process for slskdn, including vers
 | `GPG_PRIVATE_KEY` | PPA jobs | GPG key for package signing |
 | `CHOCO_API_KEY` | Chocolatey jobs | Chocolatey API key |
 | `DISCORD_RELEASE_WEBHOOK` | `announce-dev`, `announce-main` | Discord webhook URL used to announce each published dev and stable GitHub release |
-| `WINGETCREATE_GITHUB_TOKEN` | Stable Winget job | GitHub classic PAT with `public_repo` so `wingetcreate --submit` can fork and open a PR against `microsoft/winget-pkgs` |
+| `WINGETCREATE_GITHUB_TOKEN` | Manual `Publish Winget` workflow | GitHub classic PAT with `public_repo` so `wingetcreate submit` can fork and open a PR against `microsoft/winget-pkgs` |
 | `TAP_GITHUB_TOKEN` | Homebrew jobs | GitHub token for tap repo |
 
 ## Branch Strategy

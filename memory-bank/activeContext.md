@@ -1,3 +1,68 @@
+## Update 2026-04-30 02:33:09Z
+
+- Current task: None. Stable Winget publishing is now opt-in.
+- Last activity:
+  - removed the automatic `winget-main` job from `build-on-tag.yml`
+  - kept the manual `Publish Winget` workflow as the high-value stable release path
+  - documented that main release tags regenerate checked-in Winget metadata but do not open public `microsoft/winget-pkgs` PRs automatically
+- Next steps:
+  1. Use `Publish Winget` manually only for stable releases that should be promoted to the public Winget catalog.
+  2. Let routine/package-test releases stay in GitHub/package channels without Winget PR noise.
+
+## Update 2026-04-30 02:20:25Z
+
+- Current task: None. Winget singleton validation failure is fixed locally.
+- Last activity:
+  - confirmed `microsoft/winget-pkgs` PR #366812 cleared CLA but still failed service validation because singleton manifests are not accepted
+  - changed the stable release and manual Winget workflows to stage the generated multi-file manifests under `winget-submit/manifests/s/snapetech/slskdn/<version>/`
+  - tightened staging to copy only the three stable manifest filenames so dev manifests cannot leak into the stable package directory
+  - corrected the Winget gotchas documentation and committed those ADR fixes separately
+  - locally verified the `.202` staging shape produces version, installer, and defaultLocale manifests with no singleton or dev files
+  - updated the existing `microsoft/winget-pkgs` PR branch in place with commit `25ce9d0f1cdabdb03e42bded02a49317f785cf30` instead of opening a duplicate PR
+  - pushed the slskdN workflow fix to `snapetech/slskdn` as `64cb9247a`
+- Next steps:
+  1. Wait for Winget validation run `307341` on PR #366812 to finish.
+  2. If validation passes, wait for Microsoft review/merge; if it fails, inspect the new Azure timeline before making another PR change.
+
+## Update 2026-04-30 02:07:00Z
+
+- Current task: None. Player and listening-party documentation is updated.
+- Last activity:
+  - updated README with the integrated Web Player & Listening Parties section
+  - documented modal collection/file browsers, footer-safe drawer behavior, local-root streaming, player extras, and PWA/mobile behavior
+  - expanded `docs/listening-party.md` with Web Player source, controls, and local audio boundaries
+  - corrected `docs/advanced-features.md` and `docs/FEATURES.md` so streaming is no longer described as Pod-only
+- Next steps:
+  1. Improve persisted collection item display metadata so playlist rows can show friendly filenames/titles instead of raw content ids.
+  2. Browser-smoke the broader Winamp controls against a real streamed track, especially Document Picture-in-Picture in Chrome/Edge.
+
+## Update 2026-04-30 02:06:00Z
+
+- Current task: None. Player collection/file picking now uses modal browsers instead of compact dropdowns.
+- Last activity:
+  - replaced the player empty-state collection dropdown with a two-pane Collections modal
+  - replaced the downloaded/shared audio dropdown with a searchable local-audio browser modal
+  - kept playback actions explicit with per-row play buttons and kept the full Collections management path available
+  - verified focused player tests, frontend lint/build, and mobile modal geometry with no horizontal overflow
+- Next steps:
+  1. Improve persisted collection item display metadata so playlist rows can show friendly filenames/titles instead of raw content ids.
+  2. Browser-smoke the broader Winamp controls against a real streamed track, especially Document Picture-in-Picture in Chrome/Edge.
+
+## Update 2026-04-30 02:05:00Z
+
+- Current task: None. Winamp-style Web UI player enhancements are implemented and validated locally.
+- Last activity:
+  - added shared Web Audio graph plumbing for the player, MilkDrop, EQ, analyzer, karaoke, and crossfade gain control
+  - added a persisted 10-band EQ with presets
+  - added lightweight spectrum/oscilloscope rendering and Document Picture-in-Picture spectrum output
+  - added LRCLIB synced lyrics and ListenBrainz now-playing/scrobble submission using a browser-local token
+  - rebuilt the first-pass player bar into a modern Winamp-style deck after headless visual inspection
+  - documented the additions in README, feature docs, advanced walkthrough, and changelog
+  - validated focused player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Browser-smoke the new controls against a real streamed track, especially Document Picture-in-Picture in Chrome/Edge.
+  2. Improve persisted collection item display metadata so playlist rows can show friendly filenames/titles instead of raw content ids.
+
 ## Update 2026-04-30 01:52:00Z
 
 - Current task: None. The Web UI player drawer, transport controls, and local audio picker are implemented and verified.

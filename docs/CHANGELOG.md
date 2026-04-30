@@ -99,6 +99,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   the manifests, and the initial submission path uses the generated multi-file
   version, installer, and default locale manifests instead of a temporary
   singleton manifest rejected by Winget service validation.
+- Changed stable Winget publication to an optional high-value release step:
+  main release tags still regenerate checked-in Winget metadata, but public
+  `microsoft/winget-pkgs` PR submission now happens only through the manual
+  `Publish Winget` workflow.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 

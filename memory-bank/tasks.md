@@ -1210,7 +1210,13 @@
   - Notes: Replaced the permissive SongID query joins with a dedicated `BuildTrackSearchText()` helper so generated search actions no longer stuff uploader/album/title cruft into Soulseek searches; added focused SongID unit coverage for segment and fallback query formatting.
 - [x] Automate stable Winget submission from the main release workflow
   - Status: done
-  - Notes: Added a `winget-main` job in `build-on-tag.yml` that downloads `wingetcreate`, converts the release version to the Winget package version, and runs `wingetcreate update snapetech.slskdn ... --submit` against the current release asset when `WINGETCREATE_GITHUB_TOKEN` is configured.
+  - Notes: Historical implementation added a `winget-main` job in `build-on-tag.yml`; this was later superseded by the opt-in manual `Publish Winget` workflow to avoid noisy public PRs for routine stable releases.
+- [x] Fix initial stable Winget PR service validation
+  - Status: done
+  - Notes: Replaced the temporary singleton submission with repository-shaped multi-file manifest staging for stable Winget submissions, and tightened staging to copy only the three stable manifest files so `snapetech.slskdn-dev` manifests cannot leak into the stable PR.
+- [x] Make stable Winget publication opt-in
+  - Status: done
+  - Notes: Removed the automatic `winget-main` job from tag-based main releases. Stable releases still regenerate local Winget metadata, but public `microsoft/winget-pkgs` PRs now use the manual `Publish Winget` workflow only for high-value releases.
 - [x] Filter release-hygiene docs commits out of generated release note commit lists
   - Status: done
   - Notes: Updated `scripts/generate-release-notes.sh` so `Included Commits` excludes standalone ADR gotcha commits, release-notes doc commits, and stable metadata bookkeeping commits that otherwise make one fix appear multiple times in GitHub release output.
@@ -1490,3 +1496,15 @@
 - [ ] Improve collection item display metadata
   - Status: follow-up
   - Notes: Collection items currently persist only content id/media kind/hash, so playlist rows and the player can show raw `sha256:` ids for local test items. Add filename/title metadata resolution for better user-facing playlist/player labels.
+
+- [x] Add Winamp-style Web UI player enhancements
+  - Status: completed (2026-04-30)
+  - Notes: Added a shared Web Audio graph, 10-band persisted EQ with presets, lightweight spectrum/oscilloscope canvas, synced LRCLIB lyrics pane, ListenBrainz now-playing/scrobble submission with a browser-local token, crossfade toggle, Document Picture-in-Picture spectrum window, karaoke-style center-channel reduction, and README/features/walkthrough/changelog documentation. Follow-up design pass rebuilt the player as a modern Winamp-style deck with LCD track display, grouped transport controls, library/file browser modals, segmented analyzer controls, and modal integration settings.
+
+- [x] Replace player dropdown pickers with modal browsers
+  - Status: completed (2026-04-30)
+  - Notes: The player empty state now opens a two-pane Collections browser and a searchable shared/downloaded local-audio browser instead of compact dropdowns. Both modals use explicit row-level play actions and were validated with focused player tests, lint, build, and mobile modal geometry checks.
+
+- [x] Document integrated Web UI player and listening-party features
+  - Status: completed (2026-04-30)
+  - Notes: Updated README, `docs/listening-party.md`, `docs/advanced-features.md`, and `docs/FEATURES.md` to cover the integrated player, modal pickers, local-root stream resolution, footer-safe drawer controls, player extras, PWA/mobile behavior, and listening-party/radio boundaries.
