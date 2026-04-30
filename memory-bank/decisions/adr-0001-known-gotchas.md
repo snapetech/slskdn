@@ -52,6 +52,28 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z194. MilkDrop Needs The Real Butterchurn Export And A Live Audio Tap
+
+**The Bug**: The Web UI MilkDrop panel mounted a canvas but showed "Failed to load visualizer" or a black frame because Vite wrapped `butterchurn` differently than the component expected, and the visualizer was connected to an audio node that graph rebuilds could disconnect.
+
+**Files Affected**:
+- `src/web/src/components/Player/Visualizer.jsx`
+- `src/web/src/components/Player/audioGraph.js`
+
+**Wrong**:
+```js
+const butterchurn = butterchurnModule.default || butterchurnModule;
+visualizer.connectAudio(graph.source);
+```
+
+**Correct**:
+```js
+const butterchurn = resolveButterchurnApi(butterchurnModule);
+visualizer.connectAudio(graph.visualizerInput);
+```
+
+**Why This Keeps Happening**: Browser bundlers can wrap CommonJS visualizer libraries as `module.default.default`, and Web Audio visualizers need a stable, live tap that survives EQ/karaoke graph rebuilds. Verify MilkDrop with a real browser canvas screenshot, not only `gl.readPixels`, because Butterchurn's WebGL framebuffer readback can look black even when the visible canvas is rendering.
+
 ### 0z193. Fixed Player Layout Needs One Scroll Owner
 
 **The Bug**: The Web UI used fixed footer/player elements but left the document body scrollable. Scrolling moved page content behind the fixed player/footer stack, so the player appeared detached from the footer and page content could be hidden underneath it.
