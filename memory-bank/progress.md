@@ -1,3 +1,12 @@
+## 2026-04-30 19:46:09Z - Added decentralized MusicBrainz edit overlay
+
+- Continued center-lane feature-expansion work with T-935 Decentralized MusicBrainz Edit Overlay.
+- Added signed local `MusicBrainzOverlayEdit` artifacts for alias, title correction, artist correction, release grouping, recording linkage, missing alt-title, and duplicate marker intent.
+- Added evidence validation for SongID run, WorkRef, realm subject-index citation, and user note evidence, including safe WorkRef validation.
+- Added deterministic in-memory overlay storage and read-time application to copied artist release graphs so cached upstream MusicBrainz payloads are not mutated.
+- Added `/api/v0/musicbrainz/overlays` endpoints for storing edits and reading original/effective release graphs with overlay provenance.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter MusicBrainzOverlay` passed (`6/6`).
+
 ## 2026-04-30 19:44:02Z - Added opt-in import fingerprint verification
 
 - Continued P3 Safe Acquisition Pipeline burn-down with the optional fingerprint verification story.

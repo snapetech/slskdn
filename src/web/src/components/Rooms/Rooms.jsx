@@ -312,27 +312,6 @@ const Rooms = () => {
           </div>
         </div>
       </Segment>
-      {joinedRooms.length > 0 && (
-        <Segment className="room-recovery-rail">
-          {joinedRooms.map((roomName) => (
-            <Popup
-              content="Open this joined room."
-              key={roomName}
-              trigger={
-                <Button
-                  basic
-                  compact
-                  onClick={() => openRoomTab(roomName)}
-                  size="small"
-                >
-                  <Icon name="comments outline" />
-                  {roomName}
-                </Button>
-              }
-            />
-          ))}
-        </Segment>
-      )}
       <Tab
         activeIndex={activeIndex}
         menu={{

@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a signed local MusicBrainz overlay-edit API that applies corrections at
+  release-graph read time with original/effective graph provenance.
 - Added opt-in browser-local SHA-256 fingerprint verification for newly staged
   import files, storing only verification metadata in the staging queue.
 - Added a local import metadata matcher with confidence, parsed identity,

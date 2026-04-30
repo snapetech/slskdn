@@ -1,3 +1,15 @@
+## Update 2026-04-30 19:46:09Z
+
+- Current task: T-935 Decentralized MusicBrainz Edit Overlay first slice is implemented locally.
+- Last activity:
+  - added signed MusicBrainz overlay-edit models and validation
+  - added deterministic local overlay storage and read-time release-graph application without mutating cached MusicBrainz data
+  - added a dedicated overlay API returning original/effective graphs plus provenance
+  - validated focused MusicBrainz overlay service/controller tests
+- Next steps:
+  1. Gossip signed overlay edits through trust-scoped mesh/realm channels.
+  2. Add manual upstream MusicBrainz export/review for selected local corrections.
+
 ## Update 2026-04-30 19:36:05Z
 
 - Current task: None. Player local-audio file explorer redesign is implemented locally.

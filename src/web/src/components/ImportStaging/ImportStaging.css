@@ -23,6 +23,18 @@
   display: none;
 }
 
+.import-staging-fingerprint-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.45rem;
+  min-height: 36px;
+}
+
+.import-staging-fingerprint-toggle input {
+  cursor: pointer;
+}
+
 .import-staging-summary {
   display: flex;
   flex-wrap: wrap;

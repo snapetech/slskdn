@@ -186,11 +186,21 @@
  - Priority: P2
  - Notes: Show when subscribed realm indexes disagree with MusicBrainz or another realm, preserving provenance and allowing users to disable individual realm authorities.
 
-- [ ] **T-935**: Decentralized MusicBrainz edit overlay.
- - Status: planned
+- [x] **T-935**: Decentralized MusicBrainz edit overlay.
+ - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Capture signed corrections as mesh/realm overlay artifacts and apply them at MusicBrainz read time with provenance. Optional upstream MusicBrainz submission remains manual.
+ - Notes: Added signed local MusicBrainz overlay-edit artifacts, evidence validation, deterministic in-memory storage, read-time overlay application for artist release graphs, and a dedicated overlay API that returns original/effective graphs plus provenance without mutating cached upstream MusicBrainz payloads. Mesh/realm gossip and upstream MusicBrainz export remain separate follow-ups.
+
+- [ ] **feature**: Gossip MusicBrainz overlay edits through trust-scoped mesh/realm channels.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-935 by routing signed overlay edits through mesh service fabric or realm channels according to user trust scope. Keep publication opt-in and preserve source provenance.
+
+- [ ] **feature**: Add manual upstream MusicBrainz export review for overlay edits.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-935 with a manual export/review path for users who want to submit selected local corrections upstream. Do not auto-submit edits.
 
 - [ ] **T-936**: Quarantine Jury.
  - Status: planned

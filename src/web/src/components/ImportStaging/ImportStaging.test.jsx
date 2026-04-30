@@ -31,7 +31,7 @@ describe('ImportStaging', () => {
   it('stores optional fingerprint verification for newly staged files', async () => {
     render(<ImportStaging />);
 
-    fireEvent.click(screen.getByTestId('import-staging-fingerprint-toggle'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Fingerprint on add' }));
     fireEvent.change(screen.getByTestId('import-staging-file-input'), {
       target: {
         files: [

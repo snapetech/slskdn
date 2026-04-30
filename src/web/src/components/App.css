@@ -319,6 +319,7 @@ body {
 :root.dark .ui.card > .content > .header,
 :root.dark .ui.cards > .card > .content > .header,
 :root.dark .ui.header,
+:root.dark .ui.list .item .header,
 :root.dark .ui.items > .item > .content > .header {
     color: var(--slskd-color) !important;
 }
@@ -328,6 +329,7 @@ body {
 :root.dark .ui.card .description,
 :root.dark .ui.cards > .card .description,
 :root.dark .ui.header .sub.header,
+:root.dark .ui.list .item .description,
 :root.dark .ui.items > .item > .content > .meta,
 :root.dark .ui.items > .item > .content > .description {
     color: var(--slskd-color-subtle) !important;
@@ -437,6 +439,7 @@ body {
 :root.dark .ui.form .field > label,
 :root.dark .ui.checkbox label,
 :root.dark .ui.list .item,
+:root.dark .ui.list .item > .content,
 :root.dark .ui.feed > .event > .content .summary,
 :root.dark .ui.feed > .event > .content .extra.text,
 :root.dark .ui.statistic > .label,
@@ -538,6 +541,9 @@ body {
 
 :root.dark .app-content [style*="color: rgb(102, 102, 102)"],
 :root.dark .app-content [style*="color: #666"],
+:root.dark .app-content [style*="color: black"],
+:root.dark .app-content [style*="color: #000"],
+:root.dark .app-content [style*="color: rgb(0, 0, 0)"],
 :root.dark .app-content [style*="color: grey"],
 :root.dark .app-content [style*="color: gray"],
 :root.dark .app-content [style*="color: #999"],

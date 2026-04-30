@@ -10,7 +10,6 @@ import {
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Button,
-  Checkbox,
   Header,
   Icon,
   Label,
@@ -216,14 +215,16 @@ const ImportStaging = () => {
             content="When enabled, newly selected files are hashed locally with SHA-256 in the browser. This reads the selected file bytes but does not upload or import them."
             position="top center"
             trigger={
-              <Checkbox
-                aria-label="Fingerprint on add"
-                checked={fingerprintOnAdd}
-                data-testid="import-staging-fingerprint-toggle"
-                label="Fingerprint on add"
-                onChange={(_, data) => setFingerprintOnAdd(data.checked)}
-                toggle
-              />
+              <label className="import-staging-fingerprint-toggle">
+                <input
+                  aria-label="Fingerprint on add"
+                  checked={fingerprintOnAdd}
+                  data-testid="import-staging-fingerprint-toggle"
+                  onChange={(event) => setFingerprintOnAdd(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>Fingerprint on add</span>
+              </label>
             }
           />
         </div>

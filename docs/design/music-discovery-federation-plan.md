@@ -241,6 +241,7 @@ Acceptance:
 - 2026-04-30: T-930 first slice implemented. It includes the backend coverage service/API, cached release-target resolution, HashDb/Wishlist evidence cells, manual missing-track Wishlist promotion, and the Search-page Discography Concierge panel. Discovery Graph density prioritization is split to T-937.
 - 2026-04-30: T-933 first slice implemented. It includes a local taste recommendation service/API over accepted inbound music WorkRefs, followed-actor trust filtering, MusicBrainz-or-normalized-work grouping, service-layer k-anonymity with a default threshold of two trusted sources, and opt-in source actor reveal for future policy-gated UI surfaces.
 - 2026-04-30: T-934 first slice implemented. It defines signed realm subject-index artifacts with WorkRefs, external ids, aliases, evidence links, and signature metadata; validates local realm scope, trusted governance roots, payload hashes, safe WorkRefs, and safe evidence links; and adds a recording-MBID resolver that returns realm/index/revision provenance for ShadowIndex and VirtualSoulfind integration.
+- 2026-04-30: T-935 first slice implemented. It defines signed MusicBrainz overlay-edit artifacts with SongID, WorkRef, realm-index, or user-note evidence; validates signatures and supported edit/target/field combinations; stores edits deterministically; and applies them at release-graph read time through a dedicated overlay API returning original/effective graphs plus provenance without mutating cached MusicBrainz data.
 
 ## Validation Strategy
 
