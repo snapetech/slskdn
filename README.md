@@ -349,12 +349,13 @@ Automated metadata enrichment and quality assurance.
 📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md) • [Music discovery federation plan](docs/design/music-discovery-federation-plan.md)
 
 ### 🎛️ Built-in Lidarr Integration
-Plugin-free Lidarr support driven from slskdN using Lidarr's HTTP API.
+Lidarr is a first-class slskdN integration. No Lidarr plugin is required: slskdN talks to Lidarr's supported HTTP API, turns Wanted/Missing albums into Wishlist searches, downloads through the normal Soulseek queue, and can hand completed albums back to Lidarr for safe import.
 - **Wanted sync** — pulls Lidarr Wanted/Missing albums into slskdN Wishlist searches
 - **Optional auto-download** — Lidarr-created Wishlist items can immediately enter the normal slskdN download flow
-- **Safe post-download import** — completed directories can be submitted to Lidarr's manual-import command only when Lidarr returns clean, unambiguous matches
+- **Safe post-download import** — completed directories are submitted to Lidarr's manual-import command only when Lidarr returns clean, unambiguous matches
 - **Manual fallback** — ambiguous or rejected candidates are intentionally left for Lidarr's interactive Manual Import screen
 - **Path mapping** — rewrite slskdN download paths to the path Lidarr sees in Docker, host, or split-volume setups
+- **Operator API** — verify status, run wanted sync, and trigger import from `/api/v0/integrations/lidarr/*`
 
 📖 **Guide**: [Lidarr integration](docs/lidarr-integration.md)
 
@@ -610,6 +611,7 @@ dotnet run --project src/slskd/slskd.csproj
 | **DHT mesh networking** | ❌ | ✅ |
 | **Security hardening** | ❌ | ✅ |
 | **MusicBrainz integration** | ❌ | ✅ |
+| **Built-in Lidarr integration** | ❌ | ✅ |
 | **Library health scanner** | ❌ | ✅ |
 | **Pod communities** | ❌ | ✅ 🧪 |
 | **VirtualSoulfind v2** | ❌ | ✅ 🧪 |
@@ -662,6 +664,15 @@ destinations:
       default: true
     - name: "Audiobooks"
       path: "/downloads/audiobooks"
+
+integrations:
+  lidarr:
+    enabled: true
+    url: "http://lidarr:8686"
+    api_key: "<lidarr-api-key>"
+    sync_wanted_to_wishlist: true
+    auto_download: false
+    auto_import_completed: true
 
 # Experimental features (dev builds only)
 security:

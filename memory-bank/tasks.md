@@ -65,6 +65,7 @@
  - Progress (2026-04-30): Expanded native shader translation with safe straight-line temp declarations and common HLSL helper aliases including `frac`, `fmod`, `rsqrt`, and `atan2`.
  - Progress (2026-04-30): Added translated shader viewport context with `resolution`, `pixelSize`, `aspect`, `texsize`, and generated `x/y/rad/ang` coordinate helpers.
  - Progress (2026-04-30): Added safe `shader_body { ... }` wrapper unwrapping for translated native warp/comp shaders and fixture smoke coverage.
+ - Progress (2026-04-30): Added first translated shader named-texture sampler support for up to four `tex`/`tex2D` preset samplers, reusing imported texture aliases with procedural fallback.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

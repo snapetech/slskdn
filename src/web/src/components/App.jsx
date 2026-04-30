@@ -14,7 +14,7 @@ import { PlayerProvider } from './Player/PlayerContext';
 import ErrorSegment from './Shared/ErrorSegment';
 import Footer from './Shared/Footer';
 import React, { Component, lazy, Suspense } from 'react';
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import {
   Button,
@@ -823,37 +823,37 @@ class App extends Component {
                 </Menu.Item>
               ) : (
                 <>
-                  <Link to="/searches">
+                  <NavLink to="/searches">
                     <Menu.Item data-testid="nav-search">
                       <Icon name="search" />
                       Search
                     </Menu.Item>
-                  </Link>
-                  <Link to="/discovery-graph">
+                  </NavLink>
+                  <NavLink to="/discovery-graph">
                     <Menu.Item data-testid="nav-discovery-graph">
                       <Icon name="crosshairs" />
                       Discovery Graph
                     </Menu.Item>
-                  </Link>
-                  <Link to="/wishlist">
+                  </NavLink>
+                  <NavLink to="/wishlist">
                     <Menu.Item data-testid="nav-wishlist">
                       <Icon name="star" />
                       Wishlist
                     </Menu.Item>
-                  </Link>
-                  <Link to="/downloads">
+                  </NavLink>
+                  <NavLink to="/downloads">
                     <Menu.Item data-testid="nav-downloads">
                       <Icon name="download" />
                       Downloads
                     </Menu.Item>
-                  </Link>
-                  <Link to="/uploads">
+                  </NavLink>
+                  <NavLink to="/uploads">
                     <Menu.Item data-testid="nav-uploads">
                       <Icon name="upload" />
                       Uploads
                     </Menu.Item>
-                  </Link>
-                  <Link to="/rooms">
+                  </NavLink>
+                  <NavLink to="/rooms">
                     <Menu.Item data-testid="nav-rooms">
                       <NavigationIcon
                         alert={navActivity.rooms}
@@ -862,8 +862,8 @@ class App extends Component {
                       />
                       Rooms
                     </Menu.Item>
-                  </Link>
-                  <Link to="/chat">
+                  </NavLink>
+                  <NavLink to="/chat">
                     <Menu.Item data-testid="nav-chat">
                       <NavigationIcon
                         alert={navActivity.chat}
@@ -872,49 +872,49 @@ class App extends Component {
                       />
                       Chat
                     </Menu.Item>
-                  </Link>
-                  <Link to="/users">
+                  </NavLink>
+                  <NavLink to="/users">
                     <Menu.Item data-testid="nav-users">
                       <Icon name="users" />
                       Users
                     </Menu.Item>
-                  </Link>
-                  <Link to="/contacts">
+                  </NavLink>
+                  <NavLink to="/contacts">
                     <Menu.Item data-testid="nav-contacts">
                       <Icon name="address book" />
                       Contacts
                     </Menu.Item>
-                  </Link>
-                  <Link to="/solid">
+                  </NavLink>
+                  <NavLink to="/solid">
                     <Menu.Item data-testid="nav-solid">
                       <Icon name="key" />
                       Solid
                     </Menu.Item>
-                  </Link>
-                  <Link to="/collections">
+                  </NavLink>
+                  <NavLink to="/collections">
                     <Menu.Item data-testid="nav-collections">
                       <Icon name="list" />
                       Collections
                     </Menu.Item>
-                  </Link>
-                  <Link to="/sharegroups">
+                  </NavLink>
+                  <NavLink to="/sharegroups">
                     <Menu.Item data-testid="nav-groups">
                       <Icon name="users" />
                       Share Groups
                     </Menu.Item>
-                  </Link>
-                  <Link to="/shared">
+                  </NavLink>
+                  <NavLink to="/shared">
                     <Menu.Item data-testid="nav-shared-with-me">
                       <Icon name="share" />
                       Shared with Me
                     </Menu.Item>
-                  </Link>
-                  <Link to="/browse">
+                  </NavLink>
+                  <NavLink to="/browse">
                     <Menu.Item data-testid="nav-browse">
                       <Icon name="folder open" />
                       Browse
                     </Menu.Item>
-                  </Link>
+                  </NavLink>
                 </>
               )}
             </div>
@@ -970,12 +970,12 @@ class App extends Component {
               {(pendingReconnect || pendingRestart || pendingShareRescan) && (
                 <Menu.Item position="right">
                   <Icon.Group className="menu-icon-group">
-                    <Link to="/system/info">
+                    <NavLink to="/system/info">
                       <Icon
                         color="yellow"
                         name="exclamation circle"
                       />
-                    </Link>
+                    </NavLink>
                   </Icon.Group>
                   Pending Action
                 </Menu.Item>
@@ -1017,12 +1017,12 @@ class App extends Component {
                   </Modal.Actions>
                 </Modal>
               )}
-              <Link to="/system">
+              <NavLink to="/system">
                 <Menu.Item data-testid="nav-system">
                   <Icon name="cogs" />
                   System
                 </Menu.Item>
-              </Link>
+              </NavLink>
               {session.isLoggedIn() && (
                 <Modal
                   actions={[

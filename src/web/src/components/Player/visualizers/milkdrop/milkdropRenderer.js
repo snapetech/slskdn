@@ -1,5 +1,8 @@
 import { evaluateMilkdropEquations } from './expressionVm';
-import { createTranslatedMilkdropFragmentShader } from './shaderTranslator';
+import {
+  createTranslatedMilkdropFragmentShader,
+  getMilkdropShaderTextureSamplers,
+} from './shaderTranslator';
 
 const vertexShaderSource = `#version 300 es
 in vec2 position;
@@ -219,6 +222,7 @@ const createFullscreenTriangle = (gl, program) => {
 const createOptionalShaderProgram = (gl, shaderSource) => {
   const fragmentSource = createTranslatedMilkdropFragmentShader(shaderSource);
   if (!fragmentSource) return null;
+  const textureSamplers = getMilkdropShaderTextureSamplers(shaderSource);
   const program = createProgram(gl, vertexShaderSource, fragmentSource);
   gl.useProgram(program);
   const state = {
@@ -237,9 +241,17 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
       name,
     })),
     texsizeUniform: gl.getUniformLocation(program, 'texsize'),
+    textureSamplers: textureSamplers.map((sampler, index) => ({
+      location: gl.getUniformLocation(program, `shaderTexture${index}`),
+      sampler,
+      textureUnit: index + 2,
+    })),
     timeUniform: gl.getUniformLocation(program, 'time'),
   };
   gl.uniform1i(state.previousFrameUniform, 0);
+  state.textureSamplers.forEach((sampler) => {
+    gl.uniform1i(sampler.location, sampler.textureUnit);
+  });
   return state;
 };
 
@@ -251,6 +263,8 @@ const bindTranslatedShaderProgram = (
   time,
   scope,
   outputAlpha = 1,
+  textureLookup = {},
+  fallbackTexture = null,
 ) => {
   gl.useProgram(shaderProgram.program);
   gl.uniform3f(shaderProgram.colorUniform, color[0], color[1], color[2]);
@@ -267,6 +281,13 @@ const bindTranslatedShaderProgram = (
   gl.uniform4f(shaderProgram.texsizeUniform, width, height, 1 / width, 1 / height);
   shaderProgram.scopeUniforms.forEach((uniform) => {
     gl.uniform1f(uniform.location, Number(scope?.[uniform.name] ?? 0) || 0);
+  });
+  shaderProgram.textureSamplers.forEach((sampler) => {
+    const texture = getTextureNameAliases(sampler.sampler)
+      .map((alias) => textureLookup[alias])
+      .find(Boolean) || fallbackTexture;
+    gl.activeTexture((gl.TEXTURE0 ?? 0) + sampler.textureUnit);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
   });
 };
 
@@ -1239,6 +1260,8 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           scope.time,
           scope,
           1,
+          namedShapeTextures,
+          proceduralShapeTexture,
         );
         bindFullscreenTriangle(gl, translatedWarpProgram.program, fullscreenBuffer);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -1495,6 +1518,8 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           scope.time,
           scope,
           outputAlpha,
+          namedShapeTextures,
+          proceduralShapeTexture,
         );
         bindFullscreenTriangle(gl, translatedCompProgram.program, fullscreenBuffer);
       } else {

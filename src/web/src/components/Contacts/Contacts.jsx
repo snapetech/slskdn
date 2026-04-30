@@ -1,10 +1,10 @@
 import * as identityAPI from '../../lib/identity';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
+import TooltipButton from '../Shared/TooltipButton';
 import React, { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Button,
   Container,
   Header,
   Icon,
@@ -16,6 +16,8 @@ import {
   Tab,
   Table,
 } from 'semantic-ui-react';
+
+const Button = TooltipButton;
 
 const withNavigate = (WrappedComponent) => {
   const RoutedComponent = (props) => {

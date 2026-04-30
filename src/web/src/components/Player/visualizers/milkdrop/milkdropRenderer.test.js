@@ -356,9 +356,16 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
         wave_r=0.5
         q64=0.64
         per_frame_1=q1=0.25;
-        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, get_fft(0.5), aspect);
+        warp_shader=ret = tex2D(sampler_main, uv).rgb * tex2D(sampler_noise, uv).rgb * vec3(q1, get_fft(0.5), aspect);
         comp_shader=ret = vec3(get_fft_hz(11025) + pixelSize.x, q64, treb + x + y);
       `).primary,
+      textureAssets: {
+        sampler_noise: {
+          data: new Uint8Array([255, 255, 255, 255]),
+          height: 1,
+          width: 1,
+        },
+      },
     });
 
     renderer.render({
@@ -373,7 +380,9 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
 
     const shaderSources = gl.shaderSource.mock.calls.map(([, source]) => source);
     expect(shaderSources.some((source) =>
-      source.includes('texture(previousFrame, uv).rgb * vec3(q1, get_fft(0.5), aspect)'))).toBe(true);
+      source.includes('texture(previousFrame, uv).rgb * texture(shaderTexture0, uv).rgb * vec3(q1, get_fft(0.5), aspect)'))).toBe(true);
+    expect(shaderSources.some((source) => source.includes('uniform sampler2D shaderTexture0;')))
+      .toBe(true);
     expect(shaderSources.some((source) =>
       source.includes('vec3 ret = vec3(vec3(get_fft_hz(11025) + pixelSize.x, q64, treb + x + y))'))).toBe(true);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
@@ -386,6 +395,8 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.uniform2f).toHaveBeenCalledWith(expect.anything(), 64, 64);
     expect(gl.uniform2f).toHaveBeenCalledWith(expect.anything(), 1 / 64, 1 / 64);
     expect(gl.uniform4f).toHaveBeenCalledWith(expect.anything(), 64, 64, 1 / 64, 1 / 64);
+    expect(gl.uniform1i).toHaveBeenCalledWith(expect.anything(), 2);
+    expect(gl.activeTexture).toHaveBeenCalledWith(gl.TEXTURE0 + 2);
     expect(gl.uniform1fv).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ length: 32 }),

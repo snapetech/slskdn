@@ -4,11 +4,13 @@ const unsupportedPatterns = [
   /\bif\s*\(/i,
   /\bfloat[234]x[234]\b/i,
   /\bmul\s*\(/i,
-  /\bsampler\b/i,
+  /\bsampler(?:1d|2d|3d|cube)?\s+[A-Za-z_]/i,
 ];
 
 const allowedExpressionPattern = /^[A-Za-z0-9_.,+\-*/%<>=!&|^~?:()\s]+$/;
 const declarationPattern = /^(float|float2|float3|float4|vec2|vec3|vec4)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/i;
+const shaderTextureLimit = 4;
+const shaderTextureCallPattern = /\b(?:tex2D|tex)\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,/gi;
 const shaderQRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
 const shaderAudioVariableNames = ['bass', 'bass_att', 'mid', 'mid_att', 'treb', 'treb_att'];
 const shaderVariableNames = [...shaderAudioVariableNames, ...shaderQRegisterNames];
@@ -19,14 +21,39 @@ const stripShaderComments = (source) =>
     .replace(/\/\/.*$/gm, '')
     .trim();
 
-const normalizeShaderSource = (source) =>
+const isMainSampler = (name) =>
+  ['previousframe', 'sampler_main', 'sampler_fc_main', 'sampler_sampler_main'].includes(
+    String(name || '').toLowerCase(),
+  );
+
+export const getMilkdropShaderTextureSamplers = (source) => {
+  const samplers = [];
+  let match = shaderTextureCallPattern.exec(stripShaderComments(source));
+  while (match) {
+    const sampler = match[1];
+    if (!isMainSampler(sampler) && !samplers.includes(sampler)) {
+      samplers.push(sampler);
+    }
+    match = shaderTextureCallPattern.exec(stripShaderComments(source));
+  }
+  return samplers.slice(0, shaderTextureLimit);
+};
+
+const getShaderTextureUniformName = (samplers, sampler) => {
+  const index = samplers.indexOf(sampler);
+  return index >= 0 ? `shaderTexture${index}` : '';
+};
+
+const normalizeShaderSource = (source, textureSamplers = []) =>
   stripShaderComments(source)
     .replace(/\bshader_body\s*\{/gi, '')
     .replace(/^\s*\{/, '')
     .replace(/\}\s*$/g, '')
-    .replace(/\btex2D\s*\(\s*sampler_(?:main|fc_main|sampler_main)\s*,/gi, 'texture(previousFrame,')
-    .replace(/\btex2D\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,')
-    .replace(/\btex\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,');
+    .replace(shaderTextureCallPattern, (_match, sampler) => {
+      if (isMainSampler(sampler)) return 'texture(previousFrame,';
+      const textureUniform = getShaderTextureUniformName(textureSamplers, sampler);
+      return textureUniform ? `texture(${textureUniform},` : `texture(${sampler},`;
+    });
 
 const normalizeShaderExpression = (expression) =>
   expression
@@ -49,12 +76,14 @@ const normalizeShaderType = (type) =>
 const isSafeShaderExpression = (expression) => {
   if (!expression) return false;
   if (!allowedExpressionPattern.test(expression)) return false;
-  return !(/\btexture\s*\(/i.test(expression) && !/\bpreviousFrame\b/.test(expression));
+  return !(/\btexture\s*\(/i.test(expression)
+    && !/\b(?:previousFrame|shaderTexture[0-3])\b/.test(expression));
 };
 
 const parseShaderProgram = (source) => {
   if (unsupportedPatterns.some((pattern) => pattern.test(source))) return null;
-  const cleaned = normalizeShaderSource(source);
+  const textureSamplers = getMilkdropShaderTextureSamplers(source);
+  const cleaned = normalizeShaderSource(source, textureSamplers);
   const statements = cleaned
     .split(';')
     .map((statement) => statement.trim())
@@ -86,6 +115,7 @@ const parseShaderProgram = (source) => {
   return {
     declarations,
     expression,
+    textureSamplers,
   };
 };
 
@@ -100,10 +130,14 @@ export const createTranslatedMilkdropFragmentShader = (source) => {
   const uniformDeclarations = shaderVariableNames
     .map((name) => `uniform float ${name};`)
     .join('\n');
+  const textureUniformDeclarations = parsed.textureSamplers
+    .map((_sampler, index) => `uniform sampler2D shaderTexture${index};`)
+    .join('\n');
   return `#version 300 es
 precision highp float;
 uniform vec3 color;
 uniform sampler2D previousFrame;
+${textureUniformDeclarations}
 uniform float feedback;
 uniform float outputAlpha;
 uniform float time;

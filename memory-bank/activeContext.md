@@ -10,6 +10,18 @@
   1. Run whitespace checks, commit, and push.
   2. Continue the next large MilkDrop phase, likely shader texture access or real-preset compatibility coverage.
 
+## Update 2026-04-30 18:26:01Z
+
+- Current task: Native MilkDrop translated shaders have first named-texture sampler binding.
+- Last activity:
+  - shader translation now detects up to four non-main `tex`/`tex2D` sampler references and maps them to `shaderTexture0..3`
+  - renderer binds those sampler uniforms to imported texture assets using existing alias lookup, with procedural fallback for missing assets
+  - curated shader fixture now exercises a named sampler in browser smoke coverage
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke
+- Next steps:
+  1. Run whitespace checks, commit, and push.
+  2. Continue the next large MilkDrop phase, likely shader language expansion or real-preset compatibility coverage.
+
 ## Update 2026-04-30 18:22:09Z
 
 - Current task: None. All Semantic UI tabs now preserve inactive panes locally.

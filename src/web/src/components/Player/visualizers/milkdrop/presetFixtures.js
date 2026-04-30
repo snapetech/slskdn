@@ -60,8 +60,9 @@ export const nativeMilkdropFixturePack = [
       wave_b=0.9
       warp_shader=shader_body {
       warp_shader_1=  float3 tint = vec3(0.8, 0.95, aspect);
-      warp_shader_2=  ret = tex2D(sampler_main, uv).rgb * tint;
-      warp_shader_3=}
+      warp_shader_2=  float3 noise = tex2D(sampler_noise, uv).rgb;
+      warp_shader_3=  ret = tex2D(sampler_main, uv).rgb * tint * noise;
+      warp_shader_4=}
       comp_shader=shader_body {
       comp_shader_1=  ret = saturate(vec3(x, y, 0.45 + 0.35 * sin(time)));
       comp_shader_2=}

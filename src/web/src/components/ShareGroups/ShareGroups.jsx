@@ -2,9 +2,9 @@ import * as collectionsAPI from '../../lib/collections';
 import * as identityAPI from '../../lib/identity';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
+import TooltipButton from '../Shared/TooltipButton';
 import React, { Component } from 'react';
 import {
-  Button,
   Container,
   Dropdown,
   Form,
@@ -15,6 +15,8 @@ import {
   Segment,
   Table,
 } from 'semantic-ui-react';
+
+const Button = TooltipButton;
 
 export default class ShareGroups extends Component {
   state = {
@@ -266,6 +268,7 @@ export default class ShareGroups extends Component {
             data-testid="groups-create"
             onClick={() => this.setState({ createModalOpen: true })}
             primary
+            tooltip="Create a named group that can be granted access to shared collections."
           >
             <Icon name="plus" />
             Create Group
@@ -281,6 +284,7 @@ export default class ShareGroups extends Component {
             <Button
               onClick={() => this.setState({ createModalOpen: true })}
               primary
+              tooltip="Create the first share group for collection permissions."
             >
               Create Your First Group
             </Button>
@@ -322,6 +326,7 @@ export default class ShareGroups extends Component {
                         }
                       }}
                       size="small"
+                      tooltip="Show the contacts or users currently assigned to this group."
                     >
                       View Members
                     </Button>
@@ -340,6 +345,7 @@ export default class ShareGroups extends Component {
                       }
                       primary
                       size="small"
+                      tooltip="Add a contact or Soulseek username to this share group."
                     >
                       Add Member
                     </Button>
@@ -347,6 +353,7 @@ export default class ShareGroups extends Component {
                       negative
                       onClick={() => this.handleDeleteGroup(group.id)}
                       size="small"
+                      tooltip="Delete this share group and remove its collection access."
                     >
                       Delete
                     </Button>
@@ -383,6 +390,7 @@ export default class ShareGroups extends Component {
               onClick={() =>
                 this.setState({ createModalOpen: false, newGroupName: '' })
               }
+              tooltip="Close this dialog without creating a share group."
             >
               Cancel
             </Button>
@@ -391,6 +399,7 @@ export default class ShareGroups extends Component {
               disabled={!newGroupName.trim()}
               onClick={this.handleCreateGroup}
               primary
+              tooltip="Create this share group."
             >
               Create
             </Button>
@@ -474,6 +483,7 @@ export default class ShareGroups extends Component {
                   selectedUserId: null,
                 })
               }
+              tooltip="Close this dialog without adding a member."
             >
               Cancel
             </Button>
@@ -482,6 +492,7 @@ export default class ShareGroups extends Component {
               disabled={!selectedContactId && !selectedUserId}
               onClick={this.handleAddMember}
               primary
+              tooltip="Add the selected contact or username to this share group."
             >
               Add Member
             </Button>

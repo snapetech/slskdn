@@ -1,6 +1,7 @@
 import {
   analyzeMilkdropShaderSupport,
   createTranslatedMilkdropFragmentShader,
+  getMilkdropShaderTextureSamplers,
   translateMilkdropShaderExpression,
 } from './shaderTranslator';
 
@@ -94,6 +95,25 @@ describe('MilkDrop shader translator', () => {
     expect(shader).toContain('vec3 ret = vec3(tint * texture(previousFrame, uv).rgb);');
     expect(translateMilkdropShaderExpression('shader_body { ret = vec3(q1); }')).toBe('vec3(q1)');
     expect(analyzeMilkdropShaderSupport('shader_body { ret = vec3(x, y, rad); }').supported)
+      .toBe(true);
+  });
+
+  it('accepts capped named texture samplers in safe shader expressions', () => {
+    const shader = createTranslatedMilkdropFragmentShader(`
+      float3 noise = tex2D(sampler_noise, uv).rgb;
+      float3 overlay = tex2D(album_art, uv).rgb;
+      ret = noise * 0.5 + overlay * 0.5 + tex2D(sampler_main, uv).rgb * 0.1;
+    `);
+
+    expect(getMilkdropShaderTextureSamplers(
+      'ret = tex2D(sampler_noise, uv).rgb + tex2D(album_art, uv).rgb;',
+    )).toEqual(['sampler_noise', 'album_art']);
+    expect(shader).toContain('uniform sampler2D shaderTexture0;');
+    expect(shader).toContain('uniform sampler2D shaderTexture1;');
+    expect(shader).toContain('vec3 noise = texture(shaderTexture0, uv).rgb;');
+    expect(shader).toContain('vec3 overlay = texture(shaderTexture1, uv).rgb;');
+    expect(shader).toContain('texture(previousFrame, uv).rgb * 0.1');
+    expect(analyzeMilkdropShaderSupport('ret = tex2D(sampler_noise, uv).rgb;').supported)
       .toBe(true);
   });
 

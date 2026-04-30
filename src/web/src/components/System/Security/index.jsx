@@ -15,6 +15,7 @@ import {
 } from 'semantic-ui-react';
 
 const Security = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboard, setDashboard] = useState(null);
@@ -246,6 +247,10 @@ const Security = () => {
 
   return (
     <Tab
+      activeIndex={activeIndex}
+      onTabChange={(_event, { activeIndex: nextIndex }) =>
+        setActiveIndex(nextIndex)
+      }
       panes={panes}
       renderActiveOnly={false}
     />

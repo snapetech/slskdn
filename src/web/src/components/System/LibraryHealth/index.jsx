@@ -17,6 +17,7 @@ import {
 } from 'semantic-ui-react';
 
 const LibraryHealth = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const [libraryPath, setLibraryPath] = useState('');
   const [scanning, setScanning] = useState(false);
   const [summary, setSummary] = useState(null);
@@ -562,6 +563,10 @@ const LibraryHealth = () => {
   return (
     <div className="library-health">
       <Tab
+        activeIndex={activeIndex}
+        onTabChange={(_event, { activeIndex: nextIndex }) =>
+          setActiveIndex(nextIndex)
+        }
         panes={panes}
         renderActiveOnly={false}
       />

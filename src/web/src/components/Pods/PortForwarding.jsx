@@ -23,6 +23,7 @@ import {
 } from 'semantic-ui-react';
 
 const initialState = {
+  activeTab: 0,
   availablePorts: [],
   createForm: {
     destinationHost: '',
@@ -755,7 +756,11 @@ class PortForwarding extends Component {
         )}
 
         <Tab
+          activeIndex={this.state.activeTab}
           menu={{ pointing: true }}
+          onTabChange={(_event, { activeIndex }) =>
+            this.setState({ activeTab: activeIndex })
+          }
           panes={panes}
           renderActiveOnly={false}
         />

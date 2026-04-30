@@ -1,3 +1,10 @@
+## 2026-04-30 18:26Z - Added native MilkDrop shader named texture samplers
+
+- Shader translation now detects up to four non-main `tex`/`tex2D` sampler references and maps them to `shaderTexture0..3`.
+- The renderer binds those sampler uniforms to imported texture assets using existing path/basename/stem alias lookup, with procedural fallback for missing assets.
+- The curated shader smoke fixture now exercises a named sampler path.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 18:18Z - Added native MilkDrop shader_body wrapper support
 
 - Translated shader parsing now unwraps safe `shader_body { ... }` wrappers before statement analysis.

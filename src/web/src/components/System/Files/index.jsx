@@ -1,10 +1,11 @@
 import './Files.css';
 import Explorer from './Explorer';
-import React from 'react';
+import React, { useState } from 'react';
 import { Tab } from 'semantic-ui-react';
 
 const Files = ({ options } = {}) => {
   const { remoteFileManagement } = options;
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const panes = [
     {
@@ -36,6 +37,10 @@ const Files = ({ options } = {}) => {
   return (
     <div>
       <Tab
+        activeIndex={activeIndex}
+        onTabChange={(_event, { activeIndex: nextIndex }) =>
+          setActiveIndex(nextIndex)
+        }
         panes={panes}
         renderActiveOnly={false}
       />

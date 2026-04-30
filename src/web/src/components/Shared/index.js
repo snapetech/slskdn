@@ -8,3 +8,4 @@ export { default as PlaceholderSegment } from './PlaceholderSegment';
 export { default as ShrinkableButton } from './ShrinkableButton';
 export { default as ShrinkableDropdownButton } from './ShrinkableDropdownButton';
 export { default as Switch } from './Switch';
+export { default as TooltipButton } from './TooltipButton';

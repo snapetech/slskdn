@@ -21,6 +21,7 @@ import {
 } from 'semantic-ui-react';
 
 const AdversarialSettings = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -1244,6 +1245,10 @@ const AdversarialSettings = () => {
       )}
 
       <Tab
+        activeIndex={activeIndex}
+        onTabChange={(_event, { activeIndex: nextIndex }) =>
+          setActiveIndex(nextIndex)
+        }
         panes={panes}
         renderActiveOnly={false}
       />

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Form, Message, Segment } from 'semantic-ui-react';
+import { TooltipButton } from '../Shared';
+import { Form, Message, Segment } from 'semantic-ui-react';
 import api from '../../lib/api';
 
 export default function SolidSettings() {
@@ -78,14 +79,15 @@ export default function SolidSettings() {
           onChange={(e) => setWebId(e.target.value)}
           data-testid="solid-webid-input"
         />
-        <Button
+        <TooltipButton
           primary
           type="button"
           onClick={resolveWebId}
           data-testid="solid-resolve-webid"
+          tooltip="Resolve this WebID and show the Solid identity document returned by the server."
         >
           Resolve WebID
-        </Button>
+        </TooltipButton>
       </Form>
 
       {resolved && (
