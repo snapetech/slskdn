@@ -1,3 +1,15 @@
+## Update 2026-04-30 05:36:58Z
+
+- Current task: Native MilkDrop local preset library supports per-preset removal.
+- Last activity:
+  - selector state now tracks the active native preset id
+  - added a tooltipped remove-selected button for deleting one imported preset from browser storage
+  - removing the active imported preset clears the persisted active preset but keeps the rest of the library
+  - added component coverage for removing one preset while retaining another
+- Next steps:
+  1. Run the focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks.
+  2. Continue toward richer preset-pack management or shader translation after validation.
+
 ## Update 2026-04-30 05:33:38Z
 
 - Current task: Native MilkDrop local preset library has a first cleanup affordance.

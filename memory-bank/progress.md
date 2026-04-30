@@ -1,3 +1,11 @@
+## 2026-04-30 05:36Z - Added native MilkDrop per-preset library removal
+
+- Native visualizer mode now tracks the selected imported preset id in the library selector.
+- Added a tooltipped remove-selected button that deletes one imported preset from browser storage while leaving the rest of the library intact.
+- Removing the persisted active import clears only that active-preset key, so the next native session falls back cleanly instead of trying a deleted preset.
+- Added component coverage for removing one imported preset while retaining another.
+- Validation pending in this continuation: focused native/player tests, native browser smoke, frontend lint, frontend build, and `git diff --check`.
+
 ## 2026-04-30 05:33Z - Added native MilkDrop preset-library cleanup
 
 - Added a tooltipped clear-library button for native visualizer mode when imported presets exist.

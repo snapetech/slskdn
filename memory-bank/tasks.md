@@ -37,7 +37,7 @@
  - Progress (2026-04-30): Expanded native expression compatibility with common NSEEL math/constants, `rand`, and bitwise helper functions.
  - Progress (2026-04-30): Added import-time native preset compatibility reporting for unsupported equation functions and pending shader sections before replacing the active renderer.
  - Progress (2026-04-30): Added a capped browser-local native preset library with multi-file `.milk`/`.milk2` import, skipped-file reporting, and overlay preset reload selector.
- - Progress (2026-04-30): Added a tooltipped native preset-library clear affordance so imported local presets can be removed from browser storage.
+ - Progress (2026-04-30): Added tooltipped native preset-library clear and remove-selected affordances so imported local presets can be pruned from browser storage.
  - Progress (2026-04-30): Added inline bitwise, shift, unary, and logical expression operator support for `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` in native MilkDrop equations.
 
 - [x] **T-930**: Discography Concierge coverage map.
