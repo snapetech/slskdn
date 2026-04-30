@@ -52,6 +52,60 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z192. Player Audio Graphs Must Resume Before Playback
+
+**The Bug**: The Web UI player created a `MediaElementSource` for EQ/analyzer output, then called `audio.play()` while the Web Audio `AudioContext` could still be suspended. Browser playback looked active or the source loaded, but audio output could be silent.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/audioGraph.js`
+- `src/web/src/components/Player/Player.css`
+
+**Wrong**:
+```js
+setOutputGain(audioRef.current, 1);
+audioRef.current.load();
+audioRef.current.play().catch(() => {});
+```
+
+**Correct**:
+```js
+await resumeAudioGraph(audioRef.current);
+await audioRef.current.play();
+```
+
+**Why This Keeps Happening**: Once a media element is routed through Web Audio, the browser's native media output depends on the audio graph. EQ, MilkDrop, spectrum, crossfade, and karaoke code must treat `AudioContext.resume()` as part of playback, not only as part of visualizer startup.
+
+### 0z191. Fixed Player Bars Need Explicit Full-Width Grid Tracks
+
+**The Bug**: The modern player deck used a fixed-minimum display column next to an auto-sized control pad. At some widths, the now-playing display and signal/spectrum tile stopped short instead of consuming the available bar width.
+
+**Files Affected**:
+- `src/web/src/components/Player/Player.css`
+
+**Wrong**:
+```css
+.player-main-deck {
+  grid-template-columns: minmax(540px, 1fr) auto;
+}
+```
+
+**Correct**:
+```css
+.player-main-deck {
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+}
+
+.player-display,
+.player-display-analyzers,
+.player-analyzer-tile {
+  width: 100%;
+}
+```
+
+**Why This Keeps Happening**: Fixed footer/player bars combine grid, intrinsic button widths, canvas elements, and long metadata. Use `minmax(0, 1fr)`, `min-width: 0`, and explicit `width: 100%` on the display and signal containers so canvases and metadata scale with the available track.
+
 ### 0z191. Player Queue Previews Must Exclude The Current Track
 
 **The Bug**: The persistent Web UI player rendered `queue.slice(0, 3)` below the main now-playing display. Because the player queue stores the current item at index 0, the current song title appeared twice: once in the LCD display and again as a queue pill.
