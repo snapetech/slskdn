@@ -821,6 +821,12 @@ namespace slskd
 
             try
             {
+                if (IsSelfUsername(username))
+                {
+                    Log.Information("Rejected self-upload enqueue request for {Username} ({IP})", username, endpoint.Address);
+                    throw new DownloadEnqueueException("File not shared.");
+                }
+
                 if (Users.IsBlacklisted(username, endpoint.Address))
                 {
                     Log.Information("Rejected enqueue request for blacklisted user {Username} ({IP})", username, endpoint.Address);
@@ -1139,6 +1145,12 @@ namespace slskd
                     GlobalEnqueueSemaphore.Release();
                 }
             }
+        }
+
+        private bool IsSelfUsername(string username)
+        {
+            return !string.IsNullOrWhiteSpace(Client.Username)
+                && string.Equals(username, Client.Username, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

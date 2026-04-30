@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z199. Reject Soulseek Upload Requests From Our Own Username
+
+**The Bug**: The incoming upload enqueue path accepted requests where the requesting Soulseek username matched the daemon's own logged-in username, so the Uploads page could show a file being uploaded to yourself.
+
+**Files Affected**:
+- `src/slskd/Application.cs`
+
+**Wrong**:
+```csharp
+if (Users.IsBlacklisted(username, endpoint.Address))
+{
+    throw new DownloadEnqueueException("File not shared.");
+}
+```
+
+**Correct**:
+```csharp
+if (IsSelfUsername(username))
+{
+    throw new DownloadEnqueueException("File not shared.");
+}
+
+if (Users.IsBlacklisted(username, endpoint.Address))
+{
+    throw new DownloadEnqueueException("File not shared.");
+}
+```
+
+**Why This Keeps Happening**: Soulseek upload requests are inbound peer download requests, and the UI labels them from the daemon's perspective. Without an explicit self-username guard, stale/self-originated requests or another client using the same account can look like a real peer transfer and pollute upload history.
+
 ### 0z198. WebGL Attribute Bindings Must Be Rebound Before Each Program Draw
 
 **The Bug**: The native MilkDrop renderer initialized vertex attribute pointers once per shader program, then switched between fullscreen, primitive, wave, and shape buffers. WebGL attribute bindings are context/VAO state, not safely isolated by program switches, so later primitive buffer setup could make the fullscreen feedback/blit program draw from the wrong buffer.

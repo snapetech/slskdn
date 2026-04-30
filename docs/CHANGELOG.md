@@ -30,6 +30,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   browser-native MilkDrop3-compatible renderer inside slskdN.
 - Introduced the browser visualizer engine adapter boundary used by the
   current Butterchurn implementation.
+- Rejected incoming Soulseek upload requests from the daemon's own username so
+  self-originated requests do not appear as uploads to yourself.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 
