@@ -87,6 +87,7 @@
  - Progress (2026-04-30): Added richer `.milk2` transition and composite controls with preset-defined transition durations plus alpha/additive/screen/multiply secondary blend modes.
  - Progress (2026-04-30): Added q-register pressure metrics to the native MilkDrop compatibility matrix and a MilkDrop3-style fixture that exercises q1/q2/q16/q32/q48/q63/q64 across globals, primitives, and translated shaders.
  - Progress (2026-04-30): Added dense primitive-count validation with a curated 40-shape/20-wave fixture in compatibility reporting and native browser smoke coverage.
+ - Progress (2026-04-30): Added native transition modes beyond the default crossfade, including cut, fade-through-black, and overlay modes selected by preset aliases or caller options.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

@@ -14,12 +14,45 @@
 /tests/**/bin/
 /tests/**/obj/
 /dist/
+/publish/
 /logs/
 /node_modules/
 /package.json
 /package-lock.json
 coverage.json
 /test-artifacts/
+
+# Generated/local artifacts at any depth
+**/obj/
+**/[Tt]mp/
+**/[Tt]mp*/
+**/[Tt]emp/
+**/[Tt]emp*/
+**/[Aa]rtifact/
+**/[Aa]rtifacts/
+**/*[Aa]rtifact*/
+**/[Tt]est[Rr]esults/
+**/[Tt]est-[Rr]esults/
+**/playwright-report/
+**/coverage/
+**/.nyc_output/
+*.log
+*.pid
+*.trx
+*.coverage
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
+*.bak
+*.tmp
+*.temp
+*.nupkg
+*.snupkg
+*.tgz
+*.tar.gz
 
 # Local E2E artifacts (Playwright)
 /src/web/test-results/

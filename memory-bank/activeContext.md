@@ -46,6 +46,17 @@
   1. Commit the implementation and memory-bank updates with the current dirty workspace when requested.
   2. Keep any further visual polish centralized in `App.css` unless a page has a genuine local surface leak.
 
+## Update 2026-04-30 19:22:00Z
+
+- Current task: Native MilkDrop Phase 2 transition modes are implemented locally.
+- Last activity:
+  - added transition alpha mapping for crossfade, cut, fade-through-black, and overlay modes
+  - added preset aliases for `transition_mode` and caller option support for transition mode overrides
+  - validated focused native transition tests, broader native/player tests, native browser smoke, frontend lint, and frontend build
+- Next steps:
+  1. Run final whitespace/status checks.
+  2. Commit and push the transition-mode phase.
+
 ## Update 2026-04-30 19:16:00Z
 
 - Current task: Native MilkDrop Phase 2 dense wave/shape validation is implemented locally.

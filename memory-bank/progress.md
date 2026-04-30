@@ -7828,6 +7828,13 @@ Code quality improvements were completed as part of Option A:
 - ListenBrainz token clearing now removes storage and submission reports HTTP failure instead of always returning success.
 - Validation: `dotnet build --no-incremental --nologo --configuration Release`, focused backend test slice (`424/424`), `npm run lint`, `npm run build`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and `bash ./bin/lint` passed. The web production build still reports the existing large chunk warning, and .NET still reports existing analyzer warnings.
 
+## 2026-04-30 19:22:00Z
+
+- Added native MilkDrop transition modes beyond the original smooth crossfade: `cut`, `fade` / `fade_through_black`, and `overlay`.
+- Presets can select modes with `transition_mode` / `transition_style` aliases, and callers can override with an engine `transitionMode` option.
+- Transition rendering now maps eased progress to incoming/outgoing renderer-set alpha by mode while preserving existing renderer-set disposal behavior.
+- Validation: focused native transition tests (`19/19`), broader native/player tests (`53/53`), `npm run test:native-milkdrop-smoke`, `npm run lint -- --quiet`, and `npm run build` passed.
+
 ## 2026-04-30 19:16:00Z
 
 - Added a curated dense native MilkDrop fixture with 40 shapes and 20 custom waves to validate higher MilkDrop3-style primitive counts.

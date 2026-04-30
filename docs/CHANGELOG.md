@@ -42,6 +42,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   MilkDrop3-style q-register fixture in browser smoke coverage.
 - Added native MilkDrop dense primitive validation with a 40-shape/20-wave
   fixture included in compatibility and browser smoke coverage.
+- Added native MilkDrop transition modes for cut, fade-through-black, and
+  overlay behavior in addition to the default crossfade.
 - Added app-wide interaction affordances for hover, focus-visible, disabled,
   and clickable row states.
 - Added acquisition-profile request plumbing, documentation audit notes, and
