@@ -19,9 +19,10 @@
   - wired player ratings into promote-preview, archive-preview, keep-reviewing, and expiry-watch shelf classifications
   - surfaced a player Discovery Shelf modal with summary counts, action previews, remove, and clear controls
   - recorded live media-server, peer search, queue, download, scrobble, and file-action handoffs as follow-up scope
+  - validated broader player-focused tests, frontend lint, frontend production build, and whitespace checks
 - Next steps:
-  1. Run broader player-focused tests, frontend lint/build, and whitespace checks.
-  2. Continue E13 with preview policy refinement only if it avoids active DiscoveryInbox ownership.
+  1. Continue E13 with preview policy refinement only if it avoids active DiscoveryInbox ownership.
+  2. Wire real promote/archive/delete only after explicit backend preview and confirmation contracts exist.
 
 ## Update 2026-04-30 21:03:57Z
 
