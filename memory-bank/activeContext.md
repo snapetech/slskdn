@@ -1,3 +1,15 @@
+## Update 2026-04-30 02:20:00Z
+
+- Current task: None. Gold Star Club leave/revoke copy now states that leaving is irrevocable.
+- Last activity:
+  - added a browser confirmation before Gold Star Club leave
+  - changed the in-page Gold Star warning to say there are no rejoins
+  - updated README and Gold Star design docs to document permanent revocation
+  - validated frontend lint and diff whitespace
+- Next steps:
+  1. Keep Gold Star membership recovery/rejoin flows intentionally absent.
+  2. Review any future governance UI for the same irrevocable-leave language.
+
 ## Update 2026-04-30 01:45:00Z
 
 - Current task: None. Pod, room, chat, and contact social recovery surfaces are integrated.

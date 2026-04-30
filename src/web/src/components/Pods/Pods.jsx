@@ -345,6 +345,15 @@ class Pods extends Component {
 
     if (!activePodId || !peerId) return;
 
+    if (
+      podDetail?.podId === 'pod:901d57a2c1bb4e5d90d57a2c1bb4e5d0' &&
+      !window.confirm(
+        'Leaving Gold Star Club is irrevocable. You will not be able to rejoin or recover Gold Star status later. Leave anyway?',
+      )
+    ) {
+      return;
+    }
+
     try {
       await pods.leave(activePodId, peerId);
       toast.success(`Left ${podName}`);
@@ -622,9 +631,9 @@ class Pods extends Component {
                 </div>
                 {podDetail.description && <p>{podDetail.description}</p>}
                 {isGoldStarClub && (
-                  <Message info>
+                  <Message warning>
                     <Icon name="star" />
-                    Gold Star Club membership is limited to the first 250 nodes. Leaving this pod revokes your local Gold Star status and prevents automatic rejoin on restart.
+                    Gold Star Club membership is limited to the first 250 nodes. Leaving this pod permanently revokes local Gold Star status. There are no rejoins.
                   </Message>
                 )}
                 {podDetail.tags?.length > 0 && (
@@ -643,7 +652,7 @@ class Pods extends Component {
                   <Popup
                     content={
                       isGoldStarClub
-                        ? 'Leave Gold Star Club and record a local revocation so this node is not auto-joined again.'
+                        ? 'Permanently leave Gold Star Club. This is irrevocable and cannot be undone.'
                         : 'Leave this pod with the current user.'
                     }
                     trigger={

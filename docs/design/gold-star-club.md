@@ -9,7 +9,7 @@ The **Gold Star Club** is a special pod that automatically joins the first 250 u
 1. **Auto-join**: Network members automatically join on first connection unless they opt out
 2. **Limit**: Maximum 250 members
 3. **One-time**: Once full, no new members can be added (even if people leave)
-4. **Revocable**: A user can leave later to revoke local Gold Star status
+4. **Irrevocable leave**: A user can leave later, but leaving permanently revokes Gold Star status and cannot be undone
 5. **Exclusive**: Only the first 250 users get this privilege
 
 ## Implementation
@@ -22,7 +22,7 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 - Creates the pod on first startup (if it doesn't exist)
 - Auto-joins users when they first connect
 - Enforces 250-member limit
-- Records a local revocation marker when the user leaves, so default-on auto-join does not rejoin them on restart
+- Records a local revocation marker when the user leaves, so default-on auto-join does not rejoin them on restart or later
 - Caches membership status to avoid repeated checks
 
 ### Pod Details
@@ -53,11 +53,11 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 - **Caching**: Caches `isAcceptingMembers` status to avoid repeated DHT queries
 - **One-Time**: Once limit is reached, `isAcceptingMembers` is permanently set to `false`
 
-### Opt-Out and Revocation
+### Opt-Out and Irrevocable Revocation
 
 - **Before startup**: set `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=false`.
-- **After joining**: leave the Gold Star Club pod from the Pods page. The server writes a local `gold-star-club.revoked` marker in the app directory so the next restart does not auto-join again.
-- **Rejoin after revocation**: remove the local revocation marker and restart while membership is still below 250.
+- **After joining**: leave the Gold Star Club pod from the Pods page. The server writes a local `gold-star-club.revoked` marker in the app directory so the node does not auto-join again.
+- **No rejoins**: leaving is intentionally permanent. Gold Star status cannot be recovered later.
 
 ### Edge Cases Handled
 

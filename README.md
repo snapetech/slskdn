@@ -322,7 +322,7 @@ Topic-based micro-communities over the mesh overlay.
 - **DHT-based pod discovery** — Find pods by name, focus, or tags
 - **Decentralized chat** — Pod messaging over mesh overlay
 - **Soulseek chat bridge** — Bridge legacy Soulseek rooms to pods
-- **Gold Star Club** — Default-on auto-join pod for the first 250 users, used for realm governance bootstrap plus early-stage testing and feedback. Operators can opt out before startup with `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=false`; users can later leave the pod from the Web UI to revoke local Gold Star status.
+- **Gold Star Club** — Default-on auto-join pod for the first 250 users, used for realm governance bootstrap plus early-stage testing and feedback. Operators can opt out before startup with `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=false`; users can later leave the pod from the Web UI, but leaving is irrevocable and permanently revokes local Gold Star status.
 - **Pod APIs** — Full REST API for pod operations
 
 

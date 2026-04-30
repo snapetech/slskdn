@@ -1,3 +1,9 @@
+## 2026-04-30 02:20Z - Made Gold Star leave warning explicit
+
+- Updated the Gold Star Club Web UI warning and leave confirmation to state that leaving is irrevocable and there are no rejoins.
+- Updated README and the Gold Star Club design doc to remove rejoin guidance and document permanent status revocation.
+- Validation: `cd src/web && npm run lint -- --quiet` and `git diff --check` passed.
+
 ## 2026-04-30 01:45Z - Integrated social recovery surfaces
 
 - Reviewed the pod, room, chat, and contact UX as one social workflow rather than separate pages.
