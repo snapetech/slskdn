@@ -109,6 +109,29 @@ if (!authenticatedNormally || bearerIsExplicitShareToken)
 
 **Why This Keeps Happening**: The streaming endpoint supports both normal UI auth and share-token auth on the same route. The authorization branch must distinguish JWT/API auth from share tokens instead of blindly interpreting every bearer token as a share grant.
 
+### 0z180. DHT Object Payloads Need Explicit Serialization
+
+**The Bug**: Pod DHT publishing passed a private `SignedPod` DTO directly to `IMeshDhtClient.PutAsync`. The DHT client serializes non-byte payloads with MessagePack's standard resolver, which cannot serialize unannotated/private DTOs, causing `FormatterNotRegisteredException`.
+
+**Files Affected**:
+- `src/slskd/PodCore/PodDhtPublisher.cs`
+- `src/slskd/Mesh/Dht/MeshDhtClient.cs`
+
+**Wrong**:
+```csharp
+var signedPod = CreateSignedPod(pod);
+await _dhtClient.PutAsync(dhtKey, signedPod, ttlSeconds, ct);
+```
+
+**Correct**:
+```csharp
+var signedPod = CreateSignedPod(pod);
+var payload = JsonSerializer.SerializeToUtf8Bytes(signedPod);
+await _dhtClient.PutAsync(dhtKey, payload, ttlSeconds, ct);
+```
+
+**Why This Keeps Happening**: `IMeshDhtClient.PutAsync` accepts `object?`, so it is easy to assume arbitrary DTOs are safe. They are not. Either pass already-serialized `byte[]`, or make the type explicitly compatible with the DHT serializer and read path.
+
 ### 0z177. Fixed Pod IDs Must Still Match Pod Validation
 
 **The Bug**: `GoldStarClubService` used the human-readable fixed ID `pod:gold-star-club`, but `SqlitePodService` validates all pod IDs as `^pod:[a-f0-9]{32}$`. Startup crashed when the hosted service tried to ensure the Gold Star Club pod. The same class also derived a channel id as `$"{GoldStarClubPodId}:general"`, but channel ids only allow alphanumeric, dash, and underscore characters.
