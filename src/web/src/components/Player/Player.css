@@ -888,10 +888,22 @@
 }
 
 .player-visualizer-overlay-controls {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
   margin-left: auto;
+}
+
+.player-visualizer-native-library {
+  background: rgba(15, 18, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.75rem;
+  height: 26px;
+  max-width: 9rem;
+  padding: 0 0.35rem;
 }
 
 .player-visualizer-fullwindow .player-visualizer-overlay,

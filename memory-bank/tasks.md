@@ -16,6 +16,28 @@
  - Priority: P1
  - Design: `docs/design/webgl-milkdrop3-port.md`
  - Notes: Build a portable WebGL2-first visualizer engine inside slskdN with MilkDrop/MilkDrop3 preset compatibility, shared Web Audio input, `.milk2` double-preset support, q1-q64, FFT shader access, beat-driven preset changes, transitions, playlists/favorites, and an extensible renderer boundary. Keep the external MilkDrop3 launcher only as an interim bridge.
+ - Progress (2026-04-30): Added Phase 0 engine boundary with Butterchurn as the first adapter, then added the first parser/VM compatibility slice for `.milk`, basic `.milk2`, custom shape/wave equations, q1-q64 preservation, and deterministic equation evaluation.
+ - Progress (2026-04-30): Added the first WebGL2 renderer skeleton that compiles a shader program, evaluates preset equations, and draws a full-screen GPU pass from MilkDrop color variables.
+ - Progress (2026-04-30): Added ping-pong feedback texture/framebuffer targets, screen blit, target swapping, resize storage, and GPU cleanup.
+ - Progress (2026-04-30): Added first fixed-function warp uniforms from evaluated `zoom`, `rot`, `dx`, and `dy` values while sampling the previous feedback frame.
+ - Progress (2026-04-30): Added first waveform primitive pass that maps audio samples into WebGL line-strip vertices and draws them into the feedback target.
+ - Progress (2026-04-30): Added first parsed shape primitive pass that renders enabled shape entries as closed WebGL line strips.
+ - Progress (2026-04-30): Added first custom shape init/frame equation evaluation with per-shape q-register persistence and no global frame/audio scope leakage.
+ - Progress (2026-04-30): Added filled, bordered, alpha-blended, and additive rendering for parsed custom shapes.
+ - Progress (2026-04-30): Added first shape second-color gradient buffers and thick-outline line width handling.
+ - Progress (2026-04-30): Added first custom wave init/frame/point equation rendering with audio-sample inputs, colors, alpha, additive blending, and thick line hints.
+ - Progress (2026-04-30): Added custom wave dot rendering and spectrum-source sampling from frame frequency data.
+ - Progress (2026-04-30): Added analyzer-backed `get_fft` and `get_fft_hz` expression helpers using renderer-provided frequency data.
+ - Progress (2026-04-30): Added explicit WebGL attribute rebinding before each renderer draw path and first CPU-evaluated per-pixel warp-grid rendering.
+ - Progress (2026-04-30): Added first motion-vector rendering from `mv_*` preset values as alpha-blended WebGL line segments.
+ - Progress (2026-04-30): Added the native WebGL MilkDrop engine as an explicit opt-in player visualizer engine with curated smoke presets and shared Web Audio analyser input.
+ - Progress (2026-04-30): Added a Vite-backed Chromium pixel smoke test for the native WebGL renderer and exposed it as `npm run test:native-milkdrop-smoke`.
+ - Progress (2026-04-30): Added native-engine local `.milk`/`.milk2` preset import with overlay affordance, local persistence, and component/adapter tests.
+ - Progress (2026-04-30): Added native render-loop error surfacing for unsupported imported presets and clears persisted bad imports; documented the gotcha as `bf9e51b3a`.
+ - Progress (2026-04-30): Expanded native expression compatibility with common NSEEL math/constants, `rand`, and bitwise helper functions.
+ - Progress (2026-04-30): Added import-time native preset compatibility reporting for unsupported equation functions and pending shader sections before replacing the active renderer.
+ - Progress (2026-04-30): Added a capped browser-local native preset library with multi-file `.milk`/`.milk2` import, skipped-file reporting, and overlay preset reload selector.
+ - Progress (2026-04-30): Added inline bitwise, shift, unary, and logical expression operator support for `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` in native MilkDrop equations.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

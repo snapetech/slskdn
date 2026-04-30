@@ -60,10 +60,61 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 
 ### Phase 1: Classic Preset Renderer
 
-- Parse `.milk` presets into a typed model.
-- Implement expression evaluation for core preset variables.
+- [x] Parse `.milk` presets into a typed model.
+- [x] Implement the first expression evaluation slice for core preset variables.
+- [x] Add a minimal WebGL2 renderer skeleton driven by parsed/evaluated preset state.
+- [x] Add the first feedback texture ping-pong pipeline.
+- [x] Add first preset-driven warp uniforms for zoom, rotation, and translation.
+- [x] Add first waveform line-strip primitive pass from audio samples.
+- [x] Add first parsed shape outline primitive pass.
+- [x] Add first custom shape init/frame equation evaluation.
+- [x] Add first filled, bordered, alpha-blended, and additive custom shape rendering.
+- [x] Add first custom shape second-color gradients and thick-outline handling.
+- [x] Add first custom wave init/frame/point equation rendering.
+- [x] Add first custom wave dots and spectrum modes.
+- [x] Add first analyzer-backed `get_fft` / `get_fft_hz` expression helpers.
+- [x] Add first CPU-evaluated per-pixel warp grid renderer.
+- [x] Add first motion-vector primitive renderer.
+- [x] Add an explicit player UI engine switch for the native WebGL renderer.
+- [x] Add a browser/WebGL canvas pixel smoke test for the native renderer.
+- [x] Add first local `.milk` / `.milk2` preset import for the native renderer.
+- [x] Add native preset runtime-error surfacing and bad-import cleanup.
+- [x] Add more common NSEEL math helpers for imported preset compatibility.
+- [x] Add first import-time native preset compatibility reporting.
+- [x] Add browser-local native preset library and multi-file preset import.
+- [x] Add first inline bitwise/shift/logical expression operator support.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
+
+Current parser/VM scope:
+
+- Parses classic `.milk` base values, global init/per-frame/per-pixel equations, warp/comp shader text, custom shapes, and custom waves.
+- Detects simple `.milk2` double-preset files and preserves both preset bodies.
+- Preserves MilkDrop3 q1-q64 variables for later render/equation phases.
+- Evaluates deterministic arithmetic, assignment, compound assignment, comparison, and core helper functions.
+- Throws on unsupported syntax instead of silently mis-evaluating presets.
+- Creates a WebGL2 program and draws a placeholder full-screen triangle from evaluated MilkDrop color variables. This is not yet a MilkDrop feedback renderer; it proves the parser/VM/render boundary can drive GPU output.
+- Allocates two WebGL texture/framebuffer targets, writes each frame into the feedback target, blits that target to screen, then swaps read/write targets. The current pass uses `decay` as the feedback blend; warp/comp shader logic is still pending.
+- Applies first-pass warp state from evaluated `zoom`, `rot`, `dx`, and `dy` variables while sampling the previous feedback texture. This is still a compatibility stepping stone, not translated preset warp shader execution.
+- Converts incoming waveform samples into clip-space vertices and draws them as a WebGL `LINE_STRIP` into the feedback target before the screen blit. Custom wave equations and MilkDrop waveform modes are still pending.
+- Converts enabled parsed shape entries into closed polygon line strips using `x`, `y`, `rad`, `sides`, `ang`, and `r/g/b` values.
+- Evaluates custom shape init/frame equations before drawing and persists shape-owned values plus q-registers without leaking global frame/audio variables into shape base values.
+- Draws custom shapes as triangle-fan fills plus optional border line strips, including alpha blending and the parsed `additive` flag.
+- Supports first-pass shape center-to-edge gradients through `r2/g2/b2/a2` and thick-outline line width hints. Textured shapes and full MilkDrop shape modes are still pending.
+- Evaluates custom wave init/frame/point equations into WebGL line-strip vertices using audio samples as point inputs, with per-wave q-register persistence, color/alpha, additive blending, and thick line hints.
+- Supports first-pass custom wave dot rendering and spectrum-source sampling from frame frequency data.
+- Supports analyzer-backed `get_fft(pos)` and `get_fft_hz(freq)` expression helpers against renderer-provided frequency data. Full MilkDrop wave modes and shader-side FFT access are still pending.
+- Rebinds WebGL vertex attributes before each fullscreen, warp-grid, wave, and shape draw so program switches cannot leave draw calls pointed at stale buffers.
+- Draws presets with global `per_pixel` equations through a CPU-evaluated triangle grid. The grid evaluates MilkDrop `x`, `y`, `rad`, and `ang` values per vertex, converts local `dx/dy/zoom/rot` into source UVs, and samples the previous feedback texture through a dedicated grid shader. This is a compatibility stepping stone before GLSL translation of full warp shaders.
+- Draws first-pass motion vectors from `mv_x`, `mv_y`, `mv_dx`, `mv_dy`, `mv_l`, and `mv_r/g/b/a` values as alpha-blended WebGL line segments.
+- The player visualizer overlay can now switch between Butterchurn and the native `slskdN MilkDrop WebGL` engine. The native adapter uses the shared Web Audio visualizer tap, reads waveform/frequency data through its own analyser, and feeds curated smoke presets through the native renderer. Butterchurn remains the default engine while the native path matures.
+- `npm run test:native-milkdrop-smoke` starts a local Vite server, loads the real native renderer modules in Chromium, renders a curated WebGL preset to a canvas, and fails if readback pixel statistics indicate a blank frame.
+- Native mode exposes a local file import button for `.milk` and `.milk2` text presets. Imported preset text is loaded into the native renderer, the preset name is surfaced in the overlay, and the last imported preset is persisted in browser local storage for the next native-engine session.
+- Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
+- The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
+- The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
+- Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections while shader translation is still pending.
+- Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
 
 ### Phase 2: MilkDrop3 Feature Deltas
 

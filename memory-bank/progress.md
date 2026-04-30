@@ -1,3 +1,131 @@
+## 2026-04-30 05:28Z - Added native MilkDrop unary and shift expression operators
+
+- Added expression VM tokenization and parser support for `!`, `~`, `<<`, and `>>`.
+- Extended the compatibility tests so shift and unary expressions are covered with the existing bitwise/logical operator path.
+- Validation: focused native/player tests passed with `43/43` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 05:27Z - Added native MilkDrop inline bitwise/logical operators
+
+- Added expression tokenization and parser precedence for inline `&`, `|`, `^`, `&&`, and `||`.
+- Presets that use bitwise/logical operator syntax now evaluate through the native VM instead of being rejected when helper functions would otherwise have worked.
+- Added VM tests for inline bitwise/logical expressions while preserving explicit unsupported-syntax failures.
+- Validation: focused native/player tests passed with `43/43` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 05:25Z - Added native MilkDrop batch preset import
+
+- Native preset import now accepts multiple `.milk` / `.milk2` files from the browser file picker.
+- Compatible presets are added to the capped browser-local library, with the last compatible preset becoming the active native renderer preset.
+- Incompatible files are skipped with a visible count and sample filenames, so one shader-bearing or unsupported preset does not abort a whole local batch.
+- Added component coverage for batch import, skipped-file reporting, persisted active preset, and library ordering.
+- Validation: focused native/player tests passed with `42/42` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 05:21Z - Added native MilkDrop preset library selector
+
+- Imported native `.milk` / `.milk2` presets are now stored in a capped browser-local library instead of only persisting the most recent import.
+- Native visualizer mode shows a compact preset selector when saved imports exist, and reloading a saved preset uses the same compatibility and render-error handling path as a fresh import.
+- Updated the WebGL MilkDrop port design note and task log for this slice.
+- Validation: `npm test -- src/components/Player/Visualizer.test.jsx src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetCompatibility.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 05:15Z - Added native MilkDrop compatibility reporting
+
+- Added a compatibility analyzer for imported native MilkDrop presets.
+- Import now scans global, shape, and wave equations for unsupported function calls before replacing the active renderer.
+- Import also reports pending `warp_shader` and `comp_shader` sections while shader translation is not implemented.
+- Added focused compatibility and native adapter tests.
+- Validation: `npm test -- src/components/Player/Visualizer.test.jsx src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetCompatibility.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 05:12Z - Expanded native MilkDrop expression compatibility
+
+- Added common NSEEL helpers and constants to the native MilkDrop expression VM: `pi`, `e`, inverse trig, `atan2`, `tan`, logs, `exp`, `sign`, `sigmoid`, bounded integer `rand`, and bitwise helpers.
+- Added tests for helper behavior, clamping, constants, and rand bounds.
+- Validation: `npm test -- src/components/Player/Visualizer.test.jsx src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 05:09Z - Surfaced native MilkDrop render errors
+
+- Added a render-loop failure boundary around visualizer engines.
+- Native preset runtime errors now show the underlying unsupported syntax/function detail in the overlay.
+- Bad persisted imported native presets are cleared when render fails, so future native sessions do not repeatedly load the same broken preset.
+- Documented the render-loop gotcha and committed it as `bf9e51b3a`.
+- Validation: `npm test -- src/components/Player/Visualizer.test.jsx src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 05:06Z - Added native MilkDrop preset import
+
+- Added `loadPresetText(source, fileName)` to the native MilkDrop engine adapter.
+- Native mode now exposes a tooltipped `.milk` / `.milk2` import button in the visualizer overlay.
+- Imported preset text is loaded into the native renderer, displayed by name, and persisted in browser local storage for the next native session.
+- Added component coverage for switching to native mode and importing a local preset.
+- Validation: `npm test -- src/components/Player/Visualizer.test.jsx src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 05:03Z - Added native MilkDrop browser smoke test
+
+- Added `scripts/smoke-native-milkdrop.mjs`, a Vite-backed Chromium smoke test that imports the real native renderer modules, renders a curated MilkDrop preset, reads canvas pixels, and fails on blank output.
+- Exposed the smoke as `npm run test:native-milkdrop-smoke`.
+- Validation: `npm test -- src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:57Z - Added player-selectable native MilkDrop engine
+
+- Added a native MilkDrop visualizer engine adapter that hosts the WebGL renderer behind the existing player visualizer boundary.
+- The native adapter reads waveform and frequency data from the shared Web Audio visualizer tap through its own analyser and feeds renderer frames with sample rate and time.
+- Added curated native smoke presets that exercise warp grid, motion vectors, shapes, waveform, spectrum, and dots.
+- Added a tooltipped visualizer overlay control to switch between Butterchurn and `slskdN native`; the choice is persisted in local storage while Butterchurn remains the default.
+- Validation: `npm test -- src/components/Player/visualizers/nativeMilkdropEngine.test.js src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:53Z - Added MilkDrop motion vectors
+
+- Added motion-vector vertex generation from `mv_x`, `mv_y`, `mv_dx`, `mv_dy`, and `mv_l`.
+- Added motion-vector color and alpha handling from `mv_r/g/b/a`.
+- Renderer now draws motion vectors as alpha-blended WebGL line segments into the feedback target.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:52Z - Added MilkDrop per-pixel warp grid
+
+- Fixed native MilkDrop WebGL attribute rebinding so each draw path rebinds its own buffers before drawing; documented the gotcha and committed it as `103d4c2a0`.
+- Added a dedicated warp-grid shader and dynamic position/source-UV buffers.
+- Presets with global `per_pixel` equations now render a CPU-evaluated triangle grid using per-vertex `x`, `y`, `rad`, `ang`, and local `dx/dy/zoom/rot` values to sample the previous feedback frame.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:48Z - Added MilkDrop FFT expression helpers
+
+- Added analyzer-backed `get_fft(pos)` and `get_fft_hz(freq)` support to the expression VM.
+- Renderer frame scope now includes frequency data and sample rate so preset equations can read analyzer bins.
+- Added tests for byte-frequency normalization, normalized-position sampling, and Hz-to-bin mapping.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:46Z - Added MilkDrop custom wave dots and spectrum mode
+
+- Added point-size support to the primitive WebGL shader.
+- Custom waves with `dots` now render as point primitives; `thick` increases point size.
+- Custom waves with `spectrum` now consume frame frequency data when provided and normalize byte-frequency values for point equations.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:43Z - Added MilkDrop custom wave equations
+
+- Added custom wave init/frame state evaluation with q-register persistence and isolated frame/audio inputs.
+- Added point-equation vertex generation for enabled custom waves using audio samples as the per-point source.
+- Custom waves now draw as WebGL line strips with color/alpha, additive blending, and thick line hints.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:41Z - Added MilkDrop shape gradients and thick outlines
+
+- Moved primitive rendering to per-vertex color buffers so shape fills can carry center-to-edge gradients.
+- Added `r2/g2/b2/a2` gradient edge colors and `thickoutline` line width hints for custom shapes.
+- Added renderer tests for repeated color buffers, gradient fill colors, and thick-outline state.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:39Z - Added filled and additive MilkDrop shapes
+
+- Added triangle-fan fill rendering for enabled custom shapes alongside border line strips.
+- Shape drawing now uses alpha blending and respects parsed `additive` shape flags.
+- Added tests for fill geometry, fill/border colors, normal alpha blending, and additive blending.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
+## 2026-04-30 04:36Z - Added MilkDrop custom shape equations
+
+- Added custom shape init/frame equation evaluation to the native WebGL MilkDrop renderer.
+- Shape state now persists shape-owned values and q-registers while keeping frame/audio globals as read-only inputs.
+- Added renderer regression coverage for init-once behavior, animated shape values, q-register persistence, and scope isolation.
+- Validation: `npm test -- src/components/Player/visualizers/milkdrop/presetParser.test.js src/components/Player/visualizers/milkdrop/expressionVm.test.js src/components/Player/visualizers/milkdrop/milkdropRenderer.test.js src/components/Player/PlayerBar.test.jsx --watch=false`; `npm run lint -- --quiet`; `npm run build`.
+
 ## 2026-04-30 02:20Z - Made Gold Star leave warning explicit
 
 - Updated the Gold Star Club Web UI warning and leave confirmation to state that leaving is irrevocable and there are no rejoins.
@@ -7317,6 +7445,49 @@ Code quality improvements were completed as part of Option A:
 - Fixed Gold Star Club startup blockers uncovered during the smoke test: the reserved pod id and default channel id now both satisfy PodCore validation, with gotchas documented in ADR-0001.
 - Browser-verified playback from two separate Vite dev servers (`localhost:3001` and `localhost:3002`): both loaded the same integrated stream endpoint, reached `readyState: 4`, and played the 53.88-second audio without media errors.
 - Added `docs/assets/readme-showcase/player-commons-smoke.png` to the README screenshot gallery.
+
+## 2026-04-30 04:32:55Z
+
+- Added the first parsed shape primitive pass to the native MilkDrop renderer.
+- Enabled `shapeNN_*` entries now generate closed polygon line strips from parsed `x`, `y`, `rad`, `sides`, `ang`, and `r/g/b` values, then render into the feedback target before the screen blit.
+- This is an outline-only stepping stone; filled shapes, borders, additive blending, and shape equations still need follow-up passes.
+- Validation: renderer tests (`9/9`) and `npm run lint -- --quiet` passed before broader validation.
+
+## 2026-04-30 04:29:10Z
+
+- Added the first foreground primitive pass to the native MilkDrop renderer.
+- Incoming waveform samples now map into clip-space vertices and render as a WebGL `LINE_STRIP` into the feedback target before the screen blit.
+- The pass uses the evaluated frame color and `wave_scale` for the first simple waveform path. Full MilkDrop wave modes and custom wave equations remain pending.
+- Validation: renderer tests (`7/7`) and `npm run lint -- --quiet` passed before broader validation.
+
+## 2026-04-30 04:25:32Z
+
+- Added the first preset-driven warp state to the native MilkDrop renderer.
+- The feedback shader now samples the previous frame through evaluated `zoom`, `rot`, `dx`, and `dy` uniforms, with sane defaults and invalid zoom handling.
+- Tests now lock warp uniform values and warp-state normalization in addition to the existing feedback pipeline assertions.
+- Validation: renderer tests (`6/6`) and `npm run lint -- --quiet` passed before broader validation.
+
+## 2026-04-30 04:22:26Z
+
+- Extended the native MilkDrop WebGL renderer skeleton with the first real feedback primitive: ping-pong textures/framebuffers.
+- Each frame now renders into a feedback target, blits that target back to the screen, swaps read/write targets, resizes texture storage with the canvas, and releases GPU resources on dispose.
+- The current feedback blend is driven by the parsed/evaluated `decay` value. This is still a foundation pass, not yet full MilkDrop warp/comp rendering.
+- Validation: renderer tests (`5/5`) and `npm run lint -- --quiet` passed before broader validation.
+
+## 2026-04-30 04:19:23Z
+
+- Added `milkdropRenderer.js`, a minimal WebGL2 renderer skeleton for the native browser MilkDrop path.
+- The renderer compiles a tiny WebGL2 program, evaluates preset init/per-frame equations, maps MilkDrop color variables into a full-screen GPU draw, supports resize through the renderer boundary, and fails clearly when WebGL2 is unavailable.
+- Added renderer tests with a fake WebGL2 context to lock program creation, equation-driven frame color, draw calls, resize behavior, color clamping, and WebGL2 failure behavior.
+- Validation: MilkDrop parser/VM/renderer tests (`9/9`) and `npm run lint -- --quiet` passed.
+
+## 2026-04-30 04:17:00Z
+
+- Added the first browser-native MilkDrop compatibility foundation under `src/web/src/components/Player/visualizers/milkdrop`.
+- Implemented a `.milk`/basic `.milk2` parser that captures base values, global equations, custom shape/wave equations, warp/comp shader text, and q1-q64-compatible equation strings.
+- Implemented a deterministic first-slice expression VM for arithmetic, assignments, compound assignments, comparisons, and core MilkDrop helper functions. Unsupported functions/syntax throw instead of silently producing wrong output.
+- Documented and committed the custom wave/shape equation parser gotcha as `7a6bf43ef`.
+- Validation: MilkDrop parser/VM tests (`5/5`), player tests (`7/7`), `npm run lint -- --quiet`, `npm run build`, and `git diff --check` passed.
 
 ## 2026-04-30 04:08:24Z
 

@@ -3,6 +3,78 @@ import { Button, Icon, Popup } from 'semantic-ui-react';
 import { resumeAudioGraph } from './audioGraph';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import { createButterchurnEngine } from './visualizers/butterchurnEngine';
+import { createNativeMilkdropEngine } from './visualizers/nativeMilkdropEngine';
+
+const visualizerEngineStorageKey = 'slskdn.player.visualizerEngine';
+const nativePresetStorageKey = 'slskdn.player.nativeMilkdropPreset';
+const nativePresetLibraryStorageKey = 'slskdn.player.nativeMilkdropPresetLibrary';
+const nativePresetLibraryLimit = 20;
+
+const readStoredEngine = () => {
+  if (typeof window === 'undefined') return 'butterchurn';
+  return window.localStorage.getItem(visualizerEngineStorageKey) === 'native'
+    ? 'native'
+    : 'butterchurn';
+};
+
+const getNextEngine = (engine) => (engine === 'native' ? 'butterchurn' : 'native');
+
+const getEngineLabel = (engine) => (engine === 'native' ? 'slskdN native' : 'Butterchurn');
+
+const getVisualizerErrorMessage = (engineType, error) => {
+  const detail = error?.message ? ` ${error.message}` : '';
+  return engineType === 'native'
+    ? `Native MilkDrop render failed.${detail}`
+    : 'MilkDrop failed. Showing analyzer fallback.';
+};
+
+const readStoredNativePreset = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(window.localStorage.getItem(nativePresetStorageKey) || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const readStoredNativePresetLibrary = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const library = JSON.parse(
+      window.localStorage.getItem(nativePresetLibraryStorageKey) || '[]',
+    );
+    return Array.isArray(library)
+      ? library.filter((preset) => preset?.id && preset?.source)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeStoredNativePresetLibrary = (library) => {
+  window.localStorage.setItem(
+    nativePresetLibraryStorageKey,
+    JSON.stringify(library.slice(0, nativePresetLibraryLimit)),
+  );
+};
+
+const upsertNativePresetLibraryEntry = (library, entry) => [
+  entry,
+  ...library.filter((preset) => preset.id !== entry.id),
+].slice(0, nativePresetLibraryLimit);
+
+const getNativePresetFileId = (file) =>
+  [file.name, file.size, file.lastModified].filter((part) => part !== undefined).join(':');
+
+const getNativePresetImportMessage = ({ importedCount, skipped }) => {
+  if (skipped.length === 0) return null;
+  const skippedNames = skipped.slice(0, 3).map((preset) => preset.fileName).join(', ');
+  const remaining = skipped.length > 3 ? `, +${skipped.length - 3} more` : '';
+  const prefix = importedCount > 0
+    ? `Imported ${importedCount}; skipped ${skipped.length}`
+    : `Native preset import failed for ${skipped.length}`;
+  return `${prefix}: ${skippedNames}${remaining}.`;
+};
 
 const supportsWebGl2 = () => {
   try {
@@ -17,18 +89,31 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
+  const fileInputRef = useRef(null);
   const rafRef = useRef(null);
   const engineAudioNodeRef = useRef(null);
   const [fallbackMode, setFallbackMode] = useState(false);
+  const [engineType, setEngineType] = useState(readStoredEngine);
   const [engineName, setEngineName] = useState('');
+  const [nativePresetLibrary, setNativePresetLibrary] = useState(readStoredNativePresetLibrary);
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
 
   const renderLoop = useCallback(() => {
     if (!engineRef.current) return;
-    engineRef.current.render();
+    try {
+      engineRef.current.render();
+    } catch (renderError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to render MilkDrop visualizer', renderError);
+      if (engineType === 'native') {
+        window.localStorage.removeItem(nativePresetStorageKey);
+      }
+      setError(getVisualizerErrorMessage(engineType, renderError));
+      return;
+    }
     rafRef.current = window.requestAnimationFrame(renderLoop);
-  }, []);
+  }, [engineType]);
 
   const cyclePreset = useCallback(() => {
     if (!engineRef.current) return;
@@ -74,7 +159,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           return;
         }
 
-        const engine = await createButterchurnEngine({
+        const createEngine = engineType === 'native'
+          ? createNativeMilkdropEngine
+          : createButterchurnEngine;
+        const engine = await createEngine({
           audioContext: graph.ctx,
           audioNode: graph.visualizerInput,
           canvas: canvasRef.current,
@@ -89,6 +177,14 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         engineAudioNodeRef.current = graph.visualizerInput;
         setEngineName(engine.name);
         setPresetName(engine.presetName);
+        const storedNativePreset = engineType === 'native' ? readStoredNativePreset() : null;
+        if (storedNativePreset?.source && engine.loadPresetText) {
+          const importedPresetName = engine.loadPresetText(
+            storedNativePreset.source,
+            storedNativePreset.fileName,
+          );
+          setPresetName(importedPresetName);
+        }
         sizeCanvas();
 
         if (typeof window.ResizeObserver === 'function' && containerRef.current) {
@@ -100,7 +196,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       } catch (importError) {
         // eslint-disable-next-line no-console
         console.error('Failed to load Milkdrop visualizer', importError);
-        setError('MilkDrop failed. Showing analyzer fallback.');
+        setError(getVisualizerErrorMessage(engineType, importError));
         setFallbackMode(true);
       }
     })();
@@ -125,7 +221,11 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       engineAudioNodeRef.current = null;
       setEngineName('');
     };
-  }, [mode, audioElement, renderLoop, sizeCanvas]);
+  }, [mode, audioElement, engineType, renderLoop, sizeCanvas]);
+
+  useEffect(() => {
+    window.localStorage.setItem(visualizerEngineStorageKey, engineType);
+  }, [engineType]);
 
   useEffect(() => {
     sizeCanvas();
@@ -168,6 +268,83 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     onModeChange('inline');
   }, [onModeChange]);
 
+  const importNativePreset = useCallback(async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (files.length === 0 || !engineRef.current?.loadPresetText) return;
+
+    setError(null);
+    const imported = [];
+    const skipped = [];
+
+    for (const file of files) {
+      try {
+        const source = await file.text();
+        const importedPresetName = engineRef.current.inspectPresetText
+          ? engineRef.current.inspectPresetText(source, file.name).title
+          : engineRef.current.loadPresetText(source, file.name);
+        imported.push({
+          fileName: file.name,
+          id: getNativePresetFileId(file),
+          source,
+          title: importedPresetName,
+        });
+      } catch (presetError) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to import native MilkDrop preset', presetError);
+        skipped.push({
+          fileName: file.name,
+          message: presetError?.message || 'Unsupported syntax or shader features may be present.',
+        });
+      }
+    }
+
+    if (imported.length > 0) {
+      const activePreset = imported[imported.length - 1];
+      const activePresetName = engineRef.current.loadPresetText(
+        activePreset.source,
+        activePreset.fileName,
+      );
+      activePreset.title = activePresetName;
+      window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(activePreset));
+      setNativePresetLibrary((library) => {
+        const nextLibrary = imported.reduce(
+          (next, entry) => upsertNativePresetLibraryEntry(next, entry),
+          library,
+        );
+        writeStoredNativePresetLibrary(nextLibrary);
+        return nextLibrary;
+      });
+      setPresetName(activePresetName);
+      sizeCanvas();
+    }
+
+    const importMessage = getNativePresetImportMessage({
+      importedCount: imported.length,
+      skipped,
+    });
+    if (importMessage) {
+      setError(importMessage);
+    }
+  }, [sizeCanvas]);
+
+  const loadNativeLibraryPreset = useCallback((event) => {
+    const preset = nativePresetLibrary.find((entry) => entry.id === event.target.value);
+    if (!preset || !engineRef.current?.loadPresetText) return;
+
+    try {
+      setError(null);
+      const loadedPresetName = engineRef.current.loadPresetText(preset.source, preset.fileName);
+      window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(preset));
+      setPresetName(loadedPresetName);
+      sizeCanvas();
+    } catch (presetError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load native MilkDrop preset from library', presetError);
+      setError(presetError?.message || 'Native preset load failed.');
+    }
+  }, [nativePresetLibrary, sizeCanvas]);
+
   if (mode === 'off') return null;
 
   const className = `player-visualizer player-visualizer-${mode}`;
@@ -197,6 +374,67 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           className="player-visualizer-overlay-controls"
           onClick={(event) => event.stopPropagation()}
         >
+          <input
+            accept=".milk,.milk2,text/plain"
+            hidden
+            multiple
+            onChange={importNativePreset}
+            ref={fileInputRef}
+            type="file"
+          />
+          <Popup
+            content={`Switch visualizer engine to ${getEngineLabel(getNextEngine(engineType))}.`}
+            trigger={
+              <Button
+                aria-label={`Switch visualizer engine to ${getEngineLabel(getNextEngine(engineType))}`}
+                data-testid="visualizer-switch-engine"
+                icon
+                onClick={() => setEngineType((current) => getNextEngine(current))}
+                size="mini"
+              >
+                <Icon name={engineType === 'native' ? 'microchip' : 'magic'} />
+              </Button>
+            }
+          />
+          {engineType === 'native' ? (
+            <>
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content="Reload a previously imported native preset."
+                  trigger={
+                    <select
+                      aria-label="Native MilkDrop preset library"
+                      className="player-visualizer-native-library"
+                      data-testid="visualizer-native-preset-library"
+                      onChange={loadNativeLibraryPreset}
+                      value=""
+                    >
+                      <option value="">Presets</option>
+                      {nativePresetLibrary.map((preset) => (
+                        <option key={preset.id} value={preset.id}>
+                          {preset.title || preset.fileName}
+                        </option>
+                      ))}
+                    </select>
+                  }
+                />
+              ) : null}
+              <Popup
+                content="Import a local .milk or .milk2 preset into the native WebGL renderer."
+                trigger={
+                  <Button
+                    aria-label="Import native MilkDrop preset"
+                    data-testid="visualizer-import-native-preset"
+                    icon
+                    onClick={() => fileInputRef.current?.click()}
+                    size="mini"
+                  >
+                    <Icon name="upload" />
+                  </Button>
+                }
+              />
+            </>
+          ) : null}
           <Popup
             content="Load a different MilkDrop preset."
             trigger={

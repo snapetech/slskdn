@@ -1,3 +1,299 @@
+## Update 2026-04-30 05:28:58Z
+
+- Current task: Native MilkDrop expression compatibility now includes unary and shift operators.
+- Last activity:
+  - added token/parser support for `!`, `~`, `<<`, and `>>`
+  - extended VM coverage for shift and unary expressions alongside bitwise/logical operators
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue toward shader translation or larger preset-pack compatibility.
+  2. Add richer native preset library management once more compatibility gaps are closed.
+
+## Update 2026-04-30 05:27:23Z
+
+- Current task: Native MilkDrop expression compatibility now accepts inline bitwise/logical operators.
+- Last activity:
+  - expression tokenization now recognizes `&`, `|`, `^`, `&&`, and `||`
+  - parser precedence now evaluates bitwise and logical operators after arithmetic/comparison expressions
+  - added VM tests for inline bitwise/logical expressions and unsupported syntax preservation
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue toward shader translation or larger preset-pack compatibility.
+  2. Expand native expression compatibility based on real preset syntax.
+
+## Update 2026-04-30 05:25:10Z
+
+- Current task: Native MilkDrop preset imports now support small local batches.
+- Last activity:
+  - local native preset import accepts multiple `.milk` / `.milk2` files
+  - compatible presets are added to the capped browser-local library and the last compatible preset becomes active
+  - incompatible presets are skipped with a visible skipped-file summary instead of aborting the whole batch
+  - added component coverage for batch import, skipped shader-bearing presets, persisted active preset, and library ordering
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue with shader translation or richer preset-pack management.
+  2. Expand native expression compatibility based on real preset syntax.
+
+## Update 2026-04-30 05:21:39Z
+
+- Current task: Native MilkDrop preset imports now have a small browser-local library.
+- Last activity:
+  - imported `.milk` / `.milk2` presets are added to a capped local library instead of only replacing the last preset
+  - native mode shows a compact preset selector in the visualizer overlay when imported presets exist
+  - selecting a saved import reloads it through the same compatibility and runtime safety path as a fresh import
+  - updated the WebGL MilkDrop port design note and task log for the library slice
+  - validated focused player/native MilkDrop tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue with shader translation or richer native preset-pack management.
+  2. Add bulk preset-pack import/search once the native compatibility report is useful for real packs.
+
+## Update 2026-04-30 05:15:41Z
+
+- Current task: Native MilkDrop import-time compatibility reporting is implemented locally.
+- Last activity:
+  - exported supported-function checks from the expression VM
+  - added a compatibility analyzer that scans global, shape, and wave equations for unsupported functions
+  - import now rejects presets with unsupported equation functions or pending `warp_shader` / `comp_shader` sections before replacing the active renderer
+  - added focused compatibility and native adapter tests
+  - validated focused MilkDrop/player tests, native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Decide whether shader-bearing presets should be rejected or loaded with shader warnings once a partial shader translator exists.
+  2. Add a preset library/list UI after compatibility reporting is useful enough for real preset packs.
+
+## Update 2026-04-30 05:12:52Z
+
+- Current task: Native MilkDrop expression compatibility is expanded locally.
+- Last activity:
+  - added common NSEEL helpers/constants to the expression VM: `pi`, `e`, inverse trig, `atan2`, `tan`, logs, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions
+  - added tests for helper behavior, clamping, integer rand bounds, and constants
+  - validated focused MilkDrop/player tests, native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Build an unsupported-feature report for imported presets.
+  2. Add a preset library/list UI after compatibility reporting is useful.
+
+## Update 2026-04-30 05:09:32Z
+
+- Current task: Native MilkDrop runtime preset errors are surfaced locally.
+- Last activity:
+  - native/Butterchurn visualizer render loop now catches engine render failures
+  - native render errors show the underlying unsupported syntax/function detail in the overlay
+  - persisted imported native preset text is cleared when render fails so bad imports do not poison future sessions
+  - documented the render-loop gotcha and committed it as `bf9e51b3a`
+  - validated focused MilkDrop/player tests, native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Add a preset library/list UI after compatibility reporting matures.
+  2. Expand the native parser/VM support matrix with prioritized unsupported functions found from real presets.
+
+## Update 2026-04-30 05:06:48Z
+
+- Current task: Native MilkDrop local preset import is implemented locally.
+- Last activity:
+  - added native engine `loadPresetText(source, fileName)`
+  - added a tooltipped `.milk` / `.milk2` import button when the native engine is active
+  - imported preset text is loaded into the native renderer, displayed by name, and persisted in local storage for the next native session
+  - added component coverage for switching to native mode and importing a local preset
+  - validated focused MilkDrop/player tests, native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Add clearer unsupported-syntax diagnostics when imported presets fail.
+  2. Add a preset library/list UI after unsupported-feature reporting is useful.
+
+## Update 2026-04-30 05:03:40Z
+
+- Current task: Native MilkDrop browser canvas smoke coverage is implemented locally.
+- Last activity:
+  - added `scripts/smoke-native-milkdrop.mjs`
+  - smoke script starts a Vite server, opens Chromium, imports the real native renderer modules, renders a curated preset, and reads canvas pixels
+  - smoke fails on blank output using lit-pixel and channel-total thresholds
+  - exposed the smoke as `npm run test:native-milkdrop-smoke`
+  - validated focused MilkDrop/player tests, native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Add user preset loading/import for the native engine.
+  2. Add visualizer error surfacing for unsupported native preset syntax.
+
+## Update 2026-04-30 04:57:05Z
+
+- Current task: Native MilkDrop engine is player-selectable locally.
+- Last activity:
+  - added a `createNativeMilkdropEngine` adapter around the WebGL renderer
+  - native engine reads waveform and frequency data from the shared Web Audio visualizer tap through its own analyser
+  - added curated native smoke presets exercising warp grid, motion vectors, shapes, waveform, spectrum, and dots
+  - added a tooltipped visualizer overlay button to switch between Butterchurn and `slskdN native`, with the choice persisted in local storage
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add a Playwright/browser canvas smoke test for the native engine path.
+  2. Add user preset loading once the native path has browser-level smoke coverage.
+
+## Update 2026-04-30 04:53:44Z
+
+- Current task: First motion-vector primitive rendering is implemented locally.
+- Last activity:
+  - added motion-vector geometry from `mv_x`, `mv_y`, `mv_dx`, `mv_dy`, and `mv_l`
+  - added motion-vector color/alpha from `mv_r/g/b/a` with frame-color fallback
+  - renderer draws motion vectors as alpha-blended WebGL line segments into the feedback target
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add renderer/player selection for the native MilkDrop engine behind an explicit opt-in control.
+  2. Add a browser canvas smoke test once the native path is reachable from the player UI.
+
+## Update 2026-04-30 04:52:13Z
+
+- Current task: First per-pixel warp-grid renderer is implemented locally.
+- Last activity:
+  - fixed WebGL attribute rebinding before every fullscreen, primitive, wave, shape, and warp-grid draw path
+  - documented the attribute-state gotcha and committed it as `103d4c2a0`
+  - added a dedicated warp-grid shader and buffers
+  - presets with global `per_pixel` equations now draw a CPU-evaluated triangle grid using `x`, `y`, `rad`, `ang`, and local `dx/dy/zoom/rot` values
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add motion-vector rendering.
+  2. Add a real browser canvas smoke test for the native renderer path once it is player-selectable.
+
+## Update 2026-04-30 04:48:19Z
+
+- Current task: First analyzer-backed FFT expression helpers are implemented locally.
+- Last activity:
+  - added `get_fft(pos)` and `get_fft_hz(freq)` to the MilkDrop expression VM
+  - renderer frame scope now carries frequency data and sample rate for preset equations
+  - tests cover byte-frequency normalization and Hz-to-bin mapping
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Start the first translated per-pixel/per-vertex warp grid slice.
+  2. Add shader-side FFT access later when translated shader execution exists.
+
+## Update 2026-04-30 04:46:19Z
+
+- Current task: First custom wave dot and spectrum modes are implemented locally.
+- Last activity:
+  - added point-size support to the primitive shader
+  - custom waves with `dots` now draw as WebGL points instead of line strips
+  - custom waves with `spectrum` use frame frequency data when available and normalize byte-frequency bins
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Start the first translated per-pixel/per-vertex warp grid slice.
+  2. Add `get_fft` / `get_fft_hz` expression support once analyzer frequency data is passed through the native renderer path.
+
+## Update 2026-04-30 04:43:31Z
+
+- Current task: First custom wave equation rendering is implemented locally.
+- Last activity:
+  - added custom wave init/frame state evaluation with q-register persistence and no frame/audio scope leakage
+  - evaluates custom wave point equations into WebGL line-strip vertices using audio samples as point inputs
+  - draws enabled custom waves with color/alpha, additive blending, and thick line hints
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add custom wave dots and spectrum modes.
+  2. Start the first translated per-pixel/per-vertex warp grid slice.
+
+## Update 2026-04-30 04:41:36Z
+
+- Current task: First shape gradients and thick-outline hints are implemented locally.
+- Last activity:
+  - changed primitive rendering to use per-vertex color buffers
+  - added center-to-edge custom shape fill gradients from `r2/g2/b2/a2`
+  - maps `thickoutline` to a WebGL line width hint before restoring the normal width
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add custom wave point equations and wave modes.
+  2. Add textured shape support once texture loading/caching exists.
+
+## Update 2026-04-30 04:39:15Z
+
+- Current task: First filled/bordered custom shape rendering is implemented locally.
+- Last activity:
+  - added triangle-fan fill vertices for enabled custom shapes
+  - added border line strips, alpha blending, and parsed `additive` blend mode handling
+  - tests cover fill geometry, fill/border color clamping, normal blending, and additive blending
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add gradient second-color and thick-outline behavior for custom shapes.
+  2. Add custom wave point equations after the current shape modes are stable.
+
+## Update 2026-04-30 04:36:34Z
+
+- Current task: First custom shape equation evaluation is implemented locally.
+- Last activity:
+  - added custom shape init/frame equation evaluation to the WebGL MilkDrop renderer
+  - persists shape-owned values and q-registers while keeping frame/audio globals as read-only inputs
+  - renderer tests cover animated shape state, init-once behavior, q-register persistence, and no global scope leakage
+  - validated focused MilkDrop/player tests, frontend lint, and frontend production build
+- Next steps:
+  1. Add filled/bordered/additive shape render modes.
+  2. Add custom wave point equations after the shape primitive path is stable.
+
+## Update 2026-04-30 04:32:55Z
+
+- Current task: First parsed shape primitive pass is implemented locally.
+- Last activity:
+  - added `createShapeVertices` and `getShapeColor`
+  - renderer draws enabled parsed shape entries as closed WebGL line strips into the feedback target
+  - tests cover shape vertex closure, disabled-shape handling, color clamping/fallback, and shape draw calls
+  - validated renderer tests and frontend lint
+- Next steps:
+  1. Add custom shape frame equations so parsed shape state can animate.
+  2. Add fill/border/additive shape modes after outline geometry is stable.
+
+## Update 2026-04-30 04:29:10Z
+
+- Current task: First waveform primitive pass is implemented locally.
+- Last activity:
+  - added a second lightweight WebGL program for line-strip primitives
+  - maps incoming waveform samples into clip-space vertices with `wave_scale`
+  - draws waveform lines into the feedback target before blitting to screen
+  - tests cover waveform vertex generation, line draw calls, and program cleanup
+  - validated renderer tests and frontend lint
+- Next steps:
+  1. Add a shape primitive pass for parsed `shapeNN_*` entries.
+  2. Teach custom wave point equations to generate waveform vertices instead of only rendering raw samples.
+
+## Update 2026-04-30 04:25:32Z
+
+- Current task: First preset-driven warp uniforms are implemented locally.
+- Last activity:
+  - feedback texture sampling now uses evaluated `zoom`, `rot`, `dx`, and `dy`
+  - added warp-state normalization for defaults and invalid zoom values
+  - renderer tests cover warp uniform uploads and normalized defaults
+  - validated renderer tests and frontend lint
+- Next steps:
+  1. Add the first translated warp/comp shader support path instead of only fixed-function warp uniforms.
+  2. Start WebGL waveform/shape primitive rendering once the full-screen feedback path is stable.
+
+## Update 2026-04-30 04:22:26Z
+
+- Current task: Native MilkDrop WebGL feedback pipeline foundation is implemented locally.
+- Last activity:
+  - added ping-pong feedback texture/framebuffer targets to `milkdropRenderer.js`
+  - renderer now writes to feedback, blits to screen, swaps targets, resizes texture storage, and disposes GPU resources
+  - tests cover feedback allocation, draw/blit calls, decay-driven feedback blend, resize storage, and cleanup
+  - validated renderer tests and frontend lint
+- Next steps:
+  1. Add the first real warp pass over the feedback texture using parsed preset variables.
+  2. Start mapping MilkDrop waveform/shape primitives to WebGL draw calls after the feedback path is stable.
+
+## Update 2026-04-30 04:19:23Z
+
+- Current task: Minimal WebGL2 MilkDrop renderer skeleton is implemented locally.
+- Last activity:
+  - added `milkdropRenderer.js` behind the native MilkDrop foundation
+  - renderer compiles a WebGL2 shader program, evaluates parsed preset equations, and draws a full-screen triangle from MilkDrop color variables
+  - added tests for draw calls, color clamping, resize behavior, and missing-WebGL2 failures
+  - validated focused MilkDrop tests and frontend lint
+- Next steps:
+  1. Replace the placeholder color pass with the first real feedback texture pass.
+  2. Add real browser screenshot/pixel-stat smoke coverage once the renderer is player-selectable.
+
+## Update 2026-04-30 04:17:00Z
+
+- Current task: Browser-native MilkDrop3-compatible visualizer parser/VM foundation is implemented locally.
+- Last activity:
+  - added `presetParser.js` for classic `.milk` and basic `.milk2` double-preset parsing
+  - added `expressionVm.js` for deterministic first-slice MilkDrop equation evaluation
+  - added focused parser/VM tests for base values, equations, shaders, custom shapes/waves, q33 preservation, and unsupported syntax
+  - documented and committed the custom wave/shape equation parser gotcha as `7a6bf43ef`
+  - validated parser/VM tests, player tests, frontend lint/build, and diff whitespace
+- Next steps:
+  1. Add a WebGL2 renderer skeleton that consumes the parsed model but starts with a deliberately tiny draw path.
+  2. Add curated `.milk` fixture files and golden parse snapshots instead of embedding all fixtures inline in tests.
+
 ## Update 2026-04-30 04:08:24Z
 
 - Current task: Browser-native MilkDrop3-compatible visualizer engine design is started.
