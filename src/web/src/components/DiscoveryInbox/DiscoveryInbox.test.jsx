@@ -4,6 +4,7 @@ import {
   addDiscoveryInboxItem,
   discoveryInboxStorageKey,
 } from '../../lib/discoveryInbox';
+import { watchlistStorageKey } from '../../lib/watchlists';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
@@ -38,6 +39,37 @@ describe('DiscoveryInbox', () => {
       'Approved',
     );
     expect(screen.getAllByText('Approved').length).toBeGreaterThan(0);
+  });
+
+  it('snoozes candidates with a visible due date and can return them to review', () => {
+    const item = addDiscoveryInboxItem({
+      evidenceKey: 'manual-search:snooze-me',
+      searchText: 'snooze me',
+      source: 'Search',
+      title: 'snooze me',
+    });
+
+    render(<DiscoveryInbox />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Snooze snooze me' }));
+
+    let persisted = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
+    expect(persisted.find((candidate) => candidate.id === item.id)).toEqual(
+      expect.objectContaining({
+        state: 'Snoozed',
+      }),
+    );
+    expect(screen.getByText('Snoozed until')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unsnooze snooze me' }));
+
+    persisted = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
+    expect(persisted.find((candidate) => candidate.id === item.id)).toEqual(
+      expect.objectContaining({
+        snoozedUntil: '',
+        state: 'Suggested',
+      }),
+    );
   });
 
   it('summarizes provider and network-risk review impact before approval', () => {
@@ -121,5 +153,39 @@ describe('DiscoveryInbox', () => {
     expect(persistedInbox.find((candidate) => candidate.id === item.id).state).toBe(
       'Staged',
     );
+  });
+
+  it('adds watchlist targets and creates review seeds without scanning providers', () => {
+    render(<DiscoveryInbox />);
+
+    fireEvent.change(screen.getByLabelText('Watchlist target'), {
+      target: { value: 'Stereolab' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add watchlist target' }));
+
+    const persistedWatchlists = JSON.parse(
+      localStorage.getItem(watchlistStorageKey),
+    );
+    expect(persistedWatchlists).toHaveLength(1);
+    expect(persistedWatchlists[0]).toMatchObject({
+      kind: 'Artist',
+      target: 'Stereolab',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview scan Stereolab' }));
+    expect(
+      screen.getByText(/Manual scan preview only; no provider lookup/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Send Stereolab to Discovery Inbox' }),
+    );
+
+    const persistedInbox = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
+    expect(persistedInbox[0]).toMatchObject({
+      evidenceKey: 'watchlist:artist:stereolab',
+      source: 'Watchlist',
+      title: 'Stereolab',
+    });
   });
 });

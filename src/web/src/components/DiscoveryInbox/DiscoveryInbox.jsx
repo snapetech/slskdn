@@ -6,18 +6,31 @@ import {
 } from '../../lib/acquisitionPlans';
 import {
   bulkUpdateDiscoveryInboxItems,
+  getDiscoveryInboxSnoozeStatus,
   getDiscoveryInboxItems,
+  snoozeDiscoveryInboxItem,
   updateDiscoveryInboxItemState,
 } from '../../lib/discoveryInbox';
 import {
   buildDiscoveryInboxReviewSummary,
   classifyDiscoveryInboxImpact,
 } from '../../lib/discoveryInboxReview';
+import {
+  buildWatchlistDiscoverySeed,
+  buildWatchlistSummary,
+  getWatchlists,
+  recordWatchlistManualScan,
+  saveWatchlist,
+} from '../../lib/watchlists';
+import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
+  Dropdown,
+  Form,
   Header,
   Icon,
+  Input,
   Label,
   Popup,
   Segment,
@@ -42,10 +55,14 @@ const formatTimestamp = (timestamp) => {
 const DiscoveryInbox = () => {
   const [items, setItems] = useState([]);
   const [plans, setPlans] = useState([]);
+  const [watchlists, setWatchlists] = useState([]);
+  const [watchTarget, setWatchTarget] = useState('');
+  const [watchKind, setWatchKind] = useState('Artist');
 
   const refreshItems = () => {
     setItems(getDiscoveryInboxItems());
     setPlans(getAcquisitionPlans());
+    setWatchlists(getWatchlists());
   };
 
   useEffect(() => {
@@ -76,9 +93,17 @@ const DiscoveryInbox = () => {
     () => buildDiscoveryInboxReviewSummary(items),
     [items],
   );
+  const watchlistSummary = useMemo(
+    () => buildWatchlistSummary(watchlists),
+    [watchlists],
+  );
 
   const setItemState = (item, state) => {
     setItems(updateDiscoveryInboxItemState(item.id, state));
+  };
+
+  const snoozeItem = (item, days = 7) => {
+    setItems(snoozeDiscoveryInboxItem(item.id, days));
   };
 
   const bulkSetSuggested = (state) => {
@@ -100,6 +125,30 @@ const DiscoveryInbox = () => {
         ),
       );
     }
+  };
+
+  const addWatchlist = () => {
+    const target = watchTarget.trim();
+    if (!target) {
+      return;
+    }
+
+    setWatchlists(
+      saveWatchlist({
+        kind: watchKind,
+        target,
+      }),
+    );
+    setWatchTarget('');
+  };
+
+  const previewWatchlistScan = (watchlist) => {
+    setWatchlists(recordWatchlistManualScan(watchlist.id));
+  };
+
+  const seedWatchlistReview = (watchlist) => {
+    addDiscoveryInboxItem(buildWatchlistDiscoverySeed(watchlist));
+    refreshItems();
   };
 
   return (
@@ -217,6 +266,134 @@ const DiscoveryInbox = () => {
         </div>
       </Segment>
 
+      <Segment className="discovery-inbox-watchlists">
+        <Header as="h3">
+          <Icon name="radar" />
+          Watchlists
+          <Header.Subheader>
+            Local release-radar targets. Manual scans are previews until
+            provider-backed discovery is enabled.
+          </Header.Subheader>
+        </Header>
+        <Form className="discovery-inbox-watchlist-form">
+          <Form.Group widths="equal">
+            <Form.Field>
+              <label>Target</label>
+              <Input
+                aria-label="Watchlist target"
+                onChange={(event) => setWatchTarget(event.target.value)}
+                placeholder="Artist, label, playlist, or collection"
+                value={watchTarget}
+              />
+            </Form.Field>
+            <Form.Field>
+              <label>Type</label>
+              <Dropdown
+                aria-label="Watchlist type"
+                onChange={(_event, data) => setWatchKind(data.value)}
+                options={[
+                  { key: 'artist', text: 'Artist', value: 'Artist' },
+                  { key: 'label', text: 'Label', value: 'Label' },
+                  { key: 'playlist', text: 'Playlist', value: 'Playlist' },
+                  { key: 'collection', text: 'Collection', value: 'Collection' },
+                ]}
+                selection
+                value={watchKind}
+              />
+            </Form.Field>
+          </Form.Group>
+          <Popup
+            content="Add this target to the browser-local watchlist. This does not contact metadata providers or scan Soulseek."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Add watchlist target"
+                disabled={!watchTarget.trim()}
+                onClick={addWatchlist}
+                primary
+                type="button"
+              >
+                <Icon name="plus" />
+                Add Watch
+              </Button>
+            }
+          />
+        </Form>
+        <div className="discovery-inbox-summary">
+          <Label color="blue">
+            Total
+            <Label.Detail>{watchlistSummary.total}</Label.Detail>
+          </Label>
+          <Label color="green">
+            Artists
+            <Label.Detail>{watchlistSummary.Artist}</Label.Detail>
+          </Label>
+          <Label color="purple">
+            Labels
+            <Label.Detail>{watchlistSummary.Label}</Label.Detail>
+          </Label>
+          <Label color="teal">
+            Scheduled
+            <Label.Detail>{watchlistSummary.scheduled}</Label.Detail>
+          </Label>
+        </div>
+        {watchlists.length > 0 && (
+          <div className="discovery-inbox-watchlist-grid">
+            {watchlists.map((watchlist) => (
+              <div
+                className="discovery-inbox-watchlist"
+                key={watchlist.id}
+              >
+                <div>
+                  <strong>{watchlist.target}</strong>
+                  <div className="discovery-inbox-meta">
+                    <Icon name="tag" />
+                    {watchlist.kind}
+                    <span> · </span>
+                    <Icon name="filter" />
+                    {watchlist.releaseTypes.join(', ')}
+                    <span> · </span>
+                    <Icon name="clock" />
+                    {watchlist.schedule}
+                  </div>
+                  {watchlist.lastScanPreview && (
+                    <div className="discovery-inbox-impact">
+                      {watchlist.lastScanPreview}
+                    </div>
+                  )}
+                </div>
+                <div className="discovery-inbox-watchlist-actions">
+                  <Popup
+                    content="Record a local manual scan preview for this watchlist. This does not fetch metadata or contact peers."
+                    position="top center"
+                    trigger={
+                      <Button
+                        aria-label={`Preview scan ${watchlist.target}`}
+                        icon="search"
+                        onClick={() => previewWatchlistScan(watchlist)}
+                        size="small"
+                      />
+                    }
+                  />
+                  <Popup
+                    content="Create a Discovery Inbox review seed from this watchlist target without starting a provider lookup, search, or download."
+                    position="top center"
+                    trigger={
+                      <Button
+                        aria-label={`Send ${watchlist.target} to Discovery Inbox`}
+                        icon="inbox"
+                        onClick={() => seedWatchlistReview(watchlist)}
+                        size="small"
+                      />
+                    }
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Segment>
+
       {plans.length > 0 && (
         <Segment className="discovery-inbox-plans">
           <Header as="h3">
@@ -275,6 +452,7 @@ const DiscoveryInbox = () => {
           {items.map((item) => {
             const profile = getAcquisitionProfile(item.acquisitionProfile);
             const impact = classifyDiscoveryInboxImpact(item);
+            const snoozeStatus = getDiscoveryInboxSnoozeStatus(item);
 
             return (
               <Segment
@@ -299,6 +477,19 @@ const DiscoveryInbox = () => {
                     {item.state}
                   </Label>
                 </div>
+                {snoozeStatus && (
+                  <div className="discovery-inbox-snooze">
+                    <Label color={snoozeStatus.color}>
+                      <Icon name={snoozeStatus.isDue ? 'bell' : 'clock'} />
+                      {snoozeStatus.label}
+                      {item.snoozedUntil && (
+                        <Label.Detail>
+                          {formatTimestamp(item.snoozedUntil)}
+                        </Label.Detail>
+                      )}
+                    </Label>
+                  </div>
+                )}
                 <div className="discovery-inbox-reason">
                   <strong>Why:</strong> {item.reason}
                 </div>
@@ -335,17 +526,32 @@ const DiscoveryInbox = () => {
                     }
                   />
                   <Popup
-                    content="Snooze this candidate so it stays out of the immediate review set without losing the evidence."
+                    content="Snooze this candidate for 7 days so it stays out of the immediate review set without losing the evidence."
                     position="top center"
                     trigger={
                       <Button
                         aria-label={`Snooze ${item.title}`}
                         disabled={item.state === 'Snoozed'}
-                        onClick={() => setItemState(item, 'Snoozed')}
+                        onClick={() => snoozeItem(item, 7)}
                         size="small"
                       >
                         <Icon name="clock" />
-                        Snooze
+                        7d
+                      </Button>
+                    }
+                  />
+                  <Popup
+                    content="Return this snoozed candidate to the suggested review queue without changing its evidence."
+                    position="top center"
+                    trigger={
+                      <Button
+                        aria-label={`Unsnooze ${item.title}`}
+                        disabled={item.state !== 'Snoozed'}
+                        onClick={() => setItemState(item, 'Suggested')}
+                        size="small"
+                      >
+                        <Icon name="undo" />
+                        Unsnooze
                       </Button>
                     }
                   />

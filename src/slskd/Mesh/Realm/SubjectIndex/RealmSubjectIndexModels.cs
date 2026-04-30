@@ -93,3 +93,55 @@ public sealed class RealmSubjectIndexResolution
 
     public string Provenance { get; set; } = string.Empty;
 }
+
+public sealed class RealmSubjectIndexProposal
+{
+    public string ProposalId { get; set; } = string.Empty;
+
+    public string RealmId { get; set; } = string.Empty;
+
+    public string IndexId { get; set; } = string.Empty;
+
+    public int Revision { get; set; }
+
+    public RealmSubjectIndexProposalStatus Status { get; set; } = RealmSubjectIndexProposalStatus.Pending;
+
+    public DateTimeOffset ProposedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public string ProposedBy { get; set; } = string.Empty;
+
+    public string Note { get; set; } = string.Empty;
+
+    public string GovernanceDocumentId { get; set; } = string.Empty;
+
+    public RealmSubjectIndex Index { get; set; } = new();
+
+    public RealmSubjectIndexProposalReview? Review { get; set; }
+
+    public List<string> Errors { get; set; } = new();
+}
+
+public enum RealmSubjectIndexProposalStatus
+{
+    Pending,
+    Accepted,
+    Rejected,
+    Failed,
+}
+
+public sealed class RealmSubjectIndexProposalReview
+{
+    public string ProposalId { get; set; } = string.Empty;
+
+    public string ReviewedBy { get; set; } = string.Empty;
+
+    public bool Accept { get; set; }
+
+    public DateTimeOffset ReviewedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public string Note { get; set; } = string.Empty;
+
+    public string GovernanceDocumentId { get; set; } = string.Empty;
+
+    public List<string> Errors { get; set; } = new();
+}

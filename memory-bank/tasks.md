@@ -26,6 +26,21 @@
  - Priority: P3
  - Notes: Listening Stats now supports 7-day, 30-day, 90-day, and all-time filters plus browser-local forgotten favorites derived from repeat plays outside the active range. This remains local-only and does not call external recommendation, scrobbling, or media-server APIs.
 
+- [x] **feature**: Add browser-local listening genre breakdowns.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Local play history now stores available genre/tag metadata and Listening Stats shows top genres for the selected range. Label breakdowns remain deferred until real label metadata exists in the now-playing payload.
+
+- [x] **feature**: Add listening-stats recommendation seed handoffs.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Listening Stats now derives explicit Search handoff seeds from browser-local forgotten favorites, top artists, and top genres. The recommendations are local-only previews; no search, peer browse, queue mutation, download, scrobble, or external recommendation call runs until the user clicks a generated Search action.
+
+- [x] **feature**: Add browser-local media-server play-history import.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Listening Stats now accepts pasted or locally chosen CSV/JSON play-history exports from Plex, Jellyfin, Navidrome, or generic media tools, normalizes artist/album/title/genre/played-at metadata, deduplicates by track and timestamp, and can copy local history back out as JSON or CSV. The import runs entirely in the browser and does not connect to media servers, scan libraries, search peers, queue tracks, download files, scrobble, or mutate shared/downloaded audio.
+
 - [x] **feature**: Add bounded player similar-track auto-queue.
  - Status: completed (2026-04-30)
  - Priority: P3
@@ -130,6 +145,16 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Discovery Inbox now classifies saved candidates as Local/manual, Provider review, Network risk, or Needs estimate, shows aggregate batch-readiness counts before approval, and labels each candidate with its inferred impact class. This is evidence-only review metadata and does not start provider lookups, peer browsing, searches, downloads, or automation.
+
+- [x] **feature**: Add Discovery Inbox snooze due dates.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Discovery Inbox snoozes now persist a browser-local due date, show visible Snoozed until/Snooze due status, and provide an Unsnooze action that returns evidence to Suggested review. Snoozing remains local review state only and does not schedule jobs, searches, downloads, provider lookups, or peer activity.
+
+- [x] **feature**: Add browser-local Watchlists panel.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Discovery Inbox now includes browser-local Watchlists for artist, label, playlist, and collection targets, with release-type defaults, manual scan preview timestamps, summary counts, and a review-seed action that creates Discovery Inbox evidence. Watchlists do not call metadata providers, search Soulseek, browse peers, download files, or enable scheduled automation.
 
 - [x] **feature**: Unify Wishlist rows with acquisition request states.
  - Status: completed (2026-04-30)
@@ -327,10 +352,10 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Added a signed realm subject-index artifact model, trusted-governance-root validation, safe WorkRef/evidence checks, in-memory registry, and recording-MBID resolver that returns realm/index/revision provenance for ShadowIndex and VirtualSoulfind callers. Publication, proposal/review workflow, and UI conflict display remain separate follow-ups.
 
-- [ ] **feature**: Add governance proposal flow for realm subject indexes.
- - Status: planned
+- [x] **feature**: Add governance proposal flow for realm subject indexes.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Follow up T-934 by routing subject-index revisions through existing realm governance proposal/review/accept/reject flows instead of storing locally authored revisions directly.
+ - Notes: Followed up T-934 with a subject-index proposal/review flow backed by realm governance documents. Proposed revisions remain pending and do not resolve until an explicitly trusted governance reviewer accepts them; rejected proposals retain review provenance without publishing the index.
 
 - [ ] **feature**: Add UI conflict display for realm subject indexes.
  - Status: planned
@@ -343,10 +368,10 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Added signed local MusicBrainz overlay-edit artifacts, evidence validation, deterministic in-memory storage, read-time overlay application for artist release graphs, and a dedicated overlay API that returns original/effective graphs plus provenance without mutating cached upstream MusicBrainz payloads. Mesh/realm gossip and upstream MusicBrainz export remain separate follow-ups.
 
-- [ ] **feature**: Gossip MusicBrainz overlay edits through trust-scoped mesh/realm channels.
- - Status: planned
+- [x] **feature**: Gossip MusicBrainz overlay edits through trust-scoped mesh/realm channels.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Follow up T-935 by routing signed overlay edits through mesh service fabric or realm channels according to user trust scope. Keep publication opt-in and preserve source provenance.
+ - Notes: Added opt-in MusicBrainz overlay edit route attempts through PodCore to explicitly selected safe peer IDs. Attempts record target, routed, and failed peer IDs and reject unsafe metadata or targets without contacting peers. This preserves source provenance and does not auto-publish edits beyond the requested trust scope.
 
 - [x] **feature**: Add manual upstream MusicBrainz export review for overlay edits.
  - Status: completed (2026-04-30)
@@ -1840,6 +1865,15 @@
 - [x] Add chat and room header activity indicators
   - Status: completed (2026-04-30)
   - Notes: Added red-dot header activity indicators for unread private chats and joined room messages newer than the browser's last-seen room activity marker. Fixed chat and room tabs so switching tabs preserves mounted panes instead of rebuilding the session, while active-tab gating prevents hidden room panes from polling and hidden chat panes from acknowledging unread messages.
+
+- [x] Merge Chat and Rooms into a compact Messages workspace
+  - Status: completed (2026-04-30)
+  - Notes: Added a unified Messages route/workspace for direct chats and rooms. The old `/chat` and `/rooms` routes now enter the same workspace in the matching mode. Users can keep multiple chat/room panels open at once, collapse panels into a dock, restore them, and use compact sidebar affordances for saved chats and joined rooms.
+
+- [ ] Add guided admin settings for remaining YAML-only integrations and policies
+  - Status: planned
+  - Priority: P2
+  - Notes: `docs/dev/webui-surface-audit-2026-04-30.md` identifies the next gaps: notification integrations, identity/auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage settings.
 
 - [x] Fix dark-mode inner surfaces and surface VPN/Lidarr admin status
   - Status: completed (2026-04-30)

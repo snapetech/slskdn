@@ -15,6 +15,8 @@ vi.mock('../../../lib/lidarr', () => ({
 
 vi.mock('../../../lib/options', () => ({
   applyOverlay: vi.fn(),
+  getYaml: vi.fn(),
+  updateYaml: vi.fn(),
 }));
 
 describe('Integrations', () => {
@@ -181,7 +183,7 @@ describe('Integrations', () => {
     fireEvent.change(screen.getByLabelText('Last.fm API key'), {
       target: { value: 'lastfm-key' },
     });
-    fireEvent.click(screen.getByText('Apply Settings'));
+    fireEvent.click(screen.getByText('Apply Runtime'));
 
     await waitFor(() => {
       expect(optionsApi.applyOverlay).toHaveBeenCalledWith({
@@ -207,6 +209,39 @@ describe('Integrations', () => {
     });
     expect(
       screen.getByText('Source-feed integration settings applied for this running daemon.'),
+    ).toBeInTheDocument();
+  });
+
+  it('persists source-feed settings to YAML from the web UI', async () => {
+    optionsApi.getYaml.mockResolvedValue('integrations: {}\n');
+    optionsApi.updateYaml.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            lastfm: {},
+            spotify: {},
+            youtube: {},
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Enable YouTube playlist source-feed imports'));
+    fireEvent.change(screen.getByLabelText('YouTube Data API key'), {
+      target: { value: 'youtube-key' },
+    });
+    fireEvent.click(screen.getByText('Save YAML'));
+
+    await waitFor(() => {
+      expect(optionsApi.updateYaml).toHaveBeenCalled();
+    });
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain('youtube');
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain('api_key: youtube-key');
+    expect(
+      screen.getByText('Source-feed integration settings saved to YAML.'),
     ).toBeInTheDocument();
   });
 });

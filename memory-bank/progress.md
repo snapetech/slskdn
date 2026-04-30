@@ -1,3 +1,19 @@
+## 2026-04-30 21:03:57Z - Added browser-local Watchlists panel
+
+- Continued the beginning-lane burn-down into Epic E6 Watchlists and Release Radar.
+- Added browser-local watchlist storage for artist, label, playlist, and collection targets with release-type defaults, manual-only schedule state, cooldown metadata, and summary counts.
+- Added a Discovery Inbox Watchlists panel with add, manual scan preview, and send-to-review actions.
+- Kept the slice local-only: no metadata provider lookup, Soulseek search, peer browse, download, scheduled automation, or file mutation is started.
+- Validation: focused watchlist, Discovery Inbox storage, and Discovery Inbox component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:55:53Z - Added Discovery Inbox snooze due dates
+
+- Continued the beginning-lane Discovery Inbox review burn-down with local snooze timing.
+- Discovery Inbox items now retain `snoozedUntil`, show visible Snoozed until/Snooze due status, and can be returned to Suggested review with Unsnooze.
+- Added focused storage and component coverage for snooze due dates, clearing snooze metadata, and overdue status.
+- Kept the slice local-only: no scheduler, provider lookup, peer browse, search, download, automation, or file mutation is started.
+- Validation: focused Discovery Inbox storage/review/component tests passed, and frontend lint passed.
+
 ## 2026-04-30 20:47:21Z - Added Discovery Inbox impact summary
 
 - Continued the beginning-lane burn-down with the next Discovery Inbox review slice.
@@ -5,6 +21,14 @@
 - Surfaced aggregate batch-readiness counts and per-candidate impact labels before approval or plan creation.
 - Kept the slice evidence-only: no provider lookup, peer browse, search, download, automation, or file mutation is started.
 - Validation: focused Discovery Inbox review helper/component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:55:34Z - Added browser-local listening genre breakdowns
+
+- Continued Epic E14 listening intelligence with metadata-derived local breakdowns.
+- Local play history now stores genre/tag values from now-playing metadata.
+- Listening Stats now includes Top Genres for the selected stats range.
+- Kept label breakdowns deferred because the current now-playing payload does not carry trustworthy label metadata.
+- Validation: focused listening history, player auto-queue, radio, shortcut, rating, and PlayerBar tests passed.
 
 ## 2026-04-30 20:50:41Z - Added listening time ranges and forgotten favorites
 
@@ -36,6 +60,14 @@
 - Added a browser-local album decision rule store that records normalized album/search identity, expected track count, format policy, warnings, and substitution tracks.
 - Added a Search album candidate action to save a visible candidate as a local rule preview without affecting searches, ranking, downloads, peer browsing, or planner behavior.
 - Validation: focused album decision rule, album candidate, and Search component tests passed, and frontend lint passed.
+
+## 2026-04-30 20:57:04Z - Added MusicBrainz overlay trust-scoped routing
+
+- Continued the center-lane T-935 follow-up work while avoiding active frontend/options/source-feed lanes.
+- Added opt-in PodCore route attempts for stored signed MusicBrainz overlay edits.
+- Kept routing explicitly scoped to caller-selected safe peer IDs, with unsafe metadata and target identifiers rejected before contacting peers.
+- Added route attempt history with target, routed, and failed peer IDs while preserving overlay edit provenance.
+- Validation: focused `MusicBrainzOverlay` tests passed (`21/21`), `git diff --check` passed, `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3713` unit tests, `276` integration tests).
 
 ## 2026-04-30 20:48:35Z - Added MusicBrainz overlay export review API
 
@@ -8299,7 +8331,29 @@ Code quality improvements were completed as part of Option A:
 - Extended the source-provider catalog with per-acquisition-profile provider priority policies.
 - Source Providers now shows Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict routing order.
 - Every profile policy is explicitly manual-only for now, so users can inspect fallback order without enabling unattended acquisition.
+## 2026-04-30 21:04:16Z
+
+- Continued Epic E14 listening intelligence with a browser-local media-server history import slice.
+- Added CSV/JSON play-history parsing, normalization, duplicate suppression, and JSON/CSV export helpers for local listening history.
+- Surfaced a Media Server Import section in the player Listening Stats modal with paste, local file picker, import, and export actions.
+- Kept the slice browser-only: no media-server connection, library scan, peer search, queue mutation, download, scrobble, or file mutation is triggered.
+- Validation: broader player-focused tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 20:59:18Z
+
+- Continued the tail-side feature-expansion burn-down in E14 Listening Intelligence.
+- Added browser-local listening recommendation seeds derived from forgotten favorites, top artists, and top genres.
+- Surfaced those seeds in the player Listening Stats modal with explicit tooltip-backed Search actions, keeping the feature local and non-networking until a user opens a generated query.
+- Validation: focused listening/player tests, frontend lint, frontend production build, and whitespace checks passed.
+
 - Validation: focused `SourceProvidersControllerTests` and Source Providers Web UI tests passed.
+
+## 2026-04-30 21:06:05Z
+
+- Continued the center-lane music federation work with the realm subject-index governance proposal follow-up.
+- Added subject-index proposal models, pending/accepted/rejected status tracking, and trusted review records.
+- `RealmSubjectIndexService` now records proposal and review governance documents when a realm governance client is available, keeps proposed revisions out of resolution while pending or rejected, and publishes accepted revisions into the existing recording-MBID resolver only after a trusted governance-root review.
+- Validation: focused `RealmSubjectIndexServiceTests` passed (`10/10`).
 
 ## 2026-04-30 19:36:05Z
 
@@ -8379,3 +8433,12 @@ Code quality improvements were completed as part of Option A:
 - Extended the runtime options overlay to cover source-feed integration settings for Spotify, YouTube, and Last.fm.
 - Added explicit `enabled` toggles for YouTube and Last.fm provider fetchers so configured API keys can be kept off until an operator enables them.
 - System Integrations now shows masked credential state, editable replacement credential fields, validation warnings, and tooltip-backed apply/reset actions for Spotify, YouTube, and Last.fm.
+- Added a persistent YAML save action in the same Web UI panel, so operators can choose immediate runtime application or write the settings to the config file.
+- Validation: focused source-feed/options backend tests, System Integrations and Wishlist frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-04-30 21:06:41Z
+
+- Audited the Web UI surface against backend/config feature areas and recorded gaps in `docs/dev/webui-surface-audit-2026-04-30.md`.
+- Identified high-value missing admin knobs for notification integrations, auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage.
+- Added the first concrete redesign slice by introducing a unified Messages workspace for direct chats and rooms.
+- Messages now supports multiple open chat/room panels, per-panel collapse/close controls, collapse-all, a restore dock, compact saved-chat and joined-room sidebars, and compatibility routing from `/chat` and `/rooms`.

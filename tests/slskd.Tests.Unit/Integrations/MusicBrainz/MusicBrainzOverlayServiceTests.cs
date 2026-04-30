@@ -4,8 +4,10 @@
 namespace slskd.Tests.Unit.Integrations.MusicBrainz;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using slskd.Integrations.MusicBrainz.Models;
 using slskd.Integrations.MusicBrainz.Overlay;
+using slskd.PodCore;
 using slskd.SocialFederation;
 
 public sealed class MusicBrainzOverlayServiceTests
@@ -156,9 +158,98 @@ public sealed class MusicBrainzOverlayServiceTests
         Assert.Contains("Approved-by identifier must be opaque and safe.", result.Errors);
     }
 
+    [Fact]
+    public async Task RouteEditAsync_RoutesStoredEditToSelectedSafePeers()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.RouteMessageToPeersAsync(
+                It.IsAny<PodMessage>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PodMessageRoutingResult(
+                Success: true,
+                MessageId: "message-1",
+                PodId: "musicbrainz-overlay",
+                TargetPeerCount: 1,
+                SuccessfullyRoutedCount: 1,
+                FailedRoutingCount: 0,
+                RoutingDuration: TimeSpan.FromMilliseconds(1)));
+        var service = CreateService(router.Object);
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        var attempt = await service.RouteEditAsync(
+            "edit-1",
+            new MusicBrainzOverlayRouteRequest
+            {
+                TargetPeerIds = new List<string> { " actor:alice ", "actor:alice" },
+            });
+        var attempts = await service.GetRouteAttemptsAsync("edit-1");
+
+        Assert.True(attempt.Success);
+        Assert.Equal(new[] { "actor:alice" }, attempt.TargetPeerIds);
+        Assert.Equal(new[] { "actor:alice" }, attempt.RoutedPeerIds);
+        Assert.Single(attempts);
+        router.Verify(service => service.RouteMessageToPeersAsync(
+            It.Is<PodMessage>(message =>
+                message.PodId == "musicbrainz-overlay" &&
+                message.ChannelId == "edit:edit-1" &&
+                message.Body.Contains("slskdn.musicbrainz-overlay.edit.v1") &&
+                message.Body.Contains("Corrected Group Title")),
+            It.Is<IEnumerable<string>>(targets => targets.SequenceEqual(new[] { "actor:alice" })),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RouteEditAsync_RejectsUnsafeTargetWithoutRouting()
+    {
+        var router = new Mock<IPodMessageRouter>();
+        var service = CreateService(router.Object);
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        var attempt = await service.RouteEditAsync(
+            "edit-1",
+            new MusicBrainzOverlayRouteRequest
+            {
+                TargetPeerIds = new List<string> { "/home/user/private-peer" },
+            });
+
+        Assert.False(attempt.Success);
+        Assert.Equal("Route targets must be opaque and safe.", attempt.ErrorMessage);
+        router.Verify(service => service.RouteMessageToPeersAsync(
+            It.IsAny<PodMessage>(),
+            It.IsAny<IEnumerable<string>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RouteEditAsync_ReturnsFailedAttemptWhenRouterUnavailable()
+    {
+        var service = CreateService();
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        var attempt = await service.RouteEditAsync(
+            "edit-1",
+            new MusicBrainzOverlayRouteRequest
+            {
+                TargetPeerIds = new List<string> { "actor:alice" },
+            });
+
+        Assert.False(attempt.Success);
+        Assert.Equal("Routing backend is not available.", attempt.ErrorMessage);
+        Assert.Equal(new[] { "actor:alice" }, attempt.TargetPeerIds);
+    }
+
     private static MusicBrainzOverlayService CreateService()
     {
         return new MusicBrainzOverlayService(NullLogger<MusicBrainzOverlayService>.Instance);
+    }
+
+    private static MusicBrainzOverlayService CreateService(IPodMessageRouter messageRouter)
+    {
+        return new MusicBrainzOverlayService(
+            NullLogger<MusicBrainzOverlayService>.Instance,
+            messageRouter);
     }
 
     private static ArtistReleaseGraph CreateGraph()

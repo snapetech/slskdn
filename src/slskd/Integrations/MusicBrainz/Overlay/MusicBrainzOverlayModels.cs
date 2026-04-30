@@ -196,3 +196,39 @@ public sealed class MusicBrainzOverlayExportApprovalResult
 
     public MusicBrainzOverlayExportDecision? Decision { get; set; }
 }
+
+public sealed class MusicBrainzOverlayRouteRequest
+{
+    public string SenderPeerId { get; set; } = "local-musicbrainz-overlay";
+
+    public string PodId { get; set; } = "musicbrainz-overlay";
+
+    public string ChannelId { get; set; } = string.Empty;
+
+    public List<string> TargetPeerIds { get; set; } = new();
+}
+
+public sealed class MusicBrainzOverlayRouteAttempt
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string EditId { get; set; } = string.Empty;
+
+    public string MessageId { get; set; } = string.Empty;
+
+    public string PodId { get; set; } = string.Empty;
+
+    public string ChannelId { get; set; } = string.Empty;
+
+    public List<string> TargetPeerIds { get; set; } = new();
+
+    public List<string> RoutedPeerIds { get; set; } = new();
+
+    public List<string> FailedPeerIds { get; set; } = new();
+
+    public bool Success { get; set; }
+
+    public string? ErrorMessage { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+}

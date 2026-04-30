@@ -494,13 +494,43 @@ describe('PlayerBar', () => {
       '1local plays recorded',
     );
     expect(screen.getByText('Top Artists')).toBeInTheDocument();
+    expect(screen.getByText('Top Genres')).toBeInTheDocument();
+    expect(screen.getByText('Recommendation Seeds')).toBeInTheDocument();
     expect(screen.getAllByText('slskdN').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Fixture Genre').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Local stream').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId('player-stats-search-seed-Fixture Genre')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('player-clear-listening-history'));
 
     expect(screen.getByTestId('player-stats-summary')).toHaveTextContent(
       '0local plays recorded',
     );
+  });
+
+  it('imports pasted media-server listening history into browser stats', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByText('Play fixture'));
+    fireEvent.click(screen.getByTestId('player-open-listening-stats'));
+
+    expect(await screen.findByText('Listening Stats')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('player-listening-history-import-text'), {
+      target: {
+        value: [
+          'playedAt,artist,album,title,genre',
+          '2026-04-30T20:00:00Z,Imported Artist,Imported Album,Imported Track,Imported Genre',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByTestId('player-listening-history-import'));
+
+    expect(screen.getByText('1 imported, 0 skipped as duplicates or incomplete rows.')).toBeInTheDocument();
+    expect(screen.getByTestId('player-stats-summary')).toHaveTextContent(
+      '1local plays recorded',
+    );
+    expect(screen.getAllByText('Imported Artist').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Imported Genre').length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -28,10 +28,20 @@ For dev or build tags, use the same logical version string embedded in the tag.
   explicit local release-candidate acceptance without mutating quarantine state.
 - Added MusicBrainz overlay export review and approval API endpoints for manual
   upstream submission workflows without auto-submitting edits.
+- Added opt-in MusicBrainz overlay edit route attempts over PodCore for selected
+  safe peers, with dispatch history and no automatic publication.
+- Added realm subject-index governance proposals and trusted review decisions
+  so proposed revisions publish to resolution only after explicit acceptance.
 - Added browser-local listening history and player listening stats for recent
   plays, top artists, and top tracks.
 - Added listening stats time-range filters and browser-local forgotten-favorite
   derivation from older repeat plays.
+- Added browser-local listening genre breakdowns from now-playing genre/tag
+  metadata.
+- Added explicit listening-stats recommendation seed handoffs from local top
+  artists, genres, and forgotten favorites.
+- Added browser-local listening history import/export for media-server CSV/JSON
+  play-history files, with duplicate suppression.
 - Added bounded player similar-track auto-queue from already-known recent
   session tracks.
 - Added a player queue manager modal with current, upcoming, recent-session,
@@ -64,6 +74,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added System Integrations controls for source-feed provider settings,
   including Spotify, YouTube, and Last.fm on/off toggles, masked credential
   inputs, validation warnings, and tooltip-backed apply/reset actions.
+- Added a combined Messages workspace for direct chats and rooms with
+  multi-panel windows, compact sizing, collapse/restore dock behavior, and
+  compatibility routes from the old Chat and Rooms pages.
+- Added a Web UI surface audit covering admin/user areas that still need clearer
+  signalling, toggles, settings, and status affordances.
 - Added a redacted browser diagnostic bundle in System Info that can be
   inspected and copied without exposing passwords, tokens, cookies, secrets, or
   API keys.

@@ -25,6 +25,15 @@ public interface IMusicBrainzOverlayService
         MusicBrainzOverlayExportApprovalRequest approvalRequest,
         CancellationToken cancellationToken = default);
 
+    Task<MusicBrainzOverlayRouteAttempt> RouteEditAsync(
+        string editId,
+        MusicBrainzOverlayRouteRequest routeRequest,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MusicBrainzOverlayRouteAttempt>> GetRouteAttemptsAsync(
+        string editId,
+        CancellationToken cancellationToken = default);
+
     Task<MusicBrainzOverlayApplication<ArtistReleaseGraph>> ApplyToArtistReleaseGraphAsync(
         ArtistReleaseGraph graph,
         CancellationToken cancellationToken = default);

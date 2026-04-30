@@ -4,7 +4,11 @@ import * as externalVisualizer from '../../lib/externalVisualizer';
 import * as listenBrainz from '../../lib/listenBrainz';
 import {
   clearListeningHistory,
+  exportListeningHistoryCsv,
+  exportListeningHistoryJson,
+  getListeningRecommendationSeeds,
   getListeningStats,
+  importListeningHistory,
   recordLocalPlay,
 } from '../../lib/listeningHistory';
 import {
@@ -40,6 +44,7 @@ import {
   Popup,
   Segment,
   Table,
+  TextArea,
 } from 'semantic-ui-react';
 
 const localMuteStorageKey = 'slskdn.player.localMuted';
@@ -514,11 +519,15 @@ const PlayerQueueModal = ({
   );
 };
 
-const PlayerStatsModal = ({ onClose, open }) => {
+const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
+  const fileInputRef = useRef(null);
   const [rangeDays, setRangeDays] = useState(30);
+  const [importText, setImportText] = useState('');
+  const [importStatus, setImportStatus] = useState(null);
   const [stats, setStats] = useState(() =>
     getListeningStats({ rangeDays: 30 }),
   );
+  const recommendationSeeds = getListeningRecommendationSeeds(stats);
 
   const refreshStats = useCallback((nextRangeDays = rangeDays) => {
     setStats(getListeningStats({ rangeDays: nextRangeDays }));
@@ -530,12 +539,47 @@ const PlayerStatsModal = ({ onClose, open }) => {
 
   const clearStats = () => {
     clearListeningHistory();
+    setImportStatus(null);
     refreshStats();
   };
 
   const updateRange = (nextRangeDays) => {
     setRangeDays(nextRangeDays);
     refreshStats(nextRangeDays);
+  };
+
+  const importHistory = () => {
+    const result = importListeningHistory(importText);
+    setImportStatus(
+      `${result.imported} imported, ${result.skipped} skipped as duplicates or incomplete rows.`,
+    );
+    setImportText('');
+    refreshStats();
+  };
+
+  const copyHistory = (format) => {
+    const content = format === 'csv'
+      ? exportListeningHistoryCsv()
+      : exportListeningHistoryJson();
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(content).catch(() => {});
+    }
+
+    setImportStatus(`Prepared ${format.toUpperCase()} export for ${stats.history.length} plays.`);
+  };
+
+  const readImportFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    file.text().then((content) => {
+      setImportText(content);
+      setImportStatus(`Loaded ${file.name} for review.`);
+    }).catch(() => {
+      setImportStatus(`Could not read ${file.name}.`);
+    });
+    event.target.value = '';
   };
 
   const renderList = (items, emptyText) => (
@@ -602,6 +646,10 @@ const PlayerStatsModal = ({ onClose, open }) => {
             {renderList(stats.topTracks, 'No track plays recorded yet.')}
           </section>
           <section>
+            <div className="player-panel-title">Top Genres</div>
+            {renderList(stats.topGenres, 'No genre metadata recorded yet.')}
+          </section>
+          <section>
             <div className="player-panel-title">Recent</div>
             {renderList(stats.recent, 'No recent plays recorded yet.')}
           </section>
@@ -613,6 +661,126 @@ const PlayerStatsModal = ({ onClose, open }) => {
             )}
           </section>
         </div>
+        <section className="player-stats-recommendations">
+          <div className="player-panel-title">Recommendation Seeds</div>
+          {recommendationSeeds.length > 0 ? (
+            <div className="player-stats-seed-list">
+              {recommendationSeeds.map((seed) => (
+                <div className="player-stats-seed-row" key={`${seed.type}-${seed.query}`}>
+                  <div>
+                    <strong>{seed.label}</strong>
+                    <span>{seed.type} - {seed.basis}</span>
+                  </div>
+                  <Popup
+                    content="Open this local listening seed as a normal Search page query. Network search starts only after you choose to search."
+                    trigger={
+                      <Button
+                        aria-label={`Search ${seed.label}`}
+                        data-testid={`player-stats-search-seed-${seed.query}`}
+                        icon
+                        onClick={() => onOpenSearch(seed.query)}
+                        size="mini"
+                        type="button"
+                      >
+                        <Icon name="search" />
+                      </Button>
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="player-queue-manager-empty">
+              Play more tracks locally to build recommendation seeds.
+            </div>
+          )}
+        </section>
+        <section className="player-stats-import">
+          <div className="player-panel-title">Media Server Import</div>
+          <TextArea
+            aria-label="Paste exported media server play history"
+            data-testid="player-listening-history-import-text"
+            onChange={(event) => setImportText(event.target.value)}
+            placeholder="Paste Plex, Jellyfin, Navidrome, or generic CSV/JSON play history here for local import."
+            rows={4}
+            value={importText}
+          />
+          {importStatus ? (
+            <Message compact size="mini">
+              {importStatus}
+            </Message>
+          ) : null}
+          <div className="player-stats-import-actions">
+            <input
+              accept=".csv,.json,.txt"
+              aria-label="Choose media server history file"
+              data-testid="player-listening-history-file"
+              onChange={readImportFile}
+              ref={fileInputRef}
+              type="file"
+            />
+            <Popup
+              content="Choose a local CSV or JSON export from Plex, Jellyfin, Navidrome, or another media server. The file is read in this browser only."
+              trigger={
+                <Button
+                  data-testid="player-listening-history-choose-file"
+                  onClick={() => fileInputRef.current?.click()}
+                  size="mini"
+                  type="button"
+                >
+                  <Icon name="folder open" />
+                  Choose File
+                </Button>
+              }
+            />
+            <Popup
+              content="Import the pasted or chosen play history into browser-local listening stats with duplicate suppression."
+              trigger={
+                <Button
+                  data-testid="player-listening-history-import"
+                  disabled={!importText.trim()}
+                  onClick={importHistory}
+                  primary
+                  size="mini"
+                  type="button"
+                >
+                  <Icon name="upload" />
+                  Import
+                </Button>
+              }
+            />
+            <Popup
+              content="Copy the browser-local listening history as JSON for backup or review."
+              trigger={
+                <Button
+                  data-testid="player-listening-history-export-json"
+                  disabled={stats.history.length === 0}
+                  onClick={() => copyHistory('json')}
+                  size="mini"
+                  type="button"
+                >
+                  <Icon name="copy" />
+                  JSON
+                </Button>
+              }
+            />
+            <Popup
+              content="Copy the browser-local listening history as CSV for media-server or spreadsheet review."
+              trigger={
+                <Button
+                  data-testid="player-listening-history-export-csv"
+                  disabled={stats.history.length === 0}
+                  onClick={() => copyHistory('csv')}
+                  size="mini"
+                  type="button"
+                >
+                  <Icon name="table" />
+                  CSV
+                </Button>
+              }
+            />
+          </div>
+        </section>
       </Modal.Content>
       <Modal.Actions>
         <Popup
@@ -2194,6 +2362,10 @@ const PlayerBar = () => {
       />
       <PlayerStatsModal
         onClose={() => setStatsOpen(false)}
+        onOpenSearch={(query) => {
+          setStatsOpen(false);
+          openRadioSearch(query);
+        }}
         open={statsOpen}
       />
       {current && queue.length > 1 ? (

@@ -1,3 +1,64 @@
+## Update 2026-04-30 21:03:57Z
+
+- Current task: Epic E6 browser-local Watchlists panel is implemented locally.
+- Last activity:
+  - added local watchlist storage for artist, label, playlist, and collection targets
+  - surfaced Watchlists in Discovery Inbox with add, summary, manual scan preview, and send-to-review actions
+  - kept watchlists local-only with no metadata provider lookup, Soulseek search, peer browse, download, scheduled automation, or file mutation
+  - validated focused watchlist, Discovery Inbox storage, Discovery Inbox component tests, and frontend lint
+- Next steps:
+  1. Continue beginning-lane E6 with local filter controls for release type/country/format if ownership remains clear.
+  2. Later connect watchlist scans to backend radar/provider APIs only after cooldowns, credentials, and network-impact policy are explicit.
+
+## Update 2026-04-30 21:04:16Z
+
+- Current task: E14 Listening Intelligence browser-local media-server play-history import is implemented locally.
+- Last activity:
+  - added CSV/JSON import parsing and duplicate suppression for local listening history
+  - added JSON/CSV local history export helpers
+  - surfaced paste, local file picker, import, and export controls in the player Listening Stats modal
+  - validated focused listening/player tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue tail-side burn-down with E13 only if it can stay low-overlap and avoids active Discovery Inbox ownership.
+  2. Keep live media-server API import deferred until credentials, rate limits, and per-user mapping are explicit.
+
+## Update 2026-04-30 21:06:05Z
+
+- Current task: Realm subject-index governance proposal flow is implemented locally.
+- Last activity:
+  - added proposal/review models and pending/accepted/rejected status tracking for realm subject indexes
+  - stored proposal and review decisions as realm governance documents when a governance client is available
+  - kept pending and rejected proposals out of recording-MBID resolution, publishing only explicitly accepted revisions
+  - validated focused `RealmSubjectIndexServiceTests`
+- Next steps:
+  1. Continue center-lane work with realm subject-index conflict display only if frontend lane ownership is clear, otherwise stay on backend-only federation follow-ups.
+  2. Leave concurrent options, source-feed, transfer-test, search, wishlist, Discovery Inbox, and player edits untouched unless asked to integrate.
+
+## Update 2026-04-30 20:59:18Z
+
+- Current task: E14 Listening Intelligence recommendation seed handoffs are implemented locally.
+- Last activity:
+  - added deterministic recommendation seeds from browser-local forgotten favorites, top artists, and top genres
+  - surfaced Recommendation Seeds in the player Listening Stats modal
+  - used explicit Search action buttons with tooltips so no network search starts until the user chooses a seed
+  - validated focused listening/player tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue tail-side burn-down only in low-overlap local player/listening surfaces unless lane ownership changes.
+  2. Defer external recommendation/provider imports until credentials, rate limits, and dedupe policy are explicit.
+
+## Update 2026-04-30 20:55:53Z
+
+- Current task: Discovery Inbox snooze due dates are implemented locally.
+- Last activity:
+  - added persisted `snoozedUntil` metadata to Discovery Inbox items
+  - surfaced Snoozed until/Snooze due labels and an Unsnooze action
+  - added focused storage and component coverage for snoozing, clearing snooze metadata, and overdue status
+  - kept the slice local-only with no scheduler, provider lookup, peer browse, search, download, automation, or file mutation
+  - validated focused Discovery Inbox tests and frontend lint
+- Next steps:
+  1. Continue beginning-lane burn-down with Watchlists/Release Radar only if it avoids active source-feed and MusicBrainz backend ownership.
+  2. Later connect snooze due dates to backend job scheduling only after explicit automation policy and rate limits exist.
+
 ## Update 2026-04-30 20:47:21Z
 
 - Current task: Discovery Inbox impact review summary is implemented locally.
@@ -9,6 +70,17 @@
 - Next steps:
   1. Continue beginning-lane burn-down with Watchlists/Release Radar only if it avoids active source-feed and MusicBrainz backend ownership.
   2. Later replace text-derived impact classification with backend-provided provider capability metadata when acquisition jobs are wired.
+
+## Update 2026-04-30 20:55:34Z
+
+- Current task: E14 Listening Intelligence browser-local genre breakdowns are implemented locally.
+- Last activity:
+  - stored genre/tag metadata in local listening history entries
+  - added Top Genres to the player Listening Stats modal
+  - validated focused listening history, player auto-queue, radio, shortcut, rating, and PlayerBar tests
+- Next steps:
+  1. Continue E14 with stats-derived recommendation seed previews if they stay browser-local and explicit.
+  2. Add label breakdowns only after real label metadata is present in now-playing or imported history.
 
 ## Update 2026-04-30 20:50:41Z
 
@@ -57,6 +129,18 @@
 - Next steps:
   1. Continue beginning-lane burn-down with the next untouched Discovery Inbox/watchlist item only if it avoids current Wishlist/source-feed ownership.
   2. Later wire album decision rules into a backend-backed album decision planner after the persistence and download handoff contract is explicit.
+
+## Update 2026-04-30 20:57:04Z
+
+- Current task: MusicBrainz overlay trust-scoped routing is implemented locally.
+- Last activity:
+  - added opt-in PodCore route attempts for stored signed MusicBrainz overlay edits
+  - constrained routing to explicit safe peer IDs and safe route metadata
+  - recorded route attempts with target, routed, and failed peer IDs
+  - validated focused MusicBrainz overlay tests, whitespace, lint, and full `dotnet test`
+- Next steps:
+  1. Continue center-lane work with realm subject-index governance proposals once current frontend lanes settle.
+  2. Leave concurrent options, source-feed, transfer-test, search, wishlist, Discovery Inbox, and player edits untouched unless asked to integrate.
 
 ## Update 2026-04-30 20:48:35Z
 
@@ -3182,11 +3266,23 @@ dotnet test
 
 ## Update 2026-04-30 20:53:19Z
 
-- Current task: Source-feed provider Web UI settings are implemented locally.
+- Current task: Source-feed provider Web UI settings are complete locally.
 - Last activity:
   - added runtime overlay support for source-feed integration settings
   - added YouTube and Last.fm enabled toggles alongside their API keys
-  - added System Integrations controls for Spotify, YouTube, and Last.fm settings with masked secrets, warnings, and tooltip-backed apply/reset actions
+  - added System Integrations controls for Spotify, YouTube, and Last.fm settings with masked secrets, warnings, and tooltip-backed runtime apply, YAML save, and reset actions
 - Next steps:
-  1. Validate focused backend/frontend tests, build, lint, and full test gates.
+  1. Review and merge the source-feed provider settings changes.
   2. Keep private-library provider imports behind explicit OAuth/account connection work.
+
+## Update 2026-04-30 21:06:41Z
+
+- Current task: Web UI surface audit and first Messages redesign slice are implemented locally.
+- Last activity:
+  - added `docs/dev/webui-surface-audit-2026-04-30.md` with admin/general UI gaps and recommended follow-up order
+  - added a unified Messages workspace for chats and rooms
+  - kept `/chat` and `/rooms` as compatibility entry points into the new workspace
+  - added multi-panel message windows, compact workspace layout, collapse-all, per-panel collapse, close, and restore dock affordances
+- Next steps:
+  1. Validate focused Messages/App tests, frontend lint/build, whitespace, and relevant backend gates.
+  2. Start the next admin settings surface with Notifications or Transfer Policy.

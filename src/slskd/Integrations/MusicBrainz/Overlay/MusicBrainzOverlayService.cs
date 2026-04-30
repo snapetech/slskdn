@@ -5,23 +5,34 @@ namespace slskd.Integrations.MusicBrainz.Overlay;
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using slskd.Integrations.MusicBrainz.Models;
+using slskd.PodCore;
 
 public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() },
     };
 
     private readonly ConcurrentDictionary<string, MusicBrainzOverlayEdit> _edits = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, MusicBrainzOverlayExportDecision> _exportDecisions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, MusicBrainzOverlayRouteAttempt> _routeAttempts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IPodMessageRouter? _messageRouter;
     private readonly ILogger<MusicBrainzOverlayService> _logger;
 
     public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger)
+        : this(logger, null)
+    {
+    }
+
+    public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger, IPodMessageRouter? messageRouter)
     {
         _logger = logger;
+        _messageRouter = messageRouter;
     }
 
     public Task<MusicBrainzOverlayValidationResult> StoreAsync(
@@ -134,6 +145,75 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
         _exportDecisions[editId] = decision;
         result.Decision = decision;
         return Task.FromResult(result);
+    }
+
+    public async Task<MusicBrainzOverlayRouteAttempt> RouteEditAsync(
+        string editId,
+        MusicBrainzOverlayRouteRequest routeRequest,
+        CancellationToken cancellationToken = default)
+    {
+        editId = editId.Trim();
+        routeRequest ??= new MusicBrainzOverlayRouteRequest();
+        if (!_edits.TryGetValue(editId, out var edit))
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(editId, routeRequest, Array.Empty<string>(), success: false, "Edit not found."));
+        }
+
+        if (HasUnsafeRouteMetadata(routeRequest))
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(editId, routeRequest, Array.Empty<string>(), success: false, "Route metadata must be opaque and safe."));
+        }
+
+        var targetPeerIds = NormalizeRouteTargets(routeRequest.TargetPeerIds);
+        if (targetPeerIds.Count == 0)
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(editId, routeRequest, targetPeerIds, success: false, "At least one target peer is required."));
+        }
+
+        if (targetPeerIds.Any(peerId => !IsSafeOpaqueReference(peerId)))
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(editId, routeRequest, targetPeerIds, success: false, "Route targets must be opaque and safe."));
+        }
+
+        if (_messageRouter == null)
+        {
+            return StoreRouteAttempt(BuildRouteAttempt(editId, routeRequest, targetPeerIds, success: false, "Routing backend is not available."));
+        }
+
+        var message = BuildRouteMessage(edit, routeRequest, targetPeerIds);
+        var routingResult = await _messageRouter.RouteMessageToPeersAsync(message, targetPeerIds, cancellationToken).ConfigureAwait(false);
+        var failedPeerIds = routingResult.FailedPeerIds?.ToList() ?? new List<string>();
+        var routedPeerIds = targetPeerIds
+            .Where(peerId => !failedPeerIds.Contains(peerId, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        return StoreRouteAttempt(new MusicBrainzOverlayRouteAttempt
+        {
+            Id = $"musicbrainz-overlay-route:{Guid.NewGuid():N}",
+            EditId = edit.Id,
+            MessageId = message.MessageId,
+            PodId = message.PodId,
+            ChannelId = message.ChannelId,
+            TargetPeerIds = targetPeerIds,
+            RoutedPeerIds = routedPeerIds,
+            FailedPeerIds = failedPeerIds,
+            Success = routingResult.Success,
+            ErrorMessage = routingResult.ErrorMessage,
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
+    }
+
+    public Task<IReadOnlyList<MusicBrainzOverlayRouteAttempt>> GetRouteAttemptsAsync(
+        string editId,
+        CancellationToken cancellationToken = default)
+    {
+        editId = editId.Trim();
+        var attempts = _routeAttempts.Values
+            .Where(attempt => string.Equals(attempt.EditId, editId, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(attempt => attempt.CreatedAt)
+            .ThenBy(attempt => attempt.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<MusicBrainzOverlayRouteAttempt>>(attempts);
     }
 
     public Task<MusicBrainzOverlayApplication<ArtistReleaseGraph>> ApplyToArtistReleaseGraphAsync(
@@ -299,6 +379,85 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
         }
 
         return !System.Text.RegularExpressions.Regex.IsMatch(value, "^[a-fA-F0-9]{32,}$");
+    }
+
+    private static List<string> NormalizeRouteTargets(IEnumerable<string> targets)
+    {
+        return targets
+            .Select(target => target.Trim())
+            .Where(target => !string.IsNullOrWhiteSpace(target))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(target => target, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static bool HasUnsafeRouteMetadata(MusicBrainzOverlayRouteRequest routeRequest)
+    {
+        return (!string.IsNullOrWhiteSpace(routeRequest.SenderPeerId) && !IsSafeOpaqueReference(routeRequest.SenderPeerId)) ||
+            (!string.IsNullOrWhiteSpace(routeRequest.PodId) && !IsSafeOpaqueReference(routeRequest.PodId)) ||
+            (!string.IsNullOrWhiteSpace(routeRequest.ChannelId) && !IsSafeOpaqueReference(routeRequest.ChannelId));
+    }
+
+    private static PodMessage BuildRouteMessage(
+        MusicBrainzOverlayEdit edit,
+        MusicBrainzOverlayRouteRequest routeRequest,
+        IReadOnlyList<string> targetPeerIds)
+    {
+        var envelope = new MusicBrainzOverlayRouteEnvelope
+        {
+            Edit = edit,
+            TargetPeerIds = targetPeerIds.ToList(),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+
+        return new PodMessage
+        {
+            MessageId = $"musicbrainz-overlay-edit:{Guid.NewGuid():N}",
+            PodId = string.IsNullOrWhiteSpace(routeRequest.PodId) ? "musicbrainz-overlay" : routeRequest.PodId.Trim(),
+            ChannelId = string.IsNullOrWhiteSpace(routeRequest.ChannelId) ? $"edit:{edit.Id}" : routeRequest.ChannelId.Trim(),
+            SenderPeerId = string.IsNullOrWhiteSpace(routeRequest.SenderPeerId) ? "local-musicbrainz-overlay" : routeRequest.SenderPeerId.Trim(),
+            Body = JsonSerializer.Serialize(envelope, JsonOptions),
+            TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            Signature = "local-musicbrainz-overlay-route",
+        };
+    }
+
+    private static MusicBrainzOverlayRouteAttempt BuildRouteAttempt(
+        string editId,
+        MusicBrainzOverlayRouteRequest routeRequest,
+        IReadOnlyList<string> targets,
+        bool success,
+        string? errorMessage)
+    {
+        return new MusicBrainzOverlayRouteAttempt
+        {
+            Id = $"musicbrainz-overlay-route:{Guid.NewGuid():N}",
+            EditId = editId,
+            MessageId = string.Empty,
+            PodId = string.IsNullOrWhiteSpace(routeRequest.PodId) ? "musicbrainz-overlay" : routeRequest.PodId.Trim(),
+            ChannelId = string.IsNullOrWhiteSpace(routeRequest.ChannelId) ? $"edit:{editId}" : routeRequest.ChannelId.Trim(),
+            TargetPeerIds = targets.ToList(),
+            Success = success,
+            ErrorMessage = errorMessage,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+    }
+
+    private MusicBrainzOverlayRouteAttempt StoreRouteAttempt(MusicBrainzOverlayRouteAttempt attempt)
+    {
+        _routeAttempts[attempt.Id] = attempt;
+        return attempt;
+    }
+
+    private sealed class MusicBrainzOverlayRouteEnvelope
+    {
+        public string Type { get; set; } = "slskdn.musicbrainz-overlay.edit.v1";
+
+        public MusicBrainzOverlayEdit Edit { get; set; } = new();
+
+        public List<string> TargetPeerIds { get; set; } = new();
+
+        public DateTimeOffset CreatedAt { get; set; }
     }
 
     private static bool IsSupportedEdit(MusicBrainzOverlayEdit edit)

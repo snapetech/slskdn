@@ -74,6 +74,7 @@ vi.mock('./ImportStaging/ImportStaging', () => ({
   default: () => <div>Import Staging</div>,
 }));
 vi.mock('./LoginForm', () => ({ default: () => <div>Login Form</div> }));
+vi.mock('./Messaging/Messaging', () => ({ default: () => <div>Messages</div> }));
 vi.mock('./Pods/Pods', () => ({ default: () => <div>Pods</div> }));
 vi.mock('./Rooms/Rooms', () => ({ default: () => <div>Rooms</div> }));
 vi.mock('./Search/Searches', () => ({ default: () => <div>Searches</div> }));

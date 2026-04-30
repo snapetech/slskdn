@@ -35,15 +35,14 @@ const ROOM_ACTIVITY_SEEN_STORAGE_KEY = 'slskdn.rooms.lastSeenActivity';
 const NAV_ACTIVITY_POLL_INTERVAL_MS = 10_000;
 
 const Browse = lazy(() => import('./Browse/Browse'));
-const Chat = lazy(() => import('./Chat/Chat'));
 const Collections = lazy(() => import('./Collections/Collections'));
 const Contacts = lazy(() => import('./Contacts/Contacts'));
 const DiscoveryInbox = lazy(() => import('./DiscoveryInbox/DiscoveryInbox'));
 const DiscoveryGraphAtlasPage = lazy(() =>
   import('./Search/DiscoveryGraphAtlasPage'));
 const ImportStaging = lazy(() => import('./ImportStaging/ImportStaging'));
+const Messaging = lazy(() => import('./Messaging/Messaging'));
 const Pods = lazy(() => import('./Pods/Pods'));
-const Rooms = lazy(() => import('./Rooms/Rooms'));
 const Searches = lazy(() => import('./Search/Searches'));
 const ShareGroups = lazy(() => import('./ShareGroups/ShareGroups'));
 const SharedWithMe = lazy(() => import('./Shares/SharedWithMe'));
@@ -458,7 +457,10 @@ class App extends Component {
   isAuthenticated = () => session.isLoggedIn() || isPassthroughEnabled();
 
   getChatActivity = async () => {
-    if (this.getCurrentPath().startsWith('/chat')) {
+    if (
+      this.getCurrentPath().startsWith('/chat') ||
+      this.getCurrentPath().startsWith('/messages')
+    ) {
       return false;
     }
 
@@ -488,7 +490,10 @@ class App extends Component {
         : activity;
     }, {});
 
-    if (this.getCurrentPath().startsWith('/rooms')) {
+    if (
+      this.getCurrentPath().startsWith('/rooms') ||
+      this.getCurrentPath().startsWith('/messages')
+    ) {
       storeRoomActivity(latestByRoom);
       this.roomActivityBaselined = true;
       return false;
@@ -894,24 +899,16 @@ class App extends Component {
                       Uploads
                     </Menu.Item>
                   </NavLink>
-                  <NavLink to="/rooms">
-                    <Menu.Item data-testid="nav-rooms">
+                  <NavLink to="/messages">
+                    <Menu.Item data-testid="nav-messages">
                       <NavigationIcon
-                        alert={navActivity.rooms}
-                        alertTestId="nav-rooms-alert"
+                        alert={navActivity.rooms || navActivity.chat}
+                        alertTestId={
+                          navActivity.chat ? 'nav-chat-alert' : 'nav-rooms-alert'
+                        }
                         name="comments"
                       />
-                      Rooms
-                    </Menu.Item>
-                  </NavLink>
-                  <NavLink to="/chat">
-                    <Menu.Item data-testid="nav-chat">
-                      <NavigationIcon
-                        alert={navActivity.chat}
-                        alertTestId="nav-chat-alert"
-                        name="comment"
-                      />
-                      Chat
+                      Messages
                     </Menu.Item>
                   </NavLink>
                   <NavLink to="/users">
@@ -1303,7 +1300,8 @@ class App extends Component {
                     path="/chat"
                     element={
                       this.withTokenCheck(
-                        <Chat
+                        <Messaging
+                          initialKind="chat"
                           state={applicationState}
                         />,
                       )
@@ -1323,7 +1321,25 @@ class App extends Component {
                   />
                   <Route
                     path="/rooms"
-                    element={this.withTokenCheck(<Rooms />)}
+                    element={
+                      this.withTokenCheck(
+                        <Messaging
+                          initialKind="room"
+                          state={applicationState}
+                        />,
+                      )
+                    }
+                  />
+                  <Route
+                    path="/messages"
+                    element={
+                      this.withTokenCheck(
+                        <Messaging
+                          initialKind="mixed"
+                          state={applicationState}
+                        />,
+                      )
+                    }
                   />
                   <Route
                     path="/uploads"

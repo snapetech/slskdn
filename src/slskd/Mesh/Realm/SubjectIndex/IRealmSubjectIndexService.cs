@@ -13,6 +13,23 @@ public interface IRealmSubjectIndexService
         RealmSubjectIndex index,
         CancellationToken cancellationToken = default);
 
+    Task<RealmSubjectIndexProposal> ProposeAsync(
+        RealmSubjectIndex index,
+        string proposedBy,
+        string note = "",
+        CancellationToken cancellationToken = default);
+
+    Task<RealmSubjectIndexProposalReview> ReviewProposalAsync(
+        string proposalId,
+        string reviewedBy,
+        bool accept,
+        string note = "",
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RealmSubjectIndexProposal>> GetProposalsForRealmAsync(
+        string realmId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<RealmSubjectIndexResolution>> ResolveByRecordingIdAsync(
         string recordingId,
         CancellationToken cancellationToken = default);

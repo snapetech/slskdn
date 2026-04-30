@@ -1,0 +1,204 @@
+.messaging-workspace {
+  --messaging-sidebar-width: 280px;
+  margin: 14px auto 18px;
+  max-width: min(1560px, calc(100vw - 28px));
+}
+
+.messaging-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, var(--messaging-sidebar-width)) minmax(0, 1fr);
+  gap: 10px;
+  min-height: min(760px, calc(100vh - 180px));
+}
+
+.messaging-sidebar.ui.segment {
+  margin: 0 !important;
+  padding: 10px !important;
+}
+
+.messaging-sidebar-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.messaging-sidebar-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.messaging-sidebar-section {
+  margin-top: 12px;
+}
+
+.messaging-sidebar-section-title {
+  align-items: center;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  justify-content: space-between;
+  letter-spacing: 0;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.messaging-start-row {
+  display: flex;
+  gap: 6px;
+}
+
+.messaging-start-row .ui.input,
+.messaging-start-row .ui.dropdown {
+  min-width: 0;
+}
+
+.messaging-list {
+  display: grid;
+  gap: 5px;
+}
+
+.messaging-list-button.ui.button {
+  justify-content: flex-start;
+  margin: 0 !important;
+  text-align: left;
+}
+
+.messaging-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.messaging-toolbar.ui.segment {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin: 0 0 10px !important;
+  padding: 8px 10px !important;
+}
+
+.messaging-toolbar-title {
+  align-items: center;
+  display: flex;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.messaging-window-grid {
+  align-content: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr));
+  min-width: 0;
+}
+
+.messaging-window.ui.card {
+  margin: 0 !important;
+  min-width: 0;
+  width: 100% !important;
+}
+
+.messaging-window > .content.messaging-window-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 10px !important;
+}
+
+.messaging-window-heading {
+  align-items: center;
+  display: flex;
+  font-weight: 700;
+  gap: 8px;
+  min-width: 0;
+}
+
+.messaging-window-heading span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messaging-window-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.messaging-window-body {
+  padding: 0 !important;
+}
+
+.messaging-window-body .chat,
+.messaging-window-body .room {
+  height: min(520px, calc(100vh - 280px));
+  margin-top: 0;
+}
+
+.messaging-window-body .chat-history,
+.messaging-window-body .room-history {
+  height: min(480px, calc(100vh - 320px));
+}
+
+.messaging-window-body .chat-active-card.ui.card,
+.messaging-window-body .room-active-card.ui.card {
+  border: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.messaging-window-body .chat-active-card.ui.card > .content,
+.messaging-window-body .room-active-card.ui.card > .content {
+  padding: 0 !important;
+}
+
+.messaging-window-body .chat-active-card.ui.card > .content > .header,
+.messaging-window-body .room-active-card.ui.card > .content > .header {
+  display: none;
+}
+
+.messaging-dock {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.messaging-dock .ui.button {
+  margin: 0 !important;
+}
+
+.messaging-empty.ui.segment {
+  min-height: 220px;
+}
+
+:root.dark .messaging-sidebar.ui.segment,
+:root.dark .messaging-toolbar.ui.segment,
+:root.dark .messaging-window.ui.card {
+  background: var(--slskd-color-inset, #08070d) !important;
+  border-color: var(--slskd-tertiary-border-color, rgba(214, 196, 255, 0.24)) !important;
+  color: var(--slskd-color, #f4eefc) !important;
+}
+
+:root.dark .messaging-window > .content.messaging-window-title {
+  border-color: var(--slskd-tertiary-border-color, rgba(214, 196, 255, 0.24)) !important;
+}
+
+@media only screen and (max-width: 900px) {
+  .messaging-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .messaging-window-body .chat,
+  .messaging-window-body .room,
+  .messaging-window-body .chat-history,
+  .messaging-window-body .room-history {
+    height: 420px;
+  }
+}

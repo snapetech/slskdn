@@ -45,6 +45,35 @@
   margin-top: 0 !important;
 }
 
+.discovery-inbox-watchlists.ui.segment {
+  margin-bottom: 1rem;
+}
+
+.discovery-inbox-watchlist-form {
+  margin-bottom: 0.75rem;
+}
+
+.discovery-inbox-watchlist-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.discovery-inbox-watchlist {
+  align-items: center;
+  border: 1px solid var(--slskd-border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.65rem;
+}
+
+.discovery-inbox-watchlist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .discovery-inbox-plan-grid {
   display: grid;
   gap: 0.5rem;
@@ -104,6 +133,10 @@
   margin-top: 0.65rem;
 }
 
+.discovery-inbox-snooze {
+  margin-top: 0.55rem;
+}
+
 .discovery-inbox-impact-labels {
   display: flex;
   flex-wrap: wrap;
@@ -123,7 +156,8 @@
 @media only screen and (max-width: 760px) {
   .discovery-inbox-header,
   .discovery-inbox-card-head,
-  .discovery-inbox-plan {
+  .discovery-inbox-plan,
+  .discovery-inbox-watchlist {
     align-items: stretch;
     flex-direction: column;
   }
@@ -147,7 +181,8 @@
   }
 
   .discovery-inbox-card.ui.segment,
-  .discovery-inbox-plan {
+  .discovery-inbox-plan,
+  .discovery-inbox-watchlist {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
   }
 

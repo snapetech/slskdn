@@ -5,6 +5,7 @@ namespace slskd.Tests.Unit.Mesh.Realm.SubjectIndex;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using slskd.Mesh.Governance;
 using slskd.Mesh.Realm;
 using slskd.Mesh.Realm.SubjectIndex;
 using slskd.SocialFederation;
@@ -12,11 +13,18 @@ using slskd.SocialFederation;
 public sealed class RealmSubjectIndexServiceTests
 {
     private readonly Mock<IRealmService> _realmService = new();
+    private readonly Mock<IRealmAwareGovernanceClient> _governanceClient = new();
 
     public RealmSubjectIndexServiceTests()
     {
         _realmService.Setup(service => service.IsSameRealm("scene-realm")).Returns(true);
         _realmService.Setup(service => service.IsTrustedGovernanceRoot("trusted-root")).Returns(true);
+        _governanceClient
+            .Setup(client => client.StoreDocumentForRealmAsync(
+                It.IsAny<GovernanceDocument>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
     }
 
     [Fact]
@@ -90,11 +98,104 @@ public sealed class RealmSubjectIndexServiceTests
         Assert.Equal("realm:scene-realm:subject-index:scene-index:r3", resolution.Provenance);
     }
 
+    [Fact]
+    public async Task ProposeAsync_StoresGovernanceProposalWithoutPublishingIndex()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+
+        var proposal = await service.ProposeAsync(index, "local-curator", "ready for review");
+
+        Assert.Equal(RealmSubjectIndexProposalStatus.Pending, proposal.Status);
+        Assert.Empty(proposal.Errors);
+        Assert.Equal("scene-realm:scene-index:r3", proposal.ProposalId);
+        var resolutions = await service.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+        Assert.Empty(resolutions);
+        _governanceClient.Verify(client => client.StoreDocumentForRealmAsync(
+            It.Is<GovernanceDocument>(document =>
+                document.Type == "realm-subject-index.proposal" &&
+                document.RealmId == "scene-realm" &&
+                document.Signer == "trusted-root"),
+            "scene-realm",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReviewProposalAsync_AcceptsProposalAndPublishesIndex()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+        var proposal = await service.ProposeAsync(index, "local-curator");
+
+        var review = await service.ReviewProposalAsync(proposal.ProposalId, "trusted-root", accept: true, "approved");
+
+        Assert.Empty(review.Errors);
+        Assert.True(review.Accept);
+        var storedProposals = await service.GetProposalsForRealmAsync("scene-realm");
+        Assert.Equal(RealmSubjectIndexProposalStatus.Accepted, Assert.Single(storedProposals).Status);
+        var resolutions = await service.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+        Assert.Single(resolutions);
+        _governanceClient.Verify(client => client.StoreDocumentForRealmAsync(
+            It.Is<GovernanceDocument>(document =>
+                document.Type == "realm-subject-index.review" &&
+                document.Signer == "trusted-root"),
+            "scene-realm",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReviewProposalAsync_RejectsProposalWithoutPublishingIndex()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+        var proposal = await service.ProposeAsync(index, "local-curator");
+
+        var review = await service.ReviewProposalAsync(proposal.ProposalId, "trusted-root", accept: false, "needs more evidence");
+
+        Assert.Empty(review.Errors);
+        Assert.False(review.Accept);
+        var storedProposals = await service.GetProposalsForRealmAsync("scene-realm");
+        Assert.Equal(RealmSubjectIndexProposalStatus.Rejected, Assert.Single(storedProposals).Status);
+        var resolutions = await service.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+        Assert.Empty(resolutions);
+    }
+
+    [Fact]
+    public async Task ReviewProposalAsync_RejectsUntrustedReviewer()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+        var proposal = await service.ProposeAsync(index, "local-curator");
+
+        var review = await service.ReviewProposalAsync(proposal.ProposalId, "unknown-root", accept: true);
+
+        Assert.Contains("Reviewer is not trusted for this realm.", review.Errors);
+        var resolutions = await service.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+        Assert.Empty(resolutions);
+    }
+
+    [Fact]
+    public async Task ProposeAsync_RejectsUnsafeProposerWithoutGovernanceDocument()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+
+        var proposal = await service.ProposeAsync(index, "https://private.example/user");
+
+        Assert.Equal(RealmSubjectIndexProposalStatus.Failed, proposal.Status);
+        Assert.Contains("Proposed-by identifier must be opaque and safe.", proposal.Errors);
+        _governanceClient.Verify(client => client.StoreDocumentForRealmAsync(
+            It.IsAny<GovernanceDocument>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private RealmSubjectIndexService CreateService()
     {
         return new RealmSubjectIndexService(
             _realmService.Object,
-            NullLogger<RealmSubjectIndexService>.Instance);
+            NullLogger<RealmSubjectIndexService>.Instance,
+            _governanceClient.Object);
     }
 
     private static RealmSubjectIndex CreateIndex()

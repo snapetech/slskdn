@@ -1,5 +1,6 @@
 import * as lidarr from '../../../lib/lidarr';
 import * as optionsApi from '../../../lib/options';
+import * as YAML from 'yaml';
 import {
   buildMediaServerPathDiagnostic,
   mediaServerAdapters,
@@ -109,8 +110,9 @@ const SourceFeedIntegrationsPanel = ({ options }) => {
     getOption(options, 'remoteConfiguration', 'RemoteConfiguration'),
   );
   const [form, setForm] = useState(() => buildSourceFeedForm(options));
-  const [saving, setSaving] = useState(false);
+  const [savingAction, setSavingAction] = useState('');
   const [message, setMessage] = useState(null);
+  const saving = Boolean(savingAction);
 
   useEffect(() => {
     setForm(buildSourceFeedForm(options));
@@ -140,10 +142,7 @@ const SourceFeedIntegrationsPanel = ({ options }) => {
       'Last.fm needs an API key before loved/recent/top imports can run.',
   ].filter(Boolean);
 
-  const save = async () => {
-    setSaving(true);
-    setMessage(null);
-
+  const buildOverlay = () => {
     const spotifyPatch = {
       enabled: form.spotifyEnabled,
       maxItemsPerImport: toNumber(form.spotifyMaxItems, 500),
@@ -160,12 +159,12 @@ const SourceFeedIntegrationsPanel = ({ options }) => {
       spotifyPatch.clientSecret = form.spotifyClientSecret.trim();
     }
 
-    const youtubePatch = {
+    const youTubePatch = {
       enabled: form.youTubeEnabled,
     };
 
     if (form.youTubeApiKey.trim()) {
-      youtubePatch.apiKey = form.youTubeApiKey.trim();
+      youTubePatch.apiKey = form.youTubeApiKey.trim();
     }
 
     const lastFmPatch = {
@@ -176,26 +175,42 @@ const SourceFeedIntegrationsPanel = ({ options }) => {
       lastFmPatch.apiKey = form.lastFmApiKey.trim();
     }
 
+    return {
+      integration: {
+        lastFm: lastFmPatch,
+        spotify: spotifyPatch,
+        youTube: youTubePatch,
+      },
+    };
+  };
+
+  const markSecretsConfigured = (overlay) => {
+    const spotifyPatch = overlay.integration.spotify;
+    const youTubePatch = overlay.integration.youTube;
+    const lastFmPatch = overlay.integration.lastFm;
+
+    setForm((current) => ({
+      ...current,
+      lastFmApiKey: '',
+      lastFmConfigured: current.lastFmConfigured || Boolean(lastFmPatch.apiKey),
+      spotifyClientId: '',
+      spotifyClientSecret: '',
+      spotifyConfigured: current.spotifyConfigured || Boolean(spotifyPatch.clientId),
+      spotifySecretConfigured:
+        current.spotifySecretConfigured || Boolean(spotifyPatch.clientSecret),
+      youTubeApiKey: '',
+      youTubeConfigured: current.youTubeConfigured || Boolean(youTubePatch.apiKey),
+    }));
+  };
+
+  const applyRuntime = async () => {
+    setSavingAction('runtime');
+    setMessage(null);
+    const overlay = buildOverlay();
+
     try {
-      await optionsApi.applyOverlay({
-        integration: {
-          lastFm: lastFmPatch,
-          spotify: spotifyPatch,
-          youTube: youtubePatch,
-        },
-      });
-      setForm((current) => ({
-        ...current,
-        lastFmApiKey: '',
-        lastFmConfigured: current.lastFmConfigured || Boolean(lastFmPatch.apiKey),
-        spotifyClientId: '',
-        spotifyClientSecret: '',
-        spotifyConfigured: current.spotifyConfigured || Boolean(spotifyPatch.clientId),
-        spotifySecretConfigured:
-          current.spotifySecretConfigured || Boolean(spotifyPatch.clientSecret),
-        youTubeApiKey: '',
-        youTubeConfigured: current.youTubeConfigured || Boolean(youtubePatch.apiKey),
-      }));
+      await optionsApi.applyOverlay(overlay);
+      markSecretsConfigured(overlay);
       setMessage({
         positive: true,
         text: 'Source-feed integration settings applied for this running daemon.',
@@ -210,7 +225,63 @@ const SourceFeedIntegrationsPanel = ({ options }) => {
           'Failed to apply source-feed integration settings.',
       });
     } finally {
-      setSaving(false);
+      setSavingAction('');
+    }
+  };
+
+  const saveYaml = async () => {
+    setSavingAction('yaml');
+    setMessage(null);
+    const overlay = buildOverlay();
+
+    try {
+      const yaml = await optionsApi.getYaml();
+      const document = YAML.parseDocument(yaml || '{}');
+      const set = (path, value) => document.setIn(path, value);
+      const spotifyPatch = overlay.integration.spotify;
+      const youTubePatch = overlay.integration.youTube;
+      const lastFmPatch = overlay.integration.lastFm;
+
+      set(['integrations', 'spotify', 'enabled'], spotifyPatch.enabled);
+      set(['integrations', 'spotify', 'redirect_uri'], spotifyPatch.redirectUri);
+      set(['integrations', 'spotify', 'timeout_seconds'], spotifyPatch.timeoutSeconds);
+      set(['integrations', 'spotify', 'max_items_per_import'], spotifyPatch.maxItemsPerImport);
+      set(['integrations', 'spotify', 'market'], spotifyPatch.market);
+      if (spotifyPatch.clientId) {
+        set(['integrations', 'spotify', 'client_id'], spotifyPatch.clientId);
+      }
+
+      if (spotifyPatch.clientSecret) {
+        set(['integrations', 'spotify', 'client_secret'], spotifyPatch.clientSecret);
+      }
+
+      set(['integrations', 'youtube', 'enabled'], youTubePatch.enabled);
+      if (youTubePatch.apiKey) {
+        set(['integrations', 'youtube', 'api_key'], youTubePatch.apiKey);
+      }
+
+      set(['integrations', 'lastfm', 'enabled'], lastFmPatch.enabled);
+      if (lastFmPatch.apiKey) {
+        set(['integrations', 'lastfm', 'api_key'], lastFmPatch.apiKey);
+      }
+
+      await optionsApi.updateYaml({ yaml: document.toString() });
+      markSecretsConfigured(overlay);
+      setMessage({
+        positive: true,
+        text: 'Source-feed integration settings saved to YAML.',
+      });
+    } catch (error) {
+      setMessage({
+        negative: true,
+        text:
+          error?.response?.data ||
+          error?.response?.statusText ||
+          error?.message ||
+          'Failed to save source-feed integration settings.',
+      });
+    } finally {
+      setSavingAction('');
     }
   };
 
@@ -423,12 +494,27 @@ const SourceFeedIntegrationsPanel = ({ options }) => {
                 disabled={!remoteConfiguration || missingRequiredSettings.length > 0}
                 icon
                 labelPosition="left"
-                loading={saving}
-                onClick={save}
+                loading={savingAction === 'runtime'}
+                onClick={applyRuntime}
                 primary
               >
                 <Icon name="save" />
-                Apply Settings
+                Apply Runtime
+              </Button>
+            }
+          />
+          <Popup
+            content="Persist these source-feed integration settings to the YAML configuration file."
+            trigger={
+              <Button
+                disabled={!remoteConfiguration || missingRequiredSettings.length > 0}
+                icon
+                labelPosition="left"
+                loading={savingAction === 'yaml'}
+                onClick={saveYaml}
+              >
+                <Icon name="file alternate" />
+                Save YAML
               </Button>
             }
           />

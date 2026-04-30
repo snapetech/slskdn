@@ -87,6 +87,43 @@ public sealed class MusicBrainzOverlayController : ControllerBase
         return result.IsApproved ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("edits/{editId}/routes")]
+    [ProducesResponseType(typeof(MusicBrainzOverlayRouteAttempt), 200)]
+    public async Task<IActionResult> RouteEdit(
+        string editId,
+        [FromBody] MusicBrainzOverlayRouteRequest routeRequest,
+        CancellationToken cancellationToken)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var attempt = await _overlayService.RouteEditAsync(
+            editId,
+            routeRequest ?? new MusicBrainzOverlayRouteRequest(),
+            cancellationToken).ConfigureAwait(false);
+        if (attempt.ErrorMessage == "Edit not found.")
+        {
+            return NotFound(attempt);
+        }
+
+        return attempt.Success ? Ok(attempt) : BadRequest(attempt);
+    }
+
+    [HttpGet("edits/{editId}/routes")]
+    [ProducesResponseType(typeof(IReadOnlyList<MusicBrainzOverlayRouteAttempt>), 200)]
+    public async Task<IActionResult> GetRouteAttempts(string editId, CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var attempts = await _overlayService.GetRouteAttemptsAsync(editId, cancellationToken).ConfigureAwait(false);
+        return Ok(attempts);
+    }
+
     [HttpGet("artist/{artistId}/release-graph")]
     [ProducesResponseType(typeof(MusicBrainzOverlayReleaseGraphResponse), 200)]
     public async Task<IActionResult> GetEffectiveReleaseGraph(

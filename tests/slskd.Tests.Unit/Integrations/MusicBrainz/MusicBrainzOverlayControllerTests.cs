@@ -157,4 +157,64 @@ public sealed class MusicBrainzOverlayControllerTests
         var approval = Assert.IsType<MusicBrainzOverlayExportApprovalResult>(ok.Value);
         Assert.True(approval.IsApproved);
     }
+
+    [Fact]
+    public async Task RouteEdit_ReturnsBadRequestForFailedRouteAttempt()
+    {
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>();
+        var overlayService = new Mock<IMusicBrainzOverlayService>();
+        overlayService
+            .Setup(service => service.RouteEditAsync("edit-1", It.IsAny<MusicBrainzOverlayRouteRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MusicBrainzOverlayRouteAttempt
+            {
+                EditId = "edit-1",
+                Success = false,
+                ErrorMessage = "Routing backend is not available.",
+            });
+        var controller = new MusicBrainzOverlayController(releaseGraphService.Object, overlayService.Object);
+
+        var result = await controller.RouteEdit("edit-1", new MusicBrainzOverlayRouteRequest(), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task RouteEdit_ReturnsNotFoundForMissingEdit()
+    {
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>();
+        var overlayService = new Mock<IMusicBrainzOverlayService>();
+        overlayService
+            .Setup(service => service.RouteEditAsync("missing-edit", It.IsAny<MusicBrainzOverlayRouteRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MusicBrainzOverlayRouteAttempt
+            {
+                EditId = "missing-edit",
+                Success = false,
+                ErrorMessage = "Edit not found.",
+            });
+        var controller = new MusicBrainzOverlayController(releaseGraphService.Object, overlayService.Object);
+
+        var result = await controller.RouteEdit("missing-edit", new MusicBrainzOverlayRouteRequest(), CancellationToken.None);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetRouteAttempts_ReturnsServiceResult()
+    {
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>();
+        var overlayService = new Mock<IMusicBrainzOverlayService>();
+        overlayService
+            .Setup(service => service.GetRouteAttemptsAsync("edit-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<MusicBrainzOverlayRouteAttempt>
+            {
+                new() { EditId = "edit-1", Success = true },
+            });
+        var controller = new MusicBrainzOverlayController(releaseGraphService.Object, overlayService.Object);
+
+        var result = await controller.GetRouteAttempts("edit-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var attempts = Assert.IsAssignableFrom<IReadOnlyList<MusicBrainzOverlayRouteAttempt>>(ok.Value);
+        Assert.Single(attempts);
+    }
 }

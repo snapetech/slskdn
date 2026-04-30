@@ -17,6 +17,8 @@ export const discoveryInboxStates = [
 export const defaultDiscoveryInboxState = 'Suggested';
 
 const now = () => new Date().toISOString();
+const daysFromNow = (days, timestamp = Date.now()) =>
+  new Date(timestamp + days * 24 * 60 * 60 * 1_000).toISOString();
 
 const normalizeState = (state) =>
   discoveryInboxStates.includes(state) ? state : defaultDiscoveryInboxState;
@@ -35,6 +37,7 @@ const normalizeItem = (item) => {
     source: item.source || 'Manual',
     sourceId: item.sourceId || '',
     state: normalizeState(item.state),
+    snoozedUntil: item.snoozedUntil || '',
     title: item.title || item.searchText || 'Untitled discovery',
     updatedAt: item.updatedAt || timestamp,
   };
@@ -92,11 +95,63 @@ export const updateDiscoveryInboxItemState = (
   const nextState = normalizeState(state);
   const updated = getDiscoveryInboxItems(getItem).map((item) =>
     item.id === id
-      ? { ...item, state: nextState, updatedAt: now() }
+      ? {
+          ...item,
+          snoozedUntil: nextState === 'Snoozed' ? item.snoozedUntil : '',
+          state: nextState,
+          updatedAt: now(),
+        }
       : item,
   );
 
   return saveDiscoveryInboxItems(updated, setItem);
+};
+
+export const snoozeDiscoveryInboxItem = (
+  id,
+  days = 7,
+  {
+    getItem = getLocalStorageItem,
+    setItem = setLocalStorageItem,
+    timestamp = Date.now(),
+  } = {},
+) => {
+  const updated = getDiscoveryInboxItems(getItem).map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          snoozedUntil: daysFromNow(days, timestamp),
+          state: 'Snoozed',
+          updatedAt: now(),
+        }
+      : item,
+  );
+
+  return saveDiscoveryInboxItems(updated, setItem);
+};
+
+export const getDiscoveryInboxSnoozeStatus = (
+  item,
+  timestamp = Date.now(),
+) => {
+  if (item?.state !== 'Snoozed') {
+    return null;
+  }
+
+  const dueAt = Date.parse(item.snoozedUntil || '');
+  if (Number.isNaN(dueAt)) {
+    return {
+      color: 'grey',
+      isDue: false,
+      label: 'Snoozed',
+    };
+  }
+
+  return {
+    color: dueAt <= timestamp ? 'orange' : 'grey',
+    isDue: dueAt <= timestamp,
+    label: dueAt <= timestamp ? 'Snooze due' : 'Snoozed until',
+  };
 };
 
 export const bulkUpdateDiscoveryInboxItems = (

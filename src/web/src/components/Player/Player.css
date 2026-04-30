@@ -1067,7 +1067,11 @@
 .player-stats-grid {
   display: grid;
   gap: 0.9rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.player-stats-recommendations {
+  margin-top: 1rem;
 }
 
 .player-stats-list {
@@ -1106,6 +1110,97 @@
   font-style: normal;
   grid-column: 2;
   margin-top: -0.28rem;
+}
+
+.player-stats-seed-list {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.player-stats-seed-row {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(164, 116, 255, 0.14), rgba(96, 199, 217, 0.08)),
+    #17191d;
+  border: 1px solid rgba(164, 116, 255, 0.28);
+  border-radius: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.58rem 0.62rem;
+}
+
+.player-stats-seed-row strong,
+.player-stats-seed-row span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-stats-seed-row strong {
+  color: #f4ffff;
+}
+
+.player-stats-seed-row span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.76rem;
+  margin-top: 0.08rem;
+}
+
+.player-stats-seed-row .ui.button {
+  background:
+    linear-gradient(180deg, rgba(96, 199, 217, 0.26), rgba(96, 199, 217, 0.08)),
+    #1b2228;
+  border: 1px solid rgba(96, 199, 217, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #d9fbff;
+}
+
+.player-stats-import {
+  margin-top: 1rem;
+}
+
+.player-stats-import textarea {
+  background: #101317;
+  border: 1px solid rgba(164, 116, 255, 0.24);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: #f4ffff;
+  min-height: 92px;
+  padding: 0.72rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.player-stats-import textarea::placeholder {
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.player-stats-import .ui.message {
+  background: rgba(96, 199, 217, 0.1);
+  border: 1px solid rgba(96, 199, 217, 0.24);
+  color: #d9fbff;
+  margin-top: 0.55rem;
+}
+
+.player-stats-import-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.player-stats-import-actions input[type="file"] {
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
 }
 
 .player-external-visualizer {
@@ -1408,6 +1503,10 @@
 }
 
 @media (max-width: 720px) {
+  .player-stats-seed-list {
+    grid-template-columns: 1fr;
+  }
+
   .player-visualizer-inline {
     height: 72px;
     right: 0.6rem;

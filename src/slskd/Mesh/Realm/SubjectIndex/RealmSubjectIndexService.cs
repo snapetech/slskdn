@@ -5,10 +5,15 @@ namespace slskd.Mesh.Realm.SubjectIndex;
 
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using slskd.Mesh.Governance;
 using slskd.SocialFederation;
 
 public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
 {
+    private const string ProposalDocumentType = "realm-subject-index.proposal";
+    private const string ReviewDocumentType = "realm-subject-index.review";
+    private const int MaxProposalNoteLength = 512;
+
     private static readonly HashSet<string> AllowedEvidenceSchemes = new(StringComparer.OrdinalIgnoreCase)
     {
         Uri.UriSchemeHttps,
@@ -20,14 +25,18 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
 
     private readonly IRealmService _realmService;
     private readonly ILogger<RealmSubjectIndexService> _logger;
+    private readonly IRealmAwareGovernanceClient? _governanceClient;
     private readonly ConcurrentDictionary<string, RealmSubjectIndex> _indexes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, RealmSubjectIndexProposal> _proposals = new(StringComparer.OrdinalIgnoreCase);
 
     public RealmSubjectIndexService(
         IRealmService realmService,
-        ILogger<RealmSubjectIndexService> logger)
+        ILogger<RealmSubjectIndexService> logger,
+        IRealmAwareGovernanceClient? governanceClient = null)
     {
         _realmService = realmService;
         _logger = logger;
+        _governanceClient = governanceClient;
     }
 
     public Task<RealmSubjectIndexValidationResult> ValidateAsync(
@@ -54,6 +63,138 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
             index.Revision,
             index.RealmId);
         return Task.FromResult(validation);
+    }
+
+    public async Task<RealmSubjectIndexProposal> ProposeAsync(
+        RealmSubjectIndex index,
+        string proposedBy,
+        string note = "",
+        CancellationToken cancellationToken = default)
+    {
+        var proposal = BuildProposal(index, proposedBy, note);
+        var validation = Validate(index);
+        proposal.Errors.AddRange(validation.Errors);
+
+        if (!IsSafeOpaqueReference(proposal.ProposedBy))
+        {
+            proposal.Errors.Add("Proposed-by identifier must be opaque and safe.");
+        }
+
+        if (proposal.Note.Length > MaxProposalNoteLength)
+        {
+            proposal.Errors.Add("Proposal note must be 512 characters or fewer.");
+        }
+
+        if (proposal.Errors.Count > 0)
+        {
+            proposal.Status = RealmSubjectIndexProposalStatus.Failed;
+            _proposals[proposal.ProposalId] = proposal;
+            return proposal;
+        }
+
+        var document = BuildProposalDocument(proposal);
+        proposal.GovernanceDocumentId = document.Id;
+        _proposals[proposal.ProposalId] = proposal;
+
+        if (_governanceClient != null)
+        {
+            await _governanceClient.StoreDocumentForRealmAsync(document, proposal.RealmId, cancellationToken).ConfigureAwait(false);
+        }
+
+        _logger.LogInformation(
+            "[RealmSubjectIndex] Proposed index {IndexId} revision {Revision} for realm {RealmId}",
+            proposal.IndexId,
+            proposal.Revision,
+            proposal.RealmId);
+        return proposal;
+    }
+
+    public async Task<RealmSubjectIndexProposalReview> ReviewProposalAsync(
+        string proposalId,
+        string reviewedBy,
+        bool accept,
+        string note = "",
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedProposalId = proposalId.Trim();
+        var review = new RealmSubjectIndexProposalReview
+        {
+            ProposalId = normalizedProposalId,
+            ReviewedBy = reviewedBy.Trim(),
+            Accept = accept,
+            Note = note.Trim(),
+        };
+
+        if (!_proposals.TryGetValue(normalizedProposalId, out var proposal))
+        {
+            review.Errors.Add("Proposal was not found.");
+            return review;
+        }
+
+        if (proposal.Status != RealmSubjectIndexProposalStatus.Pending)
+        {
+            review.Errors.Add("Proposal has already been reviewed.");
+        }
+
+        if (!IsSafeOpaqueReference(review.ReviewedBy))
+        {
+            review.Errors.Add("Reviewed-by identifier must be opaque and safe.");
+        }
+        else if (!_realmService.IsTrustedGovernanceRoot(review.ReviewedBy))
+        {
+            review.Errors.Add("Reviewer is not trusted for this realm.");
+        }
+
+        if (review.Note.Length > MaxProposalNoteLength)
+        {
+            review.Errors.Add("Review note must be 512 characters or fewer.");
+        }
+
+        var validation = Validate(proposal.Index);
+        review.Errors.AddRange(validation.Errors);
+
+        if (review.Errors.Count > 0)
+        {
+            return review;
+        }
+
+        var document = BuildReviewDocument(proposal, review);
+        review.GovernanceDocumentId = document.Id;
+        proposal.Review = review;
+        proposal.Status = accept ? RealmSubjectIndexProposalStatus.Accepted : RealmSubjectIndexProposalStatus.Rejected;
+        _proposals[proposal.ProposalId] = proposal;
+
+        if (_governanceClient != null)
+        {
+            await _governanceClient.StoreDocumentForRealmAsync(document, proposal.RealmId, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (accept)
+        {
+            _indexes[BuildIndexKey(proposal.Index.RealmId, proposal.Index.Id)] = proposal.Index;
+        }
+
+        _logger.LogInformation(
+            "[RealmSubjectIndex] {Action} proposal {ProposalId} for index {IndexId} revision {Revision}",
+            accept ? "Accepted" : "Rejected",
+            proposal.ProposalId,
+            proposal.IndexId,
+            proposal.Revision);
+        return review;
+    }
+
+    public Task<IReadOnlyList<RealmSubjectIndexProposal>> GetProposalsForRealmAsync(
+        string realmId,
+        CancellationToken cancellationToken = default)
+    {
+        var proposals = _proposals.Values
+            .Where(proposal => string.Equals(proposal.RealmId, realmId, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(proposal => proposal.IndexId, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(proposal => proposal.Revision)
+            .ThenBy(proposal => proposal.ProposalId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<RealmSubjectIndexProposal>>(proposals);
     }
 
     public Task<IReadOnlyList<RealmSubjectIndexResolution>> ResolveByRecordingIdAsync(
@@ -235,5 +376,95 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
     private static string BuildIndexKey(string realmId, string indexId)
     {
         return $"{realmId.Trim().ToLowerInvariant()}:{indexId.Trim().ToLowerInvariant()}";
+    }
+
+    private static RealmSubjectIndexProposal BuildProposal(RealmSubjectIndex index, string proposedBy, string note)
+    {
+        return new RealmSubjectIndexProposal
+        {
+            ProposalId = BuildProposalId(index),
+            RealmId = index.RealmId.Trim(),
+            IndexId = index.Id.Trim(),
+            Revision = index.Revision,
+            ProposedBy = proposedBy.Trim(),
+            Note = note.Trim(),
+            Index = index,
+        };
+    }
+
+    private static GovernanceDocument BuildProposalDocument(RealmSubjectIndexProposal proposal)
+    {
+        return new GovernanceDocument
+        {
+            Id = $"realm-subject-index-proposal:{proposal.ProposalId}",
+            Type = ProposalDocumentType,
+            Version = proposal.Revision,
+            Created = proposal.ProposedAt,
+            Modified = proposal.ProposedAt,
+            RealmId = proposal.RealmId,
+            Signer = proposal.Index.Signature.Signer,
+            Signature = proposal.Index.Signature.Value,
+            Content = proposal.Index,
+            Metadata = new GovernanceMetadata
+            {
+                Description = $"Subject index proposal {proposal.IndexId} revision {proposal.Revision}",
+                Properties =
+                {
+                    ["proposalId"] = proposal.ProposalId,
+                    ["proposedBy"] = proposal.ProposedBy,
+                    ["payloadHash"] = proposal.Index.Signature.PayloadHash,
+                    ["note"] = proposal.Note,
+                },
+            },
+        };
+    }
+
+    private static GovernanceDocument BuildReviewDocument(
+        RealmSubjectIndexProposal proposal,
+        RealmSubjectIndexProposalReview review)
+    {
+        return new GovernanceDocument
+        {
+            Id = $"realm-subject-index-review:{proposal.ProposalId}:{(review.Accept ? "accept" : "reject")}",
+            Type = ReviewDocumentType,
+            Version = proposal.Revision,
+            Created = review.ReviewedAt,
+            Modified = review.ReviewedAt,
+            RealmId = proposal.RealmId,
+            Signer = review.ReviewedBy,
+            Signature = $"reviewed-by:{review.ReviewedBy}",
+            Content = review,
+            Metadata = new GovernanceMetadata
+            {
+                Description = $"{(review.Accept ? "Accept" : "Reject")} subject index proposal {proposal.ProposalId}",
+                Properties =
+                {
+                    ["proposalId"] = proposal.ProposalId,
+                    ["indexId"] = proposal.IndexId,
+                    ["decision"] = review.Accept ? "accept" : "reject",
+                    ["note"] = review.Note,
+                },
+            },
+        };
+    }
+
+    private static string BuildProposalId(RealmSubjectIndex index)
+    {
+        return $"{index.RealmId.Trim().ToLowerInvariant()}:{index.Id.Trim().ToLowerInvariant()}:r{index.Revision}";
+    }
+
+    private static bool IsSafeOpaqueReference(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= 128 &&
+            !trimmed.Contains('/', StringComparison.Ordinal) &&
+            !trimmed.Contains('\\', StringComparison.Ordinal) &&
+            !trimmed.Contains(':', StringComparison.Ordinal) &&
+            !trimmed.Contains("..", StringComparison.Ordinal);
     }
 }
