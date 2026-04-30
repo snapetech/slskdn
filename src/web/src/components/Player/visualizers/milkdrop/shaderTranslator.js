@@ -56,6 +56,8 @@ uniform sampler2D previousFrame;
 uniform float feedback;
 uniform float outputAlpha;
 uniform float time;
+uniform float sampleRate;
+uniform float fftBins[32];
 ${uniformDeclarations}
 in vec2 uv;
 out vec4 outColor;
@@ -70,6 +72,14 @@ vec3 clamp01(vec3 value) {
 }
 vec4 clamp01(vec4 value) {
   return clamp(value, vec4(0.0), vec4(1.0));
+}
+float get_fft(float position) {
+  int index = int(clamp(position, 0.0, 1.0) * 31.0);
+  return fftBins[index];
+}
+float get_fft_hz(float hz) {
+  float nyquist = max(sampleRate * 0.5, 1.0);
+  return get_fft(hz / nyquist);
 }
 void main() {
   vec3 ret = vec3(${expression});

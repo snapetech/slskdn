@@ -70,6 +70,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   propagation across global, custom wave, shape, and sprite evaluation stages.
 - Added first native MilkDrop shader uniform support for q1-q64 and
   bass/mid/treble audio variables in supported warp/comp shader expressions.
+- Added shader-side native MilkDrop `get_fft()` and `get_fft_hz()` support for
+  translated warp/comp shaders using a compact FFT uniform array.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

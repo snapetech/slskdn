@@ -1,6 +1,7 @@
 import {
   createMilkdropRenderer,
   createQRegisterScope,
+  createShaderFftBins,
   createShapeFillColors,
   createShapeFillVertices,
   createShapeTextureUvs,
@@ -99,6 +100,7 @@ const createFakeGl = () => ({
   texImage2D: vi.fn(),
   texParameteri: vi.fn(),
   uniform1f: vi.fn(),
+  uniform1fv: vi.fn(),
   uniform1i: vi.fn(),
   uniform2f: vi.fn(),
   uniform3f: vi.fn(),
@@ -293,8 +295,8 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
         wave_r=0.5
         q64=0.64
         per_frame_1=q1=0.25;
-        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, bass_att, 1.0);
-        comp_shader=ret = vec3(uv.x, q64, treb);
+        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, get_fft(0.5), 1.0);
+        comp_shader=ret = vec3(get_fft_hz(11025), q64, treb);
       `).primary,
     });
 
@@ -303,19 +305,33 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
         bass_att: 0.9,
         treb: 0.3,
       },
+      sampleRate: 44100,
+      spectrum: [0, 128, 255, 64],
       time: 2,
     });
 
     const shaderSources = gl.shaderSource.mock.calls.map(([, source]) => source);
     expect(shaderSources.some((source) =>
-      source.includes('texture(previousFrame, uv).rgb * vec3(q1, bass_att, 1.0)'))).toBe(true);
+      source.includes('texture(previousFrame, uv).rgb * vec3(q1, get_fft(0.5), 1.0)'))).toBe(true);
     expect(shaderSources.some((source) =>
-      source.includes('vec3 ret = vec3(vec3(uv.x, q64, treb))'))).toBe(true);
+      source.includes('vec3 ret = vec3(vec3(get_fft_hz(11025), q64, treb))'))).toBe(true);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 44100);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.25);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.64);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.9);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.3);
+    expect(gl.uniform1fv).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ length: 32 }),
+    );
+    expect(Array.from(createShaderFftBins([0, 128, 255, 64])).slice(0, 4)).toEqual([
+      0,
+      0,
+      0,
+      0,
+    ]);
+    expect(createShaderFftBins([0, 128, 255, 64])[31]).toBeCloseTo(64 / 255);
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
   });
 

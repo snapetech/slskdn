@@ -32,7 +32,7 @@ describe('MilkDrop preset compatibility analysis', () => {
       per_frame_1=q1=rand(4)+get_fft(0.5)+atan2(1,0);
       per_frame_2=q2=band(7,3)+sigmoid(q1,2);
       warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(0.5, 0.7, 1.0);
-      comp_shader=ret = vec3(uv.x, q1, bass_att);
+      comp_shader=ret = vec3(get_fft(0.5), get_fft_hz(11025), bass_att);
     `).primary;
 
     const report = analyzeMilkdropPresetCompatibility(preset);

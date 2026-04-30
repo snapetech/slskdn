@@ -113,6 +113,7 @@ const shaderScopeUniformNames = [
   'treb_att',
   ...qRegisterNames,
 ];
+const shaderFftBinCount = 32;
 
 const isQVariable = (key) => /^q([1-9]|[1-5][0-9]|6[0-4])$/.test(key);
 
@@ -134,6 +135,24 @@ const mergeQRegisters = (target = {}, source = {}) => ({
   ...target,
   ...extractQRegisters(source),
 });
+
+const normalizeFrequencySample = (value) => {
+  const number = Number(value) || 0;
+  return number > 1 ? number / 255 : number;
+};
+
+export const createShaderFftBins = (frequencyData = []) => {
+  const bins = new Float32Array(shaderFftBinCount);
+  if (!frequencyData.length) return bins;
+  for (let index = 0; index < shaderFftBinCount; index += 1) {
+    const sourceIndex = Math.min(
+      frequencyData.length - 1,
+      Math.floor((index / (shaderFftBinCount - 1)) * frequencyData.length),
+    );
+    bins[index] = normalizeFrequencySample(frequencyData[sourceIndex]);
+  }
+  return bins;
+};
 
 const createShader = (gl, type, source) => {
   const shader = gl.createShader(type);
@@ -189,9 +208,11 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
   const state = {
     colorUniform: gl.getUniformLocation(program, 'color'),
     feedbackUniform: gl.getUniformLocation(program, 'feedback'),
+    fftBinsUniform: gl.getUniformLocation(program, 'fftBins'),
     outputAlphaUniform: gl.getUniformLocation(program, 'outputAlpha'),
     previousFrameUniform: gl.getUniformLocation(program, 'previousFrame'),
     program,
+    sampleRateUniform: gl.getUniformLocation(program, 'sampleRate'),
     scopeUniforms: shaderScopeUniformNames.map((name) => ({
       location: gl.getUniformLocation(program, name),
       name,
@@ -216,6 +237,8 @@ const bindTranslatedShaderProgram = (
   gl.uniform1f(shaderProgram.feedbackUniform, feedback);
   gl.uniform1f(shaderProgram.outputAlphaUniform, outputAlpha);
   gl.uniform1f(shaderProgram.timeUniform, time);
+  gl.uniform1f(shaderProgram.sampleRateUniform, Number(scope?.sample_rate ?? 44100) || 44100);
+  gl.uniform1fv(shaderProgram.fftBinsUniform, createShaderFftBins(scope?.frequency_data || []));
   shaderProgram.scopeUniforms.forEach((uniform) => {
     gl.uniform1f(uniform.location, Number(scope?.[uniform.name] ?? 0) || 0);
   });

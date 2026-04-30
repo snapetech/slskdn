@@ -1,3 +1,14 @@
+## Update 2026-04-30 17:45:25Z
+
+- Current task: Native MilkDrop translated shaders have first shader-side FFT access.
+- Last activity:
+  - translated warp/comp shaders now declare a normalized 32-bin `fftBins` uniform array and `sampleRate`
+  - shader-side `get_fft(pos)` and `get_fft_hz(freq)` helpers are generated into supported shader fragments
+  - renderer binds FFT bins from the current analyzer spectrum before translated shader passes
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue the next large MilkDrop phase, likely richer shader translation or higher-fidelity wave modes.
+
 ## Update 2026-04-30 17:35:22Z
 
 - Current task: Native MilkDrop translated shaders have first q/audio uniform binding.

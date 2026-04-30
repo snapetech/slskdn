@@ -1,3 +1,10 @@
+## 2026-04-30 17:45Z - Added native MilkDrop shader-side FFT helpers
+
+- Translated native warp/comp shaders now receive `fftBins[32]` and `sampleRate` uniforms.
+- Generated shader fragments expose `get_fft(pos)` and `get_fft_hz(freq)` helpers backed by the normalized FFT uniform array.
+- The renderer binds FFT bins from the current analyzer spectrum before translated shader passes.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 17:35Z - Added native MilkDrop shader q/audio uniforms
 
 - Translated native warp/comp shaders now declare q1-q64 and bass/mid/treble audio uniforms.
