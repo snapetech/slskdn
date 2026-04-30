@@ -77,6 +77,7 @@ describe('Searches', () => {
     await waitFor(() => expect(library.create).toHaveBeenCalledTimes(1));
     expect(library.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        acquisitionProfile: 'lossless-exact',
         providers: null,
         searchText: 'beatles',
       }),
@@ -98,6 +99,7 @@ describe('Searches', () => {
     await waitFor(() => expect(library.create).toHaveBeenCalledTimes(1));
     expect(library.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        acquisitionProfile: 'lossless-exact',
         providers: ['pod', 'scene'],
         searchText: 'beatles',
       }),
@@ -132,6 +134,18 @@ describe('Searches', () => {
       screen.getAllByText('Lower concurrency, no automatic public-peer retries.')
         .length,
     ).toBeGreaterThan(0);
+
+    const input = screen.getByTestId('search-input');
+    fireEvent.change(input, { target: { value: 'rare live set' } });
+    fireEvent.keyUp(input, { key: 'Enter' });
+
+    await waitFor(() => expect(library.create).toHaveBeenCalledTimes(1));
+    expect(library.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acquisitionProfile: 'conservative-network',
+        searchText: 'rare live set',
+      }),
+    );
   });
 
   it('uses stored collapsed state for primary search sections', async () => {

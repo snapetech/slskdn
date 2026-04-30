@@ -24,6 +24,7 @@ namespace slskd.Search.API
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
     using System.Threading;
     using System.Threading.Tasks;
     using Asp.Versioning;
@@ -83,11 +84,25 @@ namespace slskd.Search.API
             }
 
             request.SearchText = request.SearchText?.Trim() ?? string.Empty;
+            request.AcquisitionProfile = string.IsNullOrWhiteSpace(request.AcquisitionProfile)
+                ? null
+                : request.AcquisitionProfile.Trim();
             request.Providers = request.Providers?
                 .Select(provider => provider?.Trim() ?? string.Empty)
                 .Where(provider => !string.IsNullOrWhiteSpace(provider))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            foreach (var validationResult in request.Validate(new ValidationContext(request)))
+            {
+                foreach (var memberName in validationResult.MemberNames)
+                {
+                    if (!ModelState.TryGetValue(memberName, out var entry) || entry.Errors.Count == 0)
+                    {
+                        ModelState.AddModelError(memberName, validationResult.ErrorMessage ?? "Invalid value");
+                    }
+                }
+            }
 
             if (!ModelState.IsValid)
             {

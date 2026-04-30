@@ -291,7 +291,12 @@ const Searches = ({ server } = {}) => {
         ? [providerPod && 'pod', providerScene && 'scene'].filter(Boolean)
         : null;
 
-      await library.create({ id, providers, searchText });
+      await library.create({
+        acquisitionProfile: acquisitionProfile.id,
+        id,
+        providers,
+        searchText,
+      });
 
       if (ref) {
         ref.value = '';

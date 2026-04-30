@@ -44,6 +44,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   fixture included in compatibility and browser smoke coverage.
 - Added app-wide interaction affordances for hover, focus-visible, disabled,
   and clickable row states.
+- Added acquisition-profile request plumbing, documentation audit notes, and
+  native MilkDrop expression coverage refinements from the workspace checkpoint.
 - Added a System Automation Center scaffold with visible opt-in recipe states
   and local dry-run checkpoints.
 - Added missing button labels/titles in chat, rooms, users, and player browser

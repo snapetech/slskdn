@@ -1,3 +1,16 @@
+## Update 2026-04-30 19:17:59Z
+
+- Current task: None. Web UI affordance audit/backfill is complete.
+- Last activity:
+  - added shared CSS affordances for hover, focus-visible, cursor, selectable-row, dropdown, checkbox, link, disabled, and reduced-motion states
+  - backfilled accessible names/titles on compact player launcher buttons and chat/room/browse/user icon action controls
+  - ran headless screenshots and a DOM audit across Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System
+  - documented the icon-only affordance gotcha and committed it as `791e91e11`
+  - validated frontend lint, production build, whitespace checks, and the focused headless DOM affordance audit
+- Next steps:
+  1. Commit the implementation and memory-bank updates with the current dirty workspace when requested.
+  2. Extend the DOM audit if new dense tool pages add custom non-Semantic interactive controls.
+
 ## Update 2026-04-30 19:10:00Z
 
 - Current task: Acquisition profile control surface is implemented locally.
@@ -2488,3 +2501,14 @@ dotnet test
 - Next steps:
   1. Monitor the `build-main-2026042900-slskdn.204` tag workflow after push.
   2. Triage any release workflow failure before cutting another tag.
+
+## Update 2026-04-30 19:20:03Z
+
+- Current task: Feature-expansion burn-down is continuing.
+- Last activity:
+  - wired the Search page acquisition profile selector into search-create API requests
+  - added backend DTO/controller trimming and validation for known acquisition profile ids
+  - covered default, selected, and invalid acquisition-profile request behavior with focused frontend/backend tests
+- Next steps:
+  1. Implement the profile policy layer that maps acquisition profiles to ranking, source selection, retry, and network-impact defaults.
+  2. Promote more Automation Center recipes from visible local toggles into backend-backed job definitions.

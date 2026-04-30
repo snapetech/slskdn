@@ -56,8 +56,18 @@ export const isUserBlocked = (username) => {
   return getBlockedUsers().includes(username);
 };
 
-export const create = ({ id, searchText, providers = null }) => {
+export const create = ({
+  acquisitionProfile = null,
+  id,
+  searchText,
+  providers = null,
+}) => {
   const body = { id, searchText };
+
+  if (acquisitionProfile) {
+    body.acquisitionProfile = acquisitionProfile;
+  }
+
   // Include providers if specified (for Scene ↔ Pod Bridging)
   if (providers && Array.isArray(providers)) {
     body.providers = providers;

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createNativeMilkdropEngine,
   getNativeMilkdropBeatUpdate,
+  getNativeMilkdropTransitionAlphas,
   getNativeMilkdropTransitionProgress,
 } from './nativeMilkdropEngine';
 import { createMilkdropRenderer } from './milkdrop/milkdropRenderer';
@@ -33,6 +34,29 @@ describe('createNativeMilkdropEngine', () => {
     expect(getNativeMilkdropTransitionProgress(10, 2, 11)).toBe(0.5);
     expect(getNativeMilkdropTransitionProgress(10, 2, 12)).toBe(1);
     expect(getNativeMilkdropTransitionProgress(10, 0, 10)).toBe(1);
+  });
+
+  it('maps native transition modes to incoming and outgoing alphas', () => {
+    expect(getNativeMilkdropTransitionAlphas(0.25, 'crossfade')).toEqual({
+      incoming: 0.25,
+      outgoing: 0.75,
+    });
+    expect(getNativeMilkdropTransitionAlphas(0.25, 'fade_through_black')).toEqual({
+      incoming: 0,
+      outgoing: 0.5,
+    });
+    expect(getNativeMilkdropTransitionAlphas(0.75, 'fade')).toEqual({
+      incoming: 0.5,
+      outgoing: 0,
+    });
+    expect(getNativeMilkdropTransitionAlphas(0.5, 'overlay')).toEqual({
+      incoming: 0.5,
+      outgoing: 1,
+    });
+    expect(getNativeMilkdropTransitionAlphas(0.5, 'cut')).toEqual({
+      incoming: 1,
+      outgoing: 0,
+    });
   });
 
   it('detects beat pulses from low-frequency spectrum energy', () => {
@@ -311,6 +335,102 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.render).toHaveBeenCalledWith(
       expect.objectContaining({ sampleRate: 44100, time: 12.1 }),
       { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
+    );
+  });
+
+  it('uses preset-defined transition modes for imported presets', async () => {
+    const analyser = createAnalyser();
+    const audioContext = {
+      createAnalyser: () => analyser,
+      currentTime: 10,
+      sampleRate: 44100,
+    };
+    const engine = await createNativeMilkdropEngine({
+      audioContext,
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.render.mockClear();
+    renderer.dispose.mockClear();
+
+    engine.loadPresetText(`
+      name=Fade mode fixture
+      transition_seconds=2
+      transition_mode=fade
+      wave_r=1
+    `, 'fade.milk');
+    audioContext.currentTime = 10.5;
+    engine.render();
+
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    expect(renderer.render.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ sampleRate: 44100, time: 10.5 }),
+    );
+    expect(renderer.render.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ clearScreen: true, compositeMode: 'alpha' }),
+    );
+    expect(renderer.render.mock.calls[0][1].outputAlpha).toBeCloseTo(0.6875);
+    renderer.render.mockClear();
+
+    audioContext.currentTime = 11.5;
+    engine.render();
+
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    expect(renderer.render.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ sampleRate: 44100, time: 11.5 }),
+    );
+    expect(renderer.render.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ clearScreen: true, compositeMode: 'alpha' }),
+    );
+    expect(renderer.render.mock.calls[0][1].outputAlpha).toBeCloseTo(0.6875);
+  });
+
+  it('supports cut and overlay transition modes from caller options', async () => {
+    const analyser = createAnalyser();
+    const audioContext = {
+      createAnalyser: () => analyser,
+      currentTime: 10,
+      sampleRate: 44100,
+    };
+    const engine = await createNativeMilkdropEngine({
+      audioContext,
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.render.mockClear();
+    renderer.dispose.mockClear();
+
+    engine.nextPreset({ blendSeconds: 2, transitionMode: 'cut' });
+    audioContext.currentTime = 11;
+    engine.render();
+
+    expect(renderer.dispose).toHaveBeenCalled();
+    expect(renderer.render).toHaveBeenCalledTimes(1);
+    expect(renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({ sampleRate: 44100, time: 11 }),
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
+    );
+    renderer.render.mockClear();
+
+    engine.nextPreset({ blendSeconds: 2, transitionMode: 'overlay' });
+    audioContext.currentTime = 12;
+    engine.render();
+
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sampleRate: 44100, time: 12 }),
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
+    );
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ sampleRate: 44100, time: 12 }),
+      { clearScreen: false, compositeMode: 'alpha', outputAlpha: 0.5 },
     );
   });
 

@@ -21,6 +21,11 @@
  - Priority: P2
  - Notes: Added a System -> Automations tab that lists every planned automation recipe, persists visible enablement toggles, shows network/file impact and cadence, keeps low-risk local recipes enabled by default, and records dry-run checkpoints without executing network or file actions.
 
+- [x] **feature**: Carry acquisition profile intent through search create requests.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Search creation now sends the selected acquisition profile id to the API, the backend trims and validates known profile ids, and focused Web UI/controller tests cover default, selected, and invalid-profile behavior. Ranking/download behavior remains unchanged until the profile policy layer is implemented.
+
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
  - Priority: P1
@@ -1620,3 +1625,7 @@
 - [x] Audit and tune dark theme color contrast
   - Status: completed (2026-04-30)
   - Notes: Ran headless screenshots and computed contrast checks across Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System. Tightened dark-mode Semantic UI colored button contrast, documented the gotcha, and validated frontend lint, production build, and a focused contrast sweep.
+
+- [x] Audit and backfill Web UI affordances
+  - Status: completed (2026-04-30)
+  - Notes: Added shared cursor, hover, focus-visible, selectable-row, dropdown, checkbox, link, disabled, and reduced-motion affordance rules. Backfilled labels/titles for icon-only player launcher, chat, room, browse, and user action controls; headless DOM audit passed representative routes with no visible unnamed icon-only controls.

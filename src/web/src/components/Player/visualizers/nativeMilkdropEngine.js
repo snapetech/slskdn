@@ -205,6 +205,7 @@ const mergeFragmentIntoPresetSet = (parsed, fragment) => {
 };
 
 const defaultTransitionSeconds = 1.5;
+const defaultTransitionMode = 'crossfade';
 const defaultAutomation = {
   beatSensitivity: 1.35,
   beatsPerPreset: 8,
@@ -223,6 +224,41 @@ export const getNativeMilkdropTransitionProgress = (startedAt, seconds, now) => 
   if (!Number.isFinite(seconds) || seconds <= 0) return 1;
   const linear = Math.max(0, Math.min(1, (now - startedAt) / seconds));
   return linear * linear * (3 - linear * 2);
+};
+
+const normalizeTransitionMode = (value) => {
+  const mode = String(value || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+  if (['cut', 'instant', 'none'].includes(mode)) return 'cut';
+  if (['fade', 'fadeblack', 'fadethroughblack'].includes(mode)) return 'fade';
+  if (['overlay', 'burnin', 'hold'].includes(mode)) return 'overlay';
+  return defaultTransitionMode;
+};
+
+export const getNativeMilkdropTransitionAlphas = (progress, mode = defaultTransitionMode) => {
+  const clampedProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+  const normalizedMode = normalizeTransitionMode(mode);
+  if (normalizedMode === 'fade') {
+    return {
+      incoming: clampedProgress <= 0.5 ? 0 : (clampedProgress - 0.5) * 2,
+      outgoing: clampedProgress >= 0.5 ? 0 : 1 - (clampedProgress * 2),
+    };
+  }
+  if (normalizedMode === 'overlay') {
+    return {
+      incoming: clampedProgress,
+      outgoing: 1,
+    };
+  }
+  if (normalizedMode === 'cut') {
+    return {
+      incoming: 1,
+      outgoing: 0,
+    };
+  }
+  return {
+    incoming: clampedProgress,
+    outgoing: 1 - clampedProgress,
+  };
 };
 
 const getSpectrumEnergy = (spectrum = []) => {
@@ -312,11 +348,22 @@ const getPresetSetTransitionSeconds = (parsed, fallback = defaultTransitionSecon
     : fallback;
 };
 
+const getPresetSetTransitionMode = (parsed, fallback = defaultTransitionMode) =>
+  normalizeTransitionMode(
+    parsed.primary?.baseValues?.transition_mode
+    ?? parsed.primary?.baseValues?.transitionmode
+    ?? parsed.primary?.baseValues?.transition_style
+    ?? parsed.primary?.baseValues?.transitionstyle
+    ?? parsed.primary?.baseValues?.blend_transition
+    ?? fallback,
+  );
+
 const createRendererSet = ({
   canvas,
   parsed,
   textureAssets,
   title,
+  transitionMode = defaultTransitionMode,
   transitionSeconds = defaultTransitionSeconds,
   transitionStartedAt = 0,
 }) => ({
@@ -330,6 +377,7 @@ const createRendererSet = ({
     }),
   })),
   title,
+  transitionMode,
   transitionSeconds,
   transitionStartedAt,
 });
@@ -382,12 +430,18 @@ export const createNativeMilkdropEngine = async ({
     retiringRendererSets = retained;
   };
 
-  const activateRendererSet = (nextRendererSet, transitionSeconds = defaultTransitionSeconds) => {
+  const activateRendererSet = (
+    nextRendererSet,
+    transitionSeconds = defaultTransitionSeconds,
+    transitionMode = defaultTransitionMode,
+  ) => {
     const startedAt = audioContext.currentTime || 0;
     const effectiveTransitionSeconds = Math.max(0, Number(transitionSeconds) || 0);
-    if (effectiveTransitionSeconds > 0) {
+    const effectiveTransitionMode = normalizeTransitionMode(transitionMode);
+    if (effectiveTransitionSeconds > 0 && effectiveTransitionMode !== 'cut') {
       retiringRendererSets.push({
         ...activeRendererSet,
+        transitionMode: effectiveTransitionMode,
         transitionSeconds: effectiveTransitionSeconds,
         transitionStartedAt: startedAt,
       });
@@ -398,6 +452,7 @@ export const createNativeMilkdropEngine = async ({
     }
     activeRendererSet = {
       ...nextRendererSet,
+      transitionMode: effectiveTransitionMode,
       transitionSeconds: effectiveTransitionSeconds,
       transitionStartedAt: startedAt,
     };
@@ -407,11 +462,15 @@ export const createNativeMilkdropEngine = async ({
     presetIndex = index % nativePresets.length;
     activeParsedPresetSet = parseMilkdropPreset(nativePresets[presetIndex].source);
     activePresetTitle = nativePresets[presetIndex].name;
-    activateRendererSet(createRendererSet({
-      canvas,
-      parsed: activeParsedPresetSet,
-      title: activePresetTitle,
-    }), options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet));
+    activateRendererSet(
+      createRendererSet({
+        canvas,
+        parsed: activeParsedPresetSet,
+        title: activePresetTitle,
+      }),
+      options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
+      options.transitionMode ?? getPresetSetTransitionMode(activeParsedPresetSet),
+    );
     return activePresetTitle;
   };
 
@@ -459,12 +518,16 @@ export const createNativeMilkdropEngine = async ({
       const title = getParsedPresetSetTitle(importedPresetSet, fileName);
       activeParsedPresetSet = importedPresetSet;
       activePresetTitle = title;
-      activateRendererSet(createRendererSet({
-        canvas,
-        parsed: activeParsedPresetSet,
-        textureAssets: options.textureAssets,
-        title,
-      }), options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet));
+      activateRendererSet(
+        createRendererSet({
+          canvas,
+          parsed: activeParsedPresetSet,
+          textureAssets: options.textureAssets,
+          title,
+        }),
+        options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
+        options.transitionMode ?? getPresetSetTransitionMode(activeParsedPresetSet),
+      );
       return title;
     },
     loadPresetFragmentText: (source, fileName = '', options = {}) => {
@@ -478,12 +541,16 @@ export const createNativeMilkdropEngine = async ({
       activeParsedPresetSet = mergedPresetSet;
       activePresetTitle = title;
       const mergedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
-      activateRendererSet(createRendererSet({
-        canvas,
-        parsed: activeParsedPresetSet,
-        textureAssets: options.textureAssets,
-        title,
-      }), options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet));
+      activateRendererSet(
+        createRendererSet({
+          canvas,
+          parsed: activeParsedPresetSet,
+          textureAssets: options.textureAssets,
+          title,
+        }),
+        options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
+        options.transitionMode ?? getPresetSetTransitionMode(activeParsedPresetSet),
+      );
       return {
         source: mergedSource,
         title,
@@ -531,16 +598,25 @@ export const createNativeMilkdropEngine = async ({
           rendererSet.transitionSeconds,
           now,
         );
-        renderRendererSet(rendererSet, renderFrame, 1 - progress, clearNextSet);
-        clearNextSet = false;
+        const { outgoing } = getNativeMilkdropTransitionAlphas(
+          progress,
+          rendererSet.transitionMode,
+        );
+        renderRendererSet(rendererSet, renderFrame, outgoing, clearNextSet);
+        if (outgoing > 0) {
+          clearNextSet = false;
+        }
       });
 
       const activeProgress = retiringRendererSets.length > 0
-        ? getNativeMilkdropTransitionProgress(
-          activeRendererSet.transitionStartedAt,
-          activeRendererSet.transitionSeconds,
-          now,
-        )
+        ? getNativeMilkdropTransitionAlphas(
+          getNativeMilkdropTransitionProgress(
+            activeRendererSet.transitionStartedAt,
+            activeRendererSet.transitionSeconds,
+            now,
+          ),
+          activeRendererSet.transitionMode,
+        ).incoming
         : 1;
       renderRendererSet(activeRendererSet, renderFrame, activeProgress, clearNextSet);
       return automatedPresetName ? { presetName: automatedPresetName } : null;

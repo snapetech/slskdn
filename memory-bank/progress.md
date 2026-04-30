@@ -1,3 +1,11 @@
+## 2026-04-30 19:17:59Z
+
+- Ran a headless affordance audit across Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System.
+- Added shared affordance CSS for interactive cursor behavior, focus-visible outlines, link hover, selectable-row hover/active states, dropdown hover, checkbox focus/hover states, disabled controls, and reduced-motion handling.
+- Backfilled accessible names and titles for compact player launcher buttons, chat/room/browse add-tab controls, chat/room refresh buttons, and Users search/clear action buttons.
+- Documented the icon-only affordance gotcha and committed it immediately as `791e91e11`.
+- Validation: `npm run lint`, `npm run build`, `git diff --check`, and a focused headless DOM audit with zero remaining unnamed visible icon-only controls.
+
 ## 2026-04-30 19:10Z - Started acquisition profile control surface
 
 - Added a local competitive roadmap update that closes product decisions and makes automations visible in the Web UI, with low-risk automations enabled by default and higher-impact recipes visibly disabled until enabled.
@@ -7926,3 +7934,10 @@ Code quality improvements were completed as part of Option A:
 - Confirmed the current shared dark palette uses stronger purple accents, deeper panel separation, and shadows across common Semantic UI surfaces.
 - Documented the dark-theme color-variant gotcha and committed it immediately as `a5da3f54a`.
 - Validation: `npm run lint`, `npm run build`, focused headless contrast sweep, and screenshots under `src/web/tmp/visual-audit/after`.
+
+## 2026-04-30 19:20:03Z
+
+- Continued feature-expansion burn-down by wiring acquisition profile intent into search creation requests.
+- The Web UI now includes the selected acquisition profile id in `/searches` POST bodies, and the backend trims/validates the profile id before dispatching the search.
+- Kept search ranking, download behavior, and Soulseek network behavior unchanged in this slice; the request contract is ready for a later profile policy/ranking implementation.
+- Validation: focused Search page tests, focused SearchesController tests, `npm run lint`, `npm run build`, `bash bin/lint`, and `git diff --check` passed.

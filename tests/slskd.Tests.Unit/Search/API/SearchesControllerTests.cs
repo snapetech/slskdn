@@ -41,6 +41,7 @@ public class SearchesControllerTests
 
         var result = await controller.Post(new SearchRequest
         {
+            AcquisitionProfile = " conservative-network ",
             SearchText = "  hello world  ",
             Providers = new List<string> { " pod ", "pod", " scene ", " " }
         });
@@ -54,6 +55,39 @@ public class SearchesControllerTests
                 It.IsAny<SearchOptions>(),
                 It.Is<List<string>>(providers => providers.SequenceEqual(new[] { "pod", "scene" }))),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Post_WithUnknownAcquisitionProfile_ReturnsBadRequest()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ReturnsAsync(new slskd.Search.Search { Id = Guid.NewGuid(), SearchText = "hello" });
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest
+        {
+            AcquisitionProfile = "unknown-profile",
+            SearchText = "hello",
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("AcquisitionProfile", badRequest.Value?.ToString() ?? string.Empty);
+        searchService.Verify(
+            service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()),
+            Times.Never);
     }
 
     [Fact]

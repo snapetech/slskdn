@@ -30,10 +30,26 @@ namespace slskd.Search.API
     /// </summary>
     public class SearchRequest : IValidatableObject
     {
+        private static readonly HashSet<string> AllowedAcquisitionProfiles = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "lossless-exact",
+            "fast-good-enough",
+            "album-complete",
+            "rare-hunt",
+            "conservative-network",
+            "mesh-preferred",
+            "metadata-strict",
+        };
+
         /// <summary>
         ///     Gets or sets the unique search identifier.
         /// </summary>
         public Guid? Id { get; set; }
+
+        /// <summary>
+        ///     Gets or sets the requested acquisition profile used by the Web UI to declare search intent.
+        /// </summary>
+        public string? AcquisitionProfile { get; set; }
 
         /// <summary>
         ///     Gets or sets the maximum number of file results to accept before the search is considered complete. (Default = 10,000).
@@ -124,6 +140,11 @@ namespace slskd.Search.API
             if (string.IsNullOrWhiteSpace(SearchText))
             {
                 yield return new ValidationResult("The field SearchText can not be null, empty, or consist of only whitespace", [nameof(SearchText)]);
+            }
+
+            if (!string.IsNullOrWhiteSpace(AcquisitionProfile) && !AllowedAcquisitionProfiles.Contains(AcquisitionProfile))
+            {
+                yield return new ValidationResult("The field AcquisitionProfile must be a known acquisition profile", [nameof(AcquisitionProfile)]);
             }
         }
     }
