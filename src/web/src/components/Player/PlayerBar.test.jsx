@@ -1,12 +1,33 @@
 import PlayerBar from './PlayerBar';
 import React from 'react';
 import { PlayerProvider, usePlayer } from './PlayerContext';
+import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
 vi.mock('../../lib/nowPlaying', () => ({
   clearNowPlaying: vi.fn(() => Promise.resolve()),
   setNowPlaying: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../lib/collections', () => ({
+  getCollections: vi.fn(() =>
+    Promise.resolve({ data: [{ id: 'collection-1', title: 'Favorites' }] }),
+  ),
+  searchLibraryItems: vi.fn(() =>
+    Promise.resolve({
+      data: {
+        items: [
+          {
+            contentId: 'sha256:library',
+            fileName: 'Library stream.ogg',
+            mediaKind: 'Audio',
+            path: '/downloads/Library stream.ogg',
+          },
+        ],
+      },
+    }),
+  ),
 }));
 
 const TestHarness = () => {
@@ -33,9 +54,11 @@ const TestHarness = () => {
 
 const renderPlayer = () =>
   render(
-    <PlayerProvider>
-      <TestHarness />
-    </PlayerProvider>,
+    <MemoryRouter>
+      <PlayerProvider>
+        <TestHarness />
+      </PlayerProvider>
+    </MemoryRouter>,
   );
 
 describe('PlayerBar', () => {
@@ -58,13 +81,17 @@ describe('PlayerBar', () => {
     const audio = document.querySelector('audio');
     const source = audio.querySelector('source');
     await waitFor(() =>
-      expect(source.getAttribute('src')).toContain('/api/v0/streams/sha256%3Atest'),
+      expect(source.getAttribute('src')).toContain(
+        '/api/v0/streams/sha256%3Atest',
+      ),
     );
 
     fireEvent.click(screen.getByTestId('player-toggle-mute'));
 
     expect(audio.muted).toBe(true);
-    expect(source.getAttribute('src')).toContain('/api/v0/streams/sha256%3Atest');
+    expect(source.getAttribute('src')).toContain(
+      '/api/v0/streams/sha256%3Atest',
+    );
     expect(window.localStorage.getItem('slskdn.player.localMuted')).toBe('true');
   });
 
@@ -75,5 +102,14 @@ describe('PlayerBar', () => {
     fireEvent.click(screen.getByText('Play fixture'));
 
     expect(document.querySelector('audio').muted).toBe(true);
+  });
+
+  it('shows collection and local file launchers before playback starts', async () => {
+    renderPlayer();
+
+    expect(screen.getByTestId('player-open-collections')).toBeInTheDocument();
+    expect(screen.getByTestId('player-collection-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('player-file-picker')).toBeInTheDocument();
+    await screen.findByText('Pick a collection or local audio file');
   });
 });

@@ -1,3 +1,8 @@
+.slskdn-root,
+:root {
+    --slskdn-footer-height: 43px;
+}
+
 .slskdn-footer {
     position: fixed;
     bottom: 0;

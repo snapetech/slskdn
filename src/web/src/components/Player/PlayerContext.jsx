@@ -1,26 +1,45 @@
 import * as nowPlaying from '../../lib/nowPlaying';
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
 export const PlayerContext = createContext({
   clear: () => {},
   current: null,
   followParty: () => {},
   followingParty: null,
+  next: () => {},
   pause: () => {},
   playItem: () => {},
+  previous: () => {},
   queue: [],
   removeFromQueue: () => {},
+  seekRelative: () => {},
   setAudioElement: () => {},
 });
 
 export const PlayerProvider = ({ children }) => {
   const [audioElement, setAudioElement] = useState(null);
   const [current, setCurrent] = useState(null);
+  const [history, setHistory] = useState([]);
   const [queue, setQueue] = useState([]);
   const [followingParty, setFollowingParty] = useState(null);
 
+  useEffect(() => {
+    if (!current?.artist || !current?.title) return;
+    nowPlaying.setNowPlaying({
+      album: current.album,
+      artist: current.artist,
+      title: current.title,
+    });
+  }, [current]);
+
   const playItem = useCallback(
-    async (item, options = {}) => {
+    (item, options = {}) => {
       if (!item?.contentId) return;
 
       const playable = {
@@ -33,18 +52,11 @@ export const PlayerProvider = ({ children }) => {
         title: item.title || item.fileName || item.contentId,
       };
 
+      setHistory((existing) => (current ? [current, ...existing].slice(0, 25) : existing));
       setCurrent(playable);
       setQueue((existing) =>
         options.replaceQueue ? [playable] : [playable, ...existing],
       );
-
-      if (playable.artist && playable.title) {
-        await nowPlaying.setNowPlaying({
-          album: playable.album,
-          artist: playable.artist,
-          title: playable.title,
-        });
-      }
 
       window.setTimeout(() => {
         if (audioElement) {
@@ -52,7 +64,7 @@ export const PlayerProvider = ({ children }) => {
         }
       }, 0);
     },
-    [audioElement],
+    [audioElement, current],
   );
 
   const pause = useCallback(() => {
@@ -69,6 +81,7 @@ export const PlayerProvider = ({ children }) => {
     }
 
     setCurrent(null);
+    setHistory([]);
     setQueue([]);
     await nowPlaying.clearNowPlaying();
   }, [audioElement]);
@@ -83,6 +96,46 @@ export const PlayerProvider = ({ children }) => {
     setFollowingParty(partyState);
   }, []);
 
+  const seekRelative = useCallback(
+    (seconds) => {
+      if (!audioElement) return;
+      const duration = Number.isFinite(audioElement.duration)
+        ? audioElement.duration
+        : Number.MAX_SAFE_INTEGER;
+      audioElement.currentTime = Math.max(
+        0,
+        Math.min(duration, audioElement.currentTime + seconds),
+      );
+    },
+    [audioElement],
+  );
+
+  const next = useCallback(() => {
+    setQueue((existing) => {
+      if (existing.length < 2) return existing;
+      const [, nextItem, ...remaining] = existing;
+      setHistory((previousHistory) =>
+        current ? [current, ...previousHistory].slice(0, 25) : previousHistory,
+      );
+      setCurrent(nextItem);
+      return [nextItem, ...remaining];
+    });
+  }, [current]);
+
+  const previous = useCallback(() => {
+    if (history.length === 0) {
+      if (audioElement) {
+        audioElement.currentTime = 0;
+      }
+      return;
+    }
+
+    const [previousItem, ...remainingHistory] = history;
+    setHistory(remainingHistory);
+    setCurrent(previousItem);
+    setQueue((existing) => [previousItem, ...existing]);
+  }, [audioElement, history]);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -90,10 +143,13 @@ export const PlayerProvider = ({ children }) => {
         current,
         followParty,
         followingParty,
+        next,
         pause,
         playItem,
+        previous,
         queue,
         removeFromQueue,
+        seekRelative,
         setAudioElement,
       }}
     >

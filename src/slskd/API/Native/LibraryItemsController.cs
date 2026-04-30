@@ -125,7 +125,7 @@ public class LibraryItemsController : ControllerBase
 
             if (items.Count == 0 && options != null)
             {
-                var fallbackItems = await SearchShareDirectoriesAsync(
+                var fallbackItems = await SearchLocalDirectoriesAsync(
                     query,
                     kinds,
                     limit,
@@ -142,7 +142,7 @@ public class LibraryItemsController : ControllerBase
         }
     }
 
-    private async Task<List<LibraryItemResponse>> SearchShareDirectoriesAsync(
+    private async Task<List<LibraryItemResponse>> SearchLocalDirectoriesAsync(
         string? query,
         string? kinds,
         int limit,
@@ -155,14 +155,16 @@ public class LibraryItemsController : ControllerBase
             return new List<LibraryItemResponse>();
         }
 
-        var shareDirs = options.Value.Shares.Directories
+        var localDirs = options.Value.Shares.Directories
             .Select(raw => new Share(raw))
             .Where(share => !share.IsExcluded)
             .Select(share => share.LocalPath)
+            .Concat(new[] { options.Value.Directories.Downloads })
+            .Where(path => !string.IsNullOrWhiteSpace(path))
             .Distinct()
             .ToArray();
 
-        if (!shareDirs.Any())
+        if (!localDirs.Any())
         {
             return new List<LibraryItemResponse>();
         }
@@ -174,12 +176,12 @@ public class LibraryItemsController : ControllerBase
             .Select(filter => new Regex(filter, regexOptions))
             .ToList();
 
-        var files = shareDirs.SelectMany(shareDir =>
+        var files = localDirs.SelectMany(localDir =>
         {
             try
             {
                 return System.IO.Directory.EnumerateFiles(
-                    shareDir,
+                    localDir,
                     "*",
                     SearchOption.AllDirectories);
             }

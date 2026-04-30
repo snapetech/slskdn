@@ -22,6 +22,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a MilkDrop visualizer (butterchurn) to the Web UI player bar with
+  inline-thumbnail, full-browser-window, and native-fullscreen modes. The
+  butterchurn engine and preset pack are loaded via dynamic imports so they
+  ship as separate chunks and stay off the critical path until the user
+  toggles the visualizer on.
 - Added Discography Concierge planning and first implementation pieces,
   including MusicBrainz artist coverage services/API/UI, manual missing-track
   Wishlist promotion, and supporting docs/tasks for mesh/social music

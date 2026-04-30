@@ -2,17 +2,29 @@
   align-items: center;
   background: var(--slskdn-nav-background, #1b1c1d);
   border-top: 1px solid var(--slskdn-nav-border, rgba(255, 255, 255, 0.12));
-  bottom: calc(43px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--slskdn-footer-height, 43px) + env(safe-area-inset-bottom, 0px));
   color: var(--slskd-color, #fff);
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: minmax(0, 1fr) auto minmax(140px, 320px);
+  grid-template-columns: minmax(0, 1fr) auto minmax(280px, 560px);
   left: 0;
   min-height: 64px;
   padding: 0.6rem 1rem max(0.6rem, env(safe-area-inset-bottom, 0px));
   position: fixed;
   right: 0;
   z-index: 1100;
+}
+
+.player-bar-collapsed {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 42px;
+  padding-bottom: 0.35rem;
+  padding-top: 0.35rem;
+}
+
+.player-bar-collapsed .player-controls .button {
+  min-height: 34px;
+  min-width: 34px;
 }
 
 .player-track {
@@ -40,6 +52,7 @@
 
 .player-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
 }
 
@@ -69,6 +82,29 @@
   white-space: nowrap;
 }
 
+.player-launcher {
+  align-items: center;
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: auto minmax(110px, 1fr) minmax(150px, 1.3fr);
+  min-width: 0;
+  width: 100%;
+}
+
+.player-picker {
+  min-width: 0;
+}
+
+.player-picker-meta {
+  color: var(--slskd-color-subtle, rgba(255, 255, 255, 0.7));
+  font-size: 0.78rem;
+  font-weight: 400;
+  max-width: 32rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 720px) {
   .player-bar {
     gap: 0.5rem;
@@ -78,13 +114,22 @@
     padding-right: 0.75rem;
   }
 
-  .player-queue {
+  .player-bar-collapsed {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 48px;
+  }
+
+  .player-queue:not(.player-queue-empty) {
     display: none;
+  }
+
+  .player-launcher {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 420px) {
-  .player-bar {
+  .player-bar:not(.player-bar-collapsed) {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
@@ -96,6 +141,111 @@
   .player-controls .button {
     flex: 0 0 44px;
     min-height: 44px;
+  }
+}
+
+.player-visualizer {
+  background: #000;
+  overflow: hidden;
+  position: relative;
+}
+
+.player-visualizer-canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.player-visualizer-inline {
+  border: 1px solid var(--slskd-tertiary-border-color, rgba(255, 255, 255, 0.18));
+  border-radius: 6px;
+  bottom: calc(100% + 0.4rem);
+  height: 96px;
+  position: absolute;
+  right: 1rem;
+  width: 168px;
+  z-index: 1;
+}
+
+.player-visualizer-fullwindow {
+  bottom: 0;
+  height: auto;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: auto;
+  z-index: 1200;
+}
+
+.player-visualizer-fullscreen {
+  height: 100%;
+  width: 100%;
+}
+
+.player-visualizer-overlay {
+  align-items: flex-start;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  left: 0;
+  opacity: 0;
+  padding: 0.4rem;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: opacity 150ms ease-in-out;
+}
+
+.player-visualizer:hover .player-visualizer-overlay,
+.player-visualizer:focus-within .player-visualizer-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.player-visualizer-overlay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.player-visualizer-fullwindow .player-visualizer-overlay,
+.player-visualizer-fullscreen .player-visualizer-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.player-visualizer-preset {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.8rem;
+  max-width: min(70%, 480px);
+  overflow: hidden;
+  padding: 0.25rem 0.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-visualizer-error {
+  background: rgba(160, 0, 0, 0.7);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.8rem;
+  left: 0.4rem;
+  padding: 0.5rem;
+  position: absolute;
+  top: 0.4rem;
+}
+
+@media (max-width: 720px) {
+  .player-visualizer-inline {
+    height: 72px;
+    right: 0.6rem;
+    width: 124px;
   }
 }
 

@@ -5,7 +5,9 @@ namespace slskd.Tests.Unit.Streaming;
 
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using slskd.Shares;
 using slskd.Streaming;
@@ -16,11 +18,18 @@ public class ContentLocatorTests
     private readonly Mock<IShareService> _shareServiceMock = new();
     private readonly Mock<IShareRepository> _repoMock = new();
     private readonly Mock<ILogger<ContentLocator>> _logMock = new();
+    private readonly Mock<IOptionsMonitor<slskd.Options>> _optionsMock = new();
 
-    private ContentLocator CreateLocator()
+    private ContentLocator CreateLocator(slskd.Options? options = null)
     {
         _shareServiceMock.Setup(x => x.GetLocalRepository()).Returns(_repoMock.Object);
-        return new ContentLocator(_shareServiceMock.Object, _logMock.Object);
+        if (options == null)
+        {
+            return new ContentLocator(_shareServiceMock.Object, _logMock.Object);
+        }
+
+        _optionsMock.Setup(x => x.CurrentValue).Returns(options);
+        return new ContentLocator(_shareServiceMock.Object, _logMock.Object, _optionsMock.Object);
     }
 
     [Fact]
@@ -121,6 +130,41 @@ public class ContentLocatorTests
         finally
         {
             try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Resolve_AllowedDownloadContentId_ReturnsResolvedContent()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ContentLoc_" + Guid.NewGuid().ToString("N")[..8]);
+        var path = Path.Combine(root, "downloaded.ogg");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllBytes(path, new byte[] { 1, 2, 3, 4 });
+            var hashBytes = SHA256.HashData(new byte[] { 1, 2, 3, 4 });
+            var contentId = $"sha256:{BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant()}";
+            var locator = CreateLocator(new slskd.Options
+            {
+                Directories = new slskd.Options.DirectoriesOptions
+                {
+                    Downloads = root,
+                    Incomplete = Path.GetTempPath(),
+                },
+            });
+            _repoMock.Setup(x => x.FindContentItem(contentId))
+                .Returns((ValueTuple<string, string, string, bool, string, long>?)null);
+
+            var r = locator.Resolve(contentId);
+
+            Assert.NotNull(r);
+            Assert.Equal(path, r.AbsolutePath);
+            Assert.Equal(4, r.Length);
+            Assert.Equal("audio/ogg", r.ContentType);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
         }
     }
 }
