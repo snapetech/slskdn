@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z165. Release Gate Compiles All Tests, Including Stale Compatibility Tests
+
+**The Bug**: The tag release gate failed at test compilation because stale tests still asserted a removed `MusicBrainz.Enabled` option and used unqualified `File` / `Directory` after importing `Soulseek`, where those names collide with `System.IO`.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Configuration/YamlConfigurationSourceTests.cs`
+- `tests/slskd.Tests.Unit/ProgramPathNormalizationTests.cs`
+
+**Wrong**:
+```csharp
+Assert.True(options.Integration.MusicBrainz.Enabled);
+File.WriteAllText(path, content);
+Directory.Delete(directory, recursive: true);
+```
+
+**Correct**:
+```csharp
+Assert.Equal("https://musicbrainz.example.invalid", options.Integration.MusicBrainz.BaseUrl);
+using Directory = System.IO.Directory;
+using File = System.IO.File;
+```
+
+**Why This Keeps Happening**: Compatibility tests are often added quickly while config schemas are moving. Release workflows compile the full test project, so stale assertions and namespace collisions outside the focused test filter can still break tags. When adding tests that import `Soulseek`, qualify or alias `System.IO.File` and `System.IO.Directory`; when testing YAML aliases, assert options that still exist in `Options`.
+
 ### 0z164. Header And Footer Chrome Need Explicit Rail Grouping
 
 **The Bug**: The Web UI header and footer rendered as flat item streams, so utility actions mixed visually with primary navigation and footer status pills drifted into awkward spacing under live counters.
