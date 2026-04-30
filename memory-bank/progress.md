@@ -8346,7 +8346,7 @@ Code quality improvements were completed as part of Option A:
 - Player ratings now update shelf items with promote-preview, archive-preview, keep-reviewing, or expiry-watch classifications.
 - Added a player Discovery Shelf modal with summary counts, review rows, preview-only action buttons, remove, and clear controls.
 - Captured the requested live media-server, peer search, queue, download, scrobble, and file-action ambitions as explicit follow-up instead of treating the browser-only import slice as final scope.
-- Validation pending: broader player-focused tests, frontend lint/build, and whitespace checks.
+- Validation: broader player-focused tests, frontend lint, frontend production build, and whitespace checks passed.
 
 ## 2026-04-30 21:04:16Z
 
