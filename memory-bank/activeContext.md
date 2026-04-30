@@ -1,3 +1,30 @@
+## Update 2026-04-30 01:15:00Z
+
+- Current task: None. Mixed-source accelerated failover no longer dials mesh-overlay sources through Soulseek.
+- Last activity:
+  - filtered sequential failover candidates to `IsSoulseekPeer()` before selecting sources
+  - added a regression test for mixed mesh/Soulseek source lists
+  - documented the gotcha in ADR-0001 and committed it separately
+  - validated backend build, focused multi-source tests, and diff whitespace
+- Next steps:
+  1. Keep the broader listening-party/UI dirty work separate from this transfer fix.
+  2. Commit the transfer fix with its test and changelog update.
+
+## Update 2026-04-30 01:02:06Z
+
+- Current task: None. Layer 1 listening parties are implemented locally.
+- Last activity:
+  - documented the metadata-only pod listen-along protocol and deferred live mic/WebRTC layer
+  - added a persistent Web UI player for existing `ContentId` stream playback
+  - wired browser playback into Now Playing updates
+  - added collection item play controls
+  - added pod listen-along host/follow controls backed by stored/routed pod messages and SignalR fan-out
+  - validated backend build, frontend lint/build, repo tests, and lint via `bash ./bin/lint`
+- Next steps:
+  1. Review the listening-party UX in a live browser with real shared audio.
+  2. Add richer playlist queue controls and explicit seek publishing if the MVP feels right.
+  3. Design the separate WebRTC live mic/commentary layer before implementation.
+
 ## Update 2026-04-30 00:58:00Z
 
 - Current task: None. Security audit hardening is implemented and validated locally.

@@ -1,0 +1,108 @@
+.player-bar {
+  align-items: center;
+  background: var(--slskdn-nav-background, #1b1c1d);
+  border-top: 1px solid var(--slskdn-nav-border, rgba(255, 255, 255, 0.12));
+  bottom: 43px;
+  color: var(--slskd-color, #fff);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto minmax(140px, 320px);
+  left: 0;
+  min-height: 64px;
+  padding: 0.6rem 1rem;
+  position: fixed;
+  right: 0;
+  z-index: 1100;
+}
+
+.player-track {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.player-title,
+.player-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-title {
+  font-weight: 700;
+}
+
+.player-subtitle {
+  color: var(--slskd-color-subtle, rgba(255, 255, 255, 0.72));
+  font-size: 0.85rem;
+}
+
+.player-controls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.player-queue {
+  display: flex;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.player-queue-item {
+  background: var(--slskd-subtle-background, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--slskd-tertiary-border-color, rgba(255, 255, 255, 0.18));
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.35rem 0.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .player-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .player-queue {
+    display: none;
+  }
+}
+
+.pod-listen-along {
+  margin-bottom: 1rem !important;
+}
+
+.pod-listen-along-main {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.pod-listen-along-toggles {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.pod-listen-along-state {
+  color: var(--slskd-color-subtle, #767676);
+  max-width: min(64vw, 720px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pod-listen-along-directory {
+  border-top: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.15));
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+}

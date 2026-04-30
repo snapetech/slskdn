@@ -1,4 +1,5 @@
 import * as collectionsAPI from '../../lib/collections';
+import PlayCollectionItemButton from '../Player/PlayCollectionItemButton';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
 import React, { Component } from 'react';
@@ -11,6 +12,7 @@ import {
   Icon,
   Message,
   Modal,
+  Popup,
   Segment,
   Table,
 } from 'semantic-ui-react';
@@ -475,25 +477,31 @@ export default class Collections extends Component {
                           </Table.Cell>
                           <Table.Cell>{item.mediaKind || 'Unknown'}</Table.Cell>
                           <Table.Cell>
-                            <Button
-                              data-testid={`collection-item-remove-${index}`}
-                              negative
-                              onClick={async () => {
-                                try {
-                                  await collectionsAPI.removeCollectionItem(
-                                    item.id,
-                                  );
-                                  await this.loadCollectionItems(
-                                    selectedCollection.id,
-                                  );
-                                } catch (error) {
-                                  this.setState({ error: error.message });
-                                }
-                              }}
-                              size="small"
-                            >
-                              Remove
-                            </Button>
+                            <PlayCollectionItemButton item={item} />
+                            <Popup
+                              content="Remove this item from the collection without deleting the shared file."
+                              trigger={
+                                <Button
+                                  data-testid={`collection-item-remove-${index}`}
+                                  negative
+                                  onClick={async () => {
+                                    try {
+                                      await collectionsAPI.removeCollectionItem(
+                                        item.id,
+                                      );
+                                      await this.loadCollectionItems(
+                                        selectedCollection.id,
+                                      );
+                                    } catch (error) {
+                                      this.setState({ error: error.message });
+                                    }
+                                  }}
+                                  size="small"
+                                >
+                                  Remove
+                                </Button>
+                              }
+                            />
                           </Table.Cell>
                         </Table.Row>
                       ))}

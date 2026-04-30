@@ -859,8 +859,20 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         }
 
         var triedSources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var soulseekSources = request.Sources
+            .Where(s => s.IsSoulseekPeer())
+            .ToList();
         var sourcesUsed = 0;
         long bytesReceived = 0;
+
+        if (soulseekSources.Count == 0)
+        {
+            result.Error = "Sequential failover requires at least one Soulseek source";
+            result.Success = false;
+            status.State = MultiSourceDownloadState.Failed;
+            activity?.SetTag("swarm.download.success", false);
+            return result;
+        }
 
         // FileStream stays open across failover attempts; each peer resumes at bytesReceived.
         await using var fileStream = new FileStream(
@@ -872,7 +884,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
         while (bytesReceived < request.FileSize && !cancellationToken.IsCancellationRequested)
         {
             // Pick the next untried source, preferring sources we haven't visited yet.
-            var source = request.Sources.FirstOrDefault(s => !triedSources.Contains(s.Username));
+            var source = soulseekSources.FirstOrDefault(s => !triedSources.Contains(s.Username));
             if (source == null)
             {
                 _logger.LogWarning("[FAILOVER] All sources tried; {Got}/{Total} bytes received",

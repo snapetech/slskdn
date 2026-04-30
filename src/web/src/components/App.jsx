@@ -12,6 +12,8 @@ import Collections from './Collections/Collections';
 import Contacts from './Contacts/Contacts';
 import DiscoveryGraphAtlasPage from './Search/DiscoveryGraphAtlasPage';
 import LoginForm from './LoginForm';
+import PlayerBar from './Player/PlayerBar';
+import { PlayerProvider } from './Player/PlayerContext';
 import Pods from './Pods/Pods';
 import Rooms from './Rooms/Rooms';
 import Searches from './Search/Searches';
@@ -761,15 +763,16 @@ class App extends Component {
               )}
             </Menu>
           </Sidebar>
-          <Sidebar.Pusher className="app-content">
-            <AppContext.Provider
-              // Note: Context value object recreated on each render (class component limitation)
-              // Deferred: Optimize with useMemo when converting to functional component
-              // See memory-bank/triage-todo-fixme.md (defer section) for details
-              // eslint-disable-next-line react/jsx-no-constructed-context-values
-              value={{ options: applicationOptions, state: applicationState }}
-            >
-              {isAgent ? (
+          <PlayerProvider>
+            <Sidebar.Pusher className="app-content">
+              <AppContext.Provider
+                // Note: Context value object recreated on each render (class component limitation)
+                // Deferred: Optimize with useMemo when converting to functional component
+                // See memory-bank/triage-todo-fixme.md (defer section) for details
+                // eslint-disable-next-line react/jsx-no-constructed-context-values
+                value={{ options: applicationOptions, state: applicationState }}
+              >
+                {isAgent ? (
                 <Routes>
                   <Route
                     path="/system"
@@ -798,7 +801,7 @@ class App extends Component {
                     element={<Navigate replace to="/system" />}
                   />
                 </Routes>
-              ) : (
+                ) : (
                 <Routes>
                   <Route
                     path="/"
@@ -936,15 +939,15 @@ class App extends Component {
                   />
                   <Route
                     path="/pods"
-                    element={this.withTokenCheck(<Pods />)}
+                    element={this.withTokenCheck(<Pods state={applicationState} />)}
                   />
                   <Route
                     path="/pods/:podId"
-                    element={this.withTokenCheck(<Pods />)}
+                    element={this.withTokenCheck(<Pods state={applicationState} />)}
                   />
                   <Route
                     path="/pods/:podId/channels/:channelId"
-                    element={this.withTokenCheck(<Pods />)}
+                    element={this.withTokenCheck(<Pods state={applicationState} />)}
                   />
                   <Route
                     path="/rooms"
@@ -1004,9 +1007,11 @@ class App extends Component {
                     element={<RouteMissRedirect />}
                   />
                 </Routes>
-              )}
-            </AppContext.Provider>
-          </Sidebar.Pusher>
+                )}
+              </AppContext.Provider>
+            </Sidebar.Pusher>
+            <PlayerBar />
+          </PlayerProvider>
         </Sidebar.Pushable>
         <ToastContainer
           autoClose={5_000}

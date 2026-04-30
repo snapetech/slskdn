@@ -167,7 +167,7 @@ body {
     min-height: calc(100% - 71px);
     background: var(--background-color);
     padding-top: 0 !important;
-    padding-bottom: 58px !important;
+    padding-bottom: 128px !important;
 }
 
 /* Nav badge styles */

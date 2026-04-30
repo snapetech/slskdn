@@ -2,6 +2,7 @@ import * as identityAPI from '../../lib/identity';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
 import React, { Component } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Container,
@@ -10,12 +11,28 @@ import {
   Label,
   List,
   Modal,
+  Popup,
   Segment,
   Tab,
   Table,
 } from 'semantic-ui-react';
 
-export default class Contacts extends Component {
+const withNavigate = (WrappedComponent) => {
+  const RoutedComponent = (props) => {
+    const navigate = useNavigate();
+    return (
+      <WrappedComponent
+        {...props}
+        navigate={navigate}
+      />
+    );
+  };
+
+  RoutedComponent.displayName = `withNavigate(${WrappedComponent.displayName || WrappedComponent.name || 'Component'})`;
+  return RoutedComponent;
+};
+
+class Contacts extends Component {
   state = {
     activeTab: 0,
     addFriendModalOpen: false,
@@ -166,6 +183,16 @@ export default class Contacts extends Component {
     }
   };
 
+  openChat = (contact) => {
+    const username = contact.nickname || contact.peerId;
+    this.props.navigate('/chat', { state: { user: username } });
+  };
+
+  browseContact = (contact) => {
+    const username = contact.nickname || contact.peerId;
+    this.props.navigate('/browse', { state: { user: username } });
+  };
+
   render() {
     const {
       activeTab,
@@ -238,13 +265,38 @@ export default class Contacts extends Component {
                           : 'Never'}
                       </Table.Cell>
                       <Table.Cell>
-                        <Button
-                          negative
-                          onClick={() => this.handleDeleteContact(contact.id)}
-                          size="small"
-                        >
-                          Delete
-                        </Button>
+                        <Button.Group size="small">
+                          <Popup
+                            content="Open a private chat with this contact."
+                            trigger={
+                              <Button
+                                icon="chat"
+                                onClick={() => this.openChat(contact)}
+                              />
+                            }
+                          />
+                          <Popup
+                            content="Browse this contact's shared files."
+                            trigger={
+                              <Button
+                                icon="folder open"
+                                onClick={() => this.browseContact(contact)}
+                              />
+                            }
+                          />
+                          <Popup
+                            content="Remove this saved contact."
+                            trigger={
+                              <Button
+                                icon="trash"
+                                negative
+                                onClick={() =>
+                                  this.handleDeleteContact(contact.id)
+                                }
+                              />
+                            }
+                          />
+                        </Button.Group>
                       </Table.Cell>
                     </Table.Row>
                   ))}
@@ -459,3 +511,5 @@ class AddFriendForm extends Component {
     );
   }
 }
+
+export default withNavigate(Contacts);

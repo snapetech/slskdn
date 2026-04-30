@@ -22,6 +22,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed mixed-source accelerated downloads so the Soulseek sequential-failover
+  loop filters out mesh-overlay sources before calling `ISoulseekClient`.
+  Mesh sources now stay on the mesh-aware path, and raw Soulseek failover only
+  dials raw Soulseek peers.
+- Added Layer 1 listening parties: a persistent Web UI player streams
+  `ContentId` values through the existing range endpoint, updates Now Playing
+  from browser playback, and publishes pod-scoped listen-along metadata over
+  stored/routed pod messages plus SignalR fan-out without relaying audio bytes.
 - Hardened security boundaries by requiring authentication for ActivityPub
   outbox publishing, adding SSRF and size guards to HTTP share backfill,
   fixing file-list path prefix authorization, removing query-string API-key

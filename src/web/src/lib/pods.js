@@ -2,6 +2,7 @@ import { urlBase } from '../config';
 import * as session from './session';
 
 const baseUrl = `${urlBase}/api/v0/pods`;
+const discoveryBaseUrl = `${urlBase}/api/v0/podcore/discovery`;
 
 export const list = async () => {
   const response = await fetch(baseUrl, {
@@ -27,9 +28,9 @@ export const get = async (podId) => {
   return response.json();
 };
 
-export const create = async (pod) => {
+export const create = async (pod, requestingPeerId = 'local-peer') => {
   const response = await fetch(baseUrl, {
-    body: JSON.stringify(pod),
+    body: JSON.stringify({ pod, requestingPeerId }),
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
@@ -44,9 +45,9 @@ export const create = async (pod) => {
   return response.json();
 };
 
-export const update = async (podId, pod) => {
+export const update = async (podId, pod, requestingPeerId = 'local-peer') => {
   const response = await fetch(`${baseUrl}/${podId}`, {
-    body: JSON.stringify(pod),
+    body: JSON.stringify({ pod, requestingPeerId }),
     headers: {
       ...session.authHeaders(),
       'Content-Type': 'application/json',
@@ -185,6 +186,54 @@ export const unbindRoom = async (podId, channelId) => {
 
   if (!response.ok) {
     throw new Error(`Failed to unbind room: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+const readDiscovery = async (response) => {
+  if (!response.ok) {
+    throw new Error(`Failed to discover pods: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  return result?.pods || result?.Pods || [];
+};
+
+export const discoverAll = async (limit = 50) => {
+  const response = await fetch(`${discoveryBaseUrl}/all?limit=${limit}`, {
+    headers: session.authHeaders(),
+  });
+
+  return readDiscovery(response);
+};
+
+export const discoverByName = async (name) => {
+  const response = await fetch(
+    `${discoveryBaseUrl}/name/${encodeURIComponent(name)}`,
+    { headers: session.authHeaders() },
+  );
+
+  return readDiscovery(response);
+};
+
+export const discoverByTag = async (tag) => {
+  const response = await fetch(
+    `${discoveryBaseUrl}/tag/${encodeURIComponent(tag)}`,
+    { headers: session.authHeaders() },
+  );
+
+  return readDiscovery(response);
+};
+
+export const refreshDiscovery = async () => {
+  const response = await fetch(`${discoveryBaseUrl}/refresh`, {
+    headers: session.authHeaders(),
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to refresh discovery: ${response.statusText}`);
   }
 
   return response.json();

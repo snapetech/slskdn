@@ -17,6 +17,8 @@
   margin-top: 15px !important;
   height: 78px;
   display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .rooms-segment-icon {
@@ -26,6 +28,20 @@
 
 .rooms-input {
   width: 100%;
+}
+
+.room-recovery-rail {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px !important;
+  margin-top: -6px !important;
+  padding: 8px !important;
+}
+
+.room-recovery-rail .button {
+  margin: 0 !important;
 }
 
 .room-tabs {

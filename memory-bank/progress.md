@@ -1,3 +1,18 @@
+## 2026-04-30 01:15Z - Fixed mixed-source failover transport filtering
+
+- Fixed `MultiSourceDownloadService.DownloadSequentialFailoverAsync` so mixed source sets build a raw-Soulseek-only candidate list before calling `ISoulseekClient.DownloadAsync`.
+- Added regression coverage proving a mesh-overlay source in a mixed set is never passed to the Soulseek client while the raw Soulseek source is used.
+- Documented the transport-filtering gotcha in ADR-0001 and committed that entry as `fa77dafe8`.
+- Validation: `dotnet build src/slskd/slskd.csproj` passed with existing warning classes; focused `MultiSourceDownloadServiceSanitizationTests` passed (`2/2`); `git diff --check` passed for touched implementation/test files.
+
+## 2026-04-30 01:02Z - Added Layer 1 listening parties
+
+- Documented `docs/listening-party.md` with the metadata-only protocol, trust boundary, and deferred live mic/WebRTC layer.
+- Added a persistent Web UI player with collection item play controls, local stream playback through `/api/v0/streams/{contentId}`, queue display, and Now Playing updates from browser playback.
+- Added a pod listen-along panel that can publish/follow `play`, `pause`, `seek`, and `stop` metadata for the active pod channel.
+- Added backend listening-party state, REST endpoints, SignalR fan-out, and pod-message storage/routing for `slskdn.listenAlong.v1` messages without relaying audio bytes.
+- Validation: `dotnet build src/slskd/slskd.csproj --no-restore`, `npm run lint -- --max-warnings=0`, `npm run build`, `dotnet test --no-build`, and `bash ./bin/lint` passed. Direct `./bin/lint` failed because the script is not executable in this checkout.
+
 ## 2026-04-30 00:58Z - Hardened security audit findings
 
 - Required authenticated access for local ActivityPub outbox publishing while keeping public protocol discovery and inbox delivery anonymous.
@@ -7236,8 +7251,8 @@ Code quality improvements were completed as part of Option A:
 ## 2026-04-30 00:58:00Z
 
 - Configured the repository `WINGETCREATE_GITHUB_TOKEN` secret with the authenticated `gh` token so WingetCreate has credentials for `microsoft/winget-pkgs` submission.
+- Retried the manual `Publish Winget` workflow for `2026042900-slskdn.202` and confirmed the second blocker: `wingetcreate update snapetech.slskdn` fails because the package does not exist in `microsoft/winget-pkgs` yet.
+- Changed both stable Winget submission paths to download the published Windows artifact, compute the SHA-256, regenerate the stable manifests, and submit those local manifests directly so the initial Winget PR can be opened.
 - Retried the manual workflow and found a third blocker: the stable locale description generated invalid YAML because the first two block-scalar lines were double-indented. Removed that source indentation, regenerated the checked-in stable manifests, and documented the gotcha in ADR-0001 as `0cd259344`.
 - Retried again and found WingetCreate validates flat scratch directories incorrectly for multi-file manifests. Changed both stable submission workflows to stage files under `winget-submit/manifests/s/snapetech/slskdn/<winget-version>/` before calling `wingetcreate submit`, and documented the layout gotcha in ADR-0001 as `6cc0ffb77`.
 - Aligned the stable zip portable installer manifest with accepted winget-pkgs examples by moving `NestedInstallerType`, `NestedInstallerFiles`, and `Commands` to the installer manifest root, then regenerated the checked-in stable manifests and documented the gotcha in ADR-0001 as `9262eed5b`.
-- Retried the manual `Publish Winget` workflow for `2026042900-slskdn.202` and confirmed the second blocker: `wingetcreate update snapetech.slskdn` fails because the package does not exist in `microsoft/winget-pkgs` yet.
-- Changed both stable Winget submission paths to download the published Windows artifact, compute the SHA-256, regenerate the stable manifests, and submit those local manifests directly so the initial Winget PR can be opened.

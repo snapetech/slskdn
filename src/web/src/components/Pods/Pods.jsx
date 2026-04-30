@@ -1,6 +1,8 @@
+import './Pods.css';
 import { urlBase } from '../../config';
 import * as pods from '../../lib/pods';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
+import PodListenAlongPanel from '../Player/PodListenAlongPanel';
 import PortForwarding from './PortForwarding';
 import VpnGatewayConfig from './VpnGatewayConfig';
 import React, { Component } from 'react';
@@ -9,9 +11,17 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Button,
   Dimmer,
+  Dropdown,
+  Form,
+  Header,
+  Icon,
   Input,
+  Label,
   List,
   Loader,
+  Message,
+  Modal,
+  Popup,
   Segment,
   Tab,
 } from 'semantic-ui-react';
@@ -29,6 +39,14 @@ const initialState = {
   messages: {},
   podDetail: null,
   pods: [],
+  createModalOpen: false,
+  createDescription: '',
+  createName: '',
+  createTags: '',
+  createVisibility: 'Unlisted',
+  discoveryLoading: false,
+  discoveryQuery: '',
+  discoveryResults: [],
 };
 
 const withRouter = (WrappedComponent) => {
@@ -114,6 +132,10 @@ class Pods extends Component {
       console.error('Failed to fetch pods:', error);
       this.setState({ pods: [] });
     }
+  };
+
+  getLocalPeerId = () => {
+    return this.props.state?.user?.username || 'local-peer';
   };
 
   fetchPodDetail = async (podId) => {
@@ -216,8 +238,24 @@ class Pods extends Component {
     }
   };
 
+  handleOpenCreatePod = () => {
+    this.setState({
+      createDescription: '',
+      createModalOpen: true,
+      createName: '',
+      createTags: '',
+      createVisibility: 'Unlisted',
+    });
+  };
+
   handleCreatePod = async () => {
-    const name = prompt('Enter pod name:');
+    const {
+      createDescription,
+      createName,
+      createTags,
+      createVisibility,
+    } = this.state;
+    const name = createName.trim();
     if (!name) return;
 
     try {
@@ -229,17 +267,39 @@ class Pods extends Component {
             name: 'General',
           },
         ],
+        description: createDescription.trim() || null,
         externalBindings: [],
         name,
-        tags: [],
-        visibility: 'Unlisted',
-      });
+        tags: createTags
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        visibility: createVisibility,
+      }, this.getLocalPeerId());
 
+      this.setState({ createModalOpen: false });
       await this.fetchPods();
       await this.selectPod(newPod.podId);
     } catch (error) {
       console.error('Failed to create pod:', error);
       toast.error(`Failed to create pod: ${error.message}`);
+    }
+  };
+
+  handleDiscoverPods = async () => {
+    const query = this.state.discoveryQuery.trim();
+    this.setState({ discoveryLoading: true });
+
+    try {
+      const discovered = query
+        ? await pods.discoverByName(query)
+        : await pods.discoverAll(50);
+      this.setState({ discoveryResults: discovered || [] });
+    } catch (error) {
+      console.error('Failed to discover pods:', error);
+      toast.error(`Failed to discover pods: ${error.message}`);
+    } finally {
+      this.setState({ discoveryLoading: false });
     }
   };
 
@@ -253,6 +313,14 @@ class Pods extends Component {
       messages,
       podDetail,
       pods: podsList,
+      createDescription,
+      createModalOpen,
+      createName,
+      createTags,
+      createVisibility,
+      discoveryLoading,
+      discoveryQuery,
+      discoveryResults,
     } = this.state;
 
     const currentMessages =
@@ -314,10 +382,15 @@ class Pods extends Component {
               <Segment>
                 <Input
                   action={
-                    <Button
-                      icon="send"
-                      onClick={this.handleSendMessage}
-                      primary
+                    <Popup
+                      content="Send this message to the active pod channel."
+                      trigger={
+                        <Button
+                          icon="send"
+                          onClick={this.handleSendMessage}
+                          primary
+                        />
+                      }
                     />
                   }
                   fluid
@@ -339,31 +412,90 @@ class Pods extends Component {
       })) || [];
 
     return (
-      <div style={{ display: 'flex', height: '100vh' }}>
+      <div className="pods-workspace">
         {/* Pod List Sidebar */}
-        <Segment
-          style={{
-            borderRadius: 0,
-            margin: 0,
-            minWidth: '250px',
-            overflowY: 'auto',
-            width: '250px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '10px',
-            }}
-          >
+        <Segment className="pods-sidebar">
+          <div className="pods-sidebar-header">
             <h3>Pods</h3>
-            <Button
-              icon="plus"
-              onClick={this.handleCreatePod}
-              size="small"
+            <Popup
+              content="Create a durable pod with a default channel. It is saved by the daemon and restored after restart."
+              trigger={
+                <Button
+                  icon="plus"
+                  onClick={this.handleOpenCreatePod}
+                  size="small"
+                />
+              }
             />
           </div>
+          <Input
+            action={
+              <Popup
+                content="Find listed pods through the pod discovery index."
+                trigger={
+                  <Button
+                    icon="search"
+                    loading={discoveryLoading}
+                    onClick={this.handleDiscoverPods}
+                  />
+                }
+              />
+            }
+            fluid
+            onChange={(e) =>
+              this.setState({ discoveryQuery: e.target.value })
+            }
+            onKeyUp={(e) => {
+              if (e.key === 'Enter') {
+                this.handleDiscoverPods();
+              }
+            }}
+            placeholder="Find pods..."
+            size="small"
+            value={discoveryQuery}
+          />
+          {discoveryResults.length > 0 && (
+            <Segment className="pod-discovery-results">
+              <Header
+                as="h5"
+                dividing
+              >
+                Discovered
+              </Header>
+              <List selection>
+                {discoveryResults.slice(0, 6).map((pod) => {
+                  const podId = pod.podId || pod.PodId;
+                  const name = pod.name || pod.Name || podId;
+                  const tags = pod.tags || pod.Tags || [];
+                  const local = podsList.some((item) => item.podId === podId);
+
+                  return (
+                    <List.Item
+                      key={podId}
+                      onClick={() => local && this.selectPod(podId)}
+                    >
+                      <List.Content>
+                        <List.Header>
+                          {name}
+                          {local && (
+                            <Label
+                              color="green"
+                              size="mini"
+                            >
+                              saved
+                            </Label>
+                          )}
+                        </List.Header>
+                        <List.Description>
+                          {tags.length > 0 ? tags.join(', ') : podId}
+                        </List.Description>
+                      </List.Content>
+                    </List.Item>
+                  );
+                })}
+              </List>
+            </Segment>
+          )}
           {podsList.length === 0 ? (
             <PlaceholderSegment
               caption="No pods yet"
@@ -390,15 +522,7 @@ class Pods extends Component {
         </Segment>
 
         {/* Pod Detail */}
-        <Segment
-          style={{
-            borderRadius: 0,
-            display: 'flex',
-            flex: 1,
-            flexDirection: 'column',
-            margin: 0,
-          }}
-        >
+        <Segment className="pod-detail">
           {loading ? (
             <Dimmer active>
               <Loader />
@@ -410,14 +534,40 @@ class Pods extends Component {
             />
           ) : (
             <>
-              <div style={{ marginBottom: '20px' }}>
+              <div className="pod-detail-header">
                 <h2>{podDetail.name || podDetail.podId}</h2>
-                <p>
-                  <strong>Members:</strong> {members.length}
-                  {' | '}
-                  <strong>Channels:</strong> {podDetail.channels?.length || 0}
-                </p>
+                <div className="pod-detail-meta">
+                  <span>
+                    <strong>Members:</strong> {members.length}
+                  </span>
+                  <span>
+                    <strong>Channels:</strong> {podDetail.channels?.length || 0}
+                  </span>
+                  <span>
+                    <strong>Visibility:</strong> {podDetail.visibility}
+                  </span>
+                </div>
+                {podDetail.description && <p>{podDetail.description}</p>}
+                {podDetail.tags?.length > 0 && (
+                  <div className="pod-tag-list">
+                    {podDetail.tags.map((tag) => (
+                      <Label
+                        key={tag}
+                        size="small"
+                      >
+                        {tag}
+                      </Label>
+                    ))}
+                  </div>
+                )}
               </div>
+              {activeChannelId && (
+                <PodListenAlongPanel
+                  channelId={activeChannelId}
+                  podId={activePodId}
+                  user={this.props.state?.user?.username}
+                />
+              )}
 
               {podDetail.channels?.length > 0 ? (
                 <Tab
@@ -462,6 +612,78 @@ class Pods extends Component {
             </>
           )}
         </Segment>
+        <Modal
+          onClose={() => this.setState({ createModalOpen: false })}
+          open={createModalOpen}
+          size="small"
+        >
+          <Modal.Header>Create Pod</Modal.Header>
+          <Modal.Content>
+            <Form>
+              <Form.Field>
+                <label>Name</label>
+                <Input
+                  autoFocus
+                  onChange={(e) =>
+                    this.setState({ createName: e.target.value })
+                  }
+                  placeholder="listening circle, label crate, private crew"
+                  value={createName}
+                />
+              </Form.Field>
+              <Form.TextArea
+                label="Description"
+                onChange={(e, { value }) =>
+                  this.setState({ createDescription: value })
+                }
+                placeholder="What this pod is for"
+                value={createDescription}
+              />
+              <Form.Field>
+                <label>Tags</label>
+                <Input
+                  onChange={(e) =>
+                    this.setState({ createTags: e.target.value })
+                  }
+                  placeholder="ambient, friends, vinyl"
+                  value={createTags}
+                />
+              </Form.Field>
+              <Form.Field>
+                <label>Visibility</label>
+                <Dropdown
+                  fluid
+                  onChange={(e, { value }) =>
+                    this.setState({ createVisibility: value })
+                  }
+                  options={[
+                    { key: 'unlisted', text: 'Unlisted', value: 'Unlisted' },
+                    { key: 'listed', text: 'Listed', value: 'Listed' },
+                    { key: 'private', text: 'Private', value: 'Private' },
+                  ]}
+                  selection
+                  value={createVisibility}
+                />
+              </Form.Field>
+              <Message info>
+                <Icon name="save" />
+                Pods are stored by the server, so the list and messages survive browser reloads and daemon restarts.
+              </Message>
+            </Form>
+          </Modal.Content>
+          <Modal.Actions>
+            <Button onClick={() => this.setState({ createModalOpen: false })}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!createName.trim()}
+              onClick={this.handleCreatePod}
+              primary
+            >
+              Create
+            </Button>
+          </Modal.Actions>
+        </Modal>
       </div>
     );
   }

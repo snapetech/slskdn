@@ -1,0 +1,49 @@
+.pods-workspace {
+  display: flex;
+  height: 100vh;
+}
+
+.pods-sidebar {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  min-width: 280px;
+  overflow-y: auto;
+  width: 280px;
+}
+
+.pods-sidebar-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pod-discovery-results {
+  margin-top: 10px !important;
+  padding: 10px !important;
+}
+
+.pod-detail {
+  border-radius: 0 !important;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 0 !important;
+}
+
+.pod-detail-header {
+  margin-bottom: 20px;
+}
+
+.pod-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pod-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

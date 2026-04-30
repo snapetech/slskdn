@@ -32,6 +32,8 @@
   margin-top: 15px !important;
   height: 78px;
   display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .chat-segment-icon {
@@ -41,6 +43,20 @@
 
 .chat-input {
   width: 100%;
+}
+
+.chat-recovery-rail {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px !important;
+  margin-top: -6px !important;
+  padding: 8px !important;
+}
+
+.chat-recovery-rail .button {
+  margin: 0 !important;
 }
 
 .chat-tabs {

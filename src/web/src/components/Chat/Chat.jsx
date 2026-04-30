@@ -3,7 +3,16 @@ import * as chat from '../../lib/chat';
 import ChatSession from './ChatSession';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Icon, Input, Menu, Segment, Tab } from 'semantic-ui-react';
+import {
+  Button,
+  Icon,
+  Input,
+  Label,
+  Menu,
+  Popup,
+  Segment,
+  Tab,
+} from 'semantic-ui-react';
 
 let tabCounter = 0;
 
@@ -41,6 +50,7 @@ const Chat = ({ state }) => {
   const location = useLocation();
   const [tabs, setTabs] = useState(() => loadTabsFromStorage());
   const [activeIndex, setActiveIndex] = useState(0);
+  const [conversations, setConversations] = useState([]);
   const [usernameInput, setUsernameInput] = useState('');
   const closeTabRef = useRef(null);
   const updateTabRef = useRef(null);
@@ -80,12 +90,71 @@ const Chat = ({ state }) => {
     };
   }, []);
 
+  const startConversation = useCallback(
+    (username) => {
+      if (!username || !username.trim()) return;
+
+      const trimmedUsername = username.trim();
+      const existingIndex = tabs.findIndex(
+        (t) => t.username === trimmedUsername,
+      );
+
+      if (existingIndex === -1) {
+        setTabs((previous) => {
+          const newTabs = [...previous, createTab(trimmedUsername)];
+          setActiveIndex(newTabs.length - 1);
+          return newTabs;
+        });
+      } else {
+        setActiveIndex(existingIndex);
+      }
+    },
+    [createTab, tabs],
+  );
+
+  const hydrateConversations = useCallback(async () => {
+    try {
+      const serverConversations = await chat.getAll();
+      const activeConversations = (serverConversations || [])
+        .filter((conversation) => conversation.username)
+        .sort((a, b) => {
+          if (a.hasUnAcknowledgedMessages !== b.hasUnAcknowledgedMessages) {
+            return a.hasUnAcknowledgedMessages ? -1 : 1;
+          }
+
+          return a.username.localeCompare(b.username);
+        });
+
+      setConversations(activeConversations);
+      if (activeConversations.length > 0) {
+        setTabs((previous) => {
+          const existingUsernames = new Set(
+            previous.map((tab) => tab.username).filter(Boolean),
+          );
+          const restoredTabs = activeConversations
+            .filter((conversation) => !existingUsernames.has(conversation.username))
+            .map((conversation) => createTab(conversation.username));
+
+          return restoredTabs.length > 0
+            ? [...previous.filter((tab) => tab.username), ...restoredTabs]
+            : previous;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to hydrate conversations:', error);
+    }
+  }, [createTab]);
+
   // Create initial tab on mount if none exist
   useEffect(() => {
     if (tabs.length === 0) {
       setTabs([createTab()]);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    hydrateConversations();
+  }, [hydrateConversations]);
 
   // Auto-create tab if all closed, and reset counter to keep numbers reasonable
   useEffect(() => {
@@ -125,30 +194,6 @@ const Chat = ({ state }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
-
-  const startConversation = useCallback(
-    (username) => {
-      if (!username || !username.trim()) return;
-
-      const trimmedUsername = username.trim();
-      const existingIndex = tabs.findIndex(
-        (t) => t.username === trimmedUsername,
-      );
-
-      if (existingIndex === -1) {
-        // Create new tab for this user
-        setTabs((previous) => {
-          const newTabs = [...previous, createTab(trimmedUsername)];
-          setActiveIndex(newTabs.length - 1);
-          return newTabs;
-        });
-      } else {
-        // Switch to existing tab
-        setActiveIndex(existingIndex);
-      }
-    },
-    [createTab, tabs],
-  );
 
   const handleAddTab = () => {
     setTabs((previous) => {
@@ -243,7 +288,46 @@ const Chat = ({ state }) => {
           size="big"
           value={usernameInput}
         />
+        <Popup
+          content="Reload saved conversations from the server after a browser refresh or restart."
+          trigger={
+            <Button
+              icon="refresh"
+              onClick={hydrateConversations}
+            />
+          }
+        />
       </Segment>
+      {conversations.length > 0 && (
+        <Segment className="chat-recovery-rail">
+          {conversations.map((conversation) => (
+            <Popup
+              content="Open this saved conversation."
+              key={conversation.username}
+              trigger={
+                <Button
+                  basic
+                  compact
+                  onClick={() => startConversation(conversation.username)}
+                  size="small"
+                >
+                  <Icon name="comment alternate" />
+                  {conversation.username}
+                  {conversation.hasUnAcknowledgedMessages && (
+                    <Label
+                      circular
+                      color="red"
+                      size="mini"
+                    >
+                      {conversation.unAcknowledgedMessageCount}
+                    </Label>
+                  )}
+                </Button>
+              }
+            />
+          ))}
+        </Segment>
+      )}
       <Tab
         activeIndex={activeIndex}
         menu={{

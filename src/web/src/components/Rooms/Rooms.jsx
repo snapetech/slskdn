@@ -1,4 +1,4 @@
-import { activeRoomKey } from '../../config';
+import './Rooms.css';
 import * as rooms from '../../lib/rooms';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import RoomCreateModal from './RoomCreateModal';
@@ -7,16 +7,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
-  Card,
-  Dimmer,
   Dropdown,
   Icon,
-  Input,
-  List,
-  Loader,
   Menu,
-  Portal,
-  Ref,
+  Popup,
   Segment,
   Tab,
 } from 'semantic-ui-react';
@@ -61,7 +55,6 @@ const Rooms = () => {
   const [joinedRooms, setJoinedRooms] = useState([]);
   const [roomSearchLoading, setRoomSearchLoading] = useState(false);
   const closeTabRef = useRef(null);
-  const updateTabRef = useRef(null);
 
   const closeTab = useCallback((tabKey) => {
     setTabs((previous) => {
@@ -75,18 +68,7 @@ const Rooms = () => {
     });
   }, []);
 
-  const updateTabLabel = useCallback((tabKey, newRoomName) => {
-    setTabs((previous) =>
-      previous.map((t) =>
-        t.key === tabKey
-          ? { ...t, label: newRoomName, roomName: newRoomName }
-          : t,
-      ),
-    );
-  }, []);
-
   closeTabRef.current = closeTab;
-  updateTabRef.current = updateTabLabel;
 
   const createTab = useCallback((roomName = '') => {
     tabCounter += 1;
@@ -120,19 +102,53 @@ const Rooms = () => {
     }
   }, [tabs]);
 
-  // Fetch joined rooms on mount
-  useEffect(() => {
-    const fetchJoinedRooms = async () => {
-      try {
-        const joined = await rooms.getJoined();
-        setJoinedRooms(joined || []);
-      } catch (error) {
-        console.error('Failed to fetch joined rooms:', error);
-      }
-    };
+  const openRoomTab = useCallback(
+    (roomName) => {
+      if (!roomName) return;
 
-    fetchJoinedRooms();
-  }, []);
+      const existingTabIndex = tabs.findIndex((t) => t.roomName === roomName);
+      if (existingTabIndex === -1) {
+        setTabs((previous) => {
+          const newTabs = [...previous, createTab(roomName)];
+          setActiveIndex(newTabs.length - 1);
+          return newTabs;
+        });
+      } else {
+        setActiveIndex(existingTabIndex);
+      }
+    },
+    [createTab, tabs],
+  );
+
+  const hydrateJoinedRooms = useCallback(async () => {
+    try {
+      const joined = await rooms.getJoined();
+      const normalized = (joined || []).filter(Boolean).sort();
+      setJoinedRooms(normalized);
+      if (normalized.length > 0) {
+        setTabs((previous) => {
+          const existingRooms = new Set(
+            previous.map((tab) => tab.roomName).filter(Boolean),
+          );
+          const restoredTabs = normalized
+            .filter((roomName) => !existingRooms.has(roomName))
+            .map((roomName) => createTab(roomName));
+
+          return restoredTabs.length > 0
+            ? [...previous.filter((tab) => tab.roomName), ...restoredTabs]
+            : previous;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch joined rooms:', error);
+    }
+  }, [createTab]);
+
+  useEffect(() => {
+    hydrateJoinedRooms();
+    const interval = window.setInterval(hydrateJoinedRooms, 10_000);
+    return () => window.clearInterval(interval);
+  }, [hydrateJoinedRooms]);
 
   const fetchAvailableRooms = async () => {
     setRoomSearchLoading(true);
@@ -153,21 +169,7 @@ const Rooms = () => {
       // Refresh joined rooms
       const joined = await rooms.getJoined();
       setJoinedRooms(joined || []);
-
-      // Check if we already have a tab for this room
-      const existingTabIndex = tabs.findIndex((t) => t.roomName === roomName);
-
-      if (existingTabIndex === -1) {
-        // Create new tab for this room
-        setTabs((previous) => {
-          const newTabs = [...previous, createTab(roomName)];
-          setActiveIndex(newTabs.length - 1);
-          return newTabs;
-        });
-      } else {
-        // Switch to existing tab
-        setActiveIndex(existingTabIndex);
-      }
+      openRoomTab(roomName);
     } catch (error) {
       console.error('Failed to join room:', error);
     }
@@ -298,9 +300,39 @@ const Rooms = () => {
               selection
             />
             <RoomCreateModal onCreateRoom={createRoom} />
+            <Popup
+              content="Reload rooms joined by the daemon and reopen their tabs."
+              trigger={
+                <Button
+                  icon="refresh"
+                  onClick={hydrateJoinedRooms}
+                />
+              }
+            />
           </div>
         </div>
       </Segment>
+      {joinedRooms.length > 0 && (
+        <Segment className="room-recovery-rail">
+          {joinedRooms.map((roomName) => (
+            <Popup
+              content="Open this joined room."
+              key={roomName}
+              trigger={
+                <Button
+                  basic
+                  compact
+                  onClick={() => openRoomTab(roomName)}
+                  size="small"
+                >
+                  <Icon name="comments outline" />
+                  {roomName}
+                </Button>
+              }
+            />
+          ))}
+        </Segment>
+      )}
       <Tab
         activeIndex={activeIndex}
         menu={{

@@ -31,5 +31,8 @@ export const createSearchHubConnection = () =>
 export const createSongIdHubConnection = () =>
   createHubConnection({ url: `${hubBaseUrl}/songid` });
 
+export const createListeningPartyHubConnection = () =>
+  createHubConnection({ url: `${hubBaseUrl}/listening-party` });
+
 export const createTransfersHubConnection = () =>
   createHubConnection({ url: `${hubBaseUrl}/transfers` });

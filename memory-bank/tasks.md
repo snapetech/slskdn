@@ -11,6 +11,16 @@
 
 *No high priority tasks currently active
 
+- [x] **bug**: Keep mesh-overlay sources out of Soulseek sequential failover.
+ - Status: completed (2026-04-30)
+ - Priority: P1
+ - Notes: Mixed source sets now filter the sequential failover candidate list to raw Soulseek peers before calling `ISoulseekClient.DownloadAsync`, preventing mesh-overlay descriptors from being treated as Soulseek usernames. Added regression coverage and documented the gotcha in ADR-0001.
+
+- [x] **feature**: Add Layer 1 pod listening parties and persistent web playback.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Documented the metadata-only listen-along protocol, added a persistent Web UI player that streams existing `ContentId` values through `/api/v0/streams/{contentId}`, wired player actions into Now Playing, added collection item play controls, and added pod listen-along host/follow controls backed by stored/routed pod messages plus SignalR fan-out. Deferred live mic/WebRTC audio broadcast remains out of scope.
+
 - [x] **security**: Harden audited app security boundaries.
  - Status: completed (2026-04-30)
  - Priority: P1
