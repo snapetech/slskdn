@@ -42,10 +42,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   resolving scoped PodCore message storage per publish operation.
 - Fixed Vite dev Web UI startup so browser API calls use the same-origin proxy
   by default instead of bypassing it with CORS-blocked absolute daemon URLs.
+- Fixed Gold Star Club startup so its reserved pod id and default channel id
+  conform to PodCore validation instead of crashing the host.
 - Clarified Gold Star Club leaving as irrevocable in the Web UI and docs, with
   a confirmation prompt before permanent revocation.
-- Fixed Gold Star Club startup so its reserved pod id conforms to PodCore's
-  fixed `pod:<32 hex>` validation instead of crashing the host.
 - Reworked pod, room, chat, and contact social affordances so saved
   conversations and joined rooms rehydrate from server state, pods can be
   created or discovered from the main Pods page, and discovered pods can be

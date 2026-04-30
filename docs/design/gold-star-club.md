@@ -31,7 +31,7 @@ Located in: `src/slskd/PodCore/GoldStarClubService.cs`
 - **Name**: "Gold Star Club ⭐"
 - **Visibility**: Listed (discoverable)
 - **Tags**: `gold-star`, `first-250`, `realm-governance`, `testing`
-- **Default Channel**: `general`
+- **Default Channel**: `gold-star-club-general`
 
 ### Auto-Join Logic
 
