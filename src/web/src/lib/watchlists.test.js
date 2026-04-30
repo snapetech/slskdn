@@ -13,11 +13,15 @@ describe('watchlists', () => {
 
   it('saves normalized watchlist targets without duplicating kind and target', () => {
     saveWatchlist({
+      country: 'US',
+      format: 'Vinyl',
       kind: 'Artist',
       releaseTypes: ['Album', 'Bogus'],
       target: 'Stereolab',
     });
     saveWatchlist({
+      country: 'Atlantis',
+      format: 'Wax Cylinder',
       kind: 'Artist',
       releaseTypes: ['EP'],
       target: 'stereolab',
@@ -25,6 +29,8 @@ describe('watchlists', () => {
 
     expect(getWatchlists()).toHaveLength(1);
     expect(getWatchlists()[0]).toMatchObject({
+      country: 'Any',
+      format: 'Any',
       kind: 'Artist',
       releaseTypes: ['EP'],
       target: 'stereolab',
@@ -51,6 +57,8 @@ describe('watchlists', () => {
       acquisitionProfile: 'rare-hunt',
       id: 'watch-1',
       kind: 'Label',
+      country: 'GB',
+      format: 'CD',
       releaseTypes: ['Album', 'Single'],
       target: 'Ghost Box',
     });
@@ -62,6 +70,8 @@ describe('watchlists', () => {
       source: 'Watchlist',
       sourceId: 'watch-1',
     });
+    expect(seed.reason).toContain('GB country');
+    expect(seed.reason).toContain('CD format');
     expect(seed.networkImpact).toMatch(/no provider lookup/i);
   });
 

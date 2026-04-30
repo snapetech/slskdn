@@ -21,6 +21,10 @@ import {
   getWatchlists,
   recordWatchlistManualScan,
   saveWatchlist,
+  watchlistCountryOptions,
+  watchlistFormatOptions,
+  watchlistKindOptions,
+  watchlistReleaseTypeOptions,
 } from '../../lib/watchlists';
 import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -58,6 +62,13 @@ const DiscoveryInbox = () => {
   const [watchlists, setWatchlists] = useState([]);
   const [watchTarget, setWatchTarget] = useState('');
   const [watchKind, setWatchKind] = useState('Artist');
+  const [watchReleaseTypes, setWatchReleaseTypes] = useState([
+    'Album',
+    'EP',
+    'Single',
+  ]);
+  const [watchCountry, setWatchCountry] = useState('Any');
+  const [watchFormat, setWatchFormat] = useState('Any');
 
   const refreshItems = () => {
     setItems(getDiscoveryInboxItems());
@@ -135,7 +146,10 @@ const DiscoveryInbox = () => {
 
     setWatchlists(
       saveWatchlist({
+        country: watchCountry,
+        format: watchFormat,
         kind: watchKind,
+        releaseTypes: watchReleaseTypes,
         target,
       }),
     );
@@ -291,14 +305,43 @@ const DiscoveryInbox = () => {
               <Dropdown
                 aria-label="Watchlist type"
                 onChange={(_event, data) => setWatchKind(data.value)}
-                options={[
-                  { key: 'artist', text: 'Artist', value: 'Artist' },
-                  { key: 'label', text: 'Label', value: 'Label' },
-                  { key: 'playlist', text: 'Playlist', value: 'Playlist' },
-                  { key: 'collection', text: 'Collection', value: 'Collection' },
-                ]}
+                options={watchlistKindOptions}
                 selection
                 value={watchKind}
+              />
+            </Form.Field>
+          </Form.Group>
+          <Form.Group widths="equal">
+            <Form.Field>
+              <label>Release types</label>
+              <Dropdown
+                aria-label="Watchlist release types"
+                fluid
+                multiple
+                onChange={(_event, data) => setWatchReleaseTypes(data.value)}
+                options={watchlistReleaseTypeOptions}
+                selection
+                value={watchReleaseTypes}
+              />
+            </Form.Field>
+            <Form.Field>
+              <label>Country</label>
+              <Dropdown
+                aria-label="Watchlist country"
+                onChange={(_event, data) => setWatchCountry(data.value)}
+                options={watchlistCountryOptions}
+                selection
+                value={watchCountry}
+              />
+            </Form.Field>
+            <Form.Field>
+              <label>Format</label>
+              <Dropdown
+                aria-label="Watchlist format"
+                onChange={(_event, data) => setWatchFormat(data.value)}
+                options={watchlistFormatOptions}
+                selection
+                value={watchFormat}
               />
             </Form.Field>
           </Form.Group>
@@ -352,6 +395,12 @@ const DiscoveryInbox = () => {
                     <span> · </span>
                     <Icon name="filter" />
                     {watchlist.releaseTypes.join(', ')}
+                    <span> · </span>
+                    <Icon name="world" />
+                    {watchlist.country}
+                    <span> · </span>
+                    <Icon name="music" />
+                    {watchlist.format}
                     <span> · </span>
                     <Icon name="clock" />
                     {watchlist.schedule}

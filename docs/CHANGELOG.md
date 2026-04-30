@@ -43,6 +43,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added browser-local Discovery Shelf action previews from player ratings.
 - Fixed Discovery Shelf expiry-watch summary counts to use the same action key
   across shelf storage and player display.
+- Added browser-local Watchlist release, country, and format filters in
+  Discovery Inbox.
 - Added browser-local listening history import/export for media-server CSV/JSON
   play-history files, with duplicate suppression.
 - Added bounded player similar-track auto-queue from already-known recent
@@ -55,6 +57,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   lyrics, and visualizer controls while ignoring editable fields.
 - Added browser-local now-playing ratings plus source, match-confidence, and
   verification badges in the player display.
+- Added a browser-local Discovery Shelf built from player ratings, with visible
+  promote/archive/expiry review previews that do not mutate files.
 - Added a conservative per-artist release radar service that turns
   SongID-confirmed federated WorkRef observations into local notifications
   without polling MusicBrainz, browsing peers, searching Soulseek, or starting

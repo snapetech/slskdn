@@ -1,3 +1,16 @@
+## Update 2026-04-30 21:09:16Z
+
+- Current task: Epic E6 browser-local Watchlist release filters are implemented locally.
+- Last activity:
+  - added visible release type, country, and format filter controls to the Discovery Inbox Watchlists form
+  - persisted normalized filter choices with watchlist targets
+  - displayed saved filter context on each watchlist row and in generated Discovery Inbox review seeds
+  - kept the slice local-only with no metadata provider lookup, Soulseek search, peer browse, download, scheduled automation, or file mutation
+  - validated focused Watchlists and Discovery Inbox component tests
+- Next steps:
+  1. Continue beginning-lane E6 with schedule/cooldown/provider-policy visibility if ownership remains clear.
+  2. Defer provider-backed release radar scans until credentials, cooldowns, and network-impact policy are explicit.
+
 ## Update 2026-04-30 21:03:57Z
 
 - Current task: Epic E6 browser-local Watchlists panel is implemented locally.

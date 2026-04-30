@@ -377,6 +377,22 @@ describe('PlayerBar', () => {
     expect(window.localStorage.getItem('slskdn.player.ratings')).toContain(
       '"content:sha256:test":5',
     );
+    expect(window.localStorage.getItem('slskdn.discovery.shelf')).toContain(
+      '"action":"promote-preview"',
+    );
+
+    fireEvent.click(screen.getByTestId('player-open-discovery-shelf'));
+
+    expect(await screen.findByText('Discovery Shelf')).toBeInTheDocument();
+    expect(screen.getByTestId('player-shelf-summary')).toHaveTextContent(
+      '1local review items',
+    );
+    expect(screen.getByTestId('player-shelf-row-content:sha256:test')).toHaveTextContent(
+      'Promote preview',
+    );
+    fireEvent.click(screen.getByTestId('player-shelf-preview-content:sha256:test'));
+    expect(screen.getByText('Promote preview prepared for Local stream. No files were moved or deleted.')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('player-close-discovery-shelf'));
 
     fireEvent.click(screen.getByTestId('player-rating-5'));
 

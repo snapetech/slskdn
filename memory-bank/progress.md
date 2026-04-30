@@ -1,3 +1,11 @@
+## 2026-04-30 21:09:16Z - Added Watchlist release filters
+
+- Continued the beginning-lane Epic E6 Watchlists and Release Radar burn-down.
+- Added browser-local release type, country, and format filter choices when creating Discovery Inbox watchlist targets.
+- Normalized persisted watchlist filters and included country/format context in watchlist review seeds.
+- Kept the slice local-only: no metadata provider lookup, Soulseek search, peer browse, download, scheduled automation, or file mutation is started.
+- Validation: focused Watchlists and Discovery Inbox component tests passed.
+
 ## 2026-04-30 21:03:57Z - Added browser-local Watchlists panel
 
 - Continued the beginning-lane burn-down into Epic E6 Watchlists and Release Radar.
@@ -8331,6 +8339,15 @@ Code quality improvements were completed as part of Option A:
 - Extended the source-provider catalog with per-acquisition-profile provider priority policies.
 - Source Providers now shows Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict routing order.
 - Every profile policy is explicitly manual-only for now, so users can inspect fallback order without enabling unattended acquisition.
+## 2026-04-30 21:12:20Z
+
+- Continued the tail-side burn-down into Epic E13 Discovery Shelf.
+- Added browser-local Discovery Shelf storage keyed by the same stable now-playing rating keys.
+- Player ratings now update shelf items with promote-preview, archive-preview, keep-reviewing, or expiry-watch classifications.
+- Added a player Discovery Shelf modal with summary counts, review rows, preview-only action buttons, remove, and clear controls.
+- Captured the requested live media-server, peer search, queue, download, scrobble, and file-action ambitions as explicit follow-up instead of treating the browser-only import slice as final scope.
+- Validation pending: broader player-focused tests, frontend lint/build, and whitespace checks.
+
 ## 2026-04-30 21:04:16Z
 
 - Continued Epic E14 listening intelligence with a browser-local media-server history import slice.
@@ -8442,3 +8459,4 @@ Code quality improvements were completed as part of Option A:
 - Identified high-value missing admin knobs for notification integrations, auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage.
 - Added the first concrete redesign slice by introducing a unified Messages workspace for direct chats and rooms.
 - Messages now supports multiple open chat/room panels, per-panel collapse/close controls, collapse-all, a restore dock, compact saved-chat and joined-room sidebars, and compatibility routing from `/chat` and `/rooms`.
+- Validation: focused Messages/App/System Integrations frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.

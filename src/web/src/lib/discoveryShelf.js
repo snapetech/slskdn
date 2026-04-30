@@ -89,9 +89,9 @@ export const getDiscoveryShelfSummary = () => {
     total: summary.total + 1,
   }), {
     'archive-preview': 0,
+    'expiry-watch': 0,
     'keep-reviewing': 0,
     'promote-preview': 0,
-    'unrated-expiry-watch': 0,
     total: 0,
   });
 };

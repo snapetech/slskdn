@@ -1014,6 +1014,91 @@
   padding: 0.75rem;
 }
 
+.player-shelf-summary {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 0.9rem;
+}
+
+.player-shelf-summary > div {
+  background:
+    linear-gradient(135deg, rgba(164, 116, 255, 0.13), rgba(242, 184, 75, 0.08)),
+    #17191d;
+  border: 1px solid rgba(164, 116, 255, 0.25);
+  border-radius: 6px;
+  padding: 0.62rem;
+}
+
+.player-shelf-summary strong,
+.player-shelf-summary span {
+  display: block;
+}
+
+.player-shelf-summary strong {
+  color: #f4ffff;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.player-shelf-summary span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.75rem;
+  margin-top: 0.16rem;
+}
+
+.player-shelf-list {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.player-shelf-row {
+  align-items: center;
+  background: #17191d;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto auto;
+  padding: 0.55rem;
+}
+
+.player-shelf-rating {
+  align-items: center;
+  background: rgba(242, 184, 75, 0.12);
+  border: 1px solid rgba(242, 184, 75, 0.28);
+  border-radius: 999px;
+  color: #ffe39f;
+  display: inline-flex;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.player-shelf-track {
+  min-width: 0;
+}
+
+.player-shelf-track strong,
+.player-shelf-track span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-shelf-track strong {
+  color: #f4ffff;
+}
+
+.player-shelf-track span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.76rem;
+  margin-top: 0.08rem;
+}
+
 .player-stats-summary {
   align-items: center;
   background:
@@ -1503,6 +1588,19 @@
 }
 
 @media (max-width: 720px) {
+  .player-shelf-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .player-shelf-row .ui.label {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+  .player-shelf-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .player-stats-seed-list {
     grid-template-columns: 1fr;
   }

@@ -25,7 +25,7 @@ describe('discoveryShelf', () => {
     expect(item).toMatchObject({
       action: 'promote-preview',
       artist: 'Fixture Artist',
-      key: 'sha256:fixture',
+      key: 'content:sha256:fixture',
       rating: 5,
       reviewedAt: '2026-04-30T00:00:00.000Z',
       title: 'Fixture Track',
@@ -52,7 +52,7 @@ describe('discoveryShelf', () => {
       title: 'Remove Track',
     }, 1);
 
-    removeDiscoveryShelfItem('sha256:remove');
+    removeDiscoveryShelfItem('content:sha256:remove');
     expect(getDiscoveryShelfSummary().total).toBe(0);
 
     upsertDiscoveryShelfItem({

@@ -41,6 +41,11 @@
  - Priority: P3
  - Notes: Listening Stats now accepts pasted or locally chosen CSV/JSON play-history exports from Plex, Jellyfin, Navidrome, or generic media tools, normalizes artist/album/title/genre/played-at metadata, deduplicates by track and timestamp, and can copy local history back out as JSON or CSV. The import runs entirely in the browser and does not connect to media servers, scan libraries, search peers, queue tracks, download files, scrobble, or mutate shared/downloaded audio.
 
+- [ ] **feature**: Add live media-server and acquisition handoffs for listening intelligence.
+ - Status: follow-up
+ - Priority: P2
+ - Notes: Add live Plex/Jellyfin/Navidrome import, explicit peer search handoffs, queue population, download handoff, scrobbling, and confirmed file actions after backend credentials, per-user mapping, rate limits, dedupe policy, and confirmation contracts are in place.
+
 - [x] **feature**: Add bounded player similar-track auto-queue.
  - Status: completed (2026-04-30)
  - Priority: P3
@@ -65,6 +70,11 @@
  - Status: completed (2026-04-30)
  - Priority: P3
  - Notes: Added browser-local rating storage for now-playing tracks, preserved playback source/confidence/verification metadata through PlayerContext, and surfaced compact source, match, verified, and discovery-rating controls in PlayerBar. Ratings remain local browser context and do not sync, auto-download, delete, or publish discovery evidence yet.
+
+- [x] **feature**: Add browser-local Discovery Shelf from player ratings.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Player ratings now update a browser-local Discovery Shelf with promote-preview, archive-preview, keep-reviewing, and expiry-watch classifications. The shelf modal shows policy counts, review rows, action previews, remove, and clear controls; every promote/archive/expiry action is preview-only and does not move, delete, share, download, or publish files.
 
 - [x] **feature**: Add visible acquisition profiles to Search.
  - Status: completed (2026-04-30)
@@ -155,6 +165,11 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Discovery Inbox now includes browser-local Watchlists for artist, label, playlist, and collection targets, with release-type defaults, manual scan preview timestamps, summary counts, and a review-seed action that creates Discovery Inbox evidence. Watchlists do not call metadata providers, search Soulseek, browse peers, download files, or enable scheduled automation.
+
+- [x] **feature**: Add browser-local Watchlist release filters.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Watchlists now persist and display release-type, country, and format filters when adding targets from Discovery Inbox. Filter normalization remains browser-local and no metadata provider lookup, Soulseek search, peer browse, download, scheduled automation, or file mutation is started.
 
 - [x] **feature**: Unify Wishlist rows with acquisition request states.
  - Status: completed (2026-04-30)

@@ -168,9 +168,17 @@ describe('DiscoveryInbox', () => {
     );
     expect(persistedWatchlists).toHaveLength(1);
     expect(persistedWatchlists[0]).toMatchObject({
+      country: 'Any',
+      format: 'Any',
       kind: 'Artist',
+      releaseTypes: ['Album', 'EP', 'Single'],
       target: 'Stereolab',
     });
+    expect(
+      screen.getAllByText((_content, node) =>
+        node.textContent.includes('Album, EP, Single'),
+      ).length,
+    ).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview scan Stereolab' }));
     expect(

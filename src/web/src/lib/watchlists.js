@@ -17,11 +17,30 @@ const allowedReleaseTypes = [
   'Remix',
   'Deluxe',
 ];
+const allowedCountries = ['Any', 'US', 'GB', 'CA', 'JP', 'DE', 'FR', 'BR', 'AU'];
+const allowedFormats = ['Any', 'Digital', 'CD', 'Vinyl', 'Cassette'];
+
+const toDropdownOptions = (values) =>
+  values.map((value) => ({
+    key: value.toLowerCase(),
+    text: value,
+    value,
+  }));
+
+export const watchlistKindOptions = toDropdownOptions(allowedKinds);
+export const watchlistReleaseTypeOptions = toDropdownOptions(allowedReleaseTypes);
+export const watchlistCountryOptions = toDropdownOptions(allowedCountries);
+export const watchlistFormatOptions = toDropdownOptions(allowedFormats);
 
 const now = () => new Date().toISOString();
 
 const normalizeReleaseTypes = (releaseTypes = []) =>
   releaseTypes.filter((releaseType) => allowedReleaseTypes.includes(releaseType));
+
+const normalizeCountry = (country) =>
+  allowedCountries.includes(country) ? country : 'Any';
+
+const normalizeFormat = (format) => (allowedFormats.includes(format) ? format : 'Any');
 
 const normalizeWatchlist = (item = {}) => {
   const timestamp = now();
@@ -29,10 +48,10 @@ const normalizeWatchlist = (item = {}) => {
   return {
     acquisitionProfile: item.acquisitionProfile || 'lossless-exact',
     cooldownDays: Number.isFinite(item.cooldownDays) ? item.cooldownDays : 7,
-    country: item.country || 'Any',
+    country: normalizeCountry(item.country),
     createdAt: item.createdAt || timestamp,
     destination: item.destination || 'Discovery Inbox',
-    format: item.format || 'Any',
+    format: normalizeFormat(item.format),
     id: item.id || uuidv4(),
     kind: allowedKinds.includes(item.kind) ? item.kind : 'Artist',
     lastScannedAt: item.lastScannedAt || '',
@@ -130,7 +149,7 @@ export const buildWatchlistDiscoverySeed = (item) => ({
   evidenceKey: `watchlist:${item.kind}:${item.target}`.toLowerCase(),
   networkImpact:
     'Watchlist review seed only; no provider lookup, Soulseek search, peer browse, or download has started.',
-  reason: `${item.kind} watchlist target using ${item.releaseTypes.join(', ')} filters.`,
+  reason: `${item.kind} watchlist target using ${item.releaseTypes.join(', ')} releases, ${item.country} country, and ${item.format} format filters.`,
   searchText: item.target,
   source: 'Watchlist',
   sourceId: item.id,
