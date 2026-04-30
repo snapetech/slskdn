@@ -52,6 +52,25 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z224. Two-Thirds Jury Quorums Need Ceiling Math
+
+**The Bug**: Quarantine Jury aggregation used integer division for the two-thirds agreement threshold, so 2-of-3 jurors failed to reach a release/uphold recommendation and fell back to manual review.
+
+**Files Affected**:
+- `src/slskd/QuarantineJury/QuarantineJuryService.cs`
+
+**Wrong**:
+```csharp
+var requiredAgreement = (totalVerdicts * 2 / 3) + 1;
+```
+
+**Correct**:
+```csharp
+var requiredAgreement = (int)Math.Ceiling(totalVerdicts * 2 / 3.0);
+```
+
+**Why This Keeps Happening**: Byzantine-consensus code often uses strict greater-than-two-thirds rules, but human jury recommendations here need a two-thirds threshold. Integer division silently rounds down before adding one, changing 2-of-3 into an all-juror requirement.
+
 ### 0z223. Factory HttpClient Timeout Must Not Be Mutated Per Request
 
 **The Bug**: A source-feed provider client set `HttpClient.Timeout` inside the send helper. Focused tests reused the same factory client for token and API requests, and the second request threw because `HttpClient` properties cannot be changed after the first send.
