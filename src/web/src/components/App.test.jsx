@@ -9,16 +9,31 @@ const {
   check,
   createApplicationHubConnection,
   getSecurityEnabled,
+  getConversations,
+  getJoinedRooms,
+  getRoomMessages,
   isLoggedIn,
 } = vi.hoisted(() => ({
   check: vi.fn(),
   createApplicationHubConnection: vi.fn(),
+  getConversations: vi.fn(),
   getSecurityEnabled: vi.fn(),
+  getJoinedRooms: vi.fn(),
+  getRoomMessages: vi.fn(),
   isLoggedIn: vi.fn(),
+}));
+
+vi.mock('../lib/chat', () => ({
+  getAll: getConversations,
 }));
 
 vi.mock('../lib/hubFactory', () => ({
   createApplicationHubConnection,
+}));
+
+vi.mock('../lib/rooms', () => ({
+  getJoined: getJoinedRooms,
+  getMessages: getRoomMessages,
 }));
 
 vi.mock('../lib/session', () => ({
@@ -76,10 +91,15 @@ vi.mock('./Transfers/Transfers', () => ({
 vi.mock('./Users/Users', () => ({ default: () => <div>Users</div> }));
 vi.mock('./Wishlist/Wishlist', () => ({ default: () => <div>Wishlist</div> }));
 
+let hubHandlers;
+
 describe('App', () => {
   beforeEach(() => {
+    hubHandlers = {};
     const hub = {
-      on: vi.fn(),
+      on: vi.fn((event, handler) => {
+        hubHandlers[event] = handler;
+      }),
       onclose: vi.fn(),
       onreconnected: vi.fn(),
       onreconnecting: vi.fn(),
@@ -90,6 +110,9 @@ describe('App', () => {
     createApplicationHubConnection.mockReturnValue(hub);
     getSecurityEnabled.mockResolvedValue(true);
     check.mockResolvedValue(true);
+    getConversations.mockResolvedValue([]);
+    getJoinedRooms.mockResolvedValue([]);
+    getRoomMessages.mockResolvedValue([]);
     isLoggedIn.mockReturnValue(true);
 
     window.matchMedia = vi.fn().mockReturnValue({
@@ -168,5 +191,98 @@ describe('App', () => {
     });
 
     expect(document.title).toBe('slskdN');
+  });
+
+  it('shows chat activity in the header when conversations have unread messages', async () => {
+    getConversations.mockResolvedValue([
+      {
+        hasUnAcknowledgedMessages: true,
+        username: 'some-user',
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/searches']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('nav-chat-alert')).toBeInTheDocument();
+    expect(getConversations).toHaveBeenCalledWith({ unAcknowledgedOnly: true });
+  });
+
+  it('shows room activity in the header when joined rooms have newer incoming messages', async () => {
+    localStorage.setItem(
+      'slskdn.rooms.lastSeenActivity',
+      JSON.stringify({ chill: Date.parse('2026-04-30T00:00:00Z') }),
+    );
+    getJoinedRooms.mockResolvedValue(['chill']);
+    getRoomMessages.mockResolvedValue([
+      {
+        message: 'new one',
+        self: false,
+        timestamp: '2026-04-30T00:01:00Z',
+        username: 'friend',
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/searches']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('nav-rooms-alert')).toBeInTheDocument();
+  });
+
+  it('shows a dismissible VPN forwarded port notice when VPN ports are reported', async () => {
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Searches')).toBeInTheDocument();
+    });
+
+    hubHandlers.state({
+      server: { isConnected: true },
+      vpn: {
+        isReady: true,
+        portForwards: [
+          {
+            localPort: 50300,
+            proto: 'tcp',
+            publicIPAddress: '203.0.113.10',
+            publicPort: 51000,
+            slot: 0,
+            targetPort: 51000,
+          },
+          {
+            localPort: 50305,
+            proto: 'udp',
+            publicIPAddress: '203.0.113.20',
+            publicPort: 51001,
+            slot: 1,
+            targetPort: 50305,
+          },
+        ],
+      },
+    });
+
+    expect(
+      await screen.findByTestId('vpn-port-change-notice'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/203\.0\.113\.10:51000/)).toBeInTheDocument();
+    expect(screen.getByText(/203\.0\.113\.20:51001 -> 50305/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Dismiss VPN port notice'));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId('vpn-port-change-notice'),
+      ).not.toBeInTheDocument();
+    });
   });
 });

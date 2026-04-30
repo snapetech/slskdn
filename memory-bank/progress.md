@@ -1,3 +1,10 @@
+## 2026-04-30 18:18Z - Added native MilkDrop shader_body wrapper support
+
+- Translated shader parsing now unwraps safe `shader_body { ... }` wrappers before statement analysis.
+- Wrapped shaders still follow the same straight-line declaration and final `ret = ...` restrictions.
+- The curated shader fixture now uses wrapped warp/comp shader bodies so parser, compatibility, renderer, and browser smoke coverage exercise that import shape.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 18:14Z - Added native MilkDrop shader viewport context
 
 - Translated warp/comp shaders now receive `resolution`, `pixelSize`, `aspect`, and `texsize`.
@@ -7780,3 +7787,18 @@ Code quality improvements were completed as part of Option A:
 - Native engine now supports `off`, `beat`, and `timed` automation; beat mode derives low-frequency energy from analyzer FFT data, counts detected bass beats, and advances through native presets after repeated beats.
 - Visualizer UI now has a tooltipped native automation button that cycles Off → Beat → Timed, persists the mode in browser storage, and updates the overlay when the engine advances presets inside the render loop.
 - Validation: focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
+## 2026-04-30 18:12:28Z
+
+- Added red-dot header activity indicators for unread private chats and joined room messages newer than the browser's last-seen room activity marker.
+- Fixed chat and room tabs so switching tabs keeps panes mounted instead of reconstructing the session; room polling and chat acknowledgment are now gated to active panes.
+- Documented the Semantic UI tab remount gotcha and committed it immediately as `d0cf8a675`.
+- Validation: `npm test -- App.test.jsx`, `npm run lint`, and `npm run build` passed.
+
+## 2026-04-30 18:19:31Z
+
+- Fixed dark-mode light-box leakage by adding central Semantic UI surface overrides for segments, cards, tables, definition tables, inputs, dropdowns, modals, messages, code, and pre blocks.
+- Replaced hard-coded light inline panel styles in room creation and port-forwarding surfaces with theme variables, and themed the traffic ticker with the same variable set.
+- Added System -> Integrations with VPN readiness/status/config details and Lidarr status, wanted-preview, wanted-sync, and manual-import admin actions.
+- Documented the Semantic UI dark-surface gotcha and committed it immediately as `c25c26de0`.
+- Validation: `npm test -- src/components/System/Integrations/index.test.jsx`, `npm run lint`, `npm run build`, and `git diff --check` passed.

@@ -21,6 +21,9 @@ const stripShaderComments = (source) =>
 
 const normalizeShaderSource = (source) =>
   stripShaderComments(source)
+    .replace(/\bshader_body\s*\{/gi, '')
+    .replace(/^\s*\{/, '')
+    .replace(/\}\s*$/g, '')
     .replace(/\btex2D\s*\(\s*sampler_(?:main|fc_main|sampler_main)\s*,/gi, 'texture(previousFrame,')
     .replace(/\btex2D\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,')
     .replace(/\btex\s*\(\s*(?:sampler_main|previousFrame)\s*,/gi, 'texture(previousFrame,');

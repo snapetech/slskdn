@@ -1,6 +1,6 @@
 .traffic-ticker {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--slskd-secondary-background, #f8f9fa);
+  border: 1px solid var(--slskd-tertiary-border-color, #e9ecef);
   border-radius: 4px;
   margin: 10px 0;
   max-height: 400px;
@@ -10,8 +10,9 @@
 }
 
 .traffic-ticker-header {
-  background: #ffffff;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--slskd-tertiary-background, #ffffff);
+  border-bottom: 1px solid var(--slskd-tertiary-border-color, #e9ecef);
+  color: var(--slskd-color, rgba(0, 0, 0, 0.87));
   padding: 8px 12px;
   font-weight: bold;
   display: flex;
@@ -29,7 +30,7 @@
 .traffic-ticker-empty {
   padding: 20px;
   text-align: center;
-  color: #6c757d;
+  color: var(--slskd-color-subtle, #6c757d);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -58,15 +59,15 @@
 
 .traffic-ticker-toggle {
   padding: 8px 12px;
-  border-top: 1px solid #e9ecef;
-  background: #ffffff;
+  border-top: 1px solid var(--slskd-tertiary-border-color, #e9ecef);
+  background: var(--slskd-tertiary-background, #ffffff);
   text-align: center;
 }
 
 .traffic-ticker-toggle-button {
   background: none;
-  border: 1px solid #007bff;
-  color: #007bff;
+  border: 1px solid var(--smui-site-link-color, #007bff);
+  color: var(--smui-site-link-color, #007bff);
   padding: 4px 12px;
   border-radius: 4px;
   cursor: pointer;
@@ -75,7 +76,6 @@
 }
 
 .traffic-ticker-toggle-button:hover {
-  background: #007bff;
-  color: white;
+  background: var(--smui-site-link-color, #007bff);
+  color: var(--slskd-color-inset, white);
 }
-

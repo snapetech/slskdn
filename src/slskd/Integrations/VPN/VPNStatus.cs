@@ -18,6 +18,8 @@
 // <copyright file="VPNStatus.cs" company="slskdN Team">
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
+using System;
+using System.Collections.Generic;
 using System.Net;
 
 namespace slskd;
@@ -27,5 +29,17 @@ public record VPNStatus
     public bool IsConnected { get; init; } = false;
     public IPAddress? PublicIPAddress { get; init; }
     public int? ForwardedPort { get; init; }
+    public IReadOnlyList<VPNPortForward> PortForwards { get; init; } = Array.Empty<VPNPortForward>();
     public string? Location { get; init; }
+}
+
+public record VPNPortForward
+{
+    public int Slot { get; init; }
+    public int LocalPort { get; init; }
+    public int TargetPort { get; init; }
+    public string Proto { get; init; } = string.Empty;
+    public int PublicPort { get; init; }
+    public IPAddress? PublicIPAddress { get; init; }
+    public string Namespace { get; init; } = string.Empty;
 }

@@ -1,0 +1,16 @@
+[Unit]
+Description=Route slskdN service UID through the configured VPN interface
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/slskdN-vpn-agent split
+Environment=SLSKDN_VPN_TUNNEL_TYPE=wireguard
+Environment=SLSKDN_VPN_IFACE=slskdN-vpn
+RemainAfterExit=yes
+NoNewPrivileges=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

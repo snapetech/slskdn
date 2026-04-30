@@ -115,6 +115,7 @@ namespace slskd
         public IPAddress? PublicIPAddress { get; init; }
         public string Location { get; init; } = string.Empty;
         public int? ForwardedPort { get; init; }
+        public IReadOnlyList<VPNPortForward> PortForwards { get; init; } = Array.Empty<VPNPortForward>();
     }
 
     public record RelayState

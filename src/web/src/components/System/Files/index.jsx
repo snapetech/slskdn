@@ -35,7 +35,10 @@ const Files = ({ options } = {}) => {
 
   return (
     <div>
-      <Tab panes={panes} />
+      <Tab
+        panes={panes}
+        renderActiveOnly={false}
+      />
     </div>
   );
 };

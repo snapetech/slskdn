@@ -5,6 +5,7 @@ import Data from './Data';
 import Events from './Events';
 import Files from './Files';
 import Info from './Info';
+import Integrations from './Integrations';
 import Jobs from './Jobs';
 import LibraryHealth from './LibraryHealth';
 import Logs from './Logs';
@@ -122,6 +123,22 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'security',
+    },
+    {
+      menuItem: {
+        content: 'Integrations',
+        icon: 'plug',
+        key: 'integrations',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <Integrations
+            options={options}
+            state={state}
+          />
+        </Tab.Pane>
+      ),
+      route: 'integrations',
     },
     {
       menuItem: {
@@ -293,6 +310,7 @@ const System = ({ options = {}, state = {}, theme }) => {
           activeIndex={activeIndex > -1 ? activeIndex : 0}
           onTabChange={onTabChange}
           panes={panes}
+          renderActiveOnly={false}
         />
       </Segment>
     </div>

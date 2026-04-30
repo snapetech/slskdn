@@ -1,7 +1,8 @@
 import api from './api';
 
-export const getAll = async () => {
-  return (await api.get('/conversations')).data;
+export const getAll = async ({ unAcknowledgedOnly = false } = {}) => {
+  const query = unAcknowledgedOnly ? '?unAcknowledgedOnly=true' : '';
+  return (await api.get(`/conversations${query}`)).data;
 };
 
 export const get = async ({ username }) => {

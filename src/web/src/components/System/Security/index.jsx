@@ -244,7 +244,12 @@ const Security = () => {
     },
   ];
 
-  return <Tab panes={panes} />;
+  return (
+    <Tab
+      panes={panes}
+      renderActiveOnly={false}
+    />
+  );
 };
 
 export default Security;

@@ -249,7 +249,7 @@ public class SlskdnFullInstanceRunner : IAsyncDisposable
         sb.AppendLine("dhtRendezvous:");
         sb.AppendLine("  enabled: true");
         sb.AppendLine($"  overlay_port: {overlayPort ?? 50305}");
-        sb.AppendLine($"  dht_port: {dhtPort ?? 50306}");
+        sb.AppendLine($"  dht_port: {dhtPort ?? 50305}");
         sb.AppendLine("  bootstrap_routers:");
         sb.AppendLine("    - router.bittorrent.com");
         sb.AppendLine("    - router.utorrent.com");

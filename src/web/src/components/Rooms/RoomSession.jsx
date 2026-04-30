@@ -38,23 +38,53 @@ class RoomSession extends Component {
   }
 
   componentDidMount() {
-    this.fetchRoom();
-    this.interval = window.setInterval(this.fetchRoom, 1_000);
+    if (this.props.active !== false) {
+      this.startPolling();
+    }
+
     document.addEventListener('click', this.handleCloseContextMenu);
   }
 
   componentWillUnmount() {
-    clearInterval(this.interval);
+    this.stopPolling();
     document.removeEventListener('click', this.handleCloseContextMenu);
   }
 
   componentDidUpdate(previousProps) {
     if (previousProps.roomName !== this.props.roomName) {
       this.setState(initialState, () => {
-        this.fetchRoom();
+        if (this.props.active !== false) {
+          this.fetchRoom();
+        }
       });
     }
+
+    if (previousProps.active === false && this.props.active !== false) {
+      this.startPolling();
+    }
+
+    if (previousProps.active !== false && this.props.active === false) {
+      this.stopPolling();
+    }
   }
+
+  startPolling = () => {
+    if (this.interval) {
+      return;
+    }
+
+    this.fetchRoom();
+    this.interval = window.setInterval(this.fetchRoom, 1_000);
+  };
+
+  stopPolling = () => {
+    if (!this.interval) {
+      return;
+    }
+
+    clearInterval(this.interval);
+    this.interval = undefined;
+  };
 
   fetchRoom = async () => {
     const { roomName } = this.props;

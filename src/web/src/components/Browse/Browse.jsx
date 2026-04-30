@@ -192,6 +192,7 @@ const Browse = () => {
             render: () => null,
           },
         ]}
+        renderActiveOnly={false}
       />
     </div>
   );

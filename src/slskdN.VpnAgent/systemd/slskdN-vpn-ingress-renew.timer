@@ -1,0 +1,10 @@
+[Unit]
+Description=Renew transparent slskdN VPN ingress every 30 seconds
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+Unit=slskdN-vpn-ingress-renew.service
+
+[Install]
+WantedBy=timers.target

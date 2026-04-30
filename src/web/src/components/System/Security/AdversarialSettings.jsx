@@ -1243,7 +1243,10 @@ const AdversarialSettings = () => {
         </Message>
       )}
 
-      <Tab panes={panes} />
+      <Tab
+        panes={panes}
+        renderActiveOnly={false}
+      />
     </div>
   );
 };

@@ -561,7 +561,10 @@ const LibraryHealth = () => {
 
   return (
     <div className="library-health">
-      <Tab panes={panes} />
+      <Tab
+        panes={panes}
+        renderActiveOnly={false}
+      />
     </div>
   );
 };

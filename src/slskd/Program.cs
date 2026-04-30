@@ -98,6 +98,7 @@ namespace slskd
     using slskd.Integrations.Chromaprint;
     using slskd.Integrations.FTP;
     using slskd.Integrations.MetadataFacade;
+    using slskd.Integrations.Lidarr;
     using slskd.Integrations.MusicBrainz;
     using slskd.Integrations.Pushbullet;
     using slskd.Integrations.Scripts;
@@ -1212,6 +1213,13 @@ namespace slskd
             services.AddSingleton<TelemetryService>();
 
             services.AddSingleton<VPNService>();
+            services.AddSingleton<ILidarrClient, LidarrClient>();
+            services.AddSingleton<LidarrSyncService>();
+            services.AddSingleton<ILidarrSyncService>(sp => sp.GetRequiredService<LidarrSyncService>());
+            services.AddHostedService(sp => sp.GetRequiredService<LidarrSyncService>());
+            services.AddSingleton<LidarrImportService>();
+            services.AddSingleton<ILidarrImportService>(sp => sp.GetRequiredService<LidarrImportService>());
+            services.AddHostedService(sp => sp.GetRequiredService<LidarrImportService>());
             services.AddSingleton<ScriptService>();
             services.AddSingleton<WebhookService>();
             services.AddSingleton<NowPlaying.NowPlayingService>();

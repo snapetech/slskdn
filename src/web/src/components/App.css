@@ -157,6 +157,135 @@ body {
     background-color: var(--background-color);
 }
 
+:root.dark .ui.segment:not(.inverted),
+:root.dark .ui.segments:not(.inverted),
+:root.dark .ui.segments:not(.inverted) > .segment,
+:root.dark .ui.card,
+:root.dark .ui.cards > .card,
+:root.dark .ui.tab.segment {
+    background: var(--slskd-secondary-background) !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.card > .content,
+:root.dark .ui.cards > .card > .content,
+:root.dark .ui.card > .extra,
+:root.dark .ui.cards > .card > .extra {
+    background: transparent !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.card > .content > .header,
+:root.dark .ui.cards > .card > .content > .header,
+:root.dark .ui.header,
+:root.dark .ui.items > .item > .content > .header {
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.card .meta,
+:root.dark .ui.cards > .card .meta,
+:root.dark .ui.card .description,
+:root.dark .ui.cards > .card .description,
+:root.dark .ui.header .sub.header,
+:root.dark .ui.items > .item > .content > .meta,
+:root.dark .ui.items > .item > .content > .description {
+    color: var(--slskd-color-subtle) !important;
+}
+
+:root.dark .ui.table {
+    background: var(--slskd-secondary-background) !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.table thead th,
+:root.dark .ui.table tfoot th {
+    background: var(--slskd-tertiary-background) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.table tr,
+:root.dark .ui.table td {
+    background: transparent !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.definition.table td:first-child:not(.ignored),
+:root.dark .ui.definition.table tr td.definition,
+:root.dark .ui.definition.table tr td:first-child {
+    background: var(--slskd-tertiary-background) !important;
+    color: var(--slskd-color-subtle) !important;
+}
+
+:root.dark .ui.input > input,
+:root.dark .ui.form input:not([type]),
+:root.dark .ui.form input[type="date"],
+:root.dark .ui.form input[type="datetime-local"],
+:root.dark .ui.form input[type="email"],
+:root.dark .ui.form input[type="number"],
+:root.dark .ui.form input[type="password"],
+:root.dark .ui.form input[type="search"],
+:root.dark .ui.form input[type="tel"],
+:root.dark .ui.form input[type="text"],
+:root.dark .ui.form input[type="time"],
+:root.dark .ui.form input[type="url"],
+:root.dark .ui.form textarea,
+:root.dark .ui.selection.dropdown {
+    background: var(--slskd-color-inset) !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.input > input::placeholder,
+:root.dark .ui.form textarea::placeholder {
+    color: var(--slskd-color-subtle) !important;
+}
+
+:root.dark .ui.selection.dropdown .text,
+:root.dark .ui.selection.dropdown .default.text {
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.dropdown .menu,
+:root.dark .ui.selection.dropdown .menu {
+    background: var(--slskdn-theme-menu-background) !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+}
+
+:root.dark .ui.dropdown .menu > .item {
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.dropdown .menu > .item:hover,
+:root.dark .ui.dropdown .menu > .selected.item {
+    background: var(--slskd-hover-background) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.modal > .header,
+:root.dark .ui.modal > .content,
+:root.dark .ui.modal > .actions {
+    background: var(--slskd-secondary-background) !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark .ui.message:not(.inverted) {
+    background: var(--slskd-overlay-background) !important;
+    border-color: var(--slskd-tertiary-border-color) !important;
+    color: var(--slskd-color) !important;
+}
+
+:root.dark code,
+:root.dark pre {
+    background: var(--slskd-color-inset) !important;
+    color: var(--slskdn-accent-primary-hover) !important;
+}
+
 .ui.table td, th {
     padding-top: 5px !important;
     padding-bottom: 5px !important;
@@ -204,6 +333,60 @@ body {
     overflow-y: auto;
     padding: 0 0 16px !important;
     scrollbar-width: thin;
+}
+
+.vpn-port-change-notice.ui.segment {
+    align-items: flex-start;
+    background: var(--slskd-secondary-background, #fff);
+    border-left: 4px solid var(--slskdn-accent-warm, #f0883e);
+    border-radius: 0 !important;
+    box-shadow: none;
+    color: var(--slskd-color, rgba(0, 0, 0, 0.87));
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin: 0 !important;
+    padding: 12px 16px;
+}
+
+.vpn-port-change-notice-body {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+}
+
+.vpn-port-change-notice-body > .icon {
+    color: var(--slskdn-accent-warm, #f0883e);
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.vpn-port-change-notice-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.vpn-port-change-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.vpn-port-change-item {
+    background: var(--slskd-subtle-background, rgba(110, 118, 129, 0.1));
+    border: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.15));
+    border-radius: 4px;
+    font-family: monospace;
+    padding: 2px 6px;
+    word-break: break-word;
+}
+
+.vpn-port-change-notice .ui.basic.button {
+    color: var(--slskd-color, rgba(0, 0, 0, 0.87)) !important;
+    flex: 0 0 auto;
 }
 
 /* Nav badge styles */
@@ -256,6 +439,34 @@ body {
 .navigation.ui.labeled.icon.menu .item > .icon:not(.dropdown) {
     margin-bottom: 0.25rem !important;
     font-size: 1.45em !important;
+}
+
+.navigation.ui.labeled.icon.menu .item .navigation-alert-icon {
+    align-items: center;
+    display: inline-flex;
+    font-size: 1.45em !important;
+    height: 1em;
+    justify-content: center;
+    margin: 0 auto 0.25rem !important;
+    position: relative;
+    width: 1em;
+}
+
+.navigation.ui.labeled.icon.menu .item .navigation-alert-icon > .icon {
+    font-size: 1em !important;
+    margin: 0 !important;
+}
+
+.navigation-alert-dot {
+    background: #f43f5e;
+    border: 2px solid var(--slskdn-nav-background, #241f1c);
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.45), 0 0 8px rgba(244, 63, 94, 0.8);
+    height: 0.58rem;
+    position: absolute;
+    right: -0.34rem;
+    top: -0.28rem;
+    width: 0.58rem;
 }
 
 .navigation.ui.inverted.menu .item {

@@ -23,6 +23,8 @@ using Microsoft.Extensions.Options;
 namespace slskd.Integrations.VPN;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -87,6 +89,7 @@ public class Gluetun : IVPNClient
             }
 
             int? port = null;
+            IReadOnlyList<VPNPortForward> portForwards = Array.Empty<VPNPortForward>();
 
             if (OptionsMonitor.CurrentValue.Integration.Vpn.PortForwarding)
             {
@@ -97,6 +100,23 @@ public class Gluetun : IVPNClient
                 {
                     port = null;
                 }
+
+                var multiForward = await TryMakeRequest<SlskdNPortForwardsResponse>(http, "/v1/slskdn/portforwards");
+                portForwards = multiForward?.Forwards?
+                    .Where(forward => forward.PublicPort > 0)
+                    .Select(forward => new VPNPortForward
+                    {
+                        Slot = forward.Slot,
+                        LocalPort = forward.LocalPort,
+                        TargetPort = forward.TargetPort,
+                        Proto = forward.Proto,
+                        PublicPort = forward.PublicPort,
+                        PublicIPAddress = IPAddress.TryParse(forward.PublicIp, out var forwardIp) ? forwardIp : null,
+                        Namespace = forward.Namespace,
+                    })
+                    .ToArray() ?? Array.Empty<VPNPortForward>();
+
+                port ??= portForwards.FirstOrDefault(forward => forward.Slot == 0)?.PublicPort;
             }
 
             return new VPNStatus
@@ -107,6 +127,7 @@ public class Gluetun : IVPNClient
                     : ipAddress,
                 Location = string.Join(", ", new[] { publicIp.City, publicIp.Country }),
                 ForwardedPort = port,
+                PortForwards = portForwards,
             };
         }
         catch (Exception ex)
@@ -125,6 +146,18 @@ public class Gluetun : IVPNClient
             ?? throw new Exception($"Unexpected Gluetun response; expected: {nameof(T)},  got: {await response.Content.ReadAsStringAsync()}");
 
         return result;
+    }
+
+    private async Task<T?> TryMakeRequest<T>(HttpClient http, string url)
+    {
+        using var response = await http.GetAsync($"{Options.Url.TrimEnd('/')}{url}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return default;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>();
     }
 
     private class GluetunStatusResponse
@@ -150,5 +183,21 @@ public class Gluetun : IVPNClient
         [JsonPropertyName("postal_code")]
         public string PostalCode { get; init; } = string.Empty;
         public string Timezone { get; init; } = string.Empty;
+    }
+
+    private class SlskdNPortForwardsResponse
+    {
+        public IReadOnlyList<SlskdNPortForwardResponse> Forwards { get; init; } = Array.Empty<SlskdNPortForwardResponse>();
+    }
+
+    private class SlskdNPortForwardResponse
+    {
+        public int Slot { get; init; }
+        public int LocalPort { get; init; }
+        public int TargetPort { get; init; }
+        public string Proto { get; init; } = string.Empty;
+        public int PublicPort { get; init; }
+        public string PublicIp { get; init; } = string.Empty;
+        public string Namespace { get; init; } = string.Empty;
     }
 }

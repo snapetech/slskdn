@@ -64,6 +64,7 @@
  - Progress (2026-04-30): Added first classic native waveform modes with placement, alpha, scaling, and smoothing support from `wave_mode`, `wave_x`, `wave_y`, `wave_a`, `wave_scale`, and `wave_smoothing`.
  - Progress (2026-04-30): Expanded native shader translation with safe straight-line temp declarations and common HLSL helper aliases including `frac`, `fmod`, `rsqrt`, and `atan2`.
  - Progress (2026-04-30): Added translated shader viewport context with `resolution`, `pixelSize`, `aspect`, `texsize`, and generated `x/y/rad/ang` coordinate helpers.
+ - Progress (2026-04-30): Added safe `shader_body { ... }` wrapper unwrapping for translated native warp/comp shaders and fixture smoke coverage.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -1570,3 +1571,15 @@
 - [x] Prepare `2026042900-slskdn.204` stable release
   - Status: completed (2026-04-30)
   - Notes: Promoted the current integrated player, visualizer, streaming, pod, security, docs, and external visualizer launcher release notes into the `.204` changelog section for the tag-only stable release workflow. `.203` was a failed tag attempt blocked by optional Winget release-version metadata validation.
+
+- [x] Add chat and room header activity indicators
+  - Status: completed (2026-04-30)
+  - Notes: Added red-dot header activity indicators for unread private chats and joined room messages newer than the browser's last-seen room activity marker. Fixed chat and room tabs so switching tabs preserves mounted panes instead of rebuilding the session, while active-tab gating prevents hidden room panes from polling and hidden chat panes from acknowledging unread messages.
+
+- [x] Fix dark-mode inner surfaces and surface VPN/Lidarr admin status
+  - Status: completed (2026-04-30)
+  - Notes: Added central dark-mode overrides for Semantic UI segments, cards, tables, modals, dropdowns, inputs, and messages; replaced remaining light inline panel colors in rooms and port-forwarding surfaces with theme variables; added a System Integrations admin tab with VPN status/config summary and Lidarr status/wanted-sync/manual-import actions.
+
+- [x] Preserve all Semantic UI tab panes across tab switches
+  - Status: completed (2026-04-30)
+  - Notes: Applied `renderActiveOnly={false}` to every Semantic UI `Tab` under `src/web/src/components`, covering Browse, Contacts, port forwarding, pods, System, Files, Security, Adversarial Settings, and Library Health in addition to the existing Chat and Rooms fix.

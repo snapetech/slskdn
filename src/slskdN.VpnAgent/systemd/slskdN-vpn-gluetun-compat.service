@@ -1,0 +1,19 @@
+[Unit]
+Description=Gluetun-compatible VPN status for slskdN
+After=network-online.target slskdN-vpn-ingress.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/slskdN-vpn-agent api
+Restart=always
+RestartSec=2
+User=root
+Group=root
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/slskdN-vpn
+
+[Install]
+WantedBy=multi-user.target

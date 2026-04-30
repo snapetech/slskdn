@@ -3102,6 +3102,12 @@ namespace slskd
             public MusicBrainzOptions MusicBrainz { get; init; } = new MusicBrainzOptions();
 
             /// <summary>
+            ///     Gets Lidarr integration options.
+            /// </summary>
+            [Validate]
+            public LidarrOptions Lidarr { get; init; } = new LidarrOptions();
+
+            /// <summary>
             ///     VPN options.
             /// </summary>
             public class VpnOptions : IValidatableObject
@@ -3778,6 +3784,166 @@ namespace slskd
                     if (RetryAttempts <= 0)
                     {
                         yield return new ValidationResult($"The {nameof(RetryAttempts)} field must be greater than zero.", new[] { nameof(RetryAttempts) });
+                    }
+                }
+            }
+
+            /// <summary>
+            ///     Lidarr integration options.
+            /// </summary>
+            public class LidarrOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether the Lidarr integration is enabled.
+                /// </summary>
+                [Argument(default, "lidarr")]
+                [EnvironmentVariable("LIDARR")]
+                [Description("enable Lidarr integration")]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the Lidarr base URL.
+                /// </summary>
+                [Argument(default, "lidarr-url")]
+                [EnvironmentVariable("LIDARR_URL")]
+                [Description("Lidarr base URL")]
+                public string Url { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the Lidarr API key.
+                /// </summary>
+                [Argument(default, "lidarr-api-key")]
+                [EnvironmentVariable("LIDARR_API_KEY")]
+                [Description("Lidarr API key")]
+                [Secret]
+                public string ApiKey { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the timeout for HTTP requests to Lidarr, in seconds.
+                /// </summary>
+                [Argument(default, "lidarr-timeout")]
+                [EnvironmentVariable("LIDARR_TIMEOUT")]
+                [Description("timeout for HTTP requests to Lidarr")]
+                [Range(1, 120)]
+                public int TimeoutSeconds { get; init; } = 20;
+
+                /// <summary>
+                ///     Gets a value indicating whether Lidarr wanted albums should be synced into Wishlist.
+                /// </summary>
+                [Argument(default, "lidarr-sync-wanted")]
+                [EnvironmentVariable("LIDARR_SYNC_WANTED")]
+                [Description("sync Lidarr wanted albums into slskdN Wishlist")]
+                public bool SyncWantedToWishlist { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the interval between wanted syncs, in seconds.
+                /// </summary>
+                [Argument(default, "lidarr-sync-interval")]
+                [EnvironmentVariable("LIDARR_SYNC_INTERVAL")]
+                [Description("interval between Lidarr wanted syncs in seconds")]
+                [Range(300, int.MaxValue)]
+                public int SyncIntervalSeconds { get; init; } = 3600;
+
+                /// <summary>
+                ///     Gets the maximum wanted albums to sync per run.
+                /// </summary>
+                [Argument(default, "lidarr-sync-max-items")]
+                [EnvironmentVariable("LIDARR_SYNC_MAX_ITEMS")]
+                [Description("maximum Lidarr wanted albums to sync per run")]
+                [Range(1, 1000)]
+                public int MaxItemsPerSync { get; init; } = 100;
+
+                /// <summary>
+                ///     Gets a value indicating whether synced Wishlist items should auto-download.
+                /// </summary>
+                [Argument(default, "lidarr-auto-download")]
+                [EnvironmentVariable("LIDARR_AUTO_DOWNLOAD")]
+                [Description("auto-download Wishlist items created from Lidarr wanted albums")]
+                public bool AutoDownload { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the optional Wishlist filter for Lidarr-created searches.
+                /// </summary>
+                [Argument(default, "lidarr-wishlist-filter")]
+                [EnvironmentVariable("LIDARR_WISHLIST_FILTER")]
+                [Description("Wishlist filter for Lidarr-created searches")]
+                public string WishlistFilter { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the maximum search results retained by Lidarr-created Wishlist items.
+                /// </summary>
+                [Argument(default, "lidarr-wishlist-max-results")]
+                [EnvironmentVariable("LIDARR_WISHLIST_MAX_RESULTS")]
+                [Description("maximum search results for Lidarr-created Wishlist items")]
+                [Range(10, 1000)]
+                public int WishlistMaxResults { get; init; } = 100;
+
+                /// <summary>
+                ///     Gets a value indicating whether completed slskdN download directories should be imported into Lidarr.
+                /// </summary>
+                [Argument(default, "lidarr-auto-import-completed")]
+                [EnvironmentVariable("LIDARR_AUTO_IMPORT_COMPLETED")]
+                [Description("auto-import completed slskdN download directories into Lidarr")]
+                public bool AutoImportCompleted { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the local slskdN completed path prefix to rewrite before calling Lidarr.
+                /// </summary>
+                [Argument(default, "lidarr-import-path-from")]
+                [EnvironmentVariable("LIDARR_IMPORT_PATH_FROM")]
+                [Description("local slskdN completed path prefix to rewrite for Lidarr")]
+                public string ImportPathFrom { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the Lidarr-visible completed path prefix.
+                /// </summary>
+                [Argument(default, "lidarr-import-path-to")]
+                [EnvironmentVariable("LIDARR_IMPORT_PATH_TO")]
+                [Description("Lidarr-visible completed path prefix")]
+                public string ImportPathTo { get; init; } = string.Empty;
+
+                /// <summary>
+                ///     Gets the Lidarr manual import mode.
+                /// </summary>
+                [Argument(default, "lidarr-import-mode")]
+                [EnvironmentVariable("LIDARR_IMPORT_MODE")]
+                [Description("Lidarr manual import mode: move or copy")]
+                public string ImportMode { get; init; } = "move";
+
+                /// <summary>
+                ///     Gets a value indicating whether Lidarr may replace existing files during auto-import.
+                /// </summary>
+                [Argument(default, "lidarr-import-replace-existing")]
+                [EnvironmentVariable("LIDARR_IMPORT_REPLACE_EXISTING")]
+                [Description("allow Lidarr auto-import to replace existing files")]
+                public bool ImportReplaceExistingFiles { get; init; } = false;
+
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    if (!Enabled)
+                    {
+                        yield break;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(Url) || !Uri.TryCreate(Url, UriKind.Absolute, out _))
+                    {
+                        yield return new ValidationResult("Lidarr is enabled but integrations.lidarr.url is not an absolute URL.", new[] { nameof(Url) });
+                    }
+
+                    if (string.IsNullOrWhiteSpace(ApiKey))
+                    {
+                        yield return new ValidationResult("Lidarr is enabled but integrations.lidarr.api_key is empty.", new[] { nameof(ApiKey) });
+                    }
+
+                    if (AutoImportCompleted &&
+                        !string.IsNullOrWhiteSpace(ImportPathFrom) != !string.IsNullOrWhiteSpace(ImportPathTo))
+                    {
+                        yield return new ValidationResult("Lidarr import path mapping requires both import_path_from and import_path_to.", new[] { nameof(ImportPathFrom), nameof(ImportPathTo) });
+                    }
+
+                    if (ImportMode is not ("move" or "copy" or "Move" or "Copy"))
+                    {
+                        yield return new ValidationResult("Lidarr import_mode must be 'move' or 'copy'.", new[] { nameof(ImportMode) });
                     }
                 }
             }

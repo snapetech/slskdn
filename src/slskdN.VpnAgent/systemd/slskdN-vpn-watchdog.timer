@@ -1,0 +1,10 @@
+[Unit]
+Description=Run slskdN VPN watchdog every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+Unit=slskdN-vpn-watchdog.service
+
+[Install]
+WantedBy=timers.target

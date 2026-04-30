@@ -8,6 +8,36 @@
   margin-bottom: 16px;
 }
 
+.integrations-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.integration-status-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.integration-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.integration-actions .button {
+  margin: 0 !important;
+}
+
+.integration-manual-import {
+  margin-top: 14px !important;
+}
+
 .system .menu.tabular {
     overflow: auto hidden;
 }

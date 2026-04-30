@@ -711,6 +711,7 @@ class Pods extends Component {
                       ),
                     },
                   ]}
+                  renderActiveOnly={false}
                 />
               ) : (
                 <PlaceholderSegment

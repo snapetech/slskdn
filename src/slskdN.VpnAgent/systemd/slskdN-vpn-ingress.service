@@ -1,0 +1,22 @@
+[Unit]
+Description=Transparent VPN ingress forwards for slskdN listener ports
+After=network-online.target slskd.service
+Wants=network-online.target slskd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=PF_ATTEMPTS=90
+Environment=PF_LIFETIME=60
+Environment=SLSKDN_VPN_TUNNEL_TYPE=wireguard
+Environment=VPN_PORT_FORWARD_BACKEND=natpmp
+Environment=SLSKDN_VPN_IFACE=slskdN-vpn
+ExecStart=/usr/local/bin/slskdN-vpn-agent ingress
+ExecStop=/usr/local/bin/slskdN-vpn-agent cleanup-ingress
+TimeoutStartSec=20min
+NoNewPrivileges=true
+ProtectHome=true
+ReadWritePaths=/var/lib/slskdN-vpn /run/netns
+
+[Install]
+WantedBy=multi-user.target

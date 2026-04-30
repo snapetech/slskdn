@@ -82,6 +82,21 @@ describe('MilkDrop shader translator', () => {
     expect(analyzeMilkdropShaderSupport('ret = vec3(x, y, aspect);').supported).toBe(true);
   });
 
+  it('unwraps safe shader_body blocks from imported presets', () => {
+    const shader = createTranslatedMilkdropFragmentShader(`
+      shader_body {
+        float3 tint = saturate(vec3(x, y, aspect));
+        ret = tint * tex2D(sampler_main, uv).rgb;
+      }
+    `);
+
+    expect(shader).toContain('vec3 tint = clamp01(vec3(x, y, aspect));');
+    expect(shader).toContain('vec3 ret = vec3(tint * texture(previousFrame, uv).rgb);');
+    expect(translateMilkdropShaderExpression('shader_body { ret = vec3(q1); }')).toBe('vec3(q1)');
+    expect(analyzeMilkdropShaderSupport('shader_body { ret = vec3(x, y, rad); }').supported)
+      .toBe(true);
+  });
+
   it('rejects shader bodies outside the safe first translation subset', () => {
     expect(translateMilkdropShaderExpression('for (;;) { ret = vec3(1.0); }')).toBe('');
     expect(translateMilkdropShaderExpression('ret = unknown[index];')).toBe('');

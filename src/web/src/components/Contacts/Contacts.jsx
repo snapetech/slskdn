@@ -404,6 +404,7 @@ class Contacts extends Component {
               this.setState({ activeTab: activeIndex })
             }
             panes={panes}
+            renderActiveOnly={false}
           />
 
           {/* Add Friend Modal */}

@@ -611,6 +611,7 @@ const VpnGatewayConfig = ({ podDetail, podId }) => {
       <Tab
         menu={{ pointing: true }}
         panes={panes}
+        renderActiveOnly={false}
       />
 
       <div style={{ marginTop: '20px', textAlign: 'right' }}>

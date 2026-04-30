@@ -103,7 +103,7 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
                 />
                 <div>
                   <strong>Public Room</strong>
-                  <div style={{ color: '#666', fontSize: '12px' }}>
+                  <div className="room-create-type-description">
                     Anyone can join and see the room
                   </div>
                 </div>
@@ -119,7 +119,7 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
                 />
                 <div>
                   <strong>Private Room</strong>
-                  <div style={{ color: '#666', fontSize: '12px' }}>
+                  <div className="room-create-type-description">
                     Only invited members can join
                   </div>
                 </div>
@@ -127,13 +127,7 @@ const RoomCreateModal = ({ onCreateRoom, ...modalOptions }) => {
             </div>
           </div>
 
-          <div
-            style={{
-              background: '#f8f9fa',
-              borderRadius: '4px',
-              padding: '12px',
-            }}
-          >
+          <div className="room-create-note">
             <Icon name="info circle" />
             <strong>Note:</strong> Room creation depends on server permissions.
             Private rooms require server operator approval.

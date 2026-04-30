@@ -37,7 +37,10 @@ class ChatSession extends Component {
 
   componentDidUpdate(previousProps) {
     // If username changed, fetch new conversation
-    if (previousProps.username !== this.props.username) {
+    if (
+      previousProps.username !== this.props.username ||
+      (!previousProps.active && this.props.active)
+    ) {
       this.fetchConversation();
     }
   }
@@ -60,8 +63,8 @@ class ChatSession extends Component {
     try {
       const conversation = await chat.get({ username });
 
-      // Acknowledge unread messages if any
-      if (conversation?.hasUnAcknowledgedMessages) {
+      // Acknowledge unread messages only when the user is looking at this tab.
+      if (this.props.active !== false && conversation?.hasUnAcknowledgedMessages) {
         await chat.acknowledge({ username });
       }
 

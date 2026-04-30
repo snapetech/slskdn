@@ -5,12 +5,19 @@
 }
 
 .rooms {
+  --slskd-room-accent-color: #0e6eb8;
+  --slskd-room-note-background: rgba(0, 0, 0, 0.04);
   padding-left: 15px;
   padding-right: 15px;
   max-width: 1200px !important;
   margin-left: auto !important;
   margin-right: auto !important;
   margin-bottom: 16px;
+}
+
+:root.dark .rooms {
+  --slskd-room-accent-color: #cce2ff;
+  --slskd-room-note-background: rgba(255, 255, 255, 0.05);
 }
 
 .rooms-segment {
@@ -142,7 +149,7 @@
 }
 
 .room-message-self, .room-user-self {
-  color: blue;
+  color: var(--slskd-room-accent-color);
 }
 
 .room-input {
@@ -168,4 +175,17 @@
 
 .unknown-user-flag {
   opacity: .1 !important;
+}
+
+.room-create-note {
+  background: var(--slskd-room-note-background);
+  border: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.15));
+  border-radius: 4px;
+  color: var(--slskd-color, rgba(0, 0, 0, 0.87));
+  padding: 12px;
+}
+
+.room-create-type-description {
+  color: var(--slskd-color-subtle, #666);
+  font-size: 12px;
 }

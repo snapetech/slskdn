@@ -1,3 +1,42 @@
+## Update 2026-04-30 18:18:59Z
+
+- Current task: Native MilkDrop shader translator unwraps safe shader_body blocks.
+- Last activity:
+  - translated shader parsing now unwraps `shader_body { ... }` wrappers before statement analysis
+  - safe wrapped shader bodies still use the same straight-line declaration and `ret = ...` restrictions
+  - curated shader fixture now exercises wrapped warp/comp shader bodies in parser, compatibility, and browser smoke paths
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke
+- Next steps:
+  1. Run whitespace checks, commit, and push.
+  2. Continue the next large MilkDrop phase, likely shader texture access or real-preset compatibility coverage.
+
+## Update 2026-04-30 18:19:31Z
+
+- Current task: None. Dark-mode surface cleanup and System integrations admin tab are implemented locally.
+- Last activity:
+  - added central dark-mode overrides for Semantic UI nested surfaces
+  - replaced light hard-coded room and port-forwarding panel colors with theme variables
+  - added System -> Integrations with VPN readiness/status/config summary and Lidarr status/wanted-sync/manual-import controls
+  - added focused Integrations component tests
+  - documented the Semantic UI dark-surface gotcha and committed it as `c25c26de0`
+  - validated `npm test -- src/components/System/Integrations/index.test.jsx`, `npm run lint`, `npm run build`, and `git diff --check`
+- Next steps:
+  1. Browser-check `/chat`, `/rooms`, and `/system/integrations` against a live dark-mode instance.
+  2. Commit the code/test/memory-bank changes with the surrounding dirty workspace when ready.
+
+## Update 2026-04-30 18:12:28Z
+
+- Current task: None. Header chat/room activity dots and tab-preservation fix are implemented locally.
+- Last activity:
+  - added header red dots for unread chat conversations and newer joined-room messages
+  - kept chat and room `Tab` panes mounted so tab changes preserve the session instead of refreshing the visible panel
+  - gated chat acknowledgment and room polling to active panes to avoid hidden-tab side effects
+  - documented the Semantic UI tab remount gotcha and committed it as `d0cf8a675`
+  - validated `npm test -- App.test.jsx`, `npm run lint`, and `npm run build`
+- Next steps:
+  1. Browser-check the header dots against a live daemon with real unread chat/room activity if desired.
+  2. Commit the code/test/memory-bank changes with the surrounding dirty workspace when ready.
+
 ## Update 2026-04-30 18:14:52Z
 
 - Current task: Native MilkDrop translated shaders have viewport context.

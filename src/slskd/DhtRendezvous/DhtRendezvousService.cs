@@ -938,7 +938,7 @@ public sealed class DhtRendezvousOptions
     /// <summary>
     /// UDP port for DHT.
     /// </summary>
-    public int DhtPort { get; set; } = 50306;
+    public int DhtPort { get; set; } = 50305;
 
     /// <summary>
     /// Bootstrap routers used to seed the public BitTorrent DHT when no saved node table is available.

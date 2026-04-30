@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew transparent VPN ingress forwards for slskdN
+After=slskdN-vpn-ingress.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart slskdN-vpn-ingress.service

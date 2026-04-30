@@ -269,6 +269,7 @@ public class VPNService : IDisposable
                     PublicIPAddress = Status.PublicIPAddress,
                     Location = Status.Location ?? string.Empty,
                     ForwardedPort = Status.ForwardedPort,
+                    PortForwards = Status.PortForwards,
                 },
             });
         }

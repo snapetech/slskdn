@@ -1,0 +1,12 @@
+[Interface]
+# Redacted outbound WireGuard config.
+# Install a real config as /etc/wireguard/slskdN-vpn.conf.
+PrivateKey = REDACTED_PRIVATE_KEY
+Address = 10.2.0.2/32
+DNS = 10.2.0.1
+
+[Peer]
+PublicKey = REDACTED_PROVIDER_PUBLIC_KEY
+AllowedIPs = 0.0.0.0/0
+Endpoint = vpn-provider.example:51820
+PersistentKeepalive = 25

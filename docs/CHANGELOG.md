@@ -84,6 +84,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   `rsqrt`, and `atan2`.
 - Added translated native MilkDrop shader viewport context with `resolution`,
   `pixelSize`, `aspect`, `texsize`, and generated `x/y/rad/ang` coordinates.
+- Added native MilkDrop shader-body wrapper support so safe `shader_body { ... }`
+  warp/comp shader blocks are translated instead of rejected.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

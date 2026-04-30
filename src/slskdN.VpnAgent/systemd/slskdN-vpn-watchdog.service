@@ -1,0 +1,10 @@
+[Unit]
+Description=Check slskdN VPN health and recover ingress mapping
+After=slskd.service slskdN-vpn-ingress.service slskdN-vpn-gluetun-compat.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/slskdN-vpn-agent watchdog
+NoNewPrivileges=true
+ProtectHome=true
+ReadWritePaths=/var/lib/slskdN-vpn

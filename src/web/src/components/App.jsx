@@ -1,7 +1,9 @@
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
+import * as chat from '../lib/chat';
 import { createApplicationHubConnection } from '../lib/hubFactory';
 import * as relayAPI from '../lib/relay';
+import * as rooms from '../lib/rooms';
 import { connect, disconnect } from '../lib/server';
 import * as session from '../lib/session';
 import { isPassthroughEnabled } from '../lib/token';
@@ -27,6 +29,9 @@ import {
 } from 'semantic-ui-react';
 
 const SLSKDN_RELEASES_URL = 'https://github.com/snapetech/slskdn/releases';
+const VPN_PORT_NOTICE_STORAGE_KEY = 'slskdn.vpnForwardedPorts.dismissedSignature';
+const ROOM_ACTIVITY_SEEN_STORAGE_KEY = 'slskdn.rooms.lastSeenActivity';
+const NAV_ACTIVITY_POLL_INTERVAL_MS = 10_000;
 
 const Browse = lazy(() => import('./Browse/Browse'));
 const Chat = lazy(() => import('./Chat/Chat'));
@@ -66,6 +71,160 @@ const normalizeTheme = (theme) => {
 
 const getSemanticTheme = (theme) => (theme === 'light' ? 'light' : 'dark');
 
+const normalizePortForwardProtocol = (proto) =>
+  `${proto || ''}`.trim().toUpperCase();
+
+const getVpnPortForwards = (vpn = {}) => {
+  if (Array.isArray(vpn.portForwards) && vpn.portForwards.length > 0) {
+    return vpn.portForwards
+      .filter((forward) => forward?.publicPort > 0)
+      .map((forward) => ({
+        label:
+          forward.slot === 0
+            ? 'Soulseek'
+            : normalizePortForwardProtocol(forward.proto) || 'Forward',
+        localPort: forward.localPort,
+        proto: normalizePortForwardProtocol(forward.proto),
+        publicIp: forward.publicIPAddress || forward.publicIp,
+        publicPort: forward.publicPort,
+        slot: forward.slot,
+        targetPort: forward.targetPort,
+      }))
+      .sort((left, right) => (left.slot ?? 0) - (right.slot ?? 0));
+  }
+
+  if (vpn.forwardedPort > 0) {
+    return [
+      {
+        label: 'Soulseek',
+        proto: 'TCP',
+        publicIp: vpn.publicIPAddress,
+        publicPort: vpn.forwardedPort,
+        slot: 0,
+      },
+    ];
+  }
+
+  return [];
+};
+
+const getVpnPortSignature = (forwards) =>
+  forwards
+    .map((forward) =>
+      [
+        forward.slot ?? '',
+        forward.proto ?? '',
+        forward.publicIp ?? '',
+        forward.publicPort ?? '',
+        forward.localPort ?? '',
+        forward.targetPort ?? '',
+      ].join(':'),
+    )
+    .join('|');
+
+const hasDismissedVpnPortNotice = (signature) => {
+  try {
+    return localStorage.getItem(VPN_PORT_NOTICE_STORAGE_KEY) === signature;
+  } catch {
+    return false;
+  }
+};
+
+const storeDismissedVpnPortNotice = (signature) => {
+  try {
+    localStorage.setItem(VPN_PORT_NOTICE_STORAGE_KEY, signature);
+  } catch {
+    // localStorage can be unavailable in private browsing or locked-down webviews.
+  }
+};
+
+const getStoredRoomActivity = () => {
+  try {
+    return JSON.parse(localStorage.getItem(ROOM_ACTIVITY_SEEN_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+};
+
+const storeRoomActivity = (activity) => {
+  try {
+    localStorage.setItem(
+      ROOM_ACTIVITY_SEEN_STORAGE_KEY,
+      JSON.stringify(activity),
+    );
+  } catch {
+    // localStorage can be unavailable in private browsing or locked-down webviews.
+  }
+};
+
+const getMessageTimestamp = (message) => {
+  const timestamp = Date.parse(message?.timestamp);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const isIncomingRoomMessage = (message) =>
+  message?.self !== true && message?.direction !== 'Out';
+
+const NavigationIcon = ({ alert, alertTestId, name }) => (
+  <span className="navigation-alert-icon">
+    <Icon name={name} />
+    {alert && (
+      <span
+        aria-label="New activity"
+        className="navigation-alert-dot"
+        data-testid={alertTestId}
+        role="status"
+      />
+    )}
+  </span>
+);
+
+const VpnPortChangeNotice = ({ onDismiss, portForwards }) => {
+  if (!portForwards.length) {
+    return null;
+  }
+
+  return (
+    <Segment
+      className="vpn-port-change-notice"
+      data-testid="vpn-port-change-notice"
+    >
+      <div className="vpn-port-change-notice-body">
+        <Icon name="exchange" />
+        <div className="vpn-port-change-notice-copy">
+          <strong>VPN forwarded ports changed.</strong>
+          <span>
+            Update any router, firewall, or remote peer configuration that uses
+            fixed ports.
+          </span>
+          <div className="vpn-port-change-list">
+            {portForwards.map((forward) => (
+              <span
+                className="vpn-port-change-item"
+                key={`${forward.slot}-${forward.proto}-${forward.publicPort}`}
+              >
+                {forward.label} {forward.proto ? `${forward.proto} ` : ''}
+                {forward.publicIp ? `${forward.publicIp}:` : ''}
+                {forward.publicPort}
+                {forward.targetPort && forward.targetPort !== forward.publicPort
+                  ? ` -> ${forward.targetPort}`
+                  : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <Button
+        basic
+        compact
+        icon="close"
+        onClick={onDismiss}
+        title="Dismiss VPN port notice"
+      />
+    </Segment>
+  );
+};
+
 const initialState = {
   applicationOptions: {},
   applicationState: {},
@@ -74,6 +233,10 @@ const initialState = {
   login: {
     error: undefined,
     pending: false,
+  },
+  navActivity: {
+    chat: false,
+    rooms: false,
   },
   retriesExhausted: false,
   themeMenuOpen: false,
@@ -226,10 +389,19 @@ class App extends Component {
 
     this.state = initialState;
     this.applicationHub = undefined;
+    this.navigationActivityInterval = undefined;
+    this.roomActivityBaselined = false;
   }
 
   componentDidMount() {
     this.init();
+    this.startNavigationActivityPolling();
+  }
+
+  componentDidUpdate(previousProps) {
+    if (previousProps.location?.pathname !== this.props.location?.pathname) {
+      this.refreshNavigationActivity();
+    }
   }
 
   componentWillUnmount() {
@@ -237,7 +409,102 @@ class App extends Component {
       this.applicationHub.stop().catch(() => {});
       this.applicationHub = undefined;
     }
+
+    if (this.navigationActivityInterval) {
+      window.clearInterval(this.navigationActivityInterval);
+    }
   }
+
+  startNavigationActivityPolling = () => {
+    this.refreshNavigationActivity();
+    this.navigationActivityInterval = window.setInterval(
+      this.refreshNavigationActivity,
+      NAV_ACTIVITY_POLL_INTERVAL_MS,
+    );
+  };
+
+  getCurrentPath = () =>
+    this.props.location?.pathname || window.location?.pathname || '';
+
+  isAuthenticated = () => session.isLoggedIn() || isPassthroughEnabled();
+
+  getChatActivity = async () => {
+    if (this.getCurrentPath().startsWith('/chat')) {
+      return false;
+    }
+
+    const conversations = await chat.getAll({ unAcknowledgedOnly: true });
+    return (conversations || []).length > 0;
+  };
+
+  getRoomsActivity = async () => {
+    const joinedRooms = (await rooms.getJoined()) || [];
+    const roomMessages = await Promise.all(
+      joinedRooms.filter(Boolean).map(async (roomName) => ({
+        messages: (await rooms.getMessages({ roomName })) || [],
+        roomName,
+      })),
+    );
+    const latestByRoom = roomMessages.reduce((activity, room) => {
+      const latest = room.messages
+        .filter(isIncomingRoomMessage)
+        .reduce(
+          (latestTimestamp, message) =>
+            Math.max(latestTimestamp, getMessageTimestamp(message)),
+          0,
+        );
+
+      return latest > 0
+        ? { ...activity, [room.roomName]: latest }
+        : activity;
+    }, {});
+
+    if (this.getCurrentPath().startsWith('/rooms')) {
+      storeRoomActivity(latestByRoom);
+      this.roomActivityBaselined = true;
+      return false;
+    }
+
+    const seenActivity = getStoredRoomActivity();
+    if (!this.roomActivityBaselined && Object.keys(seenActivity).length === 0) {
+      storeRoomActivity(latestByRoom);
+      this.roomActivityBaselined = true;
+      return false;
+    }
+
+    this.roomActivityBaselined = true;
+    return Object.entries(latestByRoom).some(
+      ([roomName, latest]) => latest > (seenActivity[roomName] || 0),
+    );
+  };
+
+  refreshNavigationActivity = async () => {
+    if (!this.isAuthenticated()) {
+      this.setState({
+        navActivity: {
+          chat: false,
+          rooms: false,
+        },
+      });
+      return;
+    }
+
+    try {
+      const [chatActivity, roomsActivity] = await Promise.all([
+        this.getChatActivity(),
+        this.getRoomsActivity(),
+      ]);
+
+      this.setState({
+        navActivity: {
+          chat: chatActivity,
+          rooms: roomsActivity,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to refresh navigation activity:', error);
+    }
+  };
 
   startApplicationHub = () => {
     if (this.applicationHub) {
@@ -383,6 +650,11 @@ class App extends Component {
     this.setState({ themeMenuOpen: false });
   };
 
+  dismissVpnPortNotice = (signature) => {
+    storeDismissedVpnPortNotice(signature);
+    this.forceUpdate();
+  };
+
   handleLogin = (username, password, rememberMe) => {
     this.setState(
       (previousState) => ({
@@ -423,6 +695,7 @@ class App extends Component {
       error,
       initialized,
       login,
+      navActivity,
       retriesExhausted,
       theme = normalizeTheme(this.getSavedTheme() || 'slskdn'),
       themeMenuOpen,
@@ -440,6 +713,12 @@ class App extends Component {
     } = applicationState;
     const { current, isUpdateAvailable, latest } = version;
     const { scanPending: pendingShareRescan } = shares;
+    const vpnPortForwards = getVpnPortForwards(applicationState.vpn);
+    const vpnPortSignature = getVpnPortSignature(vpnPortForwards);
+    const showVpnPortNotice =
+      vpnPortSignature &&
+      applicationState.vpn?.isReady &&
+      !hasDismissedVpnPortNotice(vpnPortSignature);
 
     const { controller, mode } = relay;
 
@@ -576,13 +855,21 @@ class App extends Component {
                   </Link>
                   <Link to="/rooms">
                     <Menu.Item data-testid="nav-rooms">
-                      <Icon name="comments" />
+                      <NavigationIcon
+                        alert={navActivity.rooms}
+                        alertTestId="nav-rooms-alert"
+                        name="comments"
+                      />
                       Rooms
                     </Menu.Item>
                   </Link>
                   <Link to="/chat">
                     <Menu.Item data-testid="nav-chat">
-                      <Icon name="comment" />
+                      <NavigationIcon
+                        alert={navActivity.chat}
+                        alertTestId="nav-chat-alert"
+                        name="comment"
+                      />
                       Chat
                     </Menu.Item>
                   </Link>
@@ -767,6 +1054,12 @@ class App extends Component {
             </Menu>
             </Sidebar>
             <Sidebar.Pusher className="app-content">
+              {showVpnPortNotice && (
+                <VpnPortChangeNotice
+                  onDismiss={() => this.dismissVpnPortNotice(vpnPortSignature)}
+                  portForwards={vpnPortForwards}
+                />
+              )}
               <AppContext.Provider
                 // Note: Context value object recreated on each render (class component limitation)
                 // Deferred: Optimize with useMemo when converting to functional component
@@ -1043,4 +1336,15 @@ class App extends Component {
   }
 }
 
-export default App;
+const AppWithLocation = (props) => {
+  const location = useLocation();
+  return (
+    <App
+      {...props}
+      location={location}
+    />
+  );
+};
+
+export { App };
+export default AppWithLocation;

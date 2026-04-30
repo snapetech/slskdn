@@ -228,7 +228,7 @@ const Rooms = () => {
     value: r.name,
   }));
 
-  const panes = tabs.map((tab) => ({
+  const panes = tabs.map((tab, index) => ({
     menuItem: (
       <Menu.Item key={tab.key}>
         <Icon name={tab.roomName ? 'comments' : 'search'} />
@@ -252,6 +252,7 @@ const Rooms = () => {
         style={{ border: 'none', boxShadow: 'none' }}
       >
         <RoomSession
+          active={index === activeIndex}
           key={tab.key}
           onBrowseShares={handleBrowseShares}
           onLeaveRoom={leaveRoom}
@@ -358,6 +359,7 @@ const Rooms = () => {
             render: () => null,
           },
         ]}
+        renderActiveOnly={false}
       />
     </div>
   );

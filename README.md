@@ -348,6 +348,27 @@ Automated metadata enrichment and quality assurance.
 
 📖 **Design docs**: [Canonical scoring](docs/phase2-canonical-scoring-design.md) • [Library health](docs/phase2-library-health-design.md) • [Advanced fingerprinting](docs/phase2-advanced-fingerprinting-design.md) • [Music discovery federation plan](docs/design/music-discovery-federation-plan.md)
 
+### 🎛️ Built-in Lidarr Integration
+Plugin-free Lidarr support driven from slskdN using Lidarr's HTTP API.
+- **Wanted sync** — pulls Lidarr Wanted/Missing albums into slskdN Wishlist searches
+- **Optional auto-download** — Lidarr-created Wishlist items can immediately enter the normal slskdN download flow
+- **Safe post-download import** — completed directories can be submitted to Lidarr's manual-import command only when Lidarr returns clean, unambiguous matches
+- **Manual fallback** — ambiguous or rejected candidates are intentionally left for Lidarr's interactive Manual Import screen
+- **Path mapping** — rewrite slskdN download paths to the path Lidarr sees in Docker, host, or split-volume setups
+
+📖 **Guide**: [Lidarr integration](docs/lidarr-integration.md)
+
+### 🛡️ VPN Binding & Port Forward Agent
+Host-side companion for users who need Soulseek traffic to use a VPN while keeping the web UI local.
+- **Fail-closed routing** — route the slskdN service UID through a dedicated VPN routing table with a blackhole fallback
+- **Local UI preserved** — web UI/API traffic can stay reachable on LAN while Soulseek traffic uses VPN egress
+- **Dynamic forwarded ports** — slskdN consumes a local Gluetun-compatible API and advertises the current forwarded port
+- **WireGuard full mode** — outbound WireGuard plus per-port ingress namespaces, DNAT, NAT-PMP renewal, and static-forward support
+- **External tunnel mode** — OpenVPN, Tailscale, and other Linux tunnel interfaces can be used when the tunnel is already managed by another service
+- **Manual or installer setup** — real VPN configs stay out of git; redacted examples and step-by-step installation live with the agent
+
+📖 **Guide**: [slskdN VPN agent](src/slskdN.VpnAgent/README.md)
+
 ### 📦 Pod System (Decentralized Communities)
 Topic-based micro-communities over the mesh overlay.
 - **Pod creation/management** — Private, Unlisted, or Listed visibility
@@ -669,6 +690,8 @@ Detailed documentation for configuration options can be found in [docs/config.md
 | [How It Works](docs/HOW-IT-WORKS.md) | Technical architecture and design |
 | [Multi-Source Downloads](docs/multipart-downloads.md) | Network impact analysis |
 | [DHT Rendezvous Design](docs/DHT_RENDEZVOUS_DESIGN.md) | Peer discovery architecture |
+| [Lidarr Integration](docs/lidarr-integration.md) | Plugin-free Lidarr wanted sync and safe post-download import |
+| [VPN Agent](src/slskdN.VpnAgent/README.md) | Fail-closed VPN routing, port forwarding, WireGuard/OpenVPN/Tailscale modes |
 | [Security Specs](docs/SECURITY_IMPLEMENTATION_SPECS.md) | Security feature details |
 | [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Development status |
 | [Configuration](docs/config.md) | All configuration options |

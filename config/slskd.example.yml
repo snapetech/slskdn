@@ -97,8 +97,8 @@
 # dht:
 #   enabled: true
 #   lan_only: false # set true to avoid public BitTorrent DHT bootstrap/discoverability
-#   overlay_port: 50305
-#   dht_port: 50306 # explicit stable UDP port; forward/allow-list this port if DHT rendezvous is enabled
+#   overlay_port: 50305 # TCP overlay rendezvous. Can share the same numeric port as dht_port because TCP/UDP port spaces are separate.
+#   dht_port: 50305 # explicit stable UDP port; forward/allow-list this port if DHT rendezvous is enabled
 #   bootstrap_routers:
 #     - router.bittorrent.com
 #     - router.utorrent.com
@@ -378,12 +378,28 @@
 # overlay:
 #   enable: true
 #   listen_port: 50400
+#   # For a two-forward VPN setup, disable this direct UDP overlay or leave it private until the app has a UDP demux.
 #   enable_quic: false   # opt in only after the host's MsQuic/runtime stack has soaked cleanly
 #   quic_listen_port: 50402
 # overlay_data:
 #   enable: false        # QUIC data plane; requires a stable MsQuic/runtime stack
 #   listen_port: 50401
 # integrations:
+#   lidarr:
+#     enabled: false
+#     url: "http://127.0.0.1:8686"
+#     api_key: ""
+#     sync_wanted_to_wishlist: false # when true, Lidarr Wanted/Missing albums become slskdN Wishlist searches
+#     sync_interval_seconds: 3600
+#     max_items_per_sync: 100
+#     auto_download: false # applies only to Wishlist items created by Lidarr sync
+#     wishlist_filter: ""
+#     wishlist_max_results: 100
+#     auto_import_completed: false # when true, clean completed download directories are submitted to Lidarr manual import
+#     import_mode: "move" # move or copy
+#     import_replace_existing_files: false
+#     import_path_from: "" # optional local slskdN completed path prefix
+#     import_path_to: ""   # optional Lidarr-visible completed path prefix
 #   webhooks:
 #     my_webhook:
 #       on:

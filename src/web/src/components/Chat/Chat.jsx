@@ -221,7 +221,7 @@ const Chat = ({ state }) => {
     [tabs],
   );
 
-  const panes = tabs.map((tab) => ({
+  const panes = tabs.map((tab, index) => ({
     menuItem: (
       <Menu.Item key={tab.key}>
         <Icon name={tab.username ? 'comment' : 'search'} />
@@ -245,6 +245,7 @@ const Chat = ({ state }) => {
         style={{ border: 'none', boxShadow: 'none' }}
       >
         <ChatSession
+          active={index === activeIndex}
           key={tab.key}
           onDelete={handleDeleteConversation}
           user={state?.user}
@@ -353,6 +354,7 @@ const Chat = ({ state }) => {
             render: () => null,
           },
         ]}
+        renderActiveOnly={false}
       />
     </div>
   );

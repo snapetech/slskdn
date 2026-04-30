@@ -31,6 +31,8 @@ Complete guide to all slskdn documentation.
 
 - [How It Works](HOW-IT-WORKS.md) - Technical architecture overview
 - [Features Overview](FEATURES.md) - Complete feature list and details
+- [Lidarr Integration](lidarr-integration.md) - Built-in plugin-free Lidarr wanted sync and safe post-download import
+- [VPN Agent](../src/slskdN.VpnAgent/README.md) - Host-side fail-closed VPN routing and forwarded-port integration
 - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - Development status and planned features
 
 ## 📚 Development Documentation
