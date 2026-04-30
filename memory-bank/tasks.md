@@ -53,6 +53,7 @@
  - Progress (2026-04-30): Added the first native renderer-set crossfade scheduler for preset/import changes and first `.milk2` secondary composite-alpha controls via `blend_alpha` aliases.
  - Progress (2026-04-30): Added first standalone `.shape` and `.wave` fragment parsing, active-preset merge/persistence, and browser export affordances.
  - Progress (2026-04-30): Added first native beat and timed automatic preset change modes with low-frequency beat detection, render-loop preset updates, and browser-local mode persistence.
+ - Progress (2026-04-30): Added first browser-local native preset-bank controls for favorite marking, favorites-only filtering, previous-selection history, next-library cycling, and random imported-preset jumps.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

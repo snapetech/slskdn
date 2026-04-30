@@ -1,3 +1,14 @@
+## Update 2026-04-30 17:10:31Z
+
+- Current task: Native MilkDrop has first browser-local preset-bank controls.
+- Last activity:
+  - visualizer UI now treats imported native presets as a local bank for next-preset cycling instead of falling back to built-in presets
+  - added favorite/unfavorite, favorites-only selector filtering, previous manual-selection history, and random imported-preset jumps
+  - persisted favorites and library filter mode in browser local storage
+  - validated focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue the next large MilkDrop phase, likely search/playlists or deeper shader/audio compatibility.
+
 ## Update 2026-04-30 16:52:16Z
 
 - Current task: Native MilkDrop has first beat and timed automatic preset changes.

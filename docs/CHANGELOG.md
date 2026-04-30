@@ -60,6 +60,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   with active-preset merge and browser-local persistence.
 - Added native MilkDrop beat and timed automatic preset change modes with
   browser-local mode persistence.
+- Added native MilkDrop local preset-bank controls for favorites, favorites-only
+  filtering, previous-preset history, next-library cycling, and random jumps.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

@@ -1,3 +1,10 @@
+## 2026-04-30 17:10Z - Added native MilkDrop preset-bank controls
+
+- Imported native presets now behave as a local preset bank for next-preset cycling when native mode has browser-local presets.
+- Added favorite/unfavorite, favorites-only selector filtering, previous-selection history, and random imported-preset jumps to the native visualizer overlay.
+- Favorites and the library filter mode persist in browser local storage alongside the existing capped native preset library.
+- Validation: focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
 ## 2026-04-30 15:38Z - Added native MilkDrop preset folder import
 
 - Added a separate native preset-folder import button and hidden directory file input for browsers that expose directory-relative paths.

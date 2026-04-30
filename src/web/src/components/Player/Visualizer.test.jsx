@@ -67,6 +67,7 @@ describe('Visualizer', () => {
     nativeEngine.inspectPresetText.mockClear();
     nativeEngine.loadPresetFragmentText.mockClear();
     nativeEngine.loadPresetText.mockClear();
+    nativeEngine.nextPreset.mockClear();
     nativeEngine.resize.mockClear();
     nativeEngine.render.mockReset();
     nativeEngine.render.mockImplementation(() => {});
@@ -663,6 +664,91 @@ describe('Visualizer', () => {
     expect(library.map((preset) => preset.id)).toEqual(['second']);
     expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toBeNull();
     expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('');
+  });
+
+  it('supports native preset favorites, history, next, and random library jumps', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'first.milk',
+        id: 'first',
+        source: 'name=First\nwave_r=1',
+        title: 'First',
+      }),
+    );
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPresetLibrary',
+      JSON.stringify([
+        {
+          fileName: 'first.milk',
+          id: 'first',
+          source: 'name=First\nwave_r=1',
+          title: 'First',
+        },
+        {
+          fileName: 'second.milk',
+          id: 'second',
+          source: 'name=Second\nwave_r=0.5',
+          title: 'Second',
+        },
+        {
+          fileName: 'third.milk',
+          id: 'third',
+          source: 'name=Third\nwave_b=1',
+          title: 'Third',
+        },
+      ]),
+    );
+    nativeEngine.loadPresetText.mockImplementation((_source, fileName) =>
+      fileName.replace(/\.milk$/, ''));
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=First\nwave_r=1',
+        'first.milk',
+        { textureAssets: undefined },
+      );
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-toggle-native-favorite'));
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetFavorites')).toContain(
+      'first',
+    );
+
+    fireEvent.click(screen.getByTestId('visualizer-next-preset'));
+    await waitFor(() => {
+      expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('second');
+    });
+    expect(nativeEngine.nextPreset).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('visualizer-previous-native-preset'));
+    await waitFor(() => {
+      expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('first');
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-random-native-preset'));
+    await waitFor(() => {
+      expect(screen.getByTestId('visualizer-native-preset-library')).toHaveValue('third');
+    });
+    expect(randomSpy).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('visualizer-toggle-native-favorites-only'));
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibraryMode')).toBe(
+      'favorites',
+    );
+    expect(screen.getByRole('option', { name: '(favorite) First' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Second' })).not.toBeInTheDocument();
+    randomSpy.mockRestore();
   });
 
   it('surfaces native render errors and clears the persisted imported preset', async () => {

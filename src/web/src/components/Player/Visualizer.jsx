@@ -9,7 +9,10 @@ const visualizerEngineStorageKey = 'slskdn.player.visualizerEngine';
 const nativePresetStorageKey = 'slskdn.player.nativeMilkdropPreset';
 const nativePresetLibraryStorageKey = 'slskdn.player.nativeMilkdropPresetLibrary';
 const nativePresetAutomationStorageKey = 'slskdn.player.nativeMilkdropPresetAutomation';
+const nativePresetFavoritesStorageKey = 'slskdn.player.nativeMilkdropPresetFavorites';
+const nativePresetLibraryModeStorageKey = 'slskdn.player.nativeMilkdropPresetLibraryMode';
 const nativePresetLibraryLimit = 20;
+const nativePresetHistoryLimit = 12;
 const nativeTextureAssetMaxBytes = 1024 * 1024;
 
 const readStoredEngine = () => {
@@ -71,6 +74,27 @@ const readStoredNativePresetLibrary = () => {
   }
 };
 
+const readStoredNativePresetFavorites = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const favorites = JSON.parse(
+      window.localStorage.getItem(nativePresetFavoritesStorageKey) || '[]',
+    );
+    return Array.isArray(favorites)
+      ? favorites.filter((id) => typeof id === 'string' && id.length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const readStoredNativePresetLibraryMode = () => {
+  if (typeof window === 'undefined') return 'all';
+  return window.localStorage.getItem(nativePresetLibraryModeStorageKey) === 'favorites'
+    ? 'favorites'
+    : 'all';
+};
+
 const writeStoredNativePresetLibrary = (library) => {
   window.localStorage.setItem(
     nativePresetLibraryStorageKey,
@@ -78,10 +102,26 @@ const writeStoredNativePresetLibrary = (library) => {
   );
 };
 
+const writeStoredNativePresetFavorites = (favoriteIds) => {
+  if (favoriteIds.length === 0) {
+    window.localStorage.removeItem(nativePresetFavoritesStorageKey);
+    return;
+  }
+  window.localStorage.setItem(
+    nativePresetFavoritesStorageKey,
+    JSON.stringify(favoriteIds),
+  );
+};
+
 const upsertNativePresetLibraryEntry = (library, entry) => [
   entry,
   ...library.filter((preset) => preset.id !== entry.id),
 ].slice(0, nativePresetLibraryLimit);
+
+const pruneNativePresetFavorites = (favoriteIds, library) => {
+  const libraryIds = new Set(library.map((preset) => preset.id));
+  return favoriteIds.filter((id) => libraryIds.has(id));
+};
 
 const getNativePresetFileId = (file) =>
   [file.name, file.size, file.lastModified].filter((part) => part !== undefined).join(':');
@@ -257,9 +297,29 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const [activeNativePresetId, setActiveNativePresetId] = useState(
     () => readStoredNativePreset()?.id || '',
   );
+  const [nativeFavoritePresetIds, setNativeFavoritePresetIds] = useState(
+    readStoredNativePresetFavorites,
+  );
+  const [nativeLibraryMode, setNativeLibraryMode] = useState(
+    readStoredNativePresetLibraryMode,
+  );
+  const [nativePresetHistory, setNativePresetHistory] = useState([]);
   const [nativePresetLibrary, setNativePresetLibrary] = useState(readStoredNativePresetLibrary);
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
+
+  const visibleNativePresetLibrary = nativeLibraryMode === 'favorites'
+    ? nativePresetLibrary.filter((preset) => nativeFavoritePresetIds.includes(preset.id))
+    : nativePresetLibrary;
+  const activeNativePresetIndex = nativePresetLibrary.findIndex(
+    (preset) => preset.id === activeNativePresetId,
+  );
+  const activeNativePresetIsFavorite = nativeFavoritePresetIds.includes(activeNativePresetId);
+  const selectedNativePresetValue = visibleNativePresetLibrary.some(
+    (preset) => preset.id === activeNativePresetId,
+  )
+    ? activeNativePresetId
+    : '';
 
   const renderLoop = useCallback(() => {
     if (!engineRef.current) return;
@@ -280,14 +340,6 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     rafRef.current = window.requestAnimationFrame(renderLoop);
   }, [engineType]);
 
-  const cyclePreset = useCallback(() => {
-    if (!engineRef.current) return;
-    const nextPresetName = engineRef.current.nextPreset();
-    if (nextPresetName) {
-      setPresetName(nextPresetName);
-    }
-  }, []);
-
   const cycleNativeAutomationMode = useCallback(() => {
     setNativeAutomationMode((current) => getNextNativeAutomationMode(current));
   }, []);
@@ -303,6 +355,102 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     canvas.width = width;
     canvas.height = height;
     engine.resize(width, height);
+  }, []);
+
+  const loadNativePresetEntry = useCallback((preset, options = {}) => {
+    if (!preset || !engineRef.current?.loadPresetText) return false;
+    const { pushHistory = true } = options;
+
+    try {
+      setError(null);
+      const loadedPresetName = engineRef.current.loadPresetText(
+        preset.source,
+        preset.fileName,
+        { textureAssets: preset.textureAssets },
+      );
+      window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(preset));
+      if (pushHistory && activeNativePresetId && activeNativePresetId !== preset.id) {
+        setNativePresetHistory((history) => [
+          activeNativePresetId,
+          ...history.filter((id) => id !== activeNativePresetId && id !== preset.id),
+        ].slice(0, nativePresetHistoryLimit));
+      }
+      setActiveNativePresetId(preset.id);
+      setPresetName(loadedPresetName);
+      sizeCanvas();
+      return true;
+    } catch (presetError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load native MilkDrop preset from library', presetError);
+      setError(presetError?.message || 'Native preset load failed.');
+      return false;
+    }
+  }, [activeNativePresetId, sizeCanvas]);
+
+  const loadNativePresetByOffset = useCallback((offset) => {
+    if (nativePresetLibrary.length === 0) return false;
+    const currentIndex = activeNativePresetIndex >= 0
+      ? activeNativePresetIndex
+      : (offset > 0 ? -1 : 0);
+    const nextIndex = (
+      currentIndex + offset + nativePresetLibrary.length
+    ) % nativePresetLibrary.length;
+    return loadNativePresetEntry(nativePresetLibrary[nextIndex]);
+  }, [activeNativePresetIndex, loadNativePresetEntry, nativePresetLibrary]);
+
+  const cyclePreset = useCallback(() => {
+    if (engineType === 'native' && nativePresetLibrary.length > 0) {
+      loadNativePresetByOffset(1);
+      return;
+    }
+    if (!engineRef.current) return;
+    const nextPresetName = engineRef.current.nextPreset();
+    if (nextPresetName) {
+      setPresetName(nextPresetName);
+    }
+  }, [engineType, loadNativePresetByOffset, nativePresetLibrary.length]);
+
+  const previousNativeLibraryPreset = useCallback(() => {
+    if (nativePresetHistory.length > 0) {
+      const [previousId, ...remainingHistory] = nativePresetHistory;
+      const previousPreset = nativePresetLibrary.find((preset) => preset.id === previousId);
+      setNativePresetHistory(remainingHistory);
+      loadNativePresetEntry(previousPreset, { pushHistory: false });
+      return;
+    }
+    loadNativePresetByOffset(-1);
+  }, [
+    loadNativePresetByOffset,
+    loadNativePresetEntry,
+    nativePresetHistory,
+    nativePresetLibrary,
+  ]);
+
+  const randomNativeLibraryPreset = useCallback(() => {
+    if (nativePresetLibrary.length === 0) return;
+    const candidates = nativePresetLibrary.filter((preset) => preset.id !== activeNativePresetId);
+    const pool = candidates.length > 0 ? candidates : nativePresetLibrary;
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    loadNativePresetEntry(pool[randomIndex]);
+  }, [activeNativePresetId, loadNativePresetEntry, nativePresetLibrary]);
+
+  const toggleNativePresetFavorite = useCallback(() => {
+    if (!activeNativePresetId) return;
+    setNativeFavoritePresetIds((favoriteIds) => {
+      const nextFavoriteIds = favoriteIds.includes(activeNativePresetId)
+        ? favoriteIds.filter((id) => id !== activeNativePresetId)
+        : [activeNativePresetId, ...favoriteIds];
+      writeStoredNativePresetFavorites(nextFavoriteIds);
+      return nextFavoriteIds;
+    });
+  }, [activeNativePresetId]);
+
+  const toggleNativeLibraryMode = useCallback(() => {
+    setNativeLibraryMode((current) => {
+      const nextMode = current === 'favorites' ? 'all' : 'favorites';
+      window.localStorage.setItem(nativePresetLibraryModeStorageKey, nextMode);
+      return nextMode;
+    });
   }, []);
 
   useEffect(() => {
@@ -408,6 +556,25 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       engineRef.current.setPresetAutomation({ mode: nativeAutomationMode });
     }
   }, [engineType, nativeAutomationMode]);
+
+  useEffect(() => {
+    setNativeFavoritePresetIds((favoriteIds) => {
+      const nextFavoriteIds = pruneNativePresetFavorites(favoriteIds, nativePresetLibrary);
+      if (nextFavoriteIds.length !== favoriteIds.length) {
+        writeStoredNativePresetFavorites(nextFavoriteIds);
+        if (nextFavoriteIds.length === 0 && nativeLibraryMode === 'favorites') {
+          setNativeLibraryMode('all');
+          window.localStorage.setItem(nativePresetLibraryModeStorageKey, 'all');
+        }
+        return nextFavoriteIds;
+      }
+      return favoriteIds;
+    });
+    setNativePresetHistory((history) => {
+      const libraryIds = new Set(nativePresetLibrary.map((preset) => preset.id));
+      return history.filter((id) => libraryIds.has(id));
+    });
+  }, [nativeLibraryMode, nativePresetLibrary]);
 
   useEffect(() => {
     sizeCanvas();
@@ -588,30 +755,18 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
   const loadNativeLibraryPreset = useCallback((event) => {
     const preset = nativePresetLibrary.find((entry) => entry.id === event.target.value);
-    if (!preset || !engineRef.current?.loadPresetText) return;
-
-    try {
-      setError(null);
-      const loadedPresetName = engineRef.current.loadPresetText(
-        preset.source,
-        preset.fileName,
-        { textureAssets: preset.textureAssets },
-      );
-      window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(preset));
-      setActiveNativePresetId(preset.id);
-      setPresetName(loadedPresetName);
-      sizeCanvas();
-    } catch (presetError) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load native MilkDrop preset from library', presetError);
-      setError(presetError?.message || 'Native preset load failed.');
-    }
-  }, [nativePresetLibrary, sizeCanvas]);
+    loadNativePresetEntry(preset);
+  }, [loadNativePresetEntry, nativePresetLibrary]);
 
   const clearNativePresetLibrary = useCallback(() => {
     window.localStorage.removeItem(nativePresetStorageKey);
     window.localStorage.removeItem(nativePresetLibraryStorageKey);
+    window.localStorage.removeItem(nativePresetFavoritesStorageKey);
+    window.localStorage.removeItem(nativePresetLibraryModeStorageKey);
     setActiveNativePresetId('');
+    setNativeFavoritePresetIds([]);
+    setNativeLibraryMode('all');
+    setNativePresetHistory([]);
     setNativePresetLibrary([]);
     setError(null);
   }, []);
@@ -625,15 +780,19 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       } else {
         window.localStorage.removeItem(nativePresetLibraryStorageKey);
       }
+      const nextFavoriteIds = pruneNativePresetFavorites(nativeFavoritePresetIds, nextLibrary);
+      setNativeFavoritePresetIds(nextFavoriteIds);
+      writeStoredNativePresetFavorites(nextFavoriteIds);
       return nextLibrary;
     });
+    setNativePresetHistory((history) => history.filter((id) => id !== activeNativePresetId));
     const storedNativePreset = readStoredNativePreset();
     if (storedNativePreset?.id === activeNativePresetId) {
       window.localStorage.removeItem(nativePresetStorageKey);
     }
     setActiveNativePresetId('');
     setError(null);
-  }, [activeNativePresetId]);
+  }, [activeNativePresetId, nativeFavoritePresetIds]);
 
   if (mode === 'off') return null;
 
@@ -700,22 +859,113 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             <>
               {nativePresetLibrary.length > 0 ? (
                 <Popup
-                  content="Reload a previously imported native preset."
+                  content={
+                    nativeLibraryMode === 'favorites'
+                      ? 'Reload a favorite native preset from this browser.'
+                      : 'Reload a previously imported native preset from this browser.'
+                  }
                   trigger={
                     <select
                       aria-label="Native MilkDrop preset library"
                       className="player-visualizer-native-library"
                       data-testid="visualizer-native-preset-library"
                       onChange={loadNativeLibraryPreset}
-                      value={activeNativePresetId}
+                      value={selectedNativePresetValue}
                     >
-                      <option value="">Presets</option>
-                      {nativePresetLibrary.map((preset) => (
+                      <option value="">
+                        {nativeLibraryMode === 'favorites' ? 'Favorites' : 'Presets'}
+                      </option>
+                      {visibleNativePresetLibrary.map((preset) => (
                         <option key={preset.id} value={preset.id}>
+                          {nativeFavoritePresetIds.includes(preset.id) ? '(favorite) ' : ''}
                           {preset.title || preset.fileName}
                         </option>
                       ))}
                     </select>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content={
+                    activeNativePresetIsFavorite
+                      ? 'Remove the active native preset from favorites.'
+                      : 'Mark the active native preset as a favorite.'
+                  }
+                  trigger={
+                    <Button
+                      aria-label={
+                        activeNativePresetIsFavorite
+                          ? 'Unfavorite active native preset'
+                          : 'Favorite active native preset'
+                      }
+                      active={activeNativePresetIsFavorite}
+                      data-testid="visualizer-toggle-native-favorite"
+                      disabled={!activeNativePresetId}
+                      icon
+                      onClick={toggleNativePresetFavorite}
+                      size="mini"
+                    >
+                      <Icon name={activeNativePresetIsFavorite ? 'star' : 'star outline'} />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 0 ? (
+                <Popup
+                  content={
+                    nativeLibraryMode === 'favorites'
+                      ? 'Show all imported native presets.'
+                      : 'Show only favorite native presets.'
+                  }
+                  trigger={
+                    <Button
+                      aria-label={
+                        nativeLibraryMode === 'favorites'
+                          ? 'Show all native presets'
+                          : 'Show favorite native presets'
+                      }
+                      active={nativeLibraryMode === 'favorites'}
+                      data-testid="visualizer-toggle-native-favorites-only"
+                      disabled={nativeFavoritePresetIds.length === 0}
+                      icon
+                      onClick={toggleNativeLibraryMode}
+                      size="mini"
+                    >
+                      <Icon name="filter" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 1 ? (
+                <Popup
+                  content="Return to the previous native preset, or move backward in the local preset library."
+                  trigger={
+                    <Button
+                      aria-label="Previous native preset"
+                      data-testid="visualizer-previous-native-preset"
+                      icon
+                      onClick={previousNativeLibraryPreset}
+                      size="mini"
+                    >
+                      <Icon name="step backward" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {nativePresetLibrary.length > 1 ? (
+                <Popup
+                  content="Jump to a random imported native preset from this browser."
+                  trigger={
+                    <Button
+                      aria-label="Random imported native preset"
+                      data-testid="visualizer-random-native-preset"
+                      icon
+                      onClick={randomNativeLibraryPreset}
+                      size="mini"
+                    >
+                      <Icon name="random" />
+                    </Button>
                   }
                 />
               ) : null}
