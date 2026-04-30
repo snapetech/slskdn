@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z174. Singleton Services Must Not Capture Scoped Pod Storage
+
+**The Bug**: `ListeningPartyService` was registered as a singleton to keep live party state, but its constructor took scoped `IPodMessageStorage`, causing startup DI validation to fail with `Cannot consume scoped service 'slskd.PodCore.IPodMessageStorage' from singleton`.
+
+**Files Affected**:
+- `src/slskd/ListeningParty/ListeningPartyService.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+public ListeningPartyService(IPodMessageStorage messageStorage)
+{
+    _messageStorage = messageStorage;
+}
+```
+
+**Correct**:
+```csharp
+public ListeningPartyService(IServiceScopeFactory scopeFactory)
+{
+    _scopeFactory = scopeFactory;
+}
+
+using var scope = _scopeFactory.CreateScope();
+var messageStorage = scope.ServiceProvider.GetRequiredService<IPodMessageStorage>();
+```
+
+**Why This Keeps Happening**: Live coordination services often need singleton lifetime for in-memory state, while PodCore persistence services are scoped because they own disposable EF/SQLite contexts. Keep singleton state in the singleton, but resolve scoped persistence dependencies per operation through an explicit scope.
+
 ### 0z173. Initial Winget Submissions Should Use Singleton Manifests
 
 **The Bug**: WingetCreate's multi-file directory submission path repeatedly failed validation in CI with misleading duplicate manifest type and inconsistent package field errors, even after the files had matching identifiers, matching versions, a repository-shaped path, valid YAML, and accepted portable zip layout.
