@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z226. Now-Playing Helpers Must Accept Empty Player State
+
+**The Bug**: A browser-local player ratings helper assumed the now-playing track object was always present. `PlayerBar` calls helper code during its initial render before a track is selected, so reading `track.contentId` from `null` crashed every player test.
+
+**Files Affected**:
+- `src/web/src/lib/playerRatings.js`
+- `src/web/src/components/Player/PlayerBar.jsx`
+
+**Wrong**:
+```javascript
+export const getPlayerRatingKey = (track = {}) => {
+  if (track.contentId) return `content:${track.contentId}`;
+};
+```
+
+**Correct**:
+```javascript
+export const getPlayerRatingKey = (track = {}) => {
+  if (!track) return '';
+  if (track.contentId) return `content:${track.contentId}`;
+};
+```
+
+**Why This Keeps Happening**: Player helpers are often written against the active-track shape, but the player shell renders in a ready/empty state first. Any helper called from `PlayerBar` render effects must treat `null` current track as normal state and return an inert value.
+
 ### 0z225. Interpolated Raw Strings Need Extra Dollar Signs For JavaScript Braces
 
 **The Bug**: A controller callback HTML response used an interpolated raw string containing JavaScript object braces. The string started with a single `$"""`, so C# treated the JavaScript `{{ ... }}` content as interpolation syntax and the backend failed to compile.
