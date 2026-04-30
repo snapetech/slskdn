@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z205. Semantic UI Tabs Remount Inactive Chat/Room Sessions By Default
+
+**The Bug**: Switching chat or room tabs looked like a full page refresh because Semantic UI React's `Tab` unmounted inactive panes, rebuilding the active session and refetching state on every tab change.
+
+**Files Affected**:
+- `src/web/src/components/Chat/Chat.jsx`
+- `src/web/src/components/Chat/ChatSession.jsx`
+- `src/web/src/components/Rooms/Rooms.jsx`
+- `src/web/src/components/Rooms/RoomSession.jsx`
+
+**Wrong**:
+```jsx
+<Tab panes={panes} />
+```
+
+**Correct**:
+```jsx
+<Tab
+  panes={panes}
+  renderActiveOnly={false}
+/>
+```
+
+**Why This Keeps Happening**: Semantic UI's default is optimized for rendering only the visible pane, but chat and room panes hold live UI state, scroll position, inputs, and polling behavior. Keep panes mounted and explicitly gate polling or acknowledgment work to the active pane so switching tabs preserves the session without multiplying background network load.
+
 ### 0z204. Packaged Config Writes Must Preserve Service Read Access
 
 **The Bug**: Rewriting `/etc/slskd/slskd.yml` with `0600 root:root` made the systemd service fail at startup because the service runs as `slskd:slskd` and could no longer read its config.
