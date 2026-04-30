@@ -3,7 +3,7 @@
 - Added a tooltipped clear-library button for native visualizer mode when imported presets exist.
 - Clearing removes both the last imported native preset and the capped local preset library from browser storage.
 - Added component coverage for importing a preset, clearing the library, and removing the selector from the overlay.
-- Validation pending in this continuation: focused native/player tests, native browser smoke, frontend lint, frontend build, and `git diff --check`.
+- Validation: focused native/player tests passed with `44/44` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
 
 ## 2026-04-30 05:28Z - Added native MilkDrop unary and shift expression operators
 

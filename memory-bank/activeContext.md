@@ -5,9 +5,10 @@
   - added a tooltipped clear-library button in native visualizer mode when imported presets exist
   - clearing removes the last imported native preset and the capped local preset library from browser storage
   - added component coverage that imports a preset, clears the library, and verifies the selector disappears
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
 - Next steps:
-  1. Run the focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks.
-  2. Continue toward richer preset-pack management or shader translation after validation.
+  1. Continue toward richer preset-pack management or shader translation.
+  2. Add per-preset removal or search/filter once the overlay has enough imported presets to justify it.
 
 ## Update 2026-04-30 05:28:58Z
 
