@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z175. Hosted Policy Services Must Be Registered
+
+**The Bug**: `GoldStarClubService` existed as a `BackgroundService`, but it was not registered in DI, so startup policy around creating and joining the Gold Star Club pod never ran.
+
+**Files Affected**:
+- `src/slskd/PodCore/GoldStarClubService.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```csharp
+public sealed class GoldStarClubService : BackgroundService, IGoldStarClubService
+{
+    // service implementation exists
+}
+```
+
+with no matching service registration.
+
+**Correct**:
+```csharp
+services.AddSingleton<PodCore.GoldStarClubService>();
+services.AddSingleton<PodCore.IGoldStarClubService>(sp => sp.GetRequiredService<PodCore.GoldStarClubService>());
+services.AddHostedService(sp => sp.GetRequiredService<PodCore.GoldStarClubService>());
+```
+
+**Why This Keeps Happening**: Background services are inert until registered. When adding daemon policy services, verify both the typed interface and hosted-service registration path, especially when tests instantiate the class directly and can pass without proving production startup behavior.
+
 ### 0z174. Singleton Services Must Not Capture Scoped Pod Storage
 
 **The Bug**: `ListeningPartyService` was registered as a singleton to keep live party state, but its constructor took scoped `IPodMessageStorage`, causing startup DI validation to fail with `Cannot consume scoped service 'slskd.PodCore.IPodMessageStorage' from singleton`.
