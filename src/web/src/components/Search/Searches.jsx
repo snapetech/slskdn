@@ -5,6 +5,7 @@ import {
   getStoredAcquisitionProfileId,
   setStoredAcquisitionProfileId,
 } from '../../lib/acquisitionProfiles';
+import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import { createSearchHubConnection } from '../../lib/hubFactory';
 import { getCapabilities } from '../../lib/slskdn';
 import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
@@ -319,6 +320,29 @@ const Searches = ({ server } = {}) => {
     }
   };
 
+  const addCurrentSearchToDiscoveryInbox = () => {
+    const ref = inputRef?.current?.inputRef?.current;
+    const searchText = `${ref?.value || ''}`.trim();
+
+    if (!searchText) {
+      toast.error('Please enter a search phrase');
+      return;
+    }
+
+    const item = addDiscoveryInboxItem({
+      acquisitionProfile: acquisitionProfile.id,
+      evidenceKey: `manual-search:${searchText.toLowerCase()}:${acquisitionProfile.id}`,
+      networkImpact:
+        'Local review only; no peer browse, search, or download starts until approval is wired to an acquisition action.',
+      reason: `Saved from Search while using the ${acquisitionProfile.label} acquisition profile.`,
+      searchText,
+      source: 'Search',
+      title: searchText,
+    });
+
+    toast.success(`Added "${item.title}" to Discovery Inbox`);
+  };
+
   // delete a search
   const remove = async (search) => {
     try {
@@ -428,6 +452,7 @@ const Searches = ({ server } = {}) => {
                   position="top center"
                   trigger={
                     <Button
+                      aria-label="Queue search"
                       disabled={creating || !normalizedServer.isConnected}
                       icon="plus"
                       onClick={create}
@@ -439,9 +464,22 @@ const Searches = ({ server } = {}) => {
                   position="top center"
                   trigger={
                     <Button
+                      aria-label="Search and open results"
                       disabled={creating || !normalizedServer.isConnected}
                       icon="search"
                       onClick={() => create({ navigate: true })}
+                    />
+                  }
+                />
+                <Popup
+                  content="Save this search phrase to the Discovery Inbox for review before any acquisition work starts."
+                  position="top center"
+                  trigger={
+                    <Button
+                      aria-label="Add search phrase to Discovery Inbox"
+                      disabled={creating}
+                      icon="inbox"
+                      onClick={addCurrentSearchToDiscoveryInbox}
                     />
                   }
                 />

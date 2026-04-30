@@ -17,6 +17,7 @@ import Network from './Network';
 import Options from './Options';
 import Security from './Security';
 import Shares from './Shares';
+import SourceProviders from './SourceProviders';
 import SwarmAnalytics from './SwarmAnalytics';
 import React from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -210,6 +211,19 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'automations',
+    },
+    {
+      menuItem: {
+        content: 'Source Providers',
+        icon: 'random',
+        key: 'source-providers',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <SourceProviders />
+        </Tab.Pane>
+      ),
+      route: 'source-providers',
     },
     {
       menuItem: {

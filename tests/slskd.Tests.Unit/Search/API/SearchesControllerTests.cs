@@ -123,6 +123,79 @@ public class SearchesControllerTests
     }
 
     [Fact]
+    public async Task Post_AppliesAcquisitionProfileDefaultsBeforeDispatch()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ReturnsAsync(new slskd.Search.Search { Id = Guid.NewGuid(), SearchText = "rare track" });
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest
+        {
+            AcquisitionProfile = "rare-hunt",
+            SearchText = "rare track",
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        searchService.Verify(
+            service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.Is<SearchOptions>(options =>
+                    options.SearchTimeout == 30000 &&
+                    options.ResponseLimit == 250 &&
+                    options.FileLimit == 25000),
+                It.IsAny<List<string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Post_ExplicitSearchOptionsOverrideAcquisitionProfileDefaults()
+    {
+        var searchService = new Mock<ISearchService>();
+        searchService
+            .Setup(service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.IsAny<SearchOptions>(),
+                It.IsAny<List<string>>()))
+            .ReturnsAsync(new slskd.Search.Search { Id = Guid.NewGuid(), SearchText = "quick track" });
+
+        var controller = CreateController(searchService);
+
+        var result = await controller.Post(new SearchRequest
+        {
+            AcquisitionProfile = "fast-good-enough",
+            FileLimit = 8,
+            ResponseLimit = 7,
+            SearchText = "quick track",
+            SearchTimeout = 12,
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        searchService.Verify(
+            service => service.StartAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<SearchQuery>(),
+                It.IsAny<SearchScope>(),
+                It.Is<SearchOptions>(options =>
+                    options.SearchTimeout == 12000 &&
+                    options.ResponseLimit == 7 &&
+                    options.FileLimit == 8),
+                It.IsAny<List<string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetAll_WithNegativeLimit_ReturnsBadRequest()
     {
         var controller = CreateController();

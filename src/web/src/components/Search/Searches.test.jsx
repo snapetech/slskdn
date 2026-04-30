@@ -156,4 +156,29 @@ describe('Searches', () => {
     expect(screen.getByRole('button', { name: 'Expand Search' })).toBeInTheDocument();
     expect(screen.queryByTestId('search-input')).not.toBeInTheDocument();
   });
+
+  it('adds the current search phrase to the Discovery Inbox', async () => {
+    const input = await renderSearches();
+
+    fireEvent.change(input, { target: { value: 'unreleased demo' } });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add search phrase to Discovery Inbox' }),
+    );
+
+    const persisted = JSON.parse(
+      localStorage.getItem('slskdn.discoveryInbox.items'),
+    );
+
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]).toEqual(
+      expect.objectContaining({
+        acquisitionProfile: 'lossless-exact',
+        evidenceKey: 'manual-search:unreleased demo:lossless-exact',
+        searchText: 'unreleased demo',
+        source: 'Search',
+        state: 'Suggested',
+        title: 'unreleased demo',
+      }),
+    );
+  });
 });

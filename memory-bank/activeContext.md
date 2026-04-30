@@ -1,3 +1,78 @@
+## Update 2026-04-30 19:36:05Z
+
+- Current task: None. Player local-audio file explorer redesign is implemented locally.
+- Last activity:
+  - added a path-aware, paged `/api/v0/library/items/browser` endpoint for local/shared library browsing
+  - replaced the player flat file picker with a fullscreen explorer modal with folder navigation, breadcrumbs, recursive search, duplicate collapse, copy counts, paging, and row play actions
+  - documented the flat-picker gotcha and committed it immediately as `8ed962b59`
+  - validated focused PlayerBar tests, focused LibraryItemsController tests, frontend lint, production build, and whitespace checks
+- Next steps:
+  1. Run the full repo `dotnet test` and `./bin/lint` when the surrounding dirty workspace is ready for broad validation.
+  2. Consider adding backend folder-level counts from the share repository directly if very large libraries need faster root-folder summary generation.
+
+## Update 2026-04-30 19:35:00Z
+
+- Current task: Import Staging first slice is implemented locally.
+- Last activity:
+  - added browser-local import staging persistence
+  - added `/import-staging` navigation and review UI
+  - added file-picker intake that records local file metadata only
+  - added staged, ready, imported, rejected, and failed state handling without library mutation
+  - validated focused import staging tests
+- Next steps:
+  1. Add a reusable metadata matcher service as the next P3 Safe Acquisition Pipeline story.
+  2. Connect staged import rows to backend library scan/import APIs only after explicit review and mutation safeguards are in place.
+
+## Update 2026-04-30 19:33:40Z
+
+- Current task: Wishlist/request-state unification is implemented locally.
+- Last activity:
+  - added shared Web UI acquisition request state mapping over Wishlist and Discovery Inbox evidence
+  - added Wishlist Request State labels for disabled, wanted, automatic, review, approved, snoozed, rejected, staged, imported, and failed states
+  - added a Wishlist action to send a saved search to Discovery Inbox review without starting network or download work
+  - validated focused acquisition request, Discovery Inbox, and Wishlist tests
+- Next steps:
+  1. Add import staging scan/review as the next P3 Safe Acquisition Pipeline story.
+  2. Connect Approved Discovery Inbox requests to explicit backend acquisition planning once staging exists.
+
+## Update 2026-04-30 19:28:39Z
+
+- Current task: Discovery Inbox first slice is implemented locally.
+- Last activity:
+  - added browser-local Discovery Inbox persistence and review UI
+  - wired `/discovery-inbox` navigation and route
+  - added a Search-page action that saves the current phrase into the inbox with the selected acquisition profile
+  - kept the slice review-only; no peer search, browse, or download starts from the inbox
+  - fixed and documented rejected-evidence suppression as `f6d015a80`
+  - validated focused Discovery Inbox/Search tests, frontend lint, and frontend production build
+- Next steps:
+  1. Connect Approved inbox candidates to backend-backed acquisition planning with explicit opt-in execution.
+  2. Add candidate promotion from Discography Concierge, SongID, and Discovery Graph evidence sources.
+
+## Update 2026-04-30 19:36:08Z
+
+- Current task: T-934 Realm-Curated Subject Indexes first slice is implemented locally.
+- Last activity:
+  - added signed realm subject-index artifacts and validation under `Mesh/Realm/SubjectIndex`
+  - added a local registry/resolver that returns realm/index/revision provenance for recording MBID matches
+  - registered the service with realm DI
+  - validated focused `RealmSubjectIndexServiceTests`
+- Next steps:
+  1. Route subject-index revisions through realm governance proposal/review/accept/reject flows.
+  2. Add UI conflict display for disagreements between realm indexes, MusicBrainz, and other subscribed realms.
+
+## Update 2026-04-30 19:27:01Z
+
+- Current task: T-933 Federated Taste Recommendations backend is implemented locally.
+- Last activity:
+  - added `TasteRecommendationService`, request/result models, DI registration, and `/api/v0/taste-recommendations`
+  - recommendations are computed locally from accepted inbound ActivityPub music WorkRefs and followed remote actors only
+  - service-layer k-anonymity hides candidates until two trusted sources mention the same work and omits source actor IDs by default
+  - validated focused `TasteRecommendationServiceTests`
+- Next steps:
+  1. Add a Web UI recommendation card surface with Discovery Graph/Wishlist actions.
+  2. Extend ranking with explicit Discovery Graph neighborhood proximity once the UI surface is in place.
+
 ## Update 2026-04-30 19:17:59Z
 
 - Current task: None. Web UI affordance audit/backfill is complete.
@@ -45,6 +120,17 @@
 - Next steps:
   1. Commit the implementation and memory-bank updates with the current dirty workspace when requested.
   2. Keep any further visual polish centralized in `App.css` unless a page has a genuine local surface leak.
+
+## Update 2026-04-30 19:26:00Z
+
+- Current task: Native MilkDrop Phase 2 shader-side audio access is implemented locally.
+- Last activity:
+  - expanded translated shader FFT uniforms from 32 to 64 bins
+  - added signed waveform uniform bins and `get_waveform(pos)` shader helper
+  - validated shader translator/renderer tests, broader native/player tests, native browser smoke, frontend lint, and frontend build
+- Next steps:
+  1. Run final whitespace/status checks.
+  2. Commit and push the shader audio access phase.
 
 ## Update 2026-04-30 19:22:00Z
 
@@ -2523,3 +2609,25 @@ dotnet test
 - Next steps:
   1. Implement the profile policy layer that maps acquisition profiles to ranking, source selection, retry, and network-impact defaults.
   2. Promote more Automation Center recipes from visible local toggles into backend-backed job definitions.
+
+## Update 2026-04-30 19:25:59Z
+
+- Current task: Feature-expansion burn-down is continuing.
+- Last activity:
+  - mapped known acquisition profiles to bounded backend search option defaults
+  - kept explicit request options as overrides for all mapped profile values
+  - added controller coverage for profile default application and explicit override behavior
+- Next steps:
+  1. Extend profile policy beyond `SearchOptions` into result ranking and source preference.
+  2. Move Automation Center recipe state from browser storage into backend-backed configuration/jobs.
+
+## Update 2026-04-30 19:36:09Z
+
+- Current task: Feature-expansion burn-down is continuing from the top of the list.
+- Last activity:
+  - added a read-only native source-provider catalog API
+  - added System -> Source Providers with provider enablement, registration, capabilities, risk, network policy, and disabled reasons
+  - kept the provider catalog non-invasive with no peer contact or credential checks
+- Next steps:
+  1. Continue down the beginning of the expansion list into provider ordering/profile policy.
+  2. Avoid Discovery Inbox, Taste Recommendations, and MilkDrop files while parallel agents are actively editing them.

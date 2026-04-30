@@ -5,6 +5,7 @@ namespace slskd.Mesh.Realm
 {
     using Microsoft.Extensions.DependencyInjection;
     using slskd.Mesh.Realm.Migration;
+    using slskd.Mesh.Realm.SubjectIndex;
 
     /// <summary>
     ///     Extension methods for registering realm services.
@@ -35,6 +36,9 @@ namespace slskd.Mesh.Realm
 
             // Register migration services (T-REALM-05)
             services.AddRealmMigrationServices();
+
+            // Register realm-curated subject indexes (T-934)
+            services.AddSingleton<IRealmSubjectIndexService, RealmSubjectIndexService>();
 
             return services;
         }

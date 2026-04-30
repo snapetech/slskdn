@@ -39,6 +39,7 @@ namespace slskd.SocialFederation
             services.AddSingleton<IActivityPubInboxStore, ActivityPubInboxStore>();
             services.AddSingleton<IActivityPubOutboxStore, ActivityPubOutboxStore>();
             services.AddSingleton<IActivityPubRelationshipStore, ActivityPubRelationshipStore>();
+            services.AddSingleton<ITasteRecommendationService, TasteRecommendationService>();
 
             // Register activity delivery service
             services.AddSingleton<ActivityDeliveryService>(sp =>

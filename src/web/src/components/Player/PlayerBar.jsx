@@ -33,6 +33,7 @@ const karaokeStorageKey = 'slskdn.player.karaokeEnabled';
 const crossfadeStorageKey = 'slskdn.player.crossfadeEnabled';
 const visualTileStorageKey = 'slskdn.player.visualTileMode';
 const analyzerModeStorageKey = 'slskdn.player.analyzerMode';
+const playerBrowserPageSize = 80;
 
 const readStoredBoolean = (key) => {
   return getLocalStorageItem(key) === 'true';
@@ -116,6 +117,16 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
   const [collectionItems, setCollectionItems] = useState([]);
   const [collectionItemsLoading, setCollectionItemsLoading] = useState(false);
   const [items, setItems] = useState([]);
+  const [browserDirectories, setBrowserDirectories] = useState([]);
+  const [browserBreadcrumbs, setBrowserBreadcrumbs] = useState([]);
+  const [browserHasMore, setBrowserHasMore] = useState(false);
+  const [browserOffset, setBrowserOffset] = useState(0);
+  const [browserPath, setBrowserPath] = useState('');
+  const [browserStats, setBrowserStats] = useState({
+    duplicatesRemoved: 0,
+    totalDirectories: 0,
+    totalFiles: 0,
+  });
   const [filesOpen, setFilesOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [itemsLoading, setItemsLoading] = useState(false);
@@ -137,8 +148,14 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
   }, []);
 
   useEffect(() => {
+    if (!filesOpen) return undefined;
+
     if (query && query.length < 2) {
       setItems([]);
+      setBrowserDirectories([]);
+      setBrowserBreadcrumbs([]);
+      setBrowserHasMore(false);
+      setBrowserStats({ duplicatesRemoved: 0, totalDirectories: 0, totalFiles: 0 });
       return undefined;
     }
 
@@ -146,12 +163,34 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
     const timeoutId = window.setTimeout(() => {
       setItemsLoading(true);
       collectionsAPI
-        .searchLibraryItems(query, 'Audio', 12)
+        .browseLibraryItems({
+          kinds: 'Audio',
+          limit: playerBrowserPageSize,
+          offset: browserOffset,
+          path: browserPath,
+          query,
+        })
         .then((response) => {
-          if (!canceled) setItems(response.data?.items || []);
+          if (!canceled) {
+            setItems(response.data?.files || []);
+            setBrowserDirectories(response.data?.directories || []);
+            setBrowserBreadcrumbs(response.data?.breadcrumbs || []);
+            setBrowserHasMore(Boolean(response.data?.hasMore));
+            setBrowserStats({
+              duplicatesRemoved: response.data?.duplicatesRemoved || 0,
+              totalDirectories: response.data?.totalDirectories || 0,
+              totalFiles: response.data?.totalFiles || 0,
+            });
+          }
         })
         .catch(() => {
-          if (!canceled) setItems([]);
+          if (!canceled) {
+            setItems([]);
+            setBrowserDirectories([]);
+            setBrowserBreadcrumbs([]);
+            setBrowserHasMore(false);
+            setBrowserStats({ duplicatesRemoved: 0, totalDirectories: 0, totalFiles: 0 });
+          }
         })
         .finally(() => {
           if (!canceled) setItemsLoading(false);
@@ -162,7 +201,7 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
       canceled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [query]);
+  }, [browserOffset, browserPath, filesOpen, query]);
 
   const selectCollection = (collection) => {
     setSelectedCollection(collection);
@@ -179,6 +218,29 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
     setFilesOpen(false);
     setCollectionsOpen(false);
   };
+
+  const openFileBrowser = () => {
+    setBrowserOffset(0);
+    setBrowserPath('');
+    setFilesOpen(true);
+    setQuery('');
+  };
+
+  const openBrowserPath = (path) => {
+    setBrowserOffset(0);
+    setBrowserPath(path || '');
+    setQuery('');
+  };
+
+  const updateBrowserQuery = (value) => {
+    setBrowserOffset(0);
+    setQuery(value || '');
+  };
+
+  const shownFileCount = Math.min(
+    browserOffset + items.length,
+    browserStats.totalFiles,
+  );
 
   return (
     <div className="player-launcher">
@@ -211,7 +273,7 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
             data-testid="player-open-file-browser"
             icon
             labelPosition={compact ? undefined : 'left'}
-            onClick={() => setFilesOpen(true)}
+            onClick={openFileBrowser}
             size="small"
             title="Open local audio file browser"
           >
@@ -339,69 +401,185 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
         data-testid="player-file-browser-modal"
         onClose={() => setFilesOpen(false)}
         open={filesOpen}
-        size="large"
+        size="fullscreen"
       >
-        <Modal.Header>Browse Local Audio</Modal.Header>
+        <Modal.Header>Browse Local Audio Library</Modal.Header>
         <Modal.Content>
-          <Input
-            data-testid="player-file-browser-search"
-            fluid
-            icon="search"
-            onChange={(_, { value }) => setQuery(value || '')}
-            placeholder="Search shared and downloaded audio"
-            value={query}
-          />
-          <div className="player-browser-results">
-            {itemsLoading ? (
-              <Message info>Loading audio files...</Message>
-            ) : items.length === 0 ? (
-              <Message info>
-                {query && query.length < 2
-                  ? 'Type at least two characters to search.'
-                  : 'No local audio files found.'}
-              </Message>
-            ) : (
-              <Table compact selectable>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.HeaderCell>File</Table.HeaderCell>
-                    <Table.HeaderCell>Path</Table.HeaderCell>
-                    <Table.HeaderCell collapsing>Action</Table.HeaderCell>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {items.map((item) => (
-                    <Table.Row
-                      data-testid={`player-file-row-${item.contentId}`}
-                      key={item.contentId}
+          <div className="player-file-explorer">
+            <div className="player-file-explorer-toolbar">
+              <Input
+                data-testid="player-file-browser-search"
+                fluid
+                icon="search"
+                onChange={(_, { value }) => updateBrowserQuery(value)}
+                placeholder="Search all audio by file, artist folder, album folder, or path"
+                value={query}
+              />
+              <div className="player-file-explorer-counts">
+                {itemsLoading
+                  ? 'Loading...'
+                  : `${shownFileCount} of ${browserStats.totalFiles} tracks`}
+                {browserStats.duplicatesRemoved > 0
+                  ? `, ${browserStats.duplicatesRemoved} duplicates collapsed`
+                  : ''}
+              </div>
+            </div>
+
+            <div className="player-file-explorer-breadcrumbs">
+              {(browserBreadcrumbs.length > 0
+                ? browserBreadcrumbs
+                : [{ name: 'Library', path: '' }]).map((breadcrumb, index) => (
+                  <React.Fragment key={breadcrumb.path || 'library'}>
+                    {index > 0 ? <Icon name="angle right" /> : null}
+                    <button
+                      className="player-file-breadcrumb"
+                      data-testid={`player-file-breadcrumb-${index}`}
+                      onClick={() => openBrowserPath(breadcrumb.path)}
+                      title={`Open ${breadcrumb.name}`}
+                      type="button"
                     >
-                      <Table.Cell>
-                        <strong>{item.fileName || item.contentId}</strong>
-                        <div className="player-picker-meta">
-                          {item.mediaKind || 'Audio'}
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>{item.path}</Table.Cell>
-                      <Table.Cell collapsing>
-                        <Popup
-                          content="Play this local file in the browser player."
-                          trigger={
-                            <Button
-                              data-testid={`player-play-file-${item.contentId}`}
-                              icon
-                              onClick={() => playAndClose(item)}
-                              size="small"
-                            >
-                              <Icon name="play" />
-                            </Button>
-                          }
-                        />
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table>
-            )}
+                      {breadcrumb.name}
+                    </button>
+                  </React.Fragment>
+              ))}
+            </div>
+
+            <div className="player-file-explorer-body">
+              <aside className="player-file-explorer-folders">
+                <div className="player-file-explorer-section-title">
+                  Folders
+                </div>
+                {query ? (
+                  <Message info compact>
+                    Clear search to browse folders.
+                  </Message>
+                ) : browserDirectories.length === 0 ? (
+                  <Message info compact>
+                    No child folders here.
+                  </Message>
+                ) : (
+                  browserDirectories.map((directory) => (
+                    <button
+                      className="player-file-folder-row"
+                      data-testid={`player-file-folder-${directory.path}`}
+                      key={directory.path}
+                      onClick={() => openBrowserPath(directory.path)}
+                      title={`Open ${directory.name}`}
+                      type="button"
+                    >
+                      <Icon name="folder" />
+                      <span>
+                        <strong>{directory.name}</strong>
+                        <small>
+                          {directory.fileCount} tracks
+                          {directory.childDirectoryCount
+                            ? `, ${directory.childDirectoryCount} folders`
+                            : ''}
+                        </small>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </aside>
+
+              <section className="player-file-explorer-files">
+                <div className="player-file-explorer-section-title">
+                  {query ? 'Search Results' : browserPath || 'Library Root'}
+                </div>
+                {itemsLoading ? (
+                  <Message info>Loading audio files...</Message>
+                ) : items.length === 0 ? (
+                  <Message info>
+                    {query && query.length < 2
+                      ? 'Type at least two characters to search.'
+                      : 'No local audio files found here.'}
+                  </Message>
+                ) : (
+                  <Table compact selectable>
+                    <Table.Header>
+                      <Table.Row>
+                        <Table.HeaderCell>Track</Table.HeaderCell>
+                        <Table.HeaderCell>Location</Table.HeaderCell>
+                        <Table.HeaderCell collapsing>Copies</Table.HeaderCell>
+                        <Table.HeaderCell collapsing>Action</Table.HeaderCell>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {items.map((item) => (
+                        <Table.Row
+                          data-testid={`player-file-row-${item.contentId}`}
+                          key={`${item.contentId}-${item.path}`}
+                          onDoubleClick={() => playAndClose(item)}
+                        >
+                          <Table.Cell>
+                            <strong>{item.fileName || item.contentId}</strong>
+                            <div className="player-picker-meta">
+                              {item.mediaKind || 'Audio'}
+                              {item.bytes ? ` - ${Math.round(item.bytes / 1024 / 1024)} MB` : ''}
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span className="player-file-path">{item.path}</span>
+                          </Table.Cell>
+                          <Table.Cell collapsing>
+                            {item.duplicateCount > 1 ? item.duplicateCount : ''}
+                          </Table.Cell>
+                          <Table.Cell collapsing>
+                            <Popup
+                              content="Play this local file in the browser player."
+                              trigger={
+                                <Button
+                                  aria-label={`Play ${item.fileName || item.contentId}`}
+                                  data-testid={`player-play-file-${item.contentId}`}
+                                  icon
+                                  onClick={() => playAndClose(item)}
+                                  size="small"
+                                  title={`Play ${item.fileName || item.contentId}`}
+                                >
+                                  <Icon name="play" />
+                                </Button>
+                              }
+                            />
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table>
+                )}
+                <div className="player-file-explorer-pager">
+                  <Popup
+                    content="Move to the previous page of files in this folder or search."
+                    trigger={
+                      <Button
+                        disabled={browserOffset === 0 || itemsLoading}
+                        onClick={() =>
+                          setBrowserOffset(Math.max(0, browserOffset - playerBrowserPageSize))
+                        }
+                        size="small"
+                      >
+                        <Icon name="angle left" />
+                        Previous
+                      </Button>
+                    }
+                  />
+                  <Popup
+                    content="Move to the next page of files in this folder or search."
+                    trigger={
+                      <Button
+                        disabled={!browserHasMore || itemsLoading}
+                        onClick={() =>
+                          setBrowserOffset(browserOffset + playerBrowserPageSize)
+                        }
+                        size="small"
+                      >
+                        Next
+                        <Icon name="angle right" />
+                      </Button>
+                    }
+                  />
+                </div>
+              </section>
+            </div>
           </div>
         </Modal.Content>
         <Modal.Actions>

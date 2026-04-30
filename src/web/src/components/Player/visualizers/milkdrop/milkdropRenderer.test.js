@@ -2,6 +2,7 @@ import {
   createMilkdropRenderer,
   createQRegisterScope,
   createShaderFftBins,
+  createShaderWaveformBins,
   createShapeFillColors,
   createShapeFillVertices,
   createShapeTextureUvs,
@@ -360,7 +361,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
         q64=0.64
         per_frame_1=q1=0.25;
         warp_shader=ret = tex2D(sampler_main, uv).rgb * tex2D(sampler_noise, uv).rgb * vec3(q1, get_fft(0.5), aspect);
-        comp_shader=ret = vec3(get_fft_hz(11025) + pixelSize.x, q64, treb + x + y);
+        comp_shader=ret = vec3(get_fft_hz(11025) + pixelSize.x, q64, get_waveform(0.5) + treb + x + y);
       `).primary,
       textureAssets: {
         sampler_noise: {
@@ -377,6 +378,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
         treb: 0.3,
       },
       sampleRate: 44100,
+      samples: [-1, 0, 1, 0.5],
       spectrum: [0, 128, 255, 64],
       time: 2,
     });
@@ -387,7 +389,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(shaderSources.some((source) => source.includes('uniform sampler2D shaderTexture0;')))
       .toBe(true);
     expect(shaderSources.some((source) =>
-      source.includes('vec3 ret = vec3(vec3(get_fft_hz(11025) + pixelSize.x, q64, treb + x + y))'))).toBe(true);
+      source.includes('vec3 ret = vec3(vec3(get_fft_hz(11025) + pixelSize.x, q64, get_waveform(0.5) + treb + x + y))'))).toBe(true);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 44100);
     expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 1);
@@ -402,7 +404,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.activeTexture).toHaveBeenCalledWith(gl.TEXTURE0 + 2);
     expect(gl.uniform1fv).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ length: 32 }),
+      expect.objectContaining({ length: 64 }),
     );
     expect(Array.from(createShaderFftBins([0, 128, 255, 64])).slice(0, 4)).toEqual([
       0,
@@ -410,7 +412,9 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       0,
       0,
     ]);
-    expect(createShaderFftBins([0, 128, 255, 64])[31]).toBeCloseTo(64 / 255);
+    expect(createShaderFftBins([0, 128, 255, 64])[63]).toBeCloseTo(64 / 255);
+    expect(createShaderWaveformBins([-1, 0, 1, 0.5])[0]).toBeCloseTo(-1);
+    expect(createShaderWaveformBins([-1, 0, 1, 0.5])[63]).toBeCloseTo(0.5);
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
   });
 

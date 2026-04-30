@@ -143,6 +143,83 @@ public class LibraryItemsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Browse library items by virtual share path.
+    /// </summary>
+    /// <param name="path">Virtual share path to browse. Empty path lists roots.</param>
+    /// <param name="query">Optional filename search. When present, searches recursively.</param>
+    /// <param name="kinds">Optional comma-separated list of media kinds.</param>
+    /// <param name="limit">Maximum number of files to return.</param>
+    /// <param name="offset">Zero-based file offset for paging.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Folder entries and a paged file result set.</returns>
+    [HttpGet("browser")]
+    [Authorize]
+    public async Task<IActionResult> BrowseItems(
+        [FromQuery] string? path = null,
+        [FromQuery] string? query = null,
+        [FromQuery] string? kinds = "Audio",
+        [FromQuery] int limit = 100,
+        [FromQuery] int offset = 0,
+        CancellationToken cancellationToken = default)
+    {
+        var browserPath = NormalizeVirtualPath(path);
+        query = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
+        kinds = string.IsNullOrWhiteSpace(kinds) ? null : kinds.Trim();
+        limit = Math.Clamp(limit, 1, 100);
+        offset = Math.Max(0, offset);
+
+        try
+        {
+            var directories = (await shareService.BrowseAsync()).ToList();
+            var codeToMasked = BuildCodeToMaskedFilenameMap();
+            var directoryEntries = query == null
+                ? BuildDirectoryEntries(directories, browserPath)
+                : new List<LibraryDirectoryResponse>();
+            var fileCandidates = BuildFileCandidates(directories, codeToMasked, browserPath, query, kinds);
+            var groupedFiles = fileCandidates
+                .GroupBy(file => query == null ? file.PathKey : file.DuplicateKey, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First() with { DuplicateCount = group.Count() })
+                .OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var pagedFiles = groupedFiles.Skip(offset).Take(limit).ToList();
+            var items = new List<LibraryItemResponse>();
+
+            foreach (var file in pagedFiles)
+            {
+                var item = await ConvertToLibraryItemAsync(
+                    file.File,
+                    file.RemoteFilename,
+                    cancellationToken,
+                    file.Path).ConfigureAwait(false);
+                if (item != null)
+                {
+                    item.DuplicateCount = file.DuplicateCount;
+                    items.Add(item);
+                }
+            }
+
+            return Ok(new
+            {
+                path = browserPath,
+                breadcrumbs = BuildBreadcrumbs(browserPath),
+                directories = directoryEntries,
+                files = items,
+                totalFiles = groupedFiles.Count,
+                totalDirectories = directoryEntries.Count,
+                offset,
+                limit,
+                hasMore = offset + items.Count < groupedFiles.Count,
+                duplicatesRemoved = fileCandidates.Count - groupedFiles.Count,
+            });
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Error browsing library items");
+            return StatusCode(500, new { error = "Internal server error" });
+        }
+    }
+
     private async Task<List<LibraryItemResponse>> SearchLocalDirectoriesAsync(
         string? query,
         string? kinds,
@@ -413,7 +490,8 @@ public class LibraryItemsController : ControllerBase
     private async Task<LibraryItemResponse?> ConvertToLibraryItemAsync(
         Soulseek.File file,
         string maskedFilename,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? displayPath = null)
     {
         try
         {
@@ -478,12 +556,12 @@ public class LibraryItemsController : ControllerBase
 
             var ext = Path.GetExtension(filename).TrimStart('.').ToLowerInvariant();
             var mediaKind = GetMediaKind(ext);
-            var fileName = Path.GetFileName(filename);
+            var fileName = GetVirtualFileName(displayPath ?? maskedFilename);
 
             return new LibraryItemResponse
             {
                 ContentId = contentId,
-                Path = Path.GetFileName(filename),
+                Path = displayPath ?? maskedFilename,
                 FileName = fileName,
                 Bytes = size,
                 MediaKind = mediaKind,
@@ -538,6 +616,156 @@ public class LibraryItemsController : ControllerBase
             : Path.GetRelativePath(root, fullPath);
     }
 
+    private static IReadOnlyList<LibraryBreadcrumbResponse> BuildBreadcrumbs(string path)
+    {
+        var breadcrumbs = new List<LibraryBreadcrumbResponse>
+        {
+            new() { Name = "Library", Path = string.Empty },
+        };
+        var current = string.Empty;
+        foreach (var part in SplitVirtualPath(path))
+        {
+            current = string.IsNullOrEmpty(current) ? part : $"{current}\\{part}";
+            breadcrumbs.Add(new LibraryBreadcrumbResponse { Name = part, Path = current });
+        }
+
+        return breadcrumbs;
+    }
+
+    private static List<LibraryDirectoryResponse> BuildDirectoryEntries(
+        IReadOnlyList<Soulseek.Directory> directories,
+        string path)
+    {
+        var prefix = string.IsNullOrEmpty(path) ? string.Empty : $"{path}\\";
+        return directories
+            .Select(directory => NormalizeVirtualPath(directory.Name))
+            .Where(directory => !string.Equals(directory, path, StringComparison.OrdinalIgnoreCase))
+            .Where(directory => string.IsNullOrEmpty(path)
+                ? !directory.Contains('\\')
+                : directory.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    && !directory[prefix.Length..].Contains('\\'))
+            .Select(directory =>
+            {
+                var childPrefix = $"{directory}\\";
+                var fileCount = directories
+                    .Where(candidate => string.Equals(NormalizeVirtualPath(candidate.Name), directory, StringComparison.OrdinalIgnoreCase))
+                    .SelectMany(candidate => candidate.Files ?? Enumerable.Empty<Soulseek.File>())
+                    .Count();
+                var childDirectoryCount = directories
+                    .Select(candidate => NormalizeVirtualPath(candidate.Name))
+                    .Count(candidate => candidate.StartsWith(childPrefix, StringComparison.OrdinalIgnoreCase)
+                        && !candidate[childPrefix.Length..].Contains('\\'));
+                return new LibraryDirectoryResponse
+                {
+                    Name = SplitVirtualPath(directory).LastOrDefault() ?? directory,
+                    Path = directory,
+                    FileCount = fileCount,
+                    ChildDirectoryCount = childDirectoryCount,
+                };
+            })
+            .OrderBy(directory => directory.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<LibraryFileCandidate> BuildFileCandidates(
+        IReadOnlyList<Soulseek.Directory> directories,
+        IReadOnlyDictionary<int, string> codeToMasked,
+        string path,
+        string? query,
+        string? kinds)
+    {
+        var queryLower = query?.ToLowerInvariant();
+        var kindSet = string.IsNullOrWhiteSpace(kinds)
+            ? null
+            : kinds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(k => k.ToLowerInvariant())
+                .ToHashSet();
+
+        return directories
+            .SelectMany(directory =>
+            {
+                var directoryPath = NormalizeVirtualPath(directory.Name);
+                return (directory.Files ?? Enumerable.Empty<Soulseek.File>()).Select(file =>
+                {
+                    var remoteFilename = codeToMasked.TryGetValue(file.Code, out var masked)
+                        ? masked
+                        : JoinVirtualPath(directoryPath, file.Filename);
+                    var displayPath = NormalizeVirtualPath(remoteFilename);
+                    return new LibraryFileCandidate(
+                        file,
+                        remoteFilename,
+                        displayPath,
+                        file.Size,
+                        GetVirtualFileName(displayPath));
+                });
+            })
+            .Where(candidate => queryLower == null
+                ? IsDirectChildFile(candidate.Path, path)
+                : candidate.Path.ToLowerInvariant().Contains(queryLower))
+            .Where(candidate =>
+            {
+                if (kindSet == null)
+                {
+                    return true;
+                }
+
+                var ext = Path.GetExtension(candidate.FileName).TrimStart('.').ToLowerInvariant();
+                return kindSet.Contains(GetMediaKind(ext).ToLowerInvariant());
+            })
+            .ToList();
+    }
+
+    private static bool IsDirectChildFile(string filePath, string directoryPath)
+    {
+        filePath = NormalizeVirtualPath(filePath);
+        var separatorIndex = filePath.LastIndexOf('\\');
+        var parent = separatorIndex < 0 ? string.Empty : filePath[..separatorIndex];
+        return string.Equals(parent, directoryPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string JoinVirtualPath(string directory, string filename)
+    {
+        directory = NormalizeVirtualPath(directory);
+        filename = NormalizeVirtualPath(filename);
+        return string.IsNullOrEmpty(directory) ? filename : $"{directory}\\{filename}";
+    }
+
+    private static string GetVirtualFileName(string path)
+    {
+        return SplitVirtualPath(path).LastOrDefault() ?? path;
+    }
+
+    private static string NormalizeVirtualPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            "\\",
+            path.Replace('/', '\\')
+                .Split('\\', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    private static IReadOnlyList<string> SplitVirtualPath(string path)
+    {
+        return NormalizeVirtualPath(path)
+            .Split('\\', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private record LibraryFileCandidate(
+        Soulseek.File File,
+        string RemoteFilename,
+        string Path,
+        long Bytes,
+        string FileName)
+    {
+        public int DuplicateCount { get; init; } = 1;
+        public string DuplicateKey => $"{FileName}|{Bytes}";
+        public string PathKey => Path;
+    }
+
     private class LibraryItemResponse
     {
         public string ContentId { get; set; } = string.Empty;
@@ -546,5 +774,20 @@ public class LibraryItemsController : ControllerBase
         public long Bytes { get; set; }
         public string MediaKind { get; set; } = string.Empty;
         public string? Sha256 { get; set; }
+        public int DuplicateCount { get; set; } = 1;
+    }
+
+    private class LibraryDirectoryResponse
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+        public int FileCount { get; set; }
+        public int ChildDirectoryCount { get; set; }
+    }
+
+    private class LibraryBreadcrumbResponse
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
     }
 }

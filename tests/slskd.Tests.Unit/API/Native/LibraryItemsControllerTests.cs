@@ -315,6 +315,112 @@ public class LibraryItemsControllerTests
     }
 
     [Fact]
+    public async Task BrowseItems_ListsChildFoldersAndPagedFilesForPath()
+    {
+        var directories = new List<Soulseek.Directory>
+        {
+            new Soulseek.Directory("Music"),
+            new Soulseek.Directory("Music\\Artist", new List<Soulseek.File>
+            {
+                new Soulseek.File(1, "song1.mp3", 1024, ".mp3"),
+                new Soulseek.File(2, "song2.flac", 2048, ".flac")
+            }),
+            new Soulseek.Directory("Music\\Artist\\Live", new List<Soulseek.File>
+            {
+                new Soulseek.File(3, "song3.ogg", 1024, ".ogg")
+            })
+        };
+
+        shareServiceMock
+            .Setup(x => x.BrowseAsync(It.IsAny<slskd.Shares.Share>()))
+            .ReturnsAsync(directories);
+
+        shareServiceMock
+            .Setup(x => x.ResolveFileAsync(It.IsAny<string>()))
+            .ReturnsAsync((string filename) => ("local", filename, 1024L));
+
+        var result = await controller.BrowseItems(
+            path: "Music/Artist",
+            query: null,
+            kinds: "Audio",
+            limit: 1,
+            offset: 0,
+            CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var responseType = okResult.Value!.GetType();
+        var directoriesProp = responseType.GetProperty("directories");
+        var filesProp = responseType.GetProperty("files");
+        var hasMoreProp = responseType.GetProperty("hasMore");
+        var totalFilesProp = responseType.GetProperty("totalFiles");
+
+        var browserDirectories = (directoriesProp!.GetValue(okResult.Value) as System.Collections.IEnumerable)?.Cast<object>().ToList();
+        var files = (filesProp!.GetValue(okResult.Value) as System.Collections.IEnumerable)?.Cast<object>().ToList();
+
+        Assert.NotNull(browserDirectories);
+        Assert.Single(browserDirectories);
+        Assert.NotNull(files);
+        Assert.Single(files);
+        Assert.True((bool)hasMoreProp!.GetValue(okResult.Value)!);
+        Assert.Equal(2, (int)totalFilesProp!.GetValue(okResult.Value)!);
+
+        var fileType = files[0].GetType();
+        Assert.Equal("Music\\Artist\\song1.mp3", fileType.GetProperty("Path")?.GetValue(files[0]));
+    }
+
+    [Fact]
+    public async Task BrowseItems_WithQuery_CollapsesDuplicateSearchResults()
+    {
+        var directories = new List<Soulseek.Directory>
+        {
+            new Soulseek.Directory("Music\\One", new List<Soulseek.File>
+            {
+                new Soulseek.File(1, "same-song.mp3", 1024, ".mp3")
+            }),
+            new Soulseek.Directory("Music\\Two", new List<Soulseek.File>
+            {
+                new Soulseek.File(2, "same-song.mp3", 1024, ".mp3")
+            }),
+            new Soulseek.Directory("Music\\Three", new List<Soulseek.File>
+            {
+                new Soulseek.File(3, "same-song.mp3", 2048, ".mp3")
+            })
+        };
+
+        shareServiceMock
+            .Setup(x => x.BrowseAsync(It.IsAny<slskd.Shares.Share>()))
+            .ReturnsAsync(directories);
+
+        shareServiceMock
+            .Setup(x => x.ResolveFileAsync(It.IsAny<string>()))
+            .ReturnsAsync((string filename) => ("local", filename, 1024L));
+
+        var result = await controller.BrowseItems(
+            path: null,
+            query: "same-song",
+            kinds: "Audio",
+            limit: 100,
+            offset: 0,
+            CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var responseType = okResult.Value!.GetType();
+        var filesProp = responseType.GetProperty("files");
+        var duplicatesRemovedProp = responseType.GetProperty("duplicatesRemoved");
+        var files = (filesProp!.GetValue(okResult.Value) as System.Collections.IEnumerable)?.Cast<object>().ToList();
+
+        Assert.NotNull(files);
+        Assert.Equal(2, files.Count);
+        Assert.Equal(1, (int)duplicatesRemovedProp!.GetValue(okResult.Value)!);
+
+        var duplicateFile = files.First(file =>
+            (int)file.GetType().GetProperty("DuplicateCount")!.GetValue(file)! == 2);
+        Assert.Equal(
+            "same-song.mp3",
+            duplicateFile.GetType().GetProperty("FileName")?.GetValue(duplicateFile));
+    }
+
+    [Fact]
     public async Task SearchItems_EmptyShares_ReturnsEmptyList()
     {
         // Arrange

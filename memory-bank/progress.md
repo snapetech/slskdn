@@ -1,3 +1,54 @@
+## 2026-04-30 19:41:00Z - Added local import metadata matcher
+
+- Continued P3 Safe Acquisition Pipeline burn-down with the metadata matcher story.
+- Added a browser-side metadata matcher that parses filename parts into artist, album, title, track number, file-type evidence, confidence, and warnings.
+- Import Staging now shows match confidence and parsed identity per row, with row-level and bulk local matching controls.
+- Kept the matcher local and non-mutating: it does not contact MusicBrainz, fingerprint audio, upload files, or write tags.
+- Fixed and documented the standalone track-number parsing gotcha as `8e24cd666`.
+- Validation: focused metadata matcher and import staging tests passed.
+
+## 2026-04-30 19:35:00Z - Added Import Staging first slice
+
+- Continued P3 Safe Acquisition Pipeline burn-down with the import staging scan/review story.
+- Added browser-local import staging storage with Staged, Ready, Imported, Rejected, and Failed states plus duplicate file metadata suppression.
+- Added `/import-staging` navigation and a review UI with a real file picker, file metadata, state counts, and tooltipped review actions.
+- Kept the slice non-mutating: selecting files records browser-visible metadata only and does not upload, move, import, or modify library files.
+- Validation: focused import staging tests passed.
+
+## 2026-04-30 19:33:40Z - Unified Wishlist request states with Discovery Inbox
+
+- Continued burning down P3 Safe Acquisition Pipeline from the tail of the feature-expansion list.
+- Added shared browser-side acquisition request state mapping for Wishlist entries, including Disabled, Wanted, Automatic, Review, Approved, Snoozed, Rejected, Staged, Imported, and Failed labels.
+- Wishlist rows now show a Request State column derived from both Wishlist scheduler flags and matching Discovery Inbox evidence.
+- Added a tooltipped Wishlist action that sends a saved search to Discovery Inbox review without starting peer search, browse, download, or import work.
+- Validation: focused acquisition request, Discovery Inbox, and Wishlist tests passed.
+
+## 2026-04-30 19:28:39Z - Added Discovery Inbox first slice
+
+- Picked the P3 Safe Acquisition Pipeline feature-expansion item and implemented the first browser-local Discovery Inbox slice.
+- Added persistent candidate storage with Suggested, Approved, Snoozed, Rejected, Downloading, Staged, Imported, and Failed states.
+- Added a Discovery Inbox route/nav item, review cards with acquisition-profile context, explicit network-impact text, per-item state actions, and bulk approve/reject for suggested items.
+- Added a Search action to save the current phrase into the inbox under the selected acquisition profile without starting peer search, browse, or download work.
+- Fixed and documented the rejected-evidence suppression gotcha as `f6d015a80`.
+- Validation: focused Discovery Inbox/Search tests (`11/11`), `npm run lint`, and `npm run build` passed.
+
+## 2026-04-30 19:36:08Z - Added realm-curated subject indexes
+
+- Continued the center-lane feature-expansion work with T-934 Realm-Curated Subject Indexes.
+- Added signed realm subject-index models under `Mesh/Realm/SubjectIndex` with WorkRefs, external ids, aliases, evidence links, and governance signature metadata.
+- Added validation for local realm scope, trusted governance roots, payload hash integrity, safe WorkRefs, and safe evidence links.
+- Added an in-memory realm subject-index registry/resolver that resolves recording MBIDs and returns realm/index/revision provenance for ShadowIndex and VirtualSoulfind callers.
+- Registered the service with realm DI and added focused tests for valid storage, untrusted signer rejection, tamper rejection, unsafe evidence rejection, and provenance resolution.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter RealmSubjectIndexServiceTests` passed (`5/5`).
+
+## 2026-04-30 19:27:01Z - Added federated taste recommendations backend
+
+- Picked the middle feature-expansion item, T-933 Federated Taste Recommendations, to avoid front/end work collisions.
+- Added a local `TasteRecommendationService` and `/api/v0/taste-recommendations` endpoint that compute recommendations from accepted inbound ActivityPub music WorkRefs without making network calls.
+- Enforced service-layer privacy: only followed remote actors count as trusted sources, candidates stay hidden until at least two trusted actors mention the same work, and source actor IDs are omitted unless explicitly requested.
+- Added focused unit tests for k-anonymity, trusted-source filtering, and opt-in source reveal.
+- Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter TasteRecommendationServiceTests` passed (`4/4`).
+
 ## 2026-04-30 19:17:59Z
 
 - Ran a headless affordance audit across Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System.
@@ -7828,6 +7879,13 @@ Code quality improvements were completed as part of Option A:
 - ListenBrainz token clearing now removes storage and submission reports HTTP failure instead of always returning success.
 - Validation: `dotnet build --no-incremental --nologo --configuration Release`, focused backend test slice (`424/424`), `npm run lint`, `npm run build`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and `bash ./bin/lint` passed. The web production build still reports the existing large chunk warning, and .NET still reports existing analyzer warnings.
 
+## 2026-04-30 19:26:00Z
+
+- Expanded translated native MilkDrop shader FFT uniforms from 32 bins to 64 bins.
+- Added signed 64-bin waveform uniforms and `get_waveform(pos)` support for translated warp/comp shaders.
+- Renderer scope now passes waveform samples into translated shader programs alongside frequency data, q-registers, audio bands, sample rate, and viewport uniforms.
+- Validation: shader translator/renderer tests (`44/44`), broader native/player tests (`38/38`), `npm run test:native-milkdrop-smoke`, `npm run lint -- --quiet`, and `npm run build` passed.
+
 ## 2026-04-30 19:22:00Z
 
 - Added native MilkDrop transition modes beyond the original smooth crossfade: `cut`, `fade` / `fade_through_black`, and `overlay`.
@@ -7948,3 +8006,26 @@ Code quality improvements were completed as part of Option A:
 - The Web UI now includes the selected acquisition profile id in `/searches` POST bodies, and the backend trims/validates the profile id before dispatching the search.
 - Kept search ranking, download behavior, and Soulseek network behavior unchanged in this slice; the request contract is ready for a later profile policy/ranking implementation.
 - Validation: focused Search page tests, focused SearchesController tests, `npm run lint`, `npm run build`, `bash bin/lint`, and `git diff --check` passed.
+
+## 2026-04-30 19:25:59Z
+
+- Added the first backend behavior for acquisition profiles by applying bounded `SearchOptions` defaults when a known profile is selected.
+- Rare Hunt now waits longer and accepts more responses/files; Fast Good Enough and Conservative Network cap response/file collection more tightly; Album Complete raises minimum folder response size; Metadata Strict keeps default breadth with explicit minimum response size.
+- Explicit request options continue to override profile defaults, so API callers can keep precise control.
+- Validation: focused SearchesController tests passed.
+
+## 2026-04-30 19:36:09Z
+
+- Continued the feature-expansion burn-down from the beginning of the list with a Unified Source Providers visibility slice.
+- Added a read-only source-provider catalog API for Local Library, Soulseek, Native Mesh, Mesh DHT, HTTP, WebDAV, S3, LAN, and Private Torrent providers.
+- Added System -> Source Providers so active/disabled state, registration, capabilities, risk level, network policy, and disabled reasons are visible in the Web UI.
+- Kept the slice observational only: it does not start peer search, DHT lookup, download, credential validation, or remote repository probing.
+- Validation: focused `SourceProvidersControllerTests`, focused Source Providers Web UI tests, `npm run lint`, `npm run build`, and `git diff --check` passed.
+
+## 2026-04-30 19:36:05Z
+
+- Rebuilt the player local-audio picker as a file-explorer style browser instead of a flat search table.
+- Added `/api/v0/library/items/browser` with virtual-path normalization, child-folder summaries, breadcrumbs, paging, path-preserving file rows, and duplicate collapse for recursive search results.
+- Updated the player modal with a folder rail, breadcrumb navigation, full-library search, duplicate/copy counts, paged results, file locations, and double-click or row play actions.
+- Documented the flat-picker gotcha and committed it immediately as `8ed962b59`.
+- Validation: focused PlayerBar tests, focused LibraryItemsController tests, frontend lint, frontend production build, and whitespace checks passed.

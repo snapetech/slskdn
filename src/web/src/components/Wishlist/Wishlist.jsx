@@ -1,5 +1,10 @@
 import './Wishlist.css';
 import { urlBase } from '../../config';
+import {
+  addWishlistItemToDiscoveryInbox,
+  getWishlistRequestState,
+} from '../../lib/acquisitionRequests';
+import { getDiscoveryInboxItems } from '../../lib/discoveryInbox';
 import * as wishlistAPI from '../../lib/wishlist';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -11,6 +16,7 @@ import {
   Form,
   Header,
   Icon,
+  Label,
   Modal,
   Popup,
   Segment,
@@ -23,9 +29,17 @@ const formatDate = (dateString) => {
   return date.toLocaleString();
 };
 
-const WishlistItemRow = ({ item, onDelete, onEdit, onRunSearch }) => {
+const WishlistItemRow = ({
+  inboxItems,
+  item,
+  onDelete,
+  onEdit,
+  onReview,
+  onRunSearch,
+}) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [running, setRunning] = useState(false);
+  const requestState = getWishlistRequestState(item, inboxItems);
 
   const handleRunSearch = async () => {
     setRunning(true);
@@ -68,6 +82,17 @@ const WishlistItemRow = ({ item, onDelete, onEdit, onRunSearch }) => {
       <Table.Cell textAlign="center">{item.lastMatchCount}</Table.Cell>
       <Table.Cell textAlign="center">{item.totalSearchCount}</Table.Cell>
       <Table.Cell>
+        <Popup
+          content={requestState.summary}
+          position="top center"
+          trigger={
+            <Label color={requestState.color}>
+              {requestState.label}
+            </Label>
+          }
+        />
+      </Table.Cell>
+      <Table.Cell>
         {item.lastSearchId && (
           <Link to={`${urlBase}/searches/${item.lastSearchId}`}>
             <Button
@@ -86,6 +111,20 @@ const WishlistItemRow = ({ item, onDelete, onEdit, onRunSearch }) => {
           primary
           size="tiny"
           title="Run search now"
+        />
+        <Popup
+          content="Send this wishlist request to the Discovery Inbox for approval, rejection, or snoozing before any acquisition job is started."
+          position="top center"
+          trigger={
+            <Button
+              aria-label={`Send ${item.searchText} to Discovery Inbox review`}
+              compact
+              icon="inbox"
+              onClick={() => onReview(item)}
+              size="tiny"
+              title="Send to Discovery Inbox review"
+            />
+          }
         />
         <Button
           compact
@@ -357,6 +396,7 @@ const Wishlist = () => {
   const [modalItem, setModalItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [inboxItems, setInboxItems] = useState(() => getDiscoveryInboxItems());
 
   const loadItems = useCallback(async () => {
     try {
@@ -413,6 +453,12 @@ const Wishlist = () => {
     const result = await wishlistAPI.runSearch(id);
     await loadItems();
     return result;
+  };
+
+  const handleReview = (item) => {
+    const inboxItem = addWishlistItemToDiscoveryInbox(item);
+    setInboxItems(getDiscoveryInboxItems());
+    toast.success(`Added "${inboxItem.title}" to Discovery Inbox`);
   };
 
   const handleImport = async (request) => {
@@ -527,16 +573,19 @@ const Wishlist = () => {
               >
                 Runs
               </Table.HeaderCell>
+              <Table.HeaderCell width={2}>Request State</Table.HeaderCell>
               <Table.HeaderCell width={3}>Actions</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {items.map((item) => (
               <WishlistItemRow
+                inboxItems={inboxItems}
                 item={item}
                 key={item.id}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
+                onReview={handleReview}
                 onRunSearch={handleRunSearch}
               />
             ))}

@@ -26,6 +26,41 @@
  - Priority: P2
  - Notes: Search creation now sends the selected acquisition profile id to the API, the backend trims and validates known profile ids, and focused Web UI/controller tests cover default, selected, and invalid-profile behavior. Ranking/download behavior remains unchanged until the profile policy layer is implemented.
 
+- [x] **feature**: Apply conservative acquisition profile search defaults.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Known acquisition profiles now map to bounded search option defaults for timeout, response/file limits, minimum response count, and peer queue cap where appropriate. Explicit API request options override profile defaults, keeping advanced/manual callers in control.
+
+- [x] **feature**: Add visible source provider capability catalog.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a read-only `/source-providers` API and System -> Source Providers tab that list all known acquisition source providers, active/disabled state, registration, risk level, capabilities, network policy, and disabled reasons. The catalog is observational only and does not start searches, downloads, peer probes, DHT work, or credential checks.
+
+- [x] **feature**: Add browser-local Discovery Inbox review surface.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a persistent Web UI Discovery Inbox with Suggested/Approved/Snoozed/Rejected review states, bulk approve/reject, per-item review actions, acquisition-profile context, and explicit network-impact text. Search can now save the current phrase into the inbox without starting peer network activity.
+
+- [x] **feature**: Unify Wishlist rows with acquisition request states.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added shared Web UI request-state mapping for Wishlist entries and Discovery Inbox evidence, showing Disabled, Wanted, Automatic, Review, Approved, Snoozed, Rejected, Staged, Imported, and Failed states. Wishlist rows can now be sent to Discovery Inbox review without starting downloads.
+
+- [x] **feature**: Add browser-local import staging review.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added an Import Staging route with a local file picker, persisted file metadata, staged/ready/imported/rejected/failed states, and review actions that do not move, upload, import, or mutate library files.
+
+- [x] **feature**: Add local import metadata matcher.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a browser-side filename metadata matcher that parses artist, album, title, track number, file type evidence, confidence, and warnings. Import Staging rows can be matched individually or in bulk without contacting metadata services, fingerprinting audio, or mutating files.
+
+- [ ] **feature**: Wire approved Discovery Inbox candidates into acquisition jobs.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up the local review surface by connecting Approved candidates to backend-backed acquisition planning/downloading with explicit opt-in automation, rate limits, and visible network impact before any peer contact.
+
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
  - Priority: P1
@@ -88,6 +123,7 @@
  - Progress (2026-04-30): Added q-register pressure metrics to the native MilkDrop compatibility matrix and a MilkDrop3-style fixture that exercises q1/q2/q16/q32/q48/q63/q64 across globals, primitives, and translated shaders.
  - Progress (2026-04-30): Added dense primitive-count validation with a curated 40-shape/20-wave fixture in compatibility reporting and native browser smoke coverage.
  - Progress (2026-04-30): Added native transition modes beyond the default crossfade, including cut, fade-through-black, and overlay modes selected by preset aliases or caller options.
+ - Progress (2026-04-30): Expanded translated shader audio uniforms from 32 FFT bins to 64 FFT bins and added signed 64-bin waveform access via `get_waveform(pos)`.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -113,17 +149,32 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Persist artist MBID subscriptions and notify when trusted mesh/federation evidence first sees a SongID-confirmed WorkRef for that artist. This is network-presence radar, not MusicBrainz release-calendar polling.
 
-- [ ] **T-933**: Federated taste recommendations.
- - Status: planned
+- [x] **T-933**: Federated taste recommendations.
+ - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Build a local recommender over inbound LibraryActor/NowPlaying WorkRefs, weighted by trust tier and Discovery Graph proximity. Enforce k-anonymity/reveal thresholds in the service layer before surfacing recommendations.
+ - Notes: Added a local recommendation service/API over accepted inbound music WorkRefs from the ActivityPub inbox. The service filters to followed federation actors, groups candidates by MusicBrainz ID or normalized artist/title/year, enforces the default two-trusted-source reveal threshold before returning recommendations, and hides source actor IDs unless explicitly requested.
 
-- [ ] **T-934**: Realm-curated subject indexes.
+- [ ] **feature**: Add a Web UI surface for federated taste recommendations.
  - Status: planned
  - Priority: P2
+ - Notes: Follow up T-933 by showing privacy-filtered recommendation cards with evidence reasons and actions to explore in Discovery Graph or promote to Wishlist. Keep peer names hidden unless policy explicitly allows reveal.
+
+- [x] **T-934**: Realm-curated subject indexes.
+ - Status: completed (2026-04-30)
+ - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Define signed realm subject-index artifacts for niche scenes and let ShadowIndex/VirtualSoulfind cite them as provenance-preserving authorities. Realm indexes stay local/realm-scoped and must not overwrite MusicBrainz truth.
+ - Notes: Added a signed realm subject-index artifact model, trusted-governance-root validation, safe WorkRef/evidence checks, in-memory registry, and recording-MBID resolver that returns realm/index/revision provenance for ShadowIndex and VirtualSoulfind callers. Publication, proposal/review workflow, and UI conflict display remain separate follow-ups.
+
+- [ ] **feature**: Add governance proposal flow for realm subject indexes.
+ - Status: planned
+ - Priority: P2
+ - Notes: Follow up T-934 by routing subject-index revisions through existing realm governance proposal/review/accept/reject flows instead of storing locally authored revisions directly.
+
+- [ ] **feature**: Add UI conflict display for realm subject indexes.
+ - Status: planned
+ - Priority: P2
+ - Notes: Show when subscribed realm indexes disagree with MusicBrainz or another realm, preserving provenance and allowing users to disable individual realm authorities.
 
 - [ ] **T-935**: Decentralized MusicBrainz edit overlay.
  - Status: planned
@@ -1630,3 +1681,7 @@
 - [x] Audit and backfill Web UI affordances
   - Status: completed (2026-04-30)
   - Notes: Added shared cursor, hover, focus-visible, selectable-row, dropdown, checkbox, link, disabled, and reduced-motion affordance rules. Backfilled labels/titles for icon-only player launcher, chat, room, browse, and user action controls; headless DOM audit passed representative routes with no visible unnamed icon-only controls.
+
+- [x] Redesign player local-audio file picker as an explorer
+  - Status: completed (2026-04-30)
+  - Notes: Replaced the flat player file picker with a path-aware local audio explorer backed by a paged `/library/items/browser` API. The new picker has folder navigation, breadcrumbs, recursive search, duplicate collapse for search results, paging, file locations, copy counts, and row-level play actions.

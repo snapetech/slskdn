@@ -169,7 +169,8 @@ uniform float feedback;
 uniform float outputAlpha;
 uniform float time;
 uniform float sampleRate;
-uniform float fftBins[32];
+uniform float fftBins[64];
+uniform float waveformBins[64];
 uniform vec2 resolution;
 uniform vec2 pixelSize;
 uniform float aspect;
@@ -190,12 +191,16 @@ vec4 clamp01(vec4 value) {
   return clamp(value, vec4(0.0), vec4(1.0));
 }
 float get_fft(float position) {
-  int index = int(clamp(position, 0.0, 1.0) * 31.0);
+  int index = int(clamp(position, 0.0, 1.0) * 63.0);
   return fftBins[index];
 }
 float get_fft_hz(float hz) {
   float nyquist = max(sampleRate * 0.5, 1.0);
   return get_fft(hz / nyquist);
+}
+float get_waveform(float position) {
+  int index = int(clamp(position, 0.0, 1.0) * 63.0);
+  return waveformBins[index];
 }
 void main() {
   float x = uv.x;

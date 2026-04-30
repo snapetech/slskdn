@@ -62,5 +62,21 @@ export const searchLibraryItems = (query, kinds, limit = 100) => {
   return api.get(`library/items?${parameters.toString()}`);
 };
 
+export const browseLibraryItems = ({
+  kinds = 'Audio',
+  limit = 100,
+  offset = 0,
+  path = '',
+  query = '',
+} = {}) => {
+  const parameters = new URLSearchParams();
+  if (path) parameters.append('path', path);
+  if (query) parameters.append('query', query);
+  if (kinds) parameters.append('kinds', kinds);
+  parameters.append('limit', limit.toString());
+  parameters.append('offset', offset.toString());
+  return api.get(`library/items/browser?${parameters.toString()}`);
+};
+
 export const getLibraryItem = (contentId) =>
   api.get(`library/items/${encodeURIComponent(contentId)}`);

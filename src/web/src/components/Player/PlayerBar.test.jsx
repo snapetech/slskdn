@@ -12,6 +12,75 @@ vi.mock('../../lib/nowPlaying', () => ({
 }));
 
 vi.mock('../../lib/collections', () => ({
+  browseLibraryItems: vi.fn(({ path = '', query = '' } = {}) => {
+    if (query) {
+      return Promise.resolve({
+        data: {
+          breadcrumbs: [{ name: 'Library', path: '' }],
+          directories: [],
+          duplicatesRemoved: 2,
+          files: [
+            {
+              bytes: 5242880,
+              contentId: 'sha256:library',
+              duplicateCount: 3,
+              fileName: 'Library stream.ogg',
+              mediaKind: 'Audio',
+              path: 'Downloads/Library stream.ogg',
+            },
+          ],
+          hasMore: false,
+          totalDirectories: 0,
+          totalFiles: 1,
+        },
+      });
+    }
+
+    if (path === 'Downloads') {
+      return Promise.resolve({
+        data: {
+          breadcrumbs: [
+            { name: 'Library', path: '' },
+            { name: 'Downloads', path: 'Downloads' },
+          ],
+          directories: [],
+          duplicatesRemoved: 0,
+          files: [
+            {
+              bytes: 5242880,
+              contentId: 'sha256:library',
+              duplicateCount: 1,
+              fileName: 'Library stream.ogg',
+              mediaKind: 'Audio',
+              path: 'Downloads/Library stream.ogg',
+            },
+          ],
+          hasMore: false,
+          totalDirectories: 0,
+          totalFiles: 1,
+        },
+      });
+    }
+
+    return Promise.resolve({
+      data: {
+        breadcrumbs: [{ name: 'Library', path: '' }],
+        directories: [
+          {
+            childDirectoryCount: 2,
+            fileCount: 1,
+            name: 'Downloads',
+            path: 'Downloads',
+          },
+        ],
+        duplicatesRemoved: 0,
+        files: [],
+        hasMore: false,
+        totalDirectories: 1,
+        totalFiles: 0,
+      },
+    });
+  }),
   getCollectionItems: vi.fn(() =>
     Promise.resolve({
       data: [
@@ -181,7 +250,22 @@ describe('PlayerBar', () => {
     fireEvent.click(screen.getAllByText('Close')[0]);
     fireEvent.click(screen.getByTestId('player-open-file-browser'));
     expect(screen.getByTestId('player-file-browser-modal')).toBeInTheDocument();
+    expect(await screen.findByText('Downloads')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('player-file-folder-Downloads'));
     expect(await screen.findByText('Library stream.ogg')).toBeInTheDocument();
+  });
+
+  it('searches the local file browser as a deduplicated explorer', async () => {
+    renderPlayer();
+
+    fireEvent.click(screen.getByTestId('player-open-file-browser'));
+    fireEvent.change(screen.getByTestId('player-file-browser-search').querySelector('input'), {
+      target: { value: 'library' },
+    });
+
+    expect(await screen.findByText('Library stream.ogg')).toBeInTheDocument();
+    expect(screen.getByText(/2 duplicates collapsed/u)).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('switches the visual tile from album art to the MilkDrop canvas', () => {

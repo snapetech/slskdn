@@ -139,7 +139,7 @@ const shaderScopeUniformNames = [
   'treb_att',
   ...qRegisterNames,
 ];
-const shaderFftBinCount = 32;
+const shaderAudioBinCount = 64;
 
 const isQVariable = (key) => /^q([1-9]|[1-5][0-9]|6[0-4])$/.test(key);
 
@@ -168,14 +168,35 @@ const normalizeFrequencySample = (value) => {
 };
 
 export const createShaderFftBins = (frequencyData = []) => {
-  const bins = new Float32Array(shaderFftBinCount);
+  const bins = new Float32Array(shaderAudioBinCount);
   if (!frequencyData.length) return bins;
-  for (let index = 0; index < shaderFftBinCount; index += 1) {
+  for (let index = 0; index < shaderAudioBinCount; index += 1) {
     const sourceIndex = Math.min(
       frequencyData.length - 1,
-      Math.floor((index / (shaderFftBinCount - 1)) * frequencyData.length),
+      Math.floor((index / (shaderAudioBinCount - 1)) * frequencyData.length),
     );
     bins[index] = normalizeFrequencySample(frequencyData[sourceIndex]);
+  }
+  return bins;
+};
+
+const normalizeWaveformSample = (value) => {
+  const number = Number(value) || 0;
+  if (number > 1 || number < -1) {
+    return Math.max(-1, Math.min(1, (number - 128) / 128));
+  }
+  return Math.max(-1, Math.min(1, number));
+};
+
+export const createShaderWaveformBins = (waveformData = []) => {
+  const bins = new Float32Array(shaderAudioBinCount);
+  if (!waveformData.length) return bins;
+  for (let index = 0; index < shaderAudioBinCount; index += 1) {
+    const sourceIndex = Math.min(
+      waveformData.length - 1,
+      Math.floor((index / (shaderAudioBinCount - 1)) * waveformData.length),
+    );
+    bins[index] = normalizeWaveformSample(waveformData[sourceIndex]);
   }
   return bins;
 };
@@ -254,6 +275,7 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
       textureUnit: index + 2,
     })),
     timeUniform: gl.getUniformLocation(program, 'time'),
+    waveformBinsUniform: gl.getUniformLocation(program, 'waveformBins'),
   };
   gl.uniform1i(state.previousFrameUniform, 0);
   state.textureSamplers.forEach((sampler) => {
@@ -280,6 +302,10 @@ const bindTranslatedShaderProgram = (
   gl.uniform1f(shaderProgram.timeUniform, time);
   gl.uniform1f(shaderProgram.sampleRateUniform, Number(scope?.sample_rate ?? 44100) || 44100);
   gl.uniform1fv(shaderProgram.fftBinsUniform, createShaderFftBins(scope?.frequency_data || []));
+  gl.uniform1fv(
+    shaderProgram.waveformBinsUniform,
+    createShaderWaveformBins(scope?.waveform_data || []),
+  );
   const width = Math.max(1, Number(scope?.canvas_width ?? 1) || 1);
   const height = Math.max(1, Number(scope?.canvas_height ?? 1) || 1);
   gl.uniform2f(shaderProgram.resolutionUniform, width, height);
@@ -1212,6 +1238,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
       const compositeMode = options.compositeMode || 'alpha';
       const outputAlpha = clamp01(options.outputAlpha ?? 1);
       const frequencyData = frame.spectrum || frame.frequencies || frame.frequency || frame.fft || [];
+      const waveformData = frame.waveform || frame.samples || [];
       scope = {
         ...scope,
         frequency_data: frequencyData,
@@ -1219,6 +1246,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         fps: frame.fps ?? scope.fps,
         sample_rate: frame.sampleRate ?? frame.sample_rate ?? scope.sample_rate ?? 44100,
         time: frame.time ?? scope.time,
+        waveform_data: waveformData,
         canvas_height: canvas.height,
         canvas_width: canvas.width,
         ...frame.audio,

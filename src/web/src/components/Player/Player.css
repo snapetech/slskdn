@@ -534,6 +534,139 @@
   overflow: auto;
 }
 
+.player-file-explorer {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 68vh;
+}
+
+.player-file-explorer-toolbar {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(260px, 1fr) auto;
+}
+
+.player-file-explorer-counts {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.player-file-explorer-breadcrumbs {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.player-file-breadcrumb {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(242, 184, 75, 0.22);
+  border-radius: 5px;
+  color: #f5dfb0;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.35rem 0.55rem;
+}
+
+.player-file-breadcrumb:hover,
+.player-file-breadcrumb:focus-visible {
+  background: rgba(242, 184, 75, 0.16);
+  border-color: rgba(242, 184, 75, 0.48);
+  color: #fff4d8;
+  outline: 2px solid rgba(242, 184, 75, 0.28);
+  outline-offset: 2px;
+}
+
+.player-file-explorer-body {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(220px, 0.35fr) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.player-file-explorer-folders,
+.player-file-explorer-files {
+  background: #17191d;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 6px;
+  min-width: 0;
+  overflow: auto;
+  padding: 0.65rem;
+}
+
+.player-file-explorer-files {
+  max-height: 62vh;
+}
+
+.player-file-explorer-section-title {
+  color: var(--player-amber);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 0.55rem;
+  text-transform: uppercase;
+}
+
+.player-file-folder-row {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #f3f3f3;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 0.55rem;
+  grid-template-columns: 22px minmax(0, 1fr);
+  padding: 0.48rem 0.42rem;
+  text-align: left;
+  width: 100%;
+}
+
+.player-file-folder-row:hover,
+.player-file-folder-row:focus-visible {
+  background: rgba(242, 184, 75, 0.1);
+  border-color: rgba(242, 184, 75, 0.28);
+  outline: 2px solid rgba(242, 184, 75, 0.2);
+  outline-offset: 1px;
+}
+
+.player-file-folder-row .icon {
+  color: var(--player-amber);
+}
+
+.player-file-folder-row strong,
+.player-file-folder-row small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-file-folder-row small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.76rem;
+  margin-top: 0.1rem;
+}
+
+.player-file-path {
+  display: block;
+  max-width: 42rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-file-explorer-pager {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+
 .player-picker-meta {
   color: rgba(255, 255, 255, 0.62);
   font-size: 0.78rem;
@@ -766,6 +899,19 @@
 
   .player-browser-grid {
     grid-template-columns: 1fr;
+  }
+
+  .player-file-explorer-toolbar,
+  .player-file-explorer-body {
+    grid-template-columns: 1fr;
+  }
+
+  .player-file-explorer-counts {
+    white-space: normal;
+  }
+
+  .player-file-explorer-files {
+    max-height: none;
   }
 
   .player-eq-bands {

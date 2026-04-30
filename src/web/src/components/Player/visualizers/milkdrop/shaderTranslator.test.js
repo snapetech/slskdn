@@ -16,7 +16,8 @@ describe('MilkDrop shader translator', () => {
     );
 
     expect(shader).toContain('uniform sampler2D previousFrame;');
-    expect(shader).toContain('uniform float fftBins[32];');
+    expect(shader).toContain('uniform float fftBins[64];');
+    expect(shader).toContain('uniform float waveformBins[64];');
     expect(shader).toContain('uniform vec2 resolution;');
     expect(shader).toContain('uniform vec2 pixelSize;');
     expect(shader).toContain('uniform float aspect;');
@@ -25,6 +26,7 @@ describe('MilkDrop shader translator', () => {
     expect(shader).toContain('float ang = atan(centeredUv.y, centeredUv.x);');
     expect(shader).toContain('float get_fft(float position)');
     expect(shader).toContain('float get_fft_hz(float hz)');
+    expect(shader).toContain('float get_waveform(float position)');
     expect(shader).toContain('uniform float bass_att;');
     expect(shader).toContain('uniform float q64;');
     expect(shader).toContain('vec3 ret = vec3(clamp01(vec3(uv.x, uv.y, sin(time))));');
@@ -42,13 +44,15 @@ describe('MilkDrop shader translator', () => {
     expect(analyzeMilkdropShaderSupport('ret = vec3(q64, mid_att, bass);').supported).toBe(true);
   });
 
-  it('accepts FFT helpers in safe shader expressions', () => {
+  it('accepts FFT and waveform helpers in safe shader expressions', () => {
     const shader = createTranslatedMilkdropFragmentShader(
-      'ret = vec3(get_fft(0.25), get_fft_hz(1000), q1);',
+      'ret = vec3(get_fft(0.25), get_fft_hz(1000), get_waveform(0.5));',
     );
 
-    expect(shader).toContain('vec3 ret = vec3(vec3(get_fft(0.25), get_fft_hz(1000), q1));');
+    expect(shader).toContain('vec3 ret = vec3(vec3(get_fft(0.25), get_fft_hz(1000), get_waveform(0.5)));');
     expect(analyzeMilkdropShaderSupport('ret = vec3(get_fft(0.5));').supported).toBe(true);
+    expect(analyzeMilkdropShaderSupport('ret = vec3(get_waveform(0.5));').supported)
+      .toBe(true);
   });
 
   it('accepts straight-line temp declarations and common HLSL helper aliases', () => {

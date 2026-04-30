@@ -135,7 +135,7 @@ Current parser/VM scope:
 - Honors common native custom wave aliases including `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, and `bAdditive`, plus shape/sprite aliases including `bTextured`, `bAdditive`, `bDrawThick`, `numSides`, and `texName`.
 - Supports analyzer-backed `get_fft(pos)` and `get_fft_hz(freq)` expression helpers against renderer-provided frequency data. Full MilkDrop wave modes and shader-side FFT access are still pending.
 - Supported translated warp/comp shaders can reference `q1`-`q64` plus `bass`, `bass_att`, `mid`, `mid_att`, `treb`, and `treb_att`; the renderer binds those values from the current frame scope as uniforms before each translated shader pass.
-- Translated warp/comp shaders also expose first shader-side `get_fft(pos)` and `get_fft_hz(freq)` helpers backed by a 32-bin normalized FFT uniform array and current sample-rate uniform.
+- Translated warp/comp shaders expose shader-side `get_fft(pos)` and `get_fft_hz(freq)` helpers backed by a 64-bin normalized FFT uniform array and current sample-rate uniform. They also expose signed 64-bin waveform access through `get_waveform(pos)`.
 - Translated warp/comp shaders receive viewport context through `resolution`, `pixelSize`, `aspect`, and `texsize`, and generated MilkDrop-style per-fragment coordinate helpers `x`, `y`, `rad`, and `ang`.
 - Translated warp/comp shaders can sample up to four named preset texture samplers through `tex`/`tex2D`; imported texture assets are matched with the same alias rules used by shape/sprite rendering, and missing sampler assets fall back to the procedural checker texture.
 - Rebinds WebGL vertex attributes before each fullscreen, warp-grid, wave, and shape draw so program switches cannot leave draw calls pointed at stale buffers.
@@ -177,7 +177,7 @@ Current parser/VM scope:
 - Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
 - [x] Add additional MilkDrop3 transition modes beyond the first smooth renderer-set crossfade.
 - Add richer beat-driven/random/history preset selection modes beyond the first beat/timed automation and local-bank navigation controls.
-- Add richer shader-side texture/audio access beyond the first 32-bin FFT uniform path.
+- [x] Add richer shader-side texture/audio access beyond the first 32-bin FFT uniform path.
 
 ### Phase 3: Editing And VJ Controls
 

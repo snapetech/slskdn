@@ -38,8 +38,10 @@ const Browse = lazy(() => import('./Browse/Browse'));
 const Chat = lazy(() => import('./Chat/Chat'));
 const Collections = lazy(() => import('./Collections/Collections'));
 const Contacts = lazy(() => import('./Contacts/Contacts'));
+const DiscoveryInbox = lazy(() => import('./DiscoveryInbox/DiscoveryInbox'));
 const DiscoveryGraphAtlasPage = lazy(() =>
   import('./Search/DiscoveryGraphAtlasPage'));
+const ImportStaging = lazy(() => import('./ImportStaging/ImportStaging'));
 const Pods = lazy(() => import('./Pods/Pods'));
 const Rooms = lazy(() => import('./Rooms/Rooms'));
 const Searches = lazy(() => import('./Search/Searches'));
@@ -862,6 +864,18 @@ class App extends Component {
                       Discovery Graph
                     </Menu.Item>
                   </NavLink>
+                  <NavLink to="/discovery-inbox">
+                    <Menu.Item data-testid="nav-discovery-inbox">
+                      <Icon name="inbox" />
+                      Discovery Inbox
+                    </Menu.Item>
+                  </NavLink>
+                  <NavLink to="/import-staging">
+                    <Menu.Item data-testid="nav-import-staging">
+                      <Icon name="archive" />
+                      Import Staging
+                    </Menu.Item>
+                  </NavLink>
                   <NavLink to="/wishlist">
                     <Menu.Item data-testid="nav-wishlist">
                       <Icon name="star" />
@@ -1200,6 +1214,26 @@ class App extends Component {
                         <DiscoveryGraphAtlasPage
                           server={applicationState.server}
                         />,
+                      )
+                    }
+                  />
+                  <Route
+                    path="/discovery-inbox"
+                    element={
+                      this.withTokenCheck(
+                        <div className="view">
+                          <DiscoveryInbox />
+                        </div>,
+                      )
+                    }
+                  />
+                  <Route
+                    path="/import-staging"
+                    element={
+                      this.withTokenCheck(
+                        <div className="view">
+                          <ImportStaging />
+                        </div>,
                       )
                     }
                   />

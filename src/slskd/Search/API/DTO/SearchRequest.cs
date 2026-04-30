@@ -119,14 +119,16 @@ namespace slskd.Search.API
             Action<(Search Search, SearchResponse Response)>? responseReceived = null)
         {
             var def = new SearchOptions();
+            var profileDefaults = GetAcquisitionProfileDefaults();
+            var searchTimeout = SearchTimeout ?? profileDefaults.SearchTimeoutSeconds;
 
             return new SearchOptions(
-                searchTimeout: SearchTimeout.HasValue ? SearchTimeout.Value * 1000 : def.SearchTimeout,
-                responseLimit: ResponseLimit ?? def.ResponseLimit,
-                fileLimit: FileLimit ?? def.FileLimit,
+                searchTimeout: searchTimeout.HasValue ? searchTimeout.Value * 1000 : def.SearchTimeout,
+                responseLimit: ResponseLimit ?? profileDefaults.ResponseLimit ?? def.ResponseLimit,
+                fileLimit: FileLimit ?? profileDefaults.FileLimit ?? def.FileLimit,
                 filterResponses: FilterResponses ?? def.FilterResponses,
-                minimumResponseFileCount: MinimumResponseFileCount ?? def.MinimumResponseFileCount,
-                maximumPeerQueueLength: MaximumPeerQueueLength ?? def.MaximumPeerQueueLength,
+                minimumResponseFileCount: MinimumResponseFileCount ?? profileDefaults.MinimumResponseFileCount ?? def.MinimumResponseFileCount,
+                maximumPeerQueueLength: MaximumPeerQueueLength ?? profileDefaults.MaximumPeerQueueLength ?? def.MaximumPeerQueueLength,
                 minimumPeerUploadSpeed: MinimumPeerUploadSpeed ?? def.MinimumPeerUploadSpeed,
                 responseFilter: responseFilter,
                 fileFilter: fileFilter,
@@ -146,6 +148,19 @@ namespace slskd.Search.API
             {
                 yield return new ValidationResult("The field AcquisitionProfile must be a known acquisition profile", [nameof(AcquisitionProfile)]);
             }
+        }
+
+        private (int? SearchTimeoutSeconds, int? ResponseLimit, int? FileLimit, int? MinimumResponseFileCount, int? MaximumPeerQueueLength) GetAcquisitionProfileDefaults()
+        {
+            return AcquisitionProfile?.ToLowerInvariant() switch
+            {
+                "fast-good-enough" => (8, 50, 5_000, null, 250),
+                "album-complete" => (20, 150, 15_000, 4, null),
+                "rare-hunt" => (30, 250, 25_000, null, null),
+                "conservative-network" => (10, 50, 5_000, null, 100),
+                "metadata-strict" => (15, 100, null, 1, null),
+                _ => (null, null, null, null, null),
+            };
         }
     }
 }

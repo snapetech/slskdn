@@ -22,6 +22,17 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a local import metadata matcher with confidence, parsed identity,
+  evidence, warnings, and Import Staging row/bulk matching controls.
+- Added an import-staging review surface with browser-local file metadata,
+  staged/ready/imported/rejected/failed states, file-picker intake, and no
+  library mutation.
+- Added first Wishlist/request-state unification in the Web UI, including
+  shared acquisition request labels and a Wishlist-to-Discovery-Inbox review
+  action that does not start downloads.
+- Added the first browser-local Discovery Inbox for safe acquisition review,
+  including persistent candidate state, bulk approve/reject, network-impact
+  text, navigation, and Search-page save-to-inbox entry point.
 - Refined browser player controls and equalizer storage behavior during the
   native MilkDrop player integration work.
 - Hardened browser player visualizer storage access so blocked localStorage
@@ -44,6 +55,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   fixture included in compatibility and browser smoke coverage.
 - Added native MilkDrop transition modes for cut, fade-through-black, and
   overlay behavior in addition to the default crossfade.
+- Expanded native MilkDrop shader-side audio access to 64 FFT bins plus signed
+  waveform bins through `get_waveform(pos)`.
 - Added app-wide interaction affordances for hover, focus-visible, disabled,
   and clickable row states.
 - Added acquisition-profile request plumbing, documentation audit notes, and
