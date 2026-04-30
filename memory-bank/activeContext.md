@@ -10,6 +10,17 @@
   1. Run whitespace checks, commit, and push.
   2. Continue the next large MilkDrop phase, likely shader texture access or real-preset compatibility coverage.
 
+## Update 2026-04-30 18:22:09Z
+
+- Current task: None. All Semantic UI tabs now preserve inactive panes locally.
+- Last activity:
+  - applied `renderActiveOnly={false}` to every remaining `Tab` under `src/web/src/components`
+  - verified no `Tab` usages are missing the prop
+  - validated `npm run lint`, `npm run build`, and `git diff --check`
+- Next steps:
+  1. Browser-check representative tab switches in Browse, System, Pods, and Library Health against a live instance.
+  2. Commit the code/test/memory-bank changes with the surrounding dirty workspace when ready.
+
 ## Update 2026-04-30 18:19:31Z
 
 - Current task: None. Dark-mode surface cleanup and System integrations admin tab are implemented locally.

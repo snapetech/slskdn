@@ -7802,3 +7802,9 @@ Code quality improvements were completed as part of Option A:
 - Added System -> Integrations with VPN readiness/status/config details and Lidarr status, wanted-preview, wanted-sync, and manual-import admin actions.
 - Documented the Semantic UI dark-surface gotcha and committed it immediately as `c25c26de0`.
 - Validation: `npm test -- src/components/System/Integrations/index.test.jsx`, `npm run lint`, `npm run build`, and `git diff --check` passed.
+
+## 2026-04-30 18:22:09Z
+
+- Applied `renderActiveOnly={false}` to every remaining Semantic UI `Tab` under `src/web/src/components`, extending the no-refresh tab behavior beyond Chat and Rooms.
+- Covered Browse, Contacts, top-level and nested Pods panels, both port-forwarding UIs, System, Files, Security, Adversarial Settings, and Library Health.
+- Validation: `npm run lint`, `npm run build`, and `git diff --check` passed.
