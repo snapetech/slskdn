@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z229. Apple Music Track URLs Should Prefer The `i` Query Track Id
+
+**The Bug**: Apple Music URL import extracted both the album id from the path and the track id from the `?i=` query. Track URLs therefore issued two iTunes lookup requests for one pasted URL, and focused tests failed when the handler queue only expected the track lookup.
+
+**Files Affected**:
+- `src/slskd/SourceFeeds/SourceFeedImportService.cs`
+
+**Wrong**:
+```csharp
+if (!string.IsNullOrWhiteSpace(trackId))
+{
+    ids.Add(trackId);
+}
+
+ids.Add(pathAlbumId);
+```
+
+**Correct**:
+```csharp
+if (!string.IsNullOrWhiteSpace(trackId))
+{
+    return [trackId];
+}
+```
+
+**Why This Keeps Happening**: Apple Music track URLs are album URLs plus a selected-track query parameter. The path id is useful only when there is no `i` query value; otherwise it expands a single-track import into an album lookup and changes network request counts.
+
 ### 0z228. Album Candidate Track Counts Must Count Unique Track Numbers
 
 **The Bug**: Album candidate review logic used total visible audio files as a lower bound for `expectedTrackCount`. Once manual substitution metadata allowed duplicate alternates for the same track number, a complete 4-track candidate with two options for track 3 looked like it was missing track 5.
@@ -70,6 +97,8 @@ const expectedTrackCount = Math.max(highestTrackNumber, group.trackCount);
 const highestTrackNumber = trackNumbers.at(-1) || 0;
 const expectedTrackCount = highestTrackNumber || group.trackCount;
 ```
+
+Warnings for extra tracks should likewise use a separately counted `unnumberedAudioCount`, not `trackCount > expectedTrackCount`, because duplicated numbered alternates are valid substitution choices.
 
 **Why This Keeps Happening**: Album candidates can contain multiple visible source options for the same track. Total file count is not album length once alternates/substitutions are represented; completeness should use unique parsed track numbers when they exist and only fall back to file count for unnumbered folders.
 
