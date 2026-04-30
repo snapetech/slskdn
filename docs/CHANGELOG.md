@@ -48,6 +48,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   pod/listening-party controller behavior so the expanded player, local file
   browser, and radio/listen-along paths share the same integrated slskdN
   streaming boundary.
+- Improved player visualizer fallback styling so hidden canvases and fallback
+  surfaces render cleanly when MilkDrop cannot draw.
 - Added Discography Concierge planning and first implementation pieces,
   including MusicBrainz artist coverage services/API/UI, manual missing-track
   Wishlist promotion, and supporting docs/tasks for mesh/social music

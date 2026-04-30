@@ -756,6 +756,17 @@
   width: 100%;
 }
 
+.player-visualizer-canvas[hidden] {
+  display: none;
+}
+
+.player-visualizer-fallback {
+  border: 0;
+  border-radius: 0;
+  height: 100%;
+  width: 100%;
+}
+
 .player-visualizer-inline {
   border: 1px solid var(--slskd-tertiary-border-color, rgba(255, 255, 255, 0.18));
   border-radius: 6px;
@@ -848,9 +859,10 @@
 }
 
 .player-visualizer-error {
-  background: rgba(160, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.68);
+  border: 1px solid rgba(242, 184, 75, 0.38);
   border-radius: 4px;
-  color: #fff;
+  color: rgba(255, 226, 159, 0.95);
   font-size: 0.8rem;
   left: 0.4rem;
   padding: 0.5rem;

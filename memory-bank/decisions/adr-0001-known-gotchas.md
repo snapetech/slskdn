@@ -54,7 +54,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ### 0z194. MilkDrop Needs The Real Butterchurn Export And A Live Audio Tap
 
-**The Bug**: The Web UI MilkDrop panel mounted a canvas but showed "Failed to load visualizer" or a black frame because Vite wrapped `butterchurn` differently than the component expected, and the visualizer was connected to an audio node that graph rebuilds could disconnect.
+**The Bug**: The Web UI MilkDrop panel mounted a canvas but showed "Failed to load visualizer" or a black frame because Vite wrapped `butterchurn` differently than the component expected, the browser could lack WebGL2, and the visualizer was connected to an audio node that graph rebuilds could disconnect.
 
 **Files Affected**:
 - `src/web/src/components/Player/Visualizer.jsx`
@@ -69,10 +69,14 @@ visualizer.connectAudio(graph.source);
 **Correct**:
 ```js
 const butterchurn = resolveButterchurnApi(butterchurnModule);
+if (!supportsWebGl2()) {
+  setFallbackMode(true);
+  return;
+}
 visualizer.connectAudio(graph.visualizerInput);
 ```
 
-**Why This Keeps Happening**: Browser bundlers can wrap CommonJS visualizer libraries as `module.default.default`, and Web Audio visualizers need a stable, live tap that survives EQ/karaoke graph rebuilds. Verify MilkDrop with a real browser canvas screenshot, not only `gl.readPixels`, because Butterchurn's WebGL framebuffer readback can look black even when the visible canvas is rendering.
+**Why This Keeps Happening**: Browser bundlers can wrap CommonJS visualizer libraries as `module.default.default`, Butterchurn requires WebGL2, and Web Audio visualizers need a stable, live tap that survives EQ/karaoke graph rebuilds. Verify both a normal WebGL2 browser and a WebGL-disabled browser; the latter must fall back to a live analyzer instead of showing a dead red failure. Verify rendering with a real browser canvas screenshot, not only `gl.readPixels`, because Butterchurn's WebGL framebuffer readback can look black even when the visible canvas is rendering.
 
 ### 0z193. Fixed Player Layout Needs One Scroll Owner
 
