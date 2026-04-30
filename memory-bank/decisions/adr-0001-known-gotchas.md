@@ -52,6 +52,63 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z178. Fixed API v0 Routes Still Need ApiVersion Metadata
+
+**The Bug**: PodCore controllers used literal routes like `api/v0/podcore/dht`, but did not declare `[ApiVersion("0")]`. ASP.NET API versioning still inspected those actions and returned `ApiVersionUnspecified` or `UnsupportedApiVersion` for live `/api/v0/podcore/...` requests.
+
+**Files Affected**:
+- `src/slskd/PodCore/API/Controllers/*Controller.cs`
+
+**Wrong**:
+```csharp
+[ApiController]
+[Route("api/v0/podcore/dht")]
+public class PodDhtController : ControllerBase
+```
+
+**Correct**:
+```csharp
+[ApiController]
+[ApiVersion("0")]
+[Route("api/v0/podcore/dht")]
+public class PodDhtController : ControllerBase
+```
+
+**Why This Keeps Happening**: A literal `v0` route segment is not enough once ASP.NET API versioning is enabled globally. Every versioned controller must either use `api/v{version:apiVersion}/...` or declare the matching `[ApiVersion]` metadata when the route is fixed.
+
+### 0z179. Stream Bearer Tokens Are Not Always Share Tokens
+
+**The Bug**: `StreamsController` treated any `Authorization: Bearer ...` value as a share token before checking normal authenticated users. Browser/player requests carrying the normal JWT therefore failed with `401 Unauthorized` even though the user was logged in.
+
+**Files Affected**:
+- `src/slskd/Streaming/StreamsController.cs`
+
+**Wrong**:
+```csharp
+if (auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+    tokenRaw = auth.Substring("Bearer ".Length).Trim();
+
+if (!string.IsNullOrEmpty(tokenRaw))
+{
+    claims = await _tokens.ValidateAsync(tokenRaw, ct);
+    if (claims == null) return Unauthorized();
+}
+```
+
+**Correct**:
+```csharp
+var authenticatedNormally = User?.Identity?.IsAuthenticated == true;
+var bearerIsExplicitShareToken = bearer.StartsWith("share:", StringComparison.OrdinalIgnoreCase);
+
+if (!authenticatedNormally || bearerIsExplicitShareToken)
+{
+    claims = await _tokens.ValidateAsync(tokenRaw, ct);
+    if (claims == null) return Unauthorized();
+}
+```
+
+**Why This Keeps Happening**: The streaming endpoint supports both normal UI auth and share-token auth on the same route. The authorization branch must distinguish JWT/API auth from share tokens instead of blindly interpreting every bearer token as a share grant.
+
 ### 0z177. Fixed Pod IDs Must Still Match Pod Validation
 
 **The Bug**: `GoldStarClubService` used the human-readable fixed ID `pod:gold-star-club`, but `SqlitePodService` validates all pod IDs as `^pod:[a-f0-9]{32}$`. Startup crashed when the hosted service tried to ensure the Gold Star Club pod. The same class also derived a channel id as `$"{GoldStarClubPodId}:general"`, but channel ids only allow alphanumeric, dash, and underscore characters.
