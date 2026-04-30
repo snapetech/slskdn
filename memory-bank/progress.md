@@ -1,3 +1,10 @@
+## 2026-04-30 15:38Z - Added native MilkDrop preset folder import
+
+- Added a separate native preset-folder import button and hidden directory file input for browsers that expose directory-relative paths.
+- Folder imports reuse the existing native preset import pipeline, so presets and local image assets selected from a directory still get compatibility scanning, asset scoping, and browser-local library persistence.
+- Added component coverage for the directory input attributes, folder button click behavior, and relative image asset persistence.
+- Validation: focused native/player tests passed with `64/64` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 15:26Z - Scoped native MilkDrop pack image assets per preset
 
 - Native preset import now indexes selected image assets by browser-provided relative path when available, plus basename and stem aliases.

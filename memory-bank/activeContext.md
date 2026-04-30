@@ -1,3 +1,15 @@
+## Update 2026-04-30 15:38:35Z
+
+- Current task: Native MilkDrop preset packs have a folder import affordance.
+- Last activity:
+  - added a separate native preset-folder import button and hidden directory input
+  - directory imports reuse the existing native preset import path and browser-provided relative paths
+  - added component coverage for folder input attributes, button click behavior, and relative asset path persistence
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Commit and push the folder-import phase.
+  2. Continue with the next larger native MilkDrop phase, likely pack ergonomics or richer transition controls.
+
 ## Update 2026-04-30 15:26:43Z
 
 - Current task: Native MilkDrop pack imports scope image assets per preset.

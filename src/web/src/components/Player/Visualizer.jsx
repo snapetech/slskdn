@@ -201,6 +201,7 @@ const supportsWebGl2 = () => {
 const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
+  const directoryInputRef = useRef(null);
   const engineRef = useRef(null);
   const fileInputRef = useRef(null);
   const rafRef = useRef(null);
@@ -538,6 +539,16 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             ref={fileInputRef}
             type="file"
           />
+          <input
+            data-testid="visualizer-native-pack-input"
+            directory=""
+            hidden
+            multiple
+            onChange={importNativePreset}
+            ref={directoryInputRef}
+            type="file"
+            webkitdirectory=""
+          />
           <Popup
             content={`Switch visualizer engine to ${getEngineLabel(getNextEngine(engineType))}.`}
             trigger={
@@ -619,6 +630,20 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                     size="mini"
                   >
                     <Icon name="upload" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Import a native MilkDrop preset folder with its local image assets."
+                trigger={
+                  <Button
+                    aria-label="Import native MilkDrop preset folder"
+                    data-testid="visualizer-import-native-preset-folder"
+                    icon
+                    onClick={() => directoryInputRef.current?.click()}
+                    size="mini"
+                  >
+                    <Icon name="folder open outline" />
                   </Button>
                 }
               />

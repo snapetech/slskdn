@@ -52,6 +52,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   rendering backed by imported image texture assets.
 - Scoped imported native MilkDrop image assets per preset so multi-preset packs
   do not persist unrelated images with every imported preset.
+- Added a native MilkDrop preset-folder import affordance for browsers that
+  expose directory-relative file paths.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

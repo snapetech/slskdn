@@ -91,6 +91,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first `.milk2` double-preset simultaneous render/composite path.
 - [x] Add first sprite/image primitive parse and render path.
 - [x] Scope imported texture/image assets to the presets that reference them.
+- [x] Add first folder import affordance for native preset packs.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -118,6 +119,7 @@ Current parser/VM scope:
 - The player visualizer overlay can now switch between Butterchurn and the native `slskdN MilkDrop WebGL` engine. The native adapter uses the shared Web Audio visualizer tap, reads waveform/frequency data through its own analyser, and feeds curated smoke presets through the native renderer. Butterchurn remains the default engine while the native path matures.
 - `npm run test:native-milkdrop-smoke` starts a local Vite server, loads the real native renderer modules in Chromium, renders a curated WebGL preset to a canvas, and fails if readback pixel statistics indicate a blank frame.
 - Native mode exposes a local file import button for `.milk` and `.milk2` text presets. Imported preset text is loaded into the native renderer, the preset name is surfaced in the overlay, and the last imported preset is persisted in browser local storage for the next native-engine session.
+- Native mode exposes a separate folder import affordance for preset packs. Browsers that support directory file inputs provide relative paths for presets and image assets, which feed the scoped texture lookup path without requiring users to flatten pack folders manually.
 - Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.

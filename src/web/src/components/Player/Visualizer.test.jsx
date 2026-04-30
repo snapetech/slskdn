@@ -317,6 +317,81 @@ describe('Visualizer', () => {
     );
   });
 
+  it('imports native preset folders with relative asset paths', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    nativeEngine.inspectPresetText.mockImplementation((_source, fileName) => ({
+      title: fileName.replace(/\.milk$/, ''),
+    }));
+    nativeEngine.loadPresetText.mockImplementation((_source, fileName) =>
+      fileName.replace(/\.milk$/, ''));
+    vi.stubGlobal('FileReader', class {
+      readAsDataURL(file) {
+        this.result = `data:${file.name}`;
+        this.onload();
+      }
+    });
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.resize).toHaveBeenCalled();
+    });
+
+    const folderInput = screen.getByTestId('visualizer-native-pack-input');
+    expect(folderInput).toHaveAttribute('webkitdirectory');
+    expect(folderInput).toHaveAttribute('directory');
+
+    const clickSpy = vi.spyOn(folderInput, 'click').mockImplementation(() => {});
+    fireEvent.click(screen.getByTestId('visualizer-import-native-preset-folder'));
+    expect(clickSpy).toHaveBeenCalled();
+
+    const presetFile = new File(
+      ['name=Pack\nsprite00_enabled=1\nsprite00_image=assets/cover.png'],
+      'pack.milk',
+      { type: 'text/plain' },
+    );
+    const textureFile = new File(['cover'], 'cover.png', { type: 'image/png' });
+    Object.defineProperty(presetFile, 'webkitRelativePath', {
+      configurable: true,
+      value: 'pack/presets/pack.milk',
+    });
+    Object.defineProperty(textureFile, 'webkitRelativePath', {
+      configurable: true,
+      value: 'pack/assets/cover.png',
+    });
+    Object.defineProperty(folderInput, 'files', {
+      configurable: true,
+      value: createFileList([presetFile, textureFile]),
+    });
+    fireEvent.change(folderInput);
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=Pack\nsprite00_enabled=1\nsprite00_image=assets/cover.png',
+        'pack.milk',
+        {
+          textureAssets: expect.objectContaining({
+            'pack/assets/cover.png': expect.objectContaining({
+              dataUrl: 'data:cover.png',
+            }),
+            'cover.png': expect.objectContaining({
+              dataUrl: 'data:cover.png',
+            }),
+            cover: expect.objectContaining({
+              dataUrl: 'data:cover.png',
+            }),
+          }),
+        },
+      );
+    });
+  });
+
   it('reports skipped native texture assets during import', async () => {
     window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
 
