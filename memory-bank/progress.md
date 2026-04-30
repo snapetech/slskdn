@@ -11,7 +11,7 @@
 - Continued the center-lane T-936 follow-up work.
 - Quarantine Jury requests and signed verdicts now persist to an atomic JSON state file under the app directory and reload on service startup.
 - Added focused coverage proving persisted requests, verdicts, and aggregate recommendations survive service rehydration.
-- Validation: focused `QuarantineJury` tests passed (`12/12`); lint and broader tests to run before final handoff.
+- Validation: focused `QuarantineJury` tests passed (`12/12`), `git diff --check` passed, `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3675` unit tests, `276` integration tests).
 
 ## 2026-04-30 20:13:04Z - Added Quarantine Jury first slice
 

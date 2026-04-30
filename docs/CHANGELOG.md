@@ -32,6 +32,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   playlist/album/track/artist/user playlist URLs, per-import bearer-token
   support for liked/saved/followed/current-user feeds, local CSV/text/M3U/RSS
   parsing, and a Wishlist Import Feed flow into Discovery Inbox review.
+- Added Spotify account connection for source-feed imports, including OAuth
+  authorization, encrypted refresh-token storage, token refresh, disconnect,
+  and Wishlist Import Feed controls that use the connected account for private
+  liked/saved/followed playlist feeds.
 - Added a redacted browser diagnostic bundle in System Info that can be
   inspected and copied without exposing passwords, tokens, cookies, secrets, or
   API keys.

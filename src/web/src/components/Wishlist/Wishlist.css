@@ -42,6 +42,13 @@
   margin-right: 0;
 }
 
+.wishlist-source-feed-account-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* Dark theme for placeholder segment */
 .wishlist-container .ui.placeholder.segment {
   background: #1b1c1d !important;

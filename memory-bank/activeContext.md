@@ -86,6 +86,19 @@
   1. Wire preview suggestions into Discovery Inbox review.
   2. Add explicit provider fetchers only behind configuration, credentials, and rate limits.
 
+## Update 2026-04-30 20:21:05Z
+
+- Current task: E16 Automation first follow-up slice is implemented locally.
+- Last activity:
+  - added cooldown, max-runtime, and approval-gate metadata to Automation Center recipes
+  - persisted dry-run preview reports with network/file impact and `executed: false`
+  - surfaced bounded automation details on recipe cards
+  - kept all automation behavior shell-only with no recipe execution
+  - validated focused Automation Center tests
+- Next steps:
+  1. Continue tail-side feature-expansion burn-down with E15 Player Enhancements if it does not overlap player/MilkDrop work.
+  2. Later wire real automation execution through bounded backend jobs with cooldown enforcement and dry-run output review.
+
 ## Update 2026-04-30 20:17:39Z
 
 - Current task: E17 Wishlist and Requests first slice is implemented locally.

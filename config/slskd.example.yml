@@ -402,9 +402,10 @@
 #     import_path_from: "" # optional local slskdN completed path prefix
 #     import_path_to: ""   # optional Lidarr-visible completed path prefix
 #   spotify:
-#     enabled: false # enables app-token fetching for public playlist/album/track/artist imports
+#     enabled: false # enables Spotify source-feed imports and account connection
 #     client_id: ""
-#     client_secret: ""
+#     client_secret: "" # optional for OAuth; required for app-token public imports without a connected account
+#     redirect_uri: "" # optional; defaults to /api/v0/integrations/spotify/callback on the current host
 #     timeout_seconds: 20
 #     max_items_per_import: 500
 #     market: "US" # used for artist top-track imports

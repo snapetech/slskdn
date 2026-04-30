@@ -1,5 +1,6 @@
 import Wishlist from './Wishlist';
 import { discoveryInboxStorageKey } from '../../lib/discoveryInbox';
+import * as spotifyIntegrationAPI from '../../lib/spotifyIntegration';
 import * as wishlistAPI from '../../lib/wishlist';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
@@ -14,6 +15,12 @@ vi.mock('../../lib/wishlist', () => ({
   update: vi.fn(),
 }));
 
+vi.mock('../../lib/spotifyIntegration', () => ({
+  disconnectSpotify: vi.fn(),
+  getSpotifyStatus: vi.fn(),
+  startSpotifyAuthorization: vi.fn(),
+}));
+
 const renderWishlist = () =>
   render(
     <MemoryRouter>
@@ -25,6 +32,10 @@ describe('Wishlist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    spotifyIntegrationAPI.getSpotifyStatus.mockResolvedValue({
+      configured: false,
+      connected: false,
+    });
     wishlistAPI.getAll.mockResolvedValue([
       {
         autoDownload: false,

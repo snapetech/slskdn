@@ -10,6 +10,7 @@ import {
   getDiscoveryInboxItems,
 } from '../../lib/discoveryInbox';
 import * as sourceFeedImportsAPI from '../../lib/sourceFeedImports';
+import * as spotifyIntegrationAPI from '../../lib/spotifyIntegration';
 import * as wishlistAPI from '../../lib/wishlist';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -424,6 +425,35 @@ const SourceFeedImportModal = ({ onClose, onImported }) => {
   const [limit, setLimit] = useState(500);
   const [preview, setPreview] = useState(null);
   const [previewing, setPreviewing] = useState(false);
+  const [spotifyStatus, setSpotifyStatus] = useState(null);
+  const [spotifyConnecting, setSpotifyConnecting] = useState(false);
+
+  const loadSpotifyStatus = useCallback(async () => {
+    try {
+      setSpotifyStatus(await spotifyIntegrationAPI.getSpotifyStatus());
+    } catch {
+      setSpotifyStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSpotifyStatus();
+  }, [loadSpotifyStatus]);
+
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (
+        event.origin === window.location.origin &&
+        event.data?.type === 'slskdn:spotify-connected'
+      ) {
+        setSpotifyConnecting(false);
+        loadSpotifyStatus();
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [loadSpotifyStatus]);
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -457,6 +487,43 @@ const SourceFeedImportModal = ({ onClose, onImported }) => {
       toast.error(`Source import preview failed: ${error.message}`);
     } finally {
       setPreviewing(false);
+    }
+  };
+
+  const handleConnectSpotify = async () => {
+    setSpotifyConnecting(true);
+    try {
+      const authorization = await spotifyIntegrationAPI.startSpotifyAuthorization();
+      const popup = window.open(
+        authorization.authorizationUrl,
+        'slskdn-spotify-connect',
+        'popup=yes,width=520,height=720',
+      );
+      if (!popup) {
+        window.location.href = authorization.authorizationUrl;
+        return;
+      }
+
+      const interval = window.setInterval(() => {
+        if (popup.closed) {
+          window.clearInterval(interval);
+          loadSpotifyStatus();
+          setSpotifyConnecting(false);
+        }
+      }, 750);
+    } catch (error) {
+      setSpotifyConnecting(false);
+      toast.error(`Spotify connection failed: ${error.message}`);
+    }
+  };
+
+  const handleDisconnectSpotify = async () => {
+    try {
+      await spotifyIntegrationAPI.disconnectSpotify();
+      await loadSpotifyStatus();
+      toast.success('Disconnected Spotify account');
+    } catch (error) {
+      toast.error(`Spotify disconnect failed: ${error.message}`);
     }
   };
 
@@ -511,10 +578,57 @@ const SourceFeedImportModal = ({ onClose, onImported }) => {
             rows={7}
             value={sourceText}
           />
+          <Segment>
+            <Header as="h4">
+              <Icon name="spotify" />
+              Spotify Account
+            </Header>
+            <div className="wishlist-source-feed-account-row">
+              <Label color={spotifyStatus?.connected ? 'green' : 'grey'}>
+                <Icon name={spotifyStatus?.connected ? 'check circle' : 'minus circle'} />
+                {spotifyStatus?.connected
+                  ? `Connected${spotifyStatus.displayName ? `: ${spotifyStatus.displayName}` : ''}`
+                  : spotifyStatus?.configured
+                    ? 'Ready to connect'
+                    : 'Not configured'}
+              </Label>
+              <Popup
+                content="Open Spotify authorization so liked songs, saved albums, followed artists, and private playlists can be imported without pasting a temporary bearer token."
+                trigger={
+                  <Button
+                    disabled={!spotifyStatus?.configured}
+                    icon
+                    labelPosition="left"
+                    loading={spotifyConnecting}
+                    onClick={handleConnectSpotify}
+                    size="small"
+                  >
+                    <Icon name="plug" />
+                    Connect
+                  </Button>
+                }
+              />
+              <Popup
+                content="Remove the stored Spotify refresh token from this slskdN instance."
+                trigger={
+                  <Button
+                    disabled={!spotifyStatus?.connected}
+                    icon
+                    labelPosition="left"
+                    onClick={handleDisconnectSpotify}
+                    size="small"
+                  >
+                    <Icon name="unlinkify" />
+                    Disconnect
+                  </Button>
+                }
+              />
+            </div>
+          </Segment>
           <Form.Input
-            label="Provider Bearer Token (optional)"
+            label="Provider Bearer Token (optional override)"
             onChange={(event) => setProviderAccessToken(event.target.value)}
-            placeholder="Required for Spotify liked songs, saved albums, followed artists, and private playlists"
+            placeholder="Only needed when you do not want to use the connected Spotify account"
             type="password"
             value={providerAccessToken}
           />
