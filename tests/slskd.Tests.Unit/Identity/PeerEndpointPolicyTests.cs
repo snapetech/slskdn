@@ -75,7 +75,7 @@ public class PeerEndpointPolicyTests
 
     [Theory]
     [InlineData("https://peer.example.com:5030")]
-    [InlineData("https://slskd.keith.snape.tech")]
+    [InlineData("https://slskd.example.net")]
     [InlineData("https://203.0.113.5:5030")] // TEST-NET-3, classified Public
     [InlineData("https://8.8.8.8")]
     [InlineData("quic://peer.example.com:5030")]

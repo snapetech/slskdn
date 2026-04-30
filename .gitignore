@@ -69,3 +69,6 @@ opencode.json
 target/
 SECURITY-AUDIT*.md
 /tests/slskd.Tests.Integration/local-mesh-accounts.env
+
+# Local competitive roadmap notes
+/docs/dev/feature-expansion-prd-story-map.md

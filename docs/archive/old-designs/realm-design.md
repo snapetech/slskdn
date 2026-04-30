@@ -49,7 +49,7 @@ Each pod has a **RealmConfig** that determines which realm(s) it belongs to.
 
 **`realm_id: string`** – a stable identifier for the realm, e.g.:
 - `"slskdn-main-v1"`
-- `"keith-realm-01"`
+- `"personal-realm-01"`
 - `"testnet-2026-01"`
 
 **`realm_id` is used as:**
@@ -648,4 +648,3 @@ realm_peers:
 - `docs/social-federation-design.md` - ActivityPub (can bridge across realms)
 - `docs/security-hardening-guidelines.md` - Global security principles
 - `docs/archive/status/TASK_STATUS_DASHBOARD.md` - T-REALM-01 through T-REALM-05 tasks
-
