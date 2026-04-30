@@ -322,6 +322,45 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLE_FAN, 0, 5);
   });
 
+  it('matches imported texture assets by preset path basename and stem', () => {
+    const gl = createFakeGl();
+    const textureData = new Uint8Array([
+      255, 255, 255, 255,
+      0, 0, 0, 255,
+    ]);
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        shape00_enabled=1
+        shape00_texture='textures\\\\cover.png'
+        shape00_sides=4
+        shape00_rad=0.2
+      `).primary,
+      textureAssets: {
+        cover: {
+          data: textureData,
+          height: 1,
+          width: 2,
+        },
+      },
+    });
+
+    renderer.render();
+
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      2,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      textureData,
+    );
+    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLE_FAN, 0, 6);
+  });
+
   it('uses additive blending for additive custom shapes', () => {
     const gl = createFakeGl();
     const renderer = createMilkdropRenderer({

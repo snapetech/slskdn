@@ -252,13 +252,25 @@ const createProceduralShapeTexture = (gl) => {
   return texture;
 };
 
-const normalizeTextureName = (value) => String(value || '').trim().toLowerCase();
+const normalizeTextureName = (value) =>
+  String(value || '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/\\/g, '/')
+    .toLowerCase();
+
+const getTextureNameAliases = (value) => {
+  const normalized = normalizeTextureName(value);
+  const basename = normalized.replace(/^.*\//, '');
+  const stem = basename.replace(/\.[^.]+$/, '');
+  return Array.from(new Set([normalized, basename, stem].filter(Boolean)));
+};
 
 const getTextureAssetCandidates = (shape = {}) => [
   shape.baseValues?.texture,
   shape.baseValues?.tex,
   shape.baseValues?.tex_name,
-].map(normalizeTextureName).filter(Boolean);
+].flatMap(getTextureNameAliases);
 
 const createTextureFromRawAsset = (gl, asset) => {
   const width = Math.max(1, Number(asset.width) || 1);
@@ -298,11 +310,14 @@ const createTextureFromDataUrlAsset = (gl, asset) => {
 const createNamedShapeTextures = (gl, textureAssets = {}) => {
   const textures = {};
   Object.entries(textureAssets).forEach(([rawName, asset]) => {
-    const name = normalizeTextureName(rawName);
-    if (!name || !asset) return;
-    textures[name] = asset.data
+    const aliases = getTextureNameAliases(rawName);
+    if (aliases.length === 0 || !asset) return;
+    const texture = asset.data
       ? createTextureFromRawAsset(gl, asset)
       : createTextureFromDataUrlAsset(gl, asset);
+    aliases.forEach((name) => {
+      textures[name] = texture;
+    });
   });
   return textures;
 };
@@ -838,7 +853,8 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
       gl.deleteProgram(lineProgram);
       gl.deleteProgram(texturedShapeProgram);
       gl.deleteTexture(proceduralShapeTexture);
-      Object.values(namedShapeTextures).forEach((texture) => gl.deleteTexture(texture));
+      Array.from(new Set(Object.values(namedShapeTextures))).forEach((texture) =>
+        gl.deleteTexture(texture));
     },
     render: (frame = {}) => {
       const frequencyData = frame.spectrum || frame.frequencies || frame.frequency || frame.fft || [];

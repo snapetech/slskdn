@@ -1,3 +1,15 @@
+## Update 2026-04-30 14:40:57Z
+
+- Current task: Native MilkDrop texture lookup handles common preset-pack names.
+- Last activity:
+  - renderer texture lookup now strips quote wrappers and normalizes Windows-style path separators
+  - both imported texture asset keys and preset shape texture references expand to full path, basename, and stem aliases
+  - texture disposal now deduplicates aliased texture handles
+  - added renderer coverage for a quoted `textures\\cover.png` preset reference resolving against an imported `cover` asset
+- Next steps:
+  1. Continue fixture coverage with real-world texture-pack examples.
+  2. Start the next renderer gap after texture lookup, likely broader sprite/image handling or `.milk2` simultaneous rendering.
+
 ## Update 2026-04-30 14:38:26Z
 
 - Current task: Native MilkDrop imports now report skipped texture assets.

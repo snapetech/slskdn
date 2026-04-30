@@ -1,3 +1,10 @@
+## 2026-04-30 14:40Z - Improved native MilkDrop texture-name matching
+
+- Renderer texture lookup now strips quote wrappers, normalizes Windows path separators, and expands both preset references and imported asset keys to path, basename, and stem aliases.
+- Aliased imported texture handles are deduplicated during disposal so one imported image can safely resolve through multiple names.
+- Added renderer coverage for a quoted `textures\\cover.png` preset reference resolving against a stem-only imported texture asset.
+- Validation: focused native/player tests passed with `57/57` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 14:38Z - Report skipped native MilkDrop texture assets
 
 - Native preset import now reports oversized, unreadable, or unsupported texture/image files selected alongside `.milk` / `.milk2` presets.

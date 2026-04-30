@@ -44,6 +44,7 @@
  - Progress (2026-04-30): Added the first procedural textured-shape render path for parsed `textured`, `texture`, `tex`, and `tex_name` shape references.
  - Progress (2026-04-30): Added native import/library plumbing for small local image texture assets selected alongside `.milk`/`.milk2` presets, with named texture lookup and procedural fallback.
  - Progress (2026-04-30): Added skipped texture-asset reporting for oversized, unreadable, or unsupported files selected during native preset import.
+ - Progress (2026-04-30): Improved native shape texture lookup to match imported assets by quoted path, normalized path, basename, or stem.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
