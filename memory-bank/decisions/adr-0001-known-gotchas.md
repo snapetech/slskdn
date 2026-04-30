@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z227. Persistent Probe-Budget Tests Need Synthetic Peers
+
+**The Bug**: A content-verification unit test used the fixed peer name `alice`. The verification service persists per-peer probe budgets outside the test fixture, so a local exhausted `alice` budget made the test fail before it reached the intended verification path.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Transfers/MultiSource/ContentVerificationServiceTests.cs`
+- `src/slskd/Transfers/MultiSource/ContentVerificationService.cs`
+
+**Wrong**:
+```csharp
+CandidateSources = new Dictionary<string, string>
+{
+    ["alice"] = @"Music\song.flac",
+};
+```
+
+**Correct**:
+```csharp
+var username = $"test-peer-{Guid.NewGuid():N}";
+CandidateSources = new Dictionary<string, string>
+{
+    [username] = @"Music\song.flac",
+};
+```
+
+**Why This Keeps Happening**: Tests around persisted rate limits and budgets can accidentally share developer-machine state when they use realistic fixed peer names. Use synthetic unique identifiers, or inject isolated storage, before asserting downstream behavior.
+
 ### 0z226. Now-Playing Helpers Must Accept Empty Player State
 
 **The Bug**: A browser-local player ratings helper assumed the now-playing track object was always present. `PlayerBar` calls helper code during its initial render before a track is selected, so reading `track.contentId` from `null` crashed every player test.
