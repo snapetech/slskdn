@@ -10148,3 +10148,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The first validation used representative but still too-small data and treated hidden elements with zero-size boxes as overflow noise. It did not stress long speed values, larger hash/sequence counters, active swarm/backfill labels, and the live light-theme rendering together.
 
 **How to prevent it:** Dense footer/status UI must be validated with worst-case realistic counters at desktop, mid-width, and mobile sizes. Prefer flexible wrapping groups over rigid grid columns, and ignore `display:none` elements in overflow checks so the signal is about visible layout defects.
+
+### 0z67. Sequential Soulseek Failover Must Filter Out Mesh-Overlay Sources
+
+**What went wrong:** The trust-aware multi-source split correctly sent all-mesh source sets to the mesh parallel chunking path and mixed/raw source sets to the Soulseek sequential-failover path. The sequential path then iterated over the original mixed `request.Sources` list, so a mesh-overlay `VerifiedSource` in a mixed set could be passed to `ISoulseekClient.DownloadAsync` as if it were a raw Soulseek peer.
+
+**Why it happened:** The path decision used `request.Sources.All(s => s.IsMeshOverlay())`, but the failover loop did not create a transport-specific candidate list. "Not all mesh" was treated as "all entries are valid Soulseek candidates," which is false for mixed sets.
+
+**How to prevent it:** Any transport-specific transfer loop must filter candidates by transport before dialing. The Soulseek sequential-failover loop should only use `VerifiedSourceExtensions.IsSoulseekPeer()`, and mesh-overlay sources should only enter the mesh-aware path.

@@ -86,19 +86,17 @@ cat > "$INSTALLER_FILE" <<EOF
 PackageIdentifier: $PACKAGE_IDENTIFIER
 PackageVersion: $WINGET_VERSION
 InstallerType: zip
-InstallerSwitches:
-  Silent: ""
-  SilentWithProgress: ""
-UpgradeBehavior: install
 ReleaseDate: $RELEASE_DATE
+NestedInstallerType: portable
+NestedInstallerFiles:
+- RelativeFilePath: slskd.exe
+  PortableCommandAlias: $COMMAND_ALIAS
+Commands:
+- $COMMAND_ALIAS
 Installers:
-  - Architecture: x64
-    InstallerUrl: $WIN_X64_URL
-    InstallerSha256: $WIN_X64_SHA
-    NestedInstallerType: portable
-    NestedInstallerFiles:
-      - RelativeFilePath: slskd.exe
-        PortableCommandAlias: $COMMAND_ALIAS
+- Architecture: x64
+  InstallerUrl: $WIN_X64_URL
+  InstallerSha256: $WIN_X64_SHA
 ManifestType: installer
 ManifestVersion: 1.6.0
 EOF
