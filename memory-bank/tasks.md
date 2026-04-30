@@ -1475,13 +1475,17 @@
   - Status: completed (2026-04-30)
   - Notes: Added a persisted browser-local mute toggle, inline/preloaded audio attributes, safe-area-aware player/footer spacing, mobile wrapping, and larger touch targets. Verified with focused player tests, lint, build, and a 390px Playwright mobile smoke against the dev UI.
 
-- [ ] Auto-register streamable local library content ids
-  - Status: follow-up
-  - Notes: `library/items` can compute `sha256:` ids for local files before those ids exist in `content_items`; the stream endpoint correctly refuses ids that are not marked advertisable. Decide whether local library indexing should upsert an advertisable mapping after moderation, or whether the UI should surface non-streamable library results differently.
+- [x] Resolve streamable local library content ids from allowed roots
+  - Status: completed (2026-04-30)
+  - Notes: `ContentLocator` now falls back to configured non-excluded share directories plus the downloads directory, matching `sha256:` or stable path IDs only for local audio under allowed roots. This keeps the stream server integrated in slskdN without requiring a separate media server or manual `content_items` seed for local picker results.
 
-- [ ] Add browser Media Session metadata for player/PWA
-  - Status: follow-up
-  - Notes: Once collection item metadata resolves filenames/titles/artists reliably, publish `navigator.mediaSession.metadata` and action handlers so installed PWAs and mobile lock screens show useful track information and transport controls.
+- [x] Add browser Media Session metadata for player/PWA
+  - Status: completed (2026-04-30)
+  - Notes: The Web UI player now publishes title/artist/album metadata when available and wires browser media-session actions for play, pause, previous, next, rewind, and fast-forward.
+
+- [x] Add player transport controls, launchers, and footer-safe drawer
+  - Status: completed (2026-04-30)
+  - Notes: Added previous/next, rewind, fast-forward, collapse/expand, persistent local mute, and player empty-state launchers for Collections plus shared/downloaded audio. Browser geometry checks verified the expanded and collapsed player sit above the fixed footer without overlap on desktop and a 390px mobile viewport.
 
 - [ ] Improve collection item display metadata
   - Status: follow-up

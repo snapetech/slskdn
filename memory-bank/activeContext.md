@@ -1,3 +1,16 @@
+## Update 2026-04-30 01:52:00Z
+
+- Current task: None. The Web UI player drawer, transport controls, and local audio picker are implemented and verified.
+- Last activity:
+  - added collapse/expand so the player can shrink into a drawer bar above the fixed footer
+  - added previous/next, rewind, fast-forward, local mute, and browser Media Session transport handlers
+  - surfaced Collections and shared/downloaded local audio in the player empty state
+  - made the integrated stream locator resolve allowed local share/download roots without a separate streaming service
+  - verified live Commons OGG streaming, player/footer geometry, focused tests, frontend lint, and frontend build
+- Next steps:
+  1. Improve persisted collection item display metadata so playlist rows can show friendly filenames/titles instead of raw content ids.
+  2. Exercise the global radio/listening-party flow with two real authenticated mesh nodes once live credentials are loaded.
+
 ## Update 2026-04-30 02:20:00Z
 
 - Current task: None. Gold Star Club leave/revoke copy now states that leaving is irrevocable.

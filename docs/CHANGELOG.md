@@ -27,6 +27,12 @@ For dev or build tags, use the same logical version string embedded in the tag.
   butterchurn engine and preset pack are loaded via dynamic imports so they
   ship as separate chunks and stay off the critical path until the user
   toggles the visualizer on.
+- Expanded the Web UI player into a footer-safe drawer with collapse/expand,
+  previous/next, rewind, fast-forward, local mute, Media Session handlers, and
+  empty-state launchers for Collections plus shared/downloaded local audio.
+- Made the stream locator resolve `sha256:` and path-based local audio IDs from
+  configured share/download roots when the file is allowed locally but has not
+  yet been persisted into the indexed `content_items` table.
 - Added Discography Concierge planning and first implementation pieces,
   including MusicBrainz artist coverage services/API/UI, manual missing-track
   Wishlist promotion, and supporting docs/tasks for mesh/social music

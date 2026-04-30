@@ -7306,3 +7306,11 @@ Code quality improvements were completed as part of Option A:
 - Added a local browser mute control to the persistent Web UI player. Muting now toggles the device's `<audio>` element only, persists in local storage, and does not clear the stream URL or stop listen-along playback.
 - Improved mobile/PWA behavior for the player dock with `playsInline`, metadata preloading, larger touch targets, narrow-screen wrapping, and safe-area padding shared with the footer.
 - Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`, and a 390px Playwright mobile check against `localhost:3001` passed. The production build still reports the existing large bundle warning.
+
+## 2026-04-30 01:52:00Z
+
+- Expanded the player into a footer-safe drawer with collapse/expand, previous/next, rewind, fast-forward, local mute, and browser Media Session transport handlers.
+- Added player empty-state launchers for Collections and shared/downloaded local audio, with the file picker streaming through slskdN's integrated `/api/v0/streams/{contentId}` endpoint.
+- Added ContentLocator fallback resolution for allowed local share/download roots so local picker results can stream by `sha256:` or stable path IDs without a separate streaming service.
+- Verified the Commons OGG smoke file still returns `206 Partial Content` through Vite, and measured desktop/mobile browser geometry: the expanded and collapsed player stay above the fixed footer with no horizontal overflow.
+- Validation: `npm test -- src/components/Player/PlayerBar.test.jsx --watch=false`, `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --no-restore --filter ContentLocatorTests`, `npm run lint -- --quiet`, `npm run build`, `git diff --check`, live stream/file-picker curl checks, and Playwright footer/player geometry checks passed. The production build still reports the existing large chunk warning.
