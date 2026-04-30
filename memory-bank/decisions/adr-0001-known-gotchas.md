@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z181. Browser Audio Elements Cannot Send Authorization Headers
+
+**The Bug**: The Web UI player assigned `/api/v0/streams/{contentId}` directly to an `<audio>` source. API probes with `Authorization: Bearer ...` passed, but real browser playback failed with `401 Unauthorized` because media element requests do not use the app's Axios header interceptor.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/slskd/Program.cs`
+- `src/slskd/Streaming/StreamsController.cs`
+
+**Wrong**:
+```js
+const streamUrl = (contentId) =>
+  `${urlBase}/api/v0/streams/${encodeURIComponent(contentId)}`;
+```
+
+**Correct**:
+```js
+const token = getToken();
+const query = token ? `?access_token=${encodeURIComponent(token)}` : '';
+const streamUrl = `${urlBase}/api/v0/streams/${encodeURIComponent(contentId)}${query}`;
+```
+
+**Why This Keeps Happening**: Browser-managed requests from `<audio>`, `<video>`, images, and downloads bypass Axios/fetch interceptors. If a protected media endpoint must support direct element playback, the auth middleware needs an explicit query-token path, or the endpoint needs a purpose-built short-lived media token.
+
 ### 0z179. Analyzer Bars Should Use Log Frequency Buckets
 
 **The Bug**: The Web UI player analyzer sampled FFT bins linearly and drew the oscilloscope directly from byte values. Bars overrepresented high frequencies while low/mid content looked compressed, and quiet scope signals appeared squashed around the center line.
