@@ -7190,3 +7190,7 @@ Code quality improvements were completed as part of Option A:
 - Documented supported advanced search filter text syntax in the README and added comparison-table rows for the newly surfaced affordances.
 - Documented the batch-download removal path gotcha in ADR-0001 and committed that gotcha entry immediately as `ea0d2142f`.
 - Validation: `npm --prefix src/web test -- src/components/Transfers/Transfers.test.jsx`, focused `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~Transfers"`, `npm --prefix src/web run lint`, `npm --prefix src/web run build`, and `git diff --check` passed. The first focused .NET run exited nonzero due output/noise truncation, then passed when rerun with quieter output.
+
+## 2026-04-30 00:01:05Z
+
+- Prepared stable release `2026042900-slskdn.200` by moving the current Unreleased header/footer chrome and transfer polish bullets into a versioned changelog section.

@@ -1,3 +1,14 @@
+## Update 2026-04-30 00:01:05Z
+
+- Current task: Prepare stable release `2026042900-slskdn.200`.
+- Last activity:
+  - verified GitHub writes target `snapetech/slskdn`
+  - promoted the current Unreleased UI chrome and transfer polish bullets into a `.200` changelog section
+- Next steps:
+  1. Generate release notes for `2026042900-slskdn.200`.
+  2. Commit and push the `.200` release-note update.
+  3. Push tag `build-main-2026042900-slskdn.200`.
+
 ## Update 2026-04-29 23:53:57Z
 
 - Current task: None. The low-risk upstream-request integration pass is implemented locally.

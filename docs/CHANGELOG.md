@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+## [2026042900-slskdn.200] — 2026-04-30
+
 - Reworked the fixed Web UI header and footer chrome so primary navigation,
   utility actions, brand, speeds, network counters, and transport icons align
   as distinct rails instead of crowding together in live screenshots.
