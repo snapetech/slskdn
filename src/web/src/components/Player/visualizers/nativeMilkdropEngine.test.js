@@ -151,7 +151,7 @@ describe('createNativeMilkdropEngine', () => {
 
     expect(() => engine.loadPresetText(`
       per_frame_1=q1=megabuf(0);
-      comp_shader=shader_body { ret = vec3(1); }
+      comp_shader=for (;;) { ret = vec3(1); }
     `, 'unsupported.milk')).toThrow(
       'unsupported functions: megabuf; shader translation pending: comp_shader',
     );

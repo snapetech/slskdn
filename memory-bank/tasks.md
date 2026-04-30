@@ -39,6 +39,8 @@
  - Progress (2026-04-30): Added a capped browser-local native preset library with multi-file `.milk`/`.milk2` import, skipped-file reporting, and overlay preset reload selector.
  - Progress (2026-04-30): Added tooltipped native preset-library clear and remove-selected affordances so imported local presets can be pruned from browser storage.
  - Progress (2026-04-30): Added inline bitwise, shift, unary, and logical expression operator support for `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` in native MilkDrop equations.
+ - Progress (2026-04-30): Added the first safe shader translation/execution subset for simple `warp_shader` and `comp_shader` `ret = ...` bodies, with unsupported HLSL/control-flow shaders still rejected during compatibility scanning.
+ - Progress (2026-04-30): Added the first curated native preset fixture pack with golden parser summaries, compatibility expectations, and shader-backed browser smoke coverage.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

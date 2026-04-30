@@ -1,3 +1,19 @@
+## 2026-04-30 05:45Z - Added native MilkDrop fixture pack coverage
+
+- Added a curated `nativeMilkdropFixturePack` covering classic primitives, supported shader subset rendering, a simple `.milk2` double-preset parse case, and an unsupported shader-control-flow case.
+- Added golden parser summary tests and fixture compatibility expectation tests.
+- Changed the browser native MilkDrop smoke to render the shared shader fixture instead of a private inline preset, giving the first shader path browser-level pixel coverage.
+- Validation: focused native/player tests passed with `50/50` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
+## 2026-04-30 05:41Z - Added first native MilkDrop shader translation subset
+
+- Added a first safe shader translator for simple `warp_shader` and `comp_shader` bodies that assign `ret = ...`.
+- The translator supports GLSL-like expressions plus `tex2D(sampler_main, uv)`, `saturate`, and `lerp` substitutions, while rejecting control flow, matrices, unknown samplers, and wider HLSL syntax.
+- The renderer now compiles supported `warp_shader` bodies into the feedback pass and supported `comp_shader` bodies into the final screen composite.
+- Compatibility analysis now rejects only unsupported shader bodies instead of rejecting every shader-bearing preset.
+- Added translator, compatibility, and renderer coverage for supported and unsupported shader bodies.
+- Validation: focused native/player tests passed with `48/48` tests; `npm run test:native-milkdrop-smoke`; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 05:36Z - Added native MilkDrop per-preset library removal
 
 - Native visualizer mode now tracks the selected imported preset id in the library selector.

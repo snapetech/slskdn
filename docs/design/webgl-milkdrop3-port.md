@@ -84,6 +84,8 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add browser-local native preset library and multi-file preset import.
 - [x] Add first local native preset library management affordances.
 - [x] Add first inline bitwise/shift/logical expression operator support.
+- [x] Add first safe `warp_shader` / `comp_shader` translation and execution subset.
+- [x] Add first curated native preset fixture pack with golden parser and compatibility coverage.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -114,9 +116,11 @@ Current parser/VM scope:
 - Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
-- Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections while shader translation is still pending.
+- Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections only when the shader body is outside the current safe translator subset.
 - Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
 - Native mode has clear-library and remove-selected affordances for pruning imported presets from this browser without requiring manual local-storage cleanup.
+- The first shader translator accepts simple shader bodies that assign `ret = ...` using GLSL-like expressions, `tex2D(sampler_main, uv)` sampling, `saturate`, and `lerp`. Supported `warp_shader` bodies run in the feedback pass; supported `comp_shader` bodies run during the screen composite. Control flow, matrix types, general HLSL, and unknown texture/sampler forms remain explicitly unsupported.
+- The first curated fixture pack covers a classic primitive preset, a supported shader subset preset, a simple `.milk2` double-preset file, and an unsupported shader-control-flow preset. Tests lock golden parser summaries and compatibility outcomes, and the browser smoke renders the shader fixture.
 
 ### Phase 2: MilkDrop3 Feature Deltas
 

@@ -232,6 +232,28 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     );
   });
 
+  it('compiles supported preset warp and comp shaders into render passes', () => {
+    const gl = createFakeGl();
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        wave_r=0.5
+        warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(0.8, 0.9, 1.0);
+        comp_shader=ret = vec3(uv.x, uv.y, sin(time));
+      `).primary,
+    });
+
+    renderer.render({ time: 2 });
+
+    const shaderSources = gl.shaderSource.mock.calls.map(([, source]) => source);
+    expect(shaderSources.some((source) =>
+      source.includes('texture(previousFrame, uv).rgb * vec3(0.8, 0.9, 1.0)'))).toBe(true);
+    expect(shaderSources.some((source) =>
+      source.includes('vec3 ret = vec3(vec3(uv.x, uv.y, sin(time)))'))).toBe(true);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 2);
+    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
+  });
+
   it('uses additive blending for additive custom shapes', () => {
     const gl = createFakeGl();
     const renderer = createMilkdropRenderer({

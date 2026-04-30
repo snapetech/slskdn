@@ -1,4 +1,5 @@
 import { isMilkdropFunctionSupported } from './expressionVm';
+import { analyzeMilkdropShaderSupport } from './shaderTranslator';
 
 const functionCallPattern = /\b([A-Za-z_][A-Za-z0-9_.]*)\s*\(/g;
 
@@ -27,8 +28,12 @@ export const analyzeMilkdropPresetCompatibility = (preset = {}) => {
   (preset.waves || []).forEach((wave) =>
     collectEquationFunctions(wave.equations, unsupportedFunctions));
 
-  if (preset.shaders?.warp) shaderSections.push('warp_shader');
-  if (preset.shaders?.comp) shaderSections.push('comp_shader');
+  if (preset.shaders?.warp && !analyzeMilkdropShaderSupport(preset.shaders.warp).supported) {
+    shaderSections.push('warp_shader');
+  }
+  if (preset.shaders?.comp && !analyzeMilkdropShaderSupport(preset.shaders.comp).supported) {
+    shaderSections.push('comp_shader');
+  }
 
   return {
     shaderSections,

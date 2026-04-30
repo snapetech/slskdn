@@ -39,6 +39,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   preset parsing/expression tests, renderer smoke coverage, local preset import,
   player integration controls, selected-preset removal, and browser-local preset
   library cleanup.
+- Added native MilkDrop shader-subset translation coverage for supported
+  `warp_shader` and `comp_shader` return expressions.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

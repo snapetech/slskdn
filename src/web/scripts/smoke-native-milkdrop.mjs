@@ -9,42 +9,10 @@ const smokeHtml = `
       <script type="module">
         import { createMilkdropRenderer } from '/src/components/Player/visualizers/milkdrop/milkdropRenderer.js';
         import { parseMilkdropPreset } from '/src/components/Player/visualizers/milkdrop/presetParser.js';
+        import { getNativeMilkdropFixture } from '/src/components/Player/visualizers/milkdrop/presetFixtures.js';
 
-        const preset = parseMilkdropPreset(\`
-          decay=0.82
-          wave_r=0.25
-          wave_g=0.7
-          wave_b=0.95
-          wave_scale=1.4
-          meshx=3
-          meshy=2
-          per_frame_1=rot=0.015*sin(time);
-          per_pixel_1=dx=0.02*sin((x+time)*6.283);
-          per_pixel_2=dy=0.02*cos((y+time)*6.283);
-          mv_x=4
-          mv_y=3
-          mv_l=0.2
-          mv_a=0.45
-          shape00_enabled=1
-          shape00_sides=5
-          shape00_rad=0.22
-          shape00_x=0.5
-          shape00_y=0.5
-          shape00_r=0.9
-          shape00_g=0.85
-          shape00_b=0.15
-          shape00_a=0.45
-          wavecode_0_enabled=1
-          wavecode_0_samples=32
-          wavecode_0_spectrum=1
-          wavecode_0_dots=1
-          wavecode_0_r=0.8
-          wavecode_0_g=1
-          wavecode_0_b=0.3
-          wavecode_0_a=0.9
-          wavecode_0_per_point1=x=i;
-          wavecode_0_per_point2=y=0.1+sample*0.65;
-        \`).primary;
+        const fixture = getNativeMilkdropFixture('shader-subset');
+        const preset = parseMilkdropPreset(fixture.source).primary;
 
         const canvas = document.getElementById('canvas');
         const renderer = createMilkdropRenderer({ canvas, preset });

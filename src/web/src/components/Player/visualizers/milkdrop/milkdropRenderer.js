@@ -1,4 +1,5 @@
 import { evaluateMilkdropEquations } from './expressionVm';
+import { createTranslatedMilkdropFragmentShader } from './shaderTranslator';
 
 const vertexShaderSource = `#version 300 es
 in vec2 position;
@@ -123,6 +124,29 @@ const createFullscreenTriangle = (gl, program) => {
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
   return buffer;
+};
+
+const createOptionalShaderProgram = (gl, shaderSource) => {
+  const fragmentSource = createTranslatedMilkdropFragmentShader(shaderSource);
+  if (!fragmentSource) return null;
+  const program = createProgram(gl, vertexShaderSource, fragmentSource);
+  gl.useProgram(program);
+  const state = {
+    colorUniform: gl.getUniformLocation(program, 'color'),
+    feedbackUniform: gl.getUniformLocation(program, 'feedback'),
+    previousFrameUniform: gl.getUniformLocation(program, 'previousFrame'),
+    program,
+    timeUniform: gl.getUniformLocation(program, 'time'),
+  };
+  gl.uniform1i(state.previousFrameUniform, 0);
+  return state;
+};
+
+const bindTranslatedShaderProgram = (gl, shaderProgram, color, feedback, time) => {
+  gl.useProgram(shaderProgram.program);
+  gl.uniform3f(shaderProgram.colorUniform, color[0], color[1], color[2]);
+  gl.uniform1f(shaderProgram.feedbackUniform, feedback);
+  gl.uniform1f(shaderProgram.timeUniform, time);
 };
 
 const createDynamicLineBuffer = (gl, program) => {
@@ -605,6 +629,8 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
   const program = createProgram(gl);
   gl.useProgram(program);
   const fullscreenBuffer = createFullscreenTriangle(gl, program);
+  const translatedWarpProgram = createOptionalShaderProgram(gl, preset.shaders?.warp);
+  const translatedCompProgram = createOptionalShaderProgram(gl, preset.shaders?.comp);
   const warpGridProgram = createProgram(
     gl,
     warpGridVertexShaderSource,
@@ -650,6 +676,8 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
         gl.deleteTexture(target.texture);
       });
       gl.deleteProgram(program);
+      if (translatedWarpProgram) gl.deleteProgram(translatedWarpProgram.program);
+      if (translatedCompProgram) gl.deleteProgram(translatedCompProgram.program);
       gl.deleteProgram(warpGridProgram);
       gl.deleteProgram(lineProgram);
     },
@@ -698,6 +726,17 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
         gl.bindBuffer(gl.ARRAY_BUFFER, warpGridBuffers.sourceUvBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, warpGridMesh.sourceUvs, gl.DYNAMIC_DRAW);
         gl.drawArrays(gl.TRIANGLES, 0, warpGridMesh.vertexCount);
+        gl.useProgram(program);
+      } else if (translatedWarpProgram) {
+        bindTranslatedShaderProgram(
+          gl,
+          translatedWarpProgram,
+          [r, g, b],
+          feedback,
+          scope.time,
+        );
+        bindFullscreenTriangle(gl, translatedWarpProgram.program, fullscreenBuffer);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.useProgram(program);
       } else {
         gl.useProgram(program);
@@ -830,12 +869,24 @@ export const createMilkdropRenderer = ({ canvas, preset }) => {
       gl.bindTexture(gl.TEXTURE_2D, writeTarget.texture);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform3f(colorUniform, 0, 0, 0);
-      gl.uniform1f(feedbackUniform, 1);
-      gl.uniform1f(rotationUniform, 0);
-      gl.uniform1f(zoomUniform, 1);
-      gl.uniform2f(translateUniform, 0, 0);
-      bindFullscreenTriangle(gl, program, fullscreenBuffer);
+      if (translatedCompProgram) {
+        bindTranslatedShaderProgram(
+          gl,
+          translatedCompProgram,
+          [r, g, b],
+          0,
+          scope.time,
+        );
+        bindFullscreenTriangle(gl, translatedCompProgram.program, fullscreenBuffer);
+      } else {
+        gl.useProgram(program);
+        gl.uniform3f(colorUniform, 0, 0, 0);
+        gl.uniform1f(feedbackUniform, 1);
+        gl.uniform1f(rotationUniform, 0);
+        gl.uniform1f(zoomUniform, 1);
+        gl.uniform2f(translateUniform, 0, 0);
+        bindFullscreenTriangle(gl, program, fullscreenBuffer);
+      }
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       [readTarget, writeTarget] = [writeTarget, readTarget];

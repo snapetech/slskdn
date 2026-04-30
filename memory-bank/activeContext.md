@@ -1,3 +1,29 @@
+## Update 2026-04-30 05:45:24Z
+
+- Current task: Native MilkDrop has a first curated preset fixture pack.
+- Last activity:
+  - added `nativeMilkdropFixturePack` with classic primitive, supported shader, simple `.milk2`, and unsupported shader-control-flow fixtures
+  - added golden parser summary tests and fixture compatibility expectation tests
+  - changed the browser native MilkDrop smoke to render the shared shader fixture instead of an inline ad hoc preset
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Expand the fixture pack with real-world presets as shader/texture compatibility grows.
+  2. Continue remaining Phase 1 renderer work, especially texture support.
+
+## Update 2026-04-30 05:41:26Z
+
+- Current task: Native MilkDrop has a first safe shader translation/execution subset.
+- Last activity:
+  - added a shader translator for simple `ret = ...` shader bodies
+  - supported `tex2D(sampler_main, uv)`, `saturate`, and `lerp` substitutions into WebGL2 GLSL
+  - renderer now compiles supported `warp_shader` bodies into the feedback pass and supported `comp_shader` bodies into the final composite pass
+  - compatibility analysis now rejects only unsupported shader bodies instead of all shader-bearing presets
+  - added translator, compatibility, and renderer tests for supported and unsupported shader bodies
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Expand shader compatibility with real preset fixtures and golden/smoke coverage.
+  2. Add broader MilkDrop3 shader/HLSL constructs incrementally from those fixtures.
+
 ## Update 2026-04-30 05:36:58Z
 
 - Current task: Native MilkDrop local preset library supports per-preset removal.
