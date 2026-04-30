@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z166. Weak SongID Candidates Must Not Unlock Catalog Context
+
+**The Bug**: Manual-review SongID runs with a plausible but weak track candidate expanded album, artist, and segment context, which polluted Discovery Graph neighborhoods with unrelated labels such as "TV Show".
+
+**Files Affected**:
+- `src/slskd/DiscoveryGraph/DiscoveryGraphService.cs`
+- `tests/slskd.Tests.Unit/SongID/DiscoveryGraphServiceTests.cs`
+
+**Wrong**:
+```csharp
+if (run.Tracks.Any(track => track.IsExact || track.IdentityScore >= MinimumTrackIdentityForWeakRun))
+{
+    return true;
+}
+```
+
+**Correct**:
+```csharp
+if (run.Tracks.Any(track => track.IsExact || track.IdentityScore >= MinimumTrackIdentityForCatalogExpansion))
+{
+    return true;
+}
+```
+
+**Why This Keeps Happening**: The graph has two different trust decisions: showing a weak candidate as a visible clue, and expanding secondary catalog context around that candidate. Reusing the weak-candidate display threshold for expansion lets uncertain manual-review evidence look like a trusted catalog identity. Keep those thresholds separate.
+
 ### 0z165. Release Gate Compiles All Tests, Including Stale Compatibility Tests
 
 **The Bug**: The tag release gate failed at test compilation because stale tests still asserted a removed `MusicBrainz.Enabled` option and used unqualified `File` / `Directory` after importing `Soulseek`, where those names collide with `System.IO`.
